@@ -41,7 +41,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicReverseDirectKinds
+module atomicreversedirectkinds
 on Start {
   let vNothing be nothing
   let vBoolean be true
@@ -50,15 +50,15 @@ on Start {
   let vPercentage be 25%
   let vText be 'abc'
   let vTag be #abc
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(4, 5, 6)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(4, 5, 6)
   let vList be [1, 2, 3]
   let vEmptyList be []
   let vMap be [a: 1, b: 2]
-  let vDice as :dice be [6, 4, 2]
-  let vEmptyDice as :dice be []
-  let vRange as :range be from 1 to 3
-  let vFloatRange as :range be from 1.5 to 2.5 step 0.5
+  let vDice be ([6, 4, 2]) as :Dice
+  let vEmptyDice be ([]) as :Dice
+  let vRange be (from 1 to 3) as :Range
+  let vFloatRange be (from 1.5 to 2.5 step 0.5) as :Range
   emit Done(nothingValue: vNothing[:reverse], booleanValue: vBoolean[:reverse], integerValue: vInteger[:reverse], floatValue: vFloat[:reverse], percentageValue: vPercentage[:reverse], textValue: vText[:reverse], tagValue: vTag[:reverse], vectorValue: vVector[:reverse], pointValue: vPoint[:reverse], listValue: vList[:reverse], emptyListValue: vEmptyList[:reverse], mapValue: vMap[:reverse], diceValue: vDice[:reverse], emptyDiceValue: vEmptyDice[:reverse], rangeValue: vRange[:reverse], floatRangeValue: vFloatRange[:reverse])
 }
 ```
@@ -82,71 +82,71 @@ steps:
         args:
           - name: "nothingValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "booleanValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integerValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "floatValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "percentageValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "tagValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "vectorValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "pointValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "listValue"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
           - name: "emptyListValue"
             value:
-              type: ":list"
+              type: ":List"
               items: []
           - name: "mapValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "diceValue"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "6"
           - name: "emptyDiceValue"
             value:
-              type: ":list"
+              type: ":List"
               items: []
           - name: "rangeValue"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "3"
               to: "1"
               step: "-1"
           - name: "floatRangeValue"
             value:
-              type: ":range"
+              type: ":Range.binary64"
               from: "2.5"
               to: "1.5"
               step: "-0.5"
@@ -179,7 +179,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicShuffleDirectKinds
+module atomicshuffledirectkinds
 on Start {
   let vNothing be nothing
   let vBoolean be true
@@ -188,15 +188,15 @@ on Start {
   let vPercentage be 25%
   let vText be 'abc'
   let vTag be #abc
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(4, 5, 6)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(4, 5, 6)
   let vList be [1, 2, 3]
   let vEmptyList be []
   let vMap be [a: 1, b: 2]
-  let vDice as :dice be [6, 4, 2]
-  let vEmptyDice as :dice be []
-  let vRange as :range be from 1 to 3
-  let vFloatRange as :range be from 1.5 to 2.5 step 0.5
+  let vDice be ([6, 4, 2]) as :Dice
+  let vEmptyDice be ([]) as :Dice
+  let vRange be (from 1 to 3) as :Range
+  let vFloatRange be (from 1.5 to 2.5 step 0.5) as :Range
   emit Done(nothingValue: vNothing[:shuffle], booleanValue: vBoolean[:shuffle], integerValue: vInteger[:shuffle], floatValue: vFloat[:shuffle], percentageValue: vPercentage[:shuffle], textValue: vText[:shuffle], tagValue: vTag[:shuffle], vectorValue: vVector[:shuffle], pointValue: vPoint[:shuffle], listValue: vList[:shuffle], emptyListValue: vEmptyList[:shuffle], mapValue: vMap[:shuffle], diceValue: vDice[:shuffle], emptyDiceValue: vEmptyDice[:shuffle], rangeValue: vRange[:shuffle], floatRangeValue: vFloatRange[:shuffle])
 }
 ```
@@ -220,81 +220,81 @@ steps:
         args:
           - name: "nothingValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "booleanValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integerValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "floatValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "percentageValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "tagValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "vectorValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "pointValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "listValue"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
           - name: "emptyListValue"
             value:
-              type: ":list"
+              type: ":List"
               items: []
           - name: "mapValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "diceValue"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "6"
           - name: "emptyDiceValue"
             value:
-              type: ":list"
+              type: ":List"
               items: []
           - name: "rangeValue"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
           - name: "floatRangeValue"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":float"
+                - type: ":Number.binary64"
                   value: "2"
-                - type: ":float"
+                - type: ":Number.binary64"
                   value: "2.5"
-                - type: ":float"
+                - type: ":Number.binary64"
                   value: "1.5"
 ```
 
@@ -325,7 +325,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicShuffleReverseStreams
+module atomicshufflereversestreams
 on Start {
   let values be [1, 2, 3]
   let reversedStream be values[:select value => value * 10][:reverse]
@@ -353,22 +353,22 @@ steps:
         args:
           - name: "reversedStream"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "30"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "20"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "10"
           - name: "shuffledStream"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "20"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "30"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "10"
 ```

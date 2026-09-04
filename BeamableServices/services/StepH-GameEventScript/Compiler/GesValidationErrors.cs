@@ -71,9 +71,17 @@ internal sealed class GesValidationErrors
             GameEventScriptSymbolKind.Variable => FindVariableNode(module, symbol),
             GameEventScriptSymbolKind.GlobalDefinition => FindPredicateDefinition(module.PredicateDefinitions, symbol) ??
                                                           FindFunctionDefinition(module.FunctionDefinitions, symbol) ??
+                                                          FindConstantDefinition(module.ConstantDefinitions, symbol) ??
                                                           FindNodeInModule(module, symbol),
             _ => FindNodeInModule(module, symbol)
         };
+    }
+
+    private static ConstantDefinitionNode? FindConstantDefinition(IReadOnlyList<ConstantDefinitionNode> definitions, string symbol)
+    {
+        for (var index = 0; index < definitions.Count; index++)
+            if (string.Equals(definitions[index].Name, symbol, StringComparison.Ordinal)) return definitions[index];
+        return null;
     }
 
     private static ScriptNode? FindVariableNode(ParsedScript parsedScript, string symbol)
@@ -211,6 +219,8 @@ internal sealed class GesValidationErrors
     {
         switch (expression)
         {
+            case ConstantReferenceExpressionNode constant when string.Equals(constant.Name, symbol, StringComparison.Ordinal):
+                return constant;
             case IdentifierExpressionNode identifier when string.Equals(identifier.Name, symbol, StringComparison.Ordinal):
                 return identifier;
             case CallExpressionNode call when string.Equals(call.Name, symbol, StringComparison.Ordinal):
@@ -231,6 +241,7 @@ internal sealed class GesValidationErrors
             BinaryExpressionNode binary => FindNodeInExpression(binary.Left, symbol) ?? FindNodeInExpression(binary.Right, symbol),
             TypeCastExpressionNode cast => FindNodeInExpression(cast.Value, symbol),
             TypeCheckExpressionNode check => FindNodeInExpression(check.Value, symbol),
+            NothingCheckExpressionNode check => FindNodeInExpression(check.Value, symbol),
             PredicateCallExpressionNode predicateCall => FindNodeInExpression(predicateCall.Value, symbol),
             ExtensionPredicateExpressionNode extensionPredicate => FindNodeInExpression(extensionPredicate.Value, symbol),
             MemberAccessExpressionNode member => FindNodeInExpression(member.Target, symbol),

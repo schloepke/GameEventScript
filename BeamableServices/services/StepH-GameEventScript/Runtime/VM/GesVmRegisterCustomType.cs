@@ -83,52 +83,65 @@ internal static class GesVmRegisterCustomType
 
             var source = vmState.RegisterStaged((ushort)argumentIndex);
             GesValue converted;
+            if (GameEventScriptBytecodeInstructionUnits.ParseSourceQuantityTypeName(parameter.TypeName) is { } quantityUnit)
+            {
+                converted = GesVmRegisterTypeCastCheck.GesVmCastUnit(in source, quantityUnit, vmState);
+                if (converted.IsNothing)
+                {
+                    vmState.SetNothing(destinationRegister);
+                    return;
+                }
+
+                arguments[parameterIndex] = GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(in converted, parameter);
+                continue;
+            }
+
             switch (parameter.TypeName)
             {
-                case "nothing":
+                case "Nothing":
                     converted = new GesValue();
                     converted.SetNothing();
                     break;
-                case "boolean":
+                case "Boolean":
                     converted = GesVmRegisterTypeCastCheck.GesVmCast(in source, Boolean, vmState, destinationRegister);
                     break;
-                case "number":
+                case "Number":
                     converted = GesVmRegisterTypeCastCheck.GesVmCast(in source, Float, vmState, destinationRegister);
                     break;
                 case "numeric":
                     converted = GesVmRegisterTypeCastCheck.GesVmCastNumeric(in source, vmState);
                     break;
-                case "percentage":
+                case "Percentage":
                     converted = GesVmRegisterTypeCastCheck.GesVmCast(in source, Percentage, vmState, destinationRegister);
                     break;
-                case "tag":
+                case "Tag":
                     converted = GesVmRegisterTypeCastCheck.GesVmCast(in source, Tag, vmState, destinationRegister);
                     break;
-                case "text":
+                case "Text":
                     converted = GesVmRegisterTypeCastCheck.GesVmCast(in source, Text, vmState, destinationRegister);
                     break;
-                case "vector":
+                case "Vector":
                     converted = GesVmRegisterTypeCastCheck.GesVmCast(in source, Vector, vmState, destinationRegister);
                     break;
-                case "point":
+                case "Point":
                     converted = GesVmRegisterTypeCastCheck.GesVmCast(in source, Point, vmState, destinationRegister);
                     break;
-                case "range":
+                case "Range":
                     converted = GesVmRegisterTypeCastCheck.GesVmCast(in source, Range, vmState, destinationRegister);
                     break;
-                case "message":
+                case "Message":
                     converted = GesVmRegisterTypeCastCheck.GesVmCast(in source, Message, vmState, destinationRegister);
                     break;
-                case "handler":
+                case "Handler":
                     converted = GesVmRegisterTypeCastCheck.GesVmCast(in source, Handler, vmState, destinationRegister);
                     break;
-                case "list":
+                case "List":
                     converted = GesVmRegisterTypeCastCheck.GesVmCast(in source, List, vmState, destinationRegister);
                     break;
-                case "map":
+                case "Map":
                     converted = GesVmRegisterTypeCastCheck.GesVmCast(in source, Map, vmState, destinationRegister);
                     break;
-                case "dice":
+                case "Dice":
                     converted = GesVmRegisterTypeCastCheck.GesVmCast(in source, Dice, vmState, destinationRegister);
                     break;
                 case "degree":

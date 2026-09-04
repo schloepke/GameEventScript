@@ -14,22 +14,30 @@ internal static class GesAstValidator
     {
         private readonly HashSet<string> _variables;
         private readonly Dictionary<string, string> _declaredTypes;
+        private readonly IReadOnlyDictionary<string, ExpressionNode> _constants;
 
-        public ValidationScope()
+        public ValidationScope(IReadOnlyDictionary<string, ExpressionNode> constants)
         {
             _variables = new HashSet<string>(StringComparer.Ordinal);
             _declaredTypes = new Dictionary<string, string>(StringComparer.Ordinal);
+            _constants = constants;
+            foreach (var constant in constants)
+            {
+                var inferredType = InferImmutableBindingType(constant.Value, constants);
+                if (inferredType is not null) _declaredTypes["$" + constant.Key] = inferredType;
+            }
         }
 
         private ValidationScope(ValidationScope parent)
         {
             _variables = new HashSet<string>(StringComparer.Ordinal);
             _declaredTypes = new Dictionary<string, string>(parent._declaredTypes, StringComparer.Ordinal);
+            _constants = parent._constants;
         }
 
-        public static ValidationScope Create(IReadOnlyList<ParameterNode> parameters)
+        public static ValidationScope Create(IReadOnlyList<ParameterNode> parameters, IReadOnlyDictionary<string, ExpressionNode> constants)
         {
-            var scope = new ValidationScope();
+            var scope = new ValidationScope(constants);
             for (var index = 0; index < parameters.Count; index++)
             {
                 var parameter = parameters[index];
@@ -44,6 +52,7 @@ internal static class GesAstValidator
             => new(parent);
 
         public IReadOnlyDictionary<string, string> DeclaredTypes => _declaredTypes;
+        public IReadOnlyDictionary<string, ExpressionNode> Constants => _constants;
 
         public bool ContainsInCurrentScope(string name) => _variables.Contains(name);
 
@@ -63,7 +72,7 @@ internal static class GesAstValidator
     }
 
     internal static void ValidateModule(ParsedScript parsedScript, IReadOnlyDictionary<string, GesCallableDefinition> callables,
-        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, GameEventScriptCompileOptions options, GesValidationErrors errors)
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, ExpressionNode> constants, GameEventScriptCompileOptions options, GesValidationErrors errors)
     {
         _ = options;
         for (var typeDefinitionIndex = 0; typeDefinitionIndex < parsedScript.TypeDefinitions.Count; typeDefinitionIndex++)
@@ -74,12 +83,12 @@ internal static class GesAstValidator
             for (var fieldIndex = 0; fieldIndex < typeDefinition.Fields.Count; fieldIndex++)
             {
                 var field = typeDefinition.Fields[fieldIndex];
-                ValidateIdentifierCase(
+                ValidateArgumentLabelCase(
                     parsedScript,
                     field.Name,
                     field.Name,
                     GameEventScriptSymbolKind.Variable,
-                    "Field names must use identifier casing (start lowercase, letters only, optional final _index suffix)",
+                    "Field names must start with a lowercase ASCII letter and contain only ASCII letters or digits",
                     errors);
 
                 if (field.MinimumExpression is not null)
@@ -102,17 +111,18 @@ internal static class GesAstValidator
         for (var predicateIndex = 0; predicateIndex < parsedScript.PredicateDefinitions.Count; predicateIndex++)
         {
             var predicateDefinition = parsedScript.PredicateDefinitions[predicateIndex];
-            ValidateIdentifierCase(
+            ValidateCallableCase(
                     parsedScript,
                     predicateDefinition.Name,
                     predicateDefinition.Name,
                     GameEventScriptSymbolKind.Predicate,
-                    "Predicate names must use identifier casing (start lowercase, letters only, optional final _index suffix)",
+                    "Predicate names must start with a lowercase ASCII letter and contain only ASCII letters or digits",
                     errors);
 
             for (var parameterIndex = 0; parameterIndex < predicateDefinition.Parameters.Count; parameterIndex++)
             {
-                var parameter = predicateDefinition.Parameters[parameterIndex];
+                var parameterNode = predicateDefinition.ParameterList[parameterIndex];
+                var parameter = parameterNode.LocalName;
                 ValidateIdentifierCase(
                     parsedScript,
                     parameter,
@@ -120,6 +130,9 @@ internal static class GesAstValidator
                     GameEventScriptSymbolKind.Predicate,
                     $"Predicate '{predicateDefinition.Name}' declares an invalid parameter name '{parameter}'",
                     errors);
+                if (parameterNode.ExternalLabel is not null)
+                    ValidateArgumentLabelCase(parsedScript, parameterNode.ExternalLabel, predicateDefinition.Name, GameEventScriptSymbolKind.Predicate,
+                        $"Predicate '{predicateDefinition.Name}' declares an invalid external parameter label '{parameterNode.ExternalLabel}'", errors);
             }
 
             ValidateParameterTypeHints(parsedScript, "Predicate", predicateDefinition.Name, predicateDefinition.ParameterList, typeDefinitions, errors);
@@ -145,17 +158,18 @@ internal static class GesAstValidator
         for (var functionIndex = 0; functionIndex < parsedScript.FunctionDefinitions.Count; functionIndex++)
         {
             var functionDefinition = parsedScript.FunctionDefinitions[functionIndex];
-            ValidateIdentifierCase(
+            ValidateCallableCase(
                     parsedScript,
                     functionDefinition.Name,
                     functionDefinition.Name,
                     GameEventScriptSymbolKind.Function,
-                    "Function names must use identifier casing (start lowercase, letters only, optional final _index suffix)",
+                    "Function names must start with a lowercase ASCII letter and contain only ASCII letters or digits",
                     errors);
 
             for (var parameterIndex = 0; parameterIndex < functionDefinition.Parameters.Count; parameterIndex++)
             {
-                var parameter = functionDefinition.Parameters[parameterIndex];
+                var parameterNode = functionDefinition.ParameterList[parameterIndex];
+                var parameter = parameterNode.LocalName;
                 ValidateIdentifierCase(
                     parsedScript,
                     parameter,
@@ -163,6 +177,9 @@ internal static class GesAstValidator
                     GameEventScriptSymbolKind.Function,
                     $"Function '{functionDefinition.Name}' declares an invalid parameter name '{parameter}'",
                     errors);
+                if (parameterNode.ExternalLabel is not null)
+                    ValidateArgumentLabelCase(parsedScript, parameterNode.ExternalLabel, functionDefinition.Name, GameEventScriptSymbolKind.Function,
+                        $"Function '{functionDefinition.Name}' declares an invalid external parameter label '{parameterNode.ExternalLabel}'", errors);
             }
 
             ValidateParameterTypeHints(parsedScript, "Function", functionDefinition.Name, functionDefinition.ParameterList, typeDefinitions, errors);
@@ -202,14 +219,15 @@ internal static class GesAstValidator
                     handler.Message,
                     handler.Message,
                     GameEventScriptSymbolKind.Handler,
-                    "Handler message names must use message casing (start uppercase and contain only letters)",
+                    "Handler message names must start uppercase and contain only ASCII letters or digits",
                     errors);
                 ValidateMessageNameHandler(parsedScript, handler, errors);
             }
 
             for (var parameterIndex = 0; parameterIndex < handler.Parameters.Count; parameterIndex++)
             {
-                var parameter = handler.Parameters[parameterIndex];
+                var parameterNode = handler.ParameterList[parameterIndex];
+                var parameter = parameterNode.LocalName;
                 ValidateIdentifierCase(
                     parsedScript,
                     parameter,
@@ -217,6 +235,9 @@ internal static class GesAstValidator
                     GameEventScriptSymbolKind.Handler,
                     $"Handler '{handler.Message}' declares an invalid parameter name '{parameter}'",
                     errors);
+                if (parameterNode.ExternalLabel is not null)
+                    ValidateArgumentLabelCase(parsedScript, parameterNode.ExternalLabel, handler.Message, GameEventScriptSymbolKind.Handler,
+                        $"Handler '{handler.Message}' declares an invalid external parameter label '{parameterNode.ExternalLabel}'", errors);
             }
 
             ValidateParameterTypeHints(parsedScript, "Handler", handler.Message, handler.ParameterList, typeDefinitions, errors);
@@ -229,7 +250,7 @@ internal static class GesAstValidator
                 handler.ParameterList,
                 errors);
 
-            var handlerScope = ValidationScope.Create(handler.ParameterList);
+            var handlerScope = ValidationScope.Create(handler.ParameterList, constants);
             for (var statementIndex = 0; statementIndex < handler.Statements.Count; statementIndex++)
             {
                 var statement = handler.Statements[statementIndex];
@@ -287,7 +308,7 @@ internal static class GesAstValidator
         {
             errors.Add(
                 parsedScript,
-                "System endpoint 'undeliverable' must bind a ':message' value",
+                "System endpoint 'undeliverable' must bind a ':Message' value",
                 parameter.LocalName,
                 GameEventScriptSymbolKind.Handler,
                 GameEventScriptDiagnosticCodes.ValidateInvalidMessageCase,
@@ -320,7 +341,7 @@ internal static class GesAstValidator
         {
             errors.Add(
                 parsedScript,
-                "Message-name handlers must bind a ':message' value",
+                "Message-name handlers must bind a ':Message' value",
                 handler.Message,
                 GameEventScriptSymbolKind.Handler,
                 GameEventScriptDiagnosticCodes.ValidateInvalidMessageCase,
@@ -355,7 +376,7 @@ internal static class GesAstValidator
                     let.Identifier,
                     let.Identifier,
                     GameEventScriptSymbolKind.Variable,
-                    $"Variable '{let.Identifier}' must use identifier casing (start lowercase, letters only, optional final _index suffix)",
+                    $"Variable '{let.Identifier}' must start lowercase, contain ASCII letters or digits, and may use one canonical final _index suffix",
                     errors);
                 if (scope.ContainsInCurrentScope(let.Identifier))
                 {
@@ -369,7 +390,7 @@ internal static class GesAstValidator
                     return;
                 }
 
-                scope.Declare(let.Identifier, let.DeclaredType ?? InferImmutableBindingType(let.Expression));
+                scope.Declare(let.Identifier, InferImmutableBindingType(let.Expression, scope.Constants));
                 return;
 
             case IfStatementNode ifStatement:
@@ -392,7 +413,7 @@ internal static class GesAstValidator
                     forStatement.Identifier,
                     forStatement.Identifier,
                     GameEventScriptSymbolKind.Variable,
-                    $"Loop variable '{forStatement.Identifier}' must use identifier casing (start lowercase, letters only, optional final _index suffix)",
+                    $"Loop variable '{forStatement.Identifier}' must start lowercase, contain ASCII letters or digits, and may use one canonical final _index suffix",
                     errors);
                 var loopScope = ValidationScope.CreateChild(scope);
                 loopScope.Declare(forStatement.Identifier);
@@ -510,7 +531,7 @@ internal static class GesAstValidator
 
         errors.Add(
             parsedScriptContext,
-            $"Predicate '{predicateDefinition.Name}' must return :boolean or nothing; use 'as :boolean' for explicit boolean coercion.",
+            $"Predicate '{predicateDefinition.Name}' must return :Boolean or nothing; use 'as :Boolean' for explicit boolean coercion.",
             predicateDefinition.Name,
             GameEventScriptSymbolKind.Predicate,
             GameEventScriptDiagnosticCodes.ValidateInvalidPredicate,
@@ -579,6 +600,7 @@ internal static class GesAstValidator
                 return StaticExpressionInfo.Other("tag");
 
             case TypeCheckExpressionNode:
+            case NothingCheckExpressionNode:
             case PredicateCallExpressionNode:
             case ExtensionPredicateExpressionNode:
                 return StaticExpressionInfo.Boolean;
@@ -638,7 +660,7 @@ internal static class GesAstValidator
             _ => StaticExpressionInfo.Other(typeName)
         };
 
-    private static string? InferImmutableBindingType(ExpressionNode expression)
+    private static string? InferImmutableBindingType(ExpressionNode expression, IReadOnlyDictionary<string, ExpressionNode> constants)
     {
         if (expression is IntegerLiteralExpressionNode)
         {
@@ -648,6 +670,21 @@ internal static class GesAstValidator
         if (expression is FloatLiteralExpressionNode floatingPoint && GameEventScriptNumber.CanRepresentAsInteger(floatingPoint.Value))
         {
             return "integer";
+        }
+
+        if (expression is TypeCastExpressionNode typeCast)
+        {
+            return typeCast.TypeName;
+        }
+
+        if (expression is TypeConstructorExpressionNode typeConstructor)
+        {
+            return typeConstructor.TypeName;
+        }
+
+        if (expression is ConstantReferenceExpressionNode constant && constants.TryGetValue(constant.Name, out var value))
+        {
+            return InferImmutableBindingType(value, constants);
         }
 
         return null;
@@ -663,6 +700,7 @@ internal static class GesAstValidator
     {
         var result = ClassifyExpression(seedExpression, callables, typeDefinitions, declaredTypes, new HashSet<string>(StringComparer.Ordinal));
         if (result.TypeName is "integer" ||
+            seedExpression is ConstantReferenceExpressionNode constant && declaredTypes.TryGetValue("$" + constant.Name, out var constantType) && constantType == "integer" ||
             HasExplicitNumberSeedConversion(seedExpression, declaredTypes) ||
             seedExpression is FloatLiteralExpressionNode floatingPoint && GameEventScriptNumber.CanRepresentAsInteger(floatingPoint.Value))
         {
@@ -671,8 +709,8 @@ internal static class GesAstValidator
 
         errors.Add(
             parsedScriptContext,
-            "A random seed must be statically known as a unitless integer or explicitly converted with 'as :number'; at runtime the result is used as a seed only when it is an exact unitless signed 64-bit integer.",
-            "number",
+            "A random seed must be statically known as a unitless integer or explicitly converted with 'as :Number'; at runtime the result is used as a seed only when it is an exact unitless signed 64-bit integer.",
+            "Number",
             GameEventScriptSymbolKind.Type,
             GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor,
             seedExpression);
@@ -860,6 +898,7 @@ internal static class GesAstValidator
             switch (expression)
             {
                 case NothingLiteralExpressionNode:
+                case ConstantReferenceExpressionNode:
                     return;
 
                 case IdentifierExpressionNode identifierExpression:
@@ -868,12 +907,12 @@ internal static class GesAstValidator
                         identifierExpression.Name,
                         identifierExpression.Name,
                         GameEventScriptSymbolKind.Variable,
-                        $"Identifier '{identifierExpression.Name}' must use identifier casing (start lowercase, letters only, optional final _index suffix)",
+                        $"Identifier '{identifierExpression.Name}' must start lowercase, contain ASCII letters or digits, and may use one canonical final _index suffix",
                         errors);
                     return;
 
                 case CallExpressionNode call:
-                    ValidateIdentifierCase(
+                    ValidateCallableCase(
                         parsedScriptContext,
                         call.Name,
                         call.Name,
@@ -887,7 +926,7 @@ internal static class GesAstValidator
                         var argument = call.ArgumentList.Arguments[argumentIndex];
                         if (argument.Label is not null)
                         {
-                            ValidateIdentifierCase(
+                            ValidateArgumentLabelCase(
                                 parsedScriptContext,
                                 argument.Label,
                                 call.Name,
@@ -907,12 +946,12 @@ internal static class GesAstValidator
                         handlerLiteral.Message,
                         handlerLiteral.Message,
                         GameEventScriptSymbolKind.Handler,
-                        $"Handler literal '{handlerLiteral.Message}' must use message casing (start uppercase and contain only letters)",
+                        $"Handler literal '{handlerLiteral.Message}' must start uppercase and contain only ASCII letters or digits",
                         errors);
                     for (var parameterIndex = 0; parameterIndex < handlerLiteral.Parameters.Count; parameterIndex++)
                     {
                         var parameter = handlerLiteral.Parameters[parameterIndex];
-                        ValidateIdentifierCase(
+                        ValidateArgumentLabelCase(
                             parsedScriptContext,
                             parameter,
                             handlerLiteral.Message,
@@ -930,7 +969,7 @@ internal static class GesAstValidator
                         messageLiteral.Message,
                         messageLiteral.Message,
                         GameEventScriptSymbolKind.Message,
-                        $"Message literal '{messageLiteral.Message}' must use message casing (start uppercase and contain only letters)",
+                        $"Message literal '{messageLiteral.Message}' must start uppercase and contain only ASCII letters or digits",
                         errors);
                     ValidateDuplicateNamedArguments(parsedScriptContext, messageLiteral.Message, messageLiteral.Arguments, errors);
                     for (var argumentIndex = 0; argumentIndex < messageLiteral.Arguments.Count; argumentIndex++)
@@ -938,7 +977,7 @@ internal static class GesAstValidator
                         var argument = messageLiteral.Arguments[argumentIndex];
                         if (argument.Label is not null)
                         {
-                            ValidateIdentifierCase(
+                            ValidateArgumentLabelCase(
                                 parsedScriptContext,
                                 argument.Label,
                                 messageLiteral.Message,
@@ -966,7 +1005,7 @@ internal static class GesAstValidator
                     return;
 
                 case PredicateCallExpressionNode predicateCall:
-                    ValidateIdentifierCase(
+                    ValidateCallableCase(
                         parsedScriptContext,
                         predicateCall.PredicateName,
                         predicateCall.PredicateName,
@@ -1069,12 +1108,18 @@ internal static class GesAstValidator
                     expression = typeCheck.Value;
                     continue;
 
+                case NothingCheckExpressionNode nothingCheck:
+                    expression = nothingCheck.Value;
+                    continue;
+
                 case TypeCastExpressionNode typeCast:
                     ValidateRemovedType(parsedScriptContext, typeCast.TypeName, typeCast, errors);
                     expression = typeCast.Value;
                     continue;
 
                 case MemberAccessExpressionNode memberAccess:
+                    ValidateArgumentLabelCase(parsedScriptContext, memberAccess.Member, memberAccess.Member, GameEventScriptSymbolKind.Variable,
+                        $"Member name '{memberAccess.Member}' must start with a lowercase ASCII letter and contain only ASCII letters or digits", errors);
                     expression = memberAccess.Target;
                     continue;
 
@@ -1096,6 +1141,8 @@ internal static class GesAstValidator
                     for (var entryIndex = 0; entryIndex < dictionary.Entries.Count; entryIndex++)
                     {
                         var entry = dictionary.Entries[entryIndex];
+                        ValidateArgumentLabelCase(parsedScriptContext, entry.Key, entry.Key, GameEventScriptSymbolKind.Variable,
+                            $"Map key '{entry.Key}' must start with a lowercase ASCII letter and contain only ASCII letters or digits", errors);
                         ValidateExpressionReferences(parsedScriptContext, entry.Value, callables, typeDefinitions, errors, declaredTypes);
                     }
 
@@ -1504,7 +1551,7 @@ internal static class GesAstValidator
             var argument = constructor.Arguments[argumentIndex];
             if (argument.Label is not null)
             {
-                ValidateIdentifierCase(
+                ValidateArgumentLabelCase(
                     parsedScriptContext,
                     argument.Label,
                     constructor.TypeName,
@@ -1514,12 +1561,6 @@ internal static class GesAstValidator
             }
 
             ValidateExpressionReferences(parsedScriptContext, argument.Expression, callables, typeDefinitions, errors, declaredTypes);
-        }
-
-        if (constructor.TypeName is "optional" or "set" or "uuid" or "ref")
-        {
-            ValidateRemovedType(parsedScriptContext, constructor.TypeName, constructor, errors);
-            return;
         }
 
         if (IsBuiltinConstructorType(constructor.TypeName))
@@ -1704,7 +1745,7 @@ internal static class GesAstValidator
         {
             errors.Add(
                 parsedScriptContext,
-                "Type ':uuid' has been removed; use ':text' or ':integer' ids in scripts.",
+                "Type ':Uuid' has been removed; use ':Text' or ':Number' ids in scripts.",
                 typeName,
                 GameEventScriptSymbolKind.Type,
                 GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor,
@@ -1833,6 +1874,18 @@ internal static class GesAstValidator
             GameEventScriptDiagnosticCodes.ValidateInvalidIdentifierCase);
     }
 
+    private static void ValidateCallableCase(ParsedScript parsedScriptContext, string name, string symbol, GameEventScriptSymbolKind symbolKind, string message, GesValidationErrors errors)
+    {
+        if (GameEventScriptText.IsCallableName(name)) return;
+        errors.Add(parsedScriptContext, message, symbol, symbolKind, GameEventScriptDiagnosticCodes.ValidateInvalidIdentifierCase);
+    }
+
+    private static void ValidateArgumentLabelCase(ParsedScript parsedScriptContext, string name, string symbol, GameEventScriptSymbolKind symbolKind, string message, GesValidationErrors errors)
+    {
+        if (GameEventScriptText.IsArgumentLabel(name)) return;
+        errors.Add(parsedScriptContext, message, symbol, symbolKind, GameEventScriptDiagnosticCodes.ValidateInvalidIdentifierCase);
+    }
+
     private static void ValidateMessageCase(ParsedScript parsedScriptContext, string name, string symbol, GameEventScriptSymbolKind symbolKind, string message, GesValidationErrors errors)
     {
         if (IsMessageCase(name))
@@ -1852,10 +1905,5 @@ internal static class GesAstValidator
         => GameEventScriptText.IsIdentifier(name);
 
     private static bool IsMessageCase(string name)
-    {
-        if (string.IsNullOrEmpty(name) || !GameEventScriptText.IsAsciiUpper(name[0])) return false;
-        for (var index = 1; index < name.Length; index++)
-            if (!GameEventScriptText.IsAsciiLetter(name[index])) return false;
-        return true;
-    }
+        => GameEventScriptText.IsMessageName(name);
 }

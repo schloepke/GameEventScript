@@ -41,7 +41,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixIQ
+module atomicmathmatrixiq
 on Start {
   let a be #nan
   let b be nothing
@@ -56,8 +56,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: clamp a between b and vNothing, integer: clamp a between b and vInteger, float: clamp a between b and vFloat, percentage: clamp a between b and vPercentage, meter: clamp a between b and vMeter, boolean: clamp a between b and vBoolean, textNumber: clamp a between b and vTextNumber, textInvalid: clamp a between b and vTextInvalid, tagPi: clamp a between b and vTagPi, tagNan: clamp a between b and vTagNan, tagInfinity: clamp a between b and vTagInfinity, vector: clamp a between b and vVector, point: clamp a between b and vPoint)
 }
 ```
@@ -81,43 +81,43 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "float"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "percentage"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "meter"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "tagPi"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "tagNan"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "tagInfinity"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "vector"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "point"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -145,7 +145,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixIR
+module atomicmathmatrixir
 on Start {
   let a be #nan
   let b be 10
@@ -160,8 +160,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: clamp a between b and vNothing, integer: clamp a between b and vInteger, float: clamp a between b and vFloat, percentage: clamp a between b and vPercentage, meter: clamp a between b and vMeter, boolean: clamp a between b and vBoolean, textNumber: clamp a between b and vTextNumber, textInvalid: clamp a between b and vTextInvalid, tagPi: clamp a between b and vTagPi, tagNan: clamp a between b and vTagNan, tagInfinity: clamp a between b and vTagInfinity, vector: clamp a between b and vVector, point: clamp a between b and vPoint)
 }
 ```
@@ -185,53 +185,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -260,7 +260,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixIS
+module atomicmathmatrixis
 on Start {
   let a be #nan
   let b be 10.3
@@ -275,8 +275,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: clamp a between b and vNothing, integer: clamp a between b and vInteger, float: clamp a between b and vFloat, percentage: clamp a between b and vPercentage, meter: clamp a between b and vMeter, boolean: clamp a between b and vBoolean, textNumber: clamp a between b and vTextNumber, textInvalid: clamp a between b and vTextInvalid, tagPi: clamp a between b and vTagPi, tagNan: clamp a between b and vTagNan, tagInfinity: clamp a between b and vTagInfinity, vector: clamp a between b and vVector, point: clamp a between b and vPoint)
 }
 ```
@@ -300,53 +300,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -375,7 +375,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixIT
+module atomicmathmatrixit
 on Start {
   let a be #nan
   let b be 10%
@@ -390,8 +390,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: clamp a between b and vNothing, integer: clamp a between b and vInteger, float: clamp a between b and vFloat, percentage: clamp a between b and vPercentage, meter: clamp a between b and vMeter, boolean: clamp a between b and vBoolean, textNumber: clamp a between b and vTextNumber, textInvalid: clamp a between b and vTextInvalid, tagPi: clamp a between b and vTagPi, tagNan: clamp a between b and vTagNan, tagInfinity: clamp a between b and vTagInfinity, vector: clamp a between b and vVector, point: clamp a between b and vPoint)
 }
 ```
@@ -415,53 +415,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -490,7 +490,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixIU
+module atomicmathmatrixiu
 on Start {
   let a be #nan
   let b be 10m
@@ -505,8 +505,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: clamp a between b and vNothing, integer: clamp a between b and vInteger, float: clamp a between b and vFloat, percentage: clamp a between b and vPercentage, meter: clamp a between b and vMeter, boolean: clamp a between b and vBoolean, textNumber: clamp a between b and vTextNumber, textInvalid: clamp a between b and vTextInvalid, tagPi: clamp a between b and vTagPi, tagNan: clamp a between b and vTagNan, tagInfinity: clamp a between b and vTagInfinity, vector: clamp a between b and vVector, point: clamp a between b and vPoint)
 }
 ```
@@ -530,53 +530,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -605,7 +605,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixIV
+module atomicmathmatrixiv
 on Start {
   let a be #nan
   let b be true
@@ -620,8 +620,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: clamp a between b and vNothing, integer: clamp a between b and vInteger, float: clamp a between b and vFloat, percentage: clamp a between b and vPercentage, meter: clamp a between b and vMeter, boolean: clamp a between b and vBoolean, textNumber: clamp a between b and vTextNumber, textInvalid: clamp a between b and vTextInvalid, tagPi: clamp a between b and vTagPi, tagNan: clamp a between b and vTagNan, tagInfinity: clamp a between b and vTagInfinity, vector: clamp a between b and vVector, point: clamp a between b and vPoint)
 }
 ```
@@ -645,53 +645,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -720,7 +720,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixIW
+module atomicmathmatrixiw
 on Start {
   let a be #nan
   let b be '10.3'
@@ -735,8 +735,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: clamp a between b and vNothing, integer: clamp a between b and vInteger, float: clamp a between b and vFloat, percentage: clamp a between b and vPercentage, meter: clamp a between b and vMeter, boolean: clamp a between b and vBoolean, textNumber: clamp a between b and vTextNumber, textInvalid: clamp a between b and vTextInvalid, tagPi: clamp a between b and vTagPi, tagNan: clamp a between b and vTagNan, tagInfinity: clamp a between b and vTagInfinity, vector: clamp a between b and vVector, point: clamp a between b and vPoint)
 }
 ```
@@ -760,43 +760,43 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "float"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "percentage"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "meter"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "tagPi"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "tagNan"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "tagInfinity"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "vector"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "point"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -824,7 +824,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixIX
+module atomicmathmatrixix
 on Start {
   let a be #nan
   let b be 'hello'
@@ -839,8 +839,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: clamp a between b and vNothing, integer: clamp a between b and vInteger, float: clamp a between b and vFloat, percentage: clamp a between b and vPercentage, meter: clamp a between b and vMeter, boolean: clamp a between b and vBoolean, textNumber: clamp a between b and vTextNumber, textInvalid: clamp a between b and vTextInvalid, tagPi: clamp a between b and vTagPi, tagNan: clamp a between b and vTagNan, tagInfinity: clamp a between b and vTagInfinity, vector: clamp a between b and vVector, point: clamp a between b and vPoint)
 }
 ```
@@ -864,53 +864,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -939,7 +939,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixIY
+module atomicmathmatrixiy
 on Start {
   let a be #nan
   let b be pi
@@ -954,8 +954,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: clamp a between b and vNothing, integer: clamp a between b and vInteger, float: clamp a between b and vFloat, percentage: clamp a between b and vPercentage, meter: clamp a between b and vMeter, boolean: clamp a between b and vBoolean, textNumber: clamp a between b and vTextNumber, textInvalid: clamp a between b and vTextInvalid, tagPi: clamp a between b and vTagPi, tagNan: clamp a between b and vTagNan, tagInfinity: clamp a between b and vTagInfinity, vector: clamp a between b and vVector, point: clamp a between b and vPoint)
 }
 ```
@@ -979,53 +979,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -1054,7 +1054,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixIZ
+module atomicmathmatrixiz
 on Start {
   let a be #nan
   let b be #nan
@@ -1069,8 +1069,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: clamp a between b and vNothing, integer: clamp a between b and vInteger, float: clamp a between b and vFloat, percentage: clamp a between b and vPercentage, meter: clamp a between b and vMeter, boolean: clamp a between b and vBoolean, textNumber: clamp a between b and vTextNumber, textInvalid: clamp a between b and vTextInvalid, tagPi: clamp a between b and vTagPi, tagNan: clamp a between b and vTagNan, tagInfinity: clamp a between b and vTagInfinity, vector: clamp a between b and vVector, point: clamp a between b and vPoint)
 }
 ```
@@ -1094,53 +1094,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -1169,7 +1169,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixJA
+module atomicmathmatrixja
 on Start {
   let a be #nan
   let b be infinity
@@ -1184,8 +1184,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: clamp a between b and vNothing, integer: clamp a between b and vInteger, float: clamp a between b and vFloat, percentage: clamp a between b and vPercentage, meter: clamp a between b and vMeter, boolean: clamp a between b and vBoolean, textNumber: clamp a between b and vTextNumber, textInvalid: clamp a between b and vTextInvalid, tagPi: clamp a between b and vTagPi, tagNan: clamp a between b and vTagNan, tagInfinity: clamp a between b and vTagInfinity, vector: clamp a between b and vVector, point: clamp a between b and vPoint)
 }
 ```
@@ -1209,53 +1209,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -1284,10 +1284,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixJB
+module atomicmathmatrixjb
 on Start {
   let a be #nan
-  let b be :vector(1, 2, 3)
+  let b be :Vector(1, 2, 3)
   let vNothing be nothing
   let vInteger be 10
   let vFloat be 10.3
@@ -1299,8 +1299,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: clamp a between b and vNothing, integer: clamp a between b and vInteger, float: clamp a between b and vFloat, percentage: clamp a between b and vPercentage, meter: clamp a between b and vMeter, boolean: clamp a between b and vBoolean, textNumber: clamp a between b and vTextNumber, textInvalid: clamp a between b and vTextInvalid, tagPi: clamp a between b and vTagPi, tagNan: clamp a between b and vTagNan, tagInfinity: clamp a between b and vTagInfinity, vector: clamp a between b and vVector, point: clamp a between b and vPoint)
 }
 ```
@@ -1324,53 +1324,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -1399,10 +1399,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixJC
+module atomicmathmatrixjc
 on Start {
   let a be #nan
-  let b be :point(1, 2, 3)
+  let b be :Point(1, 2, 3)
   let vNothing be nothing
   let vInteger be 10
   let vFloat be 10.3
@@ -1414,8 +1414,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: clamp a between b and vNothing, integer: clamp a between b and vInteger, float: clamp a between b and vFloat, percentage: clamp a between b and vPercentage, meter: clamp a between b and vMeter, boolean: clamp a between b and vBoolean, textNumber: clamp a between b and vTextNumber, textInvalid: clamp a between b and vTextInvalid, tagPi: clamp a between b and vTagPi, tagNan: clamp a between b and vTagNan, tagInfinity: clamp a between b and vTagInfinity, vector: clamp a between b and vVector, point: clamp a between b and vPoint)
 }
 ```
@@ -1439,52 +1439,52 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```

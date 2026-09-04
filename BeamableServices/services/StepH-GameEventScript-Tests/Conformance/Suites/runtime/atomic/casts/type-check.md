@@ -41,10 +41,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCheckFromNothing
+module atomiccheckfromnothing
 on Start {
   let source be nothing
-  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)
+  emit Done(isNothing: source is nothing, isBoolean: source is :Boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :Percentage, isText: source is :Text, isTag: source is :Tag, isMeter: source is :Quantity(m), isVector: source is :Vector, isPoint: source is :Point, isList: source is :List, isMap: source is :Map, isDice: source is :Dice, isRange: source is :Range, isMessage: source is :Message, isHandler: source is :Handler, isSeries: source is :Series)
 }
 ```
 
@@ -67,75 +67,75 @@ steps:
         args:
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isFractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPercentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isVector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -164,10 +164,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCheckFromBoolean
+module atomiccheckfromboolean
 on Start {
   let source be true
-  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)
+  emit Done(isNothing: source is nothing, isBoolean: source is :Boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :Percentage, isText: source is :Text, isTag: source is :Tag, isMeter: source is :Quantity(m), isVector: source is :Vector, isPoint: source is :Point, isList: source is :List, isMap: source is :Map, isDice: source is :Dice, isRange: source is :Range, isMessage: source is :Message, isHandler: source is :Handler, isSeries: source is :Series)
 }
 ```
 
@@ -190,75 +190,75 @@ steps:
         args:
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isFractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPercentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isVector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -287,10 +287,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCheckFromInteger
+module atomiccheckfrominteger
 on Start {
   let source be 12
-  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)
+  emit Done(isNothing: source is nothing, isBoolean: source is :Boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :Percentage, isText: source is :Text, isTag: source is :Tag, isMeter: source is :Quantity(m), isVector: source is :Vector, isPoint: source is :Point, isList: source is :List, isMap: source is :Map, isDice: source is :Dice, isRange: source is :Range, isMessage: source is :Message, isHandler: source is :Handler, isSeries: source is :Series)
 }
 ```
 
@@ -313,75 +313,75 @@ steps:
         args:
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isFractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPercentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isVector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -410,10 +410,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCheckFromFloat
+module atomiccheckfromfloat
 on Start {
   let source be 12.5
-  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)
+  emit Done(isNothing: source is nothing, isBoolean: source is :Boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :Percentage, isText: source is :Text, isTag: source is :Tag, isMeter: source is :Quantity(m), isVector: source is :Vector, isPoint: source is :Point, isList: source is :List, isMap: source is :Map, isDice: source is :Dice, isRange: source is :Range, isMessage: source is :Message, isHandler: source is :Handler, isSeries: source is :Series)
 }
 ```
 
@@ -436,75 +436,75 @@ steps:
         args:
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isFractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isPercentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isVector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -533,10 +533,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCheckFromMeter
+module atomiccheckfrommeter
 on Start {
   let source be 12m
-  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)
+  emit Done(isNothing: source is nothing, isBoolean: source is :Boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :Percentage, isText: source is :Text, isTag: source is :Tag, isMeter: source is :Quantity(m), isVector: source is :Vector, isPoint: source is :Point, isList: source is :List, isMap: source is :Map, isDice: source is :Dice, isRange: source is :Range, isMessage: source is :Message, isHandler: source is :Handler, isSeries: source is :Series)
 }
 ```
 
@@ -559,75 +559,75 @@ steps:
         args:
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isFractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPercentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isVector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -656,10 +656,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCheckFromPercentage
+module atomiccheckfrompercentage
 on Start {
   let source be 25%
-  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)
+  emit Done(isNothing: source is nothing, isBoolean: source is :Boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :Percentage, isText: source is :Text, isTag: source is :Tag, isMeter: source is :Quantity(m), isVector: source is :Vector, isPoint: source is :Point, isList: source is :List, isMap: source is :Map, isDice: source is :Dice, isRange: source is :Range, isMessage: source is :Message, isHandler: source is :Handler, isSeries: source is :Series)
 }
 ```
 
@@ -682,75 +682,75 @@ steps:
         args:
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isFractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isPercentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isVector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -779,10 +779,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCheckFromNumericText
+module atomiccheckfromnumerictext
 on Start {
   let source be '12.5'
-  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)
+  emit Done(isNothing: source is nothing, isBoolean: source is :Boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :Percentage, isText: source is :Text, isTag: source is :Tag, isMeter: source is :Quantity(m), isVector: source is :Vector, isPoint: source is :Point, isList: source is :List, isMap: source is :Map, isDice: source is :Dice, isRange: source is :Range, isMessage: source is :Message, isHandler: source is :Handler, isSeries: source is :Series)
 }
 ```
 
@@ -805,75 +805,75 @@ steps:
         args:
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isFractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPercentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isVector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -902,10 +902,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCheckFromInvalidText
+module atomiccheckfrominvalidtext
 on Start {
   let source be 'hello'
-  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)
+  emit Done(isNothing: source is nothing, isBoolean: source is :Boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :Percentage, isText: source is :Text, isTag: source is :Tag, isMeter: source is :Quantity(m), isVector: source is :Vector, isPoint: source is :Point, isList: source is :List, isMap: source is :Map, isDice: source is :Dice, isRange: source is :Range, isMessage: source is :Message, isHandler: source is :Handler, isSeries: source is :Series)
 }
 ```
 
@@ -928,75 +928,75 @@ steps:
         args:
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isFractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPercentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isVector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1025,10 +1025,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCheckFromPiTag
+module atomiccheckfrompitag
 on Start {
   let source be pi
-  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)
+  emit Done(isNothing: source is nothing, isBoolean: source is :Boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :Percentage, isText: source is :Text, isTag: source is :Tag, isMeter: source is :Quantity(m), isVector: source is :Vector, isPoint: source is :Point, isList: source is :List, isMap: source is :Map, isDice: source is :Dice, isRange: source is :Range, isMessage: source is :Message, isHandler: source is :Handler, isSeries: source is :Series)
 }
 ```
 
@@ -1051,75 +1051,75 @@ steps:
         args:
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isFractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isPercentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isVector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1148,10 +1148,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCheckFromCustomTag
+module atomiccheckfromcustomtag
 on Start {
   let source be #custom
-  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)
+  emit Done(isNothing: source is nothing, isBoolean: source is :Boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :Percentage, isText: source is :Text, isTag: source is :Tag, isMeter: source is :Quantity(m), isVector: source is :Vector, isPoint: source is :Point, isList: source is :List, isMap: source is :Map, isDice: source is :Dice, isRange: source is :Range, isMessage: source is :Message, isHandler: source is :Handler, isSeries: source is :Series)
 }
 ```
 
@@ -1174,75 +1174,75 @@ steps:
         args:
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isFractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPercentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isVector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1271,10 +1271,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCheckFromVector
+module atomiccheckfromvector
 on Start {
-  let source be :vector(1, 2, 3)
-  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)
+  let source be :Vector(1, 2, 3)
+  emit Done(isNothing: source is nothing, isBoolean: source is :Boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :Percentage, isText: source is :Text, isTag: source is :Tag, isMeter: source is :Quantity(m), isVector: source is :Vector, isPoint: source is :Point, isList: source is :List, isMap: source is :Map, isDice: source is :Dice, isRange: source is :Range, isMessage: source is :Message, isHandler: source is :Handler, isSeries: source is :Series)
 }
 ```
 
@@ -1297,75 +1297,75 @@ steps:
         args:
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isFractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPercentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isVector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1394,10 +1394,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCheckFromPoint
+module atomiccheckfrompoint
 on Start {
-  let source be :point(4, 5, 6)
-  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)
+  let source be :Point(4, 5, 6)
+  emit Done(isNothing: source is nothing, isBoolean: source is :Boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :Percentage, isText: source is :Text, isTag: source is :Tag, isMeter: source is :Quantity(m), isVector: source is :Vector, isPoint: source is :Point, isList: source is :List, isMap: source is :Map, isDice: source is :Dice, isRange: source is :Range, isMessage: source is :Message, isHandler: source is :Handler, isSeries: source is :Series)
 }
 ```
 
@@ -1420,75 +1420,75 @@ steps:
         args:
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isFractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPercentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isVector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1517,10 +1517,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCheckFromList
+module atomiccheckfromlist
 on Start {
   let source be [1, 2, 3]
-  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)
+  emit Done(isNothing: source is nothing, isBoolean: source is :Boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :Percentage, isText: source is :Text, isTag: source is :Tag, isMeter: source is :Quantity(m), isVector: source is :Vector, isPoint: source is :Point, isList: source is :List, isMap: source is :Map, isDice: source is :Dice, isRange: source is :Range, isMessage: source is :Message, isHandler: source is :Handler, isSeries: source is :Series)
 }
 ```
 
@@ -1543,75 +1543,75 @@ steps:
         args:
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isFractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPercentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isVector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1640,10 +1640,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCheckFromMap
+module atomiccheckfrommap
 on Start {
   let source be [x: 1, y: 2, z: 3]
-  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)
+  emit Done(isNothing: source is nothing, isBoolean: source is :Boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :Percentage, isText: source is :Text, isTag: source is :Tag, isMeter: source is :Quantity(m), isVector: source is :Vector, isPoint: source is :Point, isList: source is :List, isMap: source is :Map, isDice: source is :Dice, isRange: source is :Range, isMessage: source is :Message, isHandler: source is :Handler, isSeries: source is :Series)
 }
 ```
 
@@ -1666,75 +1666,75 @@ steps:
         args:
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isFractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPercentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isVector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1763,10 +1763,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCheckFromDice
+module atomiccheckfromdice
 on Start {
-  let source as :dice be [3, 2, 1]
-  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)
+  let source be ([3, 2, 1]) as :Dice
+  emit Done(isNothing: source is nothing, isBoolean: source is :Boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :Percentage, isText: source is :Text, isTag: source is :Tag, isMeter: source is :Quantity(m), isVector: source is :Vector, isPoint: source is :Point, isList: source is :List, isMap: source is :Map, isDice: source is :Dice, isRange: source is :Range, isMessage: source is :Message, isHandler: source is :Handler, isSeries: source is :Series)
 }
 ```
 
@@ -1789,75 +1789,75 @@ steps:
         args:
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isFractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPercentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isVector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1886,10 +1886,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCheckFromRange
+module atomiccheckfromrange
 on Start {
-  let source as :range be from 1 to 3
-  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)
+  let source be (from 1 to 3) as :Range
+  emit Done(isNothing: source is nothing, isBoolean: source is :Boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :Percentage, isText: source is :Text, isTag: source is :Tag, isMeter: source is :Quantity(m), isVector: source is :Vector, isPoint: source is :Point, isList: source is :List, isMap: source is :Map, isDice: source is :Dice, isRange: source is :Range, isMessage: source is :Message, isHandler: source is :Handler, isSeries: source is :Series)
 }
 ```
 
@@ -1912,74 +1912,74 @@ steps:
         args:
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isFractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPercentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isVector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```

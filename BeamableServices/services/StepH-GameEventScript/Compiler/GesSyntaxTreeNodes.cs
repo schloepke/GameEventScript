@@ -30,12 +30,15 @@ internal abstract record ScriptNode
 internal sealed record ParsedScript(
     string ModuleName,
     string SourceName,
+    IReadOnlyList<ConstantDefinitionNode> ConstantDefinitions,
     IReadOnlyList<TypeDefinitionNode> TypeDefinitions,
     IReadOnlyList<PredicateDefinitionNode> PredicateDefinitions,
     IReadOnlyList<FunctionDefinitionNode> FunctionDefinitions,
     IReadOnlyList<EventHandlerNode> Handlers) : ScriptNode;
 
 // Type/Predicate/Function/Handler nodes
+
+internal sealed record ConstantDefinitionNode(string Name, ExpressionNode Value) : ScriptNode;
 
 internal sealed record ParameterNode(string? ExternalLabel, string LocalName, string? DeclaredType = null) : ScriptNode
 {
@@ -154,7 +157,7 @@ internal enum PublishStatementKind
 }
 
 internal sealed record PublishStatementNode(PublishStatementKind Kind, ExpressionNode MessageExpression, IReadOnlyList<ExpressionNode> TagExpressions) : StatementNode;
-internal sealed record LetStatementNode(string Identifier, string? DeclaredType, ExpressionNode Expression) : StatementNode;
+internal sealed record LetStatementNode(string Identifier, ExpressionNode Expression) : StatementNode;
 internal sealed record StatementBodyNode(bool IsBlock, IReadOnlyList<StatementNode> Statements) : ScriptNode;
 internal sealed record IfStatementNode(ExpressionNode Condition, StatementBodyNode ThenBody, StatementBodyNode? ElseBody) : StatementNode;
 internal sealed record ForStatementNode(string Identifier, IterationSourceNode Source, StatementBodyNode Body) : StatementNode;
@@ -320,6 +323,7 @@ internal static class GesOperatorText
 
 internal sealed record IdentifierExpressionNode(string Name) : ExpressionNode;
 internal sealed record TagLiteralExpressionNode(string Name) : ExpressionNode;
+internal sealed record ConstantReferenceExpressionNode(string Name) : ExpressionNode;
 internal sealed record HandlerLiteralExpressionNode(string Message, IReadOnlyList<ParameterNode> ParameterList) : ExpressionNode
 {
     public IReadOnlyList<string> Parameters { get; } = GesSyntaxTreeNodeLists.ToParameterNames(ParameterList);
@@ -374,6 +378,7 @@ internal sealed record BinaryExpressionNode(ExpressionNode Left, GesBinaryOperat
 internal sealed record PredicateCallExpressionNode(ExpressionNode Value, string PredicateName) : ExpressionNode;
 internal sealed record ExtensionPredicateExpressionNode(ExpressionNode Value, string ExtensionName, string FunctionName) : ExpressionNode;
 internal sealed record TypeCheckExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;
+internal sealed record NothingCheckExpressionNode(ExpressionNode Value) : ExpressionNode;
 internal sealed record TypeCastExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;
 internal sealed record DiceCountPatternNode(int Count, ExpressionNode? Face) : DicePatternNode;
 internal sealed record MemberAccessExpressionNode(ExpressionNode Target, string Member) : ExpressionNode;

@@ -51,15 +51,15 @@ internal static class GameEventScriptExternalTypeValueConverter
         var result = new GesValue();
         switch (typeName)
         {
-            case "nothing":
+            case "Nothing":
                 result.SetNothing();
                 return result;
-            case "tag":
+            case "Tag":
                 return CoerceToTag(in value);
-            case "text":
+            case "Text":
                 result.SetText(value.ToText);
                 return result;
-            case "percentage":
+            case "Percentage":
                 result.SetPercentage(value.AsNumeric);
                 return result;
             case "degree":
@@ -71,10 +71,10 @@ internal static class GameEventScriptExternalTypeValueConverter
             case "second":
                 result.SetFloat(value.AsNumeric, GameEventScriptBytecodeInstructionUnit.UnitSecond);
                 return result;
-            case "number":
+            case "Number":
                 result.SetFloat(value.AsNumeric);
                 return result;
-            case "boolean":
+            case "Boolean":
                 result.SetBoolean(value.IsTrue);
                 return result;
             default:

@@ -41,15 +41,15 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicSeriesTerm
+module atomicseriesterm
 on Start {
   let naturals be from 0 to 9
   let odd be from 1 to 9 step 2
   let fib be series fibonacci
   let fact be series factorial
   let values be [1, 2, 3]
-  let dice as :dice be [6, 4, 2]
-  let range as :range be from 1 to 3
+  let dice be ([6, 4, 2]) as :Dice
+  let range be (from 1 to 3) as :Range
   emit Done(naturalZero: naturals[1], naturalThree: naturals[4], oddFour: odd[5], fibSeven: fib[:term 7], factFive: fact[:term 5], invalidText: fib[:term 'x'], listTerm: values[:term 0], diceTerm: dice[:term 0], rangeTerm: range[:term 0])
 }
 ```
@@ -73,36 +73,36 @@ steps:
         args:
           - name: "naturalZero"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "naturalThree"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "oddFour"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9"
           - name: "fibSeven"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "13"
           - name: "factFive"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "120"
           - name: "invalidText"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "listTerm"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "diceTerm"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "rangeTerm"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -130,14 +130,14 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicSeriesTakeFirst
+module atomicseriestakefirst
 on Start {
   let naturals be from 0 to 9
   let odd be from 1 to 9 step 2
   let values be [1, 2, 3, 4]
-  let dice as :dice be [6, 5, 3, 1]
-  let range as :range be from 1 to 5
-  let floatRange as :range be from 1.5 to 3.5 step 0.5
+  let dice be ([6, 5, 3, 1]) as :Dice
+  let range be (from 1 to 5) as :Range
+  let floatRange be (from 1.5 to 3.5 step 0.5) as :Range
   let integerValue be 10
   emit Done(firstNaturals: naturals[:take first 4], firstOdd: odd[:take first 3], listFirst: values[:take first 2], diceFirst: dice[:take first 2], rangeFirst: range[:take first 3], floatRangeFirst: floatRange[:take first 2], invalid: integerValue[:take first 2])
 }
@@ -162,45 +162,45 @@ steps:
         args:
           - name: "firstNaturals"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "0"
               to: "3"
               step: "1"
           - name: "firstOdd"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "1"
               to: "5"
               step: "2"
           - name: "listFirst"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
           - name: "diceFirst"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 6
                 - 5
           - name: "rangeFirst"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "1"
               to: "3"
               step: "1"
           - name: "floatRangeFirst"
             value:
-              type: ":range"
+              type: ":Range.binary64"
               from: "1.5"
               to: "2"
               step: "0.5"
           - name: "invalid"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -228,15 +228,15 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicSeriesDropFirst
+module atomicseriesdropfirst
 on Start {
   let fib be series fibonacci
   let dropped be fib[:drop first 5]
   let values be [1, 2, 3, 4]
-  let dice as :dice be [6, 5, 3, 1]
-  let range as :range be from 1 to 5
+  let dice be ([6, 5, 3, 1]) as :Dice
+  let range be (from 1 to 5) as :Range
   let integerValue be 10
-  emit Done(droppedIsSeries: dropped is :series, droppedZero: dropped[:term 0], droppedTwo: dropped[:term 2], listDrop: values[:drop first 2], diceDrop: dice[:drop first 2], rangeDrop: range[:drop first 2], invalid: integerValue[:drop first 2])
+  emit Done(droppedIsSeries: dropped is :Series, droppedZero: dropped[:term 0], droppedTwo: dropped[:term 2], listDrop: values[:drop first 2], diceDrop: dice[:drop first 2], rangeDrop: range[:drop first 2], invalid: integerValue[:drop first 2])
 }
 ```
 
@@ -259,39 +259,39 @@ steps:
         args:
           - name: "droppedIsSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "droppedZero"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
           - name: "droppedTwo"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "13"
           - name: "listDrop"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
           - name: "diceDrop"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 3
                 - 1
           - name: "rangeDrop"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "3"
               to: "5"
               step: "1"
           - name: "invalid"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -319,13 +319,13 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicSeriesTakeLast
+module atomicseriestakelast
 on Start {
   let fib be series fibonacci
   let values be [1, 2, 3, 4]
-  let dice as :dice be [6, 5, 3, 1]
-  let range as :range be from 1 to 5
-  let descending as :range be from 5 to 1 step (0 - 2)
+  let dice be ([6, 5, 3, 1]) as :Dice
+  let range be (from 1 to 5) as :Range
+  let descending be (from 5 to 1 step (0 - 2)) as :Range
   emit Done(seriesLast: fib[:take last 2], listLast: values[:take last 2], diceLast: dice[:take last 2], rangeLast: range[:take last 2], descendingLast: descending[:take last 2])
 }
 ```
@@ -349,30 +349,30 @@ steps:
         args:
           - name: "seriesLast"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "listLast"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
           - name: "diceLast"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 3
                 - 1
           - name: "rangeLast"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "4"
               to: "5"
               step: "1"
           - name: "descendingLast"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "3"
               to: "1"
               step: "-2"
@@ -403,13 +403,13 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicSeriesDropLast
+module atomicseriesdroplast
 on Start {
   let fib be series fibonacci
   let values be [1, 2, 3, 4]
-  let dice as :dice be [6, 5, 3, 1]
-  let range as :range be from 1 to 5
-  let descending as :range be from 5 to 1 step (0 - 2)
+  let dice be ([6, 5, 3, 1]) as :Dice
+  let range be (from 1 to 5) as :Range
+  let descending be (from 5 to 1 step (0 - 2)) as :Range
   emit Done(seriesDropLast: fib[:drop last 2], listDropLast: values[:drop last 2], diceDropLast: dice[:drop last 2], rangeDropLast: range[:drop last 2], descendingDropLast: descending[:drop last 1])
 }
 ```
@@ -433,30 +433,30 @@ steps:
         args:
           - name: "seriesDropLast"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "listDropLast"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
           - name: "diceDropLast"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 6
                 - 5
           - name: "rangeDropLast"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "1"
               to: "3"
               step: "1"
           - name: "descendingDropLast"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "5"
               to: "3"
               step: "-2"

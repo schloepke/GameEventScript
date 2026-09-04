@@ -971,6 +971,39 @@ Abnahme:
 dotnet format --verify-no-changes passed for production and tests
 ```
 
+### Ergänzende Sprach- und Transportnamensbereinigung - DONE
+
+Nach Abschluss von Punkt 6 wurde die Namens- und Typoberfläche vor dem
+Monorepo-Port nochmals vereinheitlicht:
+
+- `constant $name be LITERAL` definiert programweite skalare
+  Compile-Time-Konstanten. Sie werden vollständig inlined und erzeugen weder
+  Bindings noch eigene `.gesb`-Daten oder Runtime-State.
+- Die alte Form `let name as :Type be expression` ist entfernt. Casts stehen
+  ausschließlich im Ausdruck: `let name be expression as :Type`.
+- Source-Typen und Typkonstruktoren sind PascalCase; dazu gehört auch
+  `:List[...]`. Selector- und Extension-Namen bleiben lowercase.
+- Module verwenden dot-separierte lowercase Komponenten mit optionalen Ziffern.
+  Allgemeine Namen dürfen Ziffern nach dem ersten Zeichen enthalten. Nur lokale
+  Variablen dürfen zusätzlich den kanonischen Suffix `_number` tragen.
+- Die Conformance-Transporttypen unterscheiden exakte Speicherung durch
+  `:Number.int64`/`:Number.binary64`, entsprechende Quantity-/Range-Varianten
+  und PascalCase für alle übrigen Kinds. `rangeKind` ist entfallen.
+- Lexer, Parser, AST-Validierung, `.gesb`-Validierung, Debug-/GESA-Snapshots,
+  Golden Binaries, Markdown-Conformance, TextMate-Bundles und normative
+  Spezifikationen wurden gemeinsam aktualisiert.
+
+Abnahme:
+
+```text
+1049/1049 Markdown conformance cases passed
+1166/1166 non-performance test executions passed
+5/5 explicit Markdown performance tests passed
+1/1 zero-allocation hot-path test passed
+Corpus-Fingerprint 8FED2D7804CE9D6A2A7D593AF4692B0CFB0D97F800DD72F52BFEDEA9132DE958
+dotnet format --verify-no-changes passed for production and tests
+```
+
 ## 7. Opcode- und Formatdefinition zentralisieren
 
 [Bytecode.md](/Users/stephan/Projects/BattleClub/BeamableServices/services/StepH-GameEventScript/Documentation/Specification/Bytecode.md) und die C#-Enums duplizieren momentan Informationen manuell.

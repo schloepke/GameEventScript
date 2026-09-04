@@ -57,12 +57,12 @@ steps:
     input:
       args:
         - name: value
-          value: { type: ":integer", value: "7" }
+          value: { type: ":Number.int64", value: "7" }
     local:
       - name: Pong
         args:
           - name: value
-            value: { type: ":integer", value: "7" }
+            value: { type: ":Number.int64", value: "7" }
 ```
 
 ---
@@ -100,12 +100,12 @@ steps:
     input:
       args:
         - name: value
-          value: { type: ":integer", value: "4" }
+          value: { type: ":Number.int64", value: "4" }
     local:
       - name: Done
         args:
           - name: value
-            value: { type: ":integer", value: "5" }
+            value: { type: ":Number.int64", value: "5" }
 ```
 
 ---
@@ -266,22 +266,22 @@ steps:
     input:
       args:
         - name: value
-          value: { type: ":integer", value: "1" }
+          value: { type: ":Number.int64", value: "1" }
     local:
       - name: Seen
         args:
           - name: value
-            value: { type: ":integer", value: "101" }
+            value: { type: ":Number.int64", value: "101" }
   second:
     input:
       args:
         - name: value
-          value: { type: ":integer", value: "1" }
+          value: { type: ":Number.int64", value: "1" }
     local:
       - name: Seen
         args:
           - name: value
-            value: { type: ":integer", value: "2" }
+            value: { type: ":Number.int64", value: "2" }
 ```
 
 ---
@@ -330,19 +330,19 @@ steps:
       - name: Tick
         args:
           - name: value
-            value: { type: ":integer", value: "1" }
+            value: { type: ":Number.int64", value: "1" }
       - name: Tick
         args:
           - name: value
-            value: { type: ":integer", value: "2" }
+            value: { type: ":Number.int64", value: "2" }
       - name: Tick
         args:
           - name: value
-            value: { type: ":integer", value: "3" }
+            value: { type: ":Number.int64", value: "3" }
       - name: Tick
         args:
           - name: value
-            value: { type: ":integer", value: "4" }
+            value: { type: ":Number.int64", value: "4" }
     runtimeLimits:
       exclude:
         - any: true
@@ -463,7 +463,7 @@ steps:
       - name: First
         args:
           - name: value
-            value: { type: ":integer", value: "6" }
+            value: { type: ":Number.int64", value: "6" }
       - name: Second
 ```
 
@@ -502,12 +502,12 @@ steps:
     input:
       args:
         - name: amount
-          value: { type: ":integer", value: "7" }
+          value: { type: ":Number.int64", value: "7" }
     local:
       - name: Seen
         args:
           - name: amount
-            value: { type: ":integer", value: "7" }
+            value: { type: ":Number.int64", value: "7" }
 ```
 
 ---

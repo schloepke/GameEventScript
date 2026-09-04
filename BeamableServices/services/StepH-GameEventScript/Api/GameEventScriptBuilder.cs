@@ -130,6 +130,7 @@ public sealed class GameEventScriptBuilder
         }
 
         var errors = new GesValidationErrors();
+        var constants = BuildConstantDefinitionMap(modules, errors);
         var typeDefinitions = BuildTypeDefinitionMap(modules, errors);
         var validationTypeDefinitions = BuildValidationTypeDefinitionMap(typeDefinitions, _externalTypeCatalog, modules, errors);
         var predicateDefinitions = BuildPredicateDefinitionMap(modules, errors);
@@ -157,7 +158,7 @@ public sealed class GameEventScriptBuilder
 
         foreach (var module in modules)
         {
-            GesAstValidator.ValidateModule(module, callables, validationTypeDefinitions, compileOptions, errors);
+            GesAstValidator.ValidateModule(module, callables, validationTypeDefinitions, constants, compileOptions, errors);
         }
 
         errors.ThrowIfAny();
@@ -168,29 +169,50 @@ public sealed class GameEventScriptBuilder
             var source = _sources[index];
             sourceDocuments[index] = new GesSourceDocument(checked((uint)index), string.IsNullOrEmpty(source.SourceName) ? "UnknownSource" : source.SourceName!, source.Text);
         }
-        var moduleResult = new GesSyntaxTreeModule(ResolveModuleName(modules), typeDefinitions, callables, handlers, _externalTypeCatalog, sourceDocuments);
+        var moduleResult = new GesSyntaxTreeModule(ResolveModuleName(modules, errors), constants, typeDefinitions, callables, handlers, _externalTypeCatalog, sourceDocuments);
+        errors.ThrowIfAny();
         return GesAstOptimizer.Optimize(moduleResult);
     }
 
     private sealed record SourceInput(string Text, string? SourceName);
 
-    private static string ResolveModuleName(IReadOnlyList<ParsedScript> modules)
-        => modules.Count switch
-        {
-            0 => "EmptyModule",
-            1 => modules[0].ModuleName,
-            _ => JoinModuleNames(modules)
-        };
-
-    private static string JoinModuleNames(IReadOnlyList<ParsedScript> modules)
+    private static string ResolveModuleName(IReadOnlyList<ParsedScript> modules, GesValidationErrors errors)
     {
-        var result = modules[0].ModuleName;
-        for (var index = 1; index < modules.Count; index++)
+        var result = string.Empty;
+        for (var index = 0; index < modules.Count; index++)
         {
-            result += "+" + modules[index].ModuleName;
+            var candidate = modules[index].ModuleName;
+            if (string.IsNullOrEmpty(candidate)) continue;
+            if (string.IsNullOrEmpty(result))
+            {
+                result = candidate;
+                continue;
+            }
+
+            if (!string.Equals(result, candidate, StringComparison.Ordinal))
+            {
+                errors.Add(modules[index], $"Module '{candidate}' does not match module '{result}' declared by another source", candidate, GlobalDefinition, ValidateInvalidIdentifierCase);
+            }
         }
 
         return result;
+    }
+
+    private static Dictionary<string, ExpressionNode> BuildConstantDefinitionMap(IReadOnlyList<ParsedScript> modules, GesValidationErrors errors)
+    {
+        var map = new Dictionary<string, ExpressionNode>(StringComparer.Ordinal);
+        foreach (var module in modules)
+        {
+            foreach (var definition in module.ConstantDefinitions)
+            {
+                if (!map.TryAdd(definition.Name, definition.Value))
+                {
+                    errors.Add(module, $"Constant '${definition.Name}' is defined more than once", definition.Name, GlobalDefinition, ValidateDuplicateConstant, definition);
+                }
+            }
+        }
+
+        return map;
     }
 
     private static ParsedScript? FindModuleWithCallable(IReadOnlyList<ParsedScript> modules, string name, bool function)

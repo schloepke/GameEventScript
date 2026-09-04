@@ -184,6 +184,9 @@ internal static class GesShadowingValidator
             case TypeCheckExpressionNode check:
                 VisitExpression(check.Value, scope, script, errors);
                 break;
+            case NothingCheckExpressionNode check:
+                VisitExpression(check.Value, scope, script, errors);
+                break;
             case TypeCastExpressionNode cast:
                 VisitExpression(cast.Value, scope, script, errors);
                 break;

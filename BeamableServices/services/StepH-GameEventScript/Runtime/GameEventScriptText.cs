@@ -67,24 +67,48 @@ internal static class GameEventScriptText
     }
 
     internal static bool IsMessageName(string value)
-    {
-        if (value.Length == 0 || !IsAsciiLetter(value[0])) return false;
-        for (var index = 1; index < value.Length; index++)
-            if (!IsAsciiLetter(value[index])) return false;
-        return true;
-    }
+        => IsUpperName(value);
 
     internal static bool IsIdentifier(string value)
-        => IsName(value, requireLowerFirst: true, allowNumericSuffix: true);
+        => IsVariableName(value);
+
+    internal static bool IsVariableName(string value)
+        => IsLowerName(value, allowSubscript: true);
+
+    internal static bool IsCallableName(string value)
+        => IsLowerName(value, allowSubscript: false);
+
+    internal static bool IsArgumentLabel(string value)
+        => IsLowerName(value, allowSubscript: false);
+
+    internal static bool IsFieldName(string value)
+        => IsLowerName(value, allowSubscript: false);
+
+    internal static bool IsConstantName(string value)
+        => IsLowerName(value, allowSubscript: false);
 
     internal static bool IsTagName(string value)
-        => IsName(value, requireLowerFirst: true, allowNumericSuffix: true);
+        => IsLowerName(value, allowSubscript: false);
 
     internal static bool IsTagValue(string value)
-        => IsName(value, requireLowerFirst: false, allowNumericSuffix: true);
+        => IsLowerName(value, allowSubscript: false);
 
     internal static bool IsTypeName(string value)
-        => IsName(value, requireLowerFirst: true, allowNumericSuffix: false);
+        => IsUpperName(value);
+
+    internal static bool IsModuleName(string value)
+    {
+        if (value.Length == 0) return false;
+        var segmentStart = 0;
+        for (var index = 0; index <= value.Length; index++)
+        {
+            if (index < value.Length && value[index] != '.') continue;
+            if (!IsModuleSegment(value, segmentStart, index)) return false;
+            segmentStart = index + 1;
+        }
+
+        return true;
+    }
 
     internal static bool EqualsAsciiIgnoreCase(string left, string right)
     {
@@ -102,17 +126,33 @@ internal static class GameEventScriptText
         return true;
     }
 
-    private static bool IsName(string value, bool requireLowerFirst, bool allowNumericSuffix)
+    private static bool IsLowerName(string value, bool allowSubscript)
     {
-        if (value.Length == 0 || (requireLowerFirst ? !IsAsciiLower(value[0]) : !IsAsciiLetter(value[0]))) return false;
+        if (value.Length == 0 || !IsAsciiLower(value[0])) return false;
         var index = 1;
-        while (index < value.Length && IsAsciiLetter(value[index])) index++;
+        while (index < value.Length && (IsAsciiLetter(value[index]) || IsAsciiDigit(value[index]))) index++;
         if (index == value.Length) return true;
-        if (!allowNumericSuffix || value[index++] != '_' || index == value.Length) return false;
+        if (!allowSubscript || value[index++] != '_' || index == value.Length) return false;
         if (value[index] == '0') return index + 1 == value.Length;
         if (value[index] is < '1' or > '9') return false;
         for (index++; index < value.Length; index++)
             if (!IsAsciiDigit(value[index])) return false;
+        return true;
+    }
+
+    private static bool IsUpperName(string value)
+    {
+        if (value.Length == 0 || !IsAsciiUpper(value[0])) return false;
+        for (var index = 1; index < value.Length; index++)
+            if (!IsAsciiLetter(value[index]) && !IsAsciiDigit(value[index])) return false;
+        return true;
+    }
+
+    private static bool IsModuleSegment(string value, int start, int end)
+    {
+        if (start >= end || !IsAsciiLower(value[start])) return false;
+        for (var index = start + 1; index < end; index++)
+            if (!IsAsciiLower(value[index]) && !IsAsciiDigit(value[index])) return false;
         return true;
     }
 

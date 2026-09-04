@@ -43,21 +43,21 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCreateCustomRecord
-record :gauge as {
-  current: :number clamped between 0 and maximum,
-  maximum: :number clamped between 0 and infinity,
-  percentage: :percentage computed by
+module atomiccreatecustomrecord
+record :Gauge as {
+  current: :Number clamped between 0 and maximum,
+  maximum: :Number clamped between 0 and infinity,
+  percentage: :Percentage computed by
     0% when maximum <= 0,
-    otherwise (current / maximum) as :percentage
+    otherwise (current / maximum) as :Percentage
 }
 
 on Start {
-  let gauge be :gauge(current: 125, maximum: 100)
-  let gaugeFromMap as :gauge be [current: 125, maximum: 100]
-  let gaugeList as :list be gauge
-  let gaugeMap as :map be gauge
-  emit Done(gauge: gauge, current: gauge.current, percentage: gauge.percentage, gaugeFromMap: gaugeFromMap, fromMapCurrent: gaugeFromMap.current, fromMapPercentage: gaugeFromMap.percentage, fromMapIsGauge: gaugeFromMap is :gauge, gaugeList: gaugeList, gaugeListLength: gaugeList[:count], gaugeMap: gaugeMap, mapCurrent: gaugeMap.current, mapPercentage: gaugeMap.percentage, recordKeys: gauge[:keys], recordValues: gauge[:values], recordEntries: gauge[:entries], isGauge: gauge is :gauge, isAim: gauge is :aim)
+  let gauge be :Gauge(current: 125, maximum: 100)
+  let gaugeFromMap be ([current: 125, maximum: 100]) as :Gauge
+  let gaugeList be (gauge) as :List
+  let gaugeMap be (gauge) as :Map
+  emit Done(gauge: gauge, current: gauge.current, percentage: gauge.percentage, gaugeFromMap: gaugeFromMap, fromMapCurrent: gaugeFromMap.current, fromMapPercentage: gaugeFromMap.percentage, fromMapIsGauge: gaugeFromMap is :Gauge, gaugeList: gaugeList, gaugeListLength: gaugeList[:count], gaugeMap: gaugeMap, mapCurrent: gaugeMap.current, mapPercentage: gaugeMap.percentage, recordKeys: gauge[:keys], recordValues: gauge[:values], recordEntries: gauge[:entries], isGauge: gauge is :Gauge, isAim: gauge is :Aim)
 }
 ```
 
@@ -80,149 +80,149 @@ steps:
         args:
           - name: "gauge"
             value:
-              type: ":gauge"
+              type: ":Gauge"
               entries:
                 - key: "current"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "100"
                 - key: "maximum"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "100"
                 - key: "percentage"
                   value:
-                    type: ":percentage"
+                    type: ":Percentage"
                     value: "0.01"
           - name: "current"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "100"
           - name: "percentage"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.01"
           - name: "gaugeFromMap"
             value:
-              type: ":gauge"
+              type: ":Gauge"
               entries:
                 - key: "current"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "100"
                 - key: "maximum"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "100"
                 - key: "percentage"
                   value:
-                    type: ":percentage"
+                    type: ":Percentage"
                     value: "0.01"
           - name: "fromMapCurrent"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "100"
           - name: "fromMapPercentage"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.01"
           - name: "fromMapIsGauge"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "gaugeList"
             value:
-              type: ":list"
+              type: ":List"
               items: []
           - name: "gaugeListLength"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "gaugeMap"
             value:
-              type: ":map"
+              type: ":Map"
               entries:
                 - key: "current"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "100"
                 - key: "maximum"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "100"
                 - key: "percentage"
                   value:
-                    type: ":percentage"
+                    type: ":Percentage"
                     value: "0.01"
           - name: "mapCurrent"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "100"
           - name: "mapPercentage"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.01"
           - name: "recordKeys"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":tag"
+                - type: ":Tag"
                   value: "current"
-                - type: ":tag"
+                - type: ":Tag"
                   value: "maximum"
-                - type: ":tag"
+                - type: ":Tag"
                   value: "percentage"
           - name: "recordValues"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "100"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "100"
-                - type: ":percentage"
+                - type: ":Percentage"
                   value: "0.01"
           - name: "recordEntries"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":map"
+                - type: ":Map"
                   entries:
                     - key: "key"
                       value:
-                        type: ":tag"
+                        type: ":Tag"
                         value: "current"
                     - key: "value"
                       value:
-                        type: ":integer"
+                        type: ":Number.int64"
                         value: "100"
-                - type: ":map"
+                - type: ":Map"
                   entries:
                     - key: "key"
                       value:
-                        type: ":tag"
+                        type: ":Tag"
                         value: "maximum"
                     - key: "value"
                       value:
-                        type: ":integer"
+                        type: ":Number.int64"
                         value: "100"
-                - type: ":map"
+                - type: ":Map"
                   entries:
                     - key: "key"
                       value:
-                        type: ":tag"
+                        type: ":Tag"
                         value: "percentage"
                     - key: "value"
                       value:
-                        type: ":percentage"
+                        type: ":Percentage"
                         value: "0.01"
           - name: "isGauge"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isAim"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -251,20 +251,20 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCreateRecordConstructor
-record :stat as {
-  _ base: :number clamped between 0 and cap,
-  cap: :number clamped between 1 and 99,
-  bonus: :number,
-  total: :number computed by base + bonus,
-  label: :text
+module atomiccreaterecordconstructor
+record :Stat as {
+  _ base: :Number clamped between 0 and cap,
+  cap: :Number clamped between 1 and 99,
+  bonus: :Number,
+  total: :Number computed by base + bonus,
+  label: :Text
 }
 
 on Start {
-  let stat be :stat(15, cap: 10, bonus: 3, label: 'hp')
-  let statMap as :map be stat
-  let statList as :list be stat
-  emit Done(stat: stat, base: stat.base, cap: stat.cap, bonus: stat.bonus, total: stat.total, label: stat.label, map: statMap, mapTotal: statMap.total, listLen: statList[:count], keys: stat[:keys], values: stat[:values], entries: stat[:entries], isStat: stat is :stat, isGauge: stat is :gauge, nothing: stat.missing)
+  let stat be :Stat(15, cap: 10, bonus: 3, label: 'hp')
+  let statMap be (stat) as :Map
+  let statList be (stat) as :List
+  emit Done(stat: stat, base: stat.base, cap: stat.cap, bonus: stat.bonus, total: stat.total, label: stat.label, map: statMap, mapTotal: statMap.total, listLen: statList[:count], keys: stat[:keys], values: stat[:values], entries: stat[:entries], isStat: stat is :Stat, isGauge: stat is :Gauge, nothing: stat.missing)
 }
 ```
 
@@ -287,173 +287,173 @@ steps:
         args:
           - name: "stat"
             value:
-              type: ":stat"
+              type: ":Stat"
               entries:
                 - key: "base"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "10"
                 - key: "bonus"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "3"
                 - key: "cap"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "10"
                 - key: "label"
                   value:
-                    type: ":text"
+                    type: ":Text"
                     value: "hp"
                 - key: "total"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "13"
           - name: "base"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "cap"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "bonus"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "total"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "13"
           - name: "label"
             value:
-              type: ":text"
+              type: ":Text"
               value: "hp"
           - name: "map"
             value:
-              type: ":map"
+              type: ":Map"
               entries:
                 - key: "base"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "10"
                 - key: "bonus"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "3"
                 - key: "cap"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "10"
                 - key: "label"
                   value:
-                    type: ":text"
+                    type: ":Text"
                     value: "hp"
                 - key: "total"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "13"
           - name: "mapTotal"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "13"
           - name: "listLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "keys"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":tag"
+                - type: ":Tag"
                   value: "base"
-                - type: ":tag"
+                - type: ":Tag"
                   value: "bonus"
-                - type: ":tag"
+                - type: ":Tag"
                   value: "cap"
-                - type: ":tag"
+                - type: ":Tag"
                   value: "label"
-                - type: ":tag"
+                - type: ":Tag"
                   value: "total"
           - name: "values"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "10"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "10"
-                - type: ":text"
+                - type: ":Text"
                   value: "hp"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "13"
           - name: "entries"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":map"
+                - type: ":Map"
                   entries:
                     - key: "key"
                       value:
-                        type: ":tag"
+                        type: ":Tag"
                         value: "base"
                     - key: "value"
                       value:
-                        type: ":integer"
+                        type: ":Number.int64"
                         value: "10"
-                - type: ":map"
+                - type: ":Map"
                   entries:
                     - key: "key"
                       value:
-                        type: ":tag"
+                        type: ":Tag"
                         value: "bonus"
                     - key: "value"
                       value:
-                        type: ":integer"
+                        type: ":Number.int64"
                         value: "3"
-                - type: ":map"
+                - type: ":Map"
                   entries:
                     - key: "key"
                       value:
-                        type: ":tag"
+                        type: ":Tag"
                         value: "cap"
                     - key: "value"
                       value:
-                        type: ":integer"
+                        type: ":Number.int64"
                         value: "10"
-                - type: ":map"
+                - type: ":Map"
                   entries:
                     - key: "key"
                       value:
-                        type: ":tag"
+                        type: ":Tag"
                         value: "label"
                     - key: "value"
                       value:
-                        type: ":text"
+                        type: ":Text"
                         value: "hp"
-                - type: ":map"
+                - type: ":Map"
                   entries:
                     - key: "key"
                       value:
-                        type: ":tag"
+                        type: ":Tag"
                         value: "total"
                     - key: "value"
                       value:
-                        type: ":integer"
+                        type: ":Number.int64"
                         value: "13"
           - name: "isStat"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isGauge"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -483,12 +483,12 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCreateExternalType
+module atomiccreateexternaltype
 on Start {
-  let aim be :aim(range: 12m, bearing: 90°, steps: 4m, direction: :vector(1m, 2m, 3m))
-  let aimList as :list be aim
-  let aimMap as :map be aim
-  emit Done(aim: aim, bearing: aim.bearing, checksum: aim.checksum, directionZ: aim.direction.z, aimList: aimList, aimListLength: aimList[:count], aimMap: aimMap, mapChecksum: aimMap.checksum, mapDirectionZ: aimMap.direction.z, aimKeys: aim[:keys], aimValues: aim[:values], aimEntries: aim[:entries], isAim: aim is :aim, isGauge: aim is :gauge)
+  let aim be :Aim(range: 12m, bearing: 90°, steps: 4m, direction: :Vector(1m, 2m, 3m))
+  let aimList be (aim) as :List
+  let aimMap be (aim) as :Map
+  emit Done(aim: aim, bearing: aim.bearing, checksum: aim.checksum, directionZ: aim.direction.z, aimList: aimList, aimListLength: aimList[:count], aimMap: aimMap, mapChecksum: aimMap.checksum, mapDirectionZ: aimMap.direction.z, aimKeys: aim[:keys], aimValues: aim[:values], aimEntries: aim[:entries], isAim: aim is :Aim, isGauge: aim is :Gauge)
 }
 ```
 
@@ -511,196 +511,196 @@ steps:
         args:
           - name: "aim"
             value:
-              type: ":aim"
+              type: ":Aim"
               entries:
                 - key: "bearing"
                   value:
-                    type: ":float"
+                    type: ":Quantity.binary64"
                     unit: ":degree"
                     value: "90"
                 - key: "checksum"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "106"
                 - key: "direction"
                   value:
-                    type: ":vector"
+                    type: ":Vector"
                     unit: ":meter"
                     x: "1"
                     y: "2"
                     z: "3"
                 - key: "range"
                   value:
-                    type: ":float"
+                    type: ":Quantity.binary64"
                     unit: ":meter"
                     value: "12"
                 - key: "steps"
                   value:
-                    type: ":integer"
+                    type: ":Quantity.int64"
                     unit: ":meter"
                     value: "4"
           - name: "bearing"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               unit: ":degree"
               value: "90"
           - name: "checksum"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "106"
           - name: "directionZ"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               unit: ":meter"
               value: "3"
           - name: "aimList"
             value:
-              type: ":list"
+              type: ":List"
               items: []
           - name: "aimListLength"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "aimMap"
             value:
-              type: ":map"
+              type: ":Map"
               entries:
                 - key: "bearing"
                   value:
-                    type: ":float"
+                    type: ":Quantity.binary64"
                     unit: ":degree"
                     value: "90"
                 - key: "checksum"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "106"
                 - key: "direction"
                   value:
-                    type: ":vector"
+                    type: ":Vector"
                     unit: ":meter"
                     x: "1"
                     y: "2"
                     z: "3"
                 - key: "range"
                   value:
-                    type: ":float"
+                    type: ":Quantity.binary64"
                     unit: ":meter"
                     value: "12"
                 - key: "steps"
                   value:
-                    type: ":integer"
+                    type: ":Quantity.int64"
                     unit: ":meter"
                     value: "4"
           - name: "mapChecksum"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "106"
           - name: "mapDirectionZ"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               unit: ":meter"
               value: "3"
           - name: "aimKeys"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":tag"
+                - type: ":Tag"
                   value: "bearing"
-                - type: ":tag"
+                - type: ":Tag"
                   value: "checksum"
-                - type: ":tag"
+                - type: ":Tag"
                   value: "direction"
-                - type: ":tag"
+                - type: ":Tag"
                   value: "range"
-                - type: ":tag"
+                - type: ":Tag"
                   value: "steps"
           - name: "aimValues"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":float"
+                - type: ":Quantity.binary64"
                   unit: ":degree"
                   value: "90"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "106"
-                - type: ":vector"
+                - type: ":Vector"
                   unit: ":meter"
                   x: "1"
                   y: "2"
                   z: "3"
-                - type: ":float"
+                - type: ":Quantity.binary64"
                   unit: ":meter"
                   value: "12"
-                - type: ":integer"
+                - type: ":Quantity.int64"
                   unit: ":meter"
                   value: "4"
           - name: "aimEntries"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":map"
+                - type: ":Map"
                   entries:
                     - key: "key"
                       value:
-                        type: ":tag"
+                        type: ":Tag"
                         value: "bearing"
                     - key: "value"
                       value:
-                        type: ":float"
+                        type: ":Quantity.binary64"
                         unit: ":degree"
                         value: "90"
-                - type: ":map"
+                - type: ":Map"
                   entries:
                     - key: "key"
                       value:
-                        type: ":tag"
+                        type: ":Tag"
                         value: "checksum"
                     - key: "value"
                       value:
-                        type: ":integer"
+                        type: ":Number.int64"
                         value: "106"
-                - type: ":map"
+                - type: ":Map"
                   entries:
                     - key: "key"
                       value:
-                        type: ":tag"
+                        type: ":Tag"
                         value: "direction"
                     - key: "value"
                       value:
-                        type: ":vector"
+                        type: ":Vector"
                         unit: ":meter"
                         x: "1"
                         y: "2"
                         z: "3"
-                - type: ":map"
+                - type: ":Map"
                   entries:
                     - key: "key"
                       value:
-                        type: ":tag"
+                        type: ":Tag"
                         value: "range"
                     - key: "value"
                       value:
-                        type: ":float"
+                        type: ":Quantity.binary64"
                         unit: ":meter"
                         value: "12"
-                - type: ":map"
+                - type: ":Map"
                   entries:
                     - key: "key"
                       value:
-                        type: ":tag"
+                        type: ":Tag"
                         value: "steps"
                     - key: "value"
                       value:
-                        type: ":integer"
+                        type: ":Quantity.int64"
                         unit: ":meter"
                         value: "4"
           - name: "isAim"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isGauge"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -729,19 +729,19 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCastMapToRecord
-record :gauge as {
-  current: :number clamped between 0 and maximum,
-  maximum: :number clamped between 0 and infinity,
-  percentage: :percentage computed by
+module atomiccastmaptorecord
+record :Gauge as {
+  current: :Number clamped between 0 and maximum,
+  maximum: :Number clamped between 0 and infinity,
+  percentage: :Percentage computed by
     0% when maximum <= 0,
-    otherwise (current / maximum) as :percentage
+    otherwise (current / maximum) as :Percentage
 }
 
 on Start {
   let raw be [current: 125, maximum: 100]
-  let gauge as :gauge be raw
-  emit Done(gauge: gauge, current: gauge.current, maximum: gauge.maximum, percentage: gauge.percentage, isGauge: gauge is :gauge)
+  let gauge be (raw) as :Gauge
+  emit Done(gauge: gauge, current: gauge.current, maximum: gauge.maximum, percentage: gauge.percentage, isGauge: gauge is :Gauge)
 }
 ```
 
@@ -764,34 +764,34 @@ steps:
         args:
           - name: "gauge"
             value:
-              type: ":gauge"
+              type: ":Gauge"
               entries:
                 - key: "current"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "100"
                 - key: "maximum"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "100"
                 - key: "percentage"
                   value:
-                    type: ":percentage"
+                    type: ":Percentage"
                     value: "0.01"
           - name: "current"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "100"
           - name: "maximum"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "100"
           - name: "percentage"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.01"
           - name: "isGauge"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```

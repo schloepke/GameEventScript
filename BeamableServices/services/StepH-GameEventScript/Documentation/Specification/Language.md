@@ -37,11 +37,13 @@ A compilation unit consists of one or more source documents. Each source contain
 an optional module declaration followed by top-level declarations:
 
 ```ges
-module Battle
+module battle
 
-record :unit as {
-  hp: :number clamped between 0 and maxHp,
-  maxHp: :number
+constant $startingHp be 100
+
+record :Unit as {
+  hp: :Number clamped between 0 and maxHp,
+  maxHp: :Number
 }
 
 predicate alive(_ unit) be unit.hp > 0
@@ -56,7 +58,8 @@ on Damage(unit, amount) {
 
 Top-level declarations are:
 
-- `record :name as { ... }`
+- `constant $name be scalarLiteral`
+- `record :Name as { ... }`
 - `predicate name(...) be expression`
 - `function name(...) be expression`
 - `on Message(...) { ... }`
@@ -74,7 +77,8 @@ name is supplied, the compiler derives a deterministic anonymous Program name
 from the complete compiler output. Module identity does not change expression
 semantics.
 
-There are no global variables or mutable script storage. Each handler or callable
+Constants are immutable compile-time names rather than runtime storage. There are
+no global variables or mutable script storage. Each handler or callable
 invocation receives fresh parameters and locals. State that outlives a handler
 exists only through messages or host-provided facilities outside this language.
 
@@ -83,7 +87,7 @@ exists only through messages or host-provided facilities outside this language.
 Functions and predicates are immutable, globally named expression callables:
 
 ```ges
-function damage(base, bonus as :number) be base + bonus
+function damage(base, bonus as :Number) be base + bonus
 predicate alive(_ unit) be unit.hp > 0
 ```
 
@@ -110,7 +114,7 @@ static errors.
 Record identity is likewise the custom type name alone. A record cannot be
 overloaded by changing its fields or constructor labels, and a script record
 cannot use the name of a configured external type. The type namespace is
-separate from the callable namespace, so `record :damage ...` and `function
+separate from the callable namespace, so `record :Damage ...` and `function
 damage(...) ...` may coexist.
 
 A parameter written `label` has both the external argument label and local name
@@ -145,21 +149,29 @@ let y be 20; let z be x + y // same statement separator model
 
 Names are intentionally narrow:
 
-- Identifiers start lowercase and contain letters. They may have one optional
-  final numeric suffix written as `_` followed by digits, such as `target_2`.
-  Underscores are otherwise not part of identifiers: `target2` and
-  `target_name` are invalid identifiers.
-- Identifiers must resolve to a local, parameter, capture, or callable visible
-  at compile time. Unknown identifiers are compile errors; they do not evaluate
-  to `nothing`.
-- Message names start uppercase and contain letters.
-- Tags start with `#` and use the identifier grammar, including its optional
-  numeric suffix. `#true`, `#false`, `#pi`,
-  and `#infinity` are ordinary tag values.
-- Custom type names start lowercase and contain ASCII letters only; they do not
-  accept numeric suffixes. Type references, selectors, generated collection
-  forms, and namespace-like extension references use `:`. Built-in type names
-  are reserved by the language.
+- Callable names, argument labels, fields, map keys, tags, constant names, and
+  extension namespace/function components start with a lowercase ASCII letter
+  and continue with ASCII letters or digits. They never contain `_`.
+- Local binding names use that same lower-name form and may additionally end in
+  one canonical derivation suffix `_0`, `_1`, and so on. Leading zeroes are
+  forbidden except for `_0`; `_01` is invalid. This suffix is available only to
+  variable bindings and their references, including unlabeled parameter locals,
+  loop variables, and selector variables.
+- Local names must resolve to a local, parameter, or capture visible at compile
+  time. Callable names resolve in the program-wide callable namespace. Unknown
+  names are compile errors; they do not evaluate to `nothing`.
+- Message names start with an uppercase ASCII letter and continue with ASCII
+  letters or digits.
+- Tags start with `#` and use a lower name without `_`. `#true`, `#false`,
+  `#pi`, and `#infinity` are ordinary tag values.
+- Constants start with `$` and use a lower name without `_`.
+- Built-in and custom type names start with an uppercase ASCII letter and
+  continue with ASCII letters or digits. Type references, generated collection
+  forms, and type constructors use `:` followed by that PascalCase name.
+- Extension references use lowercase `:namespace.function` components.
+- A module name is one or more dot-separated components. Every component starts
+  with a lowercase ASCII letter and continues with lowercase ASCII letters or
+  digits. Uppercase letters, `_`, and `-` are forbidden.
 
 All of these name grammars use ASCII letters and digits; they do not depend on
 platform Unicode classification. Source is strict UTF-8, an optional initial BOM
@@ -234,13 +246,13 @@ Parameters can declare a type. The runtime casts the incoming value before the
 handler body runs. Failed casts produce `nothing`; they do not prevent dispatch:
 
 ```ges
-on Move(unit, speed as :quantity(m)) {
+on Move(unit, speed as :Quantity(m)) {
   emit Moving(unit: unit, speed: speed)
 }
 ```
 
 Message-name handlers match every signature having the declared message name,
-subject to their tag filters. They receive one `:message` value instead of the
+subject to their tag filters. They receive one `:Message` value instead of the
 message's individual arguments. The identifier following `as` is a freely chosen
 local binding name; the word `message` is not required:
 
@@ -270,7 +282,7 @@ on initialization {
 `undeliverable` is the fallback endpoint for a message that has no matching
 ordinary handler after signature, name, and tag filters have been evaluated. It
 must use the message-name binding form. The chosen local receives the original
-message as a `:message` value, and filters on the fallback handler inspect the
+message as a `:Message` value, and filters on the fallback handler inspect the
 original message's tags:
 
 ```ges
@@ -347,7 +359,7 @@ publish Scan with [#radar, #active]
 Tags after `with` can be tags or lists of tags.
 
 The message operand may instead be any expression. It is emitted or published
-only when its result is a `:message`; any other result produces no message. Tag
+only when its result is a `:Message`; any other result produces no message. Tag
 expressions are evaluated left to right. Lists are recursively flattened, each
 remaining value is converted to its text form and normalized by the portable tag
 grammar, empty tags are omitted, and later duplicates are omitted while retaining
@@ -360,10 +372,13 @@ message's tags with the normalized clause result.
 
 ```ges
 let damage be base + bonus
-let percent as :percentage be 25%
+let percent be rawPercent as :Percentage
 ```
 
-The optional declared type casts the value.
+`let` has no declared-type form. A desired conversion is part of the value
+expression: write `let value be input as :Number`, not
+`let value as :Number be input`. Parameter and record-field type declarations
+remain part of their respective signatures.
 
 A name may be declared only once in one lexical scope, and a binding may not
 reuse a name that is visible from an enclosing lexical scope. This no-shadowing
@@ -430,7 +445,7 @@ An expression statement does not implicitly emit or publish a message.
 may be used directly when the compiler can establish that it is a unitless
 exact integer. This includes integer literals and immutable bindings inferred
 from such values. A statically unknown value, especially a message parameter,
-must state the intended conversion explicitly with `as :number`.
+must state the intended conversion explicitly with `as :Number`.
 
 ```ges
 random with 123 {
@@ -441,7 +456,7 @@ let fixedSeed be 123
 let fixedValue be random with fixedSeed (random from 1 to 100)
 
 on Start(seed) {
-  let suppliedValue be random with (seed as :number) (random from 1 to 100)
+  let suppliedValue be random with (seed as :Number) (random from 1 to 100)
   emit Value(value: suppliedValue)
 }
 ```
@@ -514,15 +529,15 @@ The complete Unicode token aliases are:
 
 ### Boolean Logic
 
-Predicate declarations must statically evaluate to `:boolean` or `nothing`.
-Use `as :boolean` when coercion is intentional. Predicate-call results, including
+Predicate declarations must statically evaluate to `:Boolean` or `nothing`.
+Use `as :Boolean` when coercion is intentional. Predicate-call results, including
 extension predicates used through `is`, are normalized to boolean or `nothing`.
 
 Conditions and logical operators use a three-state truth view:
 
 | Value | Truth view |
 | --- | --- |
-| `:boolean` | its boolean value |
+| `:Boolean` | its boolean value |
 | number, quantity, or percentage | false for numeric zero, true otherwise |
 | text | true for ASCII-case-insensitive `true` or exact `1`; false otherwise |
 | tag | false, including `#true` and `#false` |
@@ -699,9 +714,30 @@ has no compound-unit representation. Normalizing a zero vector and computing an
 angle with a zero-length operand produce `nothing`. Unsupported operand shapes,
 incompatible units, and absent operands likewise produce `nothing`.
 
-### Constants
+### Declared constants and mathematical constants
 
-Numeric constants are keywords, not tags:
+A declared constant has program-wide scope and is replaced by its literal value
+during compilation:
+
+```ges
+constant $maximumHealth be 100
+constant $readyLabel be 'ready'
+constant $defaultRange be 25m
+
+on Start {
+  emit Ready(label: $readyLabel, health: $maximumHealth)
+}
+```
+
+The initializer must be one scalar literal: `nothing`, boolean, number,
+percentage, quantity, text, or tag. Unary minus is part of an otherwise numeric
+literal initializer. Lists, maps, records, calls, operators, and references to
+other constants are not constant initializers. Constant declarations from all
+sources in one program share one namespace; duplicate and unresolved names are
+static errors. Constants generate no runtime bindings, registers, or bytecode of
+their own.
+
+Mathematical constants are built-in keywords, not declared `$` names or tags:
 
 ```ges
 infinity
@@ -721,22 +757,22 @@ types, and namespace-like extension references.
 
 The source language recognizes these built-in types:
 
-- `nothing`
-- `:boolean`
-- `:number`
-- `:percentage`
-- `:quantity(none)`, `:quantity(m)`, `:quantity(meter)`, `:quantity(s)`, `:quantity(second)`, `:quantity(degree)`
-- `:vector`
-- `:point`
-- `:series`
-- `:range`
-- `:message`
-- `:handler`
-- `:tag`
-- `:text`
-- `:list`
-- `:map`
-- `:dice`
+- `:Nothing` (`value is nothing` remains the dedicated nothing check)
+- `:Boolean`
+- `:Number`
+- `:Percentage`
+- `:Quantity(none)`, `:Quantity(m)`, `:Quantity(meter)`, `:Quantity(s)`, `:Quantity(second)`, `:Quantity(degree)`
+- `:Vector`
+- `:Point`
+- `:Series`
+- `:Range`
+- `:Message`
+- `:Handler`
+- `:Tag`
+- `:Text`
+- `:List`
+- `:Map`
+- `:Dice`
 
 ### Casts
 
@@ -744,42 +780,42 @@ An explicit `as TypeReference` cast reshapes a value when the target type has a
 defined representation. A cast that cannot produce that representation returns
 `nothing`, except that collection casts deliberately produce the empty target for
 unsupported scalar inputs as listed below. Built-in constructor syntax with one
-unlabeled argument, such as `:text(value)` or `:dice(values)`, has the same
-semantics as the corresponding cast. `:vector` and `:point` additionally have
+unlabeled argument, such as `:Text(value)` or `:Dice(values)`, has the same
+semantics as the corresponding cast. `:Vector` and `:Point` additionally have
 component constructors.
 
 | Target | Cast behavior |
 | --- | --- |
-| `nothing` | always `nothing` |
-| `:boolean` | true exactly when the source truth view is true; false otherwise |
-| `:number` | uses the numeric view, parses invariant numeric text, or reads series term zero; failure is `nothing` |
-| `:percentage` | rejects units and non-numeric values; integers are percentages divided by 100, while finite fractional ratios in `[-1, 1]` remain ratios and other finite numeric magnitudes are divided by 100 |
-| `:quantity(unit)` | applies the unit to numeric or spatial input that is unitless or already has that unit; a conflicting unit is invalid; `none` removes any supported unit |
-| `:text` | returns the canonical text representation of any value |
-| `:tag` | follows the strict tag rules below |
-| `:vector`, `:point` | follows the structural conversion rules below |
-| `:list` | preserves lists; expands text/tags into Unicode scalars, spatial values into three components, dice into rolls, and ranges into terms; unsupported values become `[]` |
-| `:map` | preserves maps; exposes record/external fields and spatial `x`, `y`, `z`; unsupported values become `[:]` |
-| `:dice` | preserves dice; converts a list of positive Int32 integer rolls; a non-list becomes empty dice and an invalid list becomes `nothing` |
-| `:range`, `:series`, `:message`, `:handler` | preserves the same runtime kind and returns `nothing` for another kind |
+| `:Nothing` | always `nothing` |
+| `:Boolean` | true exactly when the source truth view is true; false otherwise |
+| `:Number` | uses the numeric view, parses invariant numeric text, or reads series term zero; failure is `nothing` |
+| `:Percentage` | rejects units and non-numeric values; integers are percentages divided by 100, while finite fractional ratios in `[-1, 1]` remain ratios and other finite numeric magnitudes are divided by 100 |
+| `:Quantity(unit)` | applies the unit to numeric or spatial input that is unitless or already has that unit; a conflicting unit is invalid; `none` removes any supported unit |
+| `:Text` | returns the canonical text representation of any value |
+| `:Tag` | follows the strict tag rules below |
+| `:Vector`, `:Point` | follows the structural conversion rules below |
+| `:List` | preserves lists; expands text/tags into Unicode scalars, spatial values into three components, dice into rolls, and ranges into terms; unsupported values become `[]` |
+| `:Map` | preserves maps; exposes record/external fields and spatial `x`, `y`, `z`; unsupported values become `[:]` |
+| `:Dice` | preserves dice; converts a list of positive Int32 integer rolls; a non-list becomes empty dice and an invalid list becomes `nothing` |
+| `:Range`, `:Series`, `:Message`, `:Handler` | preserves the same runtime kind and returns `nothing` for another kind |
 | custom record | preserves the same record type or invokes that record constructor from a map; other values become `nothing` |
 
 Tag casts are strict. A runtime tag name is valid only when it matches the same
 shape as `#` tag names: the first character must be a lowercase ASCII letter,
-followed by ASCII letters and optionally one final `_` plus a canonical numeric
-suffix. Empty tags, numeric text, unit text, punctuation, whitespace, brackets,
-and colons inside the value are invalid tag names. `nothing as :tag` is
+followed by ASCII letters or digits. Empty tags, numeric text, unit text,
+punctuation, whitespace, brackets,
+and colons inside the value are invalid tag names. `nothing as :Tag` is
 `nothing`; numeric values and quantities
-cast to `:tag` as `nothing`; formatted vector, point, list, map, dice, and range
-text also cast to `:tag` as `nothing` because those strings are not valid tag
-names. Existing valid tags remain unchanged. Text casts to `:tag` only when the
+cast to `:Tag` as `nothing`; formatted vector, point, list, map, dice, and range
+text also cast to `:Tag` as `nothing` because those strings are not valid tag
+names. Existing valid tags remain unchanged. Text casts to `:Tag` only when the
 text is a valid tag name; the text values `'true'`, `'True'`, `'false'`, and
-`'False'` are normalized to `#true` and `#false`. Boolean casts to `:tag` also
+`'False'` are normalized to `#true` and `#false`. Boolean casts to `:Tag` also
 write `#true` or `#false`.
 
 Text casts are formatting casts and keep using the value's text representation;
 they do not require the formatted text to be a valid tag. Numeric text is parsed
-only by an explicit `as :number` cast. Invalid numeric text casts to `nothing`.
+only by an explicit `as :Number` cast. Invalid numeric text casts to `nothing`.
 
 Vector and point casts are structural conversions. A vector can be cast to a
 point by copying `x`, `y`, `z`, and the optional unit; a point can be cast to a
@@ -794,8 +830,8 @@ component makes the whole result `nothing`.
 ### Type checks
 
 `value is TypeReference` and `value is not TypeReference` test without converting.
-`is :number` and `is numeric` use the same numeric-view test. `is integer` and
-`is fractional` are numeric checks rather than type names. `is :map` is true for
+`is :Number` and `is numeric` use the same numeric-view test. `is integer` and
+`is fractional` are numeric checks rather than type names. `is :Map` is true for
 plain maps and map-backed custom values. Quantity checks require the exact unit
 and accept numeric, vector, or point values. Other built-in checks require the
 corresponding runtime kind; a custom check requires the exact declared or
@@ -804,9 +840,9 @@ external type name. `nothing` is written without `:` in casts and checks.
 Custom record types are type references using the same `:name` syntax:
 
 ```ges
-record :unit as {
-  hp: :number,
-  name: :text
+record :Unit as {
+  hp: :Number,
+  name: :Text
 }
 ```
 
@@ -818,7 +854,7 @@ and canonical conformance JSON are defined in
 [Number semantics](Semantics/Numbers.md). Implementations must
 not inherit these semantics from host-language overflow or formatting defaults.
 
-`:number` is the source-level numeric type. Runtime values are represented as
+`:Number` is the source-level numeric type. Runtime values are represented as
 integer when a finite result is exactly integral and fits signed 64-bit;
 otherwise they are represented as IEEE 754 double precision. Equality uses a
 strict numeric comparison for integer-only values and a two-ULP tolerant
@@ -860,17 +896,17 @@ value is fractional
 ```
 
 `:integer` and `:float` are not source-level type references. Use `is integer`
-or `is fractional` for checks, and `as :number` for explicit numeric casts.
+or `is fractional` for checks, and `as :Number` for explicit numeric casts.
 
 Numeric checks and implicit numeric views use the following rules. A runtime
 value has an `AsNumeric` value exactly when `is numeric` is true. The explicit
-`as :number` cast uses the same numeric view, except that it may additionally
+`as :Number` cast uses the same numeric view, except that it may additionally
 parse text as described below.
 
 | Runtime value | `is numeric` | `is integer` | `is fractional` | Numeric view |
 | --- | --- | --- | --- | --- |
 | `nothing` | false | false | false | none |
-| `:boolean` | true | true | false | `false` = `0`, `true` = `1` |
+| `:Boolean` | true | true | false | `false` = `0`, `true` = `1` |
 | integer number | true | true | false | integer value, including quantity unit |
 | float number | true | true when finite and exactly integral; otherwise false | true when finite and non-integral | float value, including quantity unit |
 | percentage | true | true when the stored ratio is finite and exactly integral; otherwise false | true when finite and non-integral | stored ratio |
@@ -882,14 +918,14 @@ Text values are not numeric for implicit mathematics or numeric checks:
 present operand is text, both `'10' + 20` and `10 + '20'` concatenate their
 canonical text representations and produce `'1020'`. Other arithmetic
 operators do not parse text implicitly. An
-explicit `as :number` cast parses text with invariant numeric syntax; invalid
+explicit `as :Number` cast parses text with invariant numeric syntax; invalid
 text casts to `nothing`. Series are also not numeric for implicit mathematics
-or numeric checks, but an explicit `as :number` cast reads the first term and
+or numeric checks, but an explicit `as :Number` cast reads the first term and
 casts that term to a number.
 
 Dice have a numeric view for numeric checks, explicit numeric casts, equality,
 and numeric comparison: `dice is numeric` and `dice is integer` are true, and
-`dice as :number` is the sum of the rolls. Dice-specific collection operations
+`dice as :Number` is the sum of the rolls. Dice-specific collection operations
 keep priority, so `dice + integer` adds a roll and `dice - integer` removes a
 roll instead of using the dice sum.
 
@@ -917,7 +953,7 @@ binary floating-point artifacts such as `0.1 + 0.2 = 0.3` without adding a
 separate approximate-equality operator. Infinities compare equal only when they
 have the same sign.
 Text is not numeric for equality, so `'10.3' = 10.3` is false while
-`('10.3' as :number) = 10.3` is true.
+`('10.3' as :Number) = 10.3` is true.
 
 If the numeric view does not apply, exact equality requires the same value kind:
 tags and text compare exact Unicode-scalar sequences within their own kind, vectors and points compare `x`, `y`, `z`,
@@ -931,7 +967,7 @@ coercion; the complete contract is in
 [Determinism](Semantics/Determinism.md).
 
 `abs` preserves the operand's numeric family for percentages and quantities:
-absolute percentages remain `:percentage`, and absolute quantities keep their
+absolute percentages remain `:Percentage`, and absolute quantities keep their
 unit. Finite numeric results that are exactly integral are represented as
 integer values.
 
@@ -944,15 +980,15 @@ let distance be 10m
 let duration be 2s
 let angle be 90°
 
-let a be 100 as :quantity(m)
-let b be 90 as :quantity(°)
-let unitlessDistance be distance as :quantity(none)
+let a be 100 as :Quantity(m)
+let b be 90 as :Quantity(°)
+let unitlessDistance be distance as :Quantity(none)
 ```
 
-`:percentage` is not a quantity unit; it is a separate value kind. The names
+`:Percentage` is not a quantity unit; it is a separate value kind. The names
 `meter`, `second`, `degree`, and `seconds` are not quantity type aliases. Use
-`:quantity(m)`, `:quantity(s)`, or `:quantity(°)`/`:quantity(degree)` for casts
-and checks. `:quantity(none)` removes a supported numeric or spatial unit and
+`:Quantity(m)`, `:Quantity(s)`, or `:Quantity(°)`/`:Quantity(degree)` for casts
+and checks. `:Quantity(none)` removes a supported numeric or spatial unit and
 produces the corresponding unitless value; as a check it matches only numeric
 or spatial values that are already unitless. `none` is a unit name only in this
 type form and is not the absence value `nothing`. Use `#meter` or `#degree` only
@@ -1008,8 +1044,8 @@ Vectors and points have `x`, `y`, and `z` numeric components plus an optional
 unit.
 
 ```ges
-let v be :vector(x: 1, y: 2, z: 0)
-let p be :point(x: 10m, y: 20m, z: 0m)
+let v be :Vector(x: 1, y: 2, z: 0)
+let p be :Point(x: 10m, y: 20m, z: 0m)
 
 let x be p.x
 ```
@@ -1107,9 +1143,9 @@ let values be [10, 'hello', [1, 2, 3]]
 Generated lists use a selector-like form:
 
 ```ges
-let squares be :list[:select x from 1 to 5 => x * x]
-let evens be :list[:select x from 1 to 10 where x mod 2 = 0 => x]
-let names be :list[:select unit in units => unit.name]
+let squares be :List[:select x from 1 to 5 => x * x]
+let evens be :List[:select x from 1 to 10 where x mod 2 = 0 => x]
+let names be :List[:select unit in units => unit.name]
 ```
 
 ### Maps
@@ -1399,7 +1435,7 @@ Collection intersection uses `&`. `list & list`, `list & dice`, and
 `dice & list` use multiset semantics and produce a list. `dice & dice` produces
 sorted dice. `map & map` keeps keys present in both maps and values from the
 left map. `map & listOfKeys` keeps only listed keys. `dice & integer` and
-`integer & dice` are not defined; write `dice & :dice([integer])` when a
+`integer & dice` are not defined; write `dice & :Dice([integer])` when a
 single-roll dice intersection is intended.
 
 Collection subtraction uses `-`. `list - scalar` removes one matching item, and
@@ -1419,7 +1455,7 @@ Other operand combinations produce `nothing`.
 containing any other value produces `nothing`.
 
 `+` concatenates text when either operand is text. The non-text operand is
-formatted with the same text representation used by `as :text`, so
+formatted with the same text representation used by `as :Text`, so
 `'100' + '200'` is `'100200'` and `'hp: ' + 10` is `'hp: 10'`.
 
 ## Randomness, Dice, and Series
@@ -1440,8 +1476,8 @@ let chance be chance 25%
 
 Dice rolls use `roll dice NdM`, where both `N` and `M` are positive integer
 literals. They draw `N` independent integers from `1` through `M` inclusive and
-produce a sorted dice value. This phrase consumes random. `:dice(...)` remains
-the deterministic dice constructor and `:dice` remains the dice type reference:
+produce a sorted dice value. This phrase consumes random. `:Dice(...)` remains
+the deterministic dice constructor and `:Dice` remains the dice type reference:
 
 ```ges
 let diceRoll be roll dice 5d6
@@ -1498,15 +1534,15 @@ evaluation result.
 Records are immutable map-like values with declared fields:
 
 ```ges
-record :gauge as {
-  current: :number clamped between 0 and maximum,
-  maximum: :number clamped between 0 and infinity,
-  percentage: :percentage computed by
+record :Gauge as {
+  current: :Number clamped between 0 and maximum,
+  maximum: :Number clamped between 0 and infinity,
+  percentage: :Percentage computed by
     0% when maximum <= 0,
-    otherwise (current / maximum) as :percentage
+    otherwise (current / maximum) as :Percentage
 }
 
-let hp be :gauge(current: 25, maximum: 100)
+let hp be :Gauge(current: 25, maximum: 100)
 ```
 
 Field constraints:
@@ -1529,10 +1565,10 @@ Field constraints:
   positional/unlabeled while keeping the field name for member access:
 
 ```ges
-record :super as {
-  _ xValue: :number clamped between 1 and 10,
-  yValue: :number,
-  zValue: :number computed by xValue * yValue + 10%
+record :Super as {
+  _ xValue: :Number clamped between 1 and 10,
+  yValue: :Number,
+  zValue: :Number computed by xValue * yValue + 10%
 }
 
 let rec be :super(10, yValue: 10)
@@ -1540,7 +1576,7 @@ let rec be :super(10, yValue: 10)
 
 Record values are immutable, expose fields through member access, participate in
 map ordering and iteration through their field map, and keep their exact custom
-type identity. Custom type checks use `is :typeName`. Casting a map to a record
+type identity. Custom type checks use `is :TypeName`. Casting a map to a record
 invokes the same constructor by matching map keys to constructor labels.
 
 ## Language and host boundary
@@ -1583,7 +1619,7 @@ Their stable language-neutral codes and locations are defined by
 - duplicate definitions and duplicate parameters
 - callable arity
 - direct and indirect cyclic calls (recursion is not part of the language)
-- predicate return type (`:boolean` or `nothing`)
+- predicate return type (`:Boolean` or `nothing`)
 - handler message-name shape
 - record field definitions
 - unknown or invalid type forms
@@ -1610,12 +1646,12 @@ result instead.
 ## Informative example
 
 ```ges
-module Robot
+module robot
 
-record :scan as {
-  distance: :quantity(m),
-  angle: :quantity(°),
-  strength: :percentage
+record :Scan as {
+  distance: :Quantity(m),
+  angle: :Quantity(°),
+  strength: :Percentage
 }
 
 predicate close(_ scan) be scan.distance < 30m
@@ -1625,7 +1661,7 @@ on Tick {
   publish Scan
 }
 
-on Scanner(data as :scan) {
+on Scanner(data as :Scan) {
   if data is close and data is strong {
     publish Fire
   } else {
@@ -1645,8 +1681,9 @@ Grammar-Kit so that `bnf` code fences receive useful syntax highlighting in
 IntelliJ-based editors. A rule uses `::=`; adjacent expressions form a sequence;
 `|` separates alternatives; `[ X ]` is optional; and `( X )*` / `( X )+` mean
 zero-or-more / one-or-more repetitions. Quoted text is a terminal. Uppercase
-bare names such as `IDENTIFIER`, `MESSAGE_NAME`, `NUMBER`, and `NL` are lexical
-token categories governed by the lexical rules above.
+bare names such as `LOWER_NAME`, `VARIABLE_NAME`, `TYPE_TAG`, `MODULE_NAME`,
+`CONSTANT_REFERENCE`, `MESSAGE_NAME`, `NUMBER`, and `NL` are lexical token
+categories governed by the lexical rules above.
 
 This is only a notation contract. The specification does not adopt Grammar-Kit
 rule attributes, parser generation, recovery, pinning, or PEG conflict
@@ -1657,21 +1694,23 @@ token separation is unambiguous.
 ```bnf
 compilation_unit ::= separators [module_declaration separators] (top_level_declaration separators)* EOF
 separators ::= (NL | ';')*
-module_declaration ::= 'module' module_name
-top_level_declaration ::= record_definition | predicate_definition | function_definition | event_handler
+module_declaration ::= 'module' MODULE_NAME
+top_level_declaration ::= constant_definition | record_definition | predicate_definition | function_definition | event_handler
+
+constant_definition ::= 'constant' CONSTANT_REFERENCE 'be' scalar_literal
 
 record_definition ::= 'record' custom_type_tag 'as' '{' separators [record_field (record_field_separator record_field)*] separators '}'
 record_field_separator ::= ',' separators | separators
-record_field ::= ['_'] IDENTIFIER ':' type_reference ['clamped' 'between' expression 'and' expression] ['computed' 'by' expression]
+record_field ::= ['_'] LOWER_NAME ':' type_reference ['clamped' 'between' expression 'and' expression] ['computed' 'by' expression]
 
-predicate_definition ::= 'predicate' IDENTIFIER definition_parameters 'be' expression
-function_definition ::= 'function' IDENTIFIER definition_parameters 'be' expression
+predicate_definition ::= 'predicate' LOWER_NAME definition_parameters 'be' expression
+function_definition ::= 'function' LOWER_NAME definition_parameters 'be' expression
 definition_parameters ::= '(' [parameter (',' parameter)*] ')'
-parameter ::= IDENTIFIER ['as' type_reference] | '_' IDENTIFIER ['as' type_reference]
+parameter ::= LOWER_NAME ['as' type_reference] | '_' VARIABLE_NAME ['as' type_reference]
 
 event_handler ::= 'on' handler_endpoint [handler_binding] handler_tag_filter* '{' separators [statement (statement_separator statement)*] separators '}'
 handler_endpoint ::= MESSAGE_NAME | 'initialization' | 'undeliverable'
-handler_binding ::= '(' [parameter (',' parameter)*] ')' | 'as' IDENTIFIER
+handler_binding ::= '(' [parameter (',' parameter)*] ')' | 'as' VARIABLE_NAME
 handler_tag_filter ::= ('matching' | 'without') TAG_LITERAL (',' TAG_LITERAL)*
 statement_separator ::= NL | ';'
 
@@ -1680,9 +1719,9 @@ emit_statement ::= 'emit' message_expression [tag_clause]
 publish_statement ::= 'publish' message_expression [tag_clause]
 message_expression ::= MESSAGE_NAME [parenthesized_arguments] | expression
 tag_clause ::= 'with' expression (',' expression)*
-let_statement ::= 'let' IDENTIFIER ['as' type_reference] 'be' expression
+let_statement ::= 'let' VARIABLE_NAME 'be' expression
 if_statement ::= 'if' expression statement_body ['else' statement_body]
-for_statement ::= 'for' IDENTIFIER ('in' expression | range_source) statement_body
+for_statement ::= 'for' VARIABLE_NAME ('in' expression | range_source) statement_body
 seeded_random_statement ::= 'random' 'with' expression statement_body
 expression_statement ::= expression
 statement_body ::= statement | '{' separators [statement (statement_separator statement)*] separators '}'
@@ -1704,7 +1743,7 @@ membership_expression ::= type_operation_expression (membership_operator type_op
 membership_operator ::= 'in' | '∈' | '∉' | 'has' 'value' | 'in' 'values' 'of' | 'starts' 'with' | 'ends' 'with'
 type_operation_expression ::= relational_expression type_operation*
 type_operation ::= 'as' type_reference |
-                   'is' [not_operator] (type_reference | numeric_check | 'empty' | extension_reference | IDENTIFIER |
+                   'is' [not_operator] ('nothing' | type_reference | numeric_check | 'empty' | extension_reference | LOWER_NAME |
                    'at' ('least' | 'most') additive_expression | ('less' | 'more') 'than' additive_expression |
                    additive_expression ['or' ('less' | 'more')])
 relational_expression ::= additive_expression (('<' | '>' | '<=' | '>=' | '≤' | '≥') additive_expression)*
@@ -1728,25 +1767,26 @@ clamp_expression ::= 'clamp' unary_expression 'between' expression 'and' express
 variadic_expression ::= ('min' | 'max') 'of' expression ('and' expression)*
 
 postfix_expression ::= primary_expression postfix_suffix*
-postfix_suffix ::= '.' IDENTIFIER | '[' collection_selector ']'
-primary_expression ::= literal | call_expression | uppercase_call_expression |
-                       type_constructor_expression | IDENTIFIER |
+postfix_suffix ::= '.' LOWER_NAME | '[' collection_selector ']'
+primary_expression ::= literal | CONSTANT_REFERENCE | call_expression | uppercase_call_expression |
+                       type_constructor_expression | VARIABLE_NAME |
                        '(' expression ')' | bracket_literal | generated_list_expression |
                        range_expression | random_expression | seeded_random_expression | dice_expression
-call_expression ::= IDENTIFIER parenthesized_arguments
+call_expression ::= LOWER_NAME parenthesized_arguments
 uppercase_call_expression ::= MESSAGE_NAME parenthesized_arguments
 type_constructor_expression ::= (built_in_type_tag | custom_type_tag) parenthesized_arguments
 parenthesized_arguments ::= '(' [argument (',' argument)*] ')'
 argument ::= [argument_label ':'] expression
-argument_label ::= IDENTIFIER | 'to'
+argument_label ::= LOWER_NAME | 'to'
 
 literal ::= NUMBER | PERCENTAGE | UNIT_NUMBER | TEXT_LITERAL | TAG_LITERAL | 'true' | 'false' | 'nothing' | math_constant
+scalar_literal ::= literal | ('-' | '−') (NUMBER | PERCENTAGE | UNIT_NUMBER | math_constant)
 math_constant ::= 'infinity' | '∞' | 'pi' | 'π' | '∏' | 'e' | 'ℇ' | 'tau' | 'τ'
 bracket_literal ::= list_literal | map_literal
 list_literal ::= '[' [expression (',' expression)*] ']'
 map_literal ::= '[' ':' ']' | '[' map_entry (',' map_entry)* ']'
-map_entry ::= IDENTIFIER ':' [expression]
-generated_list_expression ::= ':list' '[' ':select' IDENTIFIER (range_source | 'in' expression) ['where' expression] projection_arrow expression ']'
+map_entry ::= LOWER_NAME ':' [expression]
+generated_list_expression ::= ':List' '[' ':select' VARIABLE_NAME (range_source | 'in' expression) ['where' expression] projection_arrow expression ']'
 range_expression ::= range_source
 range_source ::= 'from' expression 'to' expression ['step' expression]
 random_expression ::= 'random' ['from'] additive_expression 'to' additive_expression
@@ -1754,7 +1794,7 @@ seeded_random_expression ::= 'random' 'with' expression expression
 dice_expression ::= 'roll' 'dice' POSITIVE_INTEGER 'd' POSITIVE_INTEGER
 series_expression ::= 'series' ('fibonacci' | 'factorial')
 
-extension_reference ::= ':' IDENTIFIER '.' IDENTIFIER
+extension_reference ::= ':' LOWER_NAME '.' LOWER_NAME
 extension_call_expression ::= extension_reference [parenthesized_arguments |
                               'of' expression ('and' expression)* |
                               argument_label ':' expression (argument_label ':' expression)* |
@@ -1767,28 +1807,28 @@ structured_selector ::= quantified_selector | pattern_selector | take_selector |
                         sum_selector | average_selector | extrema_selector | projection_selector |
                         map_selector | contains_selector | distinct_selector | group_selector |
                         sort_selector | order_selector | ':keys' | ':values' | ':entries'
-quantified_selector ::= (':any' | ':all') IDENTIFIER 'where' expression
+quantified_selector ::= (':any' | ':all') VARIABLE_NAME 'where' expression
 pattern_selector ::= ':has' (object_pattern | dice_pattern)
 take_selector ::= ':take' (slice | dice_pattern)
 drop_selector ::= ':drop' slice
 term_selector ::= ':term' expression
-count_selector ::= ':count' [IDENTIFIER 'where' expression]
-choose_selector ::= ':choose' POSITIVE_INTEGER ['at' 'random'] [IDENTIFIER 'where' expression] ['weighted' 'by' IDENTIFIER projection_arrow expression]
+count_selector ::= ':count' [VARIABLE_NAME 'where' expression]
+choose_selector ::= ':choose' POSITIVE_INTEGER ['at' 'random'] [VARIABLE_NAME 'where' expression] ['weighted' 'by' VARIABLE_NAME projection_arrow expression]
 draw_selector ::= ':draw' POSITIVE_INTEGER
 shuffle_selector ::= ':shuffle'
 reverse_selector ::= ':reverse'
-edge_selector ::= (':first' | ':last' | ':single') [IDENTIFIER 'where' expression]
-filter_selector ::= ':filter' IDENTIFIER 'where' expression
-sum_selector ::= ':sum' [IDENTIFIER projection_arrow expression]
-average_selector ::= ':average' [IDENTIFIER projection_arrow expression]
-extrema_selector ::= (':min' | ':max' | ':highest' | ':lowest') IDENTIFIER projection_arrow expression
-projection_selector ::= ':select' IDENTIFIER projection_arrow expression
-map_selector ::= ':map' IDENTIFIER 'by' expression [projection_arrow expression]
+edge_selector ::= (':first' | ':last' | ':single') [VARIABLE_NAME 'where' expression]
+filter_selector ::= ':filter' VARIABLE_NAME 'where' expression
+sum_selector ::= ':sum' [VARIABLE_NAME projection_arrow expression]
+average_selector ::= ':average' [VARIABLE_NAME projection_arrow expression]
+extrema_selector ::= (':min' | ':max' | ':highest' | ':lowest') VARIABLE_NAME projection_arrow expression
+projection_selector ::= ':select' VARIABLE_NAME projection_arrow expression
+map_selector ::= ':map' VARIABLE_NAME 'by' expression [projection_arrow expression]
 contains_selector ::= ':contains' ['all' | 'any'] expression
-distinct_selector ::= ':distinct' ['by' IDENTIFIER projection_arrow expression]
-group_selector ::= ':group' 'by' IDENTIFIER projection_arrow expression
+distinct_selector ::= ':distinct' ['by' VARIABLE_NAME projection_arrow expression]
+group_selector ::= ':group' 'by' VARIABLE_NAME projection_arrow expression
 sort_selector ::= ':sort' sort_direction
-order_selector ::= ':order' 'by' IDENTIFIER projection_arrow expression sort_direction
+order_selector ::= ':order' 'by' VARIABLE_NAME projection_arrow expression sort_direction
 projection_arrow ::= '=>' | '↦'
 sort_direction ::= 'ascending' | 'descending'
 slice ::= ('first' | 'last' | 'highest' | 'lowest') POSITIVE_INTEGER
@@ -1798,17 +1838,16 @@ dice_pattern ::= 'pair' ['of' unary_expression] |
                  'full' 'house' | 'straight'
 dice_count_word ::= 'three' | 'four' | 'five' | 'six' | 'seven'
 object_pattern ::= '[' [object_entry (',' object_entry)*] ']'
-object_entry ::= IDENTIFIER ':' (expression | object_pattern)
+object_entry ::= LOWER_NAME ':' (expression | object_pattern)
 
-type_reference ::= 'nothing' | built_in_type_tag | custom_type_tag
-built_in_type_tag ::= ':boolean' | ':number' | ':percentage' |
-                      ':quantity' '(' unit_name ')' | ':vector' | ':point' |
-                      ':series' | ':range' | ':message' | ':handler' | ':tag' |
-                      ':text' | ':list' | ':map' | ':dice'
+type_reference ::= built_in_type_tag | custom_type_tag
+built_in_type_tag ::= ':Boolean' | ':Number' | ':Percentage' |
+                      ':Quantity' '(' unit_name ')' | ':Vector' | ':Point' |
+                      ':Series' | ':Range' | ':Message' | ':Handler' | ':Tag' |
+                      ':Text' | ':List' | ':Map' | ':Dice' | ':Nothing'
 custom_type_tag ::= TYPE_TAG
 unit_name ::= 'none' | 'm' | 'meter' | 's' | 'second' | 'degree' | '°'
 numeric_check ::= 'numeric' | 'integer' | 'fractional'
-module_name ::= IDENTIFIER | MESSAGE_NAME
 ```
 
 An uppercase call is resolved contextually because messages and handler values
@@ -1817,7 +1856,7 @@ unlabeled parameter declarations (`name` or `_ name`), creates a handler value.
 A list containing a labeled argument (`name: expression`) creates a message
 value. A bare uppercase name in `emit` or `publish` is a zero-argument message.
 
-Adjacent `NUMBER IDENTIFIER` tokens without whitespace are also accepted as
+Adjacent `NUMBER VARIABLE_NAME` tokens without whitespace are also accepted as
 implicit multiplication. This applies only to numeric literals followed by an
 identifier or math constant; ordinary expressions require an explicit
 multiplication operator.

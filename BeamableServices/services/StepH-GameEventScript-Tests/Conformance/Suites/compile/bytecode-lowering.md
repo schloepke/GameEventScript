@@ -37,7 +37,7 @@ sources:
 ### Source code under test
 
 ```ges
-module EmitArgumentReads
+module emitargumentreads
 
 on Start(value) {
   let doubled be value * 2
@@ -76,7 +76,7 @@ sources:
 ### Source code under test
 
 ```ges
-module RandomTakes
+module randomtakes
 
 on Start {
   let integerValue be random from 1 to 6
@@ -118,24 +118,24 @@ sources:
 ### Source code under test
 
 ```ges
-module StageOpcodes
+module stageopcodes
 
-record :sample as {
-  falseValue: :boolean,
-  trueValue: :boolean,
-  integerValue: :number,
-  floatValue: :number,
-  meterInteger: :number,
-  meterFloat: :number,
-  percentageValue: :percentage,
-  textValue: :text,
-  tagValue: :tag,
-  omitted: :number
+record :Sample as {
+  falseValue: :Boolean,
+  trueValue: :Boolean,
+  integerValue: :Number,
+  floatValue: :Number,
+  meterInteger: :Number,
+  meterFloat: :Number,
+  percentageValue: :Percentage,
+  textValue: :Text,
+  tagValue: :Tag,
+  omitted: :Number
 }
 
 on Start {
   let values be [false, true, 12, 12.5, 7m, 1.5m, 25%, 'txt', #ready]
-  let sample be :sample(falseValue: false, trueValue: true, integerValue: 12, floatValue: 12.5, meterInteger: 7m, meterFloat: 1.5m, percentageValue: 25%, textValue: 'txt', tagValue: #ready)
+  let sample be :Sample(falseValue: false, trueValue: true, integerValue: 12, floatValue: 12.5, meterInteger: 7m, meterFloat: 1.5m, percentageValue: 25%, textValue: 'txt', tagValue: #ready)
   emit Done(values: values, omitted: sample.omitted)
 }
 
@@ -170,13 +170,13 @@ sources:
 ### Source code under test
 
 ```ges
-module PropertyAccessOpcodes
+module propertyaccessopcodes
 
 on Start {
   let listValue be [10, 20, 30]
   let mapValue be [name: 'Ada', hp: 10]
-  let vectorValue be :vector(1m, 2m, 3m)
-  let pointValue be :point(4m, 5m, 6m)
+  let vectorValue be :Vector(1m, 2m, 3m)
+  let pointValue be :Point(4m, 5m, 6m)
   let textValue be 'ab'
   let indexKey be 2
   let textKey be 'name'
@@ -219,15 +219,15 @@ sources:
 ### Source code under test
 
 ```ges
-module RangeIteratorOpcodes
+module rangeiteratoropcodes
 
 on Start {
   let fromValue be 2
   let toValue be 5
   let stepValue be 2
-  let shortRange be :list[:select item from 1 to 3 => item]
-  let dynamicRange be :list[:select item from fromValue to toValue => item]
-  let dynamicSteppedRange be :list[:select item from fromValue to toValue step stepValue => item]
+  let shortRange be :List[:select item from 1 to 3 => item]
+  let dynamicRange be :List[:select item from fromValue to toValue => item]
+  let dynamicSteppedRange be :List[:select item from fromValue to toValue step stepValue => item]
   emit Done(shortRange: shortRange, dynamicRange: dynamicRange, dynamicSteppedRange: dynamicSteppedRange)
 }
 
@@ -262,7 +262,7 @@ sources:
 ### Source code under test
 
 ```ges
-module ShortCircuit
+module shortcircuit
 
 on Start(flag, value) {
   let skipped be flag -> value
@@ -303,10 +303,10 @@ sources:
 ### Source code under test
 
 ```ges
-module NumericSugar
+module numericsugar
 
 on Start(value) {
-  let numericValue be value as :number
+  let numericValue be value as :Number
   let isNumeric be numericValue is numeric
   emit Done(numericValue: numericValue, isNumeric: isNumeric)
 }
@@ -343,11 +343,11 @@ sources:
 ### Source code under test
 
 ```ges
-module TrigNavigationOpcodes
+module trignavigationopcodes
 
 on Start(a, b) {
-  let vectorA be :vector(1, 0, 0)
-  let vectorB be :vector(0, 1, 0)
+  let vectorA be :Vector(1, 0, 0)
+  let vectorB be :Vector(0, 1, 0)
   emit Done(s: sin a, c: cos a, t: tan a, asinValue: asin a, acosValue: acos a, atanValue: atan a, atanTwoValue: atan2(a, b), hypotTwo: hypot(a, b), hypotThree: hypot(a, b, 3), distanceObject: distance(vectorA, vectorB), distanceTwo: distance(0, 0, 1, 1), distanceThree: distance(0, 0, 0, 1, 1, 1), distanceSquaredObject: distance squared(vectorA, vectorB), distanceSquaredTwo: distance squared(0, 0, 1, 1), distanceSquaredThree: distance squared(0, 0, 0, 1, 1, 1), lengthSquaredObject: length squared(vectorA), lengthSquaredTwo: length squared(a, b), lengthSquaredThree: length squared(a, b, 3), normalizeObject: normalize(vectorA), normalizeTwo: normalize(a, b), normalizeThree: normalize(a, b, 3), dotObject: dot(vectorA, vectorB), dotTwo: dot(1, 2, 3, 4), dotThree: dot(1, 2, 3, 4, 5, 6), crossObject: cross(vectorA, vectorB), crossTwo: cross(1, 2, 3, 4), crossThree: cross(1, 2, 3, 4, 5, 6), angleObject: angle between(vectorA, vectorB), angleTwo: angle between(1, 0, 0, 1), angleThree: angle between(1, 0, 0, 0, 1, 0))
 }
 
@@ -383,11 +383,11 @@ sources:
 ### Source code under test
 
 ```ges
-module SpatialCreation
+module spatialcreation
 
 on Start(value) {
-  let position be :vector(y: value, z: 3)
-  let target be :point(1, value)
+  let position be :Vector(y: value, z: 3)
+  let target be :Point(1, value)
   emit Done(position: position, target: target)
 }
 
@@ -423,7 +423,7 @@ sources:
 ### Source code under test
 
 ```ges
-module SideTables
+module sidetables
 
 on Start {
   for item from 1 to 3 emit Tick(value: item)
@@ -463,7 +463,7 @@ sources:
 ### Source code under test
 
 ```ges
-module LoopIterators
+module loopiterators
 
 on Start(begin, finish, step) {
   for item from begin to finish emit RangeItem(value: item)
@@ -489,7 +489,7 @@ opcodes:
 
 ## Test: inferred and explicitly converted seeds lower to dynamic scopes
 
-This compiler case verifies both accepted non-literal forms: an immutable binding inferred from an integer value and an externally supplied value explicitly converted to `:number`.
+This compiler case verifies both accepted non-literal forms: an immutable binding inferred from an integer value and an externally supplied value explicitly converted to `:Number`.
 
 ### Case description
 
@@ -506,12 +506,12 @@ sources:
 ### Source code under test
 
 ```ges
-module RandomScopes
+module randomscopes
 
 on Start(seed) {
   let fixedSeed be 123
   let first be random with fixedSeed 1
-  let second be random with (seed as :number) 2
+  let second be random with (seed as :Number) 2
   emit Done(first: first, second: second)
 }
 
@@ -547,7 +547,7 @@ sources:
 ### Source code under test
 
 ```ges
-module SideTables
+module sidetables
 
 on Start(values) {
   let selected be values[:select item => item + 1]
@@ -585,7 +585,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AggregateLoops
+module aggregateloops
 
 on Start(values) {
   let total be values[:sum]
@@ -626,7 +626,7 @@ sources:
 ### Source code under test
 
 ```ges
-module SeriesAtomicShape
+module seriesatomicshape
 
 on Start {
   let naturals be series fibonacci
@@ -639,7 +639,7 @@ on Start {
   let lowestValues be naturals[:take lowest 2]
   let droppedHighest be naturals[:drop highest 1]
   let droppedLowest be naturals[:drop lowest 1]
-  emit Done(term: term, firstValues: firstValues, droppedIsSeries: dropped is :series, lastValues: lastValues, droppedLast: droppedLast, highestValues: highestValues, lowestValues: lowestValues, droppedHighest: droppedHighest, droppedLowest: droppedLowest)
+  emit Done(term: term, firstValues: firstValues, droppedIsSeries: dropped is :Series, lastValues: lastValues, droppedLast: droppedLast, highestValues: highestValues, lowestValues: lowestValues, droppedHighest: droppedHighest, droppedLowest: droppedLowest)
 }
 
 ```

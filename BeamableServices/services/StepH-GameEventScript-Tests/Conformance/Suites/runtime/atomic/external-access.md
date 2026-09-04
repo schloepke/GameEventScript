@@ -41,7 +41,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEmitMessage
+module atomicemitmessage
 on Start(value) {
   emit Done(value: value)
 }
@@ -63,14 +63,14 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "21"
     local:
       - name: "Done"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "21"
 ```
 
@@ -99,7 +99,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicLoadMessage
+module atomicloadmessage
 on Start(value) {
   let msg be Done(value: value)
   emit msg
@@ -122,14 +122,14 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "21"
     local:
       - name: "Done"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "21"
 ```
 
@@ -158,7 +158,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicBindHandler
+module atomicbindhandler
 on Start(unit, target) {
   let shoot be Shoot(unit, target)
   let msg be shoot(unit: unit, target: target)
@@ -182,23 +182,23 @@ steps:
       args:
         - name: "unit"
           value:
-            type: ":text"
-            value: "u_1"
+            type: ":Text"
+            value: "u1"
         - name: "target"
           value:
-            type: ":text"
-            value: "t_1"
+            type: ":Text"
+            value: "t1"
     local:
       - name: "Shoot"
         args:
           - name: "unit"
             value:
-              type: ":text"
-              value: "u_1"
+              type: ":Text"
+              value: "u1"
           - name: "target"
             value:
-              type: ":text"
-              value: "t_1"
+              type: ":Text"
+              value: "t1"
 ```
 
 ---
@@ -226,7 +226,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicInvalidBindHandler
+module atomicinvalidbindhandler
 on Start(unit, hp) {
   let shoot be Shoot(unit, target)
   let invalid be shoot(unit: unit, hp: hp)
@@ -251,11 +251,11 @@ steps:
       args:
         - name: "unit"
           value:
-            type: ":text"
-            value: "u_1"
+            type: ":Text"
+            value: "u1"
         - name: "hp"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "10"
     local:
       - name: "Done"
@@ -287,7 +287,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMessageInputRoundtrip
+module atomicmessageinputroundtrip
 on Echo(nothingValue, falseValue, trueValue, integerValue, floatValue, infinityValue, unitInteger, unitFloat, percentageValue, textValue, emptyText, tagValue, vectorValue, unitVector, pointValue, unitPoint, listValue, emptyList, mapValue, emptyMap, customValue, diceValue, rangeValue, floatRangeValue, nestedMessage) {
   emit Done(nothingValue: nothingValue, falseValue: falseValue, trueValue: trueValue, integerValue: integerValue, floatValue: floatValue, infinityValue: infinityValue, unitInteger: unitInteger, unitFloat: unitFloat, percentageValue: percentageValue, textValue: textValue, emptyText: emptyText, tagValue: tagValue, vectorValue: vectorValue, unitVector: unitVector, pointValue: pointValue, unitPoint: unitPoint, listValue: listValue, emptyList: emptyList, mapValue: mapValue, emptyMap: emptyMap, customValue: customValue, diceValue: diceValue, rangeValue: rangeValue, floatRangeValue: floatRangeValue, nestedMessage: nestedMessage)
 }
@@ -309,108 +309,108 @@ steps:
       args:
         - name: "nothingValue"
           value:
-            type: ":nothing"
+            type: ":Nothing"
         - name: "falseValue"
           value:
-            type: ":boolean"
+            type: ":Boolean"
             value: false
         - name: "trueValue"
           value:
-            type: ":boolean"
+            type: ":Boolean"
             value: true
         - name: "integerValue"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "42"
         - name: "floatValue"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "10.75"
         - name: "infinityValue"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "Infinity"
         - name: "unitInteger"
           value:
-            type: ":integer"
+            type: ":Quantity.int64"
             value: "7"
             unit: ":meter"
         - name: "unitFloat"
           value:
-            type: ":float"
+            type: ":Quantity.binary64"
             value: "90"
             unit: ":degree"
         - name: "percentageValue"
           value:
-            type: ":percentage"
+            type: ":Percentage"
             value: "0.25"
         - name: "textValue"
           value:
-            type: ":text"
+            type: ":Text"
             value: "Hello"
         - name: "emptyText"
           value:
-            type: ":text"
+            type: ":Text"
             value: ""
         - name: "tagValue"
           value:
-            type: ":tag"
+            type: ":Tag"
             value: "ready"
         - name: "vectorValue"
           value:
-            type: ":vector"
+            type: ":Vector"
             x: "1.5"
             y: "-2"
             z: "3"
         - name: "unitVector"
           value:
-            type: ":vector"
+            type: ":Vector"
             x: "1"
             y: "2"
             z: "3"
             unit: ":meter"
         - name: "pointValue"
           value:
-            type: ":point"
+            type: ":Point"
             x: "4"
             y: "5"
             z: "6"
         - name: "unitPoint"
           value:
-            type: ":point"
+            type: ":Point"
             x: "7"
             y: "8"
             z: "9"
             unit: ":meter"
         - name: "listValue"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "1"
-              - type: ":text"
+              - type: ":Text"
                 value: "two"
-              - type: ":tag"
+              - type: ":Tag"
                 value: "three"
         - name: "emptyList"
           value:
-            type: ":list"
+            type: ":List"
             items: []
         - name: "mapValue"
           value:
-            type: ":map"
+            type: ":Map"
             entries:
               - key: "alpha"
                 value:
-                  type: ":integer"
+                  type: ":Number.int64"
                   value: "1"
               - key: "beta"
                 value:
-                  type: ":text"
+                  type: ":Text"
                   value: "two"
         - name: "emptyMap"
           value:
-            type: ":map"
+            type: ":Map"
             entries: []
         - name: "customValue"
           value:
@@ -418,34 +418,34 @@ steps:
             entries:
               - key: "hp"
                 value:
-                  type: ":integer"
+                  type: ":Number.int64"
                   value: "7"
               - key: "name"
                 value:
-                  type: ":text"
+                  type: ":Text"
                   value: "Knight"
         - name: "diceValue"
           value:
-            type: ":dice"
+            type: ":Dice"
             rolls:
               - 6
               - 5
               - 2
         - name: "rangeValue"
           value:
-            type: ":range"
+            type: ":Range.int64"
             from: "1"
             to: "3"
             step: "1"
         - name: "floatRangeValue"
           value:
-            type: ":range"
+            type: ":Range.binary64"
             from: "1.5"
             to: "3.5"
             step: "0.5"
         - name: "nestedMessage"
           value:
-            type: ":message"
+            type: ":Message"
             message:
               name: "Nested"
               tags:
@@ -454,119 +454,119 @@ steps:
               args:
                 - name: "amount"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "12"
                 - name: "payload"
                   value:
-                    type: ":text"
+                    type: ":Text"
                     value: "ok"
     local:
       - name: "Done"
         args:
           - name: "nothingValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "falseValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "trueValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "integerValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "42"
           - name: "floatValue"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "10.75"
           - name: "infinityValue"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "Infinity"
           - name: "unitInteger"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "7"
               unit: ":meter"
           - name: "unitFloat"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "90"
               unit: ":degree"
           - name: "percentageValue"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.25"
           - name: "textValue"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Hello"
           - name: "emptyText"
             value:
-              type: ":text"
+              type: ":Text"
               value: ""
           - name: "tagValue"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "ready"
           - name: "vectorValue"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "1.5"
               y: "-2"
               z: "3"
           - name: "unitVector"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "1"
               y: "2"
               z: "3"
               unit: ":meter"
           - name: "pointValue"
             value:
-              type: ":point"
+              type: ":Point"
               x: "4"
               y: "5"
               z: "6"
           - name: "unitPoint"
             value:
-              type: ":point"
+              type: ":Point"
               x: "7"
               y: "8"
               z: "9"
               unit: ":meter"
           - name: "listValue"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":text"
+                - type: ":Text"
                   value: "two"
-                - type: ":tag"
+                - type: ":Tag"
                   value: "three"
           - name: "emptyList"
             value:
-              type: ":list"
+              type: ":List"
               items: []
           - name: "mapValue"
             value:
-              type: ":map"
+              type: ":Map"
               entries:
                 - key: "alpha"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "1"
                 - key: "beta"
                   value:
-                    type: ":text"
+                    type: ":Text"
                     value: "two"
           - name: "emptyMap"
             value:
-              type: ":map"
+              type: ":Map"
               entries: []
           - name: "customValue"
             value:
@@ -574,34 +574,34 @@ steps:
               entries:
                 - key: "hp"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "7"
                 - key: "name"
                   value:
-                    type: ":text"
+                    type: ":Text"
                     value: "Knight"
           - name: "diceValue"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 6
                 - 5
                 - 2
           - name: "rangeValue"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "1"
               to: "3"
               step: "1"
           - name: "floatRangeValue"
             value:
-              type: ":range"
+              type: ":Range.binary64"
               from: "1.5"
               to: "3.5"
               step: "0.5"
           - name: "nestedMessage"
             value:
-              type: ":message"
+              type: ":Message"
               message:
                 name: "Nested"
                 tags:
@@ -610,11 +610,11 @@ steps:
                 args:
                   - name: "amount"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "12"
                   - name: "payload"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "ok"
 ```
 
@@ -643,7 +643,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEmitPublishStatic
+module atomicemitpublishstatic
 on Start {
   let tags be [#radio, #command, #radio]
   emit LocalZero
@@ -677,7 +677,7 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "OutZero"
         args: []
@@ -688,11 +688,11 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "kind"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "fire"
     outbound:
       - name: "OutZero"
@@ -704,11 +704,11 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "kind"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "fire"
 ```
 
@@ -737,7 +737,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEmitPublishMessageValues
+module atomicemitpublishmessagevalues
 on Start {
   let tags be [#alpha, #beta, #alpha]
   let emitMsg be DynamicEmit(value: 3, label: 'local')
@@ -768,11 +768,11 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "label"
             value:
-              type: ":text"
+              type: ":Text"
               value: "local"
       - name: "DynamicEmit"
         tags:
@@ -781,21 +781,21 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "label"
             value:
-              type: ":text"
+              type: ":Text"
               value: "local"
       - name: "DynamicPublish"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "label"
             value:
-              type: ":text"
+              type: ":Text"
               value: "bus"
       - name: "DynamicPublish"
         tags:
@@ -805,22 +805,22 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "label"
             value:
-              type: ":text"
+              type: ":Text"
               value: "bus"
     outbound:
       - name: "DynamicPublish"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "label"
             value:
-              type: ":text"
+              type: ":Text"
               value: "bus"
       - name: "DynamicPublish"
         tags:
@@ -830,11 +830,11 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "label"
             value:
-              type: ":text"
+              type: ":Text"
               value: "bus"
 ```
 
@@ -863,7 +863,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEmitPublishDispatch
+module atomicemitpublishdispatch
 on Start {
   emit Local(value: 1)
   publish Remote(value: 2)
@@ -897,32 +897,32 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "Remote"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
       - name: "Seen"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "ShouldNotRun"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
     outbound:
       - name: "Remote"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
 ```
 
@@ -951,7 +951,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathIntrinsicsAndSeries
+module atomicmathintrinsicsandseries
 on Start(value) {
   let natural be from 2 to 11 step 3
   let fib be series fibonacci
@@ -960,7 +960,7 @@ on Start(value) {
   let naturalThree be natural[4]
   let fibSeven be fib[:term 7]
   let factFive be fact[:term 5]
-  emit Done(floorBare: floor value, ceilCall: ceil(value), truncateNegative: truncate -10.7, halfEven: round half even 12.5, halfUp: round half up -12.5, halfDown: round half down -12.5, wrapDegree: wrap degree 370°, radians: rad 180°, degrees: deg 3.1415926535897933, naturalIsSeries: natural is :series, naturalZero: naturalZero, naturalThree: naturalThree, fibSeven: fibSeven, factFive: factFive, floorPredicate: nothing)
+  emit Done(floorBare: floor value, ceilCall: ceil(value), truncateNegative: truncate -10.7, halfEven: round half even 12.5, halfUp: round half up -12.5, halfDown: round half down -12.5, wrapDegree: wrap degree 370°, radians: rad 180°, degrees: deg 3.1415926535897933, naturalIsSeries: natural is :Series, naturalZero: naturalZero, naturalThree: naturalThree, fibSeven: fibSeven, factFive: factFive, floorPredicate: nothing)
 }
 ```
 
@@ -980,72 +980,72 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "10.75"
     local:
       - name: "Done"
         args:
           - name: "floorBare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "ceilCall"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "11"
           - name: "truncateNegative"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-10"
           - name: "halfEven"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
           - name: "halfUp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-13"
           - name: "halfDown"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-12"
           - name: "wrapDegree"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "10"
               unit: ":degree"
           - name: "radians"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "3.141592653589793"
           - name: "degrees"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "180"
               unit: ":degree"
           - name: "naturalIsSeries"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "naturalZero"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "naturalThree"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "11"
           - name: "fibSeven"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "13"
           - name: "factFive"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "120"
           - name: "floorPredicate"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -1073,14 +1073,14 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCallExternal
+module atomiccallexternal
 on Start(value, heading, target) {
   let nothingValue be nothing
   let listValue be [1, 'two', #three]
   let mapValue be [alpha: 1, beta: 'two']
-  let diceValue as :dice be [6, 4, 2]
+  let diceValue be ([6, 4, 2]) as :Dice
   let messageValue be Ping(amount: 7, label: 'ok')
-  emit Done(floored: floor value, flooredCall: floor(value), maxed: max of 2 and 8 and 5, turn: :nav.shortestTurn from: heading to: target, northPredicate: heading is :nav.isNorth, vectorTotal: :test.vectorSum :vector(1m, 2m, 3m), echoNothing: :test.echo nothingValue, echoBoolean: :test.echo true, echoInteger: :test.echo 12, echoFloat: :test.echo 12.5, echoPercentage: :test.echo 25%, echoMeter: :test.echo 10m, echoText: :test.echo 'hello', echoTag: :test.echo #ready, echoVector: :test.echo :vector(1m, 2m, 3m), echoPoint: :test.echo :point(4m, 5m, 6m), echoList: :test.echo listValue, echoMap: :test.echo mapValue, echoDice: :test.echo diceValue, echoMessage: :test.echo messageValue, echoPredicate: value is :test.echo)
+  emit Done(floored: floor value, flooredCall: floor(value), maxed: max of 2 and 8 and 5, turn: :nav.shortestTurn from: heading to: target, northPredicate: heading is :nav.isNorth, vectorTotal: :test.vectorSum :Vector(1m, 2m, 3m), echoNothing: :test.echo nothingValue, echoBoolean: :test.echo true, echoInteger: :test.echo 12, echoFloat: :test.echo 12.5, echoPercentage: :test.echo 25%, echoMeter: :test.echo 10m, echoText: :test.echo 'hello', echoTag: :test.echo #ready, echoVector: :test.echo :Vector(1m, 2m, 3m), echoPoint: :test.echo :Point(4m, 5m, 6m), echoList: :test.echo listValue, echoMap: :test.echo mapValue, echoDice: :test.echo diceValue, echoMessage: :test.echo messageValue, echoPredicate: value is :test.echo)
 }
 ```
 
@@ -1100,16 +1100,16 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "10.75"
         - name: "heading"
           value:
-            type: ":float"
+            type: ":Quantity.binary64"
             value: "350"
             unit: ":degree"
         - name: "target"
           value:
-            type: ":float"
+            type: ":Quantity.binary64"
             value: "10"
             unit: ":degree"
     local:
@@ -1117,120 +1117,120 @@ steps:
         args:
           - name: "floored"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "10"
           - name: "flooredCall"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "10"
           - name: "maxed"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "8"
           - name: "turn"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "20"
               unit: ":degree"
           - name: "northPredicate"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "vectorTotal"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "6"
               unit: ":meter"
           - name: "echoNothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "echoBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "echoInteger"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
           - name: "echoFloat"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "12.5"
           - name: "echoPercentage"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.25"
           - name: "echoMeter"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "10"
               unit: ":meter"
           - name: "echoText"
             value:
-              type: ":text"
+              type: ":Text"
               value: "hello"
           - name: "echoTag"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "ready"
           - name: "echoVector"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "1"
               y: "2"
               z: "3"
               unit: ":meter"
           - name: "echoPoint"
             value:
-              type: ":point"
+              type: ":Point"
               x: "4"
               y: "5"
               z: "6"
               unit: ":meter"
           - name: "echoList"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":text"
+                - type: ":Text"
                   value: "two"
-                - type: ":tag"
+                - type: ":Tag"
                   value: "three"
           - name: "echoMap"
             value:
-              type: ":map"
+              type: ":Map"
               entries:
                 - key: "alpha"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "1"
                 - key: "beta"
                   value:
-                    type: ":text"
+                    type: ":Text"
                     value: "two"
           - name: "echoDice"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 6
                 - 4
                 - 2
           - name: "echoMessage"
             value:
-              type: ":message"
+              type: ":Message"
               message:
                 name: "Ping"
                 args:
                   - name: "amount"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "7"
                   - name: "label"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "ok"
           - name: "echoPredicate"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```

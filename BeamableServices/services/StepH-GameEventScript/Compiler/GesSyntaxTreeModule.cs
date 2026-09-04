@@ -17,12 +17,14 @@ internal enum GameEventScriptCallableKind
 internal sealed class GesSyntaxTreeModule
 {
     internal GesSyntaxTreeModule(string moduleName,
+        IReadOnlyDictionary<string, ExpressionNode> constants,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> handlers,
         IGameEventScriptExternalTypeCatalog? externalTypeDefinitions = null,
         IReadOnlyList<GesSourceDocument>? sources = null)
     {
-        ModuleName = string.IsNullOrWhiteSpace(moduleName) ? "UnknownModule" : moduleName;
+        ModuleName = moduleName ?? throw new ArgumentNullException(nameof(moduleName));
+        Constants = constants ?? throw new ArgumentNullException(nameof(constants));
         TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
         Callables = callables ?? throw new ArgumentNullException(nameof(callables));
         Handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
@@ -31,6 +33,8 @@ internal sealed class GesSyntaxTreeModule
     }
 
     internal string ModuleName { get; }
+
+    internal IReadOnlyDictionary<string, ExpressionNode> Constants { get; }
 
     internal IReadOnlyDictionary<string, TypeDefinitionNode> TypeDefinitions { get; }
 

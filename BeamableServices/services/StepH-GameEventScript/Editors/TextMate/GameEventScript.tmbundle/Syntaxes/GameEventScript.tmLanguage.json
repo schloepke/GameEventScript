@@ -2,16 +2,16 @@
   "fileTypes": [
     "ges"
   ],
-  "firstLineMatch": "^\\s*module\\s+[A-Za-z_][A-Za-z0-9_]*\\b",
+  "firstLineMatch": "^\\s*module\\s+[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)*\\b",
   "repository": {
     "labels": {
       "patterns": [
         {
-          "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*:)",
+          "match": "\\b[a-z][A-Za-z0-9]*(?=\\s*:)",
           "name": "variable.parameter.label.gameeventscript"
         },
         {
-          "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b",
+          "match": "\\b[a-z][A-Za-z0-9]*(?:_(?:0|[1-9][0-9]*))?\\b",
           "name": "variable.other.gameeventscript"
         },
         {
@@ -31,7 +31,7 @@
     "messages": {
       "patterns": [
         {
-          "match": "\\b(emit|publish)\\s+([A-Z][A-Za-z0-9_]*)\\b",
+          "match": "\\b(emit|publish)\\s+([A-Z][A-Za-z0-9]*)\\b",
           "name": "meta.message.dispatch.gameeventscript",
           "captures": {
             "1": {
@@ -43,7 +43,7 @@
           }
         },
         {
-          "match": "\\b[A-Z][A-Za-z0-9_]*\\b",
+          "match": "\\b[A-Z][A-Za-z0-9]*\\b",
           "name": "entity.name.type.class.message.gameeventscript"
         }
       ]
@@ -55,7 +55,7 @@
           "name": "keyword.control.gameeventscript"
         },
         {
-          "match": "\\b(?:as|be|where|nothing)\\b",
+          "match": "\\b(?:as|be|where|nothing|constant)\\b",
           "name": "keyword.other.definition.gameeventscript"
         },
         {
@@ -75,7 +75,7 @@
     "declarations": {
       "patterns": [
         {
-          "match": "\\b(module)\\s+([A-Za-z_][A-Za-z0-9_]*)\\b",
+          "match": "\\b(module)\\s+([a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)*)\\b",
           "name": "meta.module.gameeventscript",
           "captures": {
             "1": {
@@ -87,7 +87,7 @@
           }
         },
         {
-          "match": "\\b(record)\\s+(:[a-z][A-Za-z]*|[a-z][A-Za-z]*(?:_[0-9]+)?)\\b",
+          "match": "\\b(record)\\s+(:[A-Z][A-Za-z0-9]*)\\b",
           "name": "meta.record.gameeventscript",
           "captures": {
             "1": {
@@ -99,7 +99,7 @@
           }
         },
         {
-          "match": "\\b(function)\\s+([A-Za-z_][A-Za-z0-9_]*)\\b",
+          "match": "\\b(function)\\s+([a-z][A-Za-z0-9]*)\\b",
           "name": "meta.function.gameeventscript",
           "captures": {
             "1": {
@@ -111,7 +111,7 @@
           }
         },
         {
-          "match": "\\b(predicate)\\s+([A-Za-z_][A-Za-z0-9_]*)\\b",
+          "match": "\\b(predicate)\\s+([a-z][A-Za-z0-9]*)\\b",
           "name": "meta.predicate.gameeventscript",
           "captures": {
             "1": {
@@ -123,7 +123,7 @@
           }
         },
         {
-          "match": "\\b(on)\\s+(@?[A-Za-z_][A-Za-z0-9_]*)\\b",
+          "match": "\\b(on)\\s+([A-Z][A-Za-z0-9]*|initialization|undeliverable)\\b",
           "name": "meta.handler.gameeventscript",
           "captures": {
             "1": {
@@ -135,7 +135,7 @@
           }
         },
         {
-          "match": "\\b(let)\\s+([A-Za-z_][A-Za-z0-9_]*)\\b",
+          "match": "\\b(let)\\s+([a-z][A-Za-z0-9]*(?:_(?:0|[1-9][0-9]*))?)\\b",
           "name": "meta.variable.let.gameeventscript",
           "captures": {
             "1": {
@@ -143,6 +143,18 @@
             },
             "2": {
               "name": "variable.other.local.gameeventscript"
+            }
+          }
+        },
+        {
+          "match": "\\b(constant)\\s+(\\$[a-z][A-Za-z0-9]*)\\b",
+          "name": "meta.constant.gameeventscript",
+          "captures": {
+            "1": {
+              "name": "keyword.other.definition.gameeventscript"
+            },
+            "2": {
+              "name": "variable.other.constant.gameeventscript"
             }
           }
         }
@@ -325,11 +337,7 @@
     "extensions-and-types": {
       "patterns": [
         {
-          "match": ":tag\\b",
-          "name": "entity.other.attribute-name.tag.gameeventscript"
-        },
-        {
-          "match": ":(quantity)(\\()((?:none|m|meter|s|second|degree|°))(\\))(?=$|[^A-Za-z0-9_])",
+          "match": ":(Quantity)(\\()((?:none|m|meter|s|second|degree|°))(\\))(?=$|[^A-Za-z0-9_])",
           "name": "support.type.primitive.quantity.gameeventscript",
           "captures": {
             "1": {
@@ -418,11 +426,11 @@
           }
         },
         {
-          "match": ":(?:text|boolean|number|percentage|vector|point|series|range|message|handler|list|map|dice)(?=$|[^A-Za-z0-9_])",
+          "match": ":(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice)(?=$|[^A-Za-z0-9_])",
           "name": "support.type.primitive.gameeventscript"
         },
         {
-          "match": ":[a-z][A-Za-z]*(?=$|[^A-Za-z0-9_])",
+          "match": ":[A-Z][A-Za-z0-9]*(?=$|[^A-Za-z0-9_])",
           "name": "entity.name.type.custom.gameeventscript"
         }
       ]
@@ -464,8 +472,12 @@
           "name": "constant.language.numeric.gameeventscript"
         },
         {
-          "match": "#[a-z][A-Za-z]*(?:_[0-9]+)?\\b",
+          "match": "#[a-z][A-Za-z0-9]*\\b",
           "name": "entity.other.attribute-name.tag.gameeventscript"
+        },
+        {
+          "match": "\\$[a-z][A-Za-z0-9]*\\b",
+          "name": "variable.other.constant.gameeventscript"
         }
       ]
     },

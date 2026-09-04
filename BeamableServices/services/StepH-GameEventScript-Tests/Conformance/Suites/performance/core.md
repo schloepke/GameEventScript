@@ -45,7 +45,7 @@ sources:
 ### Source code under test
 
 ```ges
-module PerformanceMath
+module performancemath
 
 on Start(value) {
   let a be value + 5
@@ -79,29 +79,29 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "10"
     local:
       - name: "Done"
         args:
           - name: "result"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "29"
 performance:
   profiles:
     csharp-dotnet-release-macos-arm64:
       metrics:
         ast-build.elapsed:
-          reference: 0.3407
+          reference: 0.0984
           toleranceAbsolute: 1
           unit: ms
         ast-build.allocated:
-          reference: 22.281
-          maximum: 22.281
+          reference: 23.109
+          maximum: 23.109
           unit: KiB
         binary-build.elapsed:
-          reference: 0.4375
+          reference: 0.121
           toleranceAbsolute: 1
           unit: ms
         binary-build.allocated:
@@ -109,35 +109,35 @@ performance:
           maximum: 46.969
           unit: KiB
         program-load.elapsed:
-          reference: 0.2801
+          reference: 0.0415
           toleranceAbsolute: 1
           unit: ms
         program-load.allocated:
-          reference: 13.461
+          reference: 13.328
           maximum: 13.461
           unit: KiB
         compile.elapsed:
-          reference: 1.0583
+          reference: 0.2609
           toleranceAbsolute: 1
           unit: ms
         compile.allocated:
-          reference: 82.711
-          maximum: 82.711
+          reference: 83.406
+          maximum: 83.406
           unit: KiB
         run.elapsed:
-          reference: 2.6689
+          reference: 2.4191
           toleranceAbsolute: 1
           unit: ms
         run.allocated:
-          reference: 171.914
+          reference: 140.625
           maximum: 171.914
           unit: KiB
         run.per-invoke-elapsed:
-          reference: 0.002669
+          reference: 0.002419
           toleranceAbsolute: 1
           unit: ms
         run.per-invoke-allocated:
-          reference: 0.172
+          reference: 0.141
           maximum: 0.172
           unit: KiB
 ```
@@ -163,7 +163,7 @@ sources:
 ### Source code under test
 
 ```ges
-module PerformanceMath
+module performancemath
 
 on Start(value) {
   let a be value + 5
@@ -185,13 +185,13 @@ on Start(value) {
 
 ```gesa
 // -------------------------------------------------------------------------------
-//  Module: PerformanceMath
+//  Module: performancemath
 //  Type: Game Event Script Assembler
 //  Format version: 1.0
 // -------------------------------------------------------------------------------
 
 .gesb 1
-.module "PerformanceMath"
+.module "performancemath"
 .program-version 0
 
 // -------------------------------------------------------------------------------
@@ -199,7 +199,7 @@ on Start(value) {
 
 .segment source "math integer hot path.ges"
 
-module PerformanceMath
+module performancemath
 
 on Start(value) {
   let a be value + 5
@@ -227,7 +227,7 @@ T_value:			.text "value"
 T_Start:			.text "Start"
 T_result:			.text "result"
 T_Done:				.text "Done"
-T_PerformanceMath:	.text "PerformanceMath"
+T_performancemath:	.text "performancemath"
 
 .region-end "Text"
 // -------------------------------------------------------------------------------
@@ -344,10 +344,10 @@ sources:
 ### Source code under test
 
 ```ges
-module PerformanceRanges
+module performanceranges
 
 on Start {
-  let values be :list[:select item from 1 to 100 => item * 2]
+  let values be :List[:select item from 1 to 100 => item * 2]
   let total be values[:sum value => value]
   let count be values[:count]
   emit Done(total: total, count: count)
@@ -374,26 +374,26 @@ steps:
         args:
           - name: "total"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10100"
           - name: "count"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "100"
 performance:
   profiles:
     csharp-dotnet-release-macos-arm64:
       metrics:
         ast-build.elapsed:
-          reference: 0.1287
+          reference: 0.0637
           toleranceAbsolute: 1
           unit: ms
         ast-build.allocated:
-          reference: 14.594
-          maximum: 14.594
+          reference: 15.07
+          maximum: 15.07
           unit: KiB
         binary-build.elapsed:
-          reference: 0.2945
+          reference: 0.1349
           toleranceAbsolute: 1
           unit: ms
         binary-build.allocated:
@@ -401,35 +401,35 @@ performance:
           maximum: 46.695
           unit: KiB
         program-load.elapsed:
-          reference: 0.0746
+          reference: 0.0404
           toleranceAbsolute: 1
           unit: ms
         program-load.allocated:
-          reference: 13.258
+          reference: 13.125
           maximum: 13.258
           unit: KiB
         compile.elapsed:
-          reference: 0.4978
+          reference: 0.239
           toleranceAbsolute: 1
           unit: ms
         compile.allocated:
-          reference: 74.547
-          maximum: 74.547
+          reference: 74.891
+          maximum: 74.891
           unit: KiB
         run.elapsed:
-          reference: 51.0479
+          reference: 45.4494
           toleranceAbsolute: 7.657185
           unit: ms
         run.allocated:
-          reference: 11476.602
+          reference: 11445.313
           maximum: 11476.602
           unit: KiB
         run.per-invoke-elapsed:
-          reference: 0.051048
+          reference: 0.045449
           toleranceAbsolute: 1
           unit: ms
         run.per-invoke-allocated:
-          reference: 11.477
+          reference: 11.445
           maximum: 11.477
           unit: KiB
 ```
@@ -455,10 +455,10 @@ sources:
 ### Source code under test
 
 ```ges
-module PerformanceRanges
+module performanceranges
 
 on Start {
-  let values be :list[:select item from 1 to 100 => item * 2]
+  let values be :List[:select item from 1 to 100 => item * 2]
   let total be values[:sum value => value]
   let count be values[:count]
   emit Done(total: total, count: count)
@@ -470,13 +470,13 @@ on Start {
 
 ```gesa
 // -------------------------------------------------------------------------------
-//  Module: PerformanceRanges
+//  Module: performanceranges
 //  Type: Game Event Script Assembler
 //  Format version: 1.0
 // -------------------------------------------------------------------------------
 
 .gesb 1
-.module "PerformanceRanges"
+.module "performanceranges"
 .program-version 0
 
 // -------------------------------------------------------------------------------
@@ -484,10 +484,10 @@ on Start {
 
 .segment source "range select and aggregate.ges"
 
-module PerformanceRanges
+module performanceranges
 
 on Start {
-  let values be :list[:select item from 1 to 100 => item * 2]
+  let values be :List[:select item from 1 to 100 => item * 2]
   let total be values[:sum value => value]
   let count be values[:count]
   emit Done(total: total, count: count)
@@ -505,7 +505,7 @@ T_Start:			.text "Start"
 T_total:			.text "total"
 T_count:			.text "count"
 T_Done:				.text "Done"
-T_PerformanceRanges:	.text "PerformanceRanges"
+T_performanceranges:	.text "performanceranges"
 
 .region-end "Text"
 // -------------------------------------------------------------------------------
@@ -542,7 +542,7 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_total, T_count] /
 Start:				 // handler Start()
 					RegisterLocals #8
 
-.source-line "range select and aggregate.ges" 4 |   let values be :list[:select item from 1 to 100 => item * 2]
+.source-line "range select and aggregate.ges" 4 |   let values be :List[:select item from 1 to 100 => item * 2]
 					ListBuilderCreate r4
 					CreateRangeIteratorShort r5, #1, #100, #1
 Start_3:			IteratorNext r1(item), r5, Start_8
@@ -610,18 +610,18 @@ sources:
 ### Source code under test
 
 ```ges
-module PerformanceTypes
+module performancetypes
 
-record :sample as {
-  _ value: :number,
-  label: :text,
-  doubled: :number computed by value * 2
+record :Sample as {
+  _ value: :Number,
+  label: :Text,
+  doubled: :Number computed by value * 2
 }
 
 on Start {
-  let rec be :sample(21, label: 'ok')
-  let textNumber be '42' as :number
-  emit Done(doubled: rec.doubled, label: rec.label, textNumber: textNumber, isSample: rec is :sample)
+  let rec be :Sample(21, label: 'ok')
+  let textNumber be '42' as :Number
+  emit Done(doubled: rec.doubled, label: rec.label, textNumber: textNumber, isSample: rec is :Sample)
 }
 
 ```
@@ -645,70 +645,70 @@ steps:
         args:
           - name: "doubled"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "42"
           - name: "label"
             value:
-              type: ":text"
+              type: ":Text"
               value: "ok"
           - name: "textNumber"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "42"
           - name: "isSample"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 performance:
   profiles:
     csharp-dotnet-release-macos-arm64:
       metrics:
         ast-build.elapsed:
-          reference: 0.1114
+          reference: 0.0823
           toleranceAbsolute: 1
           unit: ms
         ast-build.allocated:
-          reference: 17.703
-          maximum: 18.031
+          reference: 19.055
+          maximum: 19.055
           unit: KiB
         binary-build.elapsed:
-          reference: 0.3411
+          reference: 0.1487
           toleranceAbsolute: 1
           unit: ms
         binary-build.allocated:
-          reference: 46.336
+          reference: 46.547
           maximum: 46.547
           unit: KiB
         program-load.elapsed:
-          reference: 0.1289
+          reference: 0.0494
           toleranceAbsolute: 1
           unit: ms
         program-load.allocated:
-          reference: 15.141
+          reference: 15.219
           maximum: 15.352
           unit: KiB
         compile.elapsed:
-          reference: 0.5814
+          reference: 0.2804
           toleranceAbsolute: 1
           unit: ms
         compile.allocated:
-          reference: 79.18
-          maximum: 79.93
+          reference: 80.82
+          maximum: 80.82
           unit: KiB
         run.elapsed:
-          reference: 2.8563
+          reference: 2.7994
           toleranceAbsolute: 1
           unit: ms
         run.allocated:
-          reference: 718.789
+          reference: 687.5
           maximum: 718.789
           unit: KiB
         run.per-invoke-elapsed:
-          reference: 0.002856
+          reference: 0.002799
           toleranceAbsolute: 1
           unit: ms
         run.per-invoke-allocated:
-          reference: 0.719
+          reference: 0.688
           maximum: 0.719
           unit: KiB
 ```
@@ -734,18 +734,18 @@ sources:
 ### Source code under test
 
 ```ges
-module PerformanceTypes
+module performancetypes
 
-record :sample as {
-  _ value: :number,
-  label: :text,
-  doubled: :number computed by value * 2
+record :Sample as {
+  _ value: :Number,
+  label: :Text,
+  doubled: :Number computed by value * 2
 }
 
 on Start {
-  let rec be :sample(21, label: 'ok')
-  let textNumber be '42' as :number
-  emit Done(doubled: rec.doubled, label: rec.label, textNumber: textNumber, isSample: rec is :sample)
+  let rec be :Sample(21, label: 'ok')
+  let textNumber be '42' as :Number
+  emit Done(doubled: rec.doubled, label: rec.label, textNumber: textNumber, isSample: rec is :Sample)
 }
 
 ```
@@ -754,13 +754,13 @@ on Start {
 
 ```gesa
 // -------------------------------------------------------------------------------
-//  Module: PerformanceTypes
+//  Module: performancetypes
 //  Type: Game Event Script Assembler
 //  Format version: 1.0
 // -------------------------------------------------------------------------------
 
 .gesb 1
-.module "PerformanceTypes"
+.module "performancetypes"
 .program-version 0
 
 // -------------------------------------------------------------------------------
@@ -768,18 +768,18 @@ on Start {
 
 .segment source "record creation and casts.ges"
 
-module PerformanceTypes
+module performancetypes
 
-record :sample as {
-  _ value: :number,
-  label: :text,
-  doubled: :number computed by value * 2
+record :Sample as {
+  _ value: :Number,
+  label: :Text,
+  doubled: :Number computed by value * 2
 }
 
 on Start {
-  let rec be :sample(21, label: 'ok')
-  let textNumber be '42' as :number
-  emit Done(doubled: rec.doubled, label: rec.label, textNumber: textNumber, isSample: rec is :sample)
+  let rec be :Sample(21, label: 'ok')
+  let textNumber be '42' as :Number
+  emit Done(doubled: rec.doubled, label: rec.label, textNumber: textNumber, isSample: rec is :Sample)
 }
 
 .region-end "Source: record creation and casts.ges"
@@ -793,14 +793,14 @@ on Start {
 T_Start:			.text "Start"
 T_1:				.text "_"
 T_label:			.text "label"
-T_sample:			.text "sample"
+T_Sample:			.text "Sample"
 T_doubled:			.text "doubled"
 T_textNumber:		.text "textNumber"
 T_isSample:			.text "isSample"
 T_Done:				.text "Done"
 T_ok:				.text "ok"
 T_value:			.text "value"
-T_PerformanceTypes:	.text "PerformanceTypes"
+T_performancetypes:	.text "performancetypes"
 
 .region-end "Text"
 // -------------------------------------------------------------------------------
@@ -825,7 +825,7 @@ Keys_4:				.texts [T_value, T_label, T_doubled] // "value", "label", "doubled"
 .segment bind
 
 Handler_Start:		.bind MessageHandler id=0 name=T_Start args=[] entry=Start // "Start()"
-Record_sample:		.bind Record id=0 name=T_sample args=[T_1, T_label] entry=record_sample // "sample(_, label)"
+Record_Sample:		.bind Record id=0 name=T_Sample args=[T_1, T_label] entry=record_Sample // "Sample(_, label)"
 Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_doubled, T_label, T_textNumber, T_isSample] // "Done(doubled, label, textNumber, isSample)"
 
 .region-end "Bindings"
@@ -840,44 +840,44 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_doubled, T_label,
 Start:				 // handler Start()
 					RegisterLocals #5
 
-.source-line "record creation and casts.ges" 10 |   let rec be :sample(21, label: 'ok')
+.source-line "record creation and casts.ges" 10 |   let rec be :Sample(21, label: 'ok')
 					StageInteger #21
 					StageText T_ok // "ok"
-					CreateRecord r0(rec), Record_sample // "sample(_, label)"
+					CreateRecord r0(rec), Record_Sample // "Sample(_, label)"
 
-.source-line "record creation and casts.ges" 11 |   let textNumber be '42' as :number
+.source-line "record creation and casts.ges" 11 |   let textNumber be '42' as :Number
 					LoadInteger r1(textNumber), #42
 
-.source-line "record creation and casts.ges" 12 |   emit Done(doubled: rec.doubled, label: rec.label, textNumber: textNumber, isSample: rec is :sample)
+.source-line "record creation and casts.ges" 12 |   emit Done(doubled: rec.doubled, label: rec.label, textNumber: textNumber, isSample: rec is :Sample)
 					MemberAccess r2, T_doubled, r0(rec) // "doubled"
 					MemberAccess r3, T_label, r0(rec) // "label"
-					CheckCustomType r4, r0(rec), T_sample // "sample"
+					CheckCustomType r4, r0(rec), T_Sample // "Sample"
 					EmitMessage Outbound_Done, Args_3 // "Done(doubled, label, textNumber, isSample)"
 
 .source-line "record creation and casts.ges" 9 | on Start {
 					ReturnVoid
 
-.source-line "record creation and casts.ges" 3 | record :sample as {
-record_sample:		 // record sample(_, label)
+.source-line "record creation and casts.ges" 3 | record :Sample as {
+record_Sample:		 // record Sample(_, label)
 					RegisterLocals #3
 
-.source-line "record creation and casts.ges" 4 |   _ value: :number,
+.source-line "record creation and casts.ges" 4 |   _ value: :Number,
 					CastNumeric r0(_), r0(_)
 
-.source-line "record creation and casts.ges" 5 |   label: :text,
+.source-line "record creation and casts.ges" 5 |   label: :Text,
 					Cast r1(label), r1(label), Text
 
-.source-line "record creation and casts.ges" 6 |   doubled: :number computed by value * 2
+.source-line "record creation and casts.ges" 6 |   doubled: :Number computed by value * 2
 					LoadInteger r3, #2
 					Multiply r4, r0(_), r3
 					CastNumeric r2(doubled), r4
 
-.source-line "record creation and casts.ges" 3 | record :sample as {
+.source-line "record creation and casts.ges" 3 | record :Sample as {
 					StageRegister r0(_)
 					StageRegister r1(label)
 					StageRegister r2(doubled)
 					CreateMap r3, Keys_4 // "value", "label", "doubled"
-					CreateRecordValue r4, r3, T_sample // "sample"
+					CreateRecordValue r4, r3, T_Sample // "Sample"
 					ReturnValue r4
 
 .region-end "Code"
@@ -914,7 +914,7 @@ sources:
 ### Source code under test
 
 ```ges
-module PerformancePipelines
+module performancepipelines
 
 on Start {
   let values be [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
@@ -946,66 +946,66 @@ steps:
         args:
           - name: "directTotal"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "55"
           - name: "streamTotal"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "220"
           - name: "streamCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
 performance:
   profiles:
     csharp-dotnet-release-macos-arm64:
       metrics:
         ast-build.elapsed:
-          reference: 0.1729
+          reference: 0.1527
           toleranceAbsolute: 1
           unit: ms
         ast-build.allocated:
-          reference: 29.695
-          maximum: 30.977
+          reference: 31.602
+          maximum: 31.602
           unit: KiB
         binary-build.elapsed:
-          reference: 0.5369
+          reference: 0.2887
           toleranceAbsolute: 1
           unit: ms
         binary-build.allocated:
-          reference: 105.406
+          reference: 105.617
           maximum: 105.617
           unit: KiB
         program-load.elapsed:
-          reference: 0.1581
+          reference: 0.0534
           toleranceAbsolute: 1
           unit: ms
         program-load.allocated:
-          reference: 18.32
+          reference: 18.398
           maximum: 18.531
           unit: KiB
         compile.elapsed:
-          reference: 0.8679
+          reference: 0.4948
           toleranceAbsolute: 1
           unit: ms
         compile.allocated:
-          reference: 153.422
-          maximum: 155.125
+          reference: 155.617
+          maximum: 155.617
           unit: KiB
         run.elapsed:
-          reference: 19.525
+          reference: 20.1405
           toleranceAbsolute: 2.92875
           unit: ms
         run.allocated:
-          reference: 1312.539
+          reference: 1281.25
           maximum: 1312.539
           unit: KiB
         run.per-invoke-elapsed:
-          reference: 0.019525
+          reference: 0.020141
           toleranceAbsolute: 1
           unit: ms
         run.per-invoke-allocated:
-          reference: 1.313
+          reference: 1.281
           maximum: 1.313
           unit: KiB
 ```
@@ -1031,7 +1031,7 @@ sources:
 ### Source code under test
 
 ```ges
-module PerformancePipelines
+module performancepipelines
 
 on Start {
   let values be [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
@@ -1048,13 +1048,13 @@ on Start {
 
 ```gesa
 // -------------------------------------------------------------------------------
-//  Module: PerformancePipelines
+//  Module: performancepipelines
 //  Type: Game Event Script Assembler
 //  Format version: 1.0
 // -------------------------------------------------------------------------------
 
 .gesb 1
-.module "PerformancePipelines"
+.module "performancepipelines"
 .program-version 0
 
 // -------------------------------------------------------------------------------
@@ -1062,7 +1062,7 @@ on Start {
 
 .segment source "pipeline filter select sum and direct list slice.ges"
 
-module PerformancePipelines
+module performancepipelines
 
 on Start {
   let values be [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
@@ -1086,7 +1086,7 @@ T_directTotal:		.text "directTotal"
 T_streamTotal:		.text "streamTotal"
 T_streamCount:		.text "streamCount"
 T_Done:				.text "Done"
-T_PerformancePipelines:	.text "PerformancePipelines"
+T_performancepipelines:	.text "performancepipelines"
 
 .region-end "Text"
 // -------------------------------------------------------------------------------
@@ -1244,16 +1244,16 @@ sources:
 ### Source code under test
 
 ```ges
-module EnginePerformance
+module engineperformance
 
-predicate high(value as :number) be value >= 10
+predicate high(value as :Number) be value >= 10
 
 on Start(values) {
   let total be values[:filter value where value is high][:select value => value + 5%][:sum value => floor value]
   let average be values[:filter value where value is high][:select value => value + 5%][:average value => floor value]
   let oddCount be values[:filter value where value mod 2 = 1][:count value where true]
   let firstBoosted be values[:filter value where value is high][:select value => value + 5%][:first]
-  let scaled as :quantity(m) be 100m + 5%
+  let scaled be (100m + 5%) as :Quantity(m)
   let folded be (15% + 15%) * 2
   let directOddScaled be values[:filter value where value mod 2 = 1][:select value => value * 2][:count value where value > 10]
   if scaled > 100m {
@@ -1288,194 +1288,194 @@ steps:
       args:
         - name: "values"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "1"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "2"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "3"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "4"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "5"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "6"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "7"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "8"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "9"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "10"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "11"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "12"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "13"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "14"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "15"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "16"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "17"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "18"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "19"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "20"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "21"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "22"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "23"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "24"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "25"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "26"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "27"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "28"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "29"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "30"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "31"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "32"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "33"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "34"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "35"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "36"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "37"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "38"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "39"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "40"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "41"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "42"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "43"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "44"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "45"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "46"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "47"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "48"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "49"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "50"
     local:
       - name: "Done"
         args:
           - name: "total"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1272"
           - name: "average"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "31.024390243902438"
           - name: "oddCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "25"
           - name: "directOddScaled"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "22"
           - name: "first"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "10.5"
           - name: "scaled"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "105"
               unit: ":meter"
           - name: "folded"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.6"
           - name: "workTotal"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2583"
 performance:
   profiles:
     csharp-dotnet-release-macos-arm64:
       metrics:
         ast-build.elapsed:
-          reference: 0.3699
+          reference: 0.4111
           toleranceAbsolute: 1
           unit: ms
         ast-build.allocated:
-          reference: 75.766
-          maximum: 81.945
+          reference: 84.016
+          maximum: 84.016
           unit: KiB
         binary-build.elapsed:
-          reference: 1.0498
+          reference: 0.767
           toleranceAbsolute: 1
           unit: ms
         binary-build.allocated:
-          reference: 252.648
-          maximum: 253.445
+          reference: 253.547
+          maximum: 253.547
           unit: KiB
         program-load.elapsed:
-          reference: 0.188
+          reference: 0.1072
           toleranceAbsolute: 1
           unit: ms
         program-load.allocated:
-          reference: 32.227
+          reference: 32.758
           maximum: 32.867
           unit: KiB
         compile.elapsed:
-          reference: 1.6077
+          reference: 1.2853
           toleranceAbsolute: 1
           unit: ms
         compile.allocated:
-          reference: 360.641
-          maximum: 368.258
+          reference: 370.32
+          maximum: 370.32
           unit: KiB
         run.elapsed:
-          reference: 777.5183
+          reference: 766.0925
           toleranceAbsolute: 116.627745
           unit: ms
         run.allocated:
-          reference: 2265.664
+          reference: 2234.375
           maximum: 2265.664
           unit: KiB
         run.per-invoke-elapsed:
-          reference: 0.777518
+          reference: 0.766093
           toleranceAbsolute: 1
           unit: ms
         run.per-invoke-allocated:
-          reference: 2.266
+          reference: 2.234
           maximum: 2.266
           unit: KiB
 ```
@@ -1501,16 +1501,16 @@ sources:
 ### Source code under test
 
 ```ges
-module EnginePerformance
+module engineperformance
 
-predicate high(value as :number) be value >= 10
+predicate high(value as :Number) be value >= 10
 
 on Start(values) {
   let total be values[:filter value where value is high][:select value => value + 5%][:sum value => floor value]
   let average be values[:filter value where value is high][:select value => value + 5%][:average value => floor value]
   let oddCount be values[:filter value where value mod 2 = 1][:count value where true]
   let firstBoosted be values[:filter value where value is high][:select value => value + 5%][:first]
-  let scaled as :quantity(m) be 100m + 5%
+  let scaled be (100m + 5%) as :Quantity(m)
   let folded be (15% + 15%) * 2
   let directOddScaled be values[:filter value where value mod 2 = 1][:select value => value * 2][:count value where value > 10]
   if scaled > 100m {
@@ -1533,13 +1533,13 @@ on Start(values) {
 
 ```gesa
 // -------------------------------------------------------------------------------
-//  Module: EnginePerformance
+//  Module: engineperformance
 //  Type: Game Event Script Assembler
 //  Format version: 1.0
 // -------------------------------------------------------------------------------
 
 .gesb 1
-.module "EnginePerformance"
+.module "engineperformance"
 .program-version 0
 
 // -------------------------------------------------------------------------------
@@ -1547,16 +1547,16 @@ on Start(values) {
 
 .segment source "engine performance mixed pipelines control flow and messages.ges"
 
-module EnginePerformance
+module engineperformance
 
-predicate high(value as :number) be value >= 10
+predicate high(value as :Number) be value >= 10
 
 on Start(values) {
   let total be values[:filter value where value is high][:select value => value + 5%][:sum value => floor value]
   let average be values[:filter value where value is high][:select value => value + 5%][:average value => floor value]
   let oddCount be values[:filter value where value mod 2 = 1][:count value where true]
   let firstBoosted be values[:filter value where value is high][:select value => value + 5%][:first]
-  let scaled as :quantity(m) be 100m + 5%
+  let scaled be (100m + 5%) as :Quantity(m)
   let folded be (15% + 15%) * 2
   let directOddScaled be values[:filter value where value mod 2 = 1][:select value => value * 2][:count value where value > 10]
   if scaled > 100m {
@@ -1598,7 +1598,7 @@ T_Success:			.text "Success"
 T_message:			.text "message"
 T_hello:			.text "hello"
 T_world:			.text "world"
-T_EnginePerformance:	.text "EnginePerformance"
+T_engineperformance:	.text "engineperformance"
 
 .region-end "Text"
 // -------------------------------------------------------------------------------
@@ -1723,9 +1723,9 @@ Start_72:			IteratorClose r16
 					Jump Start_75
 Start_74:			LoadNothing r4(firstBoosted)
 
-.source-line "engine performance mixed pipelines control flow and messages.ges" 10 |   let scaled as :quantity(m) be 100m + 5%
-Start_75:			LoadInteger r5(scaled), #105, unit:meter
-					CastUnit r5(scaled), r5(scaled), unit:meter
+.source-line "engine performance mixed pipelines control flow and messages.ges" 10 |   let scaled be (100m + 5%) as :Quantity(m)
+Start_75:			LoadInteger r16, #105, unit:meter
+					CastUnit r5(scaled), r16, unit:meter
 
 .source-line "engine performance mixed pipelines control flow and messages.ges" 11 |   let folded be (15% + 15%) * 2
 					LoadFloat r6(folded), #0.6
@@ -1837,7 +1837,7 @@ Start_157:			EmitMessage Outbound_Done, Args_7 // "Done(total, average, oddCount
 .source-line "engine performance mixed pipelines control flow and messages.ges" 5 | on Start(values) {
 					ReturnVoid
 
-.source-line "engine performance mixed pipelines control flow and messages.ges" 3 | predicate high(value as :number) be value >= 10
+.source-line "engine performance mixed pipelines control flow and messages.ges" 3 | predicate high(value as :Number) be value >= 10
 predicate_high:		 // predicate high(value)
 					RegisterLocals #2
 					CastNumeric r0(value), r0(value)

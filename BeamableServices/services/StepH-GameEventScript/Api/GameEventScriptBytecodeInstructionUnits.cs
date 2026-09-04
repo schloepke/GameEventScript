@@ -84,11 +84,16 @@ public static class GameEventScriptBytecodeInstructionUnits
             ? ParseQuantityName(typeName["quantity:".Length..])
             : null;
 
+    internal static GameEventScriptBytecodeInstructionUnit? ParseSourceQuantityTypeName(string? typeName)
+        => typeName is not null && typeName.StartsWith("Quantity(", StringComparison.Ordinal) && typeName.EndsWith(")", StringComparison.Ordinal)
+            ? ParseQuantityName(typeName["Quantity(".Length..^1])
+            : null;
+
     private static GameEventScriptBytecodeInstructionUnit? ParseQuantityName(string? quantityName)
         => quantityName switch
         {
             "none" => GameEventScriptBytecodeInstructionUnit.UnitNone,
-            "degree" => GameEventScriptBytecodeInstructionUnit.UnitDegree,
+            "degree" or "°" => GameEventScriptBytecodeInstructionUnit.UnitDegree,
             "m" or "meter" => GameEventScriptBytecodeInstructionUnit.UnitMeter,
             "s" or "second" => GameEventScriptBytecodeInstructionUnit.UnitSecond,
             _ => null

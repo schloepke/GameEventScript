@@ -35,7 +35,7 @@ id: compact-bindings
 ### Source code under test
 
 ```ges
-module BinaryShape
+module binaryshape
 
 function score(value) be value + 1
 predicate high(value) be value > 3
@@ -50,13 +50,13 @@ on Start(value) {
 
 ```gesa
 // -------------------------------------------------------------------------------
-//  Module: BinaryShape
+//  Module: binaryshape
 //  Type: Game Event Script Assembler
 //  Format version: 1.0
 // -------------------------------------------------------------------------------
 
 .gesb 1
-.module "BinaryShape"
+.module "binaryshape"
 .program-version 0
 
 // -------------------------------------------------------------------------------
@@ -64,7 +64,7 @@ on Start(value) {
 
 .segment source "compile.program-dumps.compact-bindings.ges"
 
-module BinaryShape
+module binaryshape
 
 function score(value) be value + 1
 predicate high(value) be value > 3
@@ -88,7 +88,7 @@ T_high:				.text "high"
 T_score:			.text "score"
 T_rounded:			.text "rounded"
 T_Done:				.text "Done"
-T_BinaryShape:		.text "BinaryShape"
+T_binaryshape:		.text "binaryshape"
 
 .region-end "Text"
 // -------------------------------------------------------------------------------
@@ -176,7 +176,7 @@ id: message-name-and-source
 ### Source code under test
 
 ```ges
-module BinaryMessageNameDump
+module binarymessagenamedump
 
 on Ping as message {
   emit Done(value: message.name)
@@ -187,13 +187,13 @@ on Ping as message {
 
 ```gesa
 // -------------------------------------------------------------------------------
-//  Module: BinaryMessageNameDump
+//  Module: binarymessagenamedump
 //  Type: Game Event Script Assembler
 //  Format version: 1.0
 // -------------------------------------------------------------------------------
 
 .gesb 1
-.module "BinaryMessageNameDump"
+.module "binarymessagenamedump"
 .program-version 0
 
 // -------------------------------------------------------------------------------
@@ -201,7 +201,7 @@ on Ping as message {
 
 .segment source "compile.program-dumps.message-name-and-source.ges"
 
-module BinaryMessageNameDump
+module binarymessagenamedump
 
 on Ping as message {
   emit Done(value: message.name)
@@ -220,7 +220,7 @@ T_Ping:				.text "Ping"
 T_value:			.text "value"
 T_Done:				.text "Done"
 T_name:				.text "name"
-T_BinaryMessageNameDump:	.text "BinaryMessageNameDump"
+T_binarymessagenamedump:	.text "binarymessagenamedump"
 
 .region-end "Text"
 // -------------------------------------------------------------------------------

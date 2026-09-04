@@ -282,7 +282,7 @@ public sealed class GameEventScriptHostSteppingTests
                             let value be 1 + 2 + 3
                             random with 7 {
                               let outer be random from 1 to 6
-                              random with (nothing as :number) {
+                              random with (nothing as :Number) {
                                 let inner be random from 1 to 6
                               }
                             }

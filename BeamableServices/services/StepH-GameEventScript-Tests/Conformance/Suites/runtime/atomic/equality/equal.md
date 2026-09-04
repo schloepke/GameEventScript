@@ -43,7 +43,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftNothing
+module atomicequalityequalleftnothing
 on Start {
   let left be nothing
   let rightNothing be nothing
@@ -55,8 +55,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -87,58 +87,58 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "float"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "percentage"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "quantity"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "text"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "numericTag"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "plainTag"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "vector"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "point"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "list"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "map"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "dice"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "range"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "message"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "handler"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "seriesValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -168,7 +168,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftBoolean
+module atomicequalityequalleftboolean
 on Start {
   let left be true
   let rightNothing be nothing
@@ -180,8 +180,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -212,74 +212,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -310,7 +310,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftInteger
+module atomicequalityequalleftinteger
 on Start {
   let left be 10
   let rightNothing be nothing
@@ -322,8 +322,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -354,74 +354,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -452,7 +452,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftFloat
+module atomicequalityequalleftfloat
 on Start {
   let left be 10.5
   let rightNothing be nothing
@@ -464,8 +464,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -496,74 +496,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -594,7 +594,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftPercentage
+module atomicequalityequalleftpercentage
 on Start {
   let left be 1000%
   let rightNothing be nothing
@@ -606,8 +606,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -638,74 +638,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -736,7 +736,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftQuantity
+module atomicequalityequalleftquantity
 on Start {
   let left be 10m
   let rightNothing be nothing
@@ -748,8 +748,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -780,74 +780,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -878,7 +878,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftText
+module atomicequalityequallefttext
 on Start {
   let left be '10'
   let rightNothing be nothing
@@ -890,8 +890,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -922,74 +922,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1020,7 +1020,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftNumericTag
+module atomicequalityequalleftnumerictag
 on Start {
   let left be pi
   let rightNothing be nothing
@@ -1032,8 +1032,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -1064,74 +1064,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1162,7 +1162,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftPlainTag
+module atomicequalityequalleftplaintag
 on Start {
   let left be #custom
   let rightNothing be nothing
@@ -1174,8 +1174,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -1206,74 +1206,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1304,9 +1304,9 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftVector
+module atomicequalityequalleftvector
 on Start {
-  let left be :vector(1, 2, 3)
+  let left be :Vector(1, 2, 3)
   let rightNothing be nothing
   let rightBoolean be true
   let rightInteger be 10
@@ -1316,8 +1316,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -1348,74 +1348,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1446,9 +1446,9 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftPoint
+module atomicequalityequalleftpoint
 on Start {
-  let left be :point(1, 2, 3)
+  let left be :Point(1, 2, 3)
   let rightNothing be nothing
   let rightBoolean be true
   let rightInteger be 10
@@ -1458,8 +1458,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -1490,74 +1490,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1588,7 +1588,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftList
+module atomicequalityequalleftlist
 on Start {
   let left be [1, 'x']
   let rightNothing be nothing
@@ -1600,8 +1600,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -1632,74 +1632,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1730,7 +1730,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftMap
+module atomicequalityequalleftmap
 on Start {
   let left be [hp: 10, name: 'Ada']
   let rightNothing be nothing
@@ -1742,8 +1742,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -1774,74 +1774,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1872,7 +1872,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftDice
+module atomicequalityequalleftdice
 on Start {
   let left be roll dice 2d6
   let rightNothing be nothing
@@ -1884,8 +1884,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -1916,74 +1916,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -2014,7 +2014,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftRange
+module atomicequalityequalleftrange
 on Start {
   let left be from 1 to 3
   let rightNothing be nothing
@@ -2026,8 +2026,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -2058,74 +2058,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -2156,7 +2156,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftMessage
+module atomicequalityequalleftmessage
 on Start {
   let left be Ping(amount: 10)
   let rightNothing be nothing
@@ -2168,8 +2168,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -2200,74 +2200,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -2298,7 +2298,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftHandler
+module atomicequalityequallefthandler
 on Start {
   let left be Ping(amount)
   let rightNothing be nothing
@@ -2310,8 +2310,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -2342,74 +2342,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -2440,7 +2440,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicEqualityEqualLeftSeries
+module atomicequalityequalleftseries
 on Start {
   let left be series fibonacci
   let rightNothing be nothing
@@ -2452,8 +2452,8 @@ on Start {
   let rightText be '10'
   let rightNumericTag be pi
   let rightPlainTag be #custom
-  let rightVector be :vector(1, 2, 3)
-  let rightPoint be :point(1, 2, 3)
+  let rightVector be :Vector(1, 2, 3)
+  let rightPoint be :Point(1, 2, 3)
   let rightList be [1, 'x']
   let rightMap be [name: 'Ada', hp: 10]
   let rightDice be roll dice 2d6
@@ -2484,74 +2484,74 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integer"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "float"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "quantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "text"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "plainTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "list"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "map"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "dice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "range"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "message"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "seriesValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -2580,16 +2580,16 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicDeterministicEquality
-record :first as { value: :number }
-record :second as { value: :number }
+module atomicdeterministicequality
+record :First as { value: :Number }
+record :Second as { value: :Number }
 
 on Start {
-  let leftDice as :dice be [6, 4]
-  let rightDice as :dice be [5, 5]
-  let first be :first(value: 10)
-  let sameFirst be :first(value: 10)
-  let second be :second(value: 10)
+  let leftDice be ([6, 4]) as :Dice
+  let rightDice be ([5, 5]) as :Dice
+  let first be :First(value: 10)
+  let sameFirst be :First(value: 10)
+  let second be :Second(value: 10)
   let plain be [value: 10]
   emit Done(numericCrossKind: 10 = 1000%, diceBySum: leftDice = rightDice, nestedNumericExact: [10] = [1000%], nestedDiceExact: [leftDice] = [rightDice], textTagDifferent: 'same' = #same, sameRecord: first = sameFirst, differentRecordType: first = second, recordMapDifferent: first = plain, mapRecordDifferent: plain = first, mapsIgnoreSourceOrder: [b: 2, a: 1] = [a: 1, b: 2])
 }
@@ -2614,42 +2614,42 @@ steps:
         args:
           - name: "numericCrossKind"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "diceBySum"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "nestedNumericExact"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "nestedDiceExact"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "textTagDifferent"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "sameRecord"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "differentRecordType"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "recordMapDifferent"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "mapRecordDifferent"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "mapsIgnoreSourceOrder"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```

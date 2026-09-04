@@ -73,7 +73,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BrokenCombat
+module brokencombat
 predicate unitIsDead(un%it) be unit[hp] <= 0
 on FireAtUnit(unit) {
   emit Done
@@ -182,7 +182,7 @@ sources:
 
 ```ges
 on Start(value) {
-  let numberValue as :Float be value
+  let numberValue be value as :float
 }
 ```
 
@@ -530,7 +530,7 @@ sources:
 
 ```ges
 on Start {
-  let value be :dice 4d6
+  let value be :Dice 4d6
 }
 ```
 
@@ -810,7 +810,7 @@ sources:
 
 ```ges
 on Start {
-  let values be :list[:select item in from 1 to 5 => item]
+  let values be :List[:select item in from 1 to 5 => item]
 }
 ```
 
@@ -951,7 +951,7 @@ sources:
 ### Source code under test
 
 ```ges
-on :handler Shoot(unit, target) {
+on :Handler Shoot(unit, target) {
   emit Done
 }
 ```
@@ -1022,9 +1022,9 @@ sources:
 
 ```ges
 on Start(unit, target) {
-  let h as :handler be :handler Shoot(unit, target)
-  let m as :message be :message Shoot(unit: unit, target: target)
-  emit :message Shoot(unit: unit, target: target)
+  let h be (:Handler Shoot(unit, target)) as :Handler
+  let m be (:Message Shoot(unit: unit, target: target)) as :Message
+  emit :Message Shoot(unit: unit, target: target)
 }
 ```
 
@@ -1094,7 +1094,7 @@ sources:
 
 ```ges
 on Start {
-  let x be 100 as :quantity(%)
+  let x be 100 as :Quantity(%)
 }
 ```
 
@@ -1392,10 +1392,10 @@ error:
 
 ---
 
-## Test: record type names reject numeric suffixes
+## Test: record type names reject variable subscript suffixes
 
 This negative compiler case verifies that declared custom type names use the
-portable type-name grammar rather than the wider identifier and tag grammar.
+portable type-name grammar and never the variable-only `_number` suffix.
 
 ### Case description
 
@@ -1405,15 +1405,15 @@ id: case-0040
 kind: compileError
 level: atomic
 sources:
-  - name: "record type names reject numeric suffixes.ges"
+  - name: "record type names reject variable subscript suffixes.ges"
     program: main
 ```
 
 ### Source code under test
 
 ```ges
-record :unit_2 as {
-  value: :number
+record :Unit_2 as {
+  value: :Number
 }
 
 on Start {
@@ -1473,7 +1473,7 @@ error:
 
 This negative compiler case verifies that `:` remains reserved for structured
 selectors, type names, and extension namespaces. Map keys use member syntax,
-text, or `#` tags instead of the removed legacy `:name` spelling.
+text, or `#` tags instead of the removed legacy `:Name` spelling.
 
 ### Case description
 

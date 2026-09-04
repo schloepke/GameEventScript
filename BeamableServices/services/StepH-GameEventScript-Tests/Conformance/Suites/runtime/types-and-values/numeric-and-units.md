@@ -65,27 +65,27 @@ steps:
         args:
           - name: "add"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "subtract"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "multiply"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "42"
           - name: "modulo"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "divide"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "3.5"
           - name: "mixed"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "3.5"
 ```
 
@@ -135,71 +135,71 @@ steps:
       args:
         - name: "a"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "7"
         - name: "b"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "3"
     local:
       - name: "Done"
         args:
           - name: "divPositive"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "divNegative"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-3"
           - name: "divNegativeDivisor"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-3"
           - name: "floatDiv"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "sameUnitDiv"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "unitDivScalar"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "3"
               unit: ":meter"
           - name: "modPositive"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "modNegative"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "modNegativeDivisor"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-2"
           - name: "remPositive"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "remNegative"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-1"
           - name: "remNegativeDivisor"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "divZero"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "Infinity"
           - name: "remZero"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -252,59 +252,59 @@ steps:
         args:
           - name: "addToBase"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "105"
           - name: "subtractFromBase"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "95"
           - name: "multiplyBaseRight"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
           - name: "divideBaseByPercent"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2000"
           - name: "reverseAdd"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "reverseSubtract"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentAdd"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.3"
           - name: "percentSubtract"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.1"
           - name: "percentScaleRight"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.3"
           - name: "percentDivideScalar"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.05"
           - name: "scalarScaleLeft"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.3"
           - name: "percentProduct"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.0225"
           - name: "percentRatio"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "percentDivideZero"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "Infinity"
 ```
 
@@ -357,40 +357,40 @@ steps:
         args:
           - name: "meterAddPercent"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "105"
               unit: ":meter"
           - name: "meterSubtractPercent"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "95"
               unit: ":meter"
           - name: "meterMultiplyPercentRight"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "5"
               unit: ":meter"
           - name: "meterMultiplyPercentLeft"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "5"
               unit: ":meter"
           - name: "meterDividePercent"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "2000"
               unit: ":meter"
           - name: "reverseMeterAdd"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "reverseMeterSubtract"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentDivideMeter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -427,14 +427,14 @@ on Start {
   let addOver be 180° + 200°
   let subtractOpen be 10° - 40°
   let negOpen be -90°
-  let castOpen as :quantity(°) be 450
+  let castOpen be (450) as :Quantity(°)
   let wrapNegative be wrap degree -10°
   let wrapOver be wrap degree 370°
   let wrapLarge be wrap degree 1000°
   let wrapCast be wrap degree castOpen
-  let textValue as :text be 43.9°
-  let floatValue as :number be 43.9°
-  emit Done(fromLiteral: fromLiteral, overLiteral: overLiteral, floatLiteral: floatLiteral, addOpen: addOpen, addOver: addOver, subtractOpen: subtractOpen, negOpen: negOpen, castOpen: castOpen, wrapNegative: wrapNegative, wrapOver: wrapOver, wrapLarge: wrapLarge, wrapCast: wrapCast, textValue: textValue, floatValue: floatValue, isDegree: fromLiteral is :quantity(°))
+  let textValue be (43.9°) as :Text
+  let floatValue be (43.9°) as :Number
+  emit Done(fromLiteral: fromLiteral, overLiteral: overLiteral, floatLiteral: floatLiteral, addOpen: addOpen, addOver: addOver, subtractOpen: subtractOpen, negOpen: negOpen, castOpen: castOpen, wrapNegative: wrapNegative, wrapOver: wrapOver, wrapLarge: wrapLarge, wrapCast: wrapCast, textValue: textValue, floatValue: floatValue, isDegree: fromLiteral is :Quantity(°))
 }
 ```
 
@@ -457,76 +457,76 @@ steps:
         args:
           - name: "fromLiteral"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "90"
               unit: ":degree"
           - name: "overLiteral"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "360"
               unit: ":degree"
           - name: "floatLiteral"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "43.9"
               unit: ":degree"
           - name: "addOpen"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "450"
               unit: ":degree"
           - name: "addOver"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "380"
               unit: ":degree"
           - name: "subtractOpen"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "-30"
               unit: ":degree"
           - name: "negOpen"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "-90"
               unit: ":degree"
           - name: "castOpen"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "450"
               unit: ":degree"
           - name: "wrapNegative"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "350"
               unit: ":degree"
           - name: "wrapOver"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "10"
               unit: ":degree"
           - name: "wrapLarge"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "280"
               unit: ":degree"
           - name: "wrapCast"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "90"
               unit: ":degree"
           - name: "textValue"
             value:
-              type: ":text"
+              type: ":Text"
               value: "43.9\u00B0"
           - name: "floatValue"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "43.9"
               unit: ":degree"
           - name: "isDegree"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -579,118 +579,118 @@ steps:
         args:
           - name: "addNumber"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "subtractNumber"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "addPercentRight"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "132"
               unit: ":degree"
           - name: "addPercentLeft"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "subtractPercent"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "108"
               unit: ":degree"
           - name: "multiplyPercentRight"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "12"
               unit: ":degree"
           - name: "multiplyPercentLeft"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "12"
               unit: ":degree"
           - name: "multiplyFloat"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "6"
               unit: ":degree"
           - name: "divideFloat"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "150"
               unit: ":degree"
           - name: "dividePercent"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "1200"
               unit: ":degree"
           - name: "wrappedDividePercent"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "120"
               unit: ":degree"
           - name: "moduloDegree"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "10"
               unit: ":degree"
           - name: "moduloPercent"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "divideZero"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "Infinity"
           - name: "moduloZero"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "reverseSubtract"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "reverseDivide"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "reverseModulo"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "floorDegree"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "43"
           - name: "ceilDegree"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "44"
           - name: "roundEvenDegree"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "42"
           - name: "minDegree"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "10"
               unit: ":degree"
           - name: "maxDegree"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "350"
               unit: ":degree"
           - name: "greaterDegree"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "lessMixed"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentCompare"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -720,9 +720,9 @@ sources:
 
 ```ges
 on Start {
-  let castMeter as :quantity(m) be 100
-  let rawMeter as :number be castMeter
-  emit Done(distance: 100m, duration: 15s, castMeter: castMeter, rawMeter: rawMeter, isMeter: castMeter is :quantity(m), isSecond: 15s is :quantity(s), isFloat: castMeter is :number, sameAdd: 100m + 50m, mixedAdd: 100m + 50, wrongAdd: 100m + 5s, scaleLeft: 100m * 2, scaleRight: 2 * 100m, divideScalar: 100m / 2, divideSame: 100m / 25m, unitModulo: 370m mod 90m, unitModuloScalar: 100m mod 3, wrapMeter: wrap degree 10m)
+  let castMeter be (100) as :Quantity(m)
+  let rawMeter be (castMeter) as :Number
+  emit Done(distance: 100m, duration: 15s, castMeter: castMeter, rawMeter: rawMeter, isMeter: castMeter is :Quantity(m), isSecond: 15s is :Quantity(s), isFloat: castMeter is :Number, sameAdd: 100m + 50m, mixedAdd: 100m + 50, wrongAdd: 100m + 5s, scaleLeft: 100m * 2, scaleRight: 2 * 100m, divideScalar: 100m / 2, divideSame: 100m / 25m, unitModulo: 370m mod 90m, unitModuloScalar: 100m mod 3, wrapMeter: wrap degree 10m)
 }
 ```
 
@@ -745,80 +745,80 @@ steps:
         args:
           - name: "distance"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "100"
               unit: ":meter"
           - name: "duration"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "15"
               unit: ":second"
           - name: "castMeter"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "100"
               unit: ":meter"
           - name: "rawMeter"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "100"
               unit: ":meter"
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isSecond"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isFloat"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "sameAdd"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "150"
               unit: ":meter"
           - name: "mixedAdd"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "wrongAdd"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "scaleLeft"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "200"
               unit: ":meter"
           - name: "scaleRight"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "200"
               unit: ":meter"
           - name: "divideScalar"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "50"
               unit: ":meter"
           - name: "divideSame"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "unitModulo"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "10"
               unit: ":meter"
           - name: "unitModuloScalar"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "wrapMeter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -849,7 +849,7 @@ sources:
 ```ges
 on Start(value, heading, unitlessHeading, meterValue) {
   let radiansValue be rad 180°
-  emit Done(floorBare: floor value, floorCall: floor(value), floorNegative: floor -10.4, ceilNegative: ceil -10.4, truncateNegative: truncate -10.4, halfEven_12: round half even 12.5, halfEven_13: round half even 13.5, halfUpNegative: round half up -12.5, halfDownNegative: round half down -12.5, wrapNegative: wrap degree heading, wrapUnitless: wrap degree unitlessHeading, radians: radiansValue, degrees: deg radiansValue, wrapWrongUnit: wrap degree meterValue, radiansWrongUnit: rad meterValue, fromRadiansWrongUnit: deg meterValue)
+  emit Done(floorBare: floor value, floorCall: floor(value), floorNegative: floor -10.4, ceilNegative: ceil -10.4, truncateNegative: truncate -10.4, halfEven12: round half even 12.5, halfEven13: round half even 13.5, halfUpNegative: round half up -12.5, halfDownNegative: round half down -12.5, wrapNegative: wrap degree heading, wrapUnitless: wrap degree unitlessHeading, radians: radiansValue, degrees: deg radiansValue, wrapWrongUnit: wrap degree meterValue, radiansWrongUnit: rad meterValue, fromRadiansWrongUnit: deg meterValue)
 }
 ```
 
@@ -869,20 +869,20 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "10.4"
         - name: "heading"
           value:
-            type: ":float"
+            type: ":Quantity.binary64"
             value: "-10"
             unit: ":degree"
         - name: "unitlessHeading"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "370"
         - name: "meterValue"
           value:
-            type: ":float"
+            type: ":Quantity.binary64"
             value: "10"
             unit: ":meter"
     local:
@@ -890,70 +890,70 @@ steps:
         args:
           - name: "floorBare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "floorCall"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "floorNegative"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-11"
           - name: "ceilNegative"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-10"
           - name: "truncateNegative"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-10"
-          - name: "halfEven_12"
+          - name: "halfEven12"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
-          - name: "halfEven_13"
+          - name: "halfEven13"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "14"
           - name: "halfUpNegative"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-13"
           - name: "halfDownNegative"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-12"
           - name: "wrapNegative"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "350"
               unit: ":degree"
           - name: "wrapUnitless"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "10"
               unit: ":degree"
           - name: "radians"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "3.141592653589793"
           - name: "degrees"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "180"
               unit: ":degree"
           - name: "wrapWrongUnit"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "radiansWrongUnit"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "fromRadiansWrongUnit"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -1006,15 +1006,15 @@ steps:
         args:
           - name: "divZero"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "Infinity"
           - name: "modZero"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "overflow"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "1e56"
 ```
 
@@ -1048,8 +1048,8 @@ on Start(hp, mana, hand, target, age) {
   let negFloat be -12.34
   let negPercent be -25%
   let restored be -negFloat
-  let score as :number be 12 when age is :boolean, or 15 when age is :number, otherwise 5
-  emit Done(negInt: negInt, negFloat: negFloat, negPercent: negPercent, restored: restored, boolNegation: not false, hpCheck: hp is 0 or less, manaCheck: mana is at least 3, handCheck: hand is empty, targetCheck: target has value, oldHasValue: target has value, newHasValue: target has value, oldEmpty: empty hand, newEmpty: hand is empty, score: score, floor: floor 12.7, ceil: ceil 12.1, roundEven_12: round half even 12.5, roundEven_13: round half even 13.5, truncate: truncate -12.9, halfUp: round half up -12.5, halfDown: round half down -12.5)
+  let score be (12 when age is :Boolean, or 15 when age is :Number, otherwise 5) as :Number
+  emit Done(negInt: negInt, negFloat: negFloat, negPercent: negPercent, restored: restored, boolNegation: not false, hpCheck: hp is 0 or less, manaCheck: mana is at least 3, handCheck: hand is empty, targetCheck: target has value, oldHasValue: target has value, newHasValue: target has value, oldEmpty: empty hand, newEmpty: hand is empty, score: score, floor: floor 12.7, ceil: ceil 12.1, roundEven12: round half even 12.5, roundEven13: round half even 13.5, truncate: truncate -12.9, halfUp: round half up -12.5, halfDown: round half down -12.5)
 }
 ```
 
@@ -1070,220 +1070,220 @@ steps:
       args:
         - name: "hp"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "-1"
         - name: "mana"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "3"
         - name: "hand"
           value:
-            type: ":list"
+            type: ":List"
             items: []
         - name: "target"
           value:
-            type: ":text"
+            type: ":Text"
             value: "orc"
         - name: "age"
           value:
-            type: ":boolean"
+            type: ":Boolean"
             value: true
     local:
       - name: "Done"
         args:
           - name: "negInt"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-12"
           - name: "negFloat"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "-12.34"
           - name: "negPercent"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "-0.25"
           - name: "restored"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "12.34"
           - name: "boolNegation"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hpCheck"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "manaCheck"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "handCheck"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "targetCheck"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "oldHasValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "newHasValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "oldEmpty"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "newEmpty"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "score"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
           - name: "floor"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
           - name: "ceil"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "13"
-          - name: "roundEven_12"
+          - name: "roundEven12"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
-          - name: "roundEven_13"
+          - name: "roundEven13"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "14"
           - name: "truncate"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-12"
           - name: "halfUp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-13"
           - name: "halfDown"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-12"
   step-0002:
     input:
       args:
         - name: "hp"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "-1"
         - name: "mana"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "3"
         - name: "hand"
           value:
-            type: ":list"
+            type: ":List"
             items: []
         - name: "target"
           value:
-            type: ":text"
+            type: ":Text"
             value: "orc"
         - name: "age"
           value:
-            type: ":text"
+            type: ":Text"
             value: "x"
     local:
       - name: "Done"
         args:
           - name: "negInt"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-12"
           - name: "negFloat"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "-12.34"
           - name: "negPercent"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "-0.25"
           - name: "restored"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "12.34"
           - name: "boolNegation"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hpCheck"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "manaCheck"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "handCheck"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "targetCheck"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "oldHasValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "newHasValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "oldEmpty"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "newEmpty"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "score"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
           - name: "floor"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
           - name: "ceil"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "13"
-          - name: "roundEven_12"
+          - name: "roundEven12"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
-          - name: "roundEven_13"
+          - name: "roundEven13"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "14"
           - name: "truncate"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-12"
           - name: "halfUp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-13"
           - name: "halfDown"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-12"
 ```
 
@@ -1336,43 +1336,43 @@ steps:
         args:
           - name: "wordTrue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "wordFalse"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "square"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9"
           - name: "rightAssoc"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "512"
           - name: "fractional"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "negativeExponent"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.25"
           - name: "negatedSquare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-9"
           - name: "negativeBaseSquare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9"
           - name: "precedence"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "38"
           - name: "unitPower"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -1422,63 +1422,63 @@ steps:
       args:
         - name: "x"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "3"
         - name: "y"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "6"
         - name: "flag"
           value:
-            type: ":boolean"
+            type: ":Boolean"
             value: false
     local:
       - name: "Done"
         args:
           - name: "doubleX"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "floatY"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "15"
           - name: "meter"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "2"
               unit: ":meter"
           - name: "square"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9"
           - name: "cube"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "216"
           - name: "multiply"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "18"
           - name: "divide"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "lessOrEqual"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "greaterOrEqual"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "notEqual"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "notFlag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -1510,8 +1510,8 @@ sources:
 on Start(x, y) {
   let tags be [#boss, #scout]
   let unit be [name: 'Ada', hp: 10]
-  let projected be :list[:select item from 1 to 2↦item + 1]
-  emit Done(dot: x · y, smallDot: x ⋅ y, unicodeMinus: y − x, andAlias: true ∧ false, orAlias: false ∨ true, xorAlias: true ⊕ false, tagMember: #boss ∈ tags, tagNotMember: #ghost ∉ tags, dictKey: 'name' ∈ unit, infinity: ∞ as :number, infinityAdd: ∞ + 1, negativeInfinity: -∞ as :number, unicodeNegativeInfinity: −∞ + 1, piTag: pi as :number, piAlias: ∏ as :number, piGreater: ∏ > 3, eTag: e as :number, eAlias: ℇ as :number, eLess: ℇ < 3, tauTag: tau as :number, tauAlias: τ as :number, tauGreater: τ > 6, phiTag: 1.6180339887498948 as :number, phiAlias: 1.6180339887498948 as :number, phiBetween: 1.6180339887498948 > 1 and 1.6180339887498948 < 2, sqrtTag: sqrt 81, sqrtAlias: √81, cbrtTag: cbrt 27, cbrtAlias: ∛27, projectionAlias: projected[2])
+  let projected be :List[:select item from 1 to 2↦item + 1]
+  emit Done(dot: x · y, smallDot: x ⋅ y, unicodeMinus: y − x, andAlias: true ∧ false, orAlias: false ∨ true, xorAlias: true ⊕ false, tagMember: #boss ∈ tags, tagNotMember: #ghost ∉ tags, dictKey: 'name' ∈ unit, infinity: ∞ as :Number, infinityAdd: ∞ + 1, negativeInfinity: -∞ as :Number, unicodeNegativeInfinity: −∞ + 1, piTag: pi as :Number, piAlias: ∏ as :Number, piGreater: ∏ > 3, eTag: e as :Number, eAlias: ℇ as :Number, eLess: ℇ < 3, tauTag: tau as :Number, tauAlias: τ as :Number, tauGreater: τ > 6, phiTag: 1.6180339887498948 as :Number, phiAlias: 1.6180339887498948 as :Number, phiBetween: 1.6180339887498948 > 1 and 1.6180339887498948 < 2, sqrtTag: sqrt 81, sqrtAlias: √81, cbrtTag: cbrt 27, cbrtAlias: ∛27, projectionAlias: projected[2])
 }
 ```
 
@@ -1531,134 +1531,134 @@ steps:
       args:
         - name: "x"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "3"
         - name: "y"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "6"
     local:
       - name: "Done"
         args:
           - name: "dot"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "18"
           - name: "smallDot"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "18"
           - name: "unicodeMinus"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "andAlias"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "orAlias"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "xorAlias"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "tagMember"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "tagNotMember"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "dictKey"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "infinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "Infinity"
           - name: "infinityAdd"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "Infinity"
           - name: "negativeInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "-Infinity"
           - name: "unicodeNegativeInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "-Infinity"
           - name: "piTag"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "3.141592653589793"
           - name: "piAlias"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "3.141592653589793"
           - name: "piGreater"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "eTag"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "2.71828182845905"
           - name: "eAlias"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "2.71828182845905"
           - name: "eLess"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "tauTag"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "6.28318530717959"
           - name: "tauAlias"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "6.28318530717959"
           - name: "tauGreater"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "phiTag"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "1.61803398874989"
           - name: "phiAlias"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "1.61803398874989"
           - name: "phiBetween"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "sqrtTag"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9"
           - name: "sqrtAlias"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9"
           - name: "cbrtTag"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "cbrtAlias"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "projectionAlias"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
 ```
 
@@ -1713,23 +1713,23 @@ steps:
         args:
           - name: "exact"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "far"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "tagExact"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "unitNear"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "unitMismatch"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1779,45 +1779,45 @@ steps:
       args:
         - name: "x"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "4"
     local:
       - name: "Done"
         args:
           - name: "integer"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "100000"
           - name: "double"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "100000.25"
           - name: "percent"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.15"
           - name: "meter"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "1000"
               unit: ":meter"
           - name: "degree"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "900"
               unit: ":degree"
           - name: "second"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "3600"
               unit: ":second"
           - name: "square"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "144"
           - name: "scaled"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "100"
 ```
 
@@ -1847,10 +1847,10 @@ sources:
 
 ```ges
 on Start(x, values) {
-  let player_0 be x
-  let player_1 be player_0 + 1
-  let player_22 be player_1 + 21
-  emit Done(playerZero: player_0, playerOne: player_1, playerMany: player_22, compactMultiply: 2x, square: x², lookup: values[2])
+  let player0 be x
+  let player1 be player0 + 1
+  let player22 be player1 + 21
+  emit Done(playerZero: player0, playerOne: player1, playerMany: player22, compactMultiply: 2x, square: x², lookup: values[2])
 }
 ```
 
@@ -1870,42 +1870,42 @@ steps:
       args:
         - name: "x"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "3"
         - name: "values"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "10"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "20"
     local:
       - name: "Done"
         args:
           - name: "playerZero"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "playerOne"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "playerMany"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "25"
           - name: "compactMultiply"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "square"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9"
           - name: "lookup"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "20"
 ```
 
@@ -1934,17 +1934,17 @@ sources:
 ### Source code under test
 
 ```ges
-record :quantity as {
-  value: :number
+record :Quantity as {
+  value: :Number
 }
 
 on Start {
-  let distanceValue be 100 as :quantity(m)
-  let duration be :quantity(s)(5)
-  let heading be :quantity(degree)(90)
-  let strippedDistance be distanceValue as :quantity(none)
-  let custom be :quantity(value: 3)
-  emit Done(distance: distanceValue, duration: duration, heading: heading, strippedDistance: strippedDistance, strippedIsUnitless: strippedDistance is :quantity(none), distanceIsMeter: distanceValue is :quantity(m), distanceIsSecond: distanceValue is :quantity(s), symbolIsDegree: heading is :quantity(°), percentageIsMeter: 50% is :quantity(m), customIsQuantity: custom is :quantity, customValue: custom.value)
+  let distanceValue be 100 as :Quantity(m)
+  let duration be :Quantity(s)(5)
+  let heading be :Quantity(degree)(90)
+  let strippedDistance be distanceValue as :Quantity(none)
+  let custom be :Quantity(value: 3)
+  emit Done(distance: distanceValue, duration: duration, heading: heading, strippedDistance: strippedDistance, strippedIsUnitless: strippedDistance is :Quantity(none), distanceIsMeter: distanceValue is :Quantity(m), distanceIsSecond: distanceValue is :Quantity(s), symbolIsDegree: heading is :Quantity(°), percentageIsMeter: 50% is :Quantity(m), customIsQuantity: custom is :Quantity, customValue: custom.value)
 }
 ```
 
@@ -1965,50 +1965,50 @@ steps:
         args:
           - name: "distance"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "100"
               unit: ":meter"
           - name: "duration"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "5"
               unit: ":second"
           - name: "heading"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "90"
               unit: ":degree"
           - name: "strippedDistance"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "100"
           - name: "strippedIsUnitless"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "distanceIsMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "distanceIsSecond"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "symbolIsDegree"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "percentageIsMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "customIsQuantity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "customValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
 ```
 
@@ -2038,8 +2038,8 @@ sources:
 
 ```ges
 on Start {
-  let integerValue be 12.0 as :number
-  let floatValue be 12.5 as :number
+  let integerValue be 12.0 as :Number
+  let floatValue be 12.5 as :Number
   emit Done(integerValue: integerValue, floatValue: floatValue, integerIsNumeric: integerValue is numeric, canonicalIntegerCheck: integerValue is integer, textIsNumeric: '12' is numeric, badTextIsNumeric: 'abc' is numeric, textLeftConcat: '10' + 20, textRightConcat: 10 + '20')
 }
 ```
@@ -2061,35 +2061,35 @@ steps:
         args:
           - name: "integerValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
           - name: "floatValue"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "12.5"
           - name: "integerIsNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "canonicalIntegerCheck"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "textIsNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "badTextIsNumeric"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "textLeftConcat"
             value:
-              type: ":text"
+              type: ":Text"
               value: "1020"
           - name: "textRightConcat"
             value:
-              type: ":text"
+              type: ":Text"
               value: "1020"
 ```
 
@@ -2138,101 +2138,101 @@ steps:
       args:
         - name: "maximum"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "9223372036854775807"
         - name: "minimum"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "-9223372036854775808"
         - name: "exactLarge"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "9007199254740993"
         - name: "positiveInfinity"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "Infinity"
         - name: "negativeInfinity"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "-Infinity"
     local:
       - name: "Done"
         args:
           - name: "exactAdd"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9007199254740994"
           - name: "exactMultiply"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9007199254740993"
           - name: "addOverflow"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "9.223372036854776e18"
           - name: "subtractOverflow"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-9223372036854775808"
           - name: "multiplyOverflow"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "1.8446744073709552e19"
           - name: "divNegativeLeft"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-3"
           - name: "divNegativeRight"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-3"
           - name: "divBothNegative"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "modNegativeLeft"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "modNegativeRight"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-2"
           - name: "remNegativeLeft"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-1"
           - name: "remNegativeRight"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "floorPositiveInfinity"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9223372036854775807"
           - name: "ceilNegativeInfinity"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-9223372036854775808"
           - name: "truncateNegative"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-12"
           - name: "halfEvenPositive"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
           - name: "halfEvenOdd"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "14"
           - name: "halfUpNegative"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-13"
           - name: "halfDownNegative"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-12"
 ```

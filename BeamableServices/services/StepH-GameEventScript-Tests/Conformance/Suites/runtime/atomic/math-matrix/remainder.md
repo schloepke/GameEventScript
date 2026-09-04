@@ -41,7 +41,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixCD
+module atomicmathmatrixcd
 on Start {
   let a be nothing
   let vNothing be nothing
@@ -55,8 +55,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: a rem vNothing, integer: a rem vInteger, float: a rem vFloat, percentage: a rem vPercentage, meter: a rem vMeter, boolean: a rem vBoolean, textNumber: a rem vTextNumber, textInvalid: a rem vTextInvalid, tagPi: a rem vTagPi, tagNan: a rem vTagNan, tagInfinity: a rem vTagInfinity, vector: a rem vVector, point: a rem vPoint)
 }
 ```
@@ -80,43 +80,43 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "float"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "percentage"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "meter"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "tagPi"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "tagNan"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "tagInfinity"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "vector"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "point"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -144,7 +144,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixCE
+module atomicmathmatrixce
 on Start {
   let a be 10
   let vNothing be nothing
@@ -158,8 +158,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: a rem vNothing, integer: a rem vInteger, float: a rem vFloat, percentage: a rem vPercentage, meter: a rem vMeter, boolean: a rem vBoolean, textNumber: a rem vTextNumber, textInvalid: a rem vTextInvalid, tagPi: a rem vTagPi, tagNan: a rem vTagNan, tagInfinity: a rem vTagInfinity, vector: a rem vVector, point: a rem vPoint)
 }
 ```
@@ -183,53 +183,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "float"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.0999999999999995"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.575222039230621"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -258,7 +258,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixCF
+module atomicmathmatrixcf
 on Start {
   let a be 10.3
   let vNothing be nothing
@@ -272,8 +272,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: a rem vNothing, integer: a rem vInteger, float: a rem vFloat, percentage: a rem vPercentage, meter: a rem vMeter, boolean: a rem vBoolean, textNumber: a rem vTextNumber, textInvalid: a rem vTextInvalid, tagPi: a rem vTagPi, tagNan: a rem vTagNan, tagInfinity: a rem vTagInfinity, vector: a rem vVector, point: a rem vPoint)
 }
 ```
@@ -297,53 +297,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.300000000000001"
           - name: "float"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "1.387778780781e-16"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.300000000000001"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.875222039230621"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "10.3"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -372,7 +372,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixCG
+module atomicmathmatrixcg
 on Start {
   let a be 10%
   let vNothing be nothing
@@ -386,8 +386,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: a rem vNothing, integer: a rem vInteger, float: a rem vFloat, percentage: a rem vPercentage, meter: a rem vMeter, boolean: a rem vBoolean, textNumber: a rem vTextNumber, textInvalid: a rem vTextInvalid, tagPi: a rem vTagPi, tagNan: a rem vTagNan, tagInfinity: a rem vTagInfinity, vector: a rem vVector, point: a rem vPoint)
 }
 ```
@@ -411,53 +411,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.1"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.1"
           - name: "percentage"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.1"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.1"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.1"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -486,7 +486,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixCH
+module atomicmathmatrixch
 on Start {
   let a be 10m
   let vNothing be nothing
@@ -500,8 +500,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: a rem vNothing, integer: a rem vInteger, float: a rem vFloat, percentage: a rem vPercentage, meter: a rem vMeter, boolean: a rem vBoolean, textNumber: a rem vTextNumber, textInvalid: a rem vTextInvalid, tagPi: a rem vTagPi, tagNan: a rem vTagNan, tagInfinity: a rem vTagInfinity, vector: a rem vVector, point: a rem vPoint)
 }
 ```
@@ -525,54 +525,54 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "0"
               unit: ":meter"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -601,7 +601,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixCI
+module atomicmathmatrixci
 on Start {
   let a be true
   let vNothing be nothing
@@ -615,8 +615,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: a rem vNothing, integer: a rem vInteger, float: a rem vFloat, percentage: a rem vPercentage, meter: a rem vMeter, boolean: a rem vBoolean, textNumber: a rem vTextNumber, textInvalid: a rem vTextInvalid, tagPi: a rem vTagPi, tagNan: a rem vTagNan, tagInfinity: a rem vTagInfinity, vector: a rem vVector, point: a rem vPoint)
 }
 ```
@@ -640,53 +640,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "float"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.1"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -715,7 +715,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixCJ
+module atomicmathmatrixcj
 on Start {
   let a be '10.3'
   let vNothing be nothing
@@ -729,8 +729,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: a rem vNothing, integer: a rem vInteger, float: a rem vFloat, percentage: a rem vPercentage, meter: a rem vMeter, boolean: a rem vBoolean, textNumber: a rem vTextNumber, textInvalid: a rem vTextInvalid, tagPi: a rem vTagPi, tagNan: a rem vTagNan, tagInfinity: a rem vTagInfinity, vector: a rem vVector, point: a rem vPoint)
 }
 ```
@@ -754,43 +754,43 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "float"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "percentage"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "meter"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boolean"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "tagPi"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "tagNan"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "tagInfinity"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "vector"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "point"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -818,7 +818,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixCK
+module atomicmathmatrixck
 on Start {
   let a be 'hello'
   let vNothing be nothing
@@ -832,8 +832,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: a rem vNothing, integer: a rem vInteger, float: a rem vFloat, percentage: a rem vPercentage, meter: a rem vMeter, boolean: a rem vBoolean, textNumber: a rem vTextNumber, textInvalid: a rem vTextInvalid, tagPi: a rem vTagPi, tagNan: a rem vTagNan, tagInfinity: a rem vTagInfinity, vector: a rem vVector, point: a rem vPoint)
 }
 ```
@@ -857,53 +857,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -932,7 +932,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixCL
+module atomicmathmatrixcl
 on Start {
   let a be pi
   let vNothing be nothing
@@ -946,8 +946,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: a rem vNothing, integer: a rem vInteger, float: a rem vFloat, percentage: a rem vPercentage, meter: a rem vMeter, boolean: a rem vBoolean, textNumber: a rem vTextNumber, textInvalid: a rem vTextInvalid, tagPi: a rem vTagPi, tagNan: a rem vTagNan, tagInfinity: a rem vTagInfinity, vector: a rem vVector, point: a rem vPoint)
 }
 ```
@@ -971,53 +971,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "3.141592653589793"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "3.141592653589793"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.0415926535897929"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.141592653589793"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "3.141592653589793"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -1046,7 +1046,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixCM
+module atomicmathmatrixcm
 on Start {
   let a be #nan
   let vNothing be nothing
@@ -1060,8 +1060,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: a rem vNothing, integer: a rem vInteger, float: a rem vFloat, percentage: a rem vPercentage, meter: a rem vMeter, boolean: a rem vBoolean, textNumber: a rem vTextNumber, textInvalid: a rem vTextInvalid, tagPi: a rem vTagPi, tagNan: a rem vTagNan, tagInfinity: a rem vTagInfinity, vector: a rem vVector, point: a rem vPoint)
 }
 ```
@@ -1085,53 +1085,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -1160,7 +1160,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixCN
+module atomicmathmatrixcn
 on Start {
   let a be infinity
   let vNothing be nothing
@@ -1174,8 +1174,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: a rem vNothing, integer: a rem vInteger, float: a rem vFloat, percentage: a rem vPercentage, meter: a rem vMeter, boolean: a rem vBoolean, textNumber: a rem vTextNumber, textInvalid: a rem vTextInvalid, tagPi: a rem vTagPi, tagNan: a rem vTagNan, tagInfinity: a rem vTagInfinity, vector: a rem vVector, point: a rem vPoint)
 }
 ```
@@ -1199,53 +1199,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -1274,9 +1274,9 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixCO
+module atomicmathmatrixco
 on Start {
-  let a be :vector(1, 2, 3)
+  let a be :Vector(1, 2, 3)
   let vNothing be nothing
   let vInteger be 10
   let vFloat be 10.3
@@ -1288,8 +1288,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: a rem vNothing, integer: a rem vInteger, float: a rem vFloat, percentage: a rem vPercentage, meter: a rem vMeter, boolean: a rem vBoolean, textNumber: a rem vTextNumber, textInvalid: a rem vTextInvalid, tagPi: a rem vTagPi, tagNan: a rem vTagNan, tagInfinity: a rem vTagInfinity, vector: a rem vVector, point: a rem vPoint)
 }
 ```
@@ -1313,53 +1313,53 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -1388,9 +1388,9 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMathMatrixCP
+module atomicmathmatrixcp
 on Start {
-  let a be :point(1, 2, 3)
+  let a be :Point(1, 2, 3)
   let vNothing be nothing
   let vInteger be 10
   let vFloat be 10.3
@@ -1402,8 +1402,8 @@ on Start {
   let vTagPi be pi
   let vTagNan be #nan
   let vTagInfinity be infinity
-  let vVector be :vector(1, 2, 3)
-  let vPoint be :point(1, 2, 3)
+  let vVector be :Vector(1, 2, 3)
+  let vPoint be :Point(1, 2, 3)
   emit Done(nothing: a rem vNothing, integer: a rem vInteger, float: a rem vFloat, percentage: a rem vPercentage, meter: a rem vMeter, boolean: a rem vBoolean, textNumber: a rem vTextNumber, textInvalid: a rem vTextInvalid, tagPi: a rem vTagPi, tagNan: a rem vTagNan, tagInfinity: a rem vTagInfinity, vector: a rem vVector, point: a rem vPoint)
 }
 ```
@@ -1427,52 +1427,52 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integer"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "float"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "percentage"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "meter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boolean"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "textNumber"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagNan"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "point"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```

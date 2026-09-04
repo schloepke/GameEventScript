@@ -41,7 +41,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicNothingAccess
+module atomicnothingaccess
 on Start {
   let value be nothing
   emit Done(member: value.missing, index: value[1], indexOut: value[0])
@@ -67,13 +67,13 @@ steps:
         args:
           - name: "member"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "index"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -101,7 +101,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicBooleanAccess
+module atomicbooleanaccess
 on Start {
   let value be true
   emit Done(member: value.missing, index: value[1], indexOut: value[0])
@@ -127,13 +127,13 @@ steps:
         args:
           - name: "member"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "index"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -161,7 +161,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicIntegerAccess
+module atomicintegeraccess
 on Start {
   let value be 10
   emit Done(member: value.missing, index: value[1], indexOut: value[0])
@@ -187,13 +187,13 @@ steps:
         args:
           - name: "member"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "index"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -221,7 +221,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicFloatAccess
+module atomicfloataccess
 on Start {
   let value be 10.5
   emit Done(member: value.missing, index: value[1], indexOut: value[0])
@@ -247,13 +247,13 @@ steps:
         args:
           - name: "member"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "index"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -281,7 +281,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicPercentageAccess
+module atomicpercentageaccess
 on Start {
   let value be 25%
   emit Done(member: value.missing, index: value[1], indexOut: value[0])
@@ -307,13 +307,13 @@ steps:
         args:
           - name: "member"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "index"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -341,7 +341,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicTextAccess
+module atomictextaccess
 on Start {
   let value be 'ab'
   emit Done(member: value.missing, first: value[1], second: value[2], indexZero: value[0], indexOut: value[3])
@@ -367,21 +367,21 @@ steps:
         args:
           - name: "member"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "first"
             value:
-              type: ":text"
+              type: ":Text"
               value: "a"
           - name: "second"
             value:
-              type: ":text"
+              type: ":Text"
               value: "b"
           - name: "indexZero"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -409,7 +409,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicTagAccess
+module atomictagaccess
 on Start {
   let value be #ab
   emit Done(member: value.missing, first: value[1], second: value[2], indexZero: value[0], indexOut: value[3])
@@ -435,21 +435,21 @@ steps:
         args:
           - name: "member"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "first"
             value:
-              type: ":text"
+              type: ":Text"
               value: "a"
           - name: "second"
             value:
-              type: ":text"
+              type: ":Text"
               value: "b"
           - name: "indexZero"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -477,9 +477,9 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicVectorAccess
+module atomicvectoraccess
 on Start {
-  let value be :vector(1m, 2m, 3m)
+  let value be :Vector(1m, 2m, 3m)
   emit Done(memberX: value.x, memberMissing: value.missing, indexFirst: value[1], indexThird: value[3], indexZero: value[0], indexOut: value[4])
 }
 ```
@@ -503,28 +503,28 @@ steps:
         args:
           - name: "memberX"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               unit: ":meter"
               value: "1"
           - name: "memberMissing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexFirst"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               unit: ":meter"
               value: "1"
           - name: "indexThird"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               unit: ":meter"
               value: "3"
           - name: "indexZero"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -552,9 +552,9 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicPointAccess
+module atomicpointaccess
 on Start {
-  let value be :point(4m, 5m, 6m)
+  let value be :Point(4m, 5m, 6m)
   emit Done(memberY: value.y, memberMissing: value.missing, indexFirst: value[1], indexThird: value[3], indexZero: value[0], indexOut: value[4])
 }
 ```
@@ -578,28 +578,28 @@ steps:
         args:
           - name: "memberY"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               unit: ":meter"
               value: "5"
           - name: "memberMissing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexFirst"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               unit: ":meter"
               value: "4"
           - name: "indexThird"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               unit: ":meter"
               value: "6"
           - name: "indexZero"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -627,7 +627,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicListAccess
+module atomiclistaccess
 on Start {
   let value be [10, 20, 30]
   let index be 2
@@ -654,25 +654,25 @@ steps:
         args:
           - name: "member"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "first"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "dynamicSecond"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "20"
           - name: "third"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "30"
           - name: "indexZero"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -700,7 +700,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMapAccess
+module atomicmapaccess
 on Start {
   let value be [name: 'Ada', hp: 10]
   let key be 'name'
@@ -727,29 +727,29 @@ steps:
         args:
           - name: "memberName"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ada"
           - name: "memberMissing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexText"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ada"
           - name: "indexTag"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "dynamicText"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ada"
           - name: "indexMissing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -779,7 +779,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicDiceAccess
+module atomicdiceaccess
 on Start {
   let value be roll dice 3d6
   emit Done(member: value.missing, first: value[1], third: value[3], indexZero: value[0], indexOut: value[4])
@@ -805,21 +805,21 @@ steps:
         args:
           - name: "member"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "first"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "third"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "indexZero"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -847,11 +847,11 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicRangeAccess
+module atomicrangeaccess
 on Start {
-  let value as :range be from 10 to 20 step 5
-  let descending as :range be from 20 to 10 step (0 - 5)
-  let fractional as :range be from 1.5 to 2.5 step 0.5
+  let value be (from 10 to 20 step 5) as :Range
+  let descending be (from 20 to 10 step (0 - 5)) as :Range
+  let fractional be (from 1.5 to 2.5 step 0.5) as :Range
   emit Done(member: value.missing, first: value[1], third: value[3], descendingSecond: descending[2], fractionalSecond: fractional[2], indexZero: value[0], indexOut: value[4])
 }
 ```
@@ -875,29 +875,29 @@ steps:
         args:
           - name: "member"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "first"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "third"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "20"
           - name: "descendingSecond"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "15"
           - name: "fractionalSecond"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "2"
           - name: "indexZero"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -925,7 +925,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMessageAccess
+module atomicmessageaccess
 on Start {
   let value be Ping(amount: 7, target: 'orc')
   emit Done(memberName: value.name, memberArg: value.arguments.amount, memberMissing: value.missing, indexName: value[#name], indexArg: value[#arguments].target, indexMissing: value[#missing], indexOut: value[1])
@@ -951,29 +951,29 @@ steps:
         args:
           - name: "memberName"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ping"
           - name: "memberArg"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "7"
           - name: "memberMissing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexName"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ping"
           - name: "indexArg"
             value:
-              type: ":text"
+              type: ":Text"
               value: "orc"
           - name: "indexMissing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -1001,7 +1001,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicHandlerAccess
+module atomichandleraccess
 on Start {
   let value be Ping(amount, target)
   emit Done(memberName: value.name, memberParam: value.parameters[1], memberMissing: value.missing, indexName: value[#name], indexParam: value[#parameters][2], indexMissing: value[#missing], indexOut: value[1])
@@ -1027,29 +1027,29 @@ steps:
         args:
           - name: "memberName"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ping"
           - name: "memberParam"
             value:
-              type: ":text"
+              type: ":Text"
               value: "amount"
           - name: "memberMissing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexName"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ping"
           - name: "indexParam"
             value:
-              type: ":text"
+              type: ":Text"
               value: "target"
           - name: "indexMissing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -1077,15 +1077,15 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCustomRecordAccess
-record :unit as {
-  name: :text,
-  hp: :number
+module atomiccustomrecordaccess
+record :Unit as {
+  name: :Text,
+  hp: :Number
 }
 
 on Start {
-  let value be :unit(name: 'Ada', hp: 10)
-  emit Done(memberName: value.name, memberMissing: value.missing, indexText: value['name'], indexTag: value[#hp], indexMissing: value[#missing], indexOut: value[1], isUnit: value is :unit)
+  let value be :Unit(name: 'Ada', hp: 10)
+  emit Done(memberName: value.name, memberMissing: value.missing, indexText: value['name'], indexTag: value[#hp], indexMissing: value[#missing], indexOut: value[1], isUnit: value is :Unit)
 }
 ```
 
@@ -1108,28 +1108,28 @@ steps:
         args:
           - name: "memberName"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ada"
           - name: "memberMissing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexText"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ada"
           - name: "indexTag"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "indexMissing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "isUnit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -1158,12 +1158,12 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicDynamicPropertyAccess
+module atomicdynamicpropertyaccess
 on Start {
   let listValue be [10, 20, 30]
   let mapValue be [name: 'Ada', hp: 10]
-  let vectorValue be :vector(1m, 2m, 3m)
-  let pointValue be :point(4m, 5m, 6m)
+  let vectorValue be :Vector(1m, 2m, 3m)
+  let pointValue be :Point(4m, 5m, 6m)
   let textValue be 'ab'
   let indexKey be 2
   let textKey be 'name'
@@ -1194,33 +1194,33 @@ steps:
         args:
           - name: "listDynamic"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "20"
           - name: "mapText"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ada"
           - name: "mapTag"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "vectorDynamic"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               unit: ":meter"
               value: "2"
           - name: "pointDynamic"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               unit: ":meter"
               value: "6"
           - name: "textDynamic"
             value:
-              type: ":text"
+              type: ":Text"
               value: "b"
           - name: "invalidProperty"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -1248,7 +1248,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMessageAccess
+module atomicmessageaccess
 on Start {
   emit Ping(amount: 7) with #radio
 }
@@ -1279,33 +1279,33 @@ steps:
         args:
           - name: "amount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "7"
       - name: "Done"
         args:
           - name: "memberName"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ping"
           - name: "memberTag"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "radio"
           - name: "memberMissing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexName"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ping"
           - name: "indexTag"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "radio"
           - name: "indexMissing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "indexOut"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```

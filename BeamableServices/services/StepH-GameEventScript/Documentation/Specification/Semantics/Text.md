@@ -36,28 +36,38 @@ following productions use ASCII only:
 ```text
 AsciiLetter        = "A".."Z" | "a".."z"
 LowerLetter        = "a".."z"
+UpperLetter        = "A".."Z"
+Digit              = "0".."9"
 NonZeroDigit       = "1".."9"
 NumericSuffix      = "_" ("0" | NonZeroDigit { "0".."9" })
-Identifier         = LowerLetter { AsciiLetter } [ NumericSuffix ]
-SourceMessageName  = "A".."Z" { AsciiLetter }
-HostMessageName    = AsciiLetter { AsciiLetter }
-TagName            = Identifier
-TypeName           = LowerLetter { AsciiLetter }
+LowerName          = LowerLetter { AsciiLetter | Digit }
+VariableName       = LowerName [ NumericSuffix ]
+MessageName        = UpperLetter { AsciiLetter | Digit }
+TagName            = LowerName
+ConstantName       = LowerName
+TypeName           = UpperLetter { AsciiLetter | Digit }
+ModuleSegment      = LowerLetter { LowerLetter | Digit }
+ModuleName         = ModuleSegment { "." ModuleSegment }
 UnlabeledArgument  = "_"
 ```
 
 Consequences:
 
-- Ordinary identifiers, parameter names, function and predicate names use
-  `Identifier`. `_` is reserved for an unlabeled argument.
-- Regular message names written in source use `SourceMessageName`. Host APIs
-  accept `HostMessageName` because reserved endpoints such as `initialization`
-  and `undeliverable` are lowercase.
-- Script tag literals and message delivery tags use lowercase `TagName`.
+- Function/predicate names, argument labels, field names, map keys, extension
+  components, and the local name of a labeled parameter use `LowerName`.
+- Local variables, loop/selector variables, message-name bindings, and the local
+  name of an unlabeled parameter use `VariableName`. `_` is reserved for an
+  unlabeled argument and `_number` is permitted nowhere except a variable name.
+- Regular message names use `MessageName`. The lowercase system endpoint names
+  `initialization` and `undeliverable` are reserved grammar tokens rather than
+  ordinary message names.
+- Script tag literals and message delivery tags use `TagName` without `_`.
   Tag-typed values supplied as message arguments may start with either ASCII
   case, but remain case-sensitive.
-- Type names use `TypeName`. Extension and extension-function names use
-  `Identifier`; a linked extension binding is `Identifier.Identifier`.
+- Declared constants are written as `$ConstantName`. Type names use `TypeName`.
+  A linked extension binding is `LowerName.LowerName`.
+- Module declarations use `ModuleName`; every dot-separated component is
+  entirely lowercase apart from optional digits after its first letter.
 - API normalization trims ASCII space and tab only. It does not reinterpret
   Unicode whitespace.
 

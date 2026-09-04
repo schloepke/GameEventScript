@@ -45,7 +45,7 @@ public sealed class GesUnicodeSemanticsTests
     [TestMethod]
     public void SourceArchiveStoresLogicalSourceWithoutBom()
     {
-        const string logicalSource = "module Bom\r\non Start { emit Done(value: '😀') }\r";
+        const string logicalSource = "module bom\r\non Start { emit Done(value: '😀') }\r";
         var program = GameEventScriptManager.CreateScriptBuilder()
             .AddScript("\uFEFF" + logicalSource, "bom.ges")
             .WithDebugInfo(GameEventScriptDebugInfoOptions.SourceMap | GameEventScriptDebugInfoOptions.SourceArchive)

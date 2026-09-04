@@ -15,6 +15,8 @@ internal enum GesTokenKind
     NewLine,
     Message,
     Identifier,
+    TypeName,
+    ConstantReference,
     Tag,
     Float,
     Percentage,
@@ -66,6 +68,7 @@ internal enum GesTokenKind
     Roll,
     Default,
     Module,
+    Constant,
     Record,
     Predicate,
     Function,
@@ -238,10 +241,14 @@ internal sealed class GesLexer
                 case '\'':
                 case '"':
                     return ReadTextToken(startLine, startColumn);
+                case ':' when GameEventScriptText.IsAsciiUpper(Peek()):
+                    return ReadTypeToken(startLine, startColumn);
                 case ':' when GameEventScriptText.IsAsciiLower(Peek()):
                     return ReadSelectorToken(startLine, startColumn);
                 case '#' when GameEventScriptText.IsAsciiLower(Peek()):
                     return ReadTagToken(startLine, startColumn);
+                case '$' when GameEventScriptText.IsAsciiLower(Peek()):
+                    return ReadConstantReferenceToken(startLine, startColumn);
                 default:
                     return ReadOperatorToken(startLine, startColumn);
             }
@@ -284,9 +291,9 @@ internal sealed class GesLexer
         _index += GameEventScriptText.ScalarUtf16LengthAt(_input, _index);
     }
 
-    private void ReadWordLetters()
+    private void ReadWordName()
     {
-        while (!IsAtEnd && IsWordLetter(Current))
+        while (!IsAtEnd && (IsWordLetter(Current) || GameEventScriptText.IsAsciiDigit(Current)))
         {
             Advance();
         }
@@ -387,6 +394,7 @@ internal sealed class GesLexer
         if (IsWordAt(start, length, "roll")) return new GesToken(GesTokenKind.Roll, "roll", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "default")) return new GesToken(GesTokenKind.Default, "default", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "module")) return new GesToken(GesTokenKind.Module, "module", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "constant")) return new GesToken(GesTokenKind.Constant, "constant", line, column, endLine, endColumn);
 
         var text = _input[start..(start + length)];
         return GameEventScriptText.IsAsciiUpper(text[0])
@@ -401,7 +409,7 @@ internal sealed class GesLexer
     {
         var start = _index;
         var first = Current;
-        ReadWordLetters();
+        ReadWordName();
         if (GameEventScriptText.IsAsciiLower(first) && !IsAtEnd && Current == '_')
         {
             Advance();
@@ -420,15 +428,6 @@ internal sealed class GesLexer
                 return CreateToken(GesTokenKind.Identifier, _input[start.._index], line, column);
             }
         }
-        else if (_index - start == 1 && _input[start] == 'd' && !IsAtEnd && GameEventScriptText.IsAsciiDigit(Current))
-        {
-            return CreateWordToken(start, 1, line, column, _line, _column);
-        }
-        else if (_index - start == 4 && IsWordAt(start, 4, "atan") && !IsAtEnd && Current == '2')
-        {
-            Advance();
-        }
-
         if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current))) return CreateWordToken(start, _index - start, line, column, _line, _column);
         while (!IsAtEnd && !GameEventScriptText.IsTokenWhitespace(Current))
         {
@@ -460,7 +459,7 @@ internal sealed class GesLexer
         var start = _index;
         Advance();
         var selectorStart = _index;
-        ReadWordLetters();
+        ReadWordName();
         var selectorLength = _index - selectorStart;
 
         if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current)))
@@ -497,20 +496,7 @@ internal sealed class GesLexer
         var start = _index;
         Advance();
         var tagStart = _index;
-        ReadWordLetters();
-        if (!IsAtEnd && Current == '_')
-        {
-            Advance();
-            if (!ReadValidIdentifierSuffix())
-            {
-                while (!IsAtEnd && !GameEventScriptText.IsTokenWhitespace(Current))
-                {
-                    Advance();
-                }
-
-                return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
-            }
-        }
+        ReadWordName();
 
         if (_index == tagStart)
         {
@@ -525,6 +511,28 @@ internal sealed class GesLexer
             Advance();
         }
 
+        return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
+    }
+
+    private GesToken ReadTypeToken(int line, int column)
+    {
+        var start = _index;
+        Advance();
+        ReadWordName();
+        if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current)))
+            return CreateToken(GesTokenKind.TypeName, _input[start.._index], line, column);
+        while (!IsAtEnd && !GameEventScriptText.IsTokenWhitespace(Current)) Advance();
+        return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
+    }
+
+    private GesToken ReadConstantReferenceToken(int line, int column)
+    {
+        var start = _index;
+        Advance();
+        ReadWordName();
+        if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current)))
+            return CreateToken(GesTokenKind.ConstantReference, _input[start.._index], line, column);
+        while (!IsAtEnd && !GameEventScriptText.IsTokenWhitespace(Current)) Advance();
         return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
     }
 

@@ -486,13 +486,13 @@ steps:
       tags: []
       args:
         - name: value
-          value: { type: ":integer", value: "7" }
+          value: { type: ":Number.int64", value: "7" }
     accepted: true
     local:
       - name: Done
         args:
           - name: result
-            value: { type: ":integer", value: "12" }
+            value: { type: ":Number.int64", value: "12" }
     outbound: []
     paused: false
     runtimeLimits:
@@ -574,7 +574,7 @@ name: Done
 tags: [combat]
 args:
   - name: result
-    value: { type: ":integer", value: "12" }
+    value: { type: ":Number.int64", value: "12" }
 ```
 
 `name` is required; `tags` and `args` default to empty. Arguments are always an
@@ -584,19 +584,25 @@ Values use the existing portable conformance shape:
 
 | `type` | Additional fields |
 | --- | --- |
-| `:nothing` | none |
-| `:text`, `:tag` | `value` string |
-| `:boolean` | `value` boolean |
-| `:integer` | canonical signed-Int64 `value` string; optional `unit` |
-| `:float` | canonical Binary64 `value` string; optional `unit` |
-| `:percentage` | canonical Binary64 ratio `value` string |
-| `:vector`, `:point` | Binary64 strings `x`, `y`, `z`; optional `unit` |
-| `:list` | ordered `items` value sequence |
-| `:map` | `entries`, an ordered sequence of `{ key, value }` |
-| `:dice` | ordered Int32 `rolls` |
-| `:range` | numeric strings `from`, `to`, `step`; optional `rangeKind` is `integer` or `float` |
-| `:message` | nested `message` |
+| `:Nothing` | none |
+| `:Text`, `:Tag` | `value` string |
+| `:Boolean` | `value` boolean |
+| `:Number.int64` | canonical signed-Int64 `value` string |
+| `:Number.binary64` | canonical Binary64 `value` string |
+| `:Quantity.int64` | canonical signed-Int64 `value` string and required `unit` |
+| `:Quantity.binary64` | canonical Binary64 `value` string and required `unit` |
+| `:Percentage` | canonical Binary64 ratio `value` string |
+| `:Vector`, `:Point` | Binary64 strings `x`, `y`, `z`; optional `unit` |
+| `:List` | ordered `items` value sequence |
+| `:Map` | `entries`, an ordered sequence of `{ key, value }` |
+| `:Dice` | ordered Int32 `rolls` |
+| `:Range.int64`, `:Range.binary64` | numeric strings `from`, `to`, `step`; the variant fixes all three storage kinds |
+| `:Message` | nested `message` |
 | any declared custom type | ordered `entries` sequence |
+
+The `.int64` and `.binary64` suffixes are exact conformance transport variants,
+not GES source type names. Source uses `:Number`, `:Quantity(unit)`, and `:Range`.
+There is no separate `rangeKind` field.
 
 Numeric strings and special values follow [Number semantics](../Semantics/Numbers.md).
 Message names, argument names, tags, units, and custom types follow the portable
@@ -710,11 +716,11 @@ construction to verify defensive storage.
 ```yaml
 valueApi:
   value:
-    type: ":list"
-    items: [{ type: ":integer", value: "1" }]
+    type: ":List"
+    items: [{ type: ":Number.int64", value: "1" }]
   equalTo:
-    type: ":list"
-    items: [{ type: ":integer", value: "1" }]
+    type: ":List"
+    items: [{ type: ":Number.int64", value: "1" }]
   mutateSourceAfterCreate: true
 ```
 
@@ -725,8 +731,8 @@ invariant.
 ```yaml
 value:
   normalized:
-    type: ":list"
-    items: [{ type: ":integer", value: "1" }]
+    type: ":List"
+    items: [{ type: ":Number.int64", value: "1" }]
   hasValue: true
   length: 1
   equal: true
@@ -971,11 +977,11 @@ steps:
     input:
       args:
         - name: value
-          value: { type: ":integer", value: "7" }
+          value: { type: ":Number.int64", value: "7" }
     local:
       - name: Done
         args:
           - name: result
-            value: { type: ":integer", value: "12" }
+            value: { type: ":Number.int64", value: "12" }
 ```
 ````

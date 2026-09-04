@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Compiler.GesTokenKind;
@@ -98,6 +99,7 @@ internal sealed class GesParser
 
     private ParsedScript ParseScript()
     {
+        var constantDefinitions = new List<ConstantDefinitionNode>();
         var typeDefinitions = new List<TypeDefinitionNode>();
         var predicateDefinitions = new List<PredicateDefinitionNode>();
         var functionDefinitions = new List<FunctionDefinitionNode>();
@@ -124,7 +126,11 @@ internal sealed class GesParser
                     throw new GameEventScriptParseException($"Illegal token '{token.Text}'", token);
                 }
 
-                if (Match(Record))
+                if (Match(Constant))
+                {
+                    constantDefinitions.Add(ParseConstantDefinition());
+                }
+                else if (Match(Record))
                 {
                     typeDefinitions.Add(ParseTypeDefinition());
                 }
@@ -156,7 +162,7 @@ internal sealed class GesParser
             throw new GameEventScriptCompileException(_errors);
         }
 
-        var module = new ParsedScript(ModuleName, SourceName, typeDefinitions, predicateDefinitions, functionDefinitions, handlers);
+        var module = new ParsedScript(ModuleName, SourceName, constantDefinitions, typeDefinitions, predicateDefinitions, functionDefinitions, handlers);
         var firstToken = _reader.FirstToken;
         if (firstToken.Kind == EndOfFile)
         {
@@ -175,13 +181,41 @@ internal sealed class GesParser
 
         SkipNewLines();
         ThrowIfIllegalToken();
-        if (Current.Kind is not (Identifier or Message))
+        if (!Is(Identifier))
         {
             throw new GameEventScriptParseException($"Expected module name but found {Current.Kind}", Current.Line, Current.Column);
         }
 
-        _moduleName = Advance().Text;
+        var builder = new StringBuilder(Advance().Text);
+        while (Match(Dot))
+        {
+            if (!Is(Identifier)) throw new GameEventScriptParseException($"Expected module segment but found {Current.Kind}", Current);
+            builder.Append('.').Append(Advance().Text);
+        }
+
+        _moduleName = builder.ToString();
+        if (!GameEventScriptText.IsModuleName(_moduleName)) throw new GameEventScriptParseException($"Invalid module identifier '{_moduleName}'", Previous);
     }
+
+    private ConstantDefinitionNode ParseConstantDefinition()
+    {
+        var startToken = Previous;
+        var nameToken = Expect(ConstantReference);
+        Expect(Be);
+        SkipNewLines();
+        var value = ParseUnaryExpression();
+        if (!IsConstantValue(value)) throw new GameEventScriptParseException("Constant initializers must be scalar literals.", nameToken);
+        return WithRange(new ConstantDefinitionNode(nameToken.Text[1..], value), startToken, Previous);
+    }
+
+    private static bool IsConstantValue(ExpressionNode expression)
+        => expression is BooleanLiteralExpressionNode or NothingLiteralExpressionNode or IntegerLiteralExpressionNode or FloatLiteralExpressionNode or
+            PercentageLiteralExpressionNode or UnitIntegerLiteralExpressionNode or UnitFloatLiteralExpressionNode or TextLiteralExpressionNode or TagLiteralExpressionNode ||
+           expression is UnaryExpressionNode
+           {
+               Operator: GesUnaryOperator.Negate,
+               Operand: IntegerLiteralExpressionNode or FloatLiteralExpressionNode or PercentageLiteralExpressionNode or UnitIntegerLiteralExpressionNode or UnitFloatLiteralExpressionNode
+           };
 
     private TypeDefinitionNode ParseTypeDefinition()
     {
@@ -642,17 +676,10 @@ internal sealed class GesParser
     {
         var startToken = Previous;
         var identifier = ExpectIdentifier();
-        string? declaredType = null;
-        if (Match(As))
-        {
-            SkipNewLines();
-            declaredType = ParseTypeName();
-        }
-
         if (Match(Be))
         {
             var expression = ParseExpression();
-            return WithRange(new LetStatementNode(identifier, declaredType, expression), startToken);
+            return WithRange(new LetStatementNode(identifier, expression), startToken);
         }
         var token = Current;
         throw new GameEventScriptParseException($"Expected {Be} but found {token.Kind}", token.Line, token.Column);
@@ -1100,7 +1127,13 @@ internal sealed class GesParser
                     continue;
                 }
 
-                if (Is(Nothing) || Is(Tag))
+                if (Match(Nothing))
+                {
+                    expression = ApplyIsNegation(WithRange(new NothingCheckExpressionNode(expression), expression), negated);
+                    continue;
+                }
+
+                if (Is(TypeName))
                 {
                     var typeName = ParseTypeName();
                     expression = ApplyIsNegation(WithRange(new TypeCheckExpressionNode(expression, typeName), expression), negated);
@@ -2010,8 +2043,9 @@ internal sealed class GesParser
             return ParseDiceExpression();
         }
 
-        if (MatchTag(":list"))
+        if (Current.Kind == TypeName && string.Equals(Current.Text, ":List", StringComparison.Ordinal) && IsNextSignificantToken(LeftBracket))
         {
+            Advance();
             return ParseCollectionFactoryExpression("list");
         }
 
@@ -2071,6 +2105,11 @@ internal sealed class GesParser
         {
             var tagToken = Advance();
             return WithRange(new TagLiteralExpressionNode(tagToken.Text[1..]), tagToken);
+        }
+
+        if (Match(ConstantReference))
+        {
+            return WithRange(new ConstantReferenceExpressionNode(Previous.Text[1..]), Previous);
         }
 
         if (GetMathConstant(Current.Kind) is { } numericConstant)
@@ -2762,7 +2801,7 @@ internal sealed class GesParser
 
     private bool IsTypeConstructorStart()
     {
-        if (Current.Kind != Tag)
+        if (Current.Kind != TypeName)
         {
             return false;
         }
@@ -2781,7 +2820,7 @@ internal sealed class GesParser
     }
 
     private bool IsExtensionUnaryArgumentStart()
-        => Current.Kind is Identifier or Message or Tag or GesTokenKind.Float or Percentage or UnitNumber or Text or True or False or Nothing or
+        => Current.Kind is Identifier or Message or Tag or TypeName or ConstantReference or GesTokenKind.Float or Percentage or UnitNumber or Text or True or False or Nothing or
             MathConstantPi or MathConstantE or MathConstantTau or MathConstantInfinity or
             IntrinsicAbs or IntrinsicLn or IntrinsicExp or IntrinsicSqrt or IntrinsicCbrt or IntrinsicChance or
             IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound or
@@ -2844,12 +2883,7 @@ internal sealed class GesParser
     {
         ThrowIfIllegalToken();
 
-        if (Match(Nothing))
-        {
-            return "nothing";
-        }
-
-        if (!Is(Tag))
+        if (!Is(TypeName))
         {
             var token = Current;
             throw new GameEventScriptParseException($"Expected type name but found {token.Kind}", token);
@@ -2857,17 +2891,13 @@ internal sealed class GesParser
 
         var typeToken = Advance();
         var typeName = typeToken.Text[1..];
-        if (string.Equals(typeName, "nothing", StringComparison.Ordinal))
-        {
-            throw new GameEventScriptParseException("The absence type is a keyword; use nothing without ':'.", typeToken);
-        }
 
-        if (string.Equals(typeName, "numeric", StringComparison.Ordinal))
+        if (string.Equals(typeName, "Numeric", StringComparison.Ordinal))
         {
             throw new GameEventScriptParseException("The numeric type helper is a keyword; use numeric without ':'.", typeToken);
         }
 
-        if (string.Equals(typeName, "quantity", StringComparison.Ordinal) &&
+        if (string.Equals(typeName, "Quantity", StringComparison.Ordinal) &&
             Is(LeftParen) &&
             IsQuantityTypeSpecifierAhead())
         {
@@ -2877,10 +2907,28 @@ internal sealed class GesParser
             var unitToken = Expect(Identifier);
             SkipNewLines();
             Expect(RightParen);
-            typeName = $"quantity:{unitToken.Text}";
+            return $"quantity:{unitToken.Text}";
         }
 
-        return typeName;
+        return typeName switch
+        {
+            "Nothing" => "nothing",
+            "Boolean" => "boolean",
+            "Number" => "number",
+            "Percentage" => "percentage",
+            "Vector" => "vector",
+            "Point" => "point",
+            "Series" => "series",
+            "Range" => "range",
+            "Message" => "message",
+            "Handler" => "handler",
+            "Tag" => "tag",
+            "Text" => "text",
+            "List" => "list",
+            "Map" => "map",
+            "Dice" => "dice",
+            _ => typeName
+        };
     }
 
     private bool IsQuantityTypeSpecifierAhead()
@@ -3027,7 +3075,7 @@ internal sealed class GesParser
     {
         while (!Is(EndOfFile))
         {
-            if (Is(Module) || Is(Record) || Is(Predicate) || Is(Function) || Is(On))
+            if (Is(Module) || Is(Constant) || Is(Record) || Is(Predicate) || Is(Function) || Is(On))
             {
                 return;
             }

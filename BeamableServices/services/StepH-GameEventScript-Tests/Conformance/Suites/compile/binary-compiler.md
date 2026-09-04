@@ -37,7 +37,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerResources
+module binarycompilerresources
 
 function leaf(value) be value + 1
 
@@ -94,7 +94,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerCallDepthLimit
+module binarycompilercalldepthlimit
 
 function leaf(value) be value + 1
 
@@ -139,7 +139,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerRegisterLimit
+module binarycompilerregisterlimit
 
 function leaf(value) be value + 1
 
@@ -186,7 +186,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerSmoke
+module binarycompilersmoke
 
 on Start(value) {
   let doubled be value * 2
@@ -211,18 +211,18 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "6"
     local:
       - name: "Done"
         args:
           - name: "result"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
           - name: "text"
             value:
-              type: ":text"
+              type: ":Text"
               value: "ok"
 ```
 
@@ -251,7 +251,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerFunction
+module binarycompilerfunction
 
 function double(value) be value * 2
 
@@ -282,18 +282,18 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "7"
     local:
       - name: "Done"
         args:
           - name: "result"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "14"
           - name: "status"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "high"
 ```
 
@@ -322,19 +322,19 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerRecord
+module binarycompilerrecord
 
-record :gauge as {
-  current: :number clamped between 0 and maximum,
-  maximum: :number clamped between 0 and infinity,
-  percentage: :percentage computed by
+record :Gauge as {
+  current: :Number clamped between 0 and maximum,
+  maximum: :Number clamped between 0 and infinity,
+  percentage: :Percentage computed by
     0% when maximum <= 0,
-    otherwise (current / maximum) as :percentage
+    otherwise (current / maximum) as :Percentage
 }
 
 on Start {
-  let hp be :gauge(current: 125, maximum: 100)
-  emit Done(current: hp.current, maximum: hp.maximum, percentage: hp.percentage, isGauge: hp is :gauge)
+  let hp be :Gauge(current: 125, maximum: 100)
+  emit Done(current: hp.current, maximum: hp.maximum, percentage: hp.percentage, isGauge: hp is :Gauge)
 }
 
 ```
@@ -358,19 +358,19 @@ steps:
         args:
           - name: "current"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "100"
           - name: "maximum"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "100"
           - name: "percentage"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.01"
           - name: "isGauge"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -401,11 +401,11 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerExternalType
+module binarycompilerexternaltype
 
 on Start {
-  let aim be :aim(range: 12m, bearing: 90°, steps: 4m, direction: :vector(1m, 2m, 3m))
-  emit Done(isAim: aim is :aim, bearing: aim.bearing, range: aim.range, steps: aim.steps, directionZ: aim.direction.z, checksum: aim.checksum)
+  let aim be :Aim(range: 12m, bearing: 90°, steps: 4m, direction: :Vector(1m, 2m, 3m))
+  emit Done(isAim: aim is :Aim, bearing: aim.bearing, range: aim.range, steps: aim.steps, directionZ: aim.direction.z, checksum: aim.checksum)
 }
 
 ```
@@ -429,31 +429,31 @@ steps:
         args:
           - name: "isAim"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "bearing"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "90"
               unit: ":degree"
           - name: "range"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "12"
               unit: ":meter"
           - name: "steps"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "4"
               unit: ":meter"
           - name: "directionZ"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "3"
               unit: ":meter"
           - name: "checksum"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "106"
 ```
 
@@ -482,10 +482,10 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerExtensionCalls
+module binarycompilerextensioncalls
 
 on Start {
-  let direction be :vector(1m, 2m, 3m)
+  let direction be :Vector(1m, 2m, 3m)
   let floored be floor 10.75
   let vectorTotal be :test.vectorSum direction
   let turn be :nav.shortestTurn from: 350° to: 10°
@@ -514,21 +514,21 @@ steps:
         args:
           - name: "floored"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "vectorTotal"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "6"
               unit: ":meter"
           - name: "turn"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "20"
               unit: ":degree"
           - name: "normalizedPredicate"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -557,7 +557,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerHandlerBinding
+module binarycompilerhandlerbinding
 
 on Start(unit, target, hp) {
   let shoot be Shoot(unit, target)
@@ -586,27 +586,27 @@ steps:
       args:
         - name: "unit"
           value:
-            type: ":text"
-            value: "u_1"
+            type: ":Text"
+            value: "u1"
         - name: "target"
           value:
-            type: ":text"
-            value: "t_1"
+            type: ":Text"
+            value: "t1"
         - name: "hp"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "10"
     local:
       - name: "Shoot"
         args:
           - name: "unit"
             value:
-              type: ":text"
-              value: "u_1"
+              type: ":Text"
+              value: "u1"
           - name: "target"
             value:
-              type: ":text"
-              value: "t_1"
+              type: ":Text"
+              value: "t1"
       - name: "Done"
         args: []
 ```
@@ -636,14 +636,14 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerMessageNameHandler
+module binarycompilermessagenamehandler
 
 on Start {
   emit Ping(amount: 7, kind: #fire) with #radio, #urgent
 }
 
 on Ping as message {
-  emit Done(name: message.name, signature: message.signature, amount: message.arguments.amount, kind: message.arguments.kind, tagCount: message.tags[:count], firstTag: message.tags[1], secondTag: message.tags[2], isMessage: message is :message)
+  emit Done(name: message.name, signature: message.signature, amount: message.arguments.amount, kind: message.arguments.kind, tagCount: message.tags[:count], firstTag: message.tags[1], secondTag: message.tags[2], isMessage: message is :Message)
 }
 
 ```
@@ -667,11 +667,11 @@ steps:
         args:
           - name: "amount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "7"
           - name: "kind"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "fire"
         tags:
           - "radio"
@@ -680,35 +680,35 @@ steps:
         args:
           - name: "name"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ping"
           - name: "signature"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ping(amount,kind)"
           - name: "amount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "7"
           - name: "kind"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "fire"
           - name: "tagCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "firstTag"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "radio"
           - name: "secondTag"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "urgent"
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -737,7 +737,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerPublish
+module binarycompilerpublish
 
 on Start {
   let dynamicTags be [#radio, #relay]
@@ -768,7 +768,7 @@ steps:
         args:
           - name: "amount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
         tags:
           - "radio"
@@ -777,7 +777,7 @@ steps:
         args:
           - name: "amount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
         tags:
           - "network"
@@ -785,7 +785,7 @@ steps:
         args:
           - name: "amount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
         tags:
           - "copy"
@@ -794,7 +794,7 @@ steps:
         args:
           - name: "amount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
         tags:
           - "network"
@@ -802,7 +802,7 @@ steps:
         args:
           - name: "amount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
         tags:
           - "copy"
@@ -833,7 +833,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerFor
+module binarycompilerfor
 
 on Start {
   for item in [1, 2] {
@@ -868,41 +868,41 @@ steps:
         args:
           - name: "kind"
             value:
-              type: ":text"
+              type: ":Text"
               value: "list"
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "Item"
         args:
           - name: "kind"
             value:
-              type: ":text"
+              type: ":Text"
               value: "list"
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
       - name: "Item"
         args:
           - name: "kind"
             value:
-              type: ":text"
+              type: ":Text"
               value: "range"
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
       - name: "Item"
         args:
           - name: "kind"
             value:
-              type: ":text"
+              type: ":Text"
               value: "range"
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
       - name: "Done"
         args: []
@@ -933,10 +933,10 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerGeneratedList
+module binarycompilergeneratedlist
 
 on Start {
-  let values be :list[:select item from 1 to 5 where item mod 2 = 1 => item * 10]
+  let values be :List[:select item from 1 to 5 where item mod 2 = 1 => item * 10]
   emit Done(count: values[:count], first: values[1], second: values[2], third: values[3])
 }
 
@@ -961,19 +961,19 @@ steps:
         args:
           - name: "count"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "first"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "second"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "30"
           - name: "third"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "50"
 ```
 
@@ -1002,7 +1002,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerGuardedChoice
+module binarycompilerguardedchoice
 
 on Start(value) {
   let result be #large when value > 10, #medium when value > 5 otherwise #small
@@ -1029,42 +1029,42 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "12"
     local:
       - name: "Done"
         args:
           - name: "result"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "large"
   step-0002:
     input:
       args:
         - name: "value"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "7"
     local:
       - name: "Done"
         args:
           - name: "result"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "medium"
   step-0003:
     input:
       args:
         - name: "value"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "3"
     local:
       - name: "Done"
         args:
           - name: "result"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "small"
 ```
 
@@ -1093,7 +1093,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerDirectChoose
+module binarycompilerdirectchoose
 
 on Start {
   let values be [1, 2, 3]
@@ -1127,31 +1127,31 @@ steps:
         args:
           - name: "oneValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "drawnLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "drawnSecond"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "chosenOne"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "chosenLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "randomOne"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "42"
           - name: "randomLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
 ```
 
@@ -1180,11 +1180,11 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerDirectPatterns
+module binarycompilerdirectpatterns
 
 on Start {
-  let dice as :dice be [6, 6, 5, 5, 5]
-  let straight as :dice be [6, 5, 4, 3, 2]
+  let dice be ([6, 6, 5, 5, 5]) as :Dice
+  let straight be ([6, 5, 4, 3, 2]) as :Dice
   let list be ['a', 'b', 'a']
   let dicePair be dice[:take pair]
   let diceFull be dice[:take full house]
@@ -1218,47 +1218,47 @@ steps:
         args:
           - name: "hasDicePair"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasListPair"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasPairOfSix"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasPairOfFour"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "pairLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "fullLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
           - name: "straightLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
           - name: "listPairLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "pairOfSixLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "pairOfAFirst"
             value:
-              type: ":text"
+              type: ":Text"
               value: "a"
           - name: "tagPairSecond"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "fire"
 ```
 
@@ -1287,7 +1287,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerDirectSortGroupDistinct
+module binarycompilerdirectsortgroupdistinct
 
 on Start {
   let units be [[name: 'Knight', faction: #melee, hp: 10], [name: 'Rook', faction: #melee, hp: 8], [name: 'Archer', faction: #ranged, hp: 6]]
@@ -1321,39 +1321,39 @@ steps:
         args:
           - name: "firstFaction"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "melee"
           - name: "thirdFaction"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "ranged"
           - name: "distinctLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "distinctFirst"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Knight"
           - name: "distinctSecond"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Archer"
           - name: "meleeLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "rangedFirst"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Archer"
           - name: "ascFirst"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Archer"
           - name: "descFirst"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Knight"
 ```
 
@@ -1382,7 +1382,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerFilterSelect
+module binarycompilerfilterselect
 
 on Start {
   let values be [1, 2, 3, 4]
@@ -1417,35 +1417,35 @@ steps:
         args:
           - name: "filteredLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "filteredFirst"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "selectedSecond"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "20"
           - name: "capturedFilterFirst"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "capturedSelectThird"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "103"
           - name: "chainedLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "chainedFirst"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "7"
           - name: "chainedThird"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9"
 ```
 
@@ -1474,7 +1474,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerIteratorTerminals
+module binarycompileriteratorterminals
 
 on Start {
   let values be [1, 2, 3, 4]
@@ -1511,27 +1511,27 @@ steps:
         args:
           - name: "counted"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "summed"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "50"
           - name: "averaged"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "2.5"
           - name: "chainedSum"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9"
           - name: "weakest"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Mage"
           - name: "strongest"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Knight"
 ```
 
@@ -1560,7 +1560,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerPredicateEdges
+module binarycompilerpredicateedges
 
 on Start {
   let values be [1, 2, 3, 4]
@@ -1595,23 +1595,23 @@ steps:
         args:
           - name: "hasHigh"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "allPositive"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "firstAlive"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Knight"
           - name: "lastAlive"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Guard"
           - name: "boss"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Mage"
 ```
 
@@ -1640,7 +1640,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerObjectMatch
+module binarycompilerobjectmatch
 
 on Start {
   let targetRole be #boss
@@ -1672,15 +1672,15 @@ steps:
         args:
           - name: "hasBoss"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasNestedHp"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasMissing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -1709,7 +1709,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerMapSelector
+module binarycompilermapselector
 
 on Start {
   let units be [[id: #rook, hp: 10, team: #blue], [id: #mage, hp: 6, team: #red], [id: #guard, hp: 8, team: #blue]]
@@ -1740,31 +1740,31 @@ steps:
         args:
           - name: "byIdLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "rookTeam"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "blue"
           - name: "mageHp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "hpRook"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "hpMage"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "blueLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "blueGuard"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "8"
 ```
 
@@ -1793,7 +1793,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryCompilerChooseSelectors
+module binarycompilerchooseselectors
 
 on Start {
   let scale be 2
@@ -1827,30 +1827,30 @@ steps:
         args:
           - name: "chosenBlue"
             value:
-              type: ":text"
+              type: ":Text"
               value: "High"
           - name: "chosenRandomBlue"
             value:
-              type: ":text"
+              type: ":Text"
               value: "High"
           - name: "weightedOne"
             value:
-              type: ":text"
+              type: ":Text"
               value: "High"
           - name: "weightedManyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "weightedManyFirst"
             value:
-              type: ":text"
+              type: ":Text"
               value: "High"
           - name: "weightedFilteredLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "weightedFilteredFirst"
             value:
-              type: ":text"
+              type: ":Text"
               value: "High"
 ```

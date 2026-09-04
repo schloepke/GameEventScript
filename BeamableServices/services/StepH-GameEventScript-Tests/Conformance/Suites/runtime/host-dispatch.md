@@ -68,28 +68,28 @@ steps:
       args:
         - name: "playerId"
           value:
-            type: ":text"
-            value: "p_1"
+            type: ":Text"
+            value: "p1"
     local:
       - name: "Notify"
         args:
           - name: "playerId"
             value:
-              type: ":text"
-              value: "p_1"
+              type: ":Text"
+              value: "p1"
           - name: "count"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
       - name: "ExternalSeen"
         args:
           - name: "playerId"
             value:
-              type: ":text"
-              value: "p_1"
+              type: ":Text"
+              value: "p1"
           - name: "count"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
 ```
 
@@ -118,7 +118,7 @@ nativeHandlers:
         args:
           - name: "marker"
             value:
-              type: ":text"
+              type: ":Text"
               value: "external"
 sources:
   - name: "equal priority preserves script then external registration order.ges"
@@ -153,26 +153,26 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "4"
     local:
       - name: "Notify"
         args:
           - name: "value"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "4"
       - name: "SeenByScript"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
       - name: "SeenByExternal"
         args:
           - name: "marker"
             value:
-              type: ":text"
+              type: ":Text"
               value: "external"
 ```
 
@@ -201,7 +201,7 @@ nativeHandlers:
         args:
           - name: "order"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
   - message: "Notify"
     parameters: ["value"]
@@ -210,7 +210,7 @@ nativeHandlers:
         args:
           - name: "order"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
 sources:
   - name: "external subscribers keep registration order.ges"
@@ -241,26 +241,26 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "4"
     local:
       - name: "Notify"
         args:
           - name: "value"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "4"
       - name: "ExternalFirst"
         args:
           - name: "order"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "ExternalSecond"
         args:
           - name: "order"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
 ```
 
@@ -290,7 +290,7 @@ nativeHandlers:
         args:
           - name: "marker"
             value:
-              type: ":text"
+              type: ":Text"
               value: "external"
 sources:
   - name: "higher priority subscribers run first.ges"
@@ -325,26 +325,26 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "4"
     local:
       - name: "Notify"
         args:
           - name: "value"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "4"
       - name: "SeenByExternal"
         args:
           - name: "marker"
             value:
-              type: ":text"
+              type: ":Text"
               value: "external"
       - name: "SeenByScript"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
 ```
 
@@ -403,20 +403,20 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "4"
     local:
       - name: "Notify"
         args:
           - name: "value"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "4"
       - name: "ExternalOk"
         args:
           - name: "value"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "4"
     diagnostics:
       - phase: "runtime"
@@ -480,26 +480,26 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "2"
     local:
       - name: "Notify"
         args:
           - name: "value"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "2"
       - name: "Done"
         args:
           - name: "value"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "2"
       - name: "Final"
         args:
           - name: "value"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "2"
 ```
 
@@ -530,12 +530,12 @@ sources:
 ### Source code under test
 
 ```ges
-module FirstProgram
+module firstprogram
 on Start { emit First }
 ```
 
 ```ges
-module SecondProgram
+module secondprogram
 on Start { emit Second }
 ```
 
@@ -653,19 +653,19 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "Tick"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
       - name: "Tick"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
     paused: true
 ```

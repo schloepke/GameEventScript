@@ -110,12 +110,12 @@ steps:
     input:
       args:
         - name: value
-          value: { type: ":integer", value: "7" }
+          value: { type: ":Number.int64", value: "7" }
     local:
       - name: Done
         args:
           - name: result
-            value: { type: ":integer", value: "12" }
+            value: { type: ":Number.int64", value: "12" }
     paused: true
 ```
 """;
@@ -189,7 +189,7 @@ steps:
     {
         const string markdown = "---\nformatVersion: 1\nsuiteId: message.invalid-shape\nkind: messageApi\nlevel: atomic\n---\n" +
                                 "## Test: Mapping\n```yaml\ngesBlock: case\nid: mapping\nmessageApi:\n  signature: { name: Score, parameters: [score] }\n" +
-                                "  message:\n    name: Score\n    args:\n      score: { type: \":integer\", value: \"1\" }\n```\n" +
+                                "  message:\n    name: Score\n    args:\n      score: { type: \":Number.int64\", value: \"1\" }\n```\n" +
                                 "```yaml\ngesBlock: expect\nmessage: { error: invalidArgumentsShape }\n```\n";
 
         var test = ConformanceMarkdownParser.Parse(markdown).Cases[0];
@@ -479,7 +479,7 @@ gesBlock: expect
 binary:
   outcome: valid
   rewriteByteExact: true
-  moduleName: Fixture
+  moduleName: fixture
 ```
 """;
 
@@ -604,8 +604,8 @@ code
     public void AcceptsLiteralAstralScalarsInDoubleQuotedYamlStrings()
     {
         const string markdown = "---\nformatVersion: 1\nsuiteId: astral.scalar\nkind: valueApi\nlevel: atomic\n---\n" +
-                                "## Test: One\n```yaml\ngesBlock: case\nid: one\nvalueApi:\n  value: { type: \":text\", value: \"𐀀\" }\n```\n" +
-                                "```yaml\ngesBlock: expect\nvalue:\n  normalized: { type: \":text\", value: \"𐀀\" }\n```\n";
+                                "## Test: One\n```yaml\ngesBlock: case\nid: one\nvalueApi:\n  value: { type: \":Text\", value: \"𐀀\" }\n```\n" +
+                                "```yaml\ngesBlock: expect\nvalue:\n  normalized: { type: \":Text\", value: \"𐀀\" }\n```\n";
 
         var document = ConformanceMarkdownParser.Parse(markdown);
 

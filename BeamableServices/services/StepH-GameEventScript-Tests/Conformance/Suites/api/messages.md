@@ -38,11 +38,11 @@ messageApi:
     args:
       - name: "b"
         value:
-          type: ":integer"
+          type: ":Number.int64"
           value: "2"
       - name: "a"
         value:
-          type: ":integer"
+          type: ":Number.int64"
           value: "1"
 ```
 
@@ -80,11 +80,11 @@ messageApi:
     args:
       - name: "target"
         value:
-          type: ":integer"
+          type: ":Number.int64"
           value: "2"
       - name: "unit"
         value:
-          type: ":integer"
+          type: ":Number.int64"
           value: "1"
 ```
 
@@ -122,11 +122,11 @@ messageApi:
     args:
       - name: "target"
         value:
-          type: ":integer"
+          type: ":Number.int64"
           value: "2"
       - name: "unit"
         value:
-          type: ":integer"
+          type: ":Number.int64"
           value: "1"
 ```
 
@@ -197,11 +197,11 @@ messageApi:
     args:
       - name: "score"
         value:
-          type: ":integer"
+          type: ":Number.int64"
           value: "1"
       - name: " score "
         value:
-          type: ":integer"
+          type: ":Number.int64"
           value: "2"
 ```
 
@@ -234,7 +234,7 @@ messageApi:
     name: "Score"
     args:
       score:
-        type: ":integer"
+        type: ":Number.int64"
         value: "1"
 ```
 
@@ -267,7 +267,7 @@ sources:
 ### Source code under test
 
 ```ges
-module MessageDefinitions
+module messagedefinitions
 on Start(playerId) {
   emit Done(playerId: playerId)
 }
@@ -305,9 +305,9 @@ messageApi:
     name: Pair
     args:
       - name: "_"
-        value: { type: ":integer", value: "1" }
+        value: { type: ":Number.int64", value: "1" }
       - name: "_"
-        value: { type: ":integer", value: "2" }
+        value: { type: ":Number.int64", value: "2" }
 ```
 
 ### Expectation
@@ -461,7 +461,7 @@ messageApi:
     name: Ping
     args:
       - name: amount
-        value: { type: ":integer", value: "7" }
+        value: { type: ":Number.int64", value: "7" }
   compareSignature: { name: Ping, parameters: [amount] }
 ```
 
@@ -548,13 +548,13 @@ messageApi:
     tags: [radio]
     args:
       - name: amount
-        value: { type: ":integer", value: "7" }
+        value: { type: ":Number.int64", value: "7" }
   compareMessage:
     name: Ping
     tags: ["#radio"]
     args:
       - name: amount
-        value: { type: ":integer", value: "7" }
+        value: { type: ":Number.int64", value: "7" }
 ```
 
 ### Expectation
@@ -585,12 +585,12 @@ messageApi:
     name: Ping
     args:
       - name: amount
-        value: { type: ":integer", value: "7" }
+        value: { type: ":Number.int64", value: "7" }
   compareMessage:
     name: Ping
     args:
       - name: amount
-        value: { type: ":integer", value: "8" }
+        value: { type: ":Number.int64", value: "8" }
 ```
 
 ### Expectation
@@ -621,13 +621,13 @@ messageApi:
     tags: [radio]
     args:
       - name: amount
-        value: { type: ":integer", value: "7" }
+        value: { type: ":Number.int64", value: "7" }
   compareMessage:
     name: Ping
     tags: [silent]
     args:
       - name: amount
-        value: { type: ":integer", value: "7" }
+        value: { type: ":Number.int64", value: "7" }
 ```
 
 ### Expectation
@@ -657,12 +657,12 @@ messageApi:
     name: Ping
     args:
       - name: "_"
-        value: { type: ":integer", value: "7" }
+        value: { type: ":Number.int64", value: "7" }
   compareMessage:
     name: Ping
     args:
       - name: "_"
-        value: { type: ":integer", value: "7" }
+        value: { type: ":Number.int64", value: "7" }
 ```
 
 ### Expectation
@@ -746,7 +746,7 @@ messageApi:
   signature: { name: Ping, parameters: [amount] }
   message: { name: Ping, args: [] }
   createArguments:
-    - { type: ":integer", value: "7" }
+    - { type: ":Number.int64", value: "7" }
 ```
 
 ### Expectation

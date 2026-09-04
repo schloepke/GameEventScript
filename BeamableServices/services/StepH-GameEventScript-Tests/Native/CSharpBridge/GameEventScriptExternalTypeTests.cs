@@ -20,9 +20,9 @@ public sealed class GameEventScriptExternalTypeTests
         const string script =
             """
             on Start {
-              let aim be :aim(range: 12m, bearing: 90°, steps: 4m, direction: :vector(1m, 2m, 3m))
+              let aim be :Aim(range: 12m, bearing: 90°, steps: 4m, direction: :Vector(1m, 2m, 3m))
               emit Done(
-                isAim: aim is :aim,
+                isAim: aim is :Aim,
                 bearing: aim.bearing,
                 range: aim.range,
                 steps: aim.steps,
@@ -70,7 +70,7 @@ public sealed class GameEventScriptExternalTypeTests
         const string script =
             """
             on Start {
-              let aim be :aim(range: 12m, bearing: 90°, steps: 4m, direction: :vector(1m, 2m, 3m))
+              let aim be :Aim(range: 12m, bearing: 90°, steps: 4m, direction: :Vector(1m, 2m, 3m))
               emit Done(
                 score: :aim.score aim,
                 lead: :aim.lead heading: 90°,
@@ -138,7 +138,7 @@ public sealed class GameEventScriptExternalTypeTests
         Assert.AreEqual(2, extendedCall.Result.AsInteger());
     }
 
-    [GesType("aim")]
+    [GesType("Aim")]
     private sealed class AimValue
     {
         [GesConstruct]
@@ -175,7 +175,7 @@ public sealed class GameEventScriptExternalTypeTests
     private static class AimExtensionFunctions
     {
         [GesFunction("score", GameEventScriptBytecodeTypeKind.Float)]
-        public static long Score([GesParam("_", "aim")] AimValue aim) => aim.Checksum;
+        public static long Score([GesParam("_", "Aim")] AimValue aim) => aim.Checksum;
 
         [GesFunction("lead", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree)]
         public static double Lead([GesParam("heading", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree)] double heading)

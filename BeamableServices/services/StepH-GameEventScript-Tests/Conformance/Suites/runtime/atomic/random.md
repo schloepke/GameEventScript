@@ -43,7 +43,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicRandomTakeOpcodes
+module atomicrandomtakeopcodes
 on Start {
   let integerValue be random from 1 to 6
   let floatValue be random from 0.0 to 1.0
@@ -72,19 +72,19 @@ steps:
         args:
           - name: "integerValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "floatValue"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.25"
           - name: "mixedValue"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "1.5"
           - name: "nothingValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -112,7 +112,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicSeededRandomLong
+module atomicseededrandomlong
 on Start {
   let value be random with 4294967297 (random from 1 to 1000000000000)
   emit Done(value: value)
@@ -138,7 +138,7 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "820299227869"
 ```
 
@@ -166,7 +166,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicSeededRandomKnownAnswers
+module atomicseededrandomknownanswers
 on Start {
   random with 0 {
     emit Integers(a: random from -100 to 100, b: random from -100 to 100, c: random from -100 to 100, d: random from -100 to 100, e: random from -100 to 100, f: random from -100 to 100, g: random from -100 to 100, h: random from -100 to 100)
@@ -196,57 +196,57 @@ steps:
         args:
           - name: "a"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "16"
           - name: "b"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-95"
           - name: "c"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-9"
           - name: "d"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-45"
           - name: "e"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-76"
           - name: "f"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "43"
           - name: "g"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-62"
           - name: "h"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-21"
       - name: "Floats"
         args:
           - name: "a"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.6012629994179048"
           - name: "b"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.7477740925472398"
           - name: "c"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.10301998939503632"
           - name: "d"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.4165890778296456"
           - name: "e"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.7329967790569901"
 ```
 
@@ -275,7 +275,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicNestedSeededRandom
+module atomicnestedseededrandom
 on Start {
   random with 1 {
     let outerFirst be random from 1 to 100
@@ -312,27 +312,27 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "21"
       - name: "Inner"
         args:
           - name: "first"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "93"
           - name: "second"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "70"
       - name: "Outer"
         args:
           - name: "first"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "58"
           - name: "second"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "23"
 ```
 
@@ -360,7 +360,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicRandomBounds
+module atomicrandombounds
 on Start {
   let orderedInteger be random with 0 (random from -100 to 100)
   let reversedInteger be random with 0 (random from 100 to -100)
@@ -390,31 +390,31 @@ steps:
         args:
           - name: "equalInteger"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "7"
           - name: "equalFloat"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "3.5"
           - name: "orderedInteger"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "16"
           - name: "reversedInteger"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "16"
           - name: "orderedFloat"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "8.037889982537145"
           - name: "reversedFloat"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "8.037889982537145"
           - name: "roundedUpperBound"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "1.0000000000000002"
 ```
 
@@ -473,30 +473,30 @@ steps:
     input:
       args:
         - name: invalid
-          value: { type: ":float", value: "NaN" }
+          value: { type: ":Number.binary64", value: "NaN" }
     local:
       - name: Seeded
         args:
           - name: equalInteger
-            value: { type: ":integer", value: "7" }
+            value: { type: ":Number.int64", value: "7" }
           - name: equalFloat
-            value: { type: ":float", value: "3.5" }
+            value: { type: ":Number.binary64", value: "3.5" }
           - name: invalidFloat
-            value: { type: ":float", value: "NaN" }
+            value: { type: ":Number.binary64", value: "NaN" }
           - name: nextInteger
-            value: { type: ":integer", value: "16" }
+            value: { type: ":Number.int64", value: "16" }
       - name: Sequence
         args:
           - name: equalInteger
-            value: { type: ":integer", value: "7" }
+            value: { type: ":Number.int64", value: "7" }
           - name: equalFloat
-            value: { type: ":float", value: "3.5" }
+            value: { type: ":Number.binary64", value: "3.5" }
           - name: invalidFloat
-            value: { type: ":float", value: "NaN" }
+            value: { type: ":Number.binary64", value: "NaN" }
           - name: nextInteger
-            value: { type: ":integer", value: "17" }
+            value: { type: ":Number.int64", value: "17" }
           - name: nextFloat
-            value: { type: ":float", value: "0.75" }
+            value: { type: ":Number.binary64", value: "0.75" }
 ```
 
 ---
@@ -534,7 +534,7 @@ on Zero(minimum, maximum) { random with 0 { emit Values(values: draws(minimum: m
 on One(minimum, maximum) { random with 1 { emit Values(values: draws(minimum: minimum, maximum: maximum)) } }
 on NegativeOne(minimum, maximum) { random with -1 { emit Values(values: draws(minimum: minimum, maximum: maximum)) } }
 on Minimum(minimum, maximum) {
-  let seed as :number be 0 - 9223372036854775807 - 1
+  let seed be (0 - 9223372036854775807 - 1) as :Number
   random with seed { emit Values(values: draws(minimum: minimum, maximum: maximum)) }
 }
 on Maximum(minimum, maximum) { random with 9223372036854775807 { emit Values(values: draws(minimum: minimum, maximum: maximum)) } }
@@ -558,101 +558,101 @@ steps:
   zero:
     input:
       args:
-        - { name: minimum, value: { type: ":integer", value: "-9223372036854775808" } }
-        - { name: maximum, value: { type: ":integer", value: "9223372036854775807" } }
+        - { name: minimum, value: { type: ":Number.int64", value: "-9223372036854775808" } }
+        - { name: maximum, value: { type: ":Number.int64", value: "9223372036854775807" } }
     local:
       - name: Values
         args:
           - name: values
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - { type: ":integer", value: "1867972634398290612" }
-                - { type: ":integer", value: "4570625273314559274" }
-                - { type: ":integer", value: "-7322988658008267040" }
-                - { type: ":integer", value: "-1538659934228632276" }
-                - { type: ":integer", value: "4298031953262947929" }
-                - { type: ":integer", value: "9218731504441215690" }
-                - { type: ":integer", value: "-1434944111878255464" }
-                - { type: ":integer", value: "657716193016351295" }
+                - { type: ":Number.int64", value: "1867972634398290612" }
+                - { type: ":Number.int64", value: "4570625273314559274" }
+                - { type: ":Number.int64", value: "-7322988658008267040" }
+                - { type: ":Number.int64", value: "-1538659934228632276" }
+                - { type: ":Number.int64", value: "4298031953262947929" }
+                - { type: ":Number.int64", value: "9218731504441215690" }
+                - { type: ":Number.int64", value: "-1434944111878255464" }
+                - { type: ":Number.int64", value: "657716193016351295" }
   one:
     input:
       args:
-        - { name: minimum, value: { type: ":integer", value: "-9223372036854775808" } }
-        - { name: maximum, value: { type: ":integer", value: "9223372036854775807" } }
+        - { name: minimum, value: { type: ":Number.int64", value: "-9223372036854775808" } }
+        - { name: maximum, value: { type: ":Number.int64", value: "9223372036854775807" } }
     local:
       - name: Values
         args:
           - name: values
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - { type: ":integer", value: "3743247123249303749" }
-                - { type: ":integer", value: "376989097743764714" }
-                - { type: ":integer", value: "1367008882666915092" }
-                - { type: ":integer", value: "-2004633466265230425" }
-                - { type: ":integer", value: "3637299787140904563" }
-                - { type: ":integer", value: "-6574935418888935646" }
-                - { type: ":integer", value: "-7912819118364618522" }
-                - { type: ":integer", value: "-2191760103874369379" }
+                - { type: ":Number.int64", value: "3743247123249303749" }
+                - { type: ":Number.int64", value: "376989097743764714" }
+                - { type: ":Number.int64", value: "1367008882666915092" }
+                - { type: ":Number.int64", value: "-2004633466265230425" }
+                - { type: ":Number.int64", value: "3637299787140904563" }
+                - { type: ":Number.int64", value: "-6574935418888935646" }
+                - { type: ":Number.int64", value: "-7912819118364618522" }
+                - { type: ":Number.int64", value: "-2191760103874369379" }
   negative-one:
     input:
       args:
-        - { name: minimum, value: { type: ":integer", value: "-9223372036854775808" } }
-        - { name: maximum, value: { type: ":integer", value: "9223372036854775807" } }
+        - { name: minimum, value: { type: ":Number.int64", value: "-9223372036854775808" } }
+        - { name: maximum, value: { type: ":Number.int64", value: "9223372036854775807" } }
     local:
       - name: Values
         args:
           - name: values
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - { type: ":integer", value: "1104825383502392584" }
-                - { type: ":integer", value: "4933306470170198061" }
-                - { type: ":integer", value: "134599743100700318" }
-                - { type: ":integer", value: "4568212969449536559" }
-                - { type: ":integer", value: "1240059989959942954" }
-                - { type: ":integer", value: "4274864459242775845" }
-                - { type: ":integer", value: "-2392075413678006306" }
-                - { type: ":integer", value: "4937978806164953826" }
+                - { type: ":Number.int64", value: "1104825383502392584" }
+                - { type: ":Number.int64", value: "4933306470170198061" }
+                - { type: ":Number.int64", value: "134599743100700318" }
+                - { type: ":Number.int64", value: "4568212969449536559" }
+                - { type: ":Number.int64", value: "1240059989959942954" }
+                - { type: ":Number.int64", value: "4274864459242775845" }
+                - { type: ":Number.int64", value: "-2392075413678006306" }
+                - { type: ":Number.int64", value: "4937978806164953826" }
   minimum:
     input:
       args:
-        - { name: minimum, value: { type: ":integer", value: "-9223372036854775808" } }
-        - { name: maximum, value: { type: ":integer", value: "9223372036854775807" } }
+        - { name: minimum, value: { type: ":Number.int64", value: "-9223372036854775808" } }
+        - { name: maximum, value: { type: ":Number.int64", value: "9223372036854775807" } }
     local:
       - name: Values
         args:
           - name: values
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - { type: ":integer", value: "5772482892184262851" }
-                - { type: ":integer", value: "-469382119497855646" }
-                - { type: ":integer", value: "-4217990932651081551" }
-                - { type: ":integer", value: "7335871315672998252" }
-                - { type: ":integer", value: "2733347156748791322" }
-                - { type: ":integer", value: "5567399578683514215" }
-                - { type: ":integer", value: "-4465951018770553547" }
-                - { type: ":integer", value: "-1364060190999775145" }
+                - { type: ":Number.int64", value: "5772482892184262851" }
+                - { type: ":Number.int64", value: "-469382119497855646" }
+                - { type: ":Number.int64", value: "-4217990932651081551" }
+                - { type: ":Number.int64", value: "7335871315672998252" }
+                - { type: ":Number.int64", value: "2733347156748791322" }
+                - { type: ":Number.int64", value: "5567399578683514215" }
+                - { type: ":Number.int64", value: "-4465951018770553547" }
+                - { type: ":Number.int64", value: "-1364060190999775145" }
   maximum:
     input:
       args:
-        - { name: minimum, value: { type: ":integer", value: "-9223372036854775808" } }
-        - { name: maximum, value: { type: ":integer", value: "9223372036854775807" } }
+        - { name: minimum, value: { type: ":Number.int64", value: "-9223372036854775808" } }
+        - { name: maximum, value: { type: ":Number.int64", value: "9223372036854775807" } }
     local:
       - name: Values
         args:
           - name: values
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - { type: ":integer", value: "-8206636817657052987" }
-                - { type: ":integer", value: "-7415605425696876517" }
-                - { type: ":integer", value: "-333518891481786691" }
-                - { type: ":integer", value: "-8279322368292135792" }
-                - { type: ":integer", value: "-8147555866602263392" }
-                - { type: ":integer", value: "4293791176154664783" }
-                - { type: ":integer", value: "4245911017751749998" }
-                - { type: ":integer", value: "-7832179929631733380" }
+                - { type: ":Number.int64", value: "-8206636817657052987" }
+                - { type: ":Number.int64", value: "-7415605425696876517" }
+                - { type: ":Number.int64", value: "-333518891481786691" }
+                - { type: ":Number.int64", value: "-8279322368292135792" }
+                - { type: ":Number.int64", value: "-8147555866602263392" }
+                - { type: ":Number.int64", value: "4293791176154664783" }
+                - { type: ":Number.int64", value: "4245911017751749998" }
+                - { type: ":Number.int64", value: "-7832179929631733380" }
 ```

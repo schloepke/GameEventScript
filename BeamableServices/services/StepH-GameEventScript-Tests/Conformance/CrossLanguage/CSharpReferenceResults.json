@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "3EF8B050357D91FC23A954E72A7714C145ABEB78165D0653CBD0E2206F962BE2",
-    "documentCount": 74,
-    "caseCount": 1040
+    "sha256": "8FED2D7804CE9D6A2A7D593AF4692B0CFB0D97F800DD72F52BFEDEA9132DE958",
+    "documentCount": 75,
+    "caseCount": 1049
   },
   "cases": [
     {
@@ -1795,6 +1795,131 @@
           "external-types",
           "host",
           "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.names-and-constants/constant-rejects-variable-subscript",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.names-and-constants/constants-multiple-sources",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.names-and-constants/constants-runtime",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.names-and-constants/duplicate-constant",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.names-and-constants/mismatched-modules",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.names-and-constants/module-rejects-hyphen",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.names-and-constants/module-rejects-underscore",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.names-and-constants/nonliteral-constant",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.names-and-constants/unresolved-constant",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
         ],
         "optional": []
       },

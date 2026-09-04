@@ -41,11 +41,11 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCountTerminals
+module atomiccountterminals
 on Start {
   let values be [1, 2, 3, 4]
-  let dice as :dice be [6, 4, 2]
-  let range as :range be from 1 to 4
+  let dice be ([6, 4, 2]) as :Dice
+  let range be (from 1 to 4) as :Range
   let map be [b: 2, a: 1, c: 3]
   let text be 'abba'
   let emptyList be []
@@ -72,55 +72,55 @@ steps:
         args:
           - name: "allValues"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "allValuesBare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "filteredValues"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "diceHigh"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "diceBare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "rangeAll"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "rangeBare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "mapOverOne"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "mapBare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "textB"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "textBare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "emptyCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "emptyBare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
 ```
 
@@ -149,11 +149,11 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicSumAverageTerminals
+module atomicsumaverageterminals
 on Start {
   let values be [1, 2, 3, 4]
-  let dice as :dice be [6, 4, 2]
-  let range as :range be from 1 to 4
+  let dice be ([6, 4, 2]) as :Dice
+  let range be (from 1 to 4) as :Range
   let map be [b: 2, a: 1, c: 3]
   let emptyList be []
   emit Done(sumValues: values[:sum value => value], sumValuesBare: values[:sum], sumFiltered: values[:filter value where value > 2][:sum value => value], sumDice: dice[:sum value => value], sumDiceBare: dice[:sum], sumRange: range[:sum value => value], sumRangeBare: range[:sum], sumMap: map[:sum value => value], sumMapBare: map[:sum], sumEmpty: emptyList[:sum value => value], sumEmptyBare: emptyList[:sum], averageValues: values[:average value => value], averageValuesBare: values[:average], averageFiltered: values[:filter value where value > 2][:average value => value], averageDice: dice[:average value => value], averageDiceBare: dice[:average], averageRange: range[:average value => value], averageRangeBare: range[:average], averageMap: map[:average value => value], averageMapBare: map[:average], averageEmpty: emptyList[:average value => value], averageEmptyBare: emptyList[:average])
@@ -179,90 +179,90 @@ steps:
         args:
           - name: "sumValues"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "sumValuesBare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "sumFiltered"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "7"
           - name: "sumDice"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
           - name: "sumDiceBare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
           - name: "sumRange"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "sumRangeBare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "sumMap"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "sumMapBare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "sumEmpty"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "sumEmptyBare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "averageValues"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "2.5"
           - name: "averageValuesBare"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "2.5"
           - name: "averageFiltered"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "3.5"
           - name: "averageDice"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "averageDiceBare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "averageRange"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "2.5"
           - name: "averageRangeBare"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "2.5"
           - name: "averageMap"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "averageMapBare"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "averageEmpty"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "averageEmptyBare"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -290,11 +290,11 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicIteratorMinMaxTerminals
+module atomiciteratorminmaxterminals
 on Start {
   let values be [3, 1, 4, 2]
-  let dice as :dice be [6, 4, 2]
-  let range as :range be from 1 to 4
+  let dice be ([6, 4, 2]) as :Dice
+  let range be (from 1 to 4) as :Range
   let percentages be [10%, 25%, 5%]
   let quantities be [3m, 1m, 2m]
   let booleans be [true, false, true]
@@ -322,60 +322,60 @@ steps:
         args:
           - name: "minValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "maxValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "minDice"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "maxDice"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "minRange"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "maxRange"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "minPercentage"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.05"
           - name: "maxPercentage"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.25"
           - name: "minQuantity"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               unit: ":meter"
               value: "1"
           - name: "maxQuantity"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               unit: ":meter"
               value: "3"
           - name: "minBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "maxBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "emptyMin"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "emptyMax"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -403,7 +403,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicIteratorMinMaxReturnsItem
+module atomiciteratorminmaxreturnsitem
 on Start {
   let units be [[id: #rook, hp: 10], [id: #mage, hp: 6], [id: #guard, hp: 8]]
   let weakest be units[:min unit => unit.hp]
@@ -432,22 +432,22 @@ steps:
         args:
           - name: "weakestId"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "mage"
           - name: "weakestHp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "strongestId"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "rook"
           - name: "strongestHp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "transformedMax"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "30"
 ```

@@ -68,88 +68,88 @@ steps:
       args:
         - name: "unit"
           value:
-            type: ":map"
+            type: ":Map"
             entries:
               - key: "name"
                 value:
-                  type: ":text"
+                  type: ":Text"
                   value: "Ada"
               - key: "hp"
                 value:
-                  type: ":integer"
+                  type: ":Number.int64"
                   value: "2"
               - key: "maxHp"
                 value:
-                  type: ":integer"
+                  type: ":Number.int64"
                   value: "5"
         - name: "units"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "Ada"
                   - key: "hp"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "2"
                   - key: "maxHp"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "5"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "Bert"
                   - key: "hp"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "4"
                   - key: "maxHp"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "4"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "Cara"
                   - key: "hp"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "1"
                   - key: "maxHp"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "3"
     local:
       - name: "Done"
         args:
           - name: "byCall"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "byPredicate"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "woundedCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "first"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ada"
           - name: "second"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Cara"
 ```
 
@@ -205,48 +205,48 @@ steps:
       args:
         - name: "unit"
           value:
-            type: ":map"
+            type: ":Map"
             entries:
               - key: "name"
                 value:
-                  type: ":text"
+                  type: ":Text"
                   value: "NoHp"
         - name: "units"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "NoHp"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "Healthy"
                   - key: "hp"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "5"
                   - key: "maxHp"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "5"
     local:
       - name: "Done"
         args:
           - name: "byCall"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "byPredicate"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "woundedCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
 ```
 
@@ -278,7 +278,7 @@ sources:
 predicate high(_ value) be value > 3
 
 on Start(value) {
-  emit Done(byWord: value is not high, byBang: value is !high, byType: value is not :text, byEmpty: value is not empty, byCompare: value is not 3 or less)
+  emit Done(byWord: value is not high, byBang: value is !high, byType: value is not :Text, byEmpty: value is not empty, byCompare: value is not 3 or less)
 }
 ```
 
@@ -298,30 +298,30 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "2"
     local:
       - name: "Done"
         args:
           - name: "byWord"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "byBang"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "byType"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "byEmpty"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "byCompare"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -371,34 +371,34 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "9"
     local:
       - name: "Done"
         args:
           - name: "lessThan"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "moreThan"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "orLess"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "orMore"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "atMost"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "atLeast"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -427,12 +427,12 @@ sources:
 ### Source code under test
 
 ```ges
-record :unit as {
-  alive: :boolean,
-  hidden: :boolean
+record :Unit as {
+  alive: :Boolean,
+  hidden: :Boolean
 }
 
-predicate targetable(_ unit as :unit) be unit.alive and not unit.hidden
+predicate targetable(_ unit as :Unit) be unit.alive and not unit.hidden
 
 on Start(unit) {
   emit Done(targetable: unit is targetable)
@@ -455,22 +455,22 @@ steps:
       args:
         - name: "unit"
           value:
-            type: ":map"
+            type: ":Map"
             entries:
               - key: "alive"
                 value:
-                  type: ":boolean"
+                  type: ":Boolean"
                   value: true
               - key: "hidden"
                 value:
-                  type: ":boolean"
+                  type: ":Boolean"
                   value: false
     local:
       - name: "Done"
         args:
           - name: "targetable"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -499,7 +499,7 @@ sources:
 ### Source code under test
 
 ```ges
-predicate numericPredicate(_ value) be value * 2 as :boolean
+predicate numericPredicate(_ value) be value * 2 as :Boolean
 function numericSelect(_ value) be value * 2
 
 on Start {
@@ -530,19 +530,19 @@ steps:
         args:
           - name: "byPredicateCallTwo"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "byPredicateCallZero"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "byFunction"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "byPredicateOperator"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -594,22 +594,22 @@ steps:
       args:
         - name: "left"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "7"
         - name: "right"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "4"
     local:
       - name: "Done"
         args:
           - name: "ok"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "reversed"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -638,14 +638,14 @@ sources:
 ### Source code under test
 
 ```ges
-record :gauge as {
-  current: :number
+record :Gauge as {
+  current: :Number
 }
 
-predicate high(value as :number) be value > 2
-function boosted(_ value as :number) be value + 1
+predicate high(value as :Number) be value > 2
+function boosted(_ value as :Number) be value + 1
 
-on Start(value as :number, hp as :gauge) {
+on Start(value as :Number, hp as :Gauge) {
   emit Done(handlerValue: value + 1, ok: value is high, boosted: boosted(value), current: hp.current)
 }
 ```
@@ -666,34 +666,34 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "2"
         - name: "hp"
           value:
-            type: ":map"
+            type: ":Map"
             entries:
               - key: "current"
                 value:
-                  type: ":float"
+                  type: ":Number.binary64"
                   value: "4"
     local:
       - name: "Done"
         args:
           - name: "handlerValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "ok"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "boosted"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "current"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
 ```
 
@@ -724,10 +724,10 @@ sources:
 ### Source code under test
 
 ```ges
-module Shared
-record :gauge as {
-  current: :number,
-  maximum: :number
+module runtime
+record :Gauge as {
+  current: :Number,
+  maximum: :Number
 }
 
 predicate wounded(_ unit) be unit.hp < unit.maxHp
@@ -735,9 +735,9 @@ function woundedUnits(_ units) be units[:filter unit where unit is wounded]
 ```
 
 ```ges
-module Runtime
+module runtime
 on Start(unit, units) {
-  let hp as :gauge be [current: unit.hp, maximum: unit.maxHp]
+  let hp be ([current: unit.hp, maximum: unit.maxHp]) as :Gauge
   let anyWounded be wounded(unit)
   let candidates be woundedUnits(units)
   emit Done(anyWounded: anyWounded, candidateCount: candidates[:count], maximum: hp.maximum)
@@ -760,54 +760,54 @@ steps:
       args:
         - name: "unit"
           value:
-            type: ":map"
+            type: ":Map"
             entries:
               - key: "hp"
                 value:
-                  type: ":integer"
+                  type: ":Number.int64"
                   value: "2"
               - key: "maxHp"
                 value:
-                  type: ":integer"
+                  type: ":Number.int64"
                   value: "5"
         - name: "units"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "hp"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "2"
                   - key: "maxHp"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "5"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "hp"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "5"
                   - key: "maxHp"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "5"
     local:
       - name: "Done"
         args:
           - name: "anyWounded"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "candidateCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "maximum"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
 ```
 
@@ -836,7 +836,7 @@ sources:
 ### Source code under test
 
 ```ges
-module CallableSignatureOverloads
+module callablesignatureoverloads
 
 function takeDamage(unit, enemy) be unit + enemy
 function takeDamage(unit, collision) be unit * collision
@@ -867,10 +867,10 @@ steps:
         args:
           - name: "fromEnemy"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "8"
           - name: "fromCollision"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "15"
 ```

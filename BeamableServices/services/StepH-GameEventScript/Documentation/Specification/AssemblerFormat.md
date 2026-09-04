@@ -71,7 +71,7 @@ For each SourceArchive entry the dumper emits:
 
 .segment source "example.ges"
 
-module Example
+module example
 
 on Start() {
   emit Done()
@@ -208,4 +208,3 @@ Reference-resolving comments may follow an instruction. They show string content
 - DebugSymbols, SourceMap, and SourceArchive enrich a dump but are never required to execute the Program.
 - VM state is not part of `.gesa`; a VM-state diagnostic may embed a Program dump alongside separate execution-state information.
 - `.gesa` does not promise parse/write roundtripping, binary identity, or a stable wire protocol.
-

@@ -52,8 +52,8 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
         GameEventScriptText.RequireValidUnicode(name, nameof(name));
         var normalized = GameEventScriptText.TrimAsciiWhitespace(name);
         if (normalized.Length == 0) return string.Empty;
-        if (!GameEventScriptText.IsMessageName(normalized))
-            throw new ArgumentException("Message names must contain ASCII letters only.", nameof(name));
+        if (!GameEventScriptText.IsMessageName(normalized) && normalized is not ("initialization" or "undeliverable"))
+            throw new ArgumentException("Message names must start with an upper-case ASCII letter and contain ASCII letters or digits.", nameof(name));
         return normalized;
     }
 
@@ -71,7 +71,7 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
         GameEventScriptText.RequireValidUnicode(name, nameof(name));
         var normalized = GameEventScriptText.TrimAsciiWhitespace(name);
         if (normalized.Length == 0) return UnlabeledParameterName;
-        if (normalized != UnlabeledParameterName && !GameEventScriptText.IsIdentifier(normalized))
+        if (normalized != UnlabeledParameterName && !GameEventScriptText.IsArgumentLabel(normalized))
             throw new ArgumentException("Parameter names must use the portable lowercase ASCII identifier grammar.", nameof(name));
         return normalized;
     }

@@ -69,68 +69,68 @@ steps:
       args:
         - name: "items"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "a"
                   - key: "points"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "3"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "b"
                   - key: "points"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "-1"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "c"
                   - key: "points"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "4"
     local:
       - name: "Done"
         args:
           - name: "nameCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "positiveCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "total"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "counted"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "average"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "highest"
             value:
-              type: ":text"
+              type: ":Text"
               value: "c"
           - name: "lowest"
             value:
-              type: ":text"
+              type: ":Text"
               value: "b"
 ```
 
@@ -161,7 +161,7 @@ sources:
 ```ges
 on Start(values) {
   let sorted be values[:filter value where value > 1][:select value => value * -1][:sort ascending]
-  emit Done(filterSelectSum: values[:filter value where value > 2][:select value => value * 3][:sum value => value], filterCount: values[:filter value where value mod 2 = 0][:count value where value > 2], firstSelected: values[:select value => value + 10][:first value where value > 12], lastSelected: values[:select value => value + 10][:last value where value < 15], singleSelected: values[:select value => value + 10][:single value where value = 13], sorted_1: sorted[1], sorted_2: sorted[2], sorted_3: sorted[3])
+  emit Done(filterSelectSum: values[:filter value where value > 2][:select value => value * 3][:sum value => value], filterCount: values[:filter value where value mod 2 = 0][:count value where value > 2], firstSelected: values[:select value => value + 10][:first value where value > 12], lastSelected: values[:select value => value + 10][:last value where value < 15], singleSelected: values[:select value => value + 10][:single value where value = 13], sorted1: sorted[1], sorted2: sorted[2], sorted3: sorted[3])
 }
 ```
 
@@ -181,50 +181,50 @@ steps:
       args:
         - name: "values"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "1"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "2"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "3"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "4"
     local:
       - name: "Done"
         args:
           - name: "filterSelectSum"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "21"
           - name: "filterCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "firstSelected"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "13"
           - name: "lastSelected"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "14"
           - name: "singleSelected"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "13"
-          - name: "sorted_1"
+          - name: "sorted1"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-4"
-          - name: "sorted_2"
+          - name: "sorted2"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-3"
-          - name: "sorted_3"
+          - name: "sorted3"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-2"
 ```
 
@@ -285,108 +285,108 @@ steps:
       args:
         - name: "items"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "A"
                   - key: "points"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "3"
                   - key: "alive"
                     value:
-                      type: ":boolean"
+                      type: ":Boolean"
                       value: true
                   - key: "role"
                     value:
-                      type: ":tag"
+                      type: ":Tag"
                       value: "tank"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "B"
                   - key: "points"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "12"
                   - key: "alive"
                     value:
-                      type: ":boolean"
+                      type: ":Boolean"
                       value: false
                   - key: "role"
                     value:
-                      type: ":tag"
+                      type: ":Tag"
                       value: "boss"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "C"
                   - key: "points"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "7"
                   - key: "alive"
                     value:
-                      type: ":boolean"
+                      type: ":Boolean"
                       value: true
                   - key: "role"
                     value:
-                      type: ":tag"
+                      type: ":Tag"
                       value: "scout"
     local:
       - name: "Done"
         args:
           - name: "hasAny"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "allValid"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "firstTwoCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "withoutLastCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "firstAlive"
             value:
-              type: ":text"
+              type: ":Text"
               value: "A"
           - name: "lastAlive"
             value:
-              type: ":text"
+              type: ":Text"
               value: "C"
           - name: "singleBoss"
             value:
-              type: ":text"
+              type: ":Text"
               value: "B"
           - name: "weakest"
             value:
-              type: ":text"
+              type: ":Text"
               value: "A"
           - name: "strongest"
             value:
-              type: ":text"
+              type: ":Text"
               value: "B"
           - name: "topItem"
             value:
-              type: ":text"
+              type: ":Text"
               value: "B"
           - name: "lowItem"
             value:
-              type: ":text"
+              type: ":Text"
               value: "A"
 ```
 
@@ -442,23 +442,23 @@ steps:
         args:
           - name: "anyEarly"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "allEarlyFalse"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "firstEarly"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "firstSelected"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "11"
           - name: "containsLast"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
     runtimeLimits:
       exclude:
@@ -515,38 +515,38 @@ steps:
       args:
         - name: "items"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "points"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "3"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "points"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "7"
     local:
       - name: "Done"
         args:
           - name: "anyKnownFalse"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "allKnownFalse"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "anyUnknown"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "allUnknown"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -597,54 +597,54 @@ steps:
       args:
         - name: "items"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "points"
                     value:
-                      type: ":list"
+                      type: ":List"
                       items:
-                        - type: ":map"
+                        - type: ":Map"
                           entries:
                             - key: "x"
                               value:
-                                type: ":integer"
+                                type: ":Number.int64"
                                 value: "1"
-                        - type: ":map"
+                        - type: ":Map"
                           entries:
                             - key: "x"
                               value:
-                                type: ":integer"
+                                type: ":Number.int64"
                                 value: "2"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "points"
                     value:
-                      type: ":list"
+                      type: ":List"
                       items:
-                        - type: ":map"
+                        - type: ":Map"
                           entries:
                             - key: "x"
                               value:
-                                type: ":integer"
+                                type: ":Number.int64"
                                 value: "1"
-                        - type: ":map"
+                        - type: ":Map"
                           entries:
                             - key: "x"
                               value:
-                                type: ":integer"
+                                type: ":Number.int64"
                                 value: "0"
     local:
       - name: "Done"
         args:
           - name: "first"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "second"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -696,72 +696,72 @@ steps:
       args:
         - name: "items"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "id"
                     value:
-                      type: ":tag"
+                      type: ":Tag"
                       value: "rook"
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "Rook A"
                   - key: "hp"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "4"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "id"
                     value:
-                      type: ":tag"
+                      type: ":Tag"
                       value: "mage"
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "Mage"
                   - key: "hp"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "7"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "id"
                     value:
-                      type: ":tag"
+                      type: ":Tag"
                       value: "rook"
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "Rook B"
                   - key: "hp"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "9"
     local:
       - name: "Done"
         args:
           - name: "rookHp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9"
           - name: "mageHp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "7"
           - name: "rookName"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Rook B"
           - name: "mageName"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Mage"
           - name: "count"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
 ```
 
@@ -799,7 +799,7 @@ on Start(values, units) {
   let distinctValues be values[:distinct]
   let distinctFactions be units[:distinct by unit => unit.faction]
   let groups be units[:group by unit => unit.faction]
-  emit Done(asc_1: ascendingValues[1], asc_2: ascendingValues[2], asc_3: ascendingValues[3], desc_1: descendingValues[1], desc_2: descendingValues[2], desc_3: descendingValues[3], priority_1: byPriority[1].name, priority_2: byPriority[2].name, priority_3: byPriority[3].name, first: firstValue, last: lastValue, distinctCount: distinctValues[:count], distinct_1: distinctFactions[1].name, distinct_2: distinctFactions[2].name, melee_1: groups[#melee][1].name, melee_2: groups[#melee][2].name, ranged_1: groups[#ranged][1].name)
+  emit Done(asc1: ascendingValues[1], asc2: ascendingValues[2], asc3: ascendingValues[3], desc1: descendingValues[1], desc2: descendingValues[2], desc3: descendingValues[3], priority1: byPriority[1].name, priority2: byPriority[2].name, priority3: byPriority[3].name, first: firstValue, last: lastValue, distinctCount: distinctValues[:count], distinct1: distinctFactions[1].name, distinct2: distinctFactions[2].name, melee1: groups[#melee][1].name, melee2: groups[#melee][2].name, ranged1: groups[#ranged][1].name)
 }
 ```
 
@@ -819,134 +819,134 @@ steps:
       args:
         - name: "values"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "3"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "3"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "1"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "2"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "2"
         - name: "units"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "Knight"
                   - key: "faction"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "melee"
                   - key: "priority"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "2"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "Rook"
                   - key: "faction"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "melee"
                   - key: "priority"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "3"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "Archer"
                   - key: "faction"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "ranged"
                   - key: "priority"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "1"
     local:
       - name: "Done"
         args:
-          - name: "asc_1"
+          - name: "asc1"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
-          - name: "asc_2"
+          - name: "asc2"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
-          - name: "asc_3"
+          - name: "asc3"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
-          - name: "desc_1"
+          - name: "desc1"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
-          - name: "desc_2"
+          - name: "desc2"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
-          - name: "desc_3"
+          - name: "desc3"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
-          - name: "priority_1"
+          - name: "priority1"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Rook"
-          - name: "priority_2"
+          - name: "priority2"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Knight"
-          - name: "priority_3"
+          - name: "priority3"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Archer"
           - name: "first"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "last"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "distinctCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
-          - name: "distinct_1"
+          - name: "distinct1"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Knight"
-          - name: "distinct_2"
+          - name: "distinct2"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Archer"
-          - name: "melee_1"
+          - name: "melee1"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Knight"
-          - name: "melee_2"
+          - name: "melee2"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Rook"
-          - name: "ranged_1"
+          - name: "ranged1"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Archer"
 ```
 
@@ -988,7 +988,7 @@ on Start {
   let mergedDict be dictA | dictB
   let minusAge be mergedDict - #age
   let zipped be ['a', 'b', 'c'] zip [1, 2]
-  emit Done(appended: appended[4], prepended: prepended[1], mergedList: mergedList[5], common_1: commonList[1], common_2: commonList[2], leftOnlyLen: leftOnly[:count], leftOnlySecond: leftOnly[2], enemyFlag: flags.enemy, visibleIn: #visible in flags, missingIn: #missing in flags, numericLookup: flags[1], numericIn: 1 in flags, mixedEnemy: mixedFlags.enemy, mixedHp: mixedFlags.hp, mergedAge: mergedDict.age, mergedCity: mergedDict.city, minusAgeMissing: minusAge.age, minusAgeName: minusAge.name, zipOneLeft: zipped[1].left, zipOneRight: zipped[1].right, zipTwoLeft: zipped[2].left, zipTwoRight: zipped[2].right, zipLen: zipped[:count])
+  emit Done(appended: appended[4], prepended: prepended[1], mergedList: mergedList[5], common1: commonList[1], common2: commonList[2], leftOnlyLen: leftOnly[:count], leftOnlySecond: leftOnly[2], enemyFlag: flags.enemy, visibleIn: #visible in flags, missingIn: #missing in flags, numericLookup: flags[1], numericIn: 1 in flags, mixedEnemy: mixedFlags.enemy, mixedHp: mixedFlags.hp, mergedAge: mergedDict.age, mergedCity: mergedDict.city, minusAgeMissing: minusAge.age, minusAgeName: minusAge.name, zipOneLeft: zipped[1].left, zipOneRight: zipped[1].right, zipTwoLeft: zipped[2].left, zipTwoRight: zipped[2].right, zipLen: zipped[:count])
 }
 ```
 
@@ -1011,93 +1011,93 @@ steps:
         args:
           - name: "appended"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "prepended"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "mergedList"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
-          - name: "common_1"
+          - name: "common1"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
-          - name: "common_2"
+          - name: "common2"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "leftOnlyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "leftOnlySecond"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "enemyFlag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "visibleIn"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "missingIn"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "numericLookup"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "numericIn"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "mixedEnemy"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "mixedHp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "mergedAge"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "33"
           - name: "mergedCity"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Somewhere"
           - name: "minusAgeMissing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "minusAgeName"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Mark"
           - name: "zipOneLeft"
             value:
-              type: ":text"
+              type: ":Text"
               value: "a"
           - name: "zipOneRight"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "zipTwoLeft"
             value:
-              type: ":text"
+              type: ":Text"
               value: "b"
           - name: "zipTwoRight"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "zipLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
 ```
 
@@ -1137,7 +1137,7 @@ on Start(units) {
   let dictContains be [name: 'Ada', team: 'red'][:contains 'name']
   let hasRook be units[:has [faction: 'rook', alive: true]]
   let hasNestedOwner be units[:has [owner: [team: 'red']]]
-  emit Done(reverse_1: reversed[1], reverse_2: reversed[2], reverse_3: reversed[3], invalidReverse: invalidReverse, hasTwo: hasTwo, hasAll: hasAll, hasAny: hasAny, textContains: textContains, textContainsAll: textContainsAll, dictContains: dictContains, hasRook: hasRook, hasNestedOwner: hasNestedOwner)
+  emit Done(reverse1: reversed[1], reverse2: reversed[2], reverse3: reversed[3], invalidReverse: invalidReverse, hasTwo: hasTwo, hasAll: hasAll, hasAny: hasAny, textContains: textContains, textContainsAll: textContainsAll, dictContains: dictContains, hasRook: hasRook, hasNestedOwner: hasNestedOwner)
 }
 ```
 
@@ -1157,93 +1157,93 @@ steps:
       args:
         - name: "units"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "faction"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "rook"
                   - key: "alive"
                     value:
-                      type: ":boolean"
+                      type: ":Boolean"
                       value: true
                   - key: "owner"
                     value:
-                      type: ":map"
+                      type: ":Map"
                       entries:
                         - key: "team"
                           value:
-                            type: ":text"
+                            type: ":Text"
                             value: "red"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "faction"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "human"
                   - key: "alive"
                     value:
-                      type: ":boolean"
+                      type: ":Boolean"
                       value: true
                   - key: "owner"
                     value:
-                      type: ":map"
+                      type: ":Map"
                       entries:
                         - key: "team"
                           value:
-                            type: ":text"
+                            type: ":Text"
                             value: "blue"
     local:
       - name: "Done"
         args:
-          - name: "reverse_1"
+          - name: "reverse1"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
-          - name: "reverse_2"
+          - name: "reverse2"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
-          - name: "reverse_3"
+          - name: "reverse3"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "invalidReverse"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "hasTwo"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasAll"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasAny"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "textContains"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "textContainsAll"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "dictContains"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasRook"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasNestedOwner"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -1309,113 +1309,113 @@ steps:
       args:
         - name: "player"
           value:
-            type: ":map"
+            type: ":Map"
             entries:
               - key: "age"
                 value:
-                  type: ":integer"
+                  type: ":Number.int64"
                   value: "25"
               - key: "name"
                 value:
-                  type: ":text"
+                  type: ":Text"
                   value: "Mark"
         - name: "values"
           value:
-            type: ":map"
+            type: ":Map"
             entries:
               - key: "a"
                 value:
-                  type: ":integer"
+                  type: ":Number.int64"
                   value: "10"
               - key: "b"
                 value:
-                  type: ":integer"
+                  type: ":Number.int64"
                   value: "20"
               - key: "c"
                 value:
-                  type: ":integer"
+                  type: ":Number.int64"
                   value: "30"
         - name: "maybeTarget"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":text"
+              - type: ":Text"
                 value: "boss"
     local:
       - name: "SeenKey"
         args:
           - name: "key"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "age"
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "25"
       - name: "SeenKey"
         args:
           - name: "key"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "name"
           - name: "value"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Mark"
       - name: "SeenValue"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
       - name: "SeenValue"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "20"
       - name: "SeenValue"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "30"
       - name: "SeenEntry"
         args:
           - name: "key"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "age"
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "25"
       - name: "SeenEntry"
         args:
           - name: "key"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "name"
           - name: "value"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Mark"
       - name: "Done"
         args:
           - name: "keyCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "valueCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "maybeCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "entryCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
 ```

@@ -364,7 +364,6 @@ internal static class GesCompiler
                             if (value.Id != destination.Id) _builder.Move(destination, value);
                         }
 
-                        if (!string.IsNullOrEmpty(let.DeclaredType)) EmitCastInto(destination, destination, let.DeclaredType);
                         if (ClassifyHandlerSignature(let.Expression, context) is { } handlerSignature)
                         {
                             context.DeclareHandlerSignature(let.Identifier, handlerSignature);
@@ -514,6 +513,15 @@ internal static class GesCompiler
                     if (source.Id != destination.Id) _builder.Move(destination, source);
                     return true;
                 }
+                case ConstantReferenceExpressionNode constant:
+                {
+                    if (!module.Constants.TryGetValue(constant.Name, out var value))
+                    {
+                        throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"Constant '${constant.Name}' is not defined.", constant.Name);
+                    }
+
+                    return EmitExpressionToRegister(value with { SourceRange = constant.SourceRange }, destination, context, state);
+                }
                 case UnaryExpressionNode unary:
                 {
                     var operand = EmitExpressionForRead(unary.Operand, context, state);
@@ -629,6 +637,9 @@ internal static class GesCompiler
                     return true;
                 case TypeCheckExpressionNode check:
                     EmitCheckInto(destination, EmitExpressionForRead(check.Value, context, state), check.TypeName);
+                    return true;
+                case NothingCheckExpressionNode check:
+                    EmitCheckInto(destination, EmitExpressionForRead(check.Value, context, state), "nothing");
                     return true;
                 case TypeConstructorExpressionNode constructor:
                     EmitTypeConstructorInto(constructor, destination, context, state);

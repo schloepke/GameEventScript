@@ -1191,7 +1191,6 @@ public sealed class ConformanceValue
         From = Read(scalars, "from");
         To = Read(scalars, "to");
         Step = Read(scalars, "step");
-        RangeKind = Read(scalars, "rangeKind");
         Items = ConformanceDocument.Copy(items);
         Entries = ConformanceDocument.Copy(entries);
         Rolls = ConformanceDocument.Copy(rolls);
@@ -1234,10 +1233,6 @@ public sealed class ConformanceValue
     /// Gets the step.
     /// </summary>
     public string? Step { get; }
-    /// <summary>
-    /// Gets the range kind.
-    /// </summary>
-    public string? RangeKind { get; }
     /// <summary>
     /// Gets the items.
     /// </summary>

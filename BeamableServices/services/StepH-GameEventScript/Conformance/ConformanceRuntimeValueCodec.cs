@@ -24,35 +24,37 @@ internal static class ConformanceRuntimeValueCodec
         var unit = ParseUnit(value.Unit);
         switch (value.Type)
         {
-            case ":nothing": return GesValue.GesNothing();
-            case ":text": return GesValue.GesText(value.Value ?? string.Empty);
-            case ":tag": return GesValue.GesTag(value.Value ?? string.Empty);
-            case ":boolean": return GesValue.GesBoolean(string.Equals(value.Value, "true", StringComparison.Ordinal));
-            case ":integer": return GesValue.GesInteger(long.Parse(value.Value!, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture), unit);
-            case ":float": return GesValue.GesFloat(ParseBinary64(value.Value!), unit);
-            case ":percentage": return GesValue.GesPercentage(ParseBinary64(value.Value!));
-            case ":vector": return GesValue.GesVector(ParseBinary64(value.X!), ParseBinary64(value.Y!), ParseBinary64(value.Z!), unit);
-            case ":point": return GesValue.GesPoint(ParseBinary64(value.X!), ParseBinary64(value.Y!), ParseBinary64(value.Z!), unit);
-            case ":list":
+            case ":Nothing": return GesValue.GesNothing();
+            case ":Text": return GesValue.GesText(value.Value ?? string.Empty);
+            case ":Tag": return GesValue.GesTag(value.Value ?? string.Empty);
+            case ":Boolean": return GesValue.GesBoolean(string.Equals(value.Value, "true", StringComparison.Ordinal));
+            case ":Number.int64": return GesValue.GesInteger(long.Parse(value.Value!, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture));
+            case ":Number.binary64": return GesValue.GesFloat(ParseBinary64(value.Value!));
+            case ":Quantity.int64": return GesValue.GesInteger(long.Parse(value.Value!, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture), unit);
+            case ":Quantity.binary64": return GesValue.GesFloat(ParseBinary64(value.Value!), unit);
+            case ":Percentage": return GesValue.GesPercentage(ParseBinary64(value.Value!));
+            case ":Vector": return GesValue.GesVector(ParseBinary64(value.X!), ParseBinary64(value.Y!), ParseBinary64(value.Z!), unit);
+            case ":Point": return GesValue.GesPoint(ParseBinary64(value.X!), ParseBinary64(value.Y!), ParseBinary64(value.Z!), unit);
+            case ":List":
             {
                 var items = new GesValue[value.Items.Count];
                 for (var index = 0; index < items.Length; index++) items[index] = DecodeValue(value.Items[index]);
                 return GesValue.GesList(items);
             }
-            case ":map": return DecodeMap(value.Entries);
-            case ":dice":
+            case ":Map": return DecodeMap(value.Entries);
+            case ":Dice":
             {
                 var rolls = new int[value.Rolls.Count];
                 for (var index = 0; index < rolls.Length; index++) rolls[index] = value.Rolls[index];
                 return GesValue.GesDice(rolls);
             }
-            case ":range" when string.Equals(value.RangeKind, "integer", StringComparison.Ordinal):
+            case ":Range.int64":
                 return GesValue.GesRange(
                     long.Parse(value.From!, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture),
                     long.Parse(value.To!, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture),
                     long.Parse(value.Step!, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture));
-            case ":range": return GesValue.GesRange(ParseBinary64(value.From!), ParseBinary64(value.To!), ParseBinary64(value.Step!));
-            case ":message": return GesValue.GesMessage(DecodeMessage(value.Message!));
+            case ":Range.binary64": return GesValue.GesRange(ParseBinary64(value.From!), ParseBinary64(value.To!), ParseBinary64(value.Step!));
+            case ":Message": return GesValue.GesMessage(DecodeMessage(value.Message!));
             default:
             {
                 var keys = new string[value.Entries.Count];
@@ -71,7 +73,7 @@ internal static class ConformanceRuntimeValueCodec
     {
         switch (value.Type)
         {
-            case ":list":
+            case ":List":
             {
                 var items = new GesValue[value.Items.Count];
                 for (var index = 0; index < items.Length; index++) items[index] = DecodeValue(value.Items[index]);
@@ -79,7 +81,7 @@ internal static class ConformanceRuntimeValueCodec
                 if (items.Length > 0) items[0] = GesValue.GesNothing();
                 return result;
             }
-            case ":map":
+            case ":Map":
             {
                 var keys = new string[value.Entries.Count];
                 var values = new GesValue[value.Entries.Count];
@@ -92,7 +94,7 @@ internal static class ConformanceRuntimeValueCodec
                 if (keys.Length > 0) { keys[0] = "mutated"; values[0] = GesValue.GesNothing(); }
                 return result;
             }
-            case ":dice":
+            case ":Dice":
             {
                 var rolls = new int[value.Rolls.Count];
                 for (var index = 0; index < rolls.Length; index++) rolls[index] = value.Rolls[index];
@@ -101,7 +103,9 @@ internal static class ConformanceRuntimeValueCodec
                 return result;
             }
             case var type when type.Length > 1 &&
-                                   type is not ":nothing" and not ":text" and not ":tag" and not ":boolean" and not ":integer" and not ":float" and not ":percentage" and not ":vector" and not ":point" and not ":range" and not ":message":
+                                   type is not ":Nothing" and not ":Text" and not ":Tag" and not ":Boolean" and
+                                   not ":Number.int64" and not ":Number.binary64" and not ":Quantity.int64" and not ":Quantity.binary64" and
+                                   not ":Percentage" and not ":Vector" and not ":Point" and not ":Range.int64" and not ":Range.binary64" and not ":Message":
             {
                 var keys = new string[value.Entries.Count];
                 var values = new GesValue[value.Entries.Count];

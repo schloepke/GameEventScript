@@ -507,12 +507,10 @@ public static class ConformanceRunner
             AddMismatch(mismatches, "/value/customTypeName", expected.CustomTypeName, value.CustomTypeName);
         if (!ConformanceRuntimeValueCodec.ValuesEqual(in normalized, in value, testCase.Comparison))
             AddMismatch(mismatches, "/value/normalized", "expected portable value", "different portable value");
-        if (expected.Normalized.Type == ":range" && expected.Normalized.RangeKind is { } rangeKind)
-        {
-            var actualRangeKind = value.IntegerRange is not null ? "integer" : value.FloatRange is not null ? "float" : "none";
-            if (!string.Equals(rangeKind, actualRangeKind, StringComparison.Ordinal))
-                AddMismatch(mismatches, "/value/normalized/rangeKind", rangeKind, actualRangeKind);
-        }
+        if (expected.Normalized.Type == ":Range.int64" && value.IntegerRange is null)
+            AddMismatch(mismatches, "/value/normalized/type", ":Range.int64", ":Range.binary64");
+        else if (expected.Normalized.Type == ":Range.binary64" && value.FloatRange is null)
+            AddMismatch(mismatches, "/value/normalized/type", ":Range.binary64", ":Range.int64");
         if (definition.EqualTo is { } equalTo)
         {
             var other = ConformanceRuntimeValueCodec.DecodeValue(equalTo);
@@ -882,7 +880,7 @@ public static class ConformanceRunner
     private sealed class MismatchedExternalTypeConstructor : IGameEventScriptExternalTypeConstructor
     {
         public GameEventScriptExternalTypeConstructorDefinition Definition { get; } =
-            new("mismatch", [new GameEventScriptExternalTypeParameterDefinition("value", GameEventScriptBytecodeTypeKind.Float)]);
+            new("Mismatch", [new GameEventScriptExternalTypeParameterDefinition("value", GameEventScriptBytecodeTypeKind.Float)]);
 
         public void Invoke(GesExternalTypeConstructorCall call) => call.SetNothing();
     }

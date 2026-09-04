@@ -58,7 +58,7 @@ public sealed class GesExtensionAttribute(string name) : Attribute
     /// <summary>
     /// Gets the name.
     /// </summary>
-    public string Name { get; } = GameEventScriptExternalTypeNames.NormalizeTypeName(name);
+    public string Name { get; } = GameEventScriptExternalTypeNames.NormalizeExtensionName(name);
 }
 
 /// <summary>

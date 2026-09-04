@@ -182,7 +182,7 @@ sources:
 ### Source code under test
 
 ```ges
-on Start(items, seed as :number) {
+on Start(items, seed as :Number) {
   if true {
     let fromIf be 10
   }
@@ -233,7 +233,7 @@ sources:
 
 ```ges
 on Start {
-  let x be 100 as :quantity(foo)
+  let x be 100 as :Quantity(foo)
 }
 ```
 
@@ -497,7 +497,7 @@ sources:
 ### Source code under test
 
 ```ges
-module DuplicateVariables
+module duplicatevariables
 on Start {
   let x be 10
   let x be 20
@@ -513,7 +513,7 @@ error:
   code: "validate.duplicateVariable"
   symbol: "x"
   symbolKind: "variable"
-  programName: "DuplicateVariables"
+  programName: "duplicatevariables"
 ```
 
 ---
@@ -537,7 +537,7 @@ sources:
 ### Source code under test
 
 ```ges
-module Location
+module location
 
 on Start {
   let value be 1
@@ -554,7 +554,7 @@ error:
   code: "validate.duplicateVariable"
   symbol: "value"
   symbolKind: "variable"
-  programName: "Location"
+  programName: "location"
   sourceName: "location.ges"
   line: 5
   column: 3
@@ -581,7 +581,7 @@ sources:
 ### Source code under test
 
 ```ges
-module DuplicateParameterVariable
+module duplicateparametervariable
 on Start(value) {
   let value be 10
 }
@@ -596,7 +596,7 @@ error:
   code: "validate.duplicateVariable"
   symbol: "value"
   symbolKind: "variable"
-  programName: "DuplicateParameterVariable"
+  programName: "duplicateparametervariable"
 ```
 
 ---
@@ -620,7 +620,7 @@ sources:
 ### Source code under test
 
 ```ges
-module DuplicateBlockVariables
+module duplicateblockvariables
 on Start {
   if true {
     let x be 10
@@ -638,7 +638,7 @@ error:
   code: "validate.duplicateVariable"
   symbol: "x"
   symbolKind: "variable"
-  programName: "DuplicateBlockVariables"
+  programName: "duplicateblockvariables"
 ```
 
 ---
@@ -662,7 +662,7 @@ sources:
 ### Source code under test
 
 ```ges
-module DuplicatePredicateParameters
+module duplicatepredicateparameters
 predicate wounded(unit, unit) be unit.hp < unit.maxHp
 ```
 
@@ -675,7 +675,7 @@ error:
   code: "validate.duplicateDefinitionParameter"
   symbol: "wounded"
   symbolKind: "predicate"
-  programName: "DuplicatePredicateParameters"
+  programName: "duplicatepredicateparameters"
 ```
 
 ---
@@ -699,7 +699,7 @@ sources:
 ### Source code under test
 
 ```ges
-module DuplicateFunctionParameters
+module duplicatefunctionparameters
 function wounded(units, units) be units[:filter unit where unit.hp < unit.maxHp]
 ```
 
@@ -712,7 +712,7 @@ error:
   code: "validate.duplicateDefinitionParameter"
   symbol: "wounded"
   symbolKind: "function"
-  programName: "DuplicateFunctionParameters"
+  programName: "duplicatefunctionparameters"
 ```
 
 ---
@@ -736,7 +736,7 @@ sources:
 ### Source code under test
 
 ```ges
-module DuplicateHandlerBindArgs
+module duplicatehandlerbindargs
 on Start(unit, target, myHandler) {
   emit myHandler(unit: unit, unit: target)
 }
@@ -750,7 +750,7 @@ error:
   phase: "validate"
   code: "validate.duplicatePublishArgument"
   symbol: "myHandler"
-  programName: "DuplicateHandlerBindArgs"
+  programName: "duplicatehandlerbindargs"
 ```
 
 ---
@@ -774,9 +774,9 @@ sources:
 ### Source code under test
 
 ```ges
-module DuplicateHandlerLiteralParams
+module duplicatehandlerliteralparams
 on Start(unit, target) {
-  let shoot as :handler be Shoot(unit, unit)
+  let shoot be (Shoot(unit, unit)) as :Handler
   emit Done
 }
 ```
@@ -790,7 +790,7 @@ error:
   code: "validate.duplicateHandlerParameter"
   symbol: "Shoot"
   symbolKind: "handler"
-  programName: "DuplicateHandlerLiteralParams"
+  programName: "duplicatehandlerliteralparams"
 ```
 
 ---
@@ -816,12 +816,12 @@ sources:
 ### Source code under test
 
 ```ges
-module A
+module a
 predicate wounded(_ unit) be unit.hp < unit.maxHp
 ```
 
 ```ges
-module B
+module b
 function wounded(unit, amount) be amount
 ```
 
@@ -857,7 +857,7 @@ sources:
 
 ```ges
 on Start {
-  let position be :vector(y: 2, x: 1)
+  let position be :Vector(y: 2, x: 1)
 }
 ```
 
@@ -894,7 +894,7 @@ sources:
 
 ```ges
 on Start {
-  let position be :vector(1, 2, 3, 4)
+  let position be :Vector(1, 2, 3, 4)
 }
 ```
 
@@ -931,7 +931,7 @@ sources:
 
 ```ges
 on Start {
-  let point be :vector(z: 1, y: 2)
+  let point be :Vector(z: 1, y: 2)
 }
 ```
 
@@ -968,7 +968,7 @@ sources:
 
 ```ges
 on Start {
-  let unitRef be :ref(id: 'unit-42')
+  let unitRef be :Ref(id: 'unit-42')
 }
 ```
 
@@ -979,7 +979,7 @@ gesBlock: expect
 error:
   phase: "validate"
   code: "validate.invalidTypeConstructor"
-  symbol: "ref"
+  symbol: "Ref"
   symbolKind: "type"
 ```
 
@@ -1005,7 +1005,7 @@ sources:
 
 ```ges
 on Start {
-  let position be :point(y: 2, x: 1)
+  let position be :Point(y: 2, x: 1)
 }
 ```
 
@@ -1022,9 +1022,9 @@ error:
 
 ---
 
-## Test: identifier rejects attached numeric suffix
+## Test: callable names reject variable subscript suffixes
 
-This negative compiler case exercises “identifier rejects attached numeric suffix” and verifies the required portable diagnostic.
+This negative compiler case verifies that the `_number` suffix is reserved for variable bindings and cannot name a callable.
 
 ### Case description
 
@@ -1034,16 +1034,14 @@ id: case-0027
 kind: compileError
 level: scenario
 sources:
-  - name: "identifier rejects attached numeric suffix.ges"
+  - name: "callable names reject variable subscript suffixes.ges"
     program: main
 ```
 
 ### Source code under test
 
 ```ges
-on Start(x) {
-  let result be x2
-}
+function compute_2(value) be value
 ```
 
 ### Expectation
@@ -1051,8 +1049,9 @@ on Start(x) {
 ```yaml
 gesBlock: expect
 error:
-  phase: "parse"
-  code: "parse.syntax"
+  phase: "validate"
+  code: "validate.invalidIdentifierCase"
+  symbol: "compute_2"
 ```
 
 ---
@@ -1076,8 +1075,8 @@ sources:
 ### Source code under test
 
 ```ges
-function convert(_ numberValue as :number) be numberValue
-function convert(_ textValue as :text) be textValue
+function convert(_ numberValue as :Number) be numberValue
+function convert(_ textValue as :Text) be textValue
 ```
 
 ### Expectation
@@ -1245,9 +1244,9 @@ error:
 
 ---
 
-## Test: identifier rejects embedded number
+## Test: record fields reject variable subscript suffixes
 
-This negative compiler case exercises “identifier rejects embedded number” and verifies the required portable diagnostic.
+This negative compiler case verifies that record field names cannot use the variable-only `_number` suffix.
 
 ### Case description
 
@@ -1257,15 +1256,15 @@ id: case-0028
 kind: compileError
 level: scenario
 sources:
-  - name: "identifier rejects embedded number.ges"
+  - name: "record fields reject variable subscript suffixes.ges"
     program: main
 ```
 
 ### Source code under test
 
 ```ges
-on Start(x, y) {
-  let result be x2y
+record :Unit as {
+  health_2: :Number
 }
 ```
 
@@ -1274,15 +1273,16 @@ on Start(x, y) {
 ```yaml
 gesBlock: expect
 error:
-  phase: "parse"
-  code: "parse.syntax"
+  phase: "validate"
+  code: "validate.invalidIdentifierCase"
+  symbol: "health_2"
 ```
 
 ---
 
-## Test: identifier rejects numeric text without suffix marker
+## Test: message labels reject variable subscript suffixes
 
-This negative compiler case exercises “identifier rejects numeric text without suffix marker” and verifies the required portable diagnostic.
+This negative compiler case verifies that message argument labels cannot use the variable-only `_number` suffix.
 
 ### Case description
 
@@ -1292,7 +1292,7 @@ id: case-0029
 kind: compileError
 level: scenario
 sources:
-  - name: "identifier rejects numeric text without suffix marker.ges"
+  - name: "message labels reject variable subscript suffixes.ges"
     program: main
 ```
 
@@ -1300,7 +1300,7 @@ sources:
 
 ```ges
 on Start {
-  let player22 be 1
+  emit Done(value_2: 1)
 }
 ```
 
@@ -1309,8 +1309,9 @@ on Start {
 ```yaml
 gesBlock: expect
 error:
-  phase: "parse"
-  code: "parse.syntax"
+  phase: "validate"
+  code: "validate.invalidIdentifierCase"
+  symbol: "Done"
 ```
 
 ---
@@ -1420,9 +1421,9 @@ error:
 
 ---
 
-## Test: message rejects numeric suffix
+## Test: message rejects variable subscript suffix
 
-This negative compiler case exercises “message rejects numeric suffix” and verifies the required portable diagnostic.
+This negative compiler case verifies that message names may contain digits but never the variable-only `_number` suffix.
 
 ### Case description
 
@@ -1432,7 +1433,7 @@ id: case-0033
 kind: compileError
 level: scenario
 sources:
-  - name: "message rejects numeric suffix.ges"
+  - name: "message rejects variable subscript suffix.ges"
     program: main
 ```
 
@@ -1455,9 +1456,9 @@ error:
 
 ---
 
-## Test: tag rejects unseparated numeric suffix
+## Test: tags reject variable subscript suffixes
 
-This negative compiler case exercises “tag rejects unseparated numeric suffix” and verifies the required portable diagnostic.
+This negative compiler case verifies that tags allow digits but do not accept the variable-only `_number` suffix.
 
 ### Case description
 
@@ -1467,7 +1468,7 @@ id: case-0034
 kind: compileError
 level: scenario
 sources:
-  - name: "tag rejects unseparated numeric suffix.ges"
+  - name: "tags reject variable subscript suffixes.ges"
     program: main
 ```
 
@@ -1475,7 +1476,7 @@ sources:
 
 ```ges
 on Start {
-  emit Done with #tag1
+  emit Done with #tag_1
 }
 ```
 
@@ -1544,13 +1545,13 @@ sources:
 ### Source code under test
 
 ```ges
-record :gauge as {
-  current: :number,
-  maximum: :number
+record :Gauge as {
+  current: :Number,
+  maximum: :Number
 }
 
 on Start {
-  let hp be :gauge(10, 20)
+  let hp be :Gauge(10, 20)
 }
 ```
 
@@ -1561,7 +1562,7 @@ gesBlock: expect
 error:
   phase: "validate"
   code: "validate.invalidTypeConstructor"
-  symbol: "gauge"
+  symbol: "Gauge"
   symbolKind: "type"
 ```
 
@@ -1586,13 +1587,13 @@ sources:
 ### Source code under test
 
 ```ges
-record :gauge as {
-  current: :number,
-  maximum: :number
+record :Gauge as {
+  current: :Number,
+  maximum: :Number
 }
 
 on Start {
-  let hp be :gauge(current: 10, unknown: 20)
+  let hp be :Gauge(current: 10, unknown: 20)
 }
 ```
 
@@ -1603,7 +1604,7 @@ gesBlock: expect
 error:
   phase: "validate"
   code: "validate.invalidTypeConstructor"
-  symbol: "gauge"
+  symbol: "Gauge"
   symbolKind: "type"
 ```
 
@@ -1641,7 +1642,7 @@ gesBlock: expect
 error:
   phase: "validate"
   code: "validate.invalidTypeConstructor"
-  symbol: "number"
+  symbol: "Number"
   symbolKind: "type"
 ```
 
@@ -1679,15 +1680,15 @@ gesBlock: expect
 error:
   phase: "validate"
   code: "validate.invalidTypeConstructor"
-  symbol: "number"
+  symbol: "Number"
   symbolKind: "type"
 ```
 
 ---
 
-## Test: optional cast is rejected
+## Test: typed let declarations are rejected
 
-This negative compiler case exercises “optional cast is rejected” and verifies the required portable diagnostic.
+This negative compiler case verifies that a type conversion belongs to the value expression and that `let name as :Type be value` is not part of the language.
 
 ### Case description
 
@@ -1697,7 +1698,7 @@ id: case-0040
 kind: compileError
 level: scenario
 sources:
-  - name: "optional cast is rejected.ges"
+  - name: "typed let declarations are rejected.ges"
     program: main
 ```
 
@@ -1705,7 +1706,7 @@ sources:
 
 ```ges
 on Start(value) {
-  let invalid be value as :optional
+  let invalid as :Number be value
 }
 ```
 
@@ -1714,17 +1715,15 @@ on Start(value) {
 ```yaml
 gesBlock: expect
 error:
-  phase: "validate"
-  code: "validate.invalidTypeConstructor"
-  symbol: "optional"
-  symbolKind: "type"
+  phase: "parse"
+  code: "parse.syntax"
 ```
 
 ---
 
-## Test: optional type check is rejected
+## Test: lowercase cast types are rejected
 
-This negative compiler case exercises “optional type check is rejected” and verifies the required portable diagnostic.
+This negative compiler case verifies that every source-level type reference starts with an uppercase ASCII letter.
 
 ### Case description
 
@@ -1734,7 +1733,7 @@ id: case-0041
 kind: compileError
 level: scenario
 sources:
-  - name: "optional type check is rejected.ges"
+  - name: "lowercase cast types are rejected.ges"
     program: main
 ```
 
@@ -1742,7 +1741,7 @@ sources:
 
 ```ges
 on Start(value) {
-  let invalid be value is :optional
+  let invalid be value as :number
 }
 ```
 
@@ -1751,17 +1750,15 @@ on Start(value) {
 ```yaml
 gesBlock: expect
 error:
-  phase: "validate"
-  code: "validate.invalidTypeConstructor"
-  symbol: "optional"
-  symbolKind: "type"
+  phase: "parse"
+  code: "parse.syntax"
 ```
 
 ---
 
-## Test: set cast is rejected
+## Test: lowercase checked types are rejected
 
-This negative compiler case exercises “set cast is rejected” and verifies the required portable diagnostic.
+This negative compiler case verifies that type checks use PascalCase type references.
 
 ### Case description
 
@@ -1771,7 +1768,7 @@ id: case-0042
 kind: compileError
 level: scenario
 sources:
-  - name: "set cast is rejected.ges"
+  - name: "lowercase checked types are rejected.ges"
     program: main
 ```
 
@@ -1779,7 +1776,7 @@ sources:
 
 ```ges
 on Start(value) {
-  let invalid be value as :set
+  let invalid be value is :text
 }
 ```
 
@@ -1788,17 +1785,15 @@ on Start(value) {
 ```yaml
 gesBlock: expect
 error:
-  phase: "validate"
-  code: "validate.invalidTypeConstructor"
-  symbol: "set"
-  symbolKind: "type"
+  phase: "parse"
+  code: "parse.syntax"
 ```
 
 ---
 
-## Test: set type check is rejected
+## Test: module identifiers reject uppercase letters
 
-This negative compiler case exercises “set type check is rejected” and verifies the required portable diagnostic.
+This negative compiler case verifies that module path components must begin with lowercase ASCII letters.
 
 ### Case description
 
@@ -1808,16 +1803,15 @@ id: case-0043
 kind: compileError
 level: scenario
 sources:
-  - name: "set type check is rejected.ges"
+  - name: "module identifiers reject uppercase letters.ges"
     program: main
 ```
 
 ### Source code under test
 
 ```ges
-on Start(value) {
-  let invalid be value is :set
-}
+module Invalid
+on Start { }
 ```
 
 ### Expectation
@@ -1825,10 +1819,8 @@ on Start(value) {
 ```yaml
 gesBlock: expect
 error:
-  phase: "validate"
-  code: "validate.invalidTypeConstructor"
-  symbol: "set"
-  symbolKind: "type"
+  phase: "parse"
+  code: "parse.syntax"
 ```
 
 ---
@@ -1852,7 +1844,7 @@ sources:
 ### Source code under test
 
 ```ges
-on undeliverable(message as :message) {
+on undeliverable(message as :Message) {
 }
 ```
 
@@ -1994,11 +1986,11 @@ sources:
 
 ```ges
 on Start {
-  let first be x2
+  let first be player_01
 }
 
 on Done {
-  let second be y2
+  let second be value_01
 }
 ```
 

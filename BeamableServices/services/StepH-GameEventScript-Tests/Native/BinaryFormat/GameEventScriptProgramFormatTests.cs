@@ -15,7 +15,7 @@ public sealed class GameEventScriptProgramFormatTests
     public void CompilerGeneratesAllDebugSectionsByDefault()
     {
         var program = GameEventScriptManager.CreateScriptBuilder()
-            .AddScript("module DefaultDebug\n\non Start { emit Done(value: 1) }", "default-debug.ges")
+            .AddScript("module defaultdebug\n\non Start { emit Done(value: 1) }", "default-debug.ges")
             .Compile();
 
         Assert.IsNotNull(program.DebugSymbols);
@@ -53,15 +53,15 @@ public sealed class GameEventScriptProgramFormatTests
         var debugHash = Sha256(GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.All)));
 
         var multipleSources = GameEventScriptManager.CreateScriptBuilder()
-            .AddScript("module First\nfunction plusOne(value) be value + 1", "first.ges")
-            .AddScript("module Second\non Start(value) { emit Done(value: plusOne(value: value)) }", "second.ges")
+            .AddScript("module first\nfunction plusOne(value) be value + 1", "first.ges")
+            .AddScript("module first\non Start(value) { emit Done(value: plusOne(value: value)) }", "second.ges")
             .WithDebugInfo()
             .Compile();
         var multiHash = Sha256(GameEventScriptProgramWriter.ToArray(multipleSources));
-        Assert.AreEqual("C550BCC23BD72C059296924C229DA6C582C2CBD7BCF2B3B3356E12F04101370F", emptyHash);
-        Assert.AreEqual("F1E5568B144107B148D8C03E7972B5C540628B5CEF40A1DDB54A4998CE196DFE", runtimeHash);
-        Assert.AreEqual("E25E8690CF93DFE347E06C2EA014957F34D72FFC752328BCFBE11BC2E5BA0DA8", debugHash);
-        Assert.AreEqual("D531D9FC08F7E79D8DF91F1E211B86DE2FC41F9A1EC067B7ABDCE0DC9B8524F6", multiHash);
+        Assert.AreEqual("58B9A2C558CFA5711E9967D6FFF5C3AAC99F2D4AE3DF59BA8CFEBADCAC6D53B5", emptyHash);
+        Assert.AreEqual("2B7082CDE65F79533135A6B4FA54CB984B146FD84034DFD36C9E0459454B2050", runtimeHash);
+        Assert.AreEqual("15A52F001A8F75A36EAFF7ECEAD9233268706038ED557CC3815CF2035188EDAC", debugHash);
+        Assert.AreEqual("3F903994FAA14EE5AAF0F8C53415BFDB76F2C422444C431B18716B62C03D5D01", multiHash);
     }
 
     [TestMethod]
@@ -103,7 +103,7 @@ public sealed class GameEventScriptProgramFormatTests
     public void DuplicateBindingIdsProduceStableError()
     {
         var program = GameEventScriptManager.CreateScriptBuilder()
-            .AddScript("module DuplicateIds\non First { }\non Second { }")
+            .AddScript("module duplicateids\non First { }\non Second { }")
             .Compile();
         var bytes = GameEventScriptProgramWriter.ToArray(program);
         var bindings = FindSection(bytes, (ushort)GameEventScriptSectionType.Bindings);
@@ -187,7 +187,7 @@ public sealed class GameEventScriptProgramFormatTests
     [TestMethod]
     public void UnicodeSourcesUseUtf8ByteOffsetsAndRoundTrip()
     {
-        const string source = "module Unicode\n\non Start(name) {\n  let text be \"🙂 é \" + name\n  emit Done(text: text)\n}\n";
+        const string source = "module unicode\n\non Start(name) {\n  let text be \"🙂 é \" + name\n  emit Done(text: text)\n}\n";
         var program = GameEventScriptManager.CreateScriptBuilder().AddScript(source, "ä/logic.ges").WithDebugInfo().Compile();
         var bytes = GameEventScriptProgramWriter.ToArray(program);
         var sourceMapSection = FindSection(bytes, (ushort)GameEventScriptSectionType.SourceMap);
@@ -268,7 +268,7 @@ public sealed class GameEventScriptProgramFormatTests
 
     private static GameEventScriptProgram Compile(GameEventScriptDebugInfoOptions options)
         => GameEventScriptManager.CreateScriptBuilder()
-            .AddScript("module BinaryOne\n\non Start(value) {\n  let result be value + 1\n  emit Done(value: result)\n}\n", "main.ges")
+            .AddScript("module binaryone\n\non Start(value) {\n  let result be value + 1\n  emit Done(value: result)\n}\n", "main.ges")
             .WithProgramVersion(42)
             .WithDebugInfo(options)
             .Compile();

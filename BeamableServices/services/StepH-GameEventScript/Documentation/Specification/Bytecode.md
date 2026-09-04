@@ -124,7 +124,7 @@ instruction word are encoded by typed load opcodes:
   list is `[messageNameStringIndex, argumentNameStringIndex...]`.
 
 Constants are concrete. For example `1`, `1.0`, `1m`, and `1s` remain distinct
-loads. Runtime operations and explicit `:number` casts may normalize finite
+loads. Runtime operations and explicit `:Number` casts may normalize finite
 integral results to integer values. Larger constants such as future vector/point
 literals should use a normalized data segment instead of reintroducing an object
 constant pool.
@@ -182,13 +182,13 @@ Handlers, predicates, and functions may declare optional parameter type hints
 using the same `as :type` language as value coercion:
 
 ```eventscript
-on DamageTaken(unit as :unit, amount as :number) {
+on DamageTaken(unit as :Unit, amount as :Number) {
     publish DamageApplied(unit: unit, amount: amount)
 }
 
-predicate wounded(_ unit as :unit) be unit.hp < unit.maxHp
+predicate wounded(_ unit as :Unit) be unit.hp < unit.maxHp
 
-function livingUnits(_ units as :list) be
+function livingUnits(_ units as :List) be
     units[:filter unit where not (unit is wounded)]
 ```
 
@@ -224,7 +224,7 @@ counter and dump show where normalization happens:
 
 ```text
 @0000 RegisterLocals locals+=localCount
-@0001 Cast dst=r0 src=r0 kind=Custom type=:unit
+@0001 Cast dst=r0 src=r0 kind=Custom type=:Unit
 @0002 Cast dst=r1 src=r1 kind=Integer
 ```
 
@@ -425,7 +425,7 @@ helper entries.
 
 `MessageHandler` entries subscribe by `SignatureId`. `MessageNameHandler`
 entries subscribe by `MessageName` and tag filters only; the runtime invokes
-them with a single direct `:message` argument. Message-name handlers count as
+them with a single direct `:Message` argument. Message-name handlers count as
 normal delivery and therefore prevent `undeliverable` fallback when their tag
 filters match. For `MessageNameHandler` entries, `SignatureId` still records the
 synthetic message parameter signature such as `Damage(message)`, but it is
@@ -444,7 +444,7 @@ arguments. It is not normal external dispatch input; the host queues all loaded
 initialization handlers directly when a `GameEventScriptContext` starts.
 
 `undeliverable` is encoded as a `MessageNameHandler` entry with message name
-`undeliverable`. It receives the original `:message` when no `MessageHandler`
+`undeliverable`. It receives the original `:Message` when no `MessageHandler`
 or `MessageNameHandler` could be queued for the original message after
 signature/name and tag filters were applied. System endpoints still use normal
 handler metadata, priority, and declaration order.
@@ -513,7 +513,7 @@ Built-in types are direct kind operands. Custom/external record types use
 `CastCustom`/`CheckCustomType` with `TypeOperand` as the type-name `StringPool` index.
 Units are not declared type kinds: unit casts and checks use
 `CastUnit`/`CheckUnit` with the target unit in `UnitAndFlags`.
-`:number` lowers to `CastNumeric`; numeric casts keep integral values as
+`:Number` lowers to `CastNumeric`; numeric casts keep integral values as
 integers and use floats only when the value does not fit the integer
 representation. `CastNumeric` is the only numeric path that parses text; invalid
 text writes `nothing`. `CastNumeric` also accepts series by casting the first
@@ -527,14 +527,14 @@ view is finite and exactly integral; booleans and dice are therefore integer.
 `CheckFractional` is true when the numeric view is finite and non-integral.
 `Nothing`, text, list, map, range, vector, point, message, handler, series,
 custom values, and non-numeric tags have no numeric view for these checks.
-`CheckType :number` still checks the actual runtime kind. `numeric`, `integer`,
+`CheckType :Number` still checks the actual runtime kind. `numeric`, `integer`,
 and `fractional` are not declared type kinds or `:` tags. VM-level `AsNumeric`
 is valid exactly for values where `CheckNumeric` would be true; `CastNumeric` is
 broader only in that it may explicitly parse text or first-term-cast series
 before producing a numeric value or `nothing`.
 
-`Cast :tag` is a validating cast. The target tag name must match source tag
-syntax: first character lowercase letter, remaining characters letters only.
+`Cast :Tag` is a validating cast. The target tag name must match source tag
+syntax: first character lowercase letter, remaining characters ASCII letters or digits.
 The empty string, numbers, quantities, percentages, formatted containers,
 formatted vector/point values, whitespace, punctuation, brackets, colons inside
 the value, and underscores are invalid and write `nothing`. Existing valid tags
@@ -542,8 +542,8 @@ remain unchanged. Boolean sources write `#true` or `#false`; text sources write 
 tag only when the raw text is a valid tag name. Text values `true`, `True`,
 `false`, and `False` are accepted and normalized to `#true` and `#false`.
 
-`Cast :text` is the formatting cast and does not validate the formatted text as
-a tag. `Cast :vector` and `Cast :point` are structural conversions: vector to
+`Cast :Text` is the formatting cast and does not validate the formatted text as
+a tag. `Cast :Vector` and `Cast :Point` are structural conversions: vector to
 point and point to vector copy the three components and optional unit directly.
 These conversions are casts, not affine vector/point arithmetic.
 
@@ -643,7 +643,7 @@ preserve dice semantics only for unitless positive integers:
 `Dice + Integer` and `Integer + Dice` insert one roll and write sorted dice.
 Other dice/scalar additions write `nothing`. When either operand is text, `Add`
 performs text concatenation before numeric or collection handling. The non-text
-operand is formatted with the same representation used by `as :text`.
+operand is formatted with the same representation used by `as :Text`.
 
 `Subtract` is primarily numeric, but also removes from selected collection
 shapes. `List - scalar` removes one matching item, and `List - List` removes
@@ -831,7 +831,7 @@ sequence.
 
 `if` and guarded choices compile to condition code plus jumps. `else` runs when
 the condition is not true, so normal `if` lowering should use `JumpIfNotTrue`,
-not an implicit `as :boolean` conversion.
+not an implicit `as :Boolean` conversion.
 
 Example:
 
@@ -900,8 +900,8 @@ ScopeMark
 RandomMark
 ```
 
-Predicate bodies must compile as `:boolean` or DSL `nothing`; an explicit
-`as :boolean` marks intentional boolean coercion. Predicate calls preserve
+Predicate bodies must compile as `:Boolean` or DSL `nothing`; an explicit
+`as :Boolean` marks intentional boolean coercion. Predicate calls preserve
 `nothing` so missing information remains "no statement" instead of becoming
 `false`. Functions preserve the expression result.
 
@@ -1000,7 +1000,7 @@ Seeded random no longer has a side table or helper expression opcode. The
 lowerer emits `RandomPush*`, the inline body instructions, and `RandomPop`.
 Constant seeds are unitless signed `Int64`, so negative seeds such as `-145`
 are valid source literals. A non-literal seed has already been established as
-an inferred unitless integer or explicitly converted with `as :number` by the
+an inferred unitless integer or explicitly converted with `as :Number` by the
 source program; the lowerer emits its value directly to `RandomPush`.
 
 Both random push opcodes first save the complete active generator state.
@@ -1012,13 +1012,13 @@ balanced scope and cannot consume its parent stream.
 
 Required portable value families:
 
-- primitives: DSL `nothing`, `:tag`, `:text`, `:boolean`
-- numeric: `:number`, `:percentage`
-- numeric quantities: `:quantity(degree)`/`:quantity(°)`, `:quantity(m)`, `:quantity(s)`
-- vectors: `:vector`
-- points: `:point`
-- containers: `:series`, `:range`, `:list`, `:map`, `:dice`
-- runtime values: `:message`, `:handler`
+- primitives: DSL `nothing`, `:Tag`, `:Text`, `:Boolean`
+- numeric: `:Number`, `:Percentage`
+- numeric quantities: `:Quantity(degree)`/`:Quantity(°)`, `:Quantity(m)`, `:Quantity(s)`
+- vectors: `:Vector`
+- points: `:Point`
+- containers: `:Series`, `:Range`, `:List`, `:Map`, `:Dice`
+- runtime values: `:Message`, `:Handler`
 - custom record and external types
 
 Series values are repeatable mathematical series. `[:term n]` reads the
@@ -1240,7 +1240,7 @@ binding registers; there are no pipeline selector, pattern, or object-pattern po
 
 Iterator/materialization contract:
 
-- `:range` and `:series` sources must not be blindly materialized
+- `:Range` and `:Series` sources must not be blindly materialized
   before iterable terminal selectors.
 - Iterable/short-circuit terminal selectors include `:any`, `:all`, and
   `:first`. `:any` and `:all` lower to the normal `HasAny` and `HasAll`
@@ -1328,10 +1328,10 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x11 | `PublishMessageWithTags` | - | `MessageDestination`=outbound message bind id | `SecondaryListIndex`=tag register-list index | `ListIndex`=argument register-list index | - | Publishes a statically shaped message with tags. |
 | 0x12 | `PublishMessageValue` | - | - | `XRegister`=message | - | - | Publishes a dynamic message value without tags. |
 | 0x13 | `PublishMessageValueWithTags` | - | - | `XRegister`=message | `ListIndex`=tag register-list index | - | Publishes a dynamic message value with tags. |
-| 0x14 | `Cast` | - | result register | `XRegister`=source | `TypeOperand`=type kind | - | Converts `X` to the declared built-in type. Custom/record types use `CastCustom`. `Cast :tag` validates tag syntax; invalid tag text writes `nothing`. `Cast :vector`/`:point` structurally convert between vectors and points by copying components and unit. |
+| 0x14 | `Cast` | - | result register | `XRegister`=source | `TypeOperand`=type kind | - | Converts `X` to the declared built-in type. Custom/record types use `CastCustom`. `Cast :Tag` validates tag syntax; invalid tag text writes `nothing`. `Cast :Vector`/`:Point` structurally convert between vectors and points by copying components and unit. |
 | 0x15 | `CastCustom` | - | result register | `XRegister`=source | `TypeOperand`=custom type string | - | Converts `X` to a custom/record type identified by `Y`. |
 | 0x16 | `CastUnit` | target numeric unit | result register | `XRegister`=source | - | - | Converts `X` to the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
-| 0x17 | `CastNumeric` | - | result register | `XRegister`=source | - | - | Coerces `X` through the source-level `:number` type. This is the only numeric path that parses text; invalid text writes `nothing`. Integral values stay integer; otherwise the result is float. |
+| 0x17 | `CastNumeric` | - | result register | `XRegister`=source | - | - | Coerces `X` through the source-level `:Number` type. This is the only numeric path that parses text; invalid text writes `nothing`. Integral values stay integer; otherwise the result is float. |
 | 0x18 | `CheckType` | - | result register | `XRegister`=source | `TypeOperand`=type kind | - | Writes whether `X` has the declared built-in type. Custom/record types use `CheckCustomType`. |
 | 0x19 | `CheckCustomType` | - | result register | `XRegister`=source | `TypeOperand`=custom type string | - | Writes whether `X` has the custom/record type identified by `Y`. |
 | 0x1A | `CheckUnit` | target numeric unit | result register | `XRegister`=source | - | - | Writes whether `X` has the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |

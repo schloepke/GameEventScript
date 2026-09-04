@@ -82,17 +82,17 @@ steps:
       args:
         - name: "opt"
           value:
-            type: ":nothing"
+            type: ":Nothing"
         - name: "missingValue"
           value:
-            type: ":nothing"
+            type: ":Nothing"
         - name: "value"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "3"
         - name: "meterValue"
           value:
-            type: ":float"
+            type: ":Quantity.binary64"
             value: "5"
             unit: ":meter"
     local:
@@ -100,99 +100,99 @@ steps:
         args:
           - name: "text"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Hello \u0027World\u0027, I\u0027m here"
           - name: "doubleText"
             value:
-              type: ":text"
+              type: ":Text"
               value: "didn\u0027t say \u0022stop\u0022"
           - name: "listLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "name"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Hello"
           - name: "position"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "emptyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "distance"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "12.5"
           - name: "naturalOne"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "1"
           - name: "naturalZero"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "-Infinity"
           - name: "naturalNegative"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "naturalInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "Infinity"
           - name: "naturalInvalidTag"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "naturalNothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "naturalRuntime"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "naturalUnit"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boundedHigh"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "99"
           - name: "boundedLow"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0"
           - name: "boundedNothingValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boundedNothingMin"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "boundedInvalid"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "boundedInfinity"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "99"
           - name: "highest"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9"
           - name: "lowest"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "presenceFallback"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "nothingFallback"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "20"
 ```
 
@@ -225,7 +225,7 @@ on Start {
   let items be [10, 20, 30]
   let unit be [hp: 7, name: 'Knight']
   let emptyList be []
-  let invalidNumber as :number be 'abc'
+  let invalidNumber be ('abc') as :Number
   emit Done(second: items[2], nothing: items[4], hp: unit[#hp], emptyList: emptyList is empty, invalidHasValue: invalidNumber has value, invalidIsEmpty: invalidNumber is empty)
 }
 ```
@@ -249,26 +249,26 @@ steps:
         args:
           - name: "second"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "20"
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "hp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "7"
           - name: "emptyList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "invalidHasValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "invalidIsEmpty"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -297,8 +297,8 @@ sources:
 ### Source code under test
 
 ```ges
-on Start(d_6) {
-  let kept be d_6
+on Start(d6) {
+  let kept be d6
   emit Done(value: kept)
 }
 ```
@@ -317,16 +317,16 @@ steps:
   step-0001:
     input:
       args:
-        - name: "d_6"
+        - name: "d6"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "6"
     local:
       - name: "Done"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
 ```
 
@@ -380,45 +380,45 @@ steps:
         args:
           - name: "textContains"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "startsList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "endsList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "hasAll"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasAny"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "sorted"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
           - name: "distinct"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
 ```
 
@@ -471,63 +471,63 @@ steps:
       args:
         - name: "entry"
           value:
-            type: ":map"
+            type: ":Map"
             entries:
               - key: "name"
                 value:
-                  type: ":text"
+                  type: ":Text"
                   value: "Ada"
         - name: "keyName"
           value:
-            type: ":text"
+            type: ":Text"
             value: "name"
     local:
       - name: "Done"
         args:
           - name: "first"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "third"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "30"
           - name: "zero"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "missingIndex"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "property"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ada"
           - name: "textKey"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ada"
           - name: "tagKey"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ada"
           - name: "dynamicTag"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ada"
           - name: "dynamicText"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Ada"
           - name: "missingProperty"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "firstTag"
             value:
-              type: ":text"
+              type: ":Text"
               value: "alpha"
           - name: "missingTag"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -576,134 +576,134 @@ steps:
       args:
         - name: "opt"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "7"
         - name: "emptyText"
           value:
-            type: ":text"
+            type: ":Text"
             value: ""
         - name: "emptyList"
           value:
-            type: ":list"
+            type: ":List"
             items: []
         - name: "emptyDict"
           value:
-            type: ":map"
+            type: ":Map"
             entries: []
         - name: "zeroValue"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "0"
         - name: "falseValue"
           value:
-            type: ":boolean"
+            type: ":Boolean"
             value: false
         - name: "diceValue"
           value:
-            type: ":dice"
+            type: ":Dice"
             rolls: []
         - name: "nanValue"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "NaN"
         - name: "infinityValue"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "Infinity"
     local:
       - name: "Done"
         args:
           - name: "hasOpt"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasEmptyText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "hasEmptyList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "hasEmptyDict"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "hasZero"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasFalse"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasNaN"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "hasInfinity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isEmptyOpt"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isEmptyText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isEmptyList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isEmptyDict"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isEmptyDice"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isEmptyNaN"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isEmptyInfinity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "nanIsNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "notEmptyList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "notFalse"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "optValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "7"
           - name: "listValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "textValue"
             value:
-              type: ":text"
+              type: ":Text"
               value: "fallback"
           - name: "dictValue"
             value:
-              type: ":text"
+              type: ":Text"
               value: "default"
           - name: "missingTextValue"
             value:
-              type: ":text"
+              type: ":Text"
               value: "fallback"
 ```
 
@@ -735,14 +735,14 @@ sources:
 
 ```ges
 on Start(valueForLen, a, b, c, d, listArg, f, g) {
-  let tagOk as :tag be #name
-  let numberOk as :number be '12.2'
-  let numberFail as :number be 'abc'
-  let integerOk as :number be '12.7'
-  let booleanOk as :boolean be 'true'
-  let listOk as :list be 'ab'
-  let diceOk as :dice be [6, 2, 4]
-  emit Done(tagOk: tagOk, numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, booleanOk: booleanOk, listLen: listOk[:count], diceFirst: diceOk[1], diceLen: diceOk[:count], textLen: valueForLen[:count], dictLen: [first: 1, second: 2][:count], valueForLenLen: valueForLen[:count], floatLen: 12.5[:count], booleanLen: true[:count], aIsTag: a is :tag, bIsFloat: b is :number, cIsInteger: c is :number, dIsText: d is :text, eIsList: listArg is :list, fIsMap: f is :map, gIsNothing: g is nothing)
+  let tagOk be (#name) as :Tag
+  let numberOk be ('12.2') as :Number
+  let numberFail be ('abc') as :Number
+  let integerOk be ('12.7') as :Number
+  let booleanOk be ('true') as :Boolean
+  let listOk be ('ab') as :List
+  let diceOk be ([6, 2, 4]) as :Dice
+  emit Done(tagOk: tagOk, numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, booleanOk: booleanOk, listLen: listOk[:count], diceFirst: diceOk[1], diceLen: diceOk[:count], textLen: valueForLen[:count], dictLen: [first: 1, second: 2][:count], valueForLenLen: valueForLen[:count], floatLen: 12.5[:count], booleanLen: true[:count], aIsTag: a is :Tag, bIsFloat: b is :Number, cIsInteger: c is :Number, dIsText: d is :Text, eIsList: listArg is :List, fIsMap: f is :Map, gIsNothing: g is nothing)
 }
 ```
 
@@ -762,120 +762,120 @@ steps:
       args:
         - name: "valueForLen"
           value:
-            type: ":text"
+            type: ":Text"
             value: "x"
         - name: "a"
           value:
-            type: ":tag"
+            type: ":Tag"
             value: "name"
         - name: "b"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "1.5"
         - name: "c"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "2"
         - name: "d"
           value:
-            type: ":text"
+            type: ":Text"
             value: "x"
         - name: "listArg"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "1"
         - name: "f"
           value:
-            type: ":map"
+            type: ":Map"
             entries:
               - key: "v"
                 value:
-                  type: ":integer"
+                  type: ":Number.int64"
                   value: "1"
         - name: "g"
           value:
-            type: ":nothing"
+            type: ":Nothing"
     local:
       - name: "Done"
         args:
           - name: "tagOk"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "name"
           - name: "numberOk"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "12.2"
           - name: "numberFail"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "integerOk"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "12.7"
           - name: "booleanOk"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "listLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "diceFirst"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "diceLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "textLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "dictLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "valueForLenLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "floatLen"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "booleanLen"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "aIsTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "bIsFloat"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "cIsInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "dIsText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "eIsList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "fIsMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "gIsNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -905,7 +905,7 @@ sources:
 
 ```ges
 on Start(item) {
-  let nanValue as :number be 'abc'
+  let nanValue be ('abc') as :Number
   let nanPropagated be nanValue + 5
   let nothingValue be nothing
   let nothingPropagated be nothingValue + 5
@@ -931,32 +931,32 @@ steps:
       args:
         - name: "item"
           value:
-            type: ":nothing"
+            type: ":Nothing"
     local:
       - name: "Done"
         args:
           - name: "nanValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "nanPropagated"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "nothingPropagated"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "propertyFromNothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "pos"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "7.92281625142643e28"
           - name: "neg"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "-7.92281625142643e28"
 ```
 
@@ -995,7 +995,7 @@ on Start(custom) {
   let dictValue be [name: 'Ada']
   let msg be Ping(value: 1)
   let handler be Ping(value)
-  emit Done(intIsInteger: integerValue is :number, intIsFloat: integerValue is :number, percentIsFloat: percentValue is :number, degreeIsFloat: degreeValue is :number, degreeIsDegree: degreeValue is :quantity(°), meterIsMeter: meterValue is :quantity(m), secondIsSecond: secondValue is :quantity(s), textIsText: 'x' is :text, tagIsTag: #ready is :tag, boolIsBoolean: true is :boolean, listIsList: listValue is :list, dictIsMap: dictValue is :map, customIsGauge: custom is :gauge, customIsMap: custom is :map, msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: handler is :handler, missingIsNothing: nothing is nothing)
+  emit Done(intIsInteger: integerValue is :Number, intIsFloat: integerValue is :Number, percentIsFloat: percentValue is :Number, degreeIsFloat: degreeValue is :Number, degreeIsDegree: degreeValue is :Quantity(°), meterIsMeter: meterValue is :Quantity(m), secondIsSecond: secondValue is :Quantity(s), textIsText: 'x' is :Text, tagIsTag: #ready is :Tag, boolIsBoolean: true is :Boolean, listIsList: listValue is :List, dictIsMap: dictValue is :Map, customIsGauge: custom is :Gauge, customIsMap: custom is :Map, msgIsMessage: msg is :Message, msgIsMap: msg is :Map, handlerIsHandler: handler is :Handler, missingIsNothing: nothing is nothing)
 }
 ```
 
@@ -1015,86 +1015,86 @@ steps:
       args:
         - name: "custom"
           value:
-            type: ":gauge"
+            type: ":Gauge"
             entries:
               - key: "current"
                 value:
-                  type: ":integer"
+                  type: ":Number.int64"
                   value: "5"
     local:
       - name: "Done"
         args:
           - name: "intIsInteger"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "intIsFloat"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "percentIsFloat"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "degreeIsFloat"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "degreeIsDegree"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "meterIsMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "secondIsSecond"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "textIsText"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "tagIsTag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "boolIsBoolean"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "listIsList"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "dictIsMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "customIsGauge"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "customIsMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "msgIsMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "msgIsMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handlerIsHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "missingIsNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -1145,15 +1145,15 @@ steps:
         args:
           - name: "meter"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "meter"
           - name: "degree"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "degree"
           - name: "seconds"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "seconds"
 ```
 
@@ -1184,7 +1184,7 @@ sources:
 ```ges
 ﻿on Start {
   let text be 'A😀é'
-  let scalars as :list be text
+  let scalars be (text) as :List
   emit Done(count: text[:count], first: text[:first], second: text[2], third: text[3], fourth: text[4], last: text[:last], single: '😀'[:single], listCount: scalars[:count], listSecond: scalars[2], hugeIndex: text[9223372036854775807])
 }
 ```
@@ -1206,41 +1206,41 @@ steps:
         args:
           - name: "count"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "first"
             value:
-              type: ":text"
+              type: ":Text"
               value: "A"
           - name: "second"
             value:
-              type: ":text"
+              type: ":Text"
               value: "\uD83D\uDE00"
           - name: "third"
             value:
-              type: ":text"
+              type: ":Text"
               value: "e"
           - name: "fourth"
             value:
-              type: ":text"
+              type: ":Text"
               value: "\u0301"
           - name: "last"
             value:
-              type: ":text"
+              type: ":Text"
               value: "\u0301"
           - name: "single"
             value:
-              type: ":text"
+              type: ":Text"
               value: "\uD83D\uDE00"
           - name: "listCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "listSecond"
             value:
-              type: ":text"
+              type: ":Text"
               value: "\uD83D\uDE00"
           - name: "hugeIndex"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```

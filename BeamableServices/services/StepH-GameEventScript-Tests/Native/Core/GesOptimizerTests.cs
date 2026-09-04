@@ -33,7 +33,7 @@ public class GesOptimizerTests
     {
         const string script =
             """
-            module ConstantMath
+            module constantmath
             on Start {
                 let value be 12 + 3 * 10
                 emit Done(result: value)

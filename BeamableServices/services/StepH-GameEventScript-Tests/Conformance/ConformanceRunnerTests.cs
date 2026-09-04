@@ -33,12 +33,12 @@ steps:
     input:
       args:
         - name: value
-          value: { type: ":integer", value: "7" }
+          value: { type: ":Number.int64", value: "7" }
     local:
       - name: Done
         args:
           - name: result
-            value: { type: ":integer", value: "12" }
+            value: { type: ":Number.int64", value: "12" }
     paused: true
 ```
 """);
@@ -87,7 +87,7 @@ messageApi:
     name: Start
     args:
       - name: value
-        value: { type: ":integer", value: "3" }
+        value: { type: ":Number.int64", value: "3" }
 ```
 ```yaml
 gesBlock: expect
@@ -335,7 +335,7 @@ second
     public void ProgramBinaryUsesOnlyInjectedBoundedResourceBytes()
     {
         var bytes = GameEventScriptProgramWriter.ToArray(GameEventScriptBuilder.Create()
-            .AddScript("module Fixture\non Start { }", "fixture.ges")
+            .AddScript("module fixture\non Start { }", "fixture.ges")
             .WithProgramVersion(42)
             .WithDebugInfo(GameEventScriptDebugInfoOptions.None)
             .Compile());
@@ -358,7 +358,7 @@ gesBlock: expect
 binary:
   outcome: valid
   rewriteByteExact: true
-  moduleName: Fixture
+  moduleName: fixture
 ```
 """, includeDefaultCase: false);
         var resolver = new RecordingResourceResolver(bytes);

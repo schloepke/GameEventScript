@@ -31,9 +31,9 @@ id: primitives
 kind: valueApi
 level: atomic
 valueApi:
-  value: { type: ":integer", value: "42" }
-  equalTo: { type: ":integer", value: "42" }
-  notEqualTo: { type: ":integer", value: "43" }
+  value: { type: ":Number.int64", value: "42" }
+  equalTo: { type: ":Number.int64", value: "42" }
+  notEqualTo: { type: ":Number.int64", value: "43" }
 ```
 
 ### Expectation
@@ -41,7 +41,7 @@ valueApi:
 ```yaml
 gesBlock: expect
 value:
-  normalized: { type: ":integer", value: "42" }
+  normalized: { type: ":Number.int64", value: "42" }
   isNumeric: true
   hasValue: true
   isNothing: false
@@ -66,7 +66,7 @@ id: measured-float
 kind: valueApi
 level: atomic
 valueApi:
-  value: { type: ":float", value: "12.5", unit: ":meter" }
+  value: { type: ":Quantity.binary64", value: "12.5", unit: ":meter" }
 ```
 
 ### Expectation
@@ -74,7 +74,7 @@ valueApi:
 ```yaml
 gesBlock: expect
 value:
-  normalized: { type: ":float", value: "12.5", unit: ":meter" }
+  normalized: { type: ":Quantity.binary64", value: "12.5", unit: ":meter" }
   isNumeric: true
   hasValue: true
   hasUnit: true
@@ -95,7 +95,7 @@ id: percentage
 kind: valueApi
 level: atomic
 valueApi:
-  value: { type: ":percentage", value: "0.25" }
+  value: { type: ":Percentage", value: "0.25" }
 ```
 
 ### Expectation
@@ -103,7 +103,7 @@ valueApi:
 ```yaml
 gesBlock: expect
 value:
-  normalized: { type: ":percentage", value: "0.25" }
+  normalized: { type: ":Percentage", value: "0.25" }
   isNumeric: true
   hasValue: true
   hasUnit: false
@@ -123,7 +123,7 @@ id: vector
 kind: valueApi
 level: atomic
 valueApi:
-  value: { type: ":vector", x: "3", y: "4", z: "5", unit: ":meter" }
+  value: { type: ":Vector", x: "3", y: "4", z: "5", unit: ":meter" }
 ```
 
 ### Expectation
@@ -131,7 +131,7 @@ valueApi:
 ```yaml
 gesBlock: expect
 value:
-  normalized: { type: ":vector", x: "3", y: "4", z: "5", unit: ":meter" }
+  normalized: { type: ":Vector", x: "3", y: "4", z: "5", unit: ":meter" }
   hasValue: true
   hasUnit: true
   asBoolean: true
@@ -151,7 +151,7 @@ id: point
 kind: valueApi
 level: atomic
 valueApi:
-  value: { type: ":point", x: "1", y: "2", z: "3", unit: ":second" }
+  value: { type: ":Point", x: "1", y: "2", z: "3", unit: ":second" }
 ```
 
 ### Expectation
@@ -159,7 +159,7 @@ valueApi:
 ```yaml
 gesBlock: expect
 value:
-  normalized: { type: ":point", x: "1", y: "2", z: "3", unit: ":second" }
+  normalized: { type: ":Point", x: "1", y: "2", z: "3", unit: ":second" }
   hasValue: true
   hasUnit: true
   asBoolean: true
@@ -179,7 +179,7 @@ id: text
 kind: valueApi
 level: atomic
 valueApi:
-  value: { type: ":text", value: "hello 😀" }
+  value: { type: ":Text", value: "hello 😀" }
 ```
 
 ### Expectation
@@ -187,7 +187,7 @@ valueApi:
 ```yaml
 gesBlock: expect
 value:
-  normalized: { type: ":text", value: "hello 😀" }
+  normalized: { type: ":Text", value: "hello 😀" }
   isNumeric: false
   hasValue: true
   isNothing: false
@@ -195,9 +195,9 @@ value:
 
 ---
 
-## Test: tag equality is case sensitive
+## Test: tag equality compares canonical names
 
-This public API case exercises “tag equality is case sensitive” and verifies its language-neutral result.
+This public API case verifies equality and inequality between valid canonical tag names.
 
 ### Case description
 
@@ -207,9 +207,9 @@ id: tag-case-sensitive
 kind: valueApi
 level: atomic
 valueApi:
-  value: { type: ":tag", value: "Ready" }
-  equalTo: { type: ":tag", value: "Ready" }
-  notEqualTo: { type: ":tag", value: "ready" }
+  value: { type: ":Tag", value: "ready" }
+  equalTo: { type: ":Tag", value: "ready" }
+  notEqualTo: { type: ":Tag", value: "waiting" }
 ```
 
 ### Expectation
@@ -217,7 +217,7 @@ valueApi:
 ```yaml
 gesBlock: expect
 value:
-  normalized: { type: ":tag", value: "Ready" }
+  normalized: { type: ":Tag", value: "ready" }
   isNumeric: false
   hasValue: true
   equal: true
@@ -239,7 +239,7 @@ id: nan-is-nothing
 kind: valueApi
 level: atomic
 valueApi:
-  value: { type: ":float", value: "NaN" }
+  value: { type: ":Number.binary64", value: "NaN" }
 ```
 
 ### Expectation
@@ -247,7 +247,7 @@ valueApi:
 ```yaml
 gesBlock: expect
 value:
-  normalized: { type: ":nothing" }
+  normalized: { type: ":Nothing" }
   isNumeric: false
   hasValue: false
   isNothing: true
@@ -271,10 +271,10 @@ level: atomic
 valueApi:
   mutateSourceAfterCreate: true
   value:
-    type: ":list"
+    type: ":List"
     items:
-      - { type: ":integer", value: "1" }
-      - { type: ":text", value: "two" }
+      - { type: ":Number.int64", value: "1" }
+      - { type: ":Text", value: "two" }
 ```
 
 ### Expectation
@@ -283,10 +283,10 @@ valueApi:
 gesBlock: expect
 value:
   normalized:
-    type: ":list"
+    type: ":List"
     items:
-      - { type: ":integer", value: "1" }
-      - { type: ":text", value: "two" }
+      - { type: ":Number.int64", value: "1" }
+      - { type: ":Text", value: "two" }
   length: 2
   hasValue: true
 ```
@@ -306,7 +306,7 @@ kind: valueApi
 level: atomic
 valueApi:
   mutateSourceAfterCreate: true
-  value: { type: ":dice", rolls: [3, 6, 1] }
+  value: { type: ":Dice", rolls: [3, 6, 1] }
 ```
 
 ### Expectation
@@ -314,7 +314,7 @@ valueApi:
 ```yaml
 gesBlock: expect
 value:
-  normalized: { type: ":dice", rolls: [6, 3, 1] }
+  normalized: { type: ":Dice", rolls: [6, 3, 1] }
   length: 3
   hasValue: true
 ```
@@ -335,16 +335,16 @@ level: atomic
 valueApi:
   mutateSourceAfterCreate: true
   value:
-    type: ":map"
+    type: ":Map"
     entries:
       - key: "𐀀"
-        value: { type: ":integer", value: "4" }
+        value: { type: ":Number.int64", value: "4" }
       - key: same
-        value: { type: ":integer", value: "1" }
+        value: { type: ":Number.int64", value: "1" }
       - key: ""
-        value: { type: ":integer", value: "3" }
+        value: { type: ":Number.int64", value: "3" }
       - key: same
-        value: { type: ":integer", value: "2" }
+        value: { type: ":Number.int64", value: "2" }
 ```
 
 ### Expectation
@@ -353,14 +353,14 @@ valueApi:
 gesBlock: expect
 value:
   normalized:
-    type: ":map"
+    type: ":Map"
     entries:
       - key: same
-        value: { type: ":integer", value: "2" }
+        value: { type: ":Number.int64", value: "2" }
       - key: ""
-        value: { type: ":integer", value: "3" }
+        value: { type: ":Number.int64", value: "3" }
       - key: "𐀀"
-        value: { type: ":integer", value: "4" }
+        value: { type: ":Number.int64", value: "4" }
   length: 3
   hasValue: true
 ```
@@ -381,12 +381,12 @@ level: atomic
 valueApi:
   mutateSourceAfterCreate: true
   value:
-    type: ":unit"
+    type: ":Unit"
     entries:
       - key: hp
-        value: { type: ":integer", value: "10" }
+        value: { type: ":Number.int64", value: "10" }
       - key: _hidden
-        value: { type: ":text", value: secret }
+        value: { type: ":Text", value: secret }
 ```
 
 ### Expectation
@@ -395,14 +395,14 @@ valueApi:
 gesBlock: expect
 value:
   normalized:
-    type: ":unit"
+    type: ":Unit"
     entries:
       - key: _hidden
-        value: { type: ":text", value: secret }
+        value: { type: ":Text", value: secret }
       - key: hp
-        value: { type: ":integer", value: "10" }
+        value: { type: ":Number.int64", value: "10" }
   length: 2
-  customTypeName: unit
+  customTypeName: Unit
   hasValue: true
 ```
 
@@ -420,7 +420,7 @@ id: integer-range
 kind: valueApi
 level: atomic
 valueApi:
-  value: { type: ":range", rangeKind: integer, from: "1", to: "5", step: "2" }
+  value: { type: ":Range.int64", from: "1", to: "5", step: "2" }
 ```
 
 ### Expectation
@@ -428,7 +428,7 @@ valueApi:
 ```yaml
 gesBlock: expect
 value:
-  normalized: { type: ":range", rangeKind: integer, from: "1", to: "5", step: "2" }
+  normalized: { type: ":Range.int64", from: "1", to: "5", step: "2" }
   hasValue: true
 ```
 
@@ -446,7 +446,7 @@ id: float-range
 kind: valueApi
 level: atomic
 valueApi:
-  value: { type: ":range", rangeKind: float, from: "1.5", to: "2.5", step: "0.5" }
+  value: { type: ":Range.binary64", from: "1.5", to: "2.5", step: "0.5" }
 ```
 
 ### Expectation
@@ -454,7 +454,7 @@ valueApi:
 ```yaml
 gesBlock: expect
 value:
-  normalized: { type: ":range", rangeKind: float, from: "1.5", to: "2.5", step: "0.5" }
+  normalized: { type: ":Range.binary64", from: "1.5", to: "2.5", step: "0.5" }
   hasValue: true
 ```
 
@@ -473,19 +473,19 @@ kind: valueApi
 level: atomic
 valueApi:
   value:
-    type: ":message"
+    type: ":Message"
     message:
       name: Ping
       args:
         - name: amount
-          value: { type: ":integer", value: "7" }
+          value: { type: ":Number.int64", value: "7" }
   equalTo:
-    type: ":message"
+    type: ":Message"
     message:
       name: Ping
       args:
         - name: amount
-          value: { type: ":integer", value: "7" }
+          value: { type: ":Number.int64", value: "7" }
 ```
 
 ### Expectation
@@ -494,12 +494,12 @@ valueApi:
 gesBlock: expect
 value:
   normalized:
-    type: ":message"
+    type: ":Message"
     message:
       name: Ping
       args:
         - name: amount
-          value: { type: ":integer", value: "7" }
+          value: { type: ":Number.int64", value: "7" }
   equal: true
   equalHash: true
   hasValue: true

@@ -98,6 +98,10 @@ public static class GameEventScriptDiagnosticCodes
     /// </summary>
     public const string ValidateDuplicateVariable = "validate.duplicateVariable";
     /// <summary>
+    /// Defines the validate duplicate constant value.
+    /// </summary>
+    public const string ValidateDuplicateConstant = "validate.duplicateConstant";
+    /// <summary>
     /// Defines the validate shadowed variable value.
     /// </summary>
     public const string ValidateShadowedVariable = "validate.shadowedVariable";

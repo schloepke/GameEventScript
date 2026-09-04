@@ -41,7 +41,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicControlIfBranches
+module atomiccontrolifbranches
 on Start {
   if true {
     emit Branch(name: 'true-then')
@@ -84,19 +84,19 @@ steps:
         args:
           - name: "name"
             value:
-              type: ":text"
+              type: ":Text"
               value: "true-then"
       - name: "Branch"
         args:
           - name: "name"
             value:
-              type: ":text"
+              type: ":Text"
               value: "false-else"
       - name: "Branch"
         args:
           - name: "name"
             value:
-              type: ":text"
+              type: ":Text"
               value: "missing-else"
       - name: "Done"
         args: []
@@ -127,7 +127,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicControlOrShortCircuit
+module atomiccontrolorshortcircuit
 on Start {
   let trueSkips be true or :test.fail()
   let falseEvaluates be false or :test.truth()
@@ -156,19 +156,19 @@ steps:
         args:
           - name: "trueSkips"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "falseEvaluates"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "missingResolves"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "missingStaysUnknown"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -196,7 +196,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicControlAndShortCircuit
+module atomiccontrolandshortcircuit
 on Start {
   let falseSkips be false and :test.fail()
   let trueEvaluates be true and :test.truth()
@@ -225,19 +225,19 @@ steps:
         args:
           - name: "falseSkips"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "trueEvaluates"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "missingResolvesFalse"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "missingStaysUnknown"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -265,7 +265,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicControlImplication
+module atomiccontrolimplication
 on Start {
   let falseSkips be false -> :test.fail()
   let trueEvaluates be true -> true
@@ -295,23 +295,23 @@ steps:
         args:
           - name: "falseSkips"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "trueEvaluates"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "trueFails"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "missingResolvesTrue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "missingStaysUnknown"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -339,10 +339,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicControlGuardedChoice
+module atomiccontrolguardedchoice
 on Start {
-  let firstTrue as :number be 10 when false, or 20 when true, or 30 when true, otherwise 40
-  let otherwiseValue as :number be 10 when false, or 20 when nothing, otherwise 40
+  let firstTrue be (10 when false, or 20 when true, or 30 when true, otherwise 40) as :Number
+  let otherwiseValue be (10 when false, or 20 when nothing, otherwise 40) as :Number
   emit Done(firstTrue: firstTrue, otherwiseValue: otherwiseValue)
 }
 ```
@@ -366,11 +366,11 @@ steps:
         args:
           - name: "firstTrue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "20"
           - name: "otherwiseValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "40"
 ```
 
@@ -399,7 +399,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicControlForIteration
+module atomiccontrolforiteration
 on Start {
   for item in [1, 2] {
     emit Item(kind: 'list', value: item)
@@ -436,61 +436,61 @@ steps:
         args:
           - name: "kind"
             value:
-              type: ":text"
+              type: ":Text"
               value: "list"
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "Item"
         args:
           - name: "kind"
             value:
-              type: ":text"
+              type: ":Text"
               value: "list"
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
       - name: "Item"
         args:
           - name: "kind"
             value:
-              type: ":text"
+              type: ":Text"
               value: "range"
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "Item"
         args:
           - name: "kind"
             value:
-              type: ":text"
+              type: ":Text"
               value: "range"
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
       - name: "Item"
         args:
           - name: "kind"
             value:
-              type: ":text"
+              type: ":Text"
               value: "text"
           - name: "value"
             value:
-              type: ":text"
+              type: ":Text"
               value: "a"
       - name: "Item"
         args:
           - name: "kind"
             value:
-              type: ":text"
+              type: ":Text"
               value: "text"
           - name: "value"
             value:
-              type: ":text"
+              type: ":Text"
               value: "b"
       - name: "Done"
         args: []
@@ -521,7 +521,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicControlForEmptySources
+module atomiccontrolforemptysources
 on Start {
   for item in [] {
     emit Item(kind: 'empty-list', value: item)
@@ -587,7 +587,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicControlReturns
+module atomiccontrolreturns
 function addOne(_ value) be value + 1
 predicate isLarge(_ value) be value > 2
 
@@ -620,11 +620,11 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "matched"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -653,8 +653,8 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicControlSeededRandom
-on Start(seed as :number) {
+module atomiccontrolseededrandom
+on Start(seed as :Number) {
   random with seed {
     let inner be random from 1 to 6
     emit Roll(scope: 'inner', value: inner)
@@ -680,23 +680,23 @@ steps:
       args:
         - name: "seed"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "7"
     local:
       - name: "Roll"
         args:
           - name: "scope"
             value:
-              type: ":text"
+              type: ":Text"
               value: "inner"
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "Done"
         args:
           - name: "after"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```

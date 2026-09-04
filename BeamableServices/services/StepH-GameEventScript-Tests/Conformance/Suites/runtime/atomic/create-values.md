@@ -41,7 +41,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicLoadPrimitiveValues
+module atomicloadprimitivevalues
 on Start {
   let nothingValue be nothing
   let trueValue be true
@@ -75,39 +75,39 @@ steps:
         args:
           - name: "nothingValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "trueValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "falseValue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integerValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "42"
           - name: "floatValue"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "12.5"
           - name: "meterValue"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               unit: ":meter"
               value: "7"
           - name: "percentageValue"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.25"
           - name: "textValue"
             value:
-              type: ":text"
+              type: ":Text"
               value: "hello"
           - name: "tagValue"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "boss"
 ```
 
@@ -136,21 +136,21 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCreateVectorPointValues
+module atomiccreatevectorpointvalues
 on Start {
-  let vectorValue be :vector(1, 2.5, 3)
-  let pointValue be :point(4, 5.5, 6)
-  let liftedVector be :vector(vectorValue)
-  let liftedVectorWithZ be :vector(vectorValue, 9)
-  let vectorFromPoint be :vector(pointValue)
-  let liftedPoint be :point(pointValue)
-  let liftedPointWithZ be :point(pointValue, 8)
-  let pointFromVector be :point(vectorValue)
-  let unitVector be :vector(3m, 4m)
-  let unitLiftedVector be :vector(unitVector)
-  let unitLiftedVectorWithZ be :vector(unitVector, 20m)
-  let unitPoint be :point(3m, 4m)
-  let unitLiftedPointWithZ be :point(unitPoint, 20m)
+  let vectorValue be :Vector(1, 2.5, 3)
+  let pointValue be :Point(4, 5.5, 6)
+  let liftedVector be :Vector(vectorValue)
+  let liftedVectorWithZ be :Vector(vectorValue, 9)
+  let vectorFromPoint be :Vector(pointValue)
+  let liftedPoint be :Point(pointValue)
+  let liftedPointWithZ be :Point(pointValue, 8)
+  let pointFromVector be :Point(vectorValue)
+  let unitVector be :Vector(3m, 4m)
+  let unitLiftedVector be :Vector(unitVector)
+  let unitLiftedVectorWithZ be :Vector(unitVector, 20m)
+  let unitPoint be :Point(3m, 4m)
+  let unitLiftedPointWithZ be :Point(unitPoint, 20m)
   emit Done(vectorValue: vectorValue, pointValue: pointValue, liftedVector: liftedVector, liftedVectorWithZ: liftedVectorWithZ, vectorFromPoint: vectorFromPoint, liftedPoint: liftedPoint, liftedPointWithZ: liftedPointWithZ, pointFromVector: pointFromVector, unitVector: unitVector, unitLiftedVector: unitLiftedVector, unitLiftedVectorWithZ: unitLiftedVectorWithZ, unitPoint: unitPoint, unitLiftedPointWithZ: unitLiftedPointWithZ)
 }
 ```
@@ -174,83 +174,83 @@ steps:
         args:
           - name: "vectorValue"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "1"
               y: "2.5"
               z: "3"
           - name: "pointValue"
             value:
-              type: ":point"
+              type: ":Point"
               x: "4"
               y: "5.5"
               z: "6"
           - name: "liftedVector"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "1"
               y: "2.5"
               z: "3"
           - name: "liftedVectorWithZ"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "1"
               y: "2.5"
               z: "9"
           - name: "vectorFromPoint"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "4"
               y: "5.5"
               z: "6"
           - name: "liftedPoint"
             value:
-              type: ":point"
+              type: ":Point"
               x: "4"
               y: "5.5"
               z: "6"
           - name: "liftedPointWithZ"
             value:
-              type: ":point"
+              type: ":Point"
               x: "4"
               y: "5.5"
               z: "8"
           - name: "pointFromVector"
             value:
-              type: ":point"
+              type: ":Point"
               x: "1"
               y: "2.5"
               z: "3"
           - name: "unitVector"
             value:
-              type: ":vector"
+              type: ":Vector"
               unit: ":meter"
               x: "3"
               y: "4"
               z: "0"
           - name: "unitLiftedVector"
             value:
-              type: ":vector"
+              type: ":Vector"
               unit: ":meter"
               x: "3"
               y: "4"
               z: "0"
           - name: "unitLiftedVectorWithZ"
             value:
-              type: ":vector"
+              type: ":Vector"
               unit: ":meter"
               x: "3"
               y: "4"
               z: "20"
           - name: "unitPoint"
             value:
-              type: ":point"
+              type: ":Point"
               unit: ":meter"
               x: "3"
               y: "4"
               z: "0"
           - name: "unitLiftedPointWithZ"
             value:
-              type: ":point"
+              type: ":Point"
               unit: ":meter"
               x: "3"
               y: "4"
@@ -282,11 +282,11 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCreateRangeValues
+module atomiccreaterangevalues
 on Start {
-  let ascending as :range be from 1 to 3
-  let stepped as :range be from 1 to 5 step 2
-  let descending as :range be from 5 to 1 step (0 - 2)
+  let ascending be (from 1 to 3) as :Range
+  let stepped be (from 1 to 5 step 2) as :Range
+  let descending be (from 5 to 1 step (0 - 2)) as :Range
   emit Done(ascending: ascending, stepped: stepped, descending: descending)
 }
 ```
@@ -310,19 +310,19 @@ steps:
         args:
           - name: "ascending"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "1"
               to: "3"
               step: "1"
           - name: "stepped"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "1"
               to: "5"
               step: "2"
           - name: "descending"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "5"
               to: "1"
               step: "-2"
@@ -353,10 +353,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCreateFloatRangeValues
+module atomiccreatefloatrangevalues
 on Start {
-  let ascending as :range be from 1.5 to 3.5 step 0.5
-  let descending as :range be from 3.5 to 1.5 step (0 - 0.5)
+  let ascending be (from 1.5 to 3.5 step 0.5) as :Range
+  let descending be (from 3.5 to 1.5 step (0 - 0.5)) as :Range
   emit Done(ascending: ascending, descending: descending)
 }
 ```
@@ -380,13 +380,13 @@ steps:
         args:
           - name: "ascending"
             value:
-              type: ":range"
+              type: ":Range.binary64"
               from: "1.5"
               to: "3.5"
               step: "0.5"
           - name: "descending"
             value:
-              type: ":range"
+              type: ":Range.binary64"
               from: "3.5"
               to: "1.5"
               step: "-0.5"
@@ -419,10 +419,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCreateDiceValues
+module atomiccreatedicevalues
 on Start {
   let diceValue be roll dice 6d3
-  let constructedDice be :dice([1, 2, 3])
+  let constructedDice be :Dice([1, 2, 3])
   emit Done(diceValue: diceValue, length: diceValue[:count], constructedDice: constructedDice, constructedLength: constructedDice[:count])
 }
 ```
@@ -446,7 +446,7 @@ steps:
         args:
           - name: "diceValue"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 3
                 - 3
@@ -456,18 +456,18 @@ steps:
                 - 1
           - name: "length"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "constructedDice"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 3
                 - 2
                 - 1
           - name: "constructedLength"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
 ```
 
@@ -496,7 +496,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCreateListValues
+module atomiccreatelistvalues
 on Start {
   let values be [1, 'two', pi, true]
   emit Done(values: values, length: values[:count])
@@ -522,19 +522,19 @@ steps:
         args:
           - name: "values"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":text"
+                - type: ":Text"
                   value: "two"
-                - type: ":float"
+                - type: ":Number.binary64"
                   value: "3.141592653589793"
-                - type: ":boolean"
+                - type: ":Boolean"
                   value: true
           - name: "length"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
 ```
 
@@ -563,7 +563,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCreateMapValues
+module atomiccreatemapvalues
 on Start {
   let unit be [name: 'Ada', hp: 10, alive: true, role: #boss]
   emit Done(unit: unit, length: unit[:count])
@@ -589,27 +589,27 @@ steps:
         args:
           - name: "unit"
             value:
-              type: ":map"
+              type: ":Map"
               entries:
                 - key: "alive"
                   value:
-                    type: ":boolean"
+                    type: ":Boolean"
                     value: true
                 - key: "hp"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "10"
                 - key: "name"
                   value:
-                    type: ":text"
+                    type: ":Text"
                     value: "Ada"
                 - key: "role"
                   value:
-                    type: ":tag"
+                    type: ":Tag"
                     value: "boss"
           - name: "length"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
 ```
 
@@ -638,7 +638,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicCreateNestedCollectionValues
+module atomiccreatenestedcollectionvalues
 on Start {
   let squad be [leader: [name: 'Ada', hp: 10], inventory: ['potion', 'key'], tags: [#boss, #scout]]
   emit Done(squad: squad, length: squad[:count])
@@ -664,39 +664,39 @@ steps:
         args:
           - name: "squad"
             value:
-              type: ":map"
+              type: ":Map"
               entries:
                 - key: "inventory"
                   value:
-                    type: ":list"
+                    type: ":List"
                     items:
-                      - type: ":text"
+                      - type: ":Text"
                         value: "potion"
-                      - type: ":text"
+                      - type: ":Text"
                         value: "key"
                 - key: "leader"
                   value:
-                    type: ":map"
+                    type: ":Map"
                     entries:
                       - key: "hp"
                         value:
-                          type: ":integer"
+                          type: ":Number.int64"
                           value: "10"
                       - key: "name"
                         value:
-                          type: ":text"
+                          type: ":Text"
                           value: "Ada"
                 - key: "tags"
                   value:
-                    type: ":list"
+                    type: ":List"
                     items:
-                      - type: ":tag"
+                      - type: ":Tag"
                         value: "boss"
-                      - type: ":tag"
+                      - type: ":Tag"
                         value: "scout"
           - name: "length"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
 ```
 
@@ -725,7 +725,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicStageLiteralValueKinds
+module atomicstageliteralvaluekinds
 on Start {
   let stagedList be [false, true, 12, 12.5, 7m, 1.5m, 25%, 'txt', #ready]
   let stagedMap be [falseValue: false, trueValue: true, integerValue: 12, floatValue: 12.5, meterInteger: 7m, meterFloat: 1.5m, percentageValue: 25%, textValue: 'txt', tagValue: #ready]
@@ -752,69 +752,69 @@ steps:
         args:
           - name: "stagedList"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":boolean"
+                - type: ":Boolean"
                   value: false
-                - type: ":boolean"
+                - type: ":Boolean"
                   value: true
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "12"
-                - type: ":float"
+                - type: ":Number.binary64"
                   value: "12.5"
-                - type: ":integer"
+                - type: ":Quantity.int64"
                   unit: ":meter"
                   value: "7"
-                - type: ":float"
+                - type: ":Quantity.binary64"
                   unit: ":meter"
                   value: "1.5"
-                - type: ":percentage"
+                - type: ":Percentage"
                   value: "0.25"
-                - type: ":text"
+                - type: ":Text"
                   value: "txt"
-                - type: ":tag"
+                - type: ":Tag"
                   value: "ready"
           - name: "stagedMap"
             value:
-              type: ":map"
+              type: ":Map"
               entries:
                 - key: "falseValue"
                   value:
-                    type: ":boolean"
+                    type: ":Boolean"
                     value: false
                 - key: "floatValue"
                   value:
-                    type: ":float"
+                    type: ":Number.binary64"
                     value: "12.5"
                 - key: "integerValue"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "12"
                 - key: "meterFloat"
                   value:
-                    type: ":float"
+                    type: ":Quantity.binary64"
                     unit: ":meter"
                     value: "1.5"
                 - key: "meterInteger"
                   value:
-                    type: ":integer"
+                    type: ":Quantity.int64"
                     unit: ":meter"
                     value: "7"
                 - key: "percentageValue"
                   value:
-                    type: ":percentage"
+                    type: ":Percentage"
                     value: "0.25"
                 - key: "tagValue"
                   value:
-                    type: ":tag"
+                    type: ":Tag"
                     value: "ready"
                 - key: "textValue"
                   value:
-                    type: ":text"
+                    type: ":Text"
                     value: "txt"
                 - key: "trueValue"
                   value:
-                    type: ":boolean"
+                    type: ":Boolean"
                     value: true
 ```
 
@@ -843,21 +843,21 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicGeneratedListBuilderValues
+module atomicgeneratedlistbuildervalues
 on Start {
   let sourceList be [1, 'two', #boss, true]
   let emptyList be []
-  let dice as :dice be [6, 4, 2]
+  let dice be ([6, 4, 2]) as :Dice
   let text be 'ab'
   let map be [a: 1, b: 2]
-  let fromRange be :list[:select item from 1 to 4 => item * item]
-  let filteredRange be :list[:select item from 1 to 6 where item mod 2 = 0 => item]
-  let fromList be :list[:select item in sourceList => item]
-  let fromEmptyList be :list[:select item in emptyList => item]
-  let fromDice be :list[:select item in dice => item + 1]
-  let fromText be :list[:select item in text => item]
-  let fromMap be :list[:select item in map => item * 10]
-  let invalidSource be :list[:select item in 10 => item]
+  let fromRange be :List[:select item from 1 to 4 => item * item]
+  let filteredRange be :List[:select item from 1 to 6 where item mod 2 = 0 => item]
+  let fromList be :List[:select item in sourceList => item]
+  let fromEmptyList be :List[:select item in emptyList => item]
+  let fromDice be :List[:select item in dice => item + 1]
+  let fromText be :List[:select item in text => item]
+  let fromMap be :List[:select item in map => item * 10]
+  let invalidSource be :List[:select item in 10 => item]
   emit Done(fromRange: fromRange, filteredRange: filteredRange, fromList: fromList, fromEmptyList: fromEmptyList, fromDice: fromDice, fromText: fromText, fromMap: fromMap, invalidSource: invalidSource)
 }
 ```
@@ -881,71 +881,71 @@ steps:
         args:
           - name: "fromRange"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "9"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "16"
           - name: "filteredRange"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "6"
           - name: "fromList"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":text"
+                - type: ":Text"
                   value: "two"
-                - type: ":tag"
+                - type: ":Tag"
                   value: "boss"
-                - type: ":boolean"
+                - type: ":Boolean"
                   value: true
           - name: "fromEmptyList"
             value:
-              type: ":list"
+              type: ":List"
               items: []
           - name: "fromDice"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "7"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "5"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
           - name: "fromText"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":text"
+                - type: ":Text"
                   value: "a"
-                - type: ":text"
+                - type: ":Text"
                   value: "b"
           - name: "fromMap"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "10"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "20"
           - name: "invalidSource"
             value:
-              type: ":list"
+              type: ":List"
               items: []
 ```
 
@@ -974,17 +974,17 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicGeneratedRangeIteratorVariants
+module atomicgeneratedrangeiteratorvariants
 on Start {
   let fromValue be 2
   let toValue be 5
   let stepValue be 2
-  let shortRange be :list[:select item from 1 to 3 => item]
-  let dynamicRange be :list[:select item from fromValue to toValue => item]
-  let dynamicSteppedRange be :list[:select item from fromValue to toValue step stepValue => item]
-  let descendingRange be :list[:select item from 5 to 1 step (0 - 2) => item]
-  let floatRange be :list[:select item from 1.5 to 2.5 step 0.5 => item]
-  let emptyRange be :list[:select item from 3 to 1 => item]
+  let shortRange be :List[:select item from 1 to 3 => item]
+  let dynamicRange be :List[:select item from fromValue to toValue => item]
+  let dynamicSteppedRange be :List[:select item from fromValue to toValue step stepValue => item]
+  let descendingRange be :List[:select item from 5 to 1 step (0 - 2) => item]
+  let floatRange be :List[:select item from 1.5 to 2.5 step 0.5 => item]
+  let emptyRange be :List[:select item from 3 to 1 => item]
   emit Done(shortRange: shortRange, dynamicRange: dynamicRange, dynamicSteppedRange: dynamicSteppedRange, descendingRange: descendingRange, floatRange: floatRange, emptyRange: emptyRange)
 }
 ```
@@ -1008,57 +1008,57 @@ steps:
         args:
           - name: "shortRange"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
           - name: "dynamicRange"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "5"
           - name: "dynamicSteppedRange"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
           - name: "descendingRange"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "5"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
           - name: "floatRange"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":float"
+                - type: ":Number.binary64"
                   value: "1.5"
-                - type: ":float"
+                - type: ":Number.binary64"
                   value: "2"
-                - type: ":float"
+                - type: ":Number.binary64"
                   value: "2.5"
           - name: "emptyRange"
             value:
-              type: ":list"
+              type: ":List"
               items: []
 ```
 
@@ -1087,7 +1087,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicLargeStagedList
+module atomiclargestagedlist
 on Start {
   let values be [
     1, 2, 3, 4, 5, 6, 7, 8,
@@ -1119,6 +1119,6 @@ steps:
         args:
           - name: "count"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "40"
 ```

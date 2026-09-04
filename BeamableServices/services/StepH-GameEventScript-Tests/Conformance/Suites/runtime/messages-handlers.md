@@ -43,12 +43,12 @@ sources:
 ### Source code under test
 
 ```ges
-module MessageBinding
+module messagebinding
 on Start(unit, target) {
-  let shoot as :handler be Shoot(unit, target)
-  let msg as :message be shoot(unit: unit, target: target)
-  let isHandler be shoot is :handler
-  let isMessage be msg is :message
+  let shoot be (Shoot(unit, target)) as :Handler
+  let msg be (shoot(unit: unit, target: target)) as :Message
+  let isHandler be shoot is :Handler
+  let isMessage be msg is :Message
   emit msg
   emit shoot(unit: unit, target: target)
   emit Shoot(unit: unit, target: target)
@@ -72,52 +72,52 @@ steps:
       args:
         - name: "unit"
           value:
-            type: ":text"
-            value: "u_1"
+            type: ":Text"
+            value: "u1"
         - name: "target"
           value:
-            type: ":text"
-            value: "t_1"
+            type: ":Text"
+            value: "t1"
     local:
       - name: "Shoot"
         args:
           - name: "unit"
             value:
-              type: ":text"
-              value: "u_1"
+              type: ":Text"
+              value: "u1"
           - name: "target"
             value:
-              type: ":text"
-              value: "t_1"
+              type: ":Text"
+              value: "t1"
       - name: "Shoot"
         args:
           - name: "unit"
             value:
-              type: ":text"
-              value: "u_1"
+              type: ":Text"
+              value: "u1"
           - name: "target"
             value:
-              type: ":text"
-              value: "t_1"
+              type: ":Text"
+              value: "t1"
       - name: "Shoot"
         args:
           - name: "unit"
             value:
-              type: ":text"
-              value: "u_1"
+              type: ":Text"
+              value: "u1"
           - name: "target"
             value:
-              type: ":text"
-              value: "t_1"
+              type: ":Text"
+              value: "t1"
       - name: "Done"
         args:
           - name: "isHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -146,11 +146,11 @@ sources:
 ### Source code under test
 
 ```ges
-module DirectMessageLiteral
+module directmessageliteral
 on Start(value) {
   let scaled be value * 2
   let myMessageDirect be Success(message: 'world', value: scaled)
-  emit Done(isMessage: myMessageDirect is :message, name: myMessageDirect.name, signature: myMessageDirect.signature, text: myMessageDirect.arguments.message, value: myMessageDirect.arguments.value)
+  emit Done(isMessage: myMessageDirect is :Message, name: myMessageDirect.name, signature: myMessageDirect.signature, text: myMessageDirect.arguments.message, value: myMessageDirect.arguments.value)
 }
 ```
 
@@ -170,30 +170,30 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "21"
     local:
       - name: "Done"
         args:
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "name"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Success"
           - name: "signature"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Success(message,value)"
           - name: "text"
             value:
-              type: ":text"
+              type: ":Text"
               value: "world"
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "42"
 ```
 
@@ -223,7 +223,7 @@ sources:
 
 ```ges
 on Start {
-  let handler as :handler be Shoot()
+  let handler be (Shoot()) as :Handler
   emit Done(name: handler.name, parameterCount: handler.parameters[:count])
 }
 ```
@@ -247,11 +247,11 @@ steps:
         args:
           - name: "name"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Shoot"
           - name: "parameterCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
 ```
 
@@ -280,12 +280,12 @@ sources:
 ### Source code under test
 
 ```ges
-module UntypedHandlerBinding
+module untypedhandlerbinding
 on Start(success) {
   let myHandler be Success(message, value)
   let myMessage be myHandler(message: 'hello', value: success)
   let invalidMessage be myHandler(message: 'hello', other: success)
-  emit Done(handlerIsHandler: myHandler is :handler, handlerName: myHandler.name, handlerSignature: myHandler.signature, secondParameter: myHandler.parameters[2], messageIsMessage: myMessage is :message, messageName: myMessage.name, messageSignature: myMessage.signature, text: myMessage.arguments.message, value: myMessage.arguments.value, invalidIsNothing: invalidMessage is nothing)
+  emit Done(handlerIsHandler: myHandler is :Handler, handlerName: myHandler.name, handlerSignature: myHandler.signature, secondParameter: myHandler.parameters[2], messageIsMessage: myMessage is :Message, messageName: myMessage.name, messageSignature: myMessage.signature, text: myMessage.arguments.message, value: myMessage.arguments.value, invalidIsNothing: invalidMessage is nothing)
 }
 ```
 
@@ -305,50 +305,50 @@ steps:
       args:
         - name: "success"
           value:
-            type: ":boolean"
+            type: ":Boolean"
             value: true
     local:
       - name: "Done"
         args:
           - name: "handlerIsHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "handlerName"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Success"
           - name: "handlerSignature"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Success(message,value)"
           - name: "secondParameter"
             value:
-              type: ":text"
+              type: ":Text"
               value: "value"
           - name: "messageIsMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "messageName"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Success"
           - name: "messageSignature"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Success(message,value)"
           - name: "text"
             value:
-              type: ":text"
+              type: ":Text"
               value: "hello"
           - name: "value"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "invalidIsNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -377,13 +377,13 @@ sources:
 ### Source code under test
 
 ```ges
-module MessageBindingNoOp
+module messagebindingnoop
 on Start(unit, hp) {
-  let shoot as :handler be Shoot(unit, target)
-  let invalid as :message be shoot(unit: unit, hp: hp)
+  let shoot be (Shoot(unit, target)) as :Handler
+  let invalid be (shoot(unit: unit)) as :Message
   emit invalid
   emit unit
-  emit Done(isMessage: invalid is :message, isNothing: invalid is nothing)
+  emit Done(isMessage: invalid is :Message, isNothing: invalid is nothing)
 }
 ```
 
@@ -403,22 +403,22 @@ steps:
       args:
         - name: "unit"
           value:
-            type: ":text"
-            value: "u_1"
+            type: ":Text"
+            value: "u1"
         - name: "hp"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "10"
     local:
       - name: "Done"
         args:
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "isNothing"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -447,11 +447,11 @@ sources:
 ### Source code under test
 
 ```ges
-module MessageFirstClass
+module messagefirstclass
 on Start(unit, target) {
-  let shoot as :handler be Shoot(unit, target)
-  let msg as :message be shoot(unit: unit, target: target)
-  emit Done(msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: shoot is :handler, handlerIsMap: shoot is :map, msgName: msg.name, msgSignature: msg[#signature], handlerName: shoot.name, handlerParameterCount: shoot.parameters[:count], messageArgumentCount: msg.arguments[:count])
+  let shoot be (Shoot(unit, target)) as :Handler
+  let msg be (shoot(unit: unit, target: target)) as :Message
+  emit Done(msgIsMessage: msg is :Message, msgIsMap: msg is :Map, handlerIsHandler: shoot is :Handler, handlerIsMap: shoot is :Map, msgName: msg.name, msgSignature: msg[#signature], handlerName: shoot.name, handlerParameterCount: shoot.parameters[:count], messageArgumentCount: msg.arguments[:count])
 }
 ```
 
@@ -471,50 +471,50 @@ steps:
       args:
         - name: "unit"
           value:
-            type: ":text"
-            value: "u_1"
+            type: ":Text"
+            value: "u1"
         - name: "target"
           value:
-            type: ":text"
-            value: "t_1"
+            type: ":Text"
+            value: "t1"
     local:
       - name: "Done"
         args:
           - name: "msgIsMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "msgIsMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "handlerIsHandler"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "handlerIsMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "msgName"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Shoot"
           - name: "msgSignature"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Shoot(unit,target)"
           - name: "handlerName"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Shoot"
           - name: "handlerParameterCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "messageArgumentCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
 ```
 
@@ -544,8 +544,8 @@ sources:
 
 ```ges
 on Start(unit, target) {
-  let shoot as :handler be Shoot(unit, target)
-  let msg as :message be shoot(unit: unit, target: target)
+  let shoot be (Shoot(unit, target)) as :Handler
+  let msg be (shoot(unit: unit, target: target)) as :Message
   emit Done(messageValue: msg)
 }
 ```
@@ -566,29 +566,29 @@ steps:
       args:
         - name: "unit"
           value:
-            type: ":text"
-            value: "u_1"
+            type: ":Text"
+            value: "u1"
         - name: "target"
           value:
-            type: ":text"
-            value: "t_1"
+            type: ":Text"
+            value: "t1"
     local:
       - name: "Done"
         args:
           - name: "messageValue"
             value:
-              type: ":message"
+              type: ":Message"
               message:
                 name: "Shoot"
                 args:
                   - name: "unit"
                     value:
-                      type: ":text"
-                      value: "u_1"
+                      type: ":Text"
+                      value: "u1"
                   - name: "target"
                     value:
-                      type: ":text"
-                      value: "t_1"
+                      type: ":Text"
+                      value: "t1"
 ```
 
 ---
@@ -616,7 +616,7 @@ sources:
 ### Source code under test
 
 ```ges
-module RuntimeInitialization
+module runtimeinitialization
 
 on initialization {
   emit Ready(value: 1)
@@ -633,6 +633,6 @@ initialization:
       args:
         - name: "value"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "1"
 ```

@@ -41,7 +41,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicTrigIntrinsics
+module atomictrigintrinsics
 on Start {
   let missing be nothing
   emit Done(sinZero: sin 0, sinParen: sin(0), sinDegree: sin 90°, cosPi: cos pi, tanZero: tan 0, asinOne: asin 1, acosOne: acos 1, atanOne: atan 1, atanTwoQuarter: atan2(1, 1), atanTwoZero: atan2(0, 0), invalidUnit: sin 10m, invalidText: sin 'hello', invalidTag: sin #angle, invalidDomain: asin 2, missing: sin missing)
@@ -67,59 +67,59 @@ steps:
         args:
           - name: "sinZero"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0"
           - name: "sinParen"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0"
           - name: "sinDegree"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "1"
           - name: "cosPi"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "-1"
           - name: "tanZero"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0"
           - name: "asinOne"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "1.5707963267949"
           - name: "acosOne"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0"
           - name: "atanOne"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.785398163397448"
           - name: "atanTwoQuarter"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.785398163397448"
           - name: "atanTwoZero"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0"
           - name: "invalidUnit"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidText"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidTag"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidDomain"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "missing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -147,10 +147,10 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicDistanceIntrinsics
+module atomicdistanceintrinsics
 on Start {
-  let pointA be :point(1m, 2m, 2m)
-  let pointB be :point(4m, 6m, 2m)
+  let pointA be :Point(1m, 2m, 2m)
+  let pointB be :Point(4m, 6m, 2m)
   emit Done(hypotTwo: hypot(3, 4), hypotThree: hypot(3, 4, 12), hypotUnit: hypot(3m, 4m), hypotMismatch: hypot(3m, 4s), scalarDistance: distance(10m, 4m), coordinateDistanceTwo: distance(0, 0, 3, 4), coordinateDistanceThree: distance(0, 0, 0, 2, 3, 6), pointDistance: distance(pointA, pointB), scalarDistanceSquared: distance squared(10m, 4m), coordinateDistanceSquaredTwo: distance squared(0, 0, 3, 4), coordinateDistanceSquaredThree: distance squared(0, 0, 0, 2, 3, 6), pointDistanceSquared: distance squared(pointA, pointB), invalidTextDistance: distance('a', 'b'))
 }
 ```
@@ -174,57 +174,57 @@ steps:
         args:
           - name: "hypotTwo"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "5"
           - name: "hypotThree"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "13"
           - name: "hypotUnit"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               unit: ":meter"
               value: "5"
           - name: "hypotMismatch"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "scalarDistance"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               unit: ":meter"
               value: "6"
           - name: "coordinateDistanceTwo"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "5"
           - name: "coordinateDistanceThree"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "7"
           - name: "pointDistance"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               unit: ":meter"
               value: "5"
           - name: "scalarDistanceSquared"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "36"
           - name: "coordinateDistanceSquaredTwo"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "25"
           - name: "coordinateDistanceSquaredThree"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "49"
           - name: "pointDistanceSquared"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "25"
           - name: "invalidTextDistance"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -252,13 +252,13 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicVectorNavigationIntrinsics
+module atomicvectornavigationintrinsics
 on Start {
-  let a be :vector(1, 2, 3)
-  let b be :vector(4, 5, 6)
-  let right be :vector(1, 0, 0)
-  let up be :vector(0, 1, 0)
-  emit Done(lengthObject: length squared(a), lengthTwo: length squared(3, 4), lengthThree: length squared(1, 2, 2), normalizeObject: normalize(:vector(3, 0, 4)), normalizeTwo: normalize(3, 4), normalizeThree: normalize(0, 3, 4), normalizeZero: normalize(0, 0), dotObject: dot(a, b), dotTwo: dot(1, 2, 3, 4), dotThree: dot(1, 2, 3, 4, 5, 6), crossObject: cross(right, up), crossTwo: cross(1, 0, 0, 1), crossThree: cross(1, 0, 0, 0, 1, 0), angleObject: angle between(right, up), angleTwo: angle between(1, 0, 0, 1), angleThree: angle between(1, 0, 0, 0, 1, 0), angleZero: angle between(0, 0, 1, 0))
+  let a be :Vector(1, 2, 3)
+  let b be :Vector(4, 5, 6)
+  let right be :Vector(1, 0, 0)
+  let up be :Vector(0, 1, 0)
+  emit Done(lengthObject: length squared(a), lengthTwo: length squared(3, 4), lengthThree: length squared(1, 2, 2), normalizeObject: normalize(:Vector(3, 0, 4)), normalizeTwo: normalize(3, 4), normalizeThree: normalize(0, 3, 4), normalizeZero: normalize(0, 0), dotObject: dot(a, b), dotTwo: dot(1, 2, 3, 4), dotThree: dot(1, 2, 3, 4, 5, 6), crossObject: cross(right, up), crossTwo: cross(1, 0, 0, 1), crossThree: cross(1, 0, 0, 0, 1, 0), angleObject: angle between(right, up), angleTwo: angle between(1, 0, 0, 1), angleThree: angle between(1, 0, 0, 0, 1, 0), angleZero: angle between(0, 0, 1, 0))
 }
 ```
 
@@ -281,78 +281,78 @@ steps:
         args:
           - name: "lengthObject"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "14"
           - name: "lengthTwo"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "25"
           - name: "lengthThree"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "9"
           - name: "normalizeObject"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "0.6"
               y: "0"
               z: "0.8"
           - name: "normalizeTwo"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "0.6"
               y: "0.8"
               z: "0"
           - name: "normalizeThree"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "0"
               y: "0.6"
               z: "0.8"
           - name: "normalizeZero"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "dotObject"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "32"
           - name: "dotTwo"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "11"
           - name: "dotThree"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "32"
           - name: "crossObject"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "0"
               y: "0"
               z: "1"
           - name: "crossTwo"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "1"
           - name: "crossThree"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "0"
               y: "0"
               z: "1"
           - name: "angleObject"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "1.5707963267949"
           - name: "angleTwo"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "1.5707963267949"
           - name: "angleThree"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "1.5707963267949"
           - name: "angleZero"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```

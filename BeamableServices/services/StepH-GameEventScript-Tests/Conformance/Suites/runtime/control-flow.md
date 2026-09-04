@@ -90,7 +90,7 @@ sources:
 ### Source code under test
 
 ```ges
-module CommentRuntime
+module commentruntime
 // initialize flow
 on Start { // handler begins
   let hp be 10 // base value
@@ -117,7 +117,7 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
 ```
 
@@ -173,15 +173,15 @@ steps:
         args:
           - name: "lines"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "values"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "20"
           - name: "result"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
 ```
 
@@ -235,20 +235,20 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "2"
     local:
       - name: "Next"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
       - name: "Done"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
 ```
 
@@ -428,19 +428,19 @@ steps:
       args:
         - name: "first"
           value:
-            type: ":boolean"
+            type: ":Boolean"
             value: false
         - name: "second"
           value:
-            type: ":boolean"
+            type: ":Boolean"
             value: true
         - name: "items"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "1"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "2"
     local:
       - name: "Two"
@@ -449,13 +449,13 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "Item"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
 ```
 
@@ -510,24 +510,24 @@ steps:
       args:
         - name: "values"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "1"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "5"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "9"
         - name: "threshold"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "7"
     local:
       - name: "Passed"
         args:
           - name: "count"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
 ```
 
@@ -564,7 +564,7 @@ on Start {
     emit FalseBranch
   }
 
-  let explicitFalse be unknown as :boolean
+  let explicitFalse be unknown as :Boolean
   if explicitFalse {
     emit ExplicitTrue
   } else {
@@ -598,7 +598,7 @@ steps:
         args:
           - name: "unknown"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -650,55 +650,55 @@ steps:
         args:
           - name: "notUnknown"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "falseAndUnknown"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "unknownAndFalse"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "trueAndUnknown"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "unknownAndTrue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "unknownAndUnknown"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "trueOrUnknown"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "unknownOrTrue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "falseOrUnknown"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "unknownOrFalse"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "unknownOrUnknown"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "trueXorFalse"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "trueXorTrue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "unknownXorTrue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "unknownXorUnknown"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -754,19 +754,19 @@ steps:
         args:
           - name: "skippedAnd"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "skippedOr"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "evaluatedAnd"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "evaluatedOr"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -834,55 +834,55 @@ steps:
         args:
           - name: "skipped"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "unicodeSkipped"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "unicodeEvaluated"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "unicodeSingleSkipped"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "unicodeSingleEvaluated"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "rightAssoc"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "absorbedChain"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "notHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "absorbed"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "applied"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "failed"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "unknownResolved"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "unknownBlocked"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -910,7 +910,7 @@ sources:
 ### Source code under test
 
 ```ges
-module SiblingBranchScopes
+module siblingbranchscopes
 on Start(flag) {
   if flag {
     let result be 20
@@ -938,14 +938,14 @@ steps:
       args:
         - name: "flag"
           value:
-            type: ":boolean"
+            type: ":Boolean"
             value: true
     local:
       - name: "Done"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "20"
 ```
 
@@ -1107,13 +1107,13 @@ steps:
       args:
         - name: "text"
           value:
-            type: ":text"
+            type: ":Text"
             value: "ab"
     local:
       - name: "Found"
         args:
           - name: "value"
             value:
-              type: ":text"
+              type: ":Text"
               value: "a"
 ```

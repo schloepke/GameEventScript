@@ -837,20 +837,21 @@ internal static class ConformanceSchemaBinder
         var type = RequiredString(node, "type");
         var allowed = type switch
         {
-            ":nothing" => new[] { "type" },
-            ":text" or ":tag" or ":boolean" or ":percentage" => new[] { "type", "value" },
-            ":integer" or ":float" => new[] { "type", "value", "unit" },
-            ":vector" or ":point" => new[] { "type", "x", "y", "z", "unit" },
-            ":list" => new[] { "type", "items" },
-            ":map" => new[] { "type", "entries" },
-            ":dice" => new[] { "type", "rolls" },
-            ":range" => new[] { "type", "from", "to", "step", "rangeKind" },
-            ":message" => new[] { "type", "message" },
+            ":Nothing" => new[] { "type" },
+            ":Text" or ":Tag" or ":Boolean" or ":Percentage" => new[] { "type", "value" },
+            ":Number.int64" or ":Number.binary64" => new[] { "type", "value" },
+            ":Quantity.int64" or ":Quantity.binary64" => new[] { "type", "value", "unit" },
+            ":Vector" or ":Point" => new[] { "type", "x", "y", "z", "unit" },
+            ":List" => new[] { "type", "items" },
+            ":Map" => new[] { "type", "entries" },
+            ":Dice" => new[] { "type", "rolls" },
+            ":Range.int64" or ":Range.binary64" => new[] { "type", "from", "to", "step" },
+            ":Message" => new[] { "type", "message" },
             _ => new[] { "type", "entries" }
         };
         Closed(node, allowed);
         var scalars = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var name in new[] { "value", "unit", "x", "y", "z", "from", "to", "step", "rangeKind" })
+        foreach (var name in new[] { "value", "unit", "x", "y", "z", "from", "to", "step" })
         {
             var value = Optional(node, name);
             if (value is not null) scalars.Add(name, ScalarText(value));
@@ -889,33 +890,31 @@ internal static class ConformanceSchemaBinder
         bool Has(params string[] names) => names.All(scalars.ContainsKey);
         var valid = type switch
         {
-            ":nothing" => true,
-            ":text" or ":tag" or ":boolean" or ":percentage" => Has("value"),
-            ":integer" or ":float" => Has("value"),
-            ":vector" or ":point" => Has("x", "y", "z"),
-            ":list" => items is not null,
-            ":map" => entries is not null,
-            ":dice" => Optional(node, "rolls") is not null,
-            ":range" => Has("from", "to", "step"),
-            ":message" => message is not null,
+            ":Nothing" => true,
+            ":Text" or ":Tag" or ":Boolean" or ":Percentage" => Has("value"),
+            ":Number.int64" or ":Number.binary64" or ":Quantity.int64" or ":Quantity.binary64" => Has("value"),
+            ":Vector" or ":Point" => Has("x", "y", "z"),
+            ":List" => items is not null,
+            ":Map" => entries is not null,
+            ":Dice" => Optional(node, "rolls") is not null,
+            ":Range.int64" or ":Range.binary64" => Has("from", "to", "step"),
+            ":Message" => message is not null,
             _ => entries is not null
         };
         if (!valid) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, $"Portable value type '{type}' is missing required fields.", node.Range);
-        if (type == ":integer")
+        if (type is ":Number.int64" or ":Quantity.int64")
         {
             var integerNode = Required(node, "value");
             _ = String(integerNode);
             _ = ParseInt64(integerNode);
         }
-        if (type == ":boolean") _ = Boolean(Required(node, "value"));
-        if (type is ":text" or ":tag") _ = RequiredString(node, "value");
+        if (type == ":Boolean") _ = Boolean(Required(node, "value"));
+        if (type is ":Text" or ":Tag") _ = RequiredString(node, "value");
         if (Optional(node, "unit") is { } unit) _ = String(unit);
-        if (type is ":float" or ":percentage") RequireFiniteOrSpecialBinary64(RequiredString(node, "value"), Required(node, "value").Range);
+        if (type is ":Number.binary64" or ":Quantity.binary64" or ":Percentage") RequireFiniteOrSpecialBinary64(RequiredString(node, "value"), Required(node, "value").Range);
         foreach (var name in new[] { "x", "y", "z", "from", "to", "step" }) if (Optional(node, name) is { } numeric) RequireFiniteOrSpecialBinary64(String(numeric), numeric.Range);
-        if (type == ":dice") RequireKind(Required(node, "rolls"), YamlNodeKind.Sequence, "dice.rolls must be a sequence.");
-        if (type == ":range" && OptionalString(node, "rangeKind") is { } rangeKind && rangeKind is not "integer" and not "float")
-            throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "rangeKind must be integer or float.", Property(node, "rangeKind")!.Value.Range);
-        if (type == ":range" && string.Equals(OptionalString(node, "rangeKind"), "integer", StringComparison.Ordinal))
+        if (type == ":Dice") RequireKind(Required(node, "rolls"), YamlNodeKind.Sequence, "dice.rolls must be a sequence.");
+        if (type == ":Range.int64")
         {
             _ = ParseInt64(Required(node, "from"));
             _ = ParseInt64(Required(node, "to"));

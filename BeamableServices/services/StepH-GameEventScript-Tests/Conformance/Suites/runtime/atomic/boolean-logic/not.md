@@ -41,7 +41,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicBooleanLogicA
+module atomicbooleanlogica
 on Start {
   let vNothing be nothing
   let vBooleanTrue be true
@@ -60,19 +60,19 @@ on Start {
   let vTextEmpty be ''
   let vTagTrue be #true
   let vTagFalse be #false
-  let vTagTrueUpper as :tag be 'True'
+  let vTagTrueUpper be ('True') as :Tag
   let vTagPi be pi
   let vTagPhi be 1.6180339887498948
   let vTagInfinity be infinity
   let vTagNan be #nan
   let vTagCustom be #custom
-  let vVector be :vector(1, 2, 3)
-  let vVectorZero be :vector(0, 0, 0)
-  let vPoint be :point(1, 2, 3)
-  let vPointZero be :point(0, 0, 0)
+  let vVector be :Vector(1, 2, 3)
+  let vVectorZero be :Vector(0, 0, 0)
+  let vPoint be :Point(1, 2, 3)
+  let vPointZero be :Point(0, 0, 0)
   let vList be [1, 2]
   let vMap be [name: 'Ada']
-  let vDice as :dice be [6, 2, 4]
+  let vDice be ([6, 2, 4]) as :Dice
   emit Done(nothing: not vNothing, booleanTrue: not vBooleanTrue, booleanFalse: not vBooleanFalse, integerOne: not vIntegerOne, integerZero: not vIntegerZero, floatPositive: not vFloatPositive, percentagePositive: not vPercentagePositive, percentageZero: not vPercentageZero, textTrue: not vTextTrue, textTrueUpper: not vTextTrueUpper, textFalse: not vTextFalse, textOne: not vTextOne, textZero: not vTextZero, textInvalid: not vTextInvalid, textEmpty: not vTextEmpty, tagTrue: not vTagTrue, tagFalse: not vTagFalse, tagTrueUpper: not vTagTrueUpper, tagPi: not vTagPi, tagPhi: not vTagPhi, tagInfinity: not vTagInfinity, tagNan: not vTagNan, tagCustom: not vTagCustom, vector: not vVector, vectorZero: not vVectorZero, point: not vPoint, pointZero: not vPointZero, list: not vList, map: not vMap, dice: not vDice)
 }
 ```
@@ -96,118 +96,118 @@ steps:
         args:
           - name: "nothing"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "booleanTrue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "booleanFalse"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "integerOne"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "integerZero"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "floatPositive"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentagePositive"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "percentageZero"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "textTrue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "textTrueUpper"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "textFalse"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "textOne"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "textZero"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "textInvalid"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "textEmpty"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "tagTrue"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "tagFalse"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "tagTrueUpper"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "tagPi"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "tagPhi"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "tagInfinity"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "tagNan"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "tagCustom"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "vector"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "vectorZero"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "point"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "pointZero"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "list"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "map"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "dice"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```

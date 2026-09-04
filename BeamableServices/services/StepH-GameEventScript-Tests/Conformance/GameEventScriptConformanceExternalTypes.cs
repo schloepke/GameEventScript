@@ -18,7 +18,7 @@ internal static class GameEventScriptConformanceExternalTypes
 
     private static GameEventScriptExternalTypeDefinition CreateAimDefinition()
     {
-        const string typeName = "aim";
+        const string typeName = "Aim";
         return new GameEventScriptExternalTypeDefinition(
             typeName,
             [

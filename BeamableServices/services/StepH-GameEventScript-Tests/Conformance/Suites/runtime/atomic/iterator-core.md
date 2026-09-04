@@ -41,14 +41,14 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicIteratorCreateNextClose
+module atomiciteratorcreatenextclose
 on Start {
   let values be [1, 2, 3]
-  let dice as :dice be [6, 4, 2]
+  let dice be ([6, 4, 2]) as :Dice
   let text be 'abc'
   let tags be #boss
   let map be [a: 1, b: 2]
-  let range as :range be from 1 to 4
+  let range be (from 1 to 4) as :Range
   let fromRange be range[:select item => item * 2]
   let fromList be values[:select item => item + 10]
   let fromDice be dice[:select item => item]
@@ -79,69 +79,69 @@ steps:
         args:
           - name: "fromRange"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "6"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "8"
           - name: "fromList"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "11"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "12"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "13"
           - name: "fromDice"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "6"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
           - name: "fromText"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":text"
+                - type: ":Text"
                   value: "a"
-                - type: ":text"
+                - type: ":Text"
                   value: "b"
-                - type: ":text"
+                - type: ":Text"
                   value: "c"
           - name: "fromTag"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":text"
+                - type: ":Text"
                   value: "b"
-                - type: ":text"
+                - type: ":Text"
                   value: "o"
-                - type: ":text"
+                - type: ":Text"
                   value: "s"
-                - type: ":text"
+                - type: ":Text"
                   value: "s"
           - name: "fromMap"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
           - name: "fromEmptyList"
             value:
-              type: ":list"
+              type: ":List"
               items: []
 ```
 
@@ -170,12 +170,12 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicHasAnyAllDirectAndIterators
+module atomichasanyalldirectanditerators
 on Start {
   let values be [true, false, true]
   let emptyList be []
-  let dice as :dice be [6, 4, 2]
-  let range as :range be from 0 to 2
+  let dice be ([6, 4, 2]) as :Dice
+  let range be (from 0 to 2) as :Range
   let text be '10'
   let map be [a: false, b: true]
   emit Done(listAny: values[:any value where value], listAll: values[:all value where value], emptyAny: emptyList[:any value where value], emptyAll: emptyList[:all value where value], diceAny: dice[:any value where value], diceAll: dice[:all value where value], rangeAny: range[:any value where value], rangeAll: range[:all value where value], textAny: text[:any value where value], textAll: text[:all value where value], mapAny: map[:any value where value], mapAll: map[:all value where value], iteratorAnyHit: [1, 2, 3][:any value where value > 2], iteratorAnyMiss: [1, 2, 3][:any value where value > 9], iteratorAllHit: [1, 2, 3][:all value where value > 0], iteratorAllMiss: [1, 2, 3][:all value where value > 1])
@@ -201,67 +201,67 @@ steps:
         args:
           - name: "listAny"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "listAll"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "emptyAny"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "emptyAll"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "diceAny"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "diceAll"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "rangeAny"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "rangeAll"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "textAny"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "textAll"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "mapAny"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "mapAll"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "iteratorAnyHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "iteratorAnyMiss"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "iteratorAllHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "iteratorAllMiss"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -290,7 +290,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicIteratorSelectFilterCollectList
+module atomiciteratorselectfiltercollectlist
 on Start {
   let values be [1, 2, 3, 4, 5]
   let mapped be values[:select value => value * 10]
@@ -321,51 +321,51 @@ steps:
         args:
           - name: "mapped"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "10"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "20"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "30"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "40"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "50"
           - name: "filtered"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "5"
           - name: "chained"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "6"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "8"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "10"
           - name: "captured"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "101"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "102"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "103"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "104"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "105"
 ```
 
@@ -394,11 +394,11 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicIteratorContainsTerminals
+module atomiciteratorcontainsterminals
 on Start {
   let values be [1, 2, 3, 4, 5]
-  let dice as :dice be [6, 4, 2]
-  let range as :range be from 1 to 5
+  let dice be ([6, 4, 2]) as :Dice
+  let range be (from 1 to 5) as :Range
   let text be 'abcd'
   let map be [alpha: 10, beta: 20]
   emit Done(listContainsHit: values[:filter value where value > 2][:contains 4], listContainsMiss: values[:filter value where value > 2][:contains 2], listAnyHit: values[:filter value where value > 2][:contains any [1, 5]], listAnyMiss: values[:filter value where value > 2][:contains any [1, 2]], listAllHit: values[:filter value where value > 2][:contains all [3, 5]], listAllMiss: values[:filter value where value > 2][:contains all [3, 2]], diceContainsHit: dice[:select die => die][:contains 4], diceAnyHit: dice[:select die => die][:contains any [1, 6]], diceAllHit: dice[:select die => die][:contains all [6, 2]], rangeContainsHit: range[:select item => item][:contains 4], rangeAnyHit: range[:select item => item][:contains any [0, 5]], rangeAllHit: range[:select item => item][:contains all [1, 5]], textContainsHit: text[:select char => char][:contains 'b'], textAllHit: text[:select char => char][:contains all ['a', 'd']], mapContainsHit: map[:select value => value][:contains 10], mapAnyHit: map[:select value => value][:contains any [99, 20]], mapAllHit: map[:select value => value][:contains all [10, 20]])
@@ -424,71 +424,71 @@ steps:
         args:
           - name: "listContainsHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "listContainsMiss"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "listAnyHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "listAnyMiss"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "listAllHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "listAllMiss"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "diceContainsHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "diceAnyHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "diceAllHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "rangeContainsHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "rangeAnyHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "rangeAllHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "textContainsHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "textAllHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "mapContainsHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "mapAnyHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "mapAllHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -517,7 +517,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicIteratorTakeDropDirectSlices
+module atomiciteratortakedropdirectslices
 on Start {
   let values be [1, 2, 3, 4, 5]
   emit Done(takeFirst: values[:filter value where value > 1][:take first 2], dropFirst: values[:filter value where value > 1][:drop first 2], takeLast: values[:filter value where value > 1][:take last 2], dropLast: values[:filter value where value > 1][:drop last 2], takeHighest: values[:filter value where value > 1][:take highest 2], takeLowest: values[:filter value where value > 1][:take lowest 2], dropHighest: values[:filter value where value > 1][:drop highest 2], dropLowest: values[:filter value where value > 1][:drop lowest 2], mappedTakeFirst: values[:select value => value * 10][:take first 2])
@@ -543,75 +543,75 @@ steps:
         args:
           - name: "takeFirst"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
           - name: "dropFirst"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "5"
           - name: "takeLast"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "5"
           - name: "dropLast"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
           - name: "takeHighest"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "5"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
           - name: "takeLowest"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
           - name: "dropHighest"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
           - name: "dropLowest"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "5"
           - name: "mappedTakeFirst"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "10"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "20"
 ```
 
@@ -640,15 +640,15 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicTakeDropDirectBoundaries
+module atomictakedropdirectboundaries
 on Start {
   let values be [1, 2, 3]
   let emptyList be []
-  let dice as :dice be [6, 4, 2]
-  let emptyDice as :dice be []
-  let range as :range be from 1 to 3
-  let floatRange as :range be from 1.5 to 2.5 step 0.5
-  emit Done(listTakeFirstTooMany: values[:take first 9], listDropFirstTooManyLen: values[:drop first 9][:count], listTakeLastTooMany: values[:take last 9], listDropLastTooManyLen: values[:drop last 9][:count], emptyListTakeLen: emptyList[:take first 2][:count], emptyListDropLen: emptyList[:drop first 2][:count], diceTakeFirstTooMany: dice[:take first 9], diceDropFirstTooManyLen: dice[:drop first 9][:count], emptyDiceTakeLen: emptyDice[:take first 2][:count], emptyDiceDropLen: emptyDice[:drop first 2][:count], rangeTakeFirstTooMany: range[:take first 9], rangeDropFirstTooManyLen: range[:drop first 9][:count], floatRangeTakeLastTooMany: floatRange[:take last 9], floatRangeDropLastTooManyLen: floatRange[:drop last 9][:count], invalidIntTakeFirst: 10[:take first 1], invalidIntDropFirst: 10[:drop first 1], invalidIntTakeLast: 10[:take last 1], invalidIntDropLast: 10[:drop last 1], invalidIntTakeHighest: 10[:take highest 1], invalidIntTakeLowest: 10[:take lowest 1], invalidIntDropHighest: 10[:drop highest 1], invalidIntDropLowest: 10[:drop lowest 1], invalidNothingTakeFirst: nothing[:take first 1], invalidTextTakeFirst: 'abc'[:take first 1], invalidTagTakeFirst: #abc[:take first 1], invalidVectorTakeFirst: :vector(1, 2, 3)[:take first 1], invalidPointTakeFirst: :point(1, 2, 3)[:take first 1], invalidMapTakeFirst: [a: 1][:take first 1])
+  let dice be ([6, 4, 2]) as :Dice
+  let emptyDice be ([]) as :Dice
+  let range be (from 1 to 3) as :Range
+  let floatRange be (from 1.5 to 2.5 step 0.5) as :Range
+  emit Done(listTakeFirstTooMany: values[:take first 9], listDropFirstTooManyLen: values[:drop first 9][:count], listTakeLastTooMany: values[:take last 9], listDropLastTooManyLen: values[:drop last 9][:count], emptyListTakeLen: emptyList[:take first 2][:count], emptyListDropLen: emptyList[:drop first 2][:count], diceTakeFirstTooMany: dice[:take first 9], diceDropFirstTooManyLen: dice[:drop first 9][:count], emptyDiceTakeLen: emptyDice[:take first 2][:count], emptyDiceDropLen: emptyDice[:drop first 2][:count], rangeTakeFirstTooMany: range[:take first 9], rangeDropFirstTooManyLen: range[:drop first 9][:count], floatRangeTakeLastTooMany: floatRange[:take last 9], floatRangeDropLastTooManyLen: floatRange[:drop last 9][:count], invalidIntTakeFirst: 10[:take first 1], invalidIntDropFirst: 10[:drop first 1], invalidIntTakeLast: 10[:take last 1], invalidIntDropLast: 10[:drop last 1], invalidIntTakeHighest: 10[:take highest 1], invalidIntTakeLowest: 10[:take lowest 1], invalidIntDropHighest: 10[:drop highest 1], invalidIntDropLowest: 10[:drop lowest 1], invalidNothingTakeFirst: nothing[:take first 1], invalidTextTakeFirst: 'abc'[:take first 1], invalidTagTakeFirst: #abc[:take first 1], invalidVectorTakeFirst: :Vector(1, 2, 3)[:take first 1], invalidPointTakeFirst: :Point(1, 2, 3)[:take first 1], invalidMapTakeFirst: [a: 1][:take first 1])
 }
 ```
 
@@ -671,121 +671,121 @@ steps:
         args:
           - name: "listTakeFirstTooMany"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
           - name: "listDropFirstTooManyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "listTakeLastTooMany"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
           - name: "listDropLastTooManyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "emptyListTakeLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "emptyListDropLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "diceTakeFirstTooMany"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 6
                 - 4
                 - 2
           - name: "diceDropFirstTooManyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "emptyDiceTakeLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "emptyDiceDropLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "rangeTakeFirstTooMany"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "1"
               to: "3"
               step: "1"
           - name: "rangeDropFirstTooManyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "floatRangeTakeLastTooMany"
             value:
-              type: ":range"
+              type: ":Range.binary64"
               from: "1.5"
               to: "2.5"
               step: "0.5"
           - name: "floatRangeDropLastTooManyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "invalidIntTakeFirst"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidIntDropFirst"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidIntTakeLast"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidIntDropLast"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidIntTakeHighest"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidIntTakeLowest"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidIntDropHighest"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidIntDropLowest"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidNothingTakeFirst"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidTextTakeFirst"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidTagTakeFirst"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidVectorTakeFirst"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidPointTakeFirst"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidMapTakeFirst"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -813,7 +813,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicTakeDropIteratorBoundaries
+module atomictakedropiteratorboundaries
 on Start {
   let values be [1, 2, 3]
   let emptyIterator be values[:filter value where false]
@@ -840,75 +840,75 @@ steps:
         args:
           - name: "takeFirstTooMany"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
           - name: "dropFirstTooManyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "takeLastTooMany"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
           - name: "dropLastTooManyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "takeHighestTooMany"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
           - name: "dropHighestTooManyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "takeLowestTooMany"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
           - name: "dropLowestTooManyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "emptyTakeFirstLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "emptyDropLastLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "emptyTakeHighestLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "emptyDropLowestLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
 ```
 
@@ -939,14 +939,14 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicWeightedChooseLowering
+module atomicweightedchooselowering
 on Start {
   let units be [[name: 'A', weight: 1], [name: 'B', weight: 3], [name: 'C', weight: 6], [name: 'Ignored', weight: 0]]
   let liveUnits be units[:filter unit where unit.weight > 0]
   let weightedOne be liveUnits[:choose 1 weighted by unit => unit.weight]
   let weightedTwo be liveUnits[:choose 2 weighted by unit => unit.weight]
   let weightedFilteredOne be units[:choose 1 unit where unit.name <> 'Ignored' weighted by unit => unit.weight]
-  emit Done(weightedOne: weightedOne.name, weighted_1: weightedTwo[1].name, weighted_2: weightedTwo[2].name, weightedFilteredOne: weightedFilteredOne.name)
+  emit Done(weightedOne: weightedOne.name, weighted1: weightedTwo[1].name, weighted2: weightedTwo[2].name, weightedFilteredOne: weightedFilteredOne.name)
 }
 ```
 
@@ -969,19 +969,19 @@ steps:
         args:
           - name: "weightedOne"
             value:
-              type: ":text"
+              type: ":Text"
               value: "C"
-          - name: "weighted_1"
+          - name: "weighted1"
             value:
-              type: ":text"
+              type: ":Text"
               value: "A"
-          - name: "weighted_2"
+          - name: "weighted2"
             value:
-              type: ":text"
+              type: ":Text"
               value: "C"
           - name: "weightedFilteredOne"
             value:
-              type: ":text"
+              type: ":Text"
               value: "A"
 ```
 
@@ -1012,7 +1012,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicWeightedChooseInvalidWeights
+module atomicweightedchooseinvalidweights
 on Start {
   let emptyUnits be []
   let invalidUnits be [[name: 'Zero', weight: 0], [name: 'Negative', weight: 0 - 1], [name: 'Missing', weight: nothing], [name: 'Text', weight: 'bad'], [name: 'Infinite', weight: infinity]]
@@ -1023,7 +1023,7 @@ on Start {
   let invalidMany be invalidUnits[:choose 3 weighted by unit => unit.weight]
   let mixedOne be mixedUnits[:choose 1 weighted by unit => unit.weight]
   let mixedMany be mixedUnits[:choose 5 weighted by unit => unit.weight]
-  emit Done(emptyOneName: emptyOne.name, emptyManyLen: emptyMany[:count], invalidOneName: invalidOne.name, invalidManyLen: invalidMany[:count], mixedOneName: mixedOne.name, mixedManyLen: mixedMany[:count], mixed_1: mixedMany[1].name, mixed_2: mixedMany[2].name, mixed_3: mixedMany[3].name)
+  emit Done(emptyOneName: emptyOne.name, emptyManyLen: emptyMany[:count], invalidOneName: invalidOne.name, invalidManyLen: invalidMany[:count], mixedOneName: mixedOne.name, mixedManyLen: mixedMany[:count], mixed1: mixedMany[1].name, mixed2: mixedMany[2].name, mixed3: mixedMany[3].name)
 }
 ```
 
@@ -1046,37 +1046,37 @@ steps:
         args:
           - name: "emptyOneName"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "emptyManyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "invalidOneName"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidManyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "mixedOneName"
             value:
-              type: ":text"
+              type: ":Text"
               value: "A"
           - name: "mixedManyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
-          - name: "mixed_1"
+          - name: "mixed1"
             value:
-              type: ":text"
+              type: ":Text"
               value: "A"
-          - name: "mixed_2"
+          - name: "mixed2"
             value:
-              type: ":text"
+              type: ":Text"
               value: "B"
-          - name: "mixed_3"
+          - name: "mixed3"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -1106,13 +1106,13 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicWeightedChooseDuplicateWeights
+module atomicweightedchooseduplicateweights
 on Start {
   let units be [[name: 'A', weight: 1], [name: 'B', weight: 1], [name: 'C', weight: 1], [name: 'D', weight: 1]]
   let weightedOne be units[:choose 1 weighted by unit => unit.weight]
   let weightedAll be units[:choose 4 weighted by unit => unit.weight]
   let weightedBoundary be units[:choose 2 weighted by unit => unit.weight]
-  emit Done(one: weightedOne.name, all_1: weightedAll[1].name, all_2: weightedAll[2].name, all_3: weightedAll[3].name, all_4: weightedAll[4].name, boundary_1: weightedBoundary[1].name, boundary_2: weightedBoundary[2].name)
+  emit Done(one: weightedOne.name, all1: weightedAll[1].name, all2: weightedAll[2].name, all3: weightedAll[3].name, all4: weightedAll[4].name, boundary1: weightedBoundary[1].name, boundary2: weightedBoundary[2].name)
 }
 ```
 
@@ -1135,31 +1135,31 @@ steps:
         args:
           - name: "one"
             value:
-              type: ":text"
+              type: ":Text"
               value: "A"
-          - name: "all_1"
+          - name: "all1"
             value:
-              type: ":text"
+              type: ":Text"
               value: "A"
-          - name: "all_2"
+          - name: "all2"
             value:
-              type: ":text"
+              type: ":Text"
               value: "B"
-          - name: "all_3"
+          - name: "all3"
             value:
-              type: ":text"
+              type: ":Text"
               value: "C"
-          - name: "all_4"
+          - name: "all4"
             value:
-              type: ":text"
+              type: ":Text"
               value: "D"
-          - name: "boundary_1"
+          - name: "boundary1"
             value:
-              type: ":text"
+              type: ":Text"
               value: "B"
-          - name: "boundary_2"
+          - name: "boundary2"
             value:
-              type: ":text"
+              type: ":Text"
               value: "C"
 ```
 
@@ -1190,14 +1190,14 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicWeightedChooseCapturedWeights
+module atomicweightedchoosecapturedweights
 on Start {
   let scale be 2
   let bonus be 1
   let units be [[name: 'Low', weight: 1], [name: 'High', weight: 3], [name: 'Zero', weight: 0]]
   let weightedOne be units[:choose 1 weighted by unit => unit.weight * scale]
   let weightedTwo be units[:choose 2 weighted by unit => unit.weight + bonus]
-  emit Done(one: weightedOne.name, two_1: weightedTwo[1].name, two_2: weightedTwo[2].name, twoLen: weightedTwo[:count])
+  emit Done(one: weightedOne.name, two1: weightedTwo[1].name, two2: weightedTwo[2].name, twoLen: weightedTwo[:count])
 }
 ```
 
@@ -1220,19 +1220,19 @@ steps:
         args:
           - name: "one"
             value:
-              type: ":text"
+              type: ":Text"
               value: "High"
-          - name: "two_1"
+          - name: "two1"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Low"
-          - name: "two_2"
+          - name: "two2"
             value:
-              type: ":text"
+              type: ":Text"
               value: "High"
           - name: "twoLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
 ```
 
@@ -1263,11 +1263,11 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicChooseLowering
+module atomicchooselowering
 on Start {
   let values be [1, 2, 3, 4, 5]
-  let dice as :dice be [6, 5, 4, 3]
-  let range as :range be from 10 to 14
+  let dice be ([6, 5, 4, 3]) as :Dice
+  let range be (from 10 to 14) as :Range
   emit Done(chooseOne: values[:choose 1], chooseTwo: values[:choose 2], chooseFilteredOne: values[:choose 1 value where value > 2], chooseFilteredTwo: values[:choose 2 value where value > 2], randomOne: values[:choose 1 at random], randomTwo: values[:choose 2 at random], randomFilteredTwo: values[:choose 2 at random value where value > 2], diceRandomTwo: dice[:choose 2 at random], rangeRandomTwo: range[:choose 2 at random])
 }
 ```
@@ -1291,61 +1291,61 @@ steps:
         args:
           - name: "chooseOne"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "chooseTwo"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
           - name: "chooseFilteredOne"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "chooseFilteredTwo"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
           - name: "randomOne"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "randomTwo"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "5"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
           - name: "randomFilteredTwo"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "5"
           - name: "diceRandomTwo"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 6
                 - 4
           - name: "rangeRandomTwo"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "12"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "14"
 ```
 
@@ -1376,13 +1376,13 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicRandomChooseBoundaries
+module atomicrandomchooseboundaries
 on Start {
   let values be [1, 2, 3]
   let emptyList be []
-  let dice as :dice be [6, 4, 2]
-  let emptyDice as :dice be []
-  let range as :range be from 10 to 12
+  let dice be ([6, 4, 2]) as :Dice
+  let emptyDice be ([]) as :Dice
+  let range be (from 10 to 12) as :Range
   let emptyIterator be values[:filter value where false]
   emit Done(listOne: values[:choose 1 at random], listTakeTooMany: values[:choose 9 at random], emptyListOne: emptyList[:choose 1 at random], emptyListTakeLen: emptyList[:choose 2 at random][:count], diceOne: dice[:choose 1 at random], diceTakeTooMany: dice[:choose 9 at random], emptyDiceOne: emptyDice[:choose 1 at random], emptyDiceTakeLen: emptyDice[:choose 2 at random][:count], rangeOne: range[:choose 1 at random], rangeTakeTooMany: range[:choose 9 at random], iteratorTakeTooMany: values[:filter value where true][:choose 9 at random], emptyIteratorOne: emptyIterator[:choose 1 at random], emptyIteratorTakeLen: emptyIterator[:choose 2 at random][:count], invalidIntOne: 10[:choose 1 at random], invalidIntTake: 10[:choose 2 at random], invalidMapTake: [a: 1][:choose 2 at random])
 }
@@ -1407,83 +1407,83 @@ steps:
         args:
           - name: "listOne"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "listTakeTooMany"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
           - name: "emptyListOne"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "emptyListTakeLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "diceOne"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "diceTakeTooMany"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 6
                 - 4
                 - 2
           - name: "emptyDiceOne"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "emptyDiceTakeLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "rangeOne"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "rangeTakeTooMany"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "10"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "11"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "12"
           - name: "iteratorTakeTooMany"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
           - name: "emptyIteratorOne"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "emptyIteratorTakeLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "invalidIntOne"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidIntTake"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidMapTake"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -1511,11 +1511,11 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicTakeDropHighestLowestDirectFastPaths
+module atomictakedrophighestlowestdirectfastpaths
 on Start {
   let values be [1, 2, 3, 4, 5]
-  let dice as :dice be [6, 4, 2, 1]
-  let range as :range be from 1 to 5
+  let dice be ([6, 4, 2, 1]) as :Dice
+  let range be (from 1 to 5) as :Range
   emit Done(listTakeHighest: values[:take highest 2], listTakeLowest: values[:take lowest 2], listDropHighest: values[:drop highest 2], listDropLowest: values[:drop lowest 2], diceTakeHighest: dice[:take highest 2], diceTakeLowest: dice[:take lowest 2], diceDropHighest: dice[:drop highest 2], diceDropLowest: dice[:drop lowest 2], rangeTakeHighest: range[:take highest 2], rangeTakeLowest: range[:take lowest 2], rangeDropHighest: range[:drop highest 2], rangeDropLowest: range[:drop lowest 2])
 }
 ```
@@ -1539,85 +1539,85 @@ steps:
         args:
           - name: "listTakeHighest"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "5"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
           - name: "listTakeLowest"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
           - name: "listDropHighest"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
           - name: "listDropLowest"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "4"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "5"
           - name: "diceTakeHighest"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 6
                 - 4
           - name: "diceTakeLowest"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 2
                 - 1
           - name: "diceDropHighest"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 2
                 - 1
           - name: "diceDropLowest"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 6
                 - 4
           - name: "rangeTakeHighest"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "5"
               to: "4"
               step: "-1"
           - name: "rangeTakeLowest"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "1"
               to: "2"
               step: "1"
           - name: "rangeDropHighest"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "1"
               to: "3"
               step: "1"
           - name: "rangeDropLowest"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "3"
               to: "5"
               step: "1"
@@ -1648,12 +1648,12 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMapSelectorLoop
+module atomicmapselectorloop
 on Start {
   let units be [[id: #rook, hp: 10, team: #blue], [id: #mage, hp: 6, team: #red], [id: #rook, hp: 12, team: #green], [id: '', hp: 99, team: #hidden]]
   let emptyUnits be []
-  let dice as :dice be [6, 4, 2]
-  let range as :range be from 1 to 3
+  let dice be ([6, 4, 2]) as :Dice
+  let range be (from 1 to 3) as :Range
   let text be 'aba'
   let sourceMap be [b: 2, a: 1]
   let byId be units[:filter unit where true][:map unit by unit.id]
@@ -1687,86 +1687,86 @@ steps:
         args:
           - name: "byIdCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "rookHp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
           - name: "rookTeam"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "green"
           - name: "mageHp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "hpByIdCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "hpRook"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
           - name: "hpMage"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "missingEmpty"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "emptyByIdLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "diceMapLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "diceSix"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "diceFour"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "rangeMapLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "rangeTwo"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "textMapLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "textA"
             value:
-              type: ":text"
+              type: ":Text"
               value: "a"
           - name: "textB"
             value:
-              type: ":text"
+              type: ":Text"
               value: "b"
           - name: "mapValueLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "mapValueOne"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "mapValueTwo"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "20"
           - name: "invalidIntegerMapLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
 ```
 
@@ -1795,7 +1795,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMapSelectorDuplicateKeys
+module atomicmapselectorduplicatekeys
 on Start {
   let units be [[id: #rook, hp: 10, team: #blue], [id: #mage, hp: 6, team: #red], [id: #rook, hp: 12, team: #green], [id: #mage, hp: 8, team: #gold]]
   let byId be units[:filter unit where true][:map unit by unit.id]
@@ -1824,43 +1824,43 @@ steps:
         args:
           - name: "byIdLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "rookHp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
           - name: "rookTeam"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "green"
           - name: "mageHp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "8"
           - name: "mageTeam"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "gold"
           - name: "hpByIdLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "hpRook"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
           - name: "hpMage"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "8"
           - name: "iteratorRookHp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
           - name: "iteratorMageTeam"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "gold"
 ```
 
@@ -1889,7 +1889,7 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicMapSelectorInvalidKeysAndValues
+module atomicmapselectorinvalidkeysandvalues
 on Start {
   let units be [[id: #rook, hp: 10], [id: '', hp: 99], [id: nothing, hp: 42], [id: #mage, hp: 6]]
   let byId be units[:filter unit where true][:map unit by unit.id]
@@ -1918,47 +1918,47 @@ steps:
         args:
           - name: "byIdLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "rookHp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "10"
           - name: "mageHp"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "emptyKey"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "missingKey"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "missingByIdLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "missingRook"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "missingMage"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "textKeyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "textA"
             value:
-              type: ":text"
+              type: ":Text"
               value: "a"
           - name: "textB"
             value:
-              type: ":text"
+              type: ":Text"
               value: "b"
           - name: "textEmpty"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -1986,12 +1986,12 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicFirstLastSingle
+module atomicfirstlastsingle
 on Start {
   let values be [1, 2, 3, 4]
   let emptyList be []
-  let dice as :dice be [6, 4, 2]
-  let range as :range be from 1 to 3
+  let dice be ([6, 4, 2]) as :Dice
+  let range be (from 1 to 3) as :Range
   let text be 'ab'
   let map be [a: 1, b: 2]
   emit Done(first: values[:first], firstFiltered: values[:first value where value > 2], firstEmpty: emptyList[:first], last: values[:last], lastFiltered: values[:last value where value < 4], lastEmpty: emptyList[:last], single: values[:single value where value = 3], singleNone: values[:single value where value > 9], singleMany: values[:single value where value > 1], diceFirst: dice[:first], diceLast: dice[:last], rangeFirst: range[:first], rangeLast: range[:last], textFirst: text[:first], textLast: text[:last], textSingle: 'x'[:single], mapFirst: map[:first], mapLast: map[:last], listSingle: [9][:single])
@@ -2017,75 +2017,75 @@ steps:
         args:
           - name: "first"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "firstFiltered"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "firstEmpty"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "last"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "lastFiltered"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "lastEmpty"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "single"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "singleNone"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "singleMany"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "diceFirst"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
           - name: "diceLast"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "rangeFirst"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "rangeLast"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "textFirst"
             value:
-              type: ":text"
+              type: ":Text"
               value: "a"
           - name: "textLast"
             value:
-              type: ":text"
+              type: ":Text"
               value: "b"
           - name: "textSingle"
             value:
-              type: ":text"
+              type: ":Text"
               value: "x"
           - name: "mapFirst"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "mapLast"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "listSingle"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9"
 ```
 
@@ -2114,14 +2114,14 @@ sources:
 ### Source code under test
 
 ```ges
-module AtomicRangeIteratorBoundaries
+module atomicrangeiteratorboundaries
 on Start(maximum, minimum, huge) {
-  let maximumRange as :range be from maximum to maximum step 1
-  let minimumRange as :range be from minimum to minimum step -1
-  let hugeRange as :range be from huge to huge step 1.0
-  let wrongAscending as :range be from 3 to 1 step 1
-  let wrongDescending as :range be from 1 to 3 step -1
-  let zeroStep as :range be from 1 to 1 step 0
+  let maximumRange be (from maximum to maximum step 1) as :Range
+  let minimumRange be (from minimum to minimum step -1) as :Range
+  let hugeRange be (from huge to huge step 1.0) as :Range
+  let wrongAscending be (from 3 to 1 step 1) as :Range
+  let wrongDescending be (from 1 to 3 step -1) as :Range
+  let zeroStep be (from 1 to 1 step 0) as :Range
   let maximumValues be maximumRange[:select value => value]
   let minimumValues be minimumRange[:select value => value]
   let hugeValues be hugeRange[:select value => value]
@@ -2145,53 +2145,53 @@ steps:
       args:
         - name: "maximum"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "9223372036854775807"
         - name: "minimum"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "-9223372036854775808"
         - name: "huge"
           value:
-            type: ":float"
+            type: ":Number.binary64"
             value: "1e308"
     local:
       - name: "Done"
         args:
           - name: "maximumCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "maximumValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9223372036854775807"
           - name: "minimumCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "minimumValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-9223372036854775808"
           - name: "hugeCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "hugeValue"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "1e308"
           - name: "wrongAscendingCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "wrongDescendingCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "zeroStepCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
 ```

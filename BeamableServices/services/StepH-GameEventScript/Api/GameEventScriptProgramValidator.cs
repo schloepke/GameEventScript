@@ -29,6 +29,8 @@ public static class GameEventScriptProgramValidator
         _ = program ?? throw new ArgumentNullException(nameof(program));
         if (program.FormatVersion != GameEventScriptBinaryFormat.Version)
             Throw(GameEventScriptProgramFormatErrorCode.UnsupportedFormatVersion, $"Unsupported program format version '{program.FormatVersion}'.");
+        if (!GameEventScriptText.IsModuleName(program.ModuleName))
+            Throw(GameEventScriptProgramFormatErrorCode.InvalidProgram, $"Module name '{program.ModuleName}' does not use the portable module-name grammar.", (ushort)GameEventScriptSectionType.ProgramMetadata);
 
         ValidateStrings(program.StringConstants);
         ValidateLists(program.UInt16IndexLists);
@@ -195,7 +197,7 @@ public static class GameEventScriptProgramValidator
             {
                 var stringIndex = operand == GameEventScriptOpcodePrinter.OperandPart.CustomTypeName ? instruction.SecondaryStringIndex : instruction.StringIndex;
                 if (stringIndex >= program.StringConstants.Slices.Count) Throw(GameEventScriptProgramFormatErrorCode.InvalidStringIndex, "Instruction references a missing string.", (ushort)GameEventScriptSectionType.Code, instructionIndex);
-                if (operand == GameEventScriptOpcodePrinter.OperandPart.Tag && !IsPortableIdentifier(program.StringConstants, stringIndex)) InvalidOperand("Tag constants must use the portable lowercase ASCII name grammar.", instructionIndex);
+                if (operand == GameEventScriptOpcodePrinter.OperandPart.Tag && !IsPortablePlainName(program.StringConstants, stringIndex)) InvalidOperand("Tag constants must use the portable lowercase ASCII name grammar.", instructionIndex);
                 if (operand == GameEventScriptOpcodePrinter.OperandPart.CustomTypeName && !IsPortableTypeName(program.StringConstants, stringIndex))
                     InvalidOperand("Custom type names must use the portable lowercase ASCII type-name grammar.", instructionIndex);
                 continue;
@@ -284,9 +286,9 @@ public static class GameEventScriptProgramValidator
             if (!textIndexes) continue;
             if (role == GameEventScriptOpcodePrinter.OperandPart.MessageShapeList && index == 0)
             {
-                if (!IsPortableMessageName(program.StringConstants, list[index])) InvalidOperand("Message shape names must contain ASCII letters only.", instructionIndex);
+                if (!IsPortableMessageName(program.StringConstants, list[index])) InvalidOperand("Message shape names must start uppercase and contain only ASCII letters or digits.", instructionIndex);
             }
-            else if (!IsPortableUnlabeled(program.StringConstants, list[index]) && !IsPortableIdentifier(program.StringConstants, list[index]))
+            else if (!IsPortableUnlabeled(program.StringConstants, list[index]) && !IsPortablePlainName(program.StringConstants, list[index]))
             {
                 InvalidOperand("Argument and key names must use the portable lowercase ASCII identifier grammar.", instructionIndex);
             }
@@ -304,7 +306,8 @@ public static class GameEventScriptProgramValidator
         var validName = bind.Kind switch
         {
             MessageHandler or MessageNameHandler or OutboundMessage => IsPortableMessageName(program.StringConstants, bind.Name),
-            Function or Predicate or Record or ExternalType => IsPortableIdentifier(program.StringConstants, bind.Name),
+            Function or Predicate => IsPortablePlainName(program.StringConstants, bind.Name),
+            Record or ExternalType => IsPortableTypeName(program.StringConstants, bind.Name),
             ExtensionCall => IsPortableExtensionName(program.StringConstants, bind.Name),
             _ => true
         };
@@ -322,7 +325,7 @@ public static class GameEventScriptProgramValidator
         {
             var valid = allowUnlabeled
                 ? IsPortableUnlabeled(program.StringConstants, indexes[index]) || IsPortableIdentifier(program.StringConstants, indexes[index])
-                : IsPortableIdentifier(program.StringConstants, indexes[index]);
+                : IsPortablePlainName(program.StringConstants, indexes[index]);
             if (!valid)
                 Throw(GameEventScriptProgramFormatErrorCode.InvalidProgram, $"{role} does not use the portable ASCII grammar.", (ushort)GameEventScriptSectionType.Bindings, bindingIndex);
             if (!allowUnlabeled || IsPortableUnlabeled(program.StringConstants, indexes[index])) continue;
@@ -348,16 +351,29 @@ public static class GameEventScriptProgramValidator
         var slice = strings.Slices[stringIndex];
         if (slice.Length == 0) return false;
         var data = strings.Data.AsSpan();
-        for (var index = slice.Start; index < slice.Start + slice.Length; index++)
-            if (!IsAsciiLetter(data[index])) return false;
+        if (!IsAsciiUpper(data[slice.Start]))
+            return MatchesAscii(strings, stringIndex, "initialization") || MatchesAscii(strings, stringIndex, "undeliverable");
+        for (var index = slice.Start + 1; index < slice.Start + slice.Length; index++)
+            if (!IsAsciiLetterOrDigit(data[index])) return false;
         return true;
     }
 
     private static bool IsPortableIdentifier(GameEventScriptStringConstantSegment strings, ushort stringIndex)
         => IsPortableName(strings, stringIndex, allowNumericSuffix: true);
 
-    private static bool IsPortableTypeName(GameEventScriptStringConstantSegment strings, ushort stringIndex)
+    private static bool IsPortablePlainName(GameEventScriptStringConstantSegment strings, ushort stringIndex)
         => IsPortableName(strings, stringIndex, allowNumericSuffix: false);
+
+    private static bool IsPortableTypeName(GameEventScriptStringConstantSegment strings, ushort stringIndex)
+    {
+        var slice = strings.Slices[stringIndex];
+        if (slice.Length == 0) return false;
+        var data = strings.Data.AsSpan();
+        if (!IsAsciiUpper(data[slice.Start])) return false;
+        for (var index = slice.Start + 1; index < slice.Start + slice.Length; index++)
+            if (!IsAsciiLetterOrDigit(data[index])) return false;
+        return true;
+    }
 
     private static bool IsPortableName(GameEventScriptStringConstantSegment strings, ushort stringIndex, bool allowNumericSuffix)
     {
@@ -367,7 +383,7 @@ public static class GameEventScriptProgramValidator
         var end = slice.Start + slice.Length;
         if (!IsAsciiLower(data[slice.Start])) return false;
         var index = slice.Start + 1;
-        while (index < end && IsAsciiLetter(data[index])) index++;
+        while (index < end && IsAsciiLetterOrDigit(data[index])) index++;
         if (index == end) return true;
         if (!allowNumericSuffix || data[index++] != (byte)'_' || index == end) return false;
         if (data[index] == (byte)'0') return index + 1 == end;
@@ -396,26 +412,32 @@ public static class GameEventScriptProgramValidator
         }
 
         if (separator <= slice.Start || separator >= slice.Start + slice.Length - 1) return false;
-        return IsPortableIdentifierRange(data, slice.Start, separator) &&
-               IsPortableIdentifierRange(data, separator + 1, slice.Start + slice.Length);
+        return IsPortablePlainNameRange(data, slice.Start, separator) &&
+               IsPortablePlainNameRange(data, separator + 1, slice.Start + slice.Length);
     }
 
-    private static bool IsPortableIdentifierRange(ReadOnlySpan<byte> data, int start, int end)
+    private static bool IsPortablePlainNameRange(ReadOnlySpan<byte> data, int start, int end)
     {
         if (start >= end || !IsAsciiLower(data[start])) return false;
-        var index = start + 1;
-        while (index < end && IsAsciiLetter(data[index])) index++;
-        if (index == end) return true;
-        if (data[index++] != (byte)'_' || index == end) return false;
-        if (data[index] == (byte)'0') return index + 1 == end;
-        if (data[index] is < (byte)'1' or > (byte)'9') return false;
-        for (index++; index < end; index++)
-            if (data[index] is < (byte)'0' or > (byte)'9') return false;
+        for (var index = start + 1; index < end; index++)
+            if (!IsAsciiLetterOrDigit(data[index])) return false;
         return true;
     }
 
     private static bool IsAsciiLower(byte value) => value is >= (byte)'a' and <= (byte)'z';
+    private static bool IsAsciiUpper(byte value) => value is >= (byte)'A' and <= (byte)'Z';
     private static bool IsAsciiLetter(byte value) => IsAsciiLower(value) || value is >= (byte)'A' and <= (byte)'Z';
+    private static bool IsAsciiLetterOrDigit(byte value) => IsAsciiLetter(value) || value is >= (byte)'0' and <= (byte)'9';
+
+    private static bool MatchesAscii(GameEventScriptStringConstantSegment strings, ushort stringIndex, string expected)
+    {
+        var slice = strings.Slices[stringIndex];
+        if (slice.Length != expected.Length) return false;
+        var data = strings.Data.AsSpan();
+        for (var index = 0; index < expected.Length; index++)
+            if (data[slice.Start + index] != (byte)expected[index]) return false;
+        return true;
+    }
 
     private static bool HasBind(HashSet<ulong> indexedBindingIds, GameEventScriptBinaryBindKind kind, ushort id)
         => indexedBindingIds.Contains(((ulong)(byte)kind << 16) | id);

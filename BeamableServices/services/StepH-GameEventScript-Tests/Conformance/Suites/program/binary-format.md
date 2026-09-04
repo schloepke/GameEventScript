@@ -40,7 +40,7 @@ binaryFixture:
   id: gesb-v1-valid-runtime
   resourceId: gesb-v1.valid-runtime
   relativePath: GesbV1/valid-runtime.gesb
-  sha256: 594808EB171F039AF2182A22360C39183CC4960412EF3D76B97E3632603EECF8
+  sha256: DE88FAF472D5283E908DAD35BEAC07F6243B265F7DD4DA66B0B0D012A78D0FBC
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
@@ -50,7 +50,7 @@ binaryFixture:
 ### Source code under test
 
 ```ges
-module BinaryFixture
+module binaryfixture
 
 on Start(value) {
   let result be value + 1
@@ -71,8 +71,8 @@ gesBlock: expect
 binary:
   outcome: valid
   rewriteByteExact: true
-  rewriteSha256: 594808EB171F039AF2182A22360C39183CC4960412EF3D76B97E3632603EECF8
-  moduleName: BinaryFixture
+  rewriteSha256: DE88FAF472D5283E908DAD35BEAC07F6243B265F7DD4DA66B0B0D012A78D0FBC
+  moduleName: binaryfixture
   requiredRegisterCount: 3
   requiredCallStackDepth: 0
   opaqueSectionCount: 0
@@ -81,12 +81,12 @@ steps:
     input:
       args:
         - name: value
-          value: { type: ":integer", value: "2" }
+          value: { type: ":Number.int64", value: "2" }
     local:
       - name: Done
         args:
           - name: value
-            value: { type: ":integer", value: "3" }
+            value: { type: ":Number.int64", value: "3" }
 ```
 
 ---
@@ -105,7 +105,7 @@ binaryFixture:
   id: gesb-v1-valid-debug
   resourceId: gesb-v1.valid-debug
   relativePath: GesbV1/valid-debug.gesb
-  sha256: EAE9416A8C6C3905EEA9C74C6B0DE2CA62F68D2F8165E5EFB1DFA631FEEFC747
+  sha256: 726C63C9A199CDAA4C1F29197AF01A786B3A8DC31400544F7054244969F221A1
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
@@ -115,7 +115,7 @@ binaryFixture:
 ### Source code under test
 
 ```ges
-module BinaryFixture
+module binaryfixture
 
 on Start(value) {
   let result be value + 1
@@ -130,8 +130,8 @@ gesBlock: expect
 binary:
   outcome: valid
   rewriteByteExact: true
-  rewriteSha256: EAE9416A8C6C3905EEA9C74C6B0DE2CA62F68D2F8165E5EFB1DFA631FEEFC747
-  moduleName: BinaryFixture
+  rewriteSha256: 726C63C9A199CDAA4C1F29197AF01A786B3A8DC31400544F7054244969F221A1
+  moduleName: binaryfixture
   requiredRegisterCount: 3
   requiredCallStackDepth: 0
   opaqueSectionCount: 0
@@ -155,7 +155,7 @@ binaryFixture:
   id: gesb-v1-valid-opaque
   resourceId: gesb-v1.valid-opaque
   relativePath: GesbV1/valid-opaque.gesb
-  sha256: DC5CAB440C3BEB0B64F2F4D1331E30EC8E8464C422339D0CF54577DC048DFA38
+  sha256: C46CAC9FB7FE0E8ED034EF90822B6E22A92CDE30FD7A411A7827581F9CE3E79C
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
@@ -166,7 +166,7 @@ binaryFixture:
 ### Source code under test
 
 ```ges
-module BinaryFixture
+module binaryfixture
 
 on Start(value) {
   let result be value + 1
@@ -181,8 +181,8 @@ gesBlock: expect
 binary:
   outcome: valid
   rewriteByteExact: true
-  rewriteSha256: DC5CAB440C3BEB0B64F2F4D1331E30EC8E8464C422339D0CF54577DC048DFA38
-  moduleName: BinaryFixture
+  rewriteSha256: C46CAC9FB7FE0E8ED034EF90822B6E22A92CDE30FD7A411A7827581F9CE3E79C
+  moduleName: binaryfixture
   opaqueSectionCount: 1
 ```
 
@@ -204,7 +204,7 @@ binaryFixture:
   id: gesb-v1-valid-noncanonical-order
   resourceId: gesb-v1.valid-noncanonical-order
   relativePath: GesbV1/valid-noncanonical-order.gesb
-  sha256: 3CA2DA36927D73959747D3C55278DA9E9A7F8181D8FECC17B4B9AAE5CB887720
+  sha256: 16E2013841ACA210C8FAAFCFD2275F1EA53DA83DB0575B0B2E5DDD73A11C31B8
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
@@ -215,7 +215,7 @@ binaryFixture:
 ### Source code under test
 
 ```ges
-module BinaryFixture
+module binaryfixture
 
 on Start(value) {
   let result be value + 1
@@ -230,8 +230,8 @@ gesBlock: expect
 binary:
   outcome: valid
   rewriteByteExact: false
-  rewriteSha256: 594808EB171F039AF2182A22360C39183CC4960412EF3D76B97E3632603EECF8
-  moduleName: BinaryFixture
+  rewriteSha256: DE88FAF472D5283E908DAD35BEAC07F6243B265F7DD4DA66B0B0D012A78D0FBC
+  moduleName: binaryfixture
   opaqueSectionCount: 0
 ```
 
@@ -252,7 +252,7 @@ binaryFixture:
   id: gesb-v1-invalid-magic
   resourceId: gesb-v1.invalid-magic
   relativePath: GesbV1/invalid-magic.gesb
-  sha256: 5365273EA8403250C9011E8FBDD585EB7432818979327B07D668F9C382AFBFA5
+  sha256: 9A91C8994B76EB30F9F7A28ECCBB8AECE0743E66CC01BF7DCFB4DD8C32FDE5C3
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
@@ -262,7 +262,7 @@ binaryFixture:
 ### Source code under test
 
 ```ges
-module BinaryFixture
+module binaryfixture
 
 on Start(value) {
   let result be value + 1
@@ -297,7 +297,7 @@ binaryFixture:
   id: gesb-v1-invalid-truncated-payload
   resourceId: gesb-v1.invalid-truncated-payload
   relativePath: GesbV1/invalid-truncated-payload.gesb
-  sha256: BD3B9D78030AAF4442E5960FB44CB7CFAA4C34D8DFD4061CDF175ECB35476ED6
+  sha256: C31DCC0F1B9E0C5E9F2C9542FBD4399CA086C87EEC8129FC4DE343217C1007AA
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
@@ -307,7 +307,7 @@ binaryFixture:
 ### Source code under test
 
 ```ges
-module BinaryFixture
+module binaryfixture
 
 on Start(value) {
   let result be value + 1
@@ -344,7 +344,7 @@ binaryFixture:
   id: gesb-v1-invalid-missing-code
   resourceId: gesb-v1.invalid-missing-code
   relativePath: GesbV1/invalid-missing-code.gesb
-  sha256: AB520974D297772E67D9E776E41DFB10998F6421FF7A15EF331F0E7FE8FF8D41
+  sha256: 1BC9441D55862BB987FE8FD865B840CAFBC004FF15847A646D8B77FC479AA11B
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
@@ -354,7 +354,7 @@ binaryFixture:
 ### Source code under test
 
 ```ges
-module BinaryFixture
+module binaryfixture
 
 on Start(value) {
   let result be value + 1
@@ -390,7 +390,7 @@ binaryFixture:
   id: gesb-v1-invalid-duplicate-strings
   resourceId: gesb-v1.invalid-duplicate-strings
   relativePath: GesbV1/invalid-duplicate-strings.gesb
-  sha256: 98862622A6423C46455D3F10CC13771A7C1B113D6AE92EE41489B07E3F7CFFDC
+  sha256: BD9CE480E3EE62CA499FB83972FF2F9C4FA2B37128C4E110FE6A9957BE269C7F
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
@@ -400,7 +400,7 @@ binaryFixture:
 ### Source code under test
 
 ```ges
-module BinaryFixture
+module binaryfixture
 
 on Start(value) {
   let result be value + 1
@@ -437,7 +437,7 @@ binaryFixture:
   id: gesb-v1-invalid-string-index
   resourceId: gesb-v1.invalid-string-index
   relativePath: GesbV1/invalid-string-index.gesb
-  sha256: A76D94C4B131B232E675E3EAE00B0D19037F630E89EEB45AC024C4E925C3930C
+  sha256: C94B3058AB01921A1A49A145187A1FAA6EB79DE3CE4B9CF767D650E05CB7CEED
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
@@ -447,7 +447,7 @@ binaryFixture:
 ### Source code under test
 
 ```ges
-module BinaryFixture
+module binaryfixture
 
 on Start(value) {
   let result be value + 1
@@ -484,7 +484,7 @@ binaryFixture:
   id: gesb-v1-invalid-utf8
   resourceId: gesb-v1.invalid-utf8
   relativePath: GesbV1/invalid-utf8.gesb
-  sha256: 3A210F83E68AB4504867D697CFF1783A513C417CF8CD6CC79C87BEE6256B7FD4
+  sha256: 21B63F770343B171B65320BA233981FB15631694B0D0131B37F60AE9ED596C84
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
@@ -494,7 +494,7 @@ binaryFixture:
 ### Source code under test
 
 ```ges
-module BinaryFixture
+module binaryfixture
 
 on Start(value) {
   let result be value + 1
@@ -509,9 +509,9 @@ gesBlock: expect
 binary:
   outcome: readError
   errorCode: InvalidUtf8
-  byteOffset: 64
+  byteOffset: 90
   sectionType: 2
-  entryIndex: 0
+  entryIndex: 3
 ```
 
 ---
@@ -532,7 +532,7 @@ binaryFixture:
   id: gesb-v1-invalid-unknown-required
   resourceId: gesb-v1.invalid-unknown-required
   relativePath: GesbV1/invalid-unknown-required.gesb
-  sha256: FA42491DC0BF41CCFEB4589D77BABA483773979CA3143195630FBA453F72A17B
+  sha256: 4B8654D2CAFEE27985526BE93E2DE12DACE08BBB3E209DB83D8A32AE6C338D77
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
@@ -542,7 +542,7 @@ binaryFixture:
 ### Source code under test
 
 ```ges
-module BinaryFixture
+module binaryfixture
 
 on Start(value) {
   let result be value + 1
@@ -579,7 +579,7 @@ binaryFixture:
   id: gesb-v1-invalid-required-compression
   resourceId: gesb-v1.invalid-required-compression
   relativePath: GesbV1/invalid-required-compression.gesb
-  sha256: 6C2BB4AD7D4769901AE054FC3DF1200499016156E5ED3C87D19C05957DE46D4D
+  sha256: DD6AA897B289707914851EFB609A61B2B5C083F1B109D88FD661C70C64115163
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
@@ -589,7 +589,7 @@ binaryFixture:
 ### Source code under test
 
 ```ges
-module BinaryFixture
+module binaryfixture
 
 on Start(value) {
   let result be value + 1
@@ -627,7 +627,7 @@ binaryFixture:
   id: gesb-v1-invalid-indirect-call-cycle
   resourceId: gesb-v1.invalid-indirect-call-cycle
   relativePath: GesbV1/invalid-indirect-call-cycle.gesb
-  sha256: 9C4AC99A2EBA6637F818ED37D4E9ABD8C502A76A050C8D0DBC81E8188C048580
+  sha256: 35521038A0B3F48168AE93FBFBA0FE6F09E388EBC63BA3D8A4BDDD35037BA034
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 7
@@ -637,7 +637,7 @@ binaryFixture:
 ### Source code under test
 
 ```ges
-module IndirectCycleFixture
+module indirectcyclefixture
 
 function helper() be 1
 

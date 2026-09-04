@@ -421,7 +421,7 @@ internal sealed partial class GesBinaryBuilder
 
         private string ResolveModuleName()
             => string.IsNullOrWhiteSpace(_moduleName)
-                ? FormattableString.Invariant($"AnonymousModule_{ComputeBinaryHash():X8}")
+                ? FormattableString.Invariant($"anonymous.m{ComputeBinaryHash():x8}")
                 : _moduleName;
 
         private uint ComputeBinaryHash()

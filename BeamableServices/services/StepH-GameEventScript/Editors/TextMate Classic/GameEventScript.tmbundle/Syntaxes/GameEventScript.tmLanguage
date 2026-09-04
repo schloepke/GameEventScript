@@ -11,7 +11,7 @@
 		<string>ges</string>
 	</array>
 	<key>firstLineMatch</key>
-	<string>^\s*module\s+[A-Za-z_][A-Za-z0-9_]*\b</string>
+	<string>^\s*module\s+[a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*)*\b</string>
 	<key>name</key>
 	<string>GameEventScript</string>
 	<key>patterns</key>
@@ -97,9 +97,15 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>#[a-z][A-Za-z]*(?:_[0-9]+)?\b</string>
+					<string>#[a-z][A-Za-z0-9]*\b</string>
 					<key>name</key>
 					<string>entity.other.attribute-name.tag.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>\$[a-z][A-Za-z0-9]*\b</string>
+					<key>name</key>
+					<string>variable.other.constant.gameeventscript</string>
 				</dict>
 			</array>
 		</dict>
@@ -122,7 +128,7 @@
 						</dict>
 					</dict>
 					<key>match</key>
-					<string>\b(module)\s+([A-Za-z_][A-Za-z0-9_]*)\b</string>
+					<string>\b(module)\s+([a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*)*)\b</string>
 					<key>name</key>
 					<string>meta.module.gameeventscript</string>
 				</dict>
@@ -141,7 +147,7 @@
 						</dict>
 					</dict>
 					<key>match</key>
-					<string>\b(record)\s+(:[a-z][A-Za-z]*|[a-z][A-Za-z]*(?:_[0-9]+)?)\b</string>
+					<string>\b(record)\s+(:[A-Z][A-Za-z0-9]*)\b</string>
 					<key>name</key>
 					<string>meta.record.gameeventscript</string>
 				</dict>
@@ -160,7 +166,7 @@
 						</dict>
 					</dict>
 					<key>match</key>
-					<string>\b(function)\s+([A-Za-z_][A-Za-z0-9_]*)\b</string>
+					<string>\b(function)\s+([a-z][A-Za-z0-9]*)\b</string>
 					<key>name</key>
 					<string>meta.function.gameeventscript</string>
 				</dict>
@@ -179,7 +185,7 @@
 						</dict>
 					</dict>
 					<key>match</key>
-					<string>\b(predicate)\s+([A-Za-z_][A-Za-z0-9_]*)\b</string>
+					<string>\b(predicate)\s+([a-z][A-Za-z0-9]*)\b</string>
 					<key>name</key>
 					<string>meta.predicate.gameeventscript</string>
 				</dict>
@@ -198,7 +204,7 @@
 						</dict>
 					</dict>
 					<key>match</key>
-					<string>\b(on)\s+(@?[A-Za-z_][A-Za-z0-9_]*)\b</string>
+					<string>\b(on)\s+([A-Z][A-Za-z0-9]*|initialization|undeliverable)\b</string>
 					<key>name</key>
 					<string>meta.handler.gameeventscript</string>
 				</dict>
@@ -217,9 +223,28 @@
 						</dict>
 					</dict>
 					<key>match</key>
-					<string>\b(let)\s+([A-Za-z_][A-Za-z0-9_]*)\b</string>
+					<string>\b(let)\s+([a-z][A-Za-z0-9]*(?:_(?:0|[1-9][0-9]*))?)\b</string>
 					<key>name</key>
 					<string>meta.variable.let.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.definition.gameeventscript</string>
+						</dict>
+						<key>2</key>
+						<dict>
+							<key>name</key>
+							<string>variable.other.constant.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(constant)\s+(\$[a-z][A-Za-z0-9]*)\b</string>
+					<key>name</key>
+					<string>meta.constant.gameeventscript</string>
 				</dict>
 			</array>
 		</dict>
@@ -227,12 +252,6 @@
 		<dict>
 			<key>patterns</key>
 			<array>
-				<dict>
-					<key>match</key>
-					<string>:tag\b</string>
-					<key>name</key>
-					<string>entity.other.attribute-name.tag.gameeventscript</string>
-				</dict>
 				<dict>
 					<key>captures</key>
 					<dict>
@@ -258,7 +277,7 @@
 						</dict>
 					</dict>
 					<key>match</key>
-					<string>:(quantity)(\()((?:none|m|meter|s|second|degree|°))(\))(?=$|[^A-Za-z0-9_])</string>
+					<string>:(Quantity)(\()((?:none|m|meter|s|second|degree|°))(\))(?=$|[^A-Za-z0-9_])</string>
 					<key>name</key>
 					<string>support.type.primitive.quantity.gameeventscript</string>
 				</dict>
@@ -376,13 +395,13 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>:(?:text|boolean|number|percentage|vector|point|series|range|message|handler|list|map|dice)(?=$|[^A-Za-z0-9_])</string>
+					<string>:(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice)(?=$|[^A-Za-z0-9_])</string>
 					<key>name</key>
 					<string>support.type.primitive.gameeventscript</string>
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>:[a-z][A-Za-z]*(?=$|[^A-Za-z0-9_])</string>
+					<string>:[A-Z][A-Za-z0-9]*(?=$|[^A-Za-z0-9_])</string>
 					<key>name</key>
 					<string>entity.name.type.custom.gameeventscript</string>
 				</dict>
@@ -956,7 +975,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:as|be|where|nothing)\b</string>
+					<string>\b(?:as|be|where|nothing|constant)\b</string>
 					<key>name</key>
 					<string>keyword.other.definition.gameeventscript</string>
 				</dict>
@@ -986,13 +1005,13 @@
 			<array>
 				<dict>
 					<key>match</key>
-					<string>\b[A-Za-z_][A-Za-z0-9_]*(?=\s*:)</string>
+					<string>\b[a-z][A-Za-z0-9]*(?=\s*:)</string>
 					<key>name</key>
 					<string>variable.parameter.label.gameeventscript</string>
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b[A-Za-z_][A-Za-z0-9_]*\b</string>
+					<string>\b[a-z][A-Za-z0-9]*(?:_(?:0|[1-9][0-9]*))?\b</string>
 					<key>name</key>
 					<string>variable.other.gameeventscript</string>
 				</dict>
@@ -1023,13 +1042,13 @@
 						</dict>
 					</dict>
 					<key>match</key>
-					<string>\b(emit|publish)\s+([A-Z][A-Za-z0-9_]*)\b</string>
+					<string>\b(emit|publish)\s+([A-Z][A-Za-z0-9]*)\b</string>
 					<key>name</key>
 					<string>meta.message.dispatch.gameeventscript</string>
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b[A-Z][A-Za-z0-9_]*\b</string>
+					<string>\b[A-Z][A-Za-z0-9]*\b</string>
 					<key>name</key>
 					<string>entity.name.type.class.message.gameeventscript</string>
 				</dict>

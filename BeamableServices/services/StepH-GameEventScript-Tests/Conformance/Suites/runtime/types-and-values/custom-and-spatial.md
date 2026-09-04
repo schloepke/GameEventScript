@@ -62,15 +62,15 @@ steps:
       args:
         - name: "name"
           value:
-            type: ":text"
+            type: ":Text"
             value: "unit-1"
         - name: "tags"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":tag"
-                value: "Ready"
-              - type: ":text"
+              - type: ":Tag"
+                value: "ready"
+              - type: ":Text"
                 value: "frontline"
         - name: "stats"
           value:
@@ -78,55 +78,55 @@ steps:
             entries:
               - key: "hp"
                 value:
-                  type: ":integer"
+                  type: ":Number.int64"
                   value: "7"
               - key: "name"
                 value:
-                  type: ":text"
+                  type: ":Text"
                   value: "Knight"
         - name: "maybe"
           value:
-            type: ":nothing"
+            type: ":Nothing"
         - name: "flag"
           value:
-            type: ":boolean"
+            type: ":Boolean"
             value: true
         - name: "percent"
           value:
-            type: ":percentage"
+            type: ":Percentage"
             value: "0.25"
         - name: "heading"
           value:
-            type: ":float"
+            type: ":Quantity.binary64"
             value: "90"
             unit: ":degree"
         - name: "position"
           value:
-            type: ":vector"
+            type: ":Vector"
             x: "10.5"
             y: "-2"
             z: "0"
         - name: "point"
           value:
-            type: ":vector"
+            type: ":Vector"
             x: "1"
             y: "2"
             z: "3"
         - name: "category"
           value:
-            type: ":tag"
-            value: "Infantry"
+            type: ":Tag"
+            value: "infantry"
         - name: "points"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "2"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "1"
         - name: "span"
           value:
-            type: ":range"
+            type: ":Range.int64"
             from: "1"
             to: "3"
             step: "1"
@@ -135,15 +135,15 @@ steps:
         args:
           - name: "name"
             value:
-              type: ":text"
+              type: ":Text"
               value: "unit-1"
           - name: "tags"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":tag"
-                  value: "Ready"
-                - type: ":text"
+                - type: ":Tag"
+                  value: "ready"
+                - type: ":Text"
                   value: "frontline"
           - name: "stats"
             value:
@@ -151,55 +151,55 @@ steps:
               entries:
                 - key: "hp"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "7"
                 - key: "name"
                   value:
-                    type: ":text"
+                    type: ":Text"
                     value: "Knight"
           - name: "maybe"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "flag"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "percent"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.25"
           - name: "heading"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "90"
               unit: ":degree"
           - name: "position"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "10.5"
               y: "-2"
               z: "0"
           - name: "point"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "1"
               y: "2"
               z: "3"
           - name: "category"
             value:
-              type: ":tag"
-              value: "Infantry"
+              type: ":Tag"
+              value: "infantry"
           - name: "points"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "1"
           - name: "span"
             value:
-              type: ":range"
+              type: ":Range.int64"
               from: "1"
               to: "3"
               step: "1"
@@ -230,17 +230,17 @@ sources:
 ### Source code under test
 
 ```ges
-record :gauge as {
-  current: :number clamped between 0 and maximum,
-  maximum: :number clamped between 0 and infinity,
-  percentage: :percentage computed by
+record :Gauge as {
+  current: :Number clamped between 0 and maximum,
+  maximum: :Number clamped between 0 and infinity,
+  percentage: :Percentage computed by
     0% when maximum <= 0,
-    otherwise (current / maximum) as :percentage
+    otherwise (current / maximum) as :Percentage
 }
 
 on Start {
-  let hp as :gauge be [current: 125, maximum: 100]
-  emit Done(meter: hp, isMeter: hp is :gauge)
+  let hp be ([current: 125, maximum: 100]) as :Gauge
+  emit Done(meter: hp, isMeter: hp is :Gauge)
 }
 ```
 
@@ -263,23 +263,23 @@ steps:
         args:
           - name: "meter"
             value:
-              type: ":gauge"
+              type: ":Gauge"
               entries:
                 - key: "current"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "100"
                 - key: "maximum"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "100"
                 - key: "percentage"
                   value:
-                    type: ":percentage"
+                    type: ":Percentage"
                     value: "0.01"
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -309,13 +309,13 @@ sources:
 
 ```ges
 on Start {
-  let heading be :quantity(°)(180)
-  let distanceValue be :quantity(m)(100)
-  let duration be :quantity(s)(15)
-  let product be :number(90°) * :number(100m)
-  let ratio be :percentage(25)
-  let textValue be :text(heading)
-  emit Done(heading: heading, distance: distanceValue, duration: duration, product: product, ratio: ratio, textValue: textValue, headingIsDegree: heading is :quantity(°))
+  let heading be :Quantity(°)(180)
+  let distanceValue be :Quantity(m)(100)
+  let duration be :Quantity(s)(15)
+  let product be :Number(90°) * :Number(100m)
+  let ratio be :Percentage(25)
+  let textValue be :Text(heading)
+  emit Done(heading: heading, distance: distanceValue, duration: duration, product: product, ratio: ratio, textValue: textValue, headingIsDegree: heading is :Quantity(°))
 }
 ```
 
@@ -338,34 +338,34 @@ steps:
         args:
           - name: "heading"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "180"
               unit: ":degree"
           - name: "distance"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "100"
               unit: ":meter"
           - name: "duration"
             value:
-              type: ":integer"
+              type: ":Quantity.int64"
               value: "15"
               unit: ":second"
           - name: "product"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "ratio"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.25"
           - name: "textValue"
             value:
-              type: ":text"
+              type: ":Text"
               value: "180\u00B0"
           - name: "headingIsDegree"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -395,19 +395,19 @@ sources:
 
 ```ges
 on Start {
-  let position be :vector(10.5, -2)
-  let labeledPosition be :vector(x: 3, y: 4)
-  let yOnly be :vector(y: 10m)
-  let zero_2 be :vector()
-  let point be :vector(1, 2, 3)
-  let labeledPoint be :vector(x: 4, y: 5, z: 6)
-  let zOnly be :vector(z: 7m)
-  let yzOnly be :vector(y: 2m, z: 3m)
-  let zero_3 be :vector()
-  let lifted be :vector(position)
-  let liftedWithZ be :vector(position, 7)
-  let flattened be :vector(labeledPoint)
-  emit Done(position: position, labeledPosition: labeledPosition, yOnly: yOnly, zero_2: zero_2, point: point, labeledPoint: labeledPoint, zOnly: zOnly, yzOnly: yzOnly, zero_3: zero_3, lifted: lifted, liftedWithZ: liftedWithZ, flattened: flattened, x: position.x, y: labeledPosition.y, z: point.z, labeledX: labeledPoint.x)
+  let position be :Vector(10.5, -2)
+  let labeledPosition be :Vector(x: 3, y: 4)
+  let yOnly be :Vector(y: 10m)
+  let zero2 be :Vector()
+  let point be :Vector(1, 2, 3)
+  let labeledPoint be :Vector(x: 4, y: 5, z: 6)
+  let zOnly be :Vector(z: 7m)
+  let yzOnly be :Vector(y: 2m, z: 3m)
+  let zero3 be :Vector()
+  let lifted be :Vector(position)
+  let liftedWithZ be :Vector(position, 7)
+  let flattened be :Vector(labeledPoint)
+  emit Done(position: position, labeledPosition: labeledPosition, yOnly: yOnly, zero2: zero2, point: point, labeledPoint: labeledPoint, zOnly: zOnly, yzOnly: yzOnly, zero3: zero3, lifted: lifted, liftedWithZ: liftedWithZ, flattened: flattened, x: position.x, y: labeledPosition.y, z: point.z, labeledX: labeledPoint.x)
 }
 ```
 
@@ -430,94 +430,94 @@ steps:
         args:
           - name: "position"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "10.5"
               y: "-2"
               z: "0"
           - name: "labeledPosition"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "3"
               y: "4"
               z: "0"
           - name: "yOnly"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "0"
               y: "10"
               z: "0"
               unit: ":meter"
-          - name: "zero_2"
+          - name: "zero2"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "0"
               y: "0"
               z: "0"
           - name: "point"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "1"
               y: "2"
               z: "3"
           - name: "labeledPoint"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "4"
               y: "5"
               z: "6"
           - name: "zOnly"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "0"
               y: "0"
               z: "7"
               unit: ":meter"
           - name: "yzOnly"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "0"
               y: "2"
               z: "3"
               unit: ":meter"
-          - name: "zero_3"
+          - name: "zero3"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "0"
               y: "0"
               z: "0"
           - name: "lifted"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "10.5"
               y: "-2"
               z: "0"
           - name: "liftedWithZ"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "10.5"
               y: "-2"
               z: "7"
           - name: "flattened"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "4"
               y: "5"
               z: "6"
           - name: "x"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "10.5"
           - name: "y"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "4"
           - name: "z"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "3"
           - name: "labeledX"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "4"
 ```
 
@@ -546,17 +546,17 @@ sources:
 ### Source code under test
 
 ```ges
-record :gauge as {
-  current: :number clamped between 0 and maximum,
-  maximum: :number clamped between 0 and infinity,
-  percentage: :percentage computed by
+record :Gauge as {
+  current: :Number clamped between 0 and maximum,
+  maximum: :Number clamped between 0 and infinity,
+  percentage: :Percentage computed by
     0% when maximum <= 0,
-    otherwise (current / maximum) as :percentage
+    otherwise (current / maximum) as :Percentage
 }
 
 on Start {
-  let hp be :gauge(current: 125, maximum: 100)
-  emit Done(meter: hp, current: hp.current, percentage: hp.percentage, isMeter: hp is :gauge)
+  let hp be :Gauge(current: 125, maximum: 100)
+  emit Done(meter: hp, current: hp.current, percentage: hp.percentage, isMeter: hp is :Gauge)
 }
 ```
 
@@ -579,31 +579,31 @@ steps:
         args:
           - name: "meter"
             value:
-              type: ":gauge"
+              type: ":Gauge"
               entries:
                 - key: "current"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "100"
                 - key: "maximum"
                   value:
-                    type: ":integer"
+                    type: ":Number.int64"
                     value: "100"
                 - key: "percentage"
                   value:
-                    type: ":percentage"
+                    type: ":Percentage"
                     value: "0.01"
           - name: "current"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "100"
           - name: "percentage"
             value:
-              type: ":percentage"
+              type: ":Percentage"
               value: "0.01"
           - name: "isMeter"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -633,20 +633,20 @@ sources:
 
 ```ges
 on Start {
-  let origin be :point(10m, 20m)
-  let delta be :vector(3m, -5m)
+  let origin be :Point(10m, 20m)
+  let delta be :Vector(3m, -5m)
   let moved be origin + delta
   let back be moved - delta
   let between be moved - origin
-  let labeled be :point(x: 3, y: 4)
-  let yOnly be :point(y: 10m)
-  let zero_2 be :point()
-  let p_3 be :point(origin, 7m)
-  let flat be :point(p_3)
+  let labeled be :Point(x: 3, y: 4)
+  let yOnly be :Point(y: 10m)
+  let zero2 be :Point()
+  let p3 be :Point(origin, 7m)
+  let flat be :Point(p3)
   let badAdd be origin + moved
   let badScale be origin * 2
   let badAbs be abs origin
-  emit Done(origin: origin, moved: moved, back: back, between: between, labeled: labeled, yOnly: yOnly, zero_2: zero_2, p_3: p_3, flat: flat, x: moved.x, z: p_3.z, isPoint: moved is :point, badAdd: badAdd, badScale: badScale, badAbs: badAbs)
+  emit Done(origin: origin, moved: moved, back: back, between: between, labeled: labeled, yOnly: yOnly, zero2: zero2, p3: p3, flat: flat, x: moved.x, z: p3.z, isPoint: moved is :Point, badAdd: badAdd, badScale: badScale, badAbs: badAbs)
 }
 ```
 
@@ -669,90 +669,90 @@ steps:
         args:
           - name: "origin"
             value:
-              type: ":point"
+              type: ":Point"
               x: "10"
               y: "20"
               z: "0"
               unit: ":meter"
           - name: "moved"
             value:
-              type: ":point"
+              type: ":Point"
               x: "13"
               y: "15"
               z: "0"
               unit: ":meter"
           - name: "back"
             value:
-              type: ":point"
+              type: ":Point"
               x: "10"
               y: "20"
               z: "0"
               unit: ":meter"
           - name: "between"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "3"
               y: "-5"
               z: "0"
               unit: ":meter"
           - name: "labeled"
             value:
-              type: ":point"
+              type: ":Point"
               x: "3"
               y: "4"
               z: "0"
           - name: "yOnly"
             value:
-              type: ":point"
+              type: ":Point"
               x: "0"
               y: "10"
               z: "0"
               unit: ":meter"
-          - name: "zero_2"
+          - name: "zero2"
             value:
-              type: ":point"
+              type: ":Point"
               x: "0"
               y: "0"
               z: "0"
-          - name: "p_3"
+          - name: "p3"
             value:
-              type: ":point"
+              type: ":Point"
               x: "10"
               y: "20"
               z: "7"
               unit: ":meter"
           - name: "flat"
             value:
-              type: ":point"
+              type: ":Point"
               x: "10"
               y: "20"
               z: "7"
               unit: ":meter"
           - name: "x"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "13"
               unit: ":meter"
           - name: "z"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "7"
               unit: ":meter"
           - name: "isPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "badAdd"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "badScale"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "badAbs"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```
 
@@ -782,13 +782,13 @@ sources:
 
 ```ges
 on Start {
-  let position as :vector be [x: 10.5, y: -2]
-  let point as :vector be [1, 2, 3]
-  let lifted as :vector be position
-  let flattened as :vector be point
-  let vectorList as :list be position
-  let vectorDictionary as :map be point
-  emit Done(position: position, point: point, lifted: lifted, flattened: flattened, x: position.x, y: position[#y], z: point.z, listFirst: vectorList[1], dictZ: vectorDictionary.z, isVectorPosition: position is :vector, isVectorPoint: point is :vector, vectorIsMap: position is :map)
+  let position be ([x: 10.5, y: -2]) as :Vector
+  let point be ([1, 2, 3]) as :Vector
+  let lifted be (position) as :Vector
+  let flattened be (point) as :Vector
+  let vectorList be (position) as :List
+  let vectorDictionary be (point) as :Map
+  emit Done(position: position, point: point, lifted: lifted, flattened: flattened, x: position.x, y: position[#y], z: point.z, listFirst: vectorList[1], dictZ: vectorDictionary.z, isVectorPosition: position is :Vector, isVectorPoint: point is :Vector, vectorIsMap: position is :Map)
 }
 ```
 
@@ -811,59 +811,59 @@ steps:
         args:
           - name: "position"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "10.5"
               y: "-2"
               z: "0"
           - name: "point"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "1"
               y: "2"
               z: "3"
           - name: "lifted"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "10.5"
               y: "-2"
               z: "0"
           - name: "flattened"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "1"
               y: "2"
               z: "3"
           - name: "x"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "10.5"
           - name: "y"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "-2"
           - name: "z"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "3"
           - name: "listFirst"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "10.5"
           - name: "dictZ"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "3"
           - name: "isVectorPosition"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "isVectorPoint"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "vectorIsMap"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
 ```
 
@@ -893,20 +893,20 @@ sources:
 
 ```ges
 on Start {
-  let position be :vector(3m, 4m)
-  let rawPosition be :number(position)
-  let rawPositionCast as :number be position
-  let remetered be :quantity(m)(rawPosition)
-  let sameMeter be :quantity(m)(position)
-  let wrongUnitVector be :quantity(s)(position)
-  let wrongScalarUnit be :quantity(m)(15s)
-  let lifted as :vector be position
-  let liftedConstructed be :vector(position)
-  let liftedConstructedWithZ be :vector(position, 20m)
-  let flattened as :vector be :vector(1m, 2m, 3m)
-  let flattenedConstructed be :vector(:vector(1m, 2m, 3m))
-  let vectorList as :list be position
-  let vectorDictionary as :map be position
+  let position be :Vector(3m, 4m)
+  let rawPosition be :Number(position)
+  let rawPositionCast be (position) as :Number
+  let remetered be :Quantity(m)(rawPosition)
+  let sameMeter be :Quantity(m)(position)
+  let wrongUnitVector be :Quantity(s)(position)
+  let wrongScalarUnit be :Quantity(m)(15s)
+  let lifted be (position) as :Vector
+  let liftedConstructed be :Vector(position)
+  let liftedConstructedWithZ be :Vector(position, 20m)
+  let flattened be (:Vector(1m, 2m, 3m)) as :Vector
+  let flattenedConstructed be :Vector(:Vector(1m, 2m, 3m))
+  let vectorList be (position) as :List
+  let vectorDictionary be (position) as :Map
   emit Done(position: position, x: position.x, y: position[#y], listY: vectorList[2], dictX: vectorDictionary.x, rawPosition: rawPosition, rawPositionCast: rawPositionCast, remetered: remetered, sameMeter: sameMeter, wrongUnitVector: wrongUnitVector, wrongScalarUnit: wrongScalarUnit, lifted: lifted, liftedConstructed: liftedConstructed, liftedConstructedWithZ: liftedConstructedWithZ, flattened: flattened, flattenedConstructed: flattenedConstructed)
 }
 ```
@@ -930,87 +930,87 @@ steps:
         args:
           - name: "position"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "3"
               y: "4"
               z: "0"
               unit: ":meter"
           - name: "x"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "3"
               unit: ":meter"
           - name: "y"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "4"
               unit: ":meter"
           - name: "listY"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "4"
               unit: ":meter"
           - name: "dictX"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "3"
               unit: ":meter"
           - name: "rawPosition"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "rawPositionCast"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "remetered"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "sameMeter"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "3"
               y: "4"
               z: "0"
               unit: ":meter"
           - name: "wrongUnitVector"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "wrongScalarUnit"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "lifted"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "3"
               y: "4"
               z: "0"
               unit: ":meter"
           - name: "liftedConstructed"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "3"
               y: "4"
               z: "0"
               unit: ":meter"
           - name: "liftedConstructedWithZ"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "3"
               y: "4"
               z: "20"
               unit: ":meter"
           - name: "flattened"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "1"
               y: "2"
               z: "3"
               unit: ":meter"
           - name: "flattenedConstructed"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "1"
               y: "2"
               z: "3"
@@ -1043,10 +1043,10 @@ sources:
 
 ```ges
 on Start {
-  let a be :vector(1m, 2m)
-  let b be :vector(3m, 4m)
-  let c be :vector(1, 2, 2)
-  emit Done(sum: a + b, difference: a - b, negated: -a, scaleRight: a * 2, scaleLeft: 2 * a, percentScale: a * 50%, divided: b / 2, unitlessScaled: :vector(1, 2) * 5m, unitDivided: a / 1m, length_2: abs :vector(3m, 4m), length_3: abs c)
+  let a be :Vector(1m, 2m)
+  let b be :Vector(3m, 4m)
+  let c be :Vector(1, 2, 2)
+  emit Done(sum: a + b, difference: a - b, negated: -a, scaleRight: a * 2, scaleLeft: 2 * a, percentScale: a * 50%, divided: b / 2, unitlessScaled: :Vector(1, 2) * 5m, unitDivided: a / 1m, length2: abs :Vector(3m, 4m), length3: abs c)
 }
 ```
 
@@ -1069,74 +1069,74 @@ steps:
         args:
           - name: "sum"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "4"
               y: "6"
               z: "0"
               unit: ":meter"
           - name: "difference"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "-2"
               y: "-2"
               z: "0"
               unit: ":meter"
           - name: "negated"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "-1"
               y: "-2"
               z: "0"
               unit: ":meter"
           - name: "scaleRight"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "2"
               y: "4"
               z: "0"
               unit: ":meter"
           - name: "scaleLeft"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "2"
               y: "4"
               z: "0"
               unit: ":meter"
           - name: "percentScale"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "0.5"
               y: "1"
               z: "0"
               unit: ":meter"
           - name: "divided"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "1.5"
               y: "2"
               z: "0"
               unit: ":meter"
           - name: "unitlessScaled"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "5"
               y: "10"
               z: "0"
               unit: ":meter"
           - name: "unitDivided"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "1"
               y: "2"
               z: "0"
-          - name: "length_2"
+          - name: "length2"
             value:
-              type: ":float"
+              type: ":Quantity.binary64"
               value: "5"
               unit: ":meter"
-          - name: "length_3"
+          - name: "length3"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "3"
 ```
 
@@ -1166,7 +1166,7 @@ sources:
 
 ```ges
 on Start {
-  emit Done(mixedUnits: :vector(10m, 20s), mixedUnitless: :vector(10, 20m), partialMixedUnit: :vector(y: 20m, z: 30), liftedMixedUnit: :vector(:vector(10m, 20m), 20), vectorProduct: :vector(1, 2) * :vector(3, 4), scalarDivide: 10 / :vector(1, 2), dimensionAdd: :vector(1, 2) + :vector(1, 2, 3), incompatibleScalar: :vector(1m, 2m) * 5s, divideZero: :vector(1, 2) / 0, vectorModulo: :vector(1, 2) mod 2)
+  emit Done(mixedUnits: :Vector(10m, 20s), mixedUnitless: :Vector(10, 20m), partialMixedUnit: :Vector(y: 20m, z: 30), liftedMixedUnit: :Vector(:Vector(10m, 20m), 20), vectorProduct: :Vector(1, 2) * :Vector(3, 4), scalarDivide: 10 / :Vector(1, 2), dimensionAdd: :Vector(1, 2) + :Vector(1, 2, 3), incompatibleScalar: :Vector(1m, 2m) * 5s, divideZero: :Vector(1, 2) / 0, vectorModulo: :Vector(1, 2) mod 2)
 }
 ```
 
@@ -1189,44 +1189,44 @@ steps:
         args:
           - name: "mixedUnits"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "mixedUnitless"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "partialMixedUnit"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "liftedMixedUnit"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vectorProduct"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "scalarDivide"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "dimensionAdd"
             value:
-              type: ":vector"
+              type: ":Vector"
               x: "2"
               y: "4"
               z: "3"
           - name: "incompatibleScalar"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "divideZero"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "vectorModulo"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
 ```

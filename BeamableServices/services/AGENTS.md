@@ -50,6 +50,17 @@ The project has a portable Game Event Script host/VM architecture with a compact
   use casts, shifts, masks, and Binary64 bit conversion rather than overlapping
   CLR fields. The compact sequential C# struct never defines `.gesb` encoding.
 - Compilation includes `DebugSymbols`, `SourceMap`, and `SourceArchive` by default; production or size-sensitive builds opt out explicitly with `GameEventScriptDebugInfoOptions.None`.
+- Source types use PascalCase (`:Number`, `:Quantity(m)`, `:Unit`), while
+  extension namespaces/functions remain lowercase (`:math.distance`). Module
+  identifiers are dot-separated lowercase components with optional digits.
+- `constant $name be LITERAL` declares a program-wide compile-time scalar;
+  constants are inlined and never enter Program segments or runtime state.
+- `let` has only `let name be expression`; conversions belong to the expression
+  (`let name be value as :Number`). The `_number` suffix is reserved for local
+  variable bindings, while other names may contain digits without underscores.
+- Conformance distinguishes exact numeric storage with `:Number.int64` and
+  `:Number.binary64` (and corresponding Quantity/Range variants). These are
+  transport variants, not source type names.
 - `GameEventScriptHost` is the autonomous serial execution unit and can run with native handlers only.
 - `Load(program, priority)` is additive and returns an idempotently detachable `GameEventScriptInstance`.
 - Portable native handlers implement `IGameEventScriptNativeMessageHandler`.
@@ -94,6 +105,37 @@ The project has a portable Game Event Script host/VM architecture with a compact
   third-party attribution policy.
 
 ## Recent Completed Work
+
+### Compile-Time Constants and Portable Name Grammar
+
+- Added program-wide scalar constants with `$` references. The compiler resolves
+  and inlines them without new bytecode, bindings, or `.gesb` sections; duplicate,
+  unresolved, and nonliteral declarations have stable diagnostics.
+- Removed the typed-let form. Type conversion is now uniformly an expression
+  operation, while callable parameters and record fields retain type declarations.
+- Source type names and constructors are PascalCase, including `:List[...]`;
+  selectors and extensions remain lowercase. Module, callable, message, tag,
+  field, constant, type, and variable grammars are independently enforced by the
+  lexer, validator, `.gesb` validator, documentation, and TextMate grammars.
+- Digits are accepted after the first character. Only variable bindings may use
+  a canonical `_number` suffix; function, predicate, type, module, constant,
+  message, tag, field, and label names reject it.
+- Portable Conformance value tags now mirror source concepts while preserving
+  exact storage: `:Number.int64`/`:Number.binary64`, Quantity and Range variants,
+  and PascalCase names for all remaining value kinds. The obsolete `rangeKind`
+  field was removed.
+- Golden `.gesb` fixtures, GESA snapshots, performance baselines, the
+  cross-language reference, API snapshot, language/bytecode/conformance
+  specifications, and both TextMate bundles were updated together.
+
+Verification after this change:
+
+```text
+1049/1049 Markdown conformance cases passed
+1166/1166 non-performance test executions passed
+5/5 explicit Markdown performance tests passed
+1/1 zero-allocation hot-path test passed
+```
 
 ### Normative Documentation Consistency Gate
 

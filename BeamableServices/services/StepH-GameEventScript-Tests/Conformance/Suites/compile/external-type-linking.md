@@ -39,7 +39,7 @@ externalTypeRegistry: absent
 
 ```ges
 on Start() {
-  let value be :aim(range: 12m, bearing: 90°, steps: 4m, direction: :vector(1m, 2m, 3m))
+  let value be :Aim(range: 12m, bearing: 90°, steps: 4m, direction: :Vector(1m, 2m, 3m))
 }
 ```
 
@@ -70,7 +70,7 @@ externalTypeRegistry: mismatch
 
 ```ges
 on Start() {
-  let value be :aim(range: 12m, bearing: 90°, steps: 4m, direction: :vector(1m, 2m, 3m))
+  let value be :Aim(range: 12m, bearing: 90°, steps: 4m, direction: :Vector(1m, 2m, 3m))
 }
 ```
 

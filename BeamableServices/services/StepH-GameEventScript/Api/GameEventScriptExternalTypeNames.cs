@@ -19,47 +19,47 @@ internal static class GameEventScriptExternalTypeNames
 
         return kind switch
         {
-            GameEventScriptBytecodeTypeKind.Nothing => "nothing",
-            GameEventScriptBytecodeTypeKind.Tag => "tag",
-            GameEventScriptBytecodeTypeKind.Text => "text",
-            GameEventScriptBytecodeTypeKind.Percentage => "percentage",
-            GameEventScriptBytecodeTypeKind.Vector => "vector",
-            GameEventScriptBytecodeTypeKind.Point => "point",
-            GameEventScriptBytecodeTypeKind.Float => unit?.ToTypeName() ?? "number",
-            GameEventScriptBytecodeTypeKind.Boolean => "boolean",
-            GameEventScriptBytecodeTypeKind.Series => "series",
-            GameEventScriptBytecodeTypeKind.Range => "range",
-            GameEventScriptBytecodeTypeKind.Handler => "handler",
-            GameEventScriptBytecodeTypeKind.List => "list",
-            GameEventScriptBytecodeTypeKind.Map => "map",
-            GameEventScriptBytecodeTypeKind.Dice => "dice",
+            GameEventScriptBytecodeTypeKind.Nothing => "Nothing",
+            GameEventScriptBytecodeTypeKind.Tag => "Tag",
+            GameEventScriptBytecodeTypeKind.Text => "Text",
+            GameEventScriptBytecodeTypeKind.Percentage => "Percentage",
+            GameEventScriptBytecodeTypeKind.Vector => "Vector",
+            GameEventScriptBytecodeTypeKind.Point => "Point",
+            GameEventScriptBytecodeTypeKind.Float => unit is null ? "Number" : $"Quantity({unit.Value.ToSuffix()})",
+            GameEventScriptBytecodeTypeKind.Boolean => "Boolean",
+            GameEventScriptBytecodeTypeKind.Series => "Series",
+            GameEventScriptBytecodeTypeKind.Range => "Range",
+            GameEventScriptBytecodeTypeKind.Handler => "Handler",
+            GameEventScriptBytecodeTypeKind.List => "List",
+            GameEventScriptBytecodeTypeKind.Map => "Map",
+            GameEventScriptBytecodeTypeKind.Dice => "Dice",
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown GameEventScript value kind.")
         };
     }
 
     public static (GameEventScriptBytecodeTypeKind? Kind, GameEventScriptBytecodeInstructionUnit? Unit) GetKindAndUnit(string typeName)
     {
-        if (GameEventScriptBytecodeInstructionUnits.ParseTypeName(typeName) is { } unit)
+        if (GameEventScriptBytecodeInstructionUnits.ParseSourceQuantityTypeName(typeName) is { } unit)
         {
             return (GameEventScriptBytecodeTypeKind.Float, unit);
         }
 
         return typeName switch
         {
-            "nothing" => (GameEventScriptBytecodeTypeKind.Nothing, null),
-            "tag" => (GameEventScriptBytecodeTypeKind.Tag, null),
-            "text" => (GameEventScriptBytecodeTypeKind.Text, null),
-            "percentage" => (GameEventScriptBytecodeTypeKind.Percentage, null),
-            "vector" => (GameEventScriptBytecodeTypeKind.Vector, null),
-            "point" => (GameEventScriptBytecodeTypeKind.Point, null),
-            "number" => (GameEventScriptBytecodeTypeKind.Float, null),
-            "boolean" => (GameEventScriptBytecodeTypeKind.Boolean, null),
-            "series" => (GameEventScriptBytecodeTypeKind.Series, null),
-            "range" => (GameEventScriptBytecodeTypeKind.Range, null),
-            "handler" => (GameEventScriptBytecodeTypeKind.Handler, null),
-            "list" => (GameEventScriptBytecodeTypeKind.List, null),
-            "map" => (GameEventScriptBytecodeTypeKind.Map, null),
-            "dice" => (GameEventScriptBytecodeTypeKind.Dice, null),
+            "Nothing" => (GameEventScriptBytecodeTypeKind.Nothing, null),
+            "Tag" => (GameEventScriptBytecodeTypeKind.Tag, null),
+            "Text" => (GameEventScriptBytecodeTypeKind.Text, null),
+            "Percentage" => (GameEventScriptBytecodeTypeKind.Percentage, null),
+            "Vector" => (GameEventScriptBytecodeTypeKind.Vector, null),
+            "Point" => (GameEventScriptBytecodeTypeKind.Point, null),
+            "Number" => (GameEventScriptBytecodeTypeKind.Float, null),
+            "Boolean" => (GameEventScriptBytecodeTypeKind.Boolean, null),
+            "Series" => (GameEventScriptBytecodeTypeKind.Series, null),
+            "Range" => (GameEventScriptBytecodeTypeKind.Range, null),
+            "Handler" => (GameEventScriptBytecodeTypeKind.Handler, null),
+            "List" => (GameEventScriptBytecodeTypeKind.List, null),
+            "Map" => (GameEventScriptBytecodeTypeKind.Map, null),
+            "Dice" => (GameEventScriptBytecodeTypeKind.Dice, null),
             _ => (null, null)
         };
     }
@@ -74,7 +74,7 @@ internal static class GameEventScriptExternalTypeNames
 
         if (!GameEventScriptText.IsTypeName(normalized))
         {
-            throw new ArgumentException($"External GameEventScript type name ':{normalized}' must start with a lower-case letter and contain letters only.");
+            throw new ArgumentException($"External GameEventScript type name ':{normalized}' must start with an upper-case ASCII letter and contain ASCII letters or digits.");
         }
 
         return normalized;
@@ -83,9 +83,20 @@ internal static class GameEventScriptExternalTypeNames
     public static string NormalizeIdentifier(string? name, string parameterName)
     {
         var normalized = NormalizeName(name, parameterName);
-        if (!GameEventScriptText.IsIdentifier(normalized))
+        if (!GameEventScriptText.IsArgumentLabel(normalized))
         {
-            throw new ArgumentException($"External GameEventScript identifier '{normalized}' must start with a lower-case letter, contain letters only, and may end with _<index>.");
+            throw new ArgumentException($"External GameEventScript identifier '{normalized}' must start with a lower-case ASCII letter and contain ASCII letters or digits.");
+        }
+
+        return normalized;
+    }
+
+    public static string NormalizeExtensionName(string? name)
+    {
+        var normalized = NormalizeName(name, "name");
+        if (!GameEventScriptText.IsTagName(normalized))
+        {
+            throw new ArgumentException($"GameEventScript extension name '{normalized}' must start with a lower-case ASCII letter and contain ASCII letters or digits.", nameof(name));
         }
 
         return normalized;

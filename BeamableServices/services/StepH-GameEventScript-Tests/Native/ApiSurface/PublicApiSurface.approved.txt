@@ -424,6 +424,7 @@ static class StepH.GameEventScript.Api.GameEventScriptDiagnosticCodes
   field static System.String RuntimeRegisterOverflow
   field static System.String RuntimeUnhandledFailure
   field static System.String RuntimeVmStateConflict
+  field static System.String ValidateDuplicateConstant
   field static System.String ValidateDuplicateDefinitionParameter
   field static System.String ValidateDuplicateFunction
   field static System.String ValidateDuplicateHandlerParameter
@@ -1485,7 +1486,6 @@ sealed class StepH.GameEventScript.Conformance.ConformanceValue
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceValueEntry> Entries { get }
   property System.Collections.Generic.IReadOnlyList<System.Int32> Rolls { get }
   property System.String From { get }
-  property System.String RangeKind { get }
   property System.String Step { get }
   property System.String To { get }
   property System.String Type { get }

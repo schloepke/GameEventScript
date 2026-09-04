@@ -69,11 +69,11 @@ steps:
         args:
           - name: "randomValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "diceValue"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 6
                 - 5
@@ -132,7 +132,7 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 6
                 - 1
@@ -144,7 +144,7 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 3
                 - 2
@@ -183,7 +183,7 @@ on Start(units) {
   let quarterHit be chance 25%
   let weightedTarget be units[:choose 1 weighted by unit => unit.weight]
   let weightedPair be units[:choose 2 weighted by unit => unit.weight]
-  emit Done(alwaysHit: alwaysHit, neverHit: neverHit, quarterHit: quarterHit, weightedTarget: weightedTarget.name, weighted_1: weightedPair[1].name, weighted_2: weightedPair[2].name)
+  emit Done(alwaysHit: alwaysHit, neverHit: neverHit, quarterHit: quarterHit, weightedTarget: weightedTarget.name, weighted1: weightedPair[1].name, weighted2: weightedPair[2].name)
 }
 ```
 
@@ -203,64 +203,64 @@ steps:
       args:
         - name: "units"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "A"
                   - key: "weight"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "1"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "B"
                   - key: "weight"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "3"
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "C"
                   - key: "weight"
                     value:
-                      type: ":integer"
+                      type: ":Number.int64"
                       value: "6"
     local:
       - name: "Done"
         args:
           - name: "alwaysHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "neverHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "quarterHit"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "weightedTarget"
             value:
-              type: ":text"
+              type: ":Text"
               value: "C"
-          - name: "weighted_1"
+          - name: "weighted1"
             value:
-              type: ":text"
+              type: ":Text"
               value: "A"
-          - name: "weighted_2"
+          - name: "weighted2"
             value:
-              type: ":text"
+              type: ":Text"
               value: "C"
 ```
 
@@ -291,15 +291,15 @@ sources:
 ### Source code under test
 
 ```ges
-on Start(enemies, seed as :number) {
+on Start(enemies, seed as :Number) {
   let cards be [1, 2, 3, 4, 5][:shuffle]
   let hand be cards[:draw 3]
   let restCards be cards[:drop first 3]
   let target be enemies[:choose 1 enemy where enemy.alive]
   let randomTargets be enemies[:choose 2 at random enemy where enemy.alive]
-  let seededFirst be random with seed :list[:select item from 1 to 4 => random from 1 to 20]
-  let seededSecond be random with seed :list[:select item from 1 to 4 => random from 1 to 20]
-  emit Done(hand_1: hand[1], hand_2: hand[2], hand_3: hand[3], rest_1: restCards[1], rest_2: restCards[2], target: target.name, random_1: randomTargets[1].name, random_2: randomTargets[2].name, seededSame: seededFirst = seededSecond)
+  let seededFirst be random with seed :List[:select item from 1 to 4 => random from 1 to 20]
+  let seededSecond be random with seed :List[:select item from 1 to 4 => random from 1 to 20]
+  emit Done(hand1: hand[1], hand2: hand[2], hand3: hand[3], rest1: restCards[1], rest2: restCards[2], target: target.name, random1: randomTargets[1].name, random2: randomTargets[2].name, seededSame: seededFirst = seededSecond)
 }
 ```
 
@@ -319,90 +319,90 @@ steps:
       args:
         - name: "enemies"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "Rook"
                   - key: "alive"
                     value:
-                      type: ":boolean"
+                      type: ":Boolean"
                       value: false
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "Orc"
                   - key: "alive"
                     value:
-                      type: ":boolean"
+                      type: ":Boolean"
                       value: true
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "Mage"
                   - key: "alive"
                     value:
-                      type: ":boolean"
+                      type: ":Boolean"
                       value: true
-              - type: ":map"
+              - type: ":Map"
                 entries:
                   - key: "name"
                     value:
-                      type: ":text"
+                      type: ":Text"
                       value: "Knight"
                   - key: "alive"
                     value:
-                      type: ":boolean"
+                      type: ":Boolean"
                       value: true
         - name: "seed"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "42"
     local:
       - name: "Done"
         args:
-          - name: "hand_1"
+          - name: "hand1"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
-          - name: "hand_2"
+          - name: "hand2"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
-          - name: "hand_3"
+          - name: "hand3"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
-          - name: "rest_1"
+          - name: "rest1"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
-          - name: "rest_2"
+          - name: "rest2"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "target"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Orc"
-          - name: "random_1"
+          - name: "random1"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Orc"
-          - name: "random_2"
+          - name: "random2"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Knight"
           - name: "seededSame"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -438,7 +438,7 @@ on Start {
   random with 777 {
     let first be random from 1 to 100
     let invalidSeed be nothing
-    let consumed be random with (invalidSeed as :number) ([random from 1 to 100, random from 1 to 100][2])
+    let consumed be random with (invalidSeed as :Number) ([random from 1 to 100, random from 1 to 100][2])
     let after be random from 1 to 100
     emit Done(firstMatches: first = expectedFirst, copiedStreamMatches: consumed = expectedThird, parentRestored: after = expectedSecond)
   }
@@ -464,15 +464,15 @@ steps:
         args:
           - name: "firstMatches"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "copiedStreamMatches"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "parentRestored"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -503,7 +503,7 @@ sources:
 ```ges
 on Roll(low, high) {
   let value be random from low to high
-  let none as :number be nothing
+  let none be (nothing) as :Number
   let nothingValue be random from none to high
   let invalidValue be random from 'hello' to high
   let tags be 123
@@ -529,32 +529,32 @@ steps:
       args:
         - name: "low"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "9"
         - name: "high"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "2"
     local:
       - name: "Done"
         args:
           - name: "valuePresent"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "nothingValue"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "invalidValue"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "NaN"
           - name: "shuffledTags"
             value:
-              type: ":nothing"
+              type: ":Nothing"
           - name: "drawnTag"
             value:
-              type: ":nothing"
+              type: ":Nothing"
 ```
 
 ---
@@ -611,15 +611,15 @@ steps:
         args:
           - name: "integerValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "floatValue"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "0.25"
           - name: "mixedValue"
             value:
-              type: ":float"
+              type: ":Number.binary64"
               value: "1.5"
 ```
 
@@ -674,11 +674,11 @@ steps:
         args:
           - name: "maxValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9223372036854775807"
           - name: "negativeValue"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-9223372036854775807"
 ```
 
@@ -732,7 +732,7 @@ steps:
       args:
         - name: "high"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "3"
     local:
       - name: "Passed"
@@ -790,39 +790,39 @@ steps:
         args:
           - name: "highLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "highFirst"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9223372036854775806"
           - name: "highSecond"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9223372036854775807"
           - name: "highContainsMax"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "highContainsBefore"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "lowLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "lowFirst"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-9223372036854775808"
           - name: "lowSecond"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "-9223372036854775807"
           - name: "lowContainsMin"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -852,20 +852,20 @@ sources:
 
 ```ges
 on Start(values) {
-  let fullRange as :range be from 1 to 3
-  let odds as :range be from 1 to 5 step 2
+  let fullRange be (from 1 to 3) as :Range
+  let odds be (from 1 to 5 step 2) as :Range
   let descending be from 5 to 1 step (0 - 2)
   let zeroStep be from 1 to 5 step 0
-  let squares be :list[:select item from 1 to 5 => item * item]
-  let filteredSquares be :list[:select item from 1 to 6 where item mod 2 = 0 => item * item]
-  let tags be :list[:select item from 1 to 4 where item >= 2 => item mod 2]
-  let doubled be :list[:select item in values => item * 2]
-  let filtered be :list[:select item in values where item > 3 => item mod 2]
+  let squares be :List[:select item from 1 to 5 => item * item]
+  let filteredSquares be :List[:select item from 1 to 6 where item mod 2 = 0 => item * item]
+  let tags be :List[:select item from 1 to 4 where item >= 2 => item mod 2]
+  let doubled be :List[:select item in values => item * 2]
+  let filtered be :List[:select item in values where item > 3 => item mod 2]
   for item in fullRange emit Full(value: item)
   for item from 1 to 5 step 2 emit Direct(value: item)
   for item in odds emit Indirect(value: item)
   for item in zeroStep emit Zero(value: item)
-  emit Done(isRange: odds is :range, descendingFirst: descending[1], descendingSecond: descending[2], descendingThird: descending[3], zeroLen: zeroStep[:count], square_1: squares[1], square_5: squares[5], filtered_1: filteredSquares[1], filtered_3: filteredSquares[3], tagCount: tags[:count], tagsHasZero: 0 in tags, tagsHasOne: 1 in tags, doubledFirst: doubled[1], doubledSecond: doubled[2], filteredLen: filtered[:count], hasZero: 0 in filtered, hasOne: 1 in filtered)
+  emit Done(isRange: odds is :Range, descendingFirst: descending[1], descendingSecond: descending[2], descendingThird: descending[3], zeroLen: zeroStep[:count], square1: squares[1], square5: squares[5], filtered1: filteredSquares[1], filtered3: filteredSquares[3], tagCount: tags[:count], tagsHasZero: 0 in tags, tagsHasOne: 1 in tags, doubledFirst: doubled[1], doubledSecond: doubled[2], filteredLen: filtered[:count], hasZero: 0 in filtered, hasOne: 1 in filtered)
 }
 ```
 
@@ -885,138 +885,138 @@ steps:
       args:
         - name: "values"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "2"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "4"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "5"
     local:
       - name: "Full"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "Full"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
       - name: "Full"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
       - name: "Direct"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "Direct"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
       - name: "Direct"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
       - name: "Indirect"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "Indirect"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
       - name: "Indirect"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
       - name: "Done"
         args:
           - name: "isRange"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "descendingFirst"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
           - name: "descendingSecond"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "descendingThird"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "zeroLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
-          - name: "square_1"
+          - name: "square1"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
-          - name: "square_5"
+          - name: "square5"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "25"
-          - name: "filtered_1"
+          - name: "filtered1"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
-          - name: "filtered_3"
+          - name: "filtered3"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "36"
           - name: "tagCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "tagsHasZero"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "tagsHasOne"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "doubledFirst"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "doubledSecond"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "8"
           - name: "filteredLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "hasZero"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasOne"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -1048,7 +1048,7 @@ sources:
 
 ```ges
 on Start {
-  let values as :range be from 1 to 1000000
+  let values be (from 1 to 1000000) as :Range
   emit Done(value: values[1000000], contains: 999999 in values, fractional: 1.5 in values)
 }
 ```
@@ -1072,15 +1072,15 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1000000"
           - name: "contains"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "fractional"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
     runtimeLimits:
       exclude:
@@ -1116,7 +1116,7 @@ sources:
 ```ges
 on Start {
   for item from 1 to 10 emit Tick(value: item)
-  let values as :list be from 1 to 10
+  let values be (from 1 to 10) as :List
   emit Done(count: values[:count])
 }
 ```
@@ -1140,7 +1140,7 @@ steps:
         args:
           - name: "count"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
     runtimeLimits:
       include:
@@ -1199,19 +1199,19 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "Tick"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
       - name: "Tick"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
     runtimeLimits:
       include:
@@ -1270,7 +1270,7 @@ steps:
         args:
           - name: "count"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
     runtimeLimits:
       include:
@@ -1312,7 +1312,7 @@ on Roll {
   let emptyDrop be roll dice 2d6[:drop lowest 3]
   let takeTooMany be roll dice 4d6[:take highest 5]
   let diceTotal be roll dice 2d6 + 1
-  emit Done(baseDice: baseDice, baseLen: baseDice[:count], base_1: baseDice[1], base_2: baseDice[2], base_3: baseDice[3], base_4: baseDice[4], kept: kept, dropped: dropped, resorted: resorted, emptyDropLen: emptyDrop[:count], takeTooManyLen: takeTooMany[:count], diceTotal: diceTotal)
+  emit Done(baseDice: baseDice, baseLen: baseDice[:count], base1: baseDice[1], base2: baseDice[2], base3: baseDice[3], base4: baseDice[4], kept: kept, dropped: dropped, resorted: resorted, emptyDropLen: emptyDrop[:count], takeTooManyLen: takeTooMany[:count], diceTotal: diceTotal)
 }
 ```
 
@@ -1335,7 +1335,7 @@ steps:
         args:
           - name: "baseDice"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 6
                 - 5
@@ -1343,60 +1343,60 @@ steps:
                 - 2
           - name: "baseLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
-          - name: "base_1"
+          - name: "base1"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "6"
-          - name: "base_2"
+          - name: "base2"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
-          - name: "base_3"
+          - name: "base3"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
-          - name: "base_4"
+          - name: "base4"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "kept"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 6
                 - 4
           - name: "dropped"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 6
                 - 3
                 - 2
           - name: "resorted"
             value:
-              type: ":list"
+              type: ":List"
               items:
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "2"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "3"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "5"
-                - type: ":integer"
+                - type: ":Number.int64"
                   value: "6"
           - name: "emptyDropLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "0"
           - name: "takeTooManyLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "4"
           - name: "diceTotal"
             value:
-              type: ":dice"
+              type: ":Dice"
               rolls:
                 - 4
                 - 1
@@ -1453,7 +1453,7 @@ steps:
       args:
         - name: "pairRoll"
           value:
-            type: ":dice"
+            type: ":Dice"
             rolls:
               - 6
               - 6
@@ -1462,7 +1462,7 @@ steps:
               - 2
         - name: "tripleRoll"
           value:
-            type: ":dice"
+            type: ":Dice"
             rolls:
               - 6
               - 6
@@ -1471,7 +1471,7 @@ steps:
               - 3
         - name: "fullHouseRoll"
           value:
-            type: ":dice"
+            type: ":Dice"
             rolls:
               - 5
               - 5
@@ -1480,7 +1480,7 @@ steps:
               - 2
         - name: "straightRoll"
           value:
-            type: ":dice"
+            type: ":Dice"
             rolls:
               - 6
               - 6
@@ -1490,7 +1490,7 @@ steps:
               - 2
         - name: "sixRoll"
           value:
-            type: ":dice"
+            type: ":Dice"
             rolls:
               - 4
               - 4
@@ -1500,7 +1500,7 @@ steps:
               - 4
         - name: "sevenRoll"
           value:
-            type: ":dice"
+            type: ":Dice"
             rolls:
               - 6
               - 6
@@ -1511,110 +1511,110 @@ steps:
               - 6
         - name: "cards"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":text"
+              - type: ":Text"
                 value: "King"
-              - type: ":text"
+              - type: ":Text"
                 value: "King"
-              - type: ":text"
+              - type: ":Text"
                 value: "King"
-              - type: ":text"
+              - type: ":Text"
                 value: "Queen"
-              - type: ":text"
+              - type: ":Text"
                 value: "Queen"
         - name: "orderedCards"
           value:
-            type: ":list"
+            type: ":List"
             items:
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "1"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "2"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "3"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "4"
-              - type: ":integer"
+              - type: ":Number.int64"
                 value: "5"
         - name: "plainText"
           value:
-            type: ":text"
+            type: ":Text"
             value: "Hello"
     local:
       - name: "Done"
         args:
           - name: "hasPair"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasPairOfSix"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "pairHasThree"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "tripleHasThree"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "tripleHasThreeSix"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasSixKind"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasSevenSix"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasFullHouse"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "hasStraight"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "listPair"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "listKingTriple"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "listFullHouse"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "orderedStraight"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
           - name: "textPair"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: false
           - name: "pairTakeLen"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "fullHouseFirst"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
           - name: "straightFirst"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "missingPairFirst"
             value:
-              type: ":text"
+              type: ":Text"
               value: "fallback"
 ```
 
@@ -1682,7 +1682,7 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "42"
 ```
 
@@ -1751,6 +1751,6 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "42"
 ```

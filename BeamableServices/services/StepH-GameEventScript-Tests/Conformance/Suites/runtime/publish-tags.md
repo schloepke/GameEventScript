@@ -80,7 +80,7 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "ShouldNotRun"
         args: []
@@ -116,7 +116,7 @@ sources:
 ### Source code under test
 
 ```ges
-module BinaryRunnerBranch
+module binaryrunnerbranch
 
 on Start(value) {
   if value > 10 {
@@ -142,27 +142,27 @@ steps:
       args:
         - name: "value"
           value:
-            type: ":integer"
+            type: ":Number.int64"
             value: "12"
     local:
       - name: "High"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
       - name: "Done"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
     outbound:
       - name: "High"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "12"
 ```
 
@@ -233,7 +233,7 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "Signal"
         tags:
@@ -242,31 +242,31 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
       - name: "Signal"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
       - name: "Seen"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "Seen"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "11"
       - name: "Seen"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "103"
 ```
 
@@ -301,7 +301,7 @@ on Start {
 }
 
 on undeliverable as message matching #radio {
-  emit Heard(name: message.name, signature: message.signature, value: message.arguments.value, tagCount: message.tags[:count], firstTag: message.tags[1], secondTag: message.tags[2], isMessage: message is :message)
+  emit Heard(name: message.name, signature: message.signature, value: message.arguments.value, tagCount: message.tags[:count], firstTag: message.tags[1], secondTag: message.tags[2], isMessage: message is :Message)
 }
 ```
 
@@ -327,7 +327,7 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "7"
       - name: "Silent"
         tags:
@@ -335,37 +335,37 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
       - name: "Heard"
         args:
           - name: "name"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Unknown"
           - name: "signature"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Unknown(value)"
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "7"
           - name: "tagCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "firstTag"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "radio"
           - name: "secondTag"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "encrypted"
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
 ```
 
@@ -428,13 +428,13 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
       - name: "Normal"
         args:
           - name: "value"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
 ```
 
@@ -470,7 +470,7 @@ on Start {
 }
 
 on Damage as message matching #radio {
-  emit Heard(signature: message.signature, amount: message.arguments.amount, tagCount: message.tags[:count], firstTag: message.tags[1], isMessage: message is :message)
+  emit Heard(signature: message.signature, amount: message.arguments.amount, tagCount: message.tags[:count], firstTag: message.tags[1], isMessage: message is :Message)
 }
 
 on undeliverable as message matching #silent {
@@ -500,7 +500,7 @@ steps:
         args:
           - name: "amount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
       - name: "Damage"
         tags:
@@ -508,11 +508,11 @@ steps:
         args:
           - name: "amount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
           - name: "kind"
             value:
-              type: ":text"
+              type: ":Text"
               value: "fire"
       - name: "Damage"
         tags:
@@ -520,65 +520,65 @@ steps:
         args:
           - name: "amount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "7"
       - name: "Heard"
         args:
           - name: "signature"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Damage(amount)"
           - name: "amount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "3"
           - name: "tagCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "2"
           - name: "firstTag"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "radio"
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
       - name: "Heard"
         args:
           - name: "signature"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Damage(amount,kind)"
           - name: "amount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "5"
           - name: "tagCount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "1"
           - name: "firstTag"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "radio"
           - name: "isMessage"
             value:
-              type: ":boolean"
+              type: ":Boolean"
               value: true
       - name: "Missed"
         args:
           - name: "signature"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Damage(amount)"
           - name: "amount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "7"
           - name: "tag"
             value:
-              type: ":tag"
+              type: ":Tag"
               value: "silent"
 ```
 
@@ -641,18 +641,18 @@ steps:
         args:
           - name: "amount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9"
       - name: "Exact"
         args:
           - name: "amount"
             value:
-              type: ":integer"
+              type: ":Number.int64"
               value: "9"
       - name: "Any"
         args:
           - name: "signature"
             value:
-              type: ":text"
+              type: ":Text"
               value: "Damage(amount)"
 ```

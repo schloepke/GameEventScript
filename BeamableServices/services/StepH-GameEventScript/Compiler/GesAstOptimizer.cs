@@ -47,6 +47,7 @@ internal static class GesAstOptimizer
 
         return new GesSyntaxTreeModule(
             module.ModuleName,
+            module.Constants,
             optimizedTypes,
             optimizedCallables,
             optimizedHandlers,
@@ -304,6 +305,10 @@ internal static class GesAstOptimizer
             TypeCheckExpressionNode typeCheck => typeCheck with
             {
                 Value = OptimizeExpression(typeCheck.Value, knownTypeNames)
+            },
+            NothingCheckExpressionNode nothingCheck => nothingCheck with
+            {
+                Value = OptimizeExpression(nothingCheck.Value, knownTypeNames)
             },
             TypeCastExpressionNode typeCast => typeCast with
             {

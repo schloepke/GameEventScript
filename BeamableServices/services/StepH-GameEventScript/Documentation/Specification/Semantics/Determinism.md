@@ -109,7 +109,7 @@ independent state even when their initial streams are identical.
 ## Seeded random scopes
 
 `random with seed` requires the seed to be statically known as a unitless exact
-integer or explicitly converted with `as :number`. A runtime seed value creates
+integer or explicitly converted with `as :Number`. A runtime seed value creates
 a newly seeded stream only when it is a unitless exact integer in the signed
 64-bit range.
 

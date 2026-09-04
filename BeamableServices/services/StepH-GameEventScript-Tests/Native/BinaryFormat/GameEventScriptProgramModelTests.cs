@@ -169,7 +169,7 @@ public sealed class GameEventScriptProgramModelTests
 
     private static GameEventScriptProgram Compile()
         => GameEventScriptBuilder.Create()
-            .AddScript("module PortableModel\n\non Start(value) { emit Done(result: value + 1) }", "portable-model.ges")
+            .AddScript("module portablemodel\n\non Start(value) { emit Done(result: value + 1) }", "portable-model.ges")
             .WithProgramVersion(7)
             .WithDebugInfo(GameEventScriptDebugInfoOptions.All)
             .Compile();

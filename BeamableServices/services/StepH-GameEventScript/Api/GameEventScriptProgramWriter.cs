@@ -1,16 +1,23 @@
-#pragma warning disable CS1591
-
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace StepH.GameEventScript.Api;
 
+/// <summary>
+/// Writes immutable programs as canonical Little-Endian <c>.gesb</c> V1 byte images.
+/// </summary>
 public static class GameEventScriptProgramWriter
 {
     private const ushort SectionVersion = 1;
     private static readonly UTF8Encoding Utf8 = new(false, true);
 
+    /// <summary>
+    /// Validates a program and computes its exact canonical encoded size.
+    /// </summary>
+    /// <param name="program">The immutable program to encode.</param>
+    /// <returns>The required destination size in bytes.</returns>
+    /// <exception cref="GameEventScriptProgramFormatException">Thrown when the program is invalid or cannot be represented by V1.</exception>
     public static int GetEncodedSize(GameEventScriptProgram program)
     {
         _ = program ?? throw new ArgumentNullException(nameof(program));
@@ -34,6 +41,11 @@ public static class GameEventScriptProgramWriter
         return checked((int)size);
     }
 
+    /// <summary>
+    /// Validates and encodes a program into a newly allocated canonical byte array.
+    /// </summary>
+    /// <param name="program">The immutable program to encode.</param>
+    /// <returns>The complete canonical <c>.gesb</c> image.</returns>
     public static byte[] ToArray(GameEventScriptProgram program)
     {
         var result = new byte[GetEncodedSize(program)];
@@ -41,6 +53,14 @@ public static class GameEventScriptProgramWriter
         return result;
     }
 
+    /// <summary>
+    /// Validates and writes a canonical program image into caller-provided storage.
+    /// </summary>
+    /// <param name="program">The immutable program to encode.</param>
+    /// <param name="destination">The destination span, which may be larger than the encoded image.</param>
+    /// <returns>The number of destination bytes written.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="destination"/> is too small.</exception>
+    /// <exception cref="GameEventScriptProgramFormatException">Thrown when the program is invalid or cannot be represented by V1.</exception>
     public static int Write(GameEventScriptProgram program, Span<byte> destination)
     {
         _ = program ?? throw new ArgumentNullException(nameof(program));

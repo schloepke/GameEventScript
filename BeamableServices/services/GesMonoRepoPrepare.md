@@ -877,16 +877,27 @@ All specification documents are normative
 6/6 explicit performance tests passed
 ```
 
-### 6.7 Öffentliche XML-API-Dokumentation vervollständigen
+### 6.7 Öffentliche XML-API-Dokumentation vervollständigen - DONE
 
-- Sämtliche öffentlich sichtbaren C#-Typen und Member in Core, Compiler, Runtime, API, `CSharpBridge` und Conformance vollständig mit XML-Dokumentation versehen beziehungsweise vorhandene Dokumentation an den aktuellen Vertrag anpassen.
-- `summary`, Parameter, Rückgabewerte, Typparameter, relevante Exceptions, Nullability, Ownership, Lebensdauer, Seiteneffekte, Threading/Reentrancy und Hot-Path-Eigenschaften dort dokumentieren, wo sie für die korrekte Verwendung relevant sind.
-- XML-Dokumentation mit `Specification/PublicApi.md` abgleichen. Die normative Spezifikation definiert den sprachneutralen Vertrag; XML-Kommentare erklären dessen konkrete C#-Abbildung und dürfen ihm nicht widersprechen.
-- Veraltete Begriffe wie Module, Session, isolierte Runs oder eine modulgebundene VM vollständig aus aktiven API-Kommentaren entfernen.
-- Alle `#pragma`-Direktiven aus handgeschriebenem C# entfernen. Warnungen werden durch korrekten Code beziehungsweise vollständige Dokumentation behoben und nicht lokal unterdrückt.
-- Projektweite oder dateilokale Unterdrückungen für fehlende öffentliche XML-Dokumentation nicht als Ersatz einführen. Unvermeidbare Warnungsunterdrückungen in erzeugtem Fremdcode müssen über dessen Generator oder klar abgegrenzte Buildkonfiguration behandelt werden, nicht über handgeschriebene `#pragma`-Blöcke.
-- Die erzeugten XML-Dokumentationsdateien müssen ohne ungültige Verweise oder XML-Strukturfehler gebaut werden; insbesondere die derzeit bekannten `GesValueMap`-Warnungen müssen entfallen.
-- Einen mechanischen Test ergänzen, der die öffentliche API gegen fehlende XML-Dokumentation und verbleibende `#pragma`-Direktiven in handgeschriebenen Quellen absichert.
+Erledigt:
+
+- Sämtliche öffentlich sichtbaren C#-Typen und Member in API, Runtime, `CSharpBridge` und Conformance besitzen XML-Dokumentation; der Compiler exportiert weiterhin keine öffentlichen Typen. Vorhandene fachliche Kommentare wurden bewahrt und zentrale Eingangs-APIs gegen `Specification/PublicApi.md` inhaltlich geschärft.
+- Host, Context, Program-Codec, Lifecycle, Publish, Observer, C#-Auto-Runner sowie Conformance-Parser und -Runner dokumentieren die jeweils relevanten Ownership-, Lebensdauer-, Nullability-, Seiteneffekt-, Synchronitäts-, Reentrancy- und Fehlerverträge. Die XML-Kommentare bleiben die konkrete C#-Abbildung; die sprachneutrale Norm liegt weiterhin ausschließlich in `PublicApi.md`.
+- Das Hauptprojekt erzeugt bei jedem Build `StepH.GameEventScript.xml`. Fehlende öffentliche Dokumentation sowie ungültige XML-Struktur, Parameter-, Typparameter- und `cref`-Angaben sind als Buildfehler konfiguriert statt unterdrückt zu werden.
+- Alle handgeschriebenen `#pragma`-Direktiven wurden aus Produktions- und Testcode entfernt. Damit sind insbesondere die früher unterdrückten `GesValueMap`-Dokumentationswarnungen tatsächlich behoben.
+- Der API-Surface-Test sichert das erzeugte XML-Artefakt und dessen Abdeckung aller exportierten Typen, die vollständige Build-Warnschranke und die Pragma-Freiheit beider handgeschriebener C#-Projektbäume mechanisch ab.
+- `Receive(GameEventScriptMessage)` prüft den dokumentierten erforderlichen Parameter nun explizit und liefert bei `null` denselben synchronen Argumentfehler wie die Context-Messaging-Operationen.
+
+Abnahme:
+
+```text
+1585 public XML documentation member entries generated
+0 hand-written C# pragma directives
+0 XML documentation warnings
+1149/1149 non-performance test executions passed
+6/6 performance/allocation tests passed
+dotnet format --verify-no-changes passed for production and tests
+```
 
 ### 6.8 Apache-2.0-Lizenz und Copyright-Header einführen
 

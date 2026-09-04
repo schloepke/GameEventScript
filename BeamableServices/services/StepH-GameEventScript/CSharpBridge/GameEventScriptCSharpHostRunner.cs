@@ -1,5 +1,3 @@
-#pragma warning disable CS1591 // Public architecture is documented in Documentation/Specification/HostRuntime.md.
-
 using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Api;
@@ -33,9 +31,19 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
         _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
     }
 
+    /// <summary>
+    /// Wraps a host with serialized access and automatic pumping on the shared C# dispatcher.
+    /// </summary>
+    /// <param name="host">The host whose access becomes owned by the returned runner.</param>
+    /// <returns>A runner using <see cref="GameEventScriptCSharpDispatcher.Shared"/>.</returns>
     public static GameEventScriptCSharpHostRunner Create(GameEventScriptHost host)
         => new(host, GameEventScriptCSharpDispatcher.Shared);
 
+    /// <summary>
+    /// Thread-safely enqueues a message and schedules one pump job when accepted.
+    /// </summary>
+    /// <param name="message">The immutable message to receive locally.</param>
+    /// <returns>Whether the underlying host accepted the message.</returns>
     public bool Receive(GameEventScriptMessage message)
     {
         lock (_gate)
@@ -47,6 +55,12 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
         }
     }
 
+    /// <summary>
+    /// Thread-safely loads a program and schedules its initialization handlers, if present.
+    /// </summary>
+    /// <param name="program">The immutable portable program.</param>
+    /// <param name="priority">The dispatch priority assigned to its handlers.</param>
+    /// <returns>The host-local program instance.</returns>
     public GameEventScriptInstance Load(GameEventScriptProgram program, int priority = 0)
     {
         lock (_gate)
@@ -58,6 +72,14 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
         }
     }
 
+    /// <summary>
+    /// Thread-safely subscribes a C# delegate to an exact ordered message signature.
+    /// </summary>
+    /// <param name="message">The message name.</param>
+    /// <param name="parameterNames">The ordered signature labels.</param>
+    /// <param name="handler">The synchronous callback executed while the runner owns its serialization gate.</param>
+    /// <param name="priority">The dispatch priority.</param>
+    /// <returns>The host-local subscription.</returns>
     public GameEventScriptSubscription Subscribe(string message, IReadOnlyCollection<string> parameterNames, Action<GameEventScriptMessage, GameEventScriptContext> handler, int priority = 0)
     {
         lock (_gate)
@@ -71,6 +93,11 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
         }
     }
 
+    /// <summary>
+    /// Thread-safely detaches a loaded program instance.
+    /// </summary>
+    /// <param name="instance">The instance handle to detach.</param>
+    /// <returns>Whether this call performed the detach.</returns>
     public bool Detach(GameEventScriptInstance instance)
     {
         lock (_gate)
@@ -80,6 +107,11 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
         }
     }
 
+    /// <summary>
+    /// Thread-safely removes a native subscription.
+    /// </summary>
+    /// <param name="subscription">The subscription handle to remove.</param>
+    /// <returns>Whether this call performed the removal.</returns>
     public bool Unsubscribe(GameEventScriptSubscription subscription)
     {
         lock (_gate)
@@ -89,6 +121,10 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
         }
     }
 
+    /// <summary>
+    /// Prevents future runner operations and suppresses pending automatic pumps.
+    /// The wrapped host and shared dispatcher are not disposed.
+    /// </summary>
     public void Dispose()
     {
         lock (_gate) _disposed = true;
@@ -121,8 +157,20 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
     }
 }
 
+/// <summary>
+/// Provides delegate-based and automatic-runner conveniences that intentionally remain outside the portable Core.
+/// </summary>
 public static class GameEventScriptCSharpHostExtensions
 {
+    /// <summary>
+    /// Performs the subscribe operation.
+    /// </summary>
+    /// <param name="host">The host value.</param>
+    /// <param name="message">The message value.</param>
+    /// <param name="parameterNames">The parameter names value.</param>
+    /// <param name="handler">The handler value.</param>
+    /// <param name="priority">The priority value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GameEventScriptSubscription Subscribe(this GameEventScriptHost host, string message, IReadOnlyCollection<string> parameterNames, Action<GameEventScriptMessage, GameEventScriptContext> handler, int priority = 0)
         => RequireHost(host).Subscribe(
             message,
@@ -130,12 +178,30 @@ public static class GameEventScriptCSharpHostExtensions
             new GameEventScriptCSharpNativeMessageHandler(handler),
             priority);
 
+    /// <summary>
+    /// Performs the subscribe operation.
+    /// </summary>
+    /// <param name="host">The host value.</param>
+    /// <param name="signature">The signature value.</param>
+    /// <param name="handler">The handler value.</param>
+    /// <param name="priority">The priority value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GameEventScriptSubscription Subscribe(this GameEventScriptHost host, GameEventScriptMessageSignature signature, Action<GameEventScriptMessage, GameEventScriptContext> handler, int priority = 0)
         => RequireHost(host).Subscribe(
             signature,
             new GameEventScriptCSharpNativeMessageHandler(handler),
             priority);
 
+    /// <summary>
+    /// Performs the subscribe operation.
+    /// </summary>
+    /// <param name="host">The host value.</param>
+    /// <param name="signature">The signature value.</param>
+    /// <param name="handler">The handler value.</param>
+    /// <param name="matchingTags">The matching tags value.</param>
+    /// <param name="withoutTags">The without tags value.</param>
+    /// <param name="priority">The priority value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GameEventScriptSubscription Subscribe(
         this GameEventScriptHost host,
         GameEventScriptMessageSignature signature,
@@ -150,6 +216,16 @@ public static class GameEventScriptCSharpHostExtensions
             withoutTags,
             priority);
 
+    /// <summary>
+    /// Performs the subscribe message name operation.
+    /// </summary>
+    /// <param name="host">The host value.</param>
+    /// <param name="messageName">The message name value.</param>
+    /// <param name="handler">The handler value.</param>
+    /// <param name="matchingTags">The matching tags value.</param>
+    /// <param name="withoutTags">The without tags value.</param>
+    /// <param name="priority">The priority value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GameEventScriptSubscription SubscribeMessageName(
         this GameEventScriptHost host,
         string messageName,
@@ -164,6 +240,11 @@ public static class GameEventScriptCSharpHostExtensions
             withoutTags,
             priority);
 
+    /// <summary>
+    /// Creates a thread-safe C# runner that automatically pumps accepted messages on the shared dispatcher.
+    /// </summary>
+    /// <param name="host">The host whose access becomes owned by the runner.</param>
+    /// <returns>The automatic host runner.</returns>
     public static GameEventScriptCSharpHostRunner RunAutomatically(this GameEventScriptHost host)
         => GameEventScriptCSharpHostRunner.Create(RequireHost(host));
 
@@ -177,12 +258,33 @@ public static class GameEventScriptCSharpHostExtensions
 /// </summary>
 public static class GameEventScriptCSharpMessage
 {
+    /// <summary>
+    /// Creates a message from C# tuple arguments while preserving tuple order.
+    /// </summary>
+    /// <param name="name">The message name.</param>
+    /// <param name="arguments">The ordered name/value pairs.</param>
+    /// <returns>An immutable portable message.</returns>
     public static GameEventScriptMessage Create(string name, params (string name, GesValue value)[] arguments)
         => GameEventScriptMessage.Create(name, ToOrdered(arguments));
 
+    /// <summary>
+    /// Creates a tagged message from C# tuple arguments while preserving tuple order.
+    /// </summary>
+    /// <param name="name">The message name.</param>
+    /// <param name="tags">Optional message tags.</param>
+    /// <param name="arguments">The ordered name/value pairs.</param>
+    /// <returns>An immutable portable message.</returns>
     public static GameEventScriptMessage Create(string name, IEnumerable<string>? tags, params (string name, GesValue value)[] arguments)
         => GameEventScriptMessage.Create(name, ToOrdered(arguments), tags);
 
+    /// <summary>
+    /// Creates a message by arranging dictionary values according to a known ordered signature.
+    /// </summary>
+    /// <param name="signature">The signature that supplies deterministic argument order.</param>
+    /// <param name="arguments">Values keyed by each named signature label.</param>
+    /// <param name="tags">Optional message tags.</param>
+    /// <returns>An immutable portable message.</returns>
+    /// <exception cref="ArgumentException">Thrown for missing, extra, or unlabeled signature arguments.</exception>
     public static GameEventScriptMessage Create(GameEventScriptMessageSignature signature, IReadOnlyDictionary<string, GesValue> arguments, IEnumerable<string>? tags = null)
     {
         _ = signature ?? throw new ArgumentNullException(nameof(signature));
@@ -225,17 +327,48 @@ public static class GameEventScriptCSharpMessage
     }
 }
 
+/// <summary>
+/// Provides C# tuple and dictionary conveniences for context messaging.
+/// </summary>
 public static class GameEventScriptCSharpContextExtensions
 {
+    /// <summary>
+    /// Performs the emit operation.
+    /// </summary>
+    /// <param name="context">The context value.</param>
+    /// <param name="message">The message value.</param>
+    /// <param name="arguments">The arguments value.</param>
+    /// <returns>The result of the operation.</returns>
     public static bool Emit(this GameEventScriptContext context, string message, params (string name, GesValue value)[] arguments)
         => RequireContext(context).Emit(GameEventScriptCSharpMessage.Create(message, arguments));
 
+    /// <summary>
+    /// Performs the emit operation.
+    /// </summary>
+    /// <param name="context">The context value.</param>
+    /// <param name="signature">The signature value.</param>
+    /// <param name="arguments">The arguments value.</param>
+    /// <returns>The result of the operation.</returns>
     public static bool Emit(this GameEventScriptContext context, GameEventScriptMessageSignature signature, IReadOnlyDictionary<string, GesValue> arguments)
         => RequireContext(context).Emit(GameEventScriptCSharpMessage.Create(signature, arguments));
 
+    /// <summary>
+    /// Performs the publish operation.
+    /// </summary>
+    /// <param name="context">The context value.</param>
+    /// <param name="message">The message value.</param>
+    /// <param name="arguments">The arguments value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GameEventScriptPublishResult Publish(this GameEventScriptContext context, string message, params (string name, GesValue value)[] arguments)
         => RequireContext(context).Publish(GameEventScriptCSharpMessage.Create(message, arguments));
 
+    /// <summary>
+    /// Performs the publish operation.
+    /// </summary>
+    /// <param name="context">The context value.</param>
+    /// <param name="signature">The signature value.</param>
+    /// <param name="arguments">The arguments value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GameEventScriptPublishResult Publish(this GameEventScriptContext context, GameEventScriptMessageSignature signature, IReadOnlyDictionary<string, GesValue> arguments)
         => RequireContext(context).Publish(GameEventScriptCSharpMessage.Create(signature, arguments));
 

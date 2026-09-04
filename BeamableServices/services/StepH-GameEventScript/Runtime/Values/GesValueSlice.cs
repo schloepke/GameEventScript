@@ -1,16 +1,24 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.Runtime.Values;
 
+/// <summary>
+/// Represents a ges value slice.
+/// </summary>
 public readonly struct GesValueSlice
 {
     private readonly GesValue[]? _values;
 
+    /// <summary>
+    /// Defines the empty value.
+    /// </summary>
     public static readonly GesValueSlice Empty = new([], 0, 0);
 
+    /// <summary>
+    /// Initializes a new instance of Ges Value Slice.
+    /// </summary>
+    /// <param name="values">The values value.</param>
     public GesValueSlice(GesValue[] values)
     {
         _values = values ?? [];
@@ -25,24 +33,69 @@ public readonly struct GesValueSlice
         Length = length;
     }
 
+    /// <summary>
+    /// Gets the start.
+    /// </summary>
     public int Start { get; }
 
+    /// <summary>
+    /// Gets the length.
+    /// </summary>
     public int Length { get; }
 
+    /// <summary>
+    /// Gets the value at the specified index.
+    /// </summary>
+    /// <param name="index">The index value.</param>
     public ref readonly GesValue this[int index] => ref _values![Start + index];
 
+    /// <summary>
+    /// Performs the value at operation.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public ref readonly GesValue ValueAt(int index) => ref _values![Start + index];
 
+    /// <summary>
+    /// Performs the kind at operation.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public GameEventScriptBytecodeTypeKind KindAt(int index) => _values![Start + index].Kind;
 
+    /// <summary>
+    /// Performs the unit at operation.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public GameEventScriptBytecodeInstructionUnit UnitAt(int index) => _values![Start + index].Unit;
 
+    /// <summary>
+    /// Determines whether has value at.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public bool HasValueAt(int index) => _values![Start + index].HasValue;
 
+    /// <summary>
+    /// Determines whether is nothing at.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public bool IsNothingAt(int index) => _values![Start + index].IsNothing;
 
+    /// <summary>
+    /// Determines whether is numeric at.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public bool IsNumericAt(int index) => _values![Start + index].IsNumeric;
 
+    /// <summary>
+    /// Gets the as integer.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public long GetAsInteger(int index)
     {
         ref readonly var value = ref _values![Start + index];
@@ -55,6 +108,11 @@ public readonly struct GesValueSlice
         };
     }
 
+    /// <summary>
+    /// Gets the as number.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public double GetAsNumber(int index)
     {
         ref readonly var value = ref _values![Start + index];
@@ -67,6 +125,11 @@ public readonly struct GesValueSlice
         };
     }
 
+    /// <summary>
+    /// Gets the as boolean.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public bool GetAsBoolean(int index)
     {
         ref readonly var value = ref _values![Start + index];
@@ -80,6 +143,11 @@ public readonly struct GesValueSlice
         };
     }
 
+    /// <summary>
+    /// Gets the as text.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public string GetAsText(int index)
     {
         ref readonly var value = ref _values![Start + index];
@@ -88,10 +156,25 @@ public readonly struct GesValueSlice
             : value.ToText;
     }
 
+    /// <summary>
+    /// Gets the x.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public double GetX(int index) => _values![Start + index].ObjectValue is GesValueVectorPoint vector ? vector.X : 0d;
 
+    /// <summary>
+    /// Gets the y.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public double GetY(int index) => _values![Start + index].ObjectValue is GesValueVectorPoint vector ? vector.Y : 0d;
 
+    /// <summary>
+    /// Gets the z.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public double GetZ(int index) => _values![Start + index].ObjectValue is GesValueVectorPoint vector ? vector.Z : 0d;
 
     internal ref readonly GesValue VmValueAt(int index) => ref _values![Start + index];

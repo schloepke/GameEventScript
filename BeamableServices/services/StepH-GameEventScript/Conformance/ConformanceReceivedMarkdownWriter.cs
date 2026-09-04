@@ -1,30 +1,61 @@
-#pragma warning disable CS1591
-
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace StepH.GameEventScript.Conformance;
 
+/// <summary>
+/// Represents a conformance received writer codes.
+/// </summary>
 public static class ConformanceReceivedWriterCodes
 {
+    /// <summary>
+    /// Defines the invalid report value.
+    /// </summary>
     public const string InvalidReport = "conformance.received.invalidReport";
+    /// <summary>
+    /// Defines the missing case value.
+    /// </summary>
     public const string MissingCase = "conformance.received.missingCase";
+    /// <summary>
+    /// Defines the missing range value.
+    /// </summary>
     public const string MissingRange = "conformance.received.missingRange";
+    /// <summary>
+    /// Defines the stale range value.
+    /// </summary>
     public const string StaleRange = "conformance.received.staleRange";
+    /// <summary>
+    /// Defines the overlapping range value.
+    /// </summary>
     public const string OverlappingRange = "conformance.received.overlappingRange";
 }
 
+/// <summary>
+/// Represents a conformance received write exception.
+/// </summary>
 public sealed class ConformanceReceivedWriteException : Exception
 {
     internal ConformanceReceivedWriteException(string code, string message) : base(message) => Code = code;
+    /// <summary>
+    /// Gets the code.
+    /// </summary>
     public string Code { get; }
 }
 
+/// <summary>
+/// Represents a conformance received markdown writer.
+/// </summary>
 public static class ConformanceReceivedMarkdownWriter
 {
     private static readonly UTF8Encoding Utf8 = new(false, true);
 
+    /// <summary>
+    /// Converts this value to an array.
+    /// </summary>
+    /// <param name="document">The document value.</param>
+    /// <param name="report">The report value.</param>
+    /// <returns>The result of the operation.</returns>
     public static byte[] ToArray(ConformanceDocument document, ConformanceRunReport report)
     {
         _ = document ?? throw new ArgumentNullException(nameof(document));
@@ -57,6 +88,12 @@ public static class ConformanceReceivedMarkdownWriter
         return output;
     }
 
+    /// <summary>
+    /// Converts this value to a text.
+    /// </summary>
+    /// <param name="document">The document value.</param>
+    /// <param name="report">The report value.</param>
+    /// <returns>The result of the operation.</returns>
     public static string ToText(ConformanceDocument document, ConformanceRunReport report)
     {
         var bytes = ToArray(document, report);

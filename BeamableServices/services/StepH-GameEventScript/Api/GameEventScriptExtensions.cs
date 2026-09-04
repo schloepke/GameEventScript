@@ -1,5 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -7,13 +5,28 @@ using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Api;
 
+/// <summary>
+/// Defines the contract for i game event script extension registry.
+/// </summary>
 public interface IGameEventScriptExtensionRegistry
 {
+    /// <summary>
+    /// Resolves the value.
+    /// </summary>
+    /// <param name="reference">The reference value.</param>
+    /// <returns>The result of the operation.</returns>
     IGameEventScriptExtensionFunction? Resolve(GameEventScriptExtensionReference reference);
 }
 
+/// <summary>
+/// Defines the contract for i game event script extension function.
+/// </summary>
 public interface IGameEventScriptExtensionFunction
 {
+    /// <summary>
+    /// Performs the invoke operation.
+    /// </summary>
+    /// <param name="call">The call value.</param>
     void Invoke(GesExtensionCall call);
 }
 
@@ -28,8 +41,17 @@ internal sealed class GameEventScriptEmptyExtensionRegistry : IGameEventScriptEx
     public IGameEventScriptExtensionFunction? Resolve(GameEventScriptExtensionReference reference) => null;
 }
 
+/// <summary>
+/// Represents a game event script extension reference.
+/// </summary>
 public sealed class GameEventScriptExtensionReference
 {
+    /// <summary>
+    /// Initializes a new instance of Game Event Script Extension Reference.
+    /// </summary>
+    /// <param name="extensionName">The extension name value.</param>
+    /// <param name="functionName">The function name value.</param>
+    /// <param name="argumentLabels">The argument labels value.</param>
     public GameEventScriptExtensionReference(string? extensionName, string? functionName, IEnumerable<string?>? argumentLabels)
     {
         ExtensionName = NormalizeName(extensionName);
@@ -38,12 +60,24 @@ public sealed class GameEventScriptExtensionReference
         SignatureId = CreateSignatureId(ExtensionName, FunctionName, ArgumentLabels);
     }
 
+    /// <summary>
+    /// Gets the extension name.
+    /// </summary>
     public string ExtensionName { get; }
 
+    /// <summary>
+    /// Gets the function name.
+    /// </summary>
     public string FunctionName { get; }
 
+    /// <summary>
+    /// Gets the argument labels.
+    /// </summary>
     public IReadOnlyList<string> ArgumentLabels { get; }
 
+    /// <summary>
+    /// Gets the signature id.
+    /// </summary>
     public string SignatureId { get; }
 
     private static string NormalizeName(string? name)
@@ -111,6 +145,9 @@ public sealed class GameEventScriptExtensionReference
     }
 }
 
+/// <summary>
+/// Represents a ges extension call.
+/// </summary>
 public sealed class GesExtensionCall
 {
     private GameEventScriptContext? _context;
@@ -120,23 +157,45 @@ public sealed class GesExtensionCall
     private GesValue _result;
     private bool _hasResult;
 
+    /// <summary>
+    /// Initializes a new instance of Ges Extension Call.
+    /// </summary>
     public GesExtensionCall()
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of Ges Extension Call.
+    /// </summary>
+    /// <param name="context">The context value.</param>
     public GesExtensionCall(GameEventScriptContext context)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
+    /// <summary>
+    /// Gets the context.
+    /// </summary>
     public GameEventScriptContext Context => _context ?? throw new InvalidOperationException("Extension context is not initialized.");
 
+    /// <summary>
+    /// Gets the random.
+    /// </summary>
     public GameEventScriptRandomGenerator Random => Context.Random;
 
+    /// <summary>
+    /// Gets the runtime limits.
+    /// </summary>
     public GameEventScriptRuntimeLimits RuntimeLimits => Context.RuntimeLimits;
 
+    /// <summary>
+    /// Gets the arguments.
+    /// </summary>
     public GesValueArguments Arguments => _arguments;
 
+    /// <summary>
+    /// Gets the result.
+    /// </summary>
     public GesValue Result => _hasResult ? _result : GesValue.GesNothing();
 
     internal bool HasResult => _hasResult;
@@ -160,8 +219,15 @@ public sealed class GesExtensionCall
         _hasResult = false;
     }
 
+    /// <summary>
+    /// Sets the nothing.
+    /// </summary>
     public void SetNothing() => SetValue(GesValue.GesNothing());
 
+    /// <summary>
+    /// Sets the value.
+    /// </summary>
+    /// <param name="value">The value value.</param>
     public void SetValue(GesValue value)
     {
         _hasResult = true;
@@ -169,6 +235,10 @@ public sealed class GesExtensionCall
         _vmState?.SetValue(_destinationRegister, in value);
     }
 
+    /// <summary>
+    /// Sets the boolean.
+    /// </summary>
+    /// <param name="value">The value value.</param>
     public void SetBoolean(bool value)
     {
         _hasResult = true;
@@ -176,6 +246,11 @@ public sealed class GesExtensionCall
         _vmState?.SetBoolean(_destinationRegister, value);
     }
 
+    /// <summary>
+    /// Sets the integer.
+    /// </summary>
+    /// <param name="value">The value value.</param>
+    /// <param name="unit">The unit value.</param>
     public void SetInteger(long value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
     {
         _hasResult = true;
@@ -183,6 +258,11 @@ public sealed class GesExtensionCall
         _vmState?.SetInteger(_destinationRegister, value, unit);
     }
 
+    /// <summary>
+    /// Sets the float.
+    /// </summary>
+    /// <param name="value">The value value.</param>
+    /// <param name="unit">The unit value.</param>
     public void SetFloat(double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
     {
         _hasResult = true;
@@ -190,6 +270,10 @@ public sealed class GesExtensionCall
         _vmState?.SetFloat(_destinationRegister, value, unit);
     }
 
+    /// <summary>
+    /// Sets the percentage.
+    /// </summary>
+    /// <param name="ratio">The ratio value.</param>
     public void SetPercentage(double ratio)
     {
         _hasResult = true;
@@ -197,6 +281,10 @@ public sealed class GesExtensionCall
         _vmState?.SetPercentage(_destinationRegister, ratio);
     }
 
+    /// <summary>
+    /// Sets the text.
+    /// </summary>
+    /// <param name="text">The text value.</param>
     public void SetText(string text)
     {
         _hasResult = true;
@@ -204,6 +292,10 @@ public sealed class GesExtensionCall
         _vmState?.SetText(_destinationRegister, text);
     }
 
+    /// <summary>
+    /// Sets the tag.
+    /// </summary>
+    /// <param name="tag">The tag value.</param>
     public void SetTag(string tag)
     {
         _hasResult = true;

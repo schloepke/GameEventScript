@@ -1,5 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -16,6 +14,9 @@ namespace StepH.GameEventScript.Runtime.Values;
 
 internal readonly record struct GesNumericWithUnit(double Value, GameEventScriptBytecodeInstructionUnit Unit);
 
+/// <summary>
+/// Represents a ges value.
+/// </summary>
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 [SuppressMessage("ReSharper", "ConvertToAutoPropertyWithPrivateSetter")]
 [StructLayout(LayoutKind.Explicit, Size = 32)]
@@ -42,8 +43,17 @@ public struct GesValue : IEquatable<GesValue>
     [FieldOffset(17)] internal GameEventScriptBytecodeInstructionUnit Unit;
     [FieldOffset(18)] internal GesValueFlags Flags;
 
+    /// <summary>
+    /// Performs the ges nothing operation.
+    /// </summary>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesNothing() => new();
 
+    /// <summary>
+    /// Performs the ges boolean operation.
+    /// </summary>
+    /// <param name="boolean">The boolean value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesBoolean(bool boolean)
     {
         var value = new GesValue();
@@ -51,6 +61,12 @@ public struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Performs the ges integer operation.
+    /// </summary>
+    /// <param name="integer">The integer value.</param>
+    /// <param name="unit">The unit value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesInteger(long integer, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
     {
         var value = new GesValue();
@@ -58,6 +74,12 @@ public struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Performs the ges float operation.
+    /// </summary>
+    /// <param name="number">The number value.</param>
+    /// <param name="unit">The unit value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesFloat(double number, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
     {
         var value = new GesValue();
@@ -65,9 +87,20 @@ public struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Performs the ges number operation.
+    /// </summary>
+    /// <param name="number">The number value.</param>
+    /// <param name="unit">The unit value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesNumber(double number, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
         => GesFloat(number, unit);
 
+    /// <summary>
+    /// Performs the ges percentage operation.
+    /// </summary>
+    /// <param name="ratio">The ratio value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesPercentage(double ratio)
     {
         var value = new GesValue();
@@ -75,6 +108,11 @@ public struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Performs the ges text operation.
+    /// </summary>
+    /// <param name="text">The text value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesText(string text)
     {
         text ??= string.Empty;
@@ -84,6 +122,11 @@ public struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Performs the ges tag operation.
+    /// </summary>
+    /// <param name="tag">The tag value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesTag(string tag)
     {
         tag ??= string.Empty;
@@ -94,6 +137,14 @@ public struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Performs the ges vector operation.
+    /// </summary>
+    /// <param name="x">The x value.</param>
+    /// <param name="y">The y value.</param>
+    /// <param name="z">The z value.</param>
+    /// <param name="unit">The unit value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesVector(double x, double y = 0d, double z = 0d, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
     {
         var value = new GesValue();
@@ -101,6 +152,14 @@ public struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Performs the ges point operation.
+    /// </summary>
+    /// <param name="x">The x value.</param>
+    /// <param name="y">The y value.</param>
+    /// <param name="z">The z value.</param>
+    /// <param name="unit">The unit value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesPoint(double x, double y = 0d, double z = 0d, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
     {
         var value = new GesValue();
@@ -108,6 +167,11 @@ public struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Performs the ges list operation.
+    /// </summary>
+    /// <param name="items">The items value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesList(GesValue[] items)
     {
         GesValue[] copy = items.Length == 0 ? [] : new GesValue[items.Length];
@@ -121,6 +185,12 @@ public struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Performs the ges map operation.
+    /// </summary>
+    /// <param name="keys">The keys value.</param>
+    /// <param name="values">The values value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesMap(string[] keys, GesValue[] values)
     {
         var count = keys.Length < values.Length ? keys.Length : values.Length;
@@ -154,6 +224,11 @@ public struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Performs the ges map operation.
+    /// </summary>
+    /// <param name="entries">The entries value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesMap(IReadOnlyDictionary<string, GesValue>? entries)
     {
         if (entries is null || entries.Count == 0)
@@ -178,6 +253,13 @@ public struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Performs the ges record operation.
+    /// </summary>
+    /// <param name="typeName">The type name value.</param>
+    /// <param name="keys">The keys value.</param>
+    /// <param name="values">The values value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesRecord(string typeName, string[] keys, GesValue[] values)
     {
         var value = new GesValue();
@@ -185,6 +267,12 @@ public struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Performs the ges record operation.
+    /// </summary>
+    /// <param name="typeName">The type name value.</param>
+    /// <param name="fields">The fields value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesRecord(string typeName, IReadOnlyDictionary<string, GesValue>? fields)
     {
         if (fields is null || fields.Count == 0)
@@ -207,6 +295,11 @@ public struct GesValue : IEquatable<GesValue>
         return GesRecord(typeName, keys, values);
     }
 
+    /// <summary>
+    /// Performs the ges dice operation.
+    /// </summary>
+    /// <param name="rolls">The rolls value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesDice(int[] rolls)
     {
         int[] copy = rolls.Length == 0 ? [] : new int[rolls.Length];
@@ -220,6 +313,13 @@ public struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Performs the ges range operation.
+    /// </summary>
+    /// <param name="from">The from value.</param>
+    /// <param name="to">The to value.</param>
+    /// <param name="step">The step value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesRange(long from, long to, long step = 1)
     {
         var value = new GesValue();
@@ -227,6 +327,13 @@ public struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Performs the ges range operation.
+    /// </summary>
+    /// <param name="from">The from value.</param>
+    /// <param name="to">The to value.</param>
+    /// <param name="step">The step value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesRange(double from, double to, double step = 1d)
     {
         var value = new GesValue();
@@ -234,6 +341,11 @@ public struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Performs the ges message operation.
+    /// </summary>
+    /// <param name="message">The message value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesMessage(GameEventScriptMessage message)
     {
         var value = new GesValue();
@@ -241,6 +353,11 @@ public struct GesValue : IEquatable<GesValue>
         return value;
     }
 
+    /// <summary>
+    /// Performs the ges handler operation.
+    /// </summary>
+    /// <param name="signature">The signature value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GesValue GesHandler(GameEventScriptMessageSignature signature)
     {
         var value = new GesValue();
@@ -261,22 +378,44 @@ public struct GesValue : IEquatable<GesValue>
     internal readonly bool IsTruthDeterminate => (Flags & (IsTrueFlag | IsFalseFlag)) != 0;
     internal readonly bool IsTruthIndeterminate => (Flags & (IsTrueFlag | IsFalseFlag)) == 0;
 
+    /// <summary>
+    /// Gets a value indicating whether is numeric.
+    /// </summary>
     public readonly bool IsNumeric => (Flags & IsNumericFlag) != 0;
+    /// <summary>
+    /// Gets a value indicating whether has value.
+    /// </summary>
     public readonly bool HasValue => (Flags & HasValueFlag) != 0;
 
+    /// <summary>
+    /// Gets a value indicating whether is nothing.
+    /// </summary>
     public readonly bool IsNothing => Kind is Nothing || (Kind is Float or Percentage && double.IsNaN(FloatValue));
     internal readonly bool IsNotNothing => Kind is not Nothing && Kind is not Float and not Percentage || Kind is Float or Percentage && !double.IsNaN(FloatValue);
 
     internal readonly bool IsUnit(GameEventScriptBytecodeInstructionUnit requiredUnit) => Unit == requiredUnit;
+    /// <summary>
+    /// Gets a value indicating whether has unit.
+    /// </summary>
     public readonly bool HasUnit => Unit.IsNumericUnit();
     internal readonly bool IsStorageObject => (Flags & StorageObjectFlag) != 0;
 
     internal readonly string TextValue => ObjectValue as string ?? string.Empty;
 
+    /// <summary>
+    /// Gets the value kind.
+    /// </summary>
     public readonly GameEventScriptBytecodeTypeKind ValueKind => Kind;
 
+    /// <summary>
+    /// Gets the value unit.
+    /// </summary>
     public readonly GameEventScriptBytecodeInstructionUnit ValueUnit => Unit;
 
+    /// <summary>
+    /// Performs the as integer operation.
+    /// </summary>
+    /// <returns>The result of the operation.</returns>
     public readonly long AsInteger() => Kind switch
     {
         GameEventScriptBytecodeTypeKind.Integer => IntegerValue,
@@ -285,6 +424,10 @@ public struct GesValue : IEquatable<GesValue>
         _ => ToIntegerSaturated(AsNumeric)
     };
 
+    /// <summary>
+    /// Performs the as number operation.
+    /// </summary>
+    /// <returns>The result of the operation.</returns>
     public readonly double AsNumber() => Kind switch
     {
         GameEventScriptBytecodeTypeKind.Integer => IntegerValue,
@@ -293,6 +436,10 @@ public struct GesValue : IEquatable<GesValue>
         _ => AsNumeric
     };
 
+    /// <summary>
+    /// Performs the as boolean operation.
+    /// </summary>
+    /// <returns>The result of the operation.</returns>
     public readonly bool AsBoolean() => Kind switch
     {
         GameEventScriptBytecodeTypeKind.Boolean => IsTrue,
@@ -302,20 +449,45 @@ public struct GesValue : IEquatable<GesValue>
         _ => IsTrue
     };
 
+    /// <summary>
+    /// Performs the as text operation.
+    /// </summary>
+    /// <returns>The result of the operation.</returns>
     public readonly string AsText() => TextValue.Length > 0 || Kind is GameEventScriptBytecodeTypeKind.Text or Tag ? TextValue : ToText;
 
+    /// <summary>
+    /// Gets the x.
+    /// </summary>
     public readonly double X => ObjectValue is GesValueVectorPoint vector ? vector.X : 0d;
 
+    /// <summary>
+    /// Gets the y.
+    /// </summary>
     public readonly double Y => ObjectValue is GesValueVectorPoint vector ? vector.Y : 0d;
 
+    /// <summary>
+    /// Gets the z.
+    /// </summary>
     public readonly double Z => ObjectValue is GesValueVectorPoint vector ? vector.Z : 0d;
 
+    /// <summary>
+    /// Gets the length.
+    /// </summary>
     public readonly int Length => IntegerValue < 0 ? 0 : IntegerValue > int.MaxValue ? int.MaxValue : (int)IntegerValue;
 
+    /// <summary>
+    /// Gets the message.
+    /// </summary>
     public readonly GameEventScriptMessage? Message => ObjectValue as GameEventScriptMessage;
 
+    /// <summary>
+    /// Gets the handler.
+    /// </summary>
     public readonly GameEventScriptMessageSignature? Handler => ObjectValue as GameEventScriptMessageSignature;
 
+    /// <summary>
+    /// Gets the custom type name.
+    /// </summary>
     public readonly string? CustomTypeName => ObjectValue switch
     {
         GesExternalValue externalValue => externalValue.CustomTypeName,
@@ -323,9 +495,17 @@ public struct GesValue : IEquatable<GesValue>
         _ => null
     };
 
+    /// <summary>
+    /// Performs the as list operation.
+    /// </summary>
+    /// <returns>The result of the operation.</returns>
     public readonly GesValueSlice AsList()
         => ObjectValue is GesValue[] source ? new GesValueSlice(source) : GesValueSlice.Empty;
 
+    /// <summary>
+    /// Performs the as map operation.
+    /// </summary>
+    /// <returns>The result of the operation.</returns>
     public readonly GesValueMap? AsMap() => ObjectValue switch
     {
         GesValueMap map => map,
@@ -334,6 +514,10 @@ public struct GesValue : IEquatable<GesValue>
         _ => null
     };
 
+    /// <summary>
+    /// Performs the as dice operation.
+    /// </summary>
+    /// <returns>The result of the operation.</returns>
     public readonly int[] AsDice()
     {
         if (ObjectValue is not int[] rolls)
@@ -346,20 +530,44 @@ public struct GesValue : IEquatable<GesValue>
         return result;
     }
 
+    /// <summary>
+    /// Gets the integer range.
+    /// </summary>
     public readonly GameEventScriptIntegerRange? IntegerRange => ObjectValue is GesValueRangeInteger range
         ? new GameEventScriptIntegerRange(range.From, range.To, range.Step)
         : null;
 
+    /// <summary>
+    /// Gets the float range.
+    /// </summary>
     public readonly GameEventScriptFloatRange? FloatRange => ObjectValue is GesValueRangeFloat range
         ? new GameEventScriptFloatRange(range.From, range.To, range.Step)
         : null;
 
+    /// <summary>
+    /// Returns the equals result for this value.
+    /// </summary>
+    /// <param name="other">The other value.</param>
+    /// <returns>The result of the operation.</returns>
     public readonly bool Equals(GesValue other) => EqualsValue(in other);
 
+    /// <summary>
+    /// Returns the equals result for this value.
+    /// </summary>
+    /// <param name="obj">The obj value.</param>
+    /// <returns>The result of the operation.</returns>
     public override readonly bool Equals(object? obj) => obj is GesValue other && Equals(other);
 
+    /// <summary>
+    /// Returns the get hash code result for this value.
+    /// </summary>
+    /// <returns>The result of the operation.</returns>
     public override readonly int GetHashCode() => GetValueHashCode();
 
+    /// <summary>
+    /// Returns the to string result for this value.
+    /// </summary>
+    /// <returns>The result of the operation.</returns>
     public override readonly string ToString() => ToText;
 
     internal void SetNothing()
@@ -684,6 +892,9 @@ public struct GesValue : IEquatable<GesValue>
         ObjectValue = orderBuilder;
     }
 
+    /// <summary>
+    /// Gets the as numeric.
+    /// </summary>
     public readonly double AsNumeric => Kind switch
     {
         Integer => IntegerValue,

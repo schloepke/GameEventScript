@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using System.Xml.Linq;
 using StepH.GameEventScript.Api;
 
 namespace StepH_GameEventScript_Tests.Native.ApiSurface;
@@ -36,6 +37,53 @@ public sealed class GameEventScriptPublicApiSurfaceTests
                 .ToArray();
 
         Assert.HasCount(0, leakedTypes, "Public compiler types leaked:\n" + string.Join("\n", leakedTypes));
+    }
+
+    /// <summary>
+    /// Verifies that the XML-documentation build gate remains active, every exported type reaches the artifact, and handwritten library sources contain no pragma directives.
+    /// </summary>
+    [TestMethod]
+    public void PublicApiDocumentationAndPragmasRemainComplete()
+    {
+        var assembly = typeof(GameEventScriptProgram).Assembly;
+        var xmlPath = Path.ChangeExtension(assembly.Location, ".xml");
+        Assert.IsTrue(File.Exists(xmlPath), "The public XML documentation artifact was not generated.");
+
+        var documentation = XDocument.Load(xmlPath);
+        var documentedMembers = documentation
+            .Descendants("member")
+            .Select(member => (string?)member.Attribute("name"))
+            .Where(name => name is not null)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var undocumentedTypes = assembly
+            .GetExportedTypes()
+            .Select(type => "T:" + (type.FullName ?? type.Name).Replace('+', '.'))
+            .Where(typeId => !documentedMembers.Contains(typeId))
+            .OrderBy(typeId => typeId, StringComparer.Ordinal)
+            .ToArray();
+        Assert.HasCount(0, undocumentedTypes, "Exported types without XML documentation:\n" + string.Join("\n", undocumentedTypes));
+
+        var projectDirectory = FindLibraryProjectDirectory();
+        var project = XDocument.Load(Path.Combine(projectDirectory, "StepH-GameEventScript.csproj"));
+        var generatedDocumentation = project.Descendants("GenerateDocumentationFile").SingleOrDefault()?.Value;
+        Assert.AreEqual("true", generatedDocumentation, "The library must continue to generate its public XML documentation artifact.");
+
+        var warningsAsErrors = project.Descendants("WarningsAsErrors").SingleOrDefault()?.Value ?? string.Empty;
+        foreach (var diagnostic in new[] { "CS0419", "CS1570", "CS1572", "CS1573", "CS1574", "CS1580", "CS1581", "CS1584", "CS1587", "CS1591", "CS1658", "CS1711", "CS1712" })
+        {
+            Assert.Contains(diagnostic, warningsAsErrors, $"XML documentation diagnostic {diagnostic} must remain a build error.");
+        }
+
+        var workspaceDirectory = Path.GetDirectoryName(projectDirectory) ?? throw new DirectoryNotFoundException("The workspace directory was not found.");
+        var pragmaDirectives = new[] { "StepH-GameEventScript", "StepH-GameEventScript-Tests" }
+            .SelectMany(relativePath => Directory.EnumerateFiles(Path.Combine(workspaceDirectory, relativePath), "*.cs", SearchOption.AllDirectories))
+            .Where(path => !HasDirectorySegment(path, "bin") && !HasDirectorySegment(path, "obj"))
+            .SelectMany(path => File.ReadLines(path).Select((line, index) => new { Path = path, Line = line, Number = index + 1 }))
+            .Where(entry => entry.Line.TrimStart().StartsWith("#pragma", StringComparison.Ordinal))
+            .Select(entry => $"{entry.Path}:{entry.Number}: {entry.Line.Trim()}")
+            .ToArray();
+        Assert.HasCount(0, pragmaDirectives, "Handwritten C# sources contain pragma directives:\n" + string.Join("\n", pragmaDirectives));
     }
 
     internal static string BuildPublicSurfaceSnapshot()
@@ -92,6 +140,28 @@ public sealed class GameEventScriptPublicApiSurfaceTests
         }
 
         throw new FileNotFoundException("Could not find PublicApiSurface.approved.txt.");
+    }
+
+    private static string FindLibraryProjectDirectory()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            var candidate = Path.Combine(directory.FullName, "StepH-GameEventScript", "StepH-GameEventScript.csproj");
+            if (File.Exists(candidate)) return Path.GetDirectoryName(candidate)!;
+
+            candidate = Path.Combine(directory.FullName, "StepH-GameEventScript.csproj");
+            if (File.Exists(candidate)) return directory.FullName;
+            directory = directory.Parent;
+        }
+
+        throw new FileNotFoundException("Could not find StepH-GameEventScript.csproj.");
+    }
+
+    private static bool HasDirectorySegment(string path, string segment)
+    {
+        var separator = Path.DirectorySeparatorChar;
+        return path.Contains(separator + segment + separator, StringComparison.Ordinal);
     }
 
     private static string FormatType(Type type)

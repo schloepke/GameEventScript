@@ -1,13 +1,19 @@
-#pragma warning disable CS1591
-
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace StepH.GameEventScript.Conformance;
 
+/// <summary>
+/// Represents a conformance markdown report writer.
+/// </summary>
 public static class ConformanceMarkdownReportWriter
 {
+    /// <summary>
+    /// Converts this value to a text.
+    /// </summary>
+    /// <param name="report">The report value.</param>
+    /// <returns>The result of the operation.</returns>
     public static string ToText(ConformanceRunReport report)
     {
         _ = report ?? throw new ArgumentNullException(nameof(report));

@@ -1,5 +1,3 @@
-#pragma warning disable CS1591 // Public architecture is documented in Documentation/Specification/HostRuntime.md.
-
 namespace StepH.GameEventScript.Api;
 
 /// <summary>
@@ -7,5 +5,10 @@ namespace StepH.GameEventScript.Api;
 /// </summary>
 public interface IGameEventScriptNativeMessageHandler
 {
+    /// <summary>
+    /// Performs the handle operation.
+    /// </summary>
+    /// <param name="message">The message value.</param>
+    /// <param name="context">The context value.</param>
     void Handle(GameEventScriptMessage message, GameEventScriptContext context);
 }

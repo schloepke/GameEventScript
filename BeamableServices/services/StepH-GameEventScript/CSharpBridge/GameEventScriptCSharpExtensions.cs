@@ -1,5 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,36 +9,78 @@ using StepH.GameEventScript.Runtime.VM;
 
 namespace StepH.GameEventScript.CSharpBridge;
 
+/// <summary>
+/// Represents a game event script c sharp extensions.
+/// </summary>
 public static class GameEventScriptCSharpExtensions
 {
+    /// <summary>
+    /// Creates a registry.
+    /// </summary>
+    /// <param name="extensionTypes">The extension types value.</param>
+    /// <returns>The result of the operation.</returns>
     public static IGameEventScriptExtensionRegistry CreateRegistry(params Type[] extensionTypes)
         => CreateRegistry((IEnumerable<Type>)extensionTypes);
 
+    /// <summary>
+    /// Creates a registry.
+    /// </summary>
+    /// <param name="extensionTypes">The extension types value.</param>
+    /// <returns>The result of the operation.</returns>
     public static IGameEventScriptExtensionRegistry CreateRegistry(IEnumerable<Type> extensionTypes)
         => CreateBuilder().AddRange(extensionTypes).Build();
 
+    /// <summary>
+    /// Creates a builder.
+    /// </summary>
+    /// <returns>The result of the operation.</returns>
     public static GameEventScriptCSharpExtensionRegistryBuilder CreateBuilder()
         => GameEventScriptCSharpExtensionRegistryBuilder.Create(baseRegistry: null);
 
+    /// <summary>
+    /// Creates a builder.
+    /// </summary>
+    /// <param name="baseRegistry">The base registry value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GameEventScriptCSharpExtensionRegistryBuilder CreateBuilder(IGameEventScriptExtensionRegistry baseRegistry)
         => GameEventScriptCSharpExtensionRegistryBuilder.Create(baseRegistry ?? throw new ArgumentNullException(nameof(baseRegistry)));
 }
 
+/// <summary>
+/// Represents a ges extension attribute.
+/// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
 public sealed class GesExtensionAttribute(string name) : Attribute
 {
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public string Name { get; } = GameEventScriptExternalTypeNames.NormalizeTypeName(name);
 }
 
+/// <summary>
+/// Represents a ges function attribute.
+/// </summary>
 [AttributeUsage(AttributeTargets.Method)]
 public sealed class GesFunctionAttribute(string name) : Attribute
 {
+    /// <summary>
+    /// Initializes a new instance of Ges Function Attribute.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <param name="returnKind">The return kind value.</param>
     public GesFunctionAttribute(string name, GameEventScriptBytecodeTypeKind returnKind) : this(name)
     {
         ReturnTypeName = GameEventScriptExternalTypeNames.ToTypeName(returnKind, unit: null);
         ReturnKind = returnKind;
     }
 
+    /// <summary>
+    /// Initializes a new instance of Ges Function Attribute.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <param name="returnKind">The return kind value.</param>
+    /// <param name="unit">The unit value.</param>
     public GesFunctionAttribute(string name, GameEventScriptBytecodeTypeKind returnKind, GameEventScriptBytecodeInstructionUnit unit) : this(name)
     {
         ReturnTypeName = GameEventScriptExternalTypeNames.ToTypeName(returnKind, unit);
@@ -48,15 +88,30 @@ public sealed class GesFunctionAttribute(string name) : Attribute
         ReturnUnit = unit.ToStoredUnit();
     }
 
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public string Name { get; } = GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
 
+    /// <summary>
+    /// Gets the return type name.
+    /// </summary>
     public string? ReturnTypeName { get; }
 
+    /// <summary>
+    /// Gets the return kind.
+    /// </summary>
     public GameEventScriptBytecodeTypeKind? ReturnKind { get; }
 
+    /// <summary>
+    /// Gets the return unit.
+    /// </summary>
     public GameEventScriptBytecodeInstructionUnit ReturnUnit { get; }
 }
 
+/// <summary>
+/// Represents a game event script c sharp extension registry builder.
+/// </summary>
 public sealed class GameEventScriptCSharpExtensionRegistryBuilder
 {
     private readonly IGameEventScriptExtensionRegistry? _baseRegistry;
@@ -70,14 +125,29 @@ public sealed class GameEventScriptCSharpExtensionRegistryBuilder
     internal static GameEventScriptCSharpExtensionRegistryBuilder Create(IGameEventScriptExtensionRegistry? baseRegistry)
         => new(baseRegistry);
 
+    /// <summary>
+    /// Adds the value.
+    /// </summary>
+    /// <param name="extensionType">The extension type value.</param>
+    /// <returns>The result of the operation.</returns>
     public GameEventScriptCSharpExtensionRegistryBuilder Add(Type extensionType)
     {
         _extensionTypes.Add(extensionType ?? throw new ArgumentNullException(nameof(extensionType)));
         return this;
     }
 
+    /// <summary>
+    /// Adds the value.
+    /// </summary>
+    /// <typeparam name="T">The t type.</typeparam>
+    /// <returns>The result of the operation.</returns>
     public GameEventScriptCSharpExtensionRegistryBuilder Add<T>() => Add(typeof(T));
 
+    /// <summary>
+    /// Adds the range.
+    /// </summary>
+    /// <param name="extensionTypes">The extension types value.</param>
+    /// <returns>The result of the operation.</returns>
     public GameEventScriptCSharpExtensionRegistryBuilder AddRange(IEnumerable<Type> extensionTypes)
     {
         _ = extensionTypes ?? throw new ArgumentNullException(nameof(extensionTypes));
@@ -89,6 +159,10 @@ public sealed class GameEventScriptCSharpExtensionRegistryBuilder
         return this;
     }
 
+    /// <summary>
+    /// Performs the build operation.
+    /// </summary>
+    /// <returns>The result of the operation.</returns>
     public IGameEventScriptExtensionRegistry Build()
     {
         var localRegistry = GameEventScriptCSharpExtensionRegistry.Create(_extensionTypes);

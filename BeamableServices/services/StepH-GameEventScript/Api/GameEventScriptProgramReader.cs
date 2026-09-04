@@ -1,5 +1,3 @@
-#pragma warning disable CS1591
-
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -7,11 +5,21 @@ using static StepH.GameEventScript.Api.GameEventScriptBindingSegment;
 
 namespace StepH.GameEventScript.Api;
 
+/// <summary>
+/// Decodes bounded, portable <c>.gesb</c> V1 bytes into an immutable program.
+/// </summary>
 public static class GameEventScriptProgramReader
 {
     private const ushort KnownFlagMask = (ushort)(GameEventScriptSectionFlags.Required | GameEventScriptSectionFlags.CompressionMask);
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
+    /// <summary>
+    /// Reads and fully validates a program from one complete <c>.gesb</c> image.
+    /// </summary>
+    /// <param name="bytes">The complete byte image. The returned program owns all retained data.</param>
+    /// <param name="options">Optional retention and resource limits; defaults preserve all supported and opaque optional sections.</param>
+    /// <returns>A structurally and semantically validated immutable program.</returns>
+    /// <exception cref="GameEventScriptProgramFormatException">Thrown with a stable error code when the image is malformed, unsupported, exceeds limits, or describes an invalid program.</exception>
     public static GameEventScriptProgram Read(ReadOnlySpan<byte> bytes, GameEventScriptProgramReadOptions? options = null)
     {
         var readOptions = options ?? new GameEventScriptProgramReadOptions();

@@ -1,5 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,30 +8,62 @@ using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.CSharpBridge;
 
+/// <summary>
+/// Represents a game event script c sharp external types.
+/// </summary>
 public static class GameEventScriptCSharpExternalTypes
 {
+    /// <summary>
+    /// Creates a registry.
+    /// </summary>
+    /// <param name="types">The types value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GameEventScriptCSharpExternalTypeRegistry CreateRegistry(params Type[] types)
         => CreateRegistry((IEnumerable<Type>)types);
 
+    /// <summary>
+    /// Creates a registry.
+    /// </summary>
+    /// <param name="types">The types value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GameEventScriptCSharpExternalTypeRegistry CreateRegistry(IEnumerable<Type> types)
         => GameEventScriptCSharpExternalTypeRegistry.Create(types);
 }
 
+/// <summary>
+/// Represents a ges type attribute.
+/// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
 public sealed class GesTypeAttribute(string typeName) : Attribute
 {
+    /// <summary>
+    /// Gets the type name.
+    /// </summary>
     public string TypeName { get; } = typeName ?? throw new ArgumentNullException(nameof(typeName));
 }
 
+/// <summary>
+/// Represents a ges field attribute.
+/// </summary>
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
 public sealed class GesFieldAttribute : Attribute
 {
+    /// <summary>
+    /// Initializes a new instance of Ges Field Attribute.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <param name="typeName">The type name value.</param>
     public GesFieldAttribute(string name, string typeName)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         TypeName = typeName ?? throw new ArgumentNullException(nameof(typeName));
     }
 
+    /// <summary>
+    /// Initializes a new instance of Ges Field Attribute.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <param name="kind">The kind value.</param>
     public GesFieldAttribute(string name, GameEventScriptBytecodeTypeKind kind)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
@@ -41,6 +71,12 @@ public sealed class GesFieldAttribute : Attribute
         Kind = kind;
     }
 
+    /// <summary>
+    /// Initializes a new instance of Ges Field Attribute.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <param name="kind">The kind value.</param>
+    /// <param name="unit">The unit value.</param>
     public GesFieldAttribute(string name, GameEventScriptBytecodeTypeKind kind, GameEventScriptBytecodeInstructionUnit unit)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
@@ -49,27 +85,55 @@ public sealed class GesFieldAttribute : Attribute
         Unit = unit.ToStoredUnit();
     }
 
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Gets the type name.
+    /// </summary>
     public string TypeName { get; }
 
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public GameEventScriptBytecodeTypeKind? Kind { get; }
 
+    /// <summary>
+    /// Gets the unit.
+    /// </summary>
     public GameEventScriptBytecodeInstructionUnit Unit { get; }
 }
 
+/// <summary>
+/// Represents a ges construct attribute.
+/// </summary>
 [AttributeUsage(AttributeTargets.Constructor | AttributeTargets.Method)]
 public sealed class GesConstructAttribute : Attribute;
 
+/// <summary>
+/// Represents a ges param attribute.
+/// </summary>
 [AttributeUsage(AttributeTargets.Parameter)]
 public sealed class GesParamAttribute : Attribute
 {
+    /// <summary>
+    /// Initializes a new instance of Ges Param Attribute.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <param name="typeName">The type name value.</param>
     public GesParamAttribute(string name, string typeName)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         TypeName = typeName ?? throw new ArgumentNullException(nameof(typeName));
     }
 
+    /// <summary>
+    /// Initializes a new instance of Ges Param Attribute.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <param name="kind">The kind value.</param>
     public GesParamAttribute(string name, GameEventScriptBytecodeTypeKind kind)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
@@ -77,6 +141,12 @@ public sealed class GesParamAttribute : Attribute
         Kind = kind;
     }
 
+    /// <summary>
+    /// Initializes a new instance of Ges Param Attribute.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <param name="kind">The kind value.</param>
+    /// <param name="unit">The unit value.</param>
     public GesParamAttribute(string name, GameEventScriptBytecodeTypeKind kind, GameEventScriptBytecodeInstructionUnit unit)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
@@ -85,15 +155,30 @@ public sealed class GesParamAttribute : Attribute
         Unit = unit.ToStoredUnit();
     }
 
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Gets the type name.
+    /// </summary>
     public string TypeName { get; }
 
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public GameEventScriptBytecodeTypeKind? Kind { get; }
 
+    /// <summary>
+    /// Gets the unit.
+    /// </summary>
     public GameEventScriptBytecodeInstructionUnit Unit { get; }
 }
 
+/// <summary>
+/// Represents a game event script c sharp external type registry.
+/// </summary>
 public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScriptExternalTypeCatalog, IGameEventScriptExternalTypeRegistry
 {
     private readonly Dictionary<string, GameEventScriptExternalTypeDefinition> _typesByName = new(StringComparer.Ordinal);
@@ -105,6 +190,9 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
     {
     }
 
+    /// <summary>
+    /// Gets the types.
+    /// </summary>
     public IReadOnlyList<GameEventScriptExternalTypeDefinition> Types => _types;
 
     internal static GameEventScriptCSharpExternalTypeRegistry Create(params Type[] types)
@@ -123,12 +211,22 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
         return registry;
     }
 
+    /// <summary>
+    /// Resolves the value.
+    /// </summary>
+    /// <param name="typeName">The type name value.</param>
+    /// <returns>The result of the operation.</returns>
     public GameEventScriptExternalTypeDefinition? Resolve(string typeName)
     {
         var normalized = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
         return _typesByName.TryGetValue(normalized, out var definition) ? definition : null;
     }
 
+    /// <summary>
+    /// Resolves the value.
+    /// </summary>
+    /// <param name="reference">The reference value.</param>
+    /// <returns>The result of the operation.</returns>
     public IGameEventScriptExternalTypeConstructor? Resolve(GameEventScriptExternalTypeConstructorReference reference)
     {
         _ = reference ?? throw new ArgumentNullException(nameof(reference));

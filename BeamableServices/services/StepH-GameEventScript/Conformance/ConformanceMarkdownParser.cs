@@ -1,16 +1,29 @@
-#pragma warning disable CS1591
-
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace StepH.GameEventScript.Conformance;
 
+/// <summary>
+/// Parses the strict, portable Conformance Markdown V1 subset into an immutable normalized model.
+/// </summary>
 public static class ConformanceMarkdownParser
 {
+    /// <summary>
+    /// Parses strict UTF-8 Conformance Markdown using the default bounded limits.
+    /// </summary>
+    /// <param name="utf8Bytes">The complete UTF-8 document bytes.</param>
+    /// <returns>The normalized conformance document.</returns>
     public static ConformanceDocument Parse(byte[] utf8Bytes)
         => Parse(utf8Bytes, ConformanceParserLimits.Default);
 
+    /// <summary>
+    /// Parses strict UTF-8 Conformance Markdown using explicit bounded limits.
+    /// </summary>
+    /// <param name="utf8Bytes">The complete UTF-8 document bytes.</param>
+    /// <param name="limits">The parser resource limits.</param>
+    /// <returns>The normalized conformance document with retained UTF-8 source ranges.</returns>
+    /// <exception cref="ConformanceParseException">Thrown with stable diagnostics when syntax, schema, encoding, or a resource limit is invalid.</exception>
     public static ConformanceDocument Parse(byte[] utf8Bytes, ConformanceParserLimits limits)
     {
         if (utf8Bytes is null) throw new ArgumentNullException(nameof(utf8Bytes));
@@ -27,9 +40,21 @@ public static class ConformanceMarkdownParser
         }
     }
 
+    /// <summary>
+    /// Encodes and parses a .NET string as Conformance Markdown using the default limits.
+    /// </summary>
+    /// <param name="text">The complete Markdown text; unpaired UTF-16 surrogates are rejected.</param>
+    /// <returns>The normalized conformance document.</returns>
     public static ConformanceDocument Parse(string text)
         => Parse(text, ConformanceParserLimits.Default);
 
+    /// <summary>
+    /// Encodes and parses a .NET string as Conformance Markdown using explicit limits.
+    /// </summary>
+    /// <param name="text">The complete Markdown text; unpaired UTF-16 surrogates are rejected.</param>
+    /// <param name="limits">The parser resource limits.</param>
+    /// <returns>The normalized conformance document with retained UTF-8 source ranges.</returns>
+    /// <exception cref="ConformanceParseException">Thrown with stable diagnostics when syntax, schema, encoding, or a resource limit is invalid.</exception>
     public static ConformanceDocument Parse(string text, ConformanceParserLimits limits)
     {
         if (text is null) throw new ArgumentNullException(nameof(text));

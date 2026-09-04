@@ -1,5 +1,3 @@
-#pragma warning disable CS1591 // Public architecture is documented in Documentation/Specification/HostRuntime.md.
-
 using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Runtime;
@@ -60,11 +58,30 @@ public sealed class GameEventScriptHost
         _context = new GameEventScriptContext(this, _random, _limits, _extensionRegistry, _observer);
     }
 
+    /// <summary>
+    /// Creates a builder for an independent host.
+    /// </summary>
+    /// <returns>A new mutable builder with the portable default configuration.</returns>
     public static GameEventScriptHostBuilder CreateBuilder() => new();
+    /// <summary>
+    /// Gets the number of logical messages waiting behind the currently active message.
+    /// </summary>
     public int PendingMessageCount => _queue.Count;
+    /// <summary>
+    /// Gets a value indicating whether no message is active or queued.
+    /// </summary>
     public bool IsIdle => !_hasActiveMessage && _queue.Count == 0;
     internal GesVmState? VmState => _vmState;
 
+    /// <summary>
+    /// Validates and links an immutable program into this host and registers all of its handlers.
+    /// </summary>
+    /// <param name="program">The portable program to load. The program remains reusable by other hosts.</param>
+    /// <param name="priority">The dispatch priority shared by the program's handlers. Lower values run first.</param>
+    /// <returns>A host-local instance handle that can detach the program.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="program"/> is <see langword="null"/>.</exception>
+    /// <exception cref="GameEventScriptProgramFormatException">Thrown when the program is structurally or semantically invalid.</exception>
+    /// <exception cref="GameEventScriptDynamicLinkException">Thrown when runtime bindings are unavailable or the program exceeds host limits.</exception>
     public GameEventScriptInstance Load(GameEventScriptProgram program, int priority = NormalPriority)
     {
         _ = program ?? throw new ArgumentNullException(nameof(program));
@@ -125,12 +142,36 @@ public sealed class GameEventScriptHost
             message,
             ProgramName: program.ModuleName));
 
+    /// <summary>
+    /// Subscribes a native handler to an exact message signature.
+    /// </summary>
+    /// <param name="message">The message name.</param>
+    /// <param name="parameterNames">The ordered parameter names that form the signature.</param>
+    /// <param name="handler">The synchronous native handler.</param>
+    /// <param name="priority">The dispatch priority. Lower values run first; equal priorities retain registration order.</param>
+    /// <returns>An idempotently removable subscription handle.</returns>
     public GameEventScriptSubscription Subscribe(string message, IReadOnlyCollection<string> parameterNames, IGameEventScriptNativeMessageHandler handler, int priority = NormalPriority)
         => Subscribe(GameEventScriptMessageSignature.Create(message, parameterNames), handler, null, null, priority);
 
+    /// <summary>
+    /// Subscribes a native handler to an exact message signature.
+    /// </summary>
+    /// <param name="signature">The exact ordered message signature.</param>
+    /// <param name="handler">The synchronous native handler.</param>
+    /// <param name="priority">The dispatch priority. Lower values run first; equal priorities retain registration order.</param>
+    /// <returns>An idempotently removable subscription handle.</returns>
     public GameEventScriptSubscription Subscribe(GameEventScriptMessageSignature signature, IGameEventScriptNativeMessageHandler handler, int priority = NormalPriority)
         => Subscribe(signature, handler, null, null, priority);
 
+    /// <summary>
+    /// Subscribes a native handler to an exact message signature and optional tag constraints.
+    /// </summary>
+    /// <param name="signature">The exact ordered message signature.</param>
+    /// <param name="handler">The synchronous native handler.</param>
+    /// <param name="matchingTags">Tags all of which must be present, or <see langword="null"/> for no required tags.</param>
+    /// <param name="withoutTags">Tags all of which must be absent, or <see langword="null"/> for no exclusions.</param>
+    /// <param name="priority">The dispatch priority. Lower values run first; equal priorities retain registration order.</param>
+    /// <returns>An idempotently removable subscription handle.</returns>
     public GameEventScriptSubscription Subscribe(
         GameEventScriptMessageSignature signature,
         IGameEventScriptNativeMessageHandler handler,
@@ -151,6 +192,15 @@ public sealed class GameEventScriptHost
         return new GameEventScriptSubscription(this, registrationId);
     }
 
+    /// <summary>
+    /// Subscribes a native handler by message name without constraining the argument signature.
+    /// </summary>
+    /// <param name="messageName">The message name to match.</param>
+    /// <param name="handler">The synchronous native handler.</param>
+    /// <param name="matchingTags">Tags all of which must be present, or <see langword="null"/> for no required tags.</param>
+    /// <param name="withoutTags">Tags all of which must be absent, or <see langword="null"/> for no exclusions.</param>
+    /// <param name="priority">The dispatch priority. Lower values run first; equal priorities retain registration order.</param>
+    /// <returns>An idempotently removable subscription handle.</returns>
     public GameEventScriptSubscription SubscribeMessageName(
         string messageName,
         IGameEventScriptNativeMessageHandler handler,
@@ -171,12 +221,27 @@ public sealed class GameEventScriptHost
         return new GameEventScriptSubscription(this, registrationId);
     }
 
+    /// <summary>
+    /// Enqueues one externally received message for local dispatch only.
+    /// </summary>
+    /// <param name="message">The immutable message to enqueue.</param>
+    /// <returns><see langword="true"/> when the host queue accepted the message; otherwise <see langword="false"/>.</returns>
+    /// <remarks>The matching handler snapshot is captured when the message is enqueued. This method never invokes the publish sink or pumps the host.</remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is <see langword="null"/>.</exception>
     public bool Receive(GameEventScriptMessage message)
     {
+        _ = message ?? throw new ArgumentNullException(nameof(message));
         if (message.Name.Length == 0 || GameEventScriptSystemEndpoints.IsInitializationName(message.Name)) return false;
         return EnqueueMessage(message);
     }
 
+    /// <summary>
+    /// Synchronously advances the serial host by at most the supplied number of script opcodes.
+    /// </summary>
+    /// <param name="opcodeBudget">The positive scheduler budget for this call. Native handlers remain atomic and do not consume opcode units.</param>
+    /// <returns>A value-type summary of work performed and the resulting host state.</returns>
+    /// <remarks>The caller must serialize access to a host. A handler may enqueue and change future subscriptions, but must not recursively pump this host.</remarks>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="opcodeBudget"/> is not positive.</exception>
     public GameEventScriptExecutionResult ExecuteFrame(int opcodeBudget)
     {
         if (opcodeBudget <= 0) throw new ArgumentOutOfRangeException(nameof(opcodeBudget), "Opcode budget must be greater than zero.");
@@ -274,6 +339,11 @@ public sealed class GameEventScriptHost
         return CreateResult(runtimeLimitReached);
     }
 
+    /// <summary>
+    /// Synchronously pumps the host until it is idle or a configured runtime boundary stops execution.
+    /// </summary>
+    /// <returns>A value-type aggregate of all internally executed frames.</returns>
+    /// <remarks>The caller must serialize access to a host. No thread or task is created.</remarks>
     public GameEventScriptExecutionResult RunToCompletion()
     {
         var totalOpcodes = 0;

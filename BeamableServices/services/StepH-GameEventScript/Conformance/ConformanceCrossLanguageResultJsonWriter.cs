@@ -1,5 +1,3 @@
-#pragma warning disable CS1591
-
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -7,6 +5,9 @@ using System.Text;
 
 namespace StepH.GameEventScript.Conformance;
 
+/// <summary>
+/// Represents a conformance corpus identity.
+/// </summary>
 public sealed class ConformanceCorpusIdentity
 {
     internal ConformanceCorpusIdentity(int markdownFormatVersion, string sha256, int documentCount, int caseCount)
@@ -17,17 +18,37 @@ public sealed class ConformanceCorpusIdentity
         CaseCount = caseCount;
     }
 
+    /// <summary>
+    /// Gets the markdown format version.
+    /// </summary>
     public int MarkdownFormatVersion { get; }
+    /// <summary>
+    /// Gets the sha256.
+    /// </summary>
     public string Sha256 { get; }
+    /// <summary>
+    /// Gets the document count.
+    /// </summary>
     public int DocumentCount { get; }
+    /// <summary>
+    /// Gets the case count.
+    /// </summary>
     public int CaseCount { get; }
 }
 
+/// <summary>
+/// Represents a conformance cross language result json writer.
+/// </summary>
 public static class ConformanceCrossLanguageResultJsonWriter
 {
     private static readonly UTF8Encoding Utf8 = new(false, true);
     private static readonly byte[] HashDomain = Encoding.ASCII.GetBytes("GES-CONFORMANCE-CORPUS-V1\0");
 
+    /// <summary>
+    /// Performs the identify operation.
+    /// </summary>
+    /// <param name="documents">The documents value.</param>
+    /// <returns>The result of the operation.</returns>
     public static ConformanceCorpusIdentity Identify(IReadOnlyList<ConformanceDocument> documents)
     {
         var ordered = ValidateAndOrderDocuments(documents, out var formatVersion, out var caseCount);
@@ -52,6 +73,12 @@ public static class ConformanceCrossLanguageResultJsonWriter
             caseCount);
     }
 
+    /// <summary>
+    /// Converts this value to a text.
+    /// </summary>
+    /// <param name="documents">The documents value.</param>
+    /// <param name="report">The report value.</param>
+    /// <returns>The result of the operation.</returns>
     public static string ToText(IReadOnlyList<ConformanceDocument> documents, ConformanceRunReport report)
     {
         _ = report ?? throw new ArgumentNullException(nameof(report));
@@ -103,6 +130,12 @@ public static class ConformanceCrossLanguageResultJsonWriter
         return writer.Complete();
     }
 
+    /// <summary>
+    /// Converts this value to an array.
+    /// </summary>
+    /// <param name="documents">The documents value.</param>
+    /// <param name="report">The report value.</param>
+    /// <returns>The result of the operation.</returns>
     public static byte[] ToArray(IReadOnlyList<ConformanceDocument> documents, ConformanceRunReport report)
         => Utf8.GetBytes(ToText(documents, report));
 

@@ -1,5 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -7,29 +5,66 @@ using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Api;
 
+/// <summary>
+/// Defines the contract for i game event script external type registry.
+/// </summary>
 public interface IGameEventScriptExternalTypeRegistry
 {
+    /// <summary>
+    /// Resolves the value.
+    /// </summary>
+    /// <param name="reference">The reference value.</param>
+    /// <returns>The result of the operation.</returns>
     IGameEventScriptExternalTypeConstructor? Resolve(GameEventScriptExternalTypeConstructorReference reference);
 }
 
+/// <summary>
+/// Defines the contract for i game event script external type catalog.
+/// </summary>
 public interface IGameEventScriptExternalTypeCatalog
 {
+    /// <summary>
+    /// Gets the types.
+    /// </summary>
     IReadOnlyList<GameEventScriptExternalTypeDefinition> Types { get; }
 
+    /// <summary>
+    /// Resolves the value.
+    /// </summary>
+    /// <param name="typeName">The type name value.</param>
+    /// <returns>The result of the operation.</returns>
     GameEventScriptExternalTypeDefinition? Resolve(string typeName);
 }
 
+/// <summary>
+/// Defines the contract for i game event script external value.
+/// </summary>
 public interface IGameEventScriptExternalValue
 {
+    /// <summary>
+    /// Gets the definition.
+    /// </summary>
     GameEventScriptExternalTypeDefinition Definition { get; }
 
+    /// <summary>
+    /// Gets the field.
+    /// </summary>
+    /// <param name="fieldName">The field name value.</param>
+    /// <returns>The result of the operation.</returns>
     GesValue? GetField(string fieldName);
 }
 
+/// <summary>
+/// Represents a game event script external type catalog.
+/// </summary>
 public sealed class GameEventScriptExternalTypeCatalog : IGameEventScriptExternalTypeCatalog
 {
     private readonly Dictionary<string, GameEventScriptExternalTypeDefinition> _typesByName;
 
+    /// <summary>
+    /// Initializes a new instance of Game Event Script External Type Catalog.
+    /// </summary>
+    /// <param name="types">The types value.</param>
     public GameEventScriptExternalTypeCatalog(IEnumerable<GameEventScriptExternalTypeDefinition> types)
     {
         _ = types ?? throw new ArgumentNullException(nameof(types));
@@ -46,8 +81,16 @@ public sealed class GameEventScriptExternalTypeCatalog : IGameEventScriptExterna
         Types = Array.AsReadOnly(definitions.ToArray());
     }
 
+    /// <summary>
+    /// Gets the types.
+    /// </summary>
     public IReadOnlyList<GameEventScriptExternalTypeDefinition> Types { get; }
 
+    /// <summary>
+    /// Resolves the value.
+    /// </summary>
+    /// <param name="typeName">The type name value.</param>
+    /// <returns>The result of the operation.</returns>
     public GameEventScriptExternalTypeDefinition? Resolve(string typeName)
     {
         var normalized = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
@@ -55,13 +98,26 @@ public sealed class GameEventScriptExternalTypeCatalog : IGameEventScriptExterna
     }
 }
 
+/// <summary>
+/// Defines the contract for i game event script external type constructor.
+/// </summary>
 public interface IGameEventScriptExternalTypeConstructor
 {
+    /// <summary>
+    /// Gets the definition.
+    /// </summary>
     GameEventScriptExternalTypeConstructorDefinition Definition { get; }
 
+    /// <summary>
+    /// Performs the invoke operation.
+    /// </summary>
+    /// <param name="call">The call value.</param>
     void Invoke(GesExternalTypeConstructorCall call);
 }
 
+/// <summary>
+/// Represents a ges external type constructor call.
+/// </summary>
 public sealed class GesExternalTypeConstructorCall
 {
     private GesValueArguments _arguments = GesValueArguments.Empty;
@@ -71,17 +127,30 @@ public sealed class GesExternalTypeConstructorCall
     private GesValue _result;
     private bool _hasResult;
 
+    /// <summary>
+    /// Initializes a new instance of Ges External Type Constructor Call.
+    /// </summary>
     public GesExternalTypeConstructorCall()
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of Ges External Type Constructor Call.
+    /// </summary>
+    /// <param name="arguments">The arguments value.</param>
     public GesExternalTypeConstructorCall(GesValueArguments arguments)
     {
         _arguments = arguments;
     }
 
+    /// <summary>
+    /// Gets the arguments.
+    /// </summary>
     public GesValueArguments Arguments => _arguments;
 
+    /// <summary>
+    /// Gets the result.
+    /// </summary>
     public GesValue Result => _hasResult ? _result : GesValue.GesNothing();
 
     internal bool HasResult => _hasResult;
@@ -106,6 +175,9 @@ public sealed class GesExternalTypeConstructorCall
         _hasResult = false;
     }
 
+    /// <summary>
+    /// Sets the nothing.
+    /// </summary>
     public void SetNothing()
     {
         var value = GesValue.GesNothing();
@@ -119,6 +191,10 @@ public sealed class GesExternalTypeConstructorCall
         _vmState?.SetValue(_destinationRegister, in value);
     }
 
+    /// <summary>
+    /// Sets the external value.
+    /// </summary>
+    /// <param name="value">The value value.</param>
     public void SetExternalValue(IGameEventScriptExternalValue value)
     {
         _ = value ?? throw new ArgumentNullException(nameof(value));
@@ -136,8 +212,17 @@ public sealed class GesExternalTypeConstructorCall
     }
 }
 
+/// <summary>
+/// Represents a game event script external type definition.
+/// </summary>
 public sealed class GameEventScriptExternalTypeDefinition
 {
+    /// <summary>
+    /// Initializes a new instance of Game Event Script External Type Definition.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <param name="fields">The fields value.</param>
+    /// <param name="constructors">The constructors value.</param>
     public GameEventScriptExternalTypeDefinition(string name, IEnumerable<GameEventScriptExternalTypeFieldDefinition> fields, IEnumerable<GameEventScriptExternalTypeConstructorDefinition> constructors)
     {
         Name = GameEventScriptExternalTypeNames.NormalizeTypeName(name);
@@ -149,10 +234,19 @@ public sealed class GameEventScriptExternalTypeDefinition
         Constructors = Array.AsReadOnly(copiedConstructors);
     }
 
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Gets the fields.
+    /// </summary>
     public IReadOnlyList<GameEventScriptExternalTypeFieldDefinition> Fields { get; }
 
+    /// <summary>
+    /// Gets the constructors.
+    /// </summary>
     public IReadOnlyList<GameEventScriptExternalTypeConstructorDefinition> Constructors { get; }
 
     internal bool HasConstructor(IReadOnlyCollection<string> argumentLabels)
@@ -270,8 +364,16 @@ public sealed class GameEventScriptExternalTypeDefinition
     }
 }
 
+/// <summary>
+/// Represents a game event script external type field definition.
+/// </summary>
 public sealed class GameEventScriptExternalTypeFieldDefinition
 {
+    /// <summary>
+    /// Initializes a new instance of Game Event Script External Type Field Definition.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <param name="typeName">The type name value.</param>
     public GameEventScriptExternalTypeFieldDefinition(string name, string typeName)
     {
         Name = GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
@@ -281,11 +383,22 @@ public sealed class GameEventScriptExternalTypeFieldDefinition
         Unit = unit.ToStoredUnit();
     }
 
+    /// <summary>
+    /// Initializes a new instance of Game Event Script External Type Field Definition.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <param name="kind">The kind value.</param>
     public GameEventScriptExternalTypeFieldDefinition(string name, GameEventScriptBytecodeTypeKind kind)
         : this(name, kind, unit: null)
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of Game Event Script External Type Field Definition.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <param name="kind">The kind value.</param>
+    /// <param name="unit">The unit value.</param>
     public GameEventScriptExternalTypeFieldDefinition(string name, GameEventScriptBytecodeTypeKind kind, GameEventScriptBytecodeInstructionUnit unit)
         : this(name, kind, (GameEventScriptBytecodeInstructionUnit?)unit)
     {
@@ -301,17 +414,37 @@ public sealed class GameEventScriptExternalTypeFieldDefinition
         Unit = unit.ToStoredUnit();
     }
 
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Gets the type name.
+    /// </summary>
     public string TypeName { get; }
 
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public GameEventScriptBytecodeTypeKind? Kind { get; }
 
+    /// <summary>
+    /// Gets the unit.
+    /// </summary>
     public GameEventScriptBytecodeInstructionUnit Unit { get; }
 }
 
+/// <summary>
+/// Represents a game event script external type parameter definition.
+/// </summary>
 public sealed class GameEventScriptExternalTypeParameterDefinition
 {
+    /// <summary>
+    /// Initializes a new instance of Game Event Script External Type Parameter Definition.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <param name="typeName">The type name value.</param>
     public GameEventScriptExternalTypeParameterDefinition(string name, string typeName)
     {
         Name = GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
@@ -321,11 +454,22 @@ public sealed class GameEventScriptExternalTypeParameterDefinition
         Unit = unit.ToStoredUnit();
     }
 
+    /// <summary>
+    /// Initializes a new instance of Game Event Script External Type Parameter Definition.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <param name="kind">The kind value.</param>
     public GameEventScriptExternalTypeParameterDefinition(string name, GameEventScriptBytecodeTypeKind kind)
         : this(name, kind, unit: null)
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of Game Event Script External Type Parameter Definition.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <param name="kind">The kind value.</param>
+    /// <param name="unit">The unit value.</param>
     public GameEventScriptExternalTypeParameterDefinition(string name, GameEventScriptBytecodeTypeKind kind, GameEventScriptBytecodeInstructionUnit unit)
         : this(name, kind, (GameEventScriptBytecodeInstructionUnit?)unit)
     {
@@ -341,17 +485,37 @@ public sealed class GameEventScriptExternalTypeParameterDefinition
         Unit = unit.ToStoredUnit();
     }
 
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Gets the type name.
+    /// </summary>
     public string TypeName { get; }
 
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public GameEventScriptBytecodeTypeKind? Kind { get; }
 
+    /// <summary>
+    /// Gets the unit.
+    /// </summary>
     public GameEventScriptBytecodeInstructionUnit Unit { get; }
 }
 
+/// <summary>
+/// Represents a game event script external type constructor definition.
+/// </summary>
 public sealed class GameEventScriptExternalTypeConstructorDefinition
 {
+    /// <summary>
+    /// Initializes a new instance of Game Event Script External Type Constructor Definition.
+    /// </summary>
+    /// <param name="typeName">The type name value.</param>
+    /// <param name="parameters">The parameters value.</param>
     public GameEventScriptExternalTypeConstructorDefinition(string typeName, IEnumerable<GameEventScriptExternalTypeParameterDefinition> parameters)
     {
         TypeName = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
@@ -367,10 +531,19 @@ public sealed class GameEventScriptExternalTypeConstructorDefinition
         SignatureId = GameEventScriptExternalTypeConstructorReference.CreateSignatureId(TypeName, CreateParameterNameArray(Parameters));
     }
 
+    /// <summary>
+    /// Gets the type name.
+    /// </summary>
     public string TypeName { get; }
 
+    /// <summary>
+    /// Gets the parameters.
+    /// </summary>
     public IReadOnlyList<GameEventScriptExternalTypeParameterDefinition> Parameters { get; }
 
+    /// <summary>
+    /// Gets the signature id.
+    /// </summary>
     public string SignatureId { get; }
 
     private static GameEventScriptExternalTypeParameterDefinition[] CopyParameters(IEnumerable<GameEventScriptExternalTypeParameterDefinition> parameters)
@@ -424,8 +597,16 @@ public sealed class GameEventScriptExternalTypeConstructorDefinition
     }
 }
 
+/// <summary>
+/// Represents a game event script external type constructor reference.
+/// </summary>
 public sealed class GameEventScriptExternalTypeConstructorReference
 {
+    /// <summary>
+    /// Initializes a new instance of Game Event Script External Type Constructor Reference.
+    /// </summary>
+    /// <param name="typeName">The type name value.</param>
+    /// <param name="argumentLabels">The argument labels value.</param>
     public GameEventScriptExternalTypeConstructorReference(string typeName, IEnumerable<string?>? argumentLabels)
     {
         TypeName = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
@@ -433,12 +614,27 @@ public sealed class GameEventScriptExternalTypeConstructorReference
         SignatureId = CreateSignatureId(TypeName, ArgumentLabels);
     }
 
+    /// <summary>
+    /// Gets the type name.
+    /// </summary>
     public string TypeName { get; }
 
+    /// <summary>
+    /// Gets the argument labels.
+    /// </summary>
     public IReadOnlyList<string> ArgumentLabels { get; }
 
+    /// <summary>
+    /// Gets the signature id.
+    /// </summary>
     public string SignatureId { get; }
 
+    /// <summary>
+    /// Creates a signature id.
+    /// </summary>
+    /// <param name="typeName">The type name value.</param>
+    /// <param name="argumentLabels">The argument labels value.</param>
+    /// <returns>The result of the operation.</returns>
     public static string CreateSignatureId(string typeName, IEnumerable<string?>? argumentLabels)
     {
         var normalizedTypeName = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);

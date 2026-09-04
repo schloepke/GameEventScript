@@ -1,15 +1,21 @@
-#pragma warning disable CS1591
-
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace StepH.GameEventScript.Conformance;
 
+/// <summary>
+/// Represents a conformance result json writer.
+/// </summary>
 public static class ConformanceResultJsonWriter
 {
     private static readonly UTF8Encoding Utf8 = new(false, true);
 
+    /// <summary>
+    /// Converts this value to a text.
+    /// </summary>
+    /// <param name="report">The report value.</param>
+    /// <returns>The result of the operation.</returns>
     public static string ToText(ConformanceRunReport report)
     {
         _ = report ?? throw new ArgumentNullException(nameof(report));
@@ -47,6 +53,11 @@ public static class ConformanceResultJsonWriter
         return writer.Complete();
     }
 
+    /// <summary>
+    /// Converts this value to an array.
+    /// </summary>
+    /// <param name="report">The report value.</param>
+    /// <returns>The result of the operation.</returns>
     public static byte[] ToArray(ConformanceRunReport report) => Utf8.GetBytes(ToText(report));
 
     private static void WriteCase(ConformanceCanonicalJsonWriter writer, ConformanceCaseResult result)

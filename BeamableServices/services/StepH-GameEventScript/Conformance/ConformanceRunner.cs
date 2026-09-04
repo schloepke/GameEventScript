@@ -1,5 +1,3 @@
-#pragma warning disable CS1591
-
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -9,8 +7,20 @@ using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Conformance;
 
+/// <summary>
+/// Executes normalized portable conformance models synchronously without filesystem or test-framework dependencies.
+/// </summary>
 public static class ConformanceRunner
 {
+    /// <summary>
+    /// Executes one case selected by local or fully qualified stable identifier.
+    /// </summary>
+    /// <param name="document">The parsed document containing the case.</param>
+    /// <param name="caseId">The case's local or fully qualified identifier.</param>
+    /// <param name="environment">The explicit portable execution environment and capabilities.</param>
+    /// <param name="options">Optional runner limits and profile; defaults are used when omitted.</param>
+    /// <param name="resultSink">An optional synchronous result observer.</param>
+    /// <returns>The immutable case result.</returns>
     public static ConformanceCaseResult RunCase(ConformanceDocument document, string caseId, ConformanceRunnerEnvironment environment, ConformanceRunnerOptions? options = null, IConformanceResultSink? resultSink = null)
     {
         _ = document ?? throw new ArgumentNullException(nameof(document));
@@ -27,12 +37,28 @@ public static class ConformanceRunner
         throw new ArgumentException($"Unknown conformance case '{caseId}'.", nameof(caseId));
     }
 
+    /// <summary>
+    /// Executes every case in one document in authored order.
+    /// </summary>
+    /// <param name="document">The normalized document to execute.</param>
+    /// <param name="environment">The explicit portable execution environment and capabilities.</param>
+    /// <param name="options">Optional runner limits and profile; defaults are used when omitted.</param>
+    /// <param name="resultSink">An optional synchronous per-case result observer.</param>
+    /// <returns>The immutable aggregate report.</returns>
     public static ConformanceRunReport RunDocument(ConformanceDocument document, ConformanceRunnerEnvironment environment, ConformanceRunnerOptions? options = null, IConformanceResultSink? resultSink = null)
     {
         _ = document ?? throw new ArgumentNullException(nameof(document));
         return RunCorpus(new[] { document }, environment, options, resultSink);
     }
 
+    /// <summary>
+    /// Validates and executes an ordered corpus without creating tasks or worker threads.
+    /// </summary>
+    /// <param name="documents">The normalized documents in execution order.</param>
+    /// <param name="environment">The explicit portable execution environment and capabilities.</param>
+    /// <param name="options">Optional runner limits and profile; defaults are used when omitted.</param>
+    /// <param name="resultSink">An optional synchronous per-case result observer.</param>
+    /// <returns>The immutable aggregate report.</returns>
     public static ConformanceRunReport RunCorpus(IReadOnlyList<ConformanceDocument> documents, ConformanceRunnerEnvironment environment, ConformanceRunnerOptions? options = null, IConformanceResultSink? resultSink = null)
     {
         _ = documents ?? throw new ArgumentNullException(nameof(documents));

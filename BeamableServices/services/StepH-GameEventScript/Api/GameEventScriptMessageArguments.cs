@@ -1,5 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -15,14 +13,25 @@ namespace StepH.GameEventScript.Api;
 /// </summary>
 public readonly struct GameEventScriptMessageArgument
 {
+    /// <summary>
+    /// Initializes a new instance of Game Event Script Message Argument.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <param name="value">The value value.</param>
     public GameEventScriptMessageArgument(string? name, GesValue value)
     {
         Name = GameEventScriptMessageSignature.NormalizeParameterName(name);
         Value = value;
     }
 
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public string Name { get; }
 
+    /// <summary>
+    /// Gets the value.
+    /// </summary>
     public GesValue Value { get; }
 }
 
@@ -32,6 +41,9 @@ public readonly struct GameEventScriptMessageArgument
 /// </summary>
 public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEventScriptMessageArgument>
 {
+    /// <summary>
+    /// Gets the empty.
+    /// </summary>
     public static GameEventScriptMessageArguments Empty { get; } = new([], [], []);
 
     private readonly string[] _names;
@@ -45,30 +57,85 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
         _signatureLabels = signatureLabels;
     }
 
+    /// <summary>
+    /// Gets the count.
+    /// </summary>
     public int Count => _values.Length;
 
+    /// <summary>
+    /// Gets the signature labels.
+    /// </summary>
     public IReadOnlyList<string> SignatureLabels => _signatureLabels;
 
+    /// <summary>
+    /// Gets the keys.
+    /// </summary>
     public IEnumerable<string> Keys => new KeyEnumerable(_names);
 
+    /// <summary>
+    /// Gets the values.
+    /// </summary>
     public IEnumerable<GesValue> Values => new ValueEnumerable(this);
 
+    /// <summary>
+    /// Gets the value at the specified index.
+    /// </summary>
+    /// <param name="index">The index value.</param>
     public GesValue this[int index] => ValueAt(index);
 
+    /// <summary>
+    /// Gets the value at the specified index.
+    /// </summary>
+    /// <param name="name">The name value.</param>
     public GesValue this[string name] => ValueAt(IndexOfRequired(name));
 
+    /// <summary>
+    /// Performs the name at operation.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public string NameAt(int index) => _names[index];
 
+    /// <summary>
+    /// Performs the kind at operation.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public GameEventScriptBytecodeTypeKind KindAt(int index) => _values[index].Kind;
 
+    /// <summary>
+    /// Performs the unit at operation.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public GameEventScriptBytecodeInstructionUnit UnitAt(int index) => _values[index].Unit;
 
+    /// <summary>
+    /// Determines whether has value at.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public bool HasValueAt(int index) => _values[index].HasValue;
 
+    /// <summary>
+    /// Determines whether is nothing at.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public bool IsNothingAt(int index) => _values[index].IsNothing;
 
+    /// <summary>
+    /// Determines whether is numeric at.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public bool IsNumericAt(int index) => _values[index].IsNumeric;
 
+    /// <summary>
+    /// Gets the as integer.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public long GetAsInteger(int index)
     {
         ref readonly var value = ref _values[index];
@@ -81,8 +148,18 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
         };
     }
 
+    /// <summary>
+    /// Gets the as integer.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <returns>The result of the operation.</returns>
     public long GetAsInteger(string name) => GetAsInteger(IndexOfRequired(name));
 
+    /// <summary>
+    /// Gets the as number.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public double GetAsNumber(int index)
     {
         ref readonly var value = ref _values[index];
@@ -95,8 +172,18 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
         };
     }
 
+    /// <summary>
+    /// Gets the as number.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <returns>The result of the operation.</returns>
     public double GetAsNumber(string name) => GetAsNumber(IndexOfRequired(name));
 
+    /// <summary>
+    /// Gets the as boolean.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public bool GetAsBoolean(int index)
     {
         ref readonly var value = ref _values[index];
@@ -110,18 +197,48 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
         };
     }
 
+    /// <summary>
+    /// Gets the as boolean.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <returns>The result of the operation.</returns>
     public bool GetAsBoolean(string name) => GetAsBoolean(IndexOfRequired(name));
 
+    /// <summary>
+    /// Gets the as text.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public string GetAsText(int index) => _values[index].TextValue.Length > 0 || _values[index].Kind is GameEventScriptBytecodeTypeKind.Text or GameEventScriptBytecodeTypeKind.Tag
         ? _values[index].TextValue
         : _values[index].ToText;
 
+    /// <summary>
+    /// Gets the as text.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <returns>The result of the operation.</returns>
     public string GetAsText(string name) => GetAsText(IndexOfRequired(name));
 
+    /// <summary>
+    /// Performs the value at operation.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public GesValue ValueAt(int index) => _values[index];
 
+    /// <summary>
+    /// Performs the contains key operation.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <returns>The result of the operation.</returns>
     public bool ContainsKey(string name) => IndexOf(name) >= 0;
 
+    /// <summary>
+    /// Performs the index of operation.
+    /// </summary>
+    /// <param name="name">The name value.</param>
+    /// <returns>The result of the operation.</returns>
     public int IndexOf(string name)
     {
         var normalizedName = GameEventScriptMessageSignature.NormalizeParameterName(name);
@@ -141,10 +258,18 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
         return -1;
     }
 
+    /// <summary>
+    /// Gets the enumerator.
+    /// </summary>
+    /// <returns>The result of the operation.</returns>
     public IEnumerator<GameEventScriptMessageArgument> GetEnumerator() => new PairEnumerator(this);
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+    /// <summary>
+    /// Returns the to string result for this value.
+    /// </summary>
+    /// <returns>The result of the operation.</returns>
     public override string ToString()
     {
         if (_values.Length == 0)
@@ -166,6 +291,11 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
         return builder.ToString();
     }
 
+    /// <summary>
+    /// Creates a value.
+    /// </summary>
+    /// <param name="arguments">The arguments value.</param>
+    /// <returns>The result of the operation.</returns>
     public static GameEventScriptMessageArguments Create(IReadOnlyList<GameEventScriptMessageArgument>? arguments)
     {
         if (arguments is null || arguments.Count == 0)

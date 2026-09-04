@@ -2,6 +2,9 @@ using System;
 
 namespace StepH.GameEventScript.Runtime.Values;
 
+/// <summary>
+/// Represents a ges value map.
+/// </summary>
 public sealed class GesValueMap
 {
     private static readonly string[] EntryKeys = ["key", "value"];
@@ -24,13 +27,24 @@ public sealed class GesValueMap
         Array.Sort(_keys, _values, GameEventScriptText.ScalarComparer);
     }
 
+    /// <summary>
+    /// Gets the length.
+    /// </summary>
     public int Length => _keys.Length;
+    /// <summary>
+    /// Gets the storage length.
+    /// </summary>
     public int StorageLength => _keys.Length;
 
     internal GesValue[] KeyList => _keyList ??= CreateListOfKeys();
     internal GesValue[] ValueList => _valueList ??= CreateListOfValues();
     internal GesValue[] EntryList => _entries ??= CreateListOfEntries();
 
+    /// <summary>
+    /// Gets the value.
+    /// </summary>
+    /// <param name="key">The key value.</param>
+    /// <returns>The result of the operation.</returns>
     public GesValue? Get(string key)
     {
         var index = FindKeyIndex(key);
@@ -42,8 +56,23 @@ public sealed class GesValueMap
         return null;
     }
 
+    /// <summary>
+    /// Performs the contains key operation.
+    /// </summary>
+    /// <param name="key">The key value.</param>
+    /// <returns>The result of the operation.</returns>
     public bool ContainsKey(string key) => FindKeyIndex(key) >= 0;
+    /// <summary>
+    /// Performs the key at operation.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public string KeyAt(int index) => _keys[index];
+    /// <summary>
+    /// Performs the value at operation.
+    /// </summary>
+    /// <param name="index">The index value.</param>
+    /// <returns>The result of the operation.</returns>
     public GesValue ValueAt(int index) => _values[index];
 
     private int FindKeyIndex(string key)

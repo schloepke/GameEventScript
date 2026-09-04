@@ -1,5 +1,3 @@
-#pragma warning disable CS1591
-
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -10,10 +8,19 @@ using static StepH.GameEventScript.Api.GameEventScriptBinaryBindKind;
 
 namespace StepH.GameEventScript.Api;
 
+/// <summary>
+/// Enforces the shared structural and semantic invariants required by the reader, writer, and host linker.
+/// </summary>
 public static class GameEventScriptProgramValidator
 {
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
+    /// <summary>
+    /// Validates the complete portable program object graph without linking host-specific runtime objects.
+    /// </summary>
+    /// <param name="program">The immutable program to validate.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="program"/> is <see langword="null"/>.</exception>
+    /// <exception cref="GameEventScriptProgramFormatException">Thrown with a stable error code when an invariant is violated.</exception>
     public static void Validate(GameEventScriptProgram program)
     {
         _ = program ?? throw new ArgumentNullException(nameof(program));

@@ -27,6 +27,7 @@ dotnet test StepH-GameEventScript-Tests/StepH-GameEventScript-Tests.csproj --fil
 - HotPath VM mutation should go through `GesVmState.Set...` methods. Read-only register borrows are currently accepted for performance.
 - Be careful with direct register refs: never hold a mutable destination ref across operations that may grow or replace register storage.
 - Use `rg` for code search.
+- Every public C# type and member requires valid XML documentation. The library build treats missing or malformed XML documentation as errors; never hide these diagnostics with `#pragma`.
 - Do not revert user changes unless explicitly requested.
 
 ## Current Architecture Direction
@@ -89,6 +90,28 @@ The project has a portable Game Event Script host/VM architecture with a compact
   normative.
 
 ## Recent Completed Work
+
+### Complete C# XML API Documentation
+
+- Every public type and member in API, Runtime, `CSharpBridge`, and Conformance
+  now has XML documentation aligned with the language-neutral `PublicApi.md`;
+  the Compiler continues to export no public types.
+- The library always generates `StepH.GameEventScript.xml`. Missing summaries,
+  parameters, type parameters, malformed XML, and invalid references are build
+  errors rather than suppressed warnings.
+- All handwritten `#pragma` directives were removed from production and tests,
+  including the suppressions that hid the former `GesValueMap` warnings.
+- The API regression test guards the generated artifact, exported-type coverage,
+  the project warning gate, and pragma-free handwritten sources.
+
+Verification after this change:
+
+```text
+1585 public XML documentation member entries generated
+1149/1149 non-performance test executions passed
+6/6 performance/allocation tests passed
+dotnet format --verify-no-changes passed for production and tests
+```
 
 ### Portable Public API Specification
 
@@ -744,10 +767,6 @@ Remaining `Try...` outside `CSharpBridge` should only be standard-library style 
 - `StepH-GameEventScript/CSharpBridge/GameEventScriptCSharpHostRunner.cs`
 - `StepH-GameEventScript/Documentation/Specification/HostRuntime.md`
 - `StepH-GameEventScript/Documentation/Specification/BinaryFormat.md`
-
-## Known Warnings
-
-The normal test build currently emits XML documentation warnings for `GesValueMap`. These warnings were not part of the last cleanup task.
 
 ## Architecture Backlog
 

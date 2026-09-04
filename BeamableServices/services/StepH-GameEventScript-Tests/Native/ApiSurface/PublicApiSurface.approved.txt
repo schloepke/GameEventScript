@@ -419,7 +419,7 @@ static class StepH.GameEventScript.Api.GameEventScriptDiagnosticCodes
   field static System.String RuntimeNativeHandlerFailure
   field static System.String RuntimePreparationFailed
   field static System.String RuntimePublishSinkFailure
-  field static System.String RuntimeRandomStackOverflow
+  field static System.String RuntimeRandomScopeImbalance
   field static System.String RuntimeRandomStackUnderflow
   field static System.String RuntimeRegisterOverflow
   field static System.String RuntimeUnhandledFailure
@@ -530,7 +530,9 @@ sealed class StepH.GameEventScript.Api.GameEventScriptHostBuilder
   method StepH.GameEventScript.Api.GameEventScriptHost Build()
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithExternalTypeRegistry(StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry registry)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithPublishSink(StepH.GameEventScript.Api.IGameEventScriptPublishSink publishSink)
-  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRandom(StepH.GameEventScript.Api.GameEventScriptRandomGenerator random)
+  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRandomSeed(System.Int64 seed)
+  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRandomSequence(System.Collections.Generic.IReadOnlyList<System.Double> values)
+  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRandomSequence(System.Collections.Generic.IReadOnlyList<System.Double> values, System.Int64 fallbackSeed)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRegistry(StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry registry)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRuntimeLimits(StepH.GameEventScript.Api.GameEventScriptRuntimeLimits limits)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRuntimeObserver(StepH.GameEventScript.Api.IGameEventScriptRuntimeObserver observer)
@@ -721,6 +723,9 @@ struct StepH.GameEventScript.Api.GameEventScriptPublishResult
   property System.Boolean OutboundAccepted { get }
   property System.Boolean OutboundAttempted { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptRandomGenerator
+  method System.Boolean Pop()
+  method System.Boolean Push()
+  method System.Boolean Push(System.Int64 seed)
   method System.Double NextFloat(System.Double firstBound, System.Double secondBound)
   method System.Int64 NextInclusiveInteger(System.Int64 minInclusive, System.Int64 maxInclusive)
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator Create()
@@ -744,6 +749,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptRuntimeLimits
   property System.Int32 MaxLoopIterations { get set }
   property System.Int32 MaxProcessedEventsPerRun { get set }
   property System.Int32 MaxQueuedMessagesPerRun { get set }
+  property System.Int32 MaxRandomScopeDepth { get set }
   property System.Int32 MaxRangeItems { get set }
   property System.Int32 MaxRegisterValues { get set }
 enum StepH.GameEventScript.Api.GameEventScriptSectionFlags

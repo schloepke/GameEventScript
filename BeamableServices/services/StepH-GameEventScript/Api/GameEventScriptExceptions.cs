@@ -58,8 +58,8 @@ public static class GameEventScriptDiagnosticCodes
     public const string RuntimeIllegalOpcode = "runtime.illegalOpcode";
     public const string RuntimeRegisterOverflow = "runtime.registerOverflow";
     public const string RuntimeCallStackOverflow = "runtime.callStackOverflow";
-    public const string RuntimeRandomStackOverflow = "runtime.randomStackOverflow";
     public const string RuntimeRandomStackUnderflow = "runtime.randomStackUnderflow";
+    public const string RuntimeRandomScopeImbalance = "runtime.randomScopeImbalance";
     public const string RuntimeInvalidRecordConstructor = "runtime.invalidRecordConstructor";
     public const string RuntimeInvalidExtensionBinding = "runtime.invalidExtensionBinding";
     public const string RuntimeInvalidExternalTypeBinding = "runtime.invalidExternalTypeBinding";

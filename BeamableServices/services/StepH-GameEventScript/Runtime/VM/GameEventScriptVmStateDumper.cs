@@ -29,7 +29,7 @@ internal static class GameEventScriptVmStateDumper
             .Append("CodeSegmentSize: ").AppendLine((state.ActiveProgram?.CodeSegmentSize ?? 0).ToString(CultureInfo.InvariantCulture))
             .Append("MaxRegisterSize: ").AppendLine(state.MaxRegisterCount.ToString(CultureInfo.InvariantCulture))
             .Append("CurrentRegisterArraySize: ").AppendLine(state.RegisterValues.Length.ToString(CultureInfo.InvariantCulture))
-            .Append("CurrentRandomStackSize: ").AppendLine(state.RandomGeneratorsPointer.ToString(CultureInfo.InvariantCulture))
+            .Append("CurrentRandomStackSize: ").AppendLine(state.RandomScopeDepth.ToString(CultureInfo.InvariantCulture))
             .AppendLine();
 
         AppendProcessingMessage(builder, state.ProcessingMessage);

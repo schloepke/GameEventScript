@@ -423,20 +423,35 @@ An expression statement does not implicitly emit or publish a message.
 
 ### Seeded Random Scope
 
-`random with` evaluates a body under a deterministic sub-random scope. The
-seed must statically resolve to a unitless integer number; dynamic seeds should
-be cast explicitly with `as :number`.
+`random with` evaluates a body with a seed-dependent random context. The seed
+may be used directly when the compiler can establish that it is a unitless
+exact integer. This includes integer literals and immutable bindings inferred
+from such values. A statically unknown value, especially a message parameter,
+must state the intended conversion explicitly with `as :number`.
 
 ```ges
-random with seed as :number {
+random with 123 {
   emit Roll(value: random from 1 to 6)
 }
 
-let value be random with 123 (random from 1 to 100)
+let fixedSeed be 123
+let fixedValue be random with fixedSeed (random from 1 to 100)
+
+on Start(seed) {
+  let suppliedValue be random with (seed as :number) (random from 1 to 100)
+  emit Value(value: suppliedValue)
+}
 ```
 
+At runtime, a converted value is a seed only when it becomes a unitless exact
+integer in the signed 64-bit range. If conversion instead yields `nothing`, a
+fractional value, an out-of-range value, or a quantity-bearing value, no
+diagnostic is reported. The body still runs once, but it consumes an isolated
+copy of the current random state. On exit the original state is restored
+exactly, regardless of the number of draws made by the body.
+
 Random scopes may be nested. Leaving a nested scope resumes its parent at the
-parent generator's next value. Integer draws include both ordered bounds.
+exact point where it entered the scope. Integer draws include both ordered bounds.
 Binary64 draws use a `[0, 1)` unit source, although binary64 rounding can make
 the scaled result equal the upper bound.
 
@@ -456,8 +471,8 @@ From high to low precedence:
 1. Postfix: member access `x.y`, lookup/selector `x[...]`
 2. Power: `^`, `²`, `³`
 3. Unary: `-`, `not`, `!`, `~`, `¬`, `empty`, prefix intrinsics
-4. Multiplicative: `*`, `/`, `div`, `mod`, `rem`
-5. Additive: `+`, `-`
+4. Multiplicative: `*`, `×`, `·`, `⋅`, `/`, `÷`, `div`, `mod`, `rem`
+5. Additive: `+`, `-`, `−`
 6. Relational: `<`, `>`, `<=`, `>=`, `≤`, `≥`
 7. Type and predicate operations: `is`, `is not`, `as`
 8. Membership and text boundaries: `in`, `∈`, `∉`, `in values of`, `starts with`, `ends with`
@@ -476,6 +491,23 @@ Power accepts at most one `^` or superscript suffix at each unparenthesized
 power node; its right operand is unary, which makes `a ^ b ^ c` right-associative.
 Parentheses override precedence. The fixed Unicode aliases are token aliases and
 have exactly the semantics and precedence of their ASCII counterparts.
+
+The complete Unicode token aliases are:
+
+| ASCII or word form | Unicode alias | Meaning |
+| --- | --- | --- |
+| `*` | `×`, `·`, `⋅` | multiplication |
+| `/` | `÷` | floating division |
+| `-` | `−` | subtraction or unary negation |
+| `<=`, `>=`, `<>` | `≤`, `≥`, `≠` | comparison |
+| `and`, `or`, `xor`, `not` | `∧`, `∨`, `⊕`, `¬` | boolean operators |
+| `x in y`, `not (x in y)` | `x ∈ y`, `x ∉ y` | membership and negated membership |
+| `->` | `→`, `⇒` | implication |
+| `=>` | `↦` | selector projection |
+| `sqrt`, `cbrt` | `√`, `∛` | unary root intrinsics |
+| `x ^ 2`, `x ^ 3` | `x²`, `x³` | square and cube postfix forms |
+| `infinity`, `pi`, `e`, `tau` | `∞`, `π`/`∏`, `ℇ`, `τ` | numeric constants |
+| `degree` | `°` | degree quantity name and literal suffix |
 
 ### Boolean Logic
 
@@ -690,7 +722,7 @@ The source language recognizes these built-in types:
 - `:boolean`
 - `:number`
 - `:percentage`
-- `:quantity(m)`, `:quantity(meter)`, `:quantity(s)`, `:quantity(second)`, `:quantity(degree)`
+- `:quantity(none)`, `:quantity(m)`, `:quantity(meter)`, `:quantity(s)`, `:quantity(second)`, `:quantity(degree)`
 - `:vector`
 - `:point`
 - `:series`
@@ -719,7 +751,7 @@ component constructors.
 | `:boolean` | true exactly when the source truth view is true; false otherwise |
 | `:number` | uses the numeric view, parses invariant numeric text, or reads series term zero; failure is `nothing` |
 | `:percentage` | rejects units and non-numeric values; integers are percentages divided by 100, while finite fractional ratios in `[-1, 1]` remain ratios and other finite numeric magnitudes are divided by 100 |
-| `:quantity(unit)` | applies the unit to numeric or spatial input that is unitless or already has that unit; a conflicting unit is invalid |
+| `:quantity(unit)` | applies the unit to numeric or spatial input that is unitless or already has that unit; a conflicting unit is invalid; `none` removes any supported unit |
 | `:text` | returns the canonical text representation of any value |
 | `:tag` | follows the strict tag rules below |
 | `:vector`, `:point` | follows the structural conversion rules below |
@@ -843,7 +875,10 @@ parse text as described below.
 | text, tag, list, map, range, vector, point, message, handler, series, custom values | false | false | false | none |
 
 Text values are not numeric for implicit mathematics or numeric checks:
-`'100' is numeric` is false, and `'100' + 200` is text concatenation. An
+`'100' is numeric` is false. Addition is the deliberate exception: if either
+present operand is text, both `'10' + 20` and `10 + '20'` concatenate their
+canonical text representations and produce `'1020'`. Other arithmetic
+operators do not parse text implicitly. An
 explicit `as :number` cast parses text with invariant numeric syntax; invalid
 text casts to `nothing`. Series are also not numeric for implicit mathematics
 or numeric checks, but an explicit `as :number` cast reads the first term and
@@ -854,6 +889,12 @@ and numeric comparison: `dice is numeric` and `dice is integer` are true, and
 `dice as :number` is the sum of the rolls. Dice-specific collection operations
 keep priority, so `dice + integer` adds a roll and `dice - integer` removes a
 roll instead of using the dice sum.
+
+The runtime canonicalizes every finite binary64 result that is exactly integral
+and fits signed 64-bit to the integer representation. Consequently a value such
+as `12.0` normally becomes an integer value immediately. The float row above
+also defines checks at external/program boundaries where a noncanonical but
+representable binary64 value may still be presented.
 
 ### Equality
 
@@ -892,7 +933,7 @@ unit. Finite numeric results that are exactly integral are represented as
 integer values.
 
 ### Quantities
-,
+
 Quantities attach a numeric unit to an integer or float:
 
 ```ges
@@ -902,12 +943,17 @@ let angle be 90°
 
 let a be 100 as :quantity(m)
 let b be 90 as :quantity(°)
+let unitlessDistance be distance as :quantity(none)
 ```
 
 `:percentage` is not a quantity unit; it is a separate value kind. The names
 `meter`, `second`, `degree`, and `seconds` are not quantity type aliases. Use
 `:quantity(m)`, `:quantity(s)`, or `:quantity(°)`/`:quantity(degree)` for casts
-and checks; use `#meter` or `#degree` only when an ordinary tag value is meant.
+and checks. `:quantity(none)` removes a supported numeric or spatial unit and
+produces the corresponding unitless value; as a check it matches only numeric
+or spatial values that are already unitless. `none` is a unit name only in this
+type form and is not the absence value `nothing`. Use `#meter` or `#degree` only
+when an ordinary tag value is meant.
 
 ### Percentages
 
@@ -1075,14 +1121,14 @@ let flags be [enemy:, visible:, armed:]
 ```
 
 Lookups use member syntax or bracket syntax. Literal text and tag keys are
-member lookups; dynamic selectors are resolved at runtime. `x[:name]` is the
-selector shorthand for the member/key named `name`, while `x[#name]` uses the
-tag value `#name` as a dynamic key.
+member lookups; dynamic selectors are resolved at runtime. The `:` prefix is
+reserved for structured selectors, type names, and extension namespaces, and
+is never an alternate spelling for a map key. Thus `x[:select]` invokes the
+`select` operation and `x[#select]` looks up the key named `select`.
 
 ```ges
 unit.name
 unit['name']
-unit[:name]
 unit[#name]
 ```
 
@@ -1096,7 +1142,7 @@ indexes are 1-based.
 
 ```ges
 let firstItem be items[1]
-let hp be unit[:hp]
+let hp be unit[#hp]
 let hasEnemyFlag be #enemy in flags
 let containsUnit be unit in values of units
 ```
@@ -1504,7 +1550,27 @@ owned by [Host runtime](HostRuntime.md). The transport representation produced
 by compilation is owned by [Program model](ProgramModel.md), [Bytecode](Bytecode.md),
 and [Binary format](BinaryFormat.md).
 
-## Errors and Limits
+## Evaluation Failures, Runtime Errors, and Limits
+
+Ordinary script evaluation has no catchable exception mechanism. An unsupported
+value combination, failed cast, missing member/index, or invalid numeric domain
+evaluates to a defined value instead of aborting the handler. Depending on the
+operation that value is `nothing`, an explicitly documented boolean or empty
+collection, or an internal numeric `NaN`; internal `NaN` is normalized and
+observed by scripts as `nothing`.
+
+Most ordinary operators propagate a `nothing` operand to `nothing`, but this is
+not a universal rewrite rule. Presence and recovery constructs intentionally
+inspect it: `empty nothing` is `true`, `nothing has value` is `false`,
+`nothing is nothing` is `true`, and `nothing default fallback` evaluates to the
+fallback. Each operator or cast retains its more specific documented behavior.
+
+Actual runtime errors are host/VM failures rather than ordinary expression
+results. Resource-limit violations, invalid executable state, and failures at
+native, extension, or external boundaries can terminate the active handler and
+produce a structured runtime diagnostic. They do not become script values and
+cannot be caught in the language. The host resets the failing handler state and
+continues according to the deterministic dispatch contract.
 
 Source processing reports distinct parse, validation, and compile diagnostics.
 Their stable language-neutral codes and locations are defined by
@@ -1517,7 +1583,6 @@ Their stable language-neutral codes and locations are defined by
 - predicate return type (`:boolean` or `nothing`)
 - handler message-name shape
 - record field definitions
-- seeded random seed type
 - unknown or invalid type forms
 
 Runtime limits cover:
@@ -1738,7 +1803,7 @@ built_in_type_tag ::= ':boolean' | ':number' | ':percentage' |
                       ':series' | ':range' | ':message' | ':handler' | ':tag' |
                       ':text' | ':list' | ':map' | ':dice'
 custom_type_tag ::= TYPE_TAG
-unit_name ::= 'm' | 'meter' | 's' | 'second' | 'degree'
+unit_name ::= 'none' | 'm' | 'meter' | 's' | 'second' | 'degree' | '°'
 numeric_check ::= 'numeric' | 'integer' | 'fractional'
 module_name ::= IDENTIFIER | MESSAGE_NAME
 ```

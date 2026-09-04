@@ -86,6 +86,18 @@ public sealed class GameEventScriptRuntimeLimits
     public int MaxCallDepth { get; init; } = 64;
 
     /// <summary>
+    /// Defines the maximum number of simultaneously active nested random scopes
+    /// owned by one host.
+    /// </summary>
+    /// <remarks>
+    /// The lazily initialized scope storage provides this many regular states
+    /// plus one internal fault-gate state. Reaching the configured depth is valid; attempting one
+    /// additional push faults the current handler without changing the parent
+    /// random stream. The value must be between 0 and 65,535.
+    /// </remarks>
+    public int MaxRandomScopeDepth { get; init; } = 16;
+
+    /// <summary>
     /// Specifies the maximum number of items allowed in a range-based operation
     /// during game event script execution. This limit helps ensure that range operations,
     /// such as enumerating over a collection or processing a sequence, do not exhaust

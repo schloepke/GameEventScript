@@ -56,6 +56,13 @@ The project has a portable Game Event Script host/VM architecture with a compact
 - Program instances and native subscriptions use stable host-local registration
   IDs for lifecycle operations; their handles store no detach/unsubscribe closures.
 - Each host creates one `GameEventScriptContext`, owns one logical-message ring queue, and lazily creates at most one reusable `GesVmState`.
+- Each host creates and exclusively owns its random generator from an optional
+  seed or copied start sequence. The builder never accepts a live mutable
+  generator instance, so hosts cannot interfere through shared PRNG state.
+- Random scopes and runtime boundary markers belong to the host generator, not
+  the VM. `MaxRandomScopeDepth` permits exactly that many regular scopes plus an
+  internal overpush gate; native, extension, and script-handler boundaries
+  restore leaked or faulted scopes without exceptions.
 - `GameEventScriptVirtualMachine` is a stateless executor; program-specific dynamic links live in `GesLinkedProgram`.
 - External types use a declarative compiler catalog, a separate host runtime
   registry, and portable `IGameEventScriptExternalValue` instances. CLR-backed
@@ -65,16 +72,72 @@ The project has a portable Game Event Script host/VM architecture with a compact
   pairs. Core has no tuple/dictionary factory; C# conveniences live in
   `CSharpBridge`, and dictionary binding requires a known signature.
 - Core is synchronous, threadless, and unsynchronized. Optional C# automatic execution lives in `CSharpBridge/GameEventScriptCSharpHostRunner.cs`.
+- A Core host is serial but not thread-affine. One caller at a time is required,
+  but a paused handler may resume on another thread after an embedding-provided
+  happens-before handoff; runtime state must never depend on thread-local state.
 - There is no Session, isolated Run, module interface, or module-owned VM compatibility API.
 - `StepH-GameEventScript/Documentation/Specification/HostRuntime.md` is the normative portable responsibility/state-machine document.
 - `StepH-GameEventScript/Documentation/Specification/Semantics/Determinism.md` is normative for the
   seeded PRNG, script/structural equality, stable ordering, iteration/ranges,
   and equal-priority host dispatch.
+- Statically unknown `random with` seeds require an explicit `as :number`
+  conversion. Invalid runtime seeds report no diagnostic and execute against a
+  snapshot whose consumption cannot advance the restored parent. `:quantity(none)` is the canonical source form
+  for removing a numeric or spatial unit, and `:...` never denotes a map key.
 - `StepH-GameEventScript/Documentation/README.md` is the canonical documentation
   entry point. `Language.md` and every other listed specification except
   `PublicApi.md` are normative; the public API remains the sole structural draft.
 
 ## Recent Completed Work
+
+### Host-Owned Random Scopes and Overpush Fencing
+
+- Host builders now accept deterministic seeds or copied start sequences and
+  create an independent generator for every host. Sequence exhaustion falls
+  through to the host's private PRNG; Conformance uses a fixed fallback seed.
+- `GameEventScriptRandomGenerator` owns nested scopes and exposes `Push()`,
+  `Push(Int64)`, and `Pop()` without allocations after first-use initialization.
+  VM, extension, and native code all observe
+  the same active scoped stream through `GameEventScriptContext`.
+- Every handler and extension call establishes a host-owned boundary marker.
+  Script markers survive frame pauses and thread handoff. Marker release restores
+  leaked scopes; boundary underflow and unbalanced native scopes are diagnosed.
+- `MaxRandomScopeDepth` is exact. One additional retained gate state protects
+  the last valid stream after overpush, suppresses further structural mutation,
+  rejects Emit/Publish, and reports one runtime limit without using exceptions.
+
+Verification after this change:
+
+```text
+1040/1040 Markdown conformance cases passed
+1148/1148 non-performance test executions passed
+6/6 performance-category tests passed (including zero-allocation hot path)
+```
+
+### Random Seed Scopes, Unit Removal, and Selector Cleanup
+
+- `random with` accepts statically known unitless integers and requires
+  `as :number` for unknown dynamic seeds. Every construct snapshots the active
+  generator state. A valid unitless signed-64 result reseeds the inner state;
+  an invalid, fractional, or unit-bearing result reports no diagnostic and uses
+  the copied state. Exiting always restores the parent without consuming it.
+- `:quantity(none)` exposes the VM's portable unit-removal operation for numeric
+  and spatial values. It is also the exact check for an already unitless value.
+- The legacy `x[:name]` map-key alias was removed. Keys use `.name`, `['name']`,
+  or `[#name]`; `:...` remains reserved for real selectors, types, and extension
+  namespaces.
+- The language specification now enumerates every supported Unicode token
+  alias, documents symmetric text addition, integer canonicalization, and
+  distinguishes ordinary value-level evaluation failure from runtime
+  diagnostics.
+
+Verification after this change:
+
+```text
+1039/1039 Markdown conformance cases passed
+1140/1140 non-performance test executions passed
+6/6 performance-category tests passed (including zero-allocation hot path)
+```
 
 ### Callable Signature Overloads and No-Shadowing Scopes
 

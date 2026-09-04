@@ -487,9 +487,9 @@ opcodes:
 
 ---
 
-## Test: explicit integer seed lowers to dynamic random push
+## Test: inferred and explicitly converted seeds lower to dynamic scopes
 
-This compiler case exercises “explicit integer seed lowers to dynamic random push” and verifies the declared portable output.
+This compiler case verifies both accepted non-literal forms: an immutable binding inferred from an integer value and an externally supplied value explicitly converted to `:number`.
 
 ### Case description
 
@@ -499,7 +499,7 @@ id: case-0012
 kind: bytecode
 level: atomic
 sources:
-  - name: "explicit integer seed lowers to dynamic random push.ges"
+  - name: "inferred and explicitly converted seeds lower to dynamic scopes.ges"
     program: main
 ```
 
@@ -509,8 +509,10 @@ sources:
 module RandomScopes
 
 on Start(seed) {
-  let value be random with (seed as :number) 1
-  emit Done(value: value)
+  let fixedSeed be 123
+  let first be random with fixedSeed 1
+  let second be random with (seed as :number) 2
+  emit Done(first: first, second: second)
 }
 
 ```
@@ -520,7 +522,7 @@ on Start(seed) {
 ```yaml
 gesBlock: expect
 opcodes:
-  contains: ["RandomPush", "RandomPop"]
+  contains: ["CastNumeric", "RandomPush", "RandomPop"]
   excludes: ["RandomPushConstant"]
 ```
 

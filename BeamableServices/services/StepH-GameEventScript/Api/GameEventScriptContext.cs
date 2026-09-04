@@ -44,7 +44,33 @@ public sealed class GameEventScriptContext
     public GameEventScriptPublishResult Publish(string message) => Publish(GameEventScriptMessage.Create(message));
     public GameEventScriptPublishResult Publish(string message, IReadOnlyList<GameEventScriptMessageArgument> arguments) => Publish(GameEventScriptMessage.Create(message, arguments));
 
-    internal void BeginHandler() => RuntimeBudget.Reset();
+    internal GameEventScriptRandomGenerator.ScopeBoundary BeginHandler()
+    {
+        RuntimeBudget.Reset();
+        return Random.MarkScopeBoundary();
+    }
+
+    internal GameEventScriptRandomGenerator.ScopeBoundary BeginRandomBoundary()
+        => Random.MarkScopeBoundary();
+
+    internal GameEventScriptRandomGenerator.ScopeBoundaryFault EndRandomBoundary(GameEventScriptRandomGenerator.ScopeBoundary boundary)
+    {
+        var fault = Random.ReleaseScopeBoundary(boundary);
+        if (fault == GameEventScriptRandomGenerator.ScopeBoundaryFault.LimitExceeded)
+        {
+            RuntimeBudget.Exhaust(
+                nameof(GameEventScriptRuntimeLimits.MaxRandomScopeDepth),
+                "Random scope depth exceeds the configured limit.",
+                RuntimeLimits.MaxRandomScopeDepth);
+        }
+        return fault;
+    }
+
+    internal void RecordRandomScopeLimitReached()
+        => RuntimeBudget.Exhaust(
+            nameof(GameEventScriptRuntimeLimits.MaxRandomScopeDepth),
+            "Random scope depth exceeds the configured limit.",
+            RuntimeLimits.MaxRandomScopeDepth);
 
     internal void RecordRuntimeLimitReached(string limitName, string detail, int limit)
         => _runtimeObserver?.RuntimeLimitReached(limitName, detail, limit);

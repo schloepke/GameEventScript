@@ -329,7 +329,7 @@
           "name": "entity.other.attribute-name.tag.gameeventscript"
         },
         {
-          "match": ":(quantity)(\\()((?:m|meter|s|second|degree|°))(\\))(?=$|[^A-Za-z0-9_])",
+          "match": ":(quantity)(\\()((?:none|m|meter|s|second|degree|°))(\\))(?=$|[^A-Za-z0-9_])",
           "name": "support.type.primitive.quantity.gameeventscript",
           "captures": {
             "1": {

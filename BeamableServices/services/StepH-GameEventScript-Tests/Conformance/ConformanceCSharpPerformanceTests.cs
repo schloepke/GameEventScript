@@ -184,14 +184,14 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
     {
         var emitted = 0;
         var outbound = 0;
-        return GameEventScriptHost.CreateBuilder()
-            .WithRandom(CreateRandom(testCase.Random))
+        var builder = GameEventScriptHost.CreateBuilder()
             .WithRegistry(ConformanceTestExtensionRegistry.Instance)
             .WithExternalTypeRegistry(GameEventScriptConformanceExternalTypes.Registry)
             .WithRuntimeLimits(CreateRuntimeLimits(testCase.RuntimeLimits))
             .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(_ => emitted++, _ => emitted++))
-            .WithPublishSink(new TestPublishSink(_ => outbound++))
-            .Build();
+            .WithPublishSink(new TestPublishSink(_ => outbound++));
+        ConfigureRandom(builder, testCase.Random);
+        return builder.Build();
     }
 
     private static GameEventScriptHost CreateLoadHost(ConformanceCase testCase)
@@ -201,16 +201,21 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
             .WithRuntimeLimits(CreateRuntimeLimits(testCase.RuntimeLimits))
             .Build();
 
-    private static GameEventScriptRandomGenerator CreateRandom(ConformanceRandomConfiguration? configuration)
+    private static void ConfigureRandom(GameEventScriptHostBuilder builder, ConformanceRandomConfiguration? configuration)
     {
-        if (configuration?.Seed is { } seed) return GameEventScriptRandomGenerator.FromSeed(seed);
+        if (configuration?.Seed is { } seed)
+        {
+            builder.WithRandomSeed(seed);
+            return;
+        }
         if (configuration is { Sequence.Count: > 0 })
         {
             var values = new double[configuration.Sequence.Count];
             for (var index = 0; index < values.Length; index++) values[index] = ConformanceRuntimeValueCodec.ParseBinary64(configuration.Sequence[index]);
-            return GameEventScriptRandomGenerator.FromSequence(values);
+            builder.WithRandomSequence(values, 0L);
+            return;
         }
-        return GameEventScriptRandomGenerator.FromSeed(0L);
+        builder.WithRandomSeed(0L);
     }
 
     private static GameEventScriptRuntimeLimits CreateRuntimeLimits(ConformanceRuntimeLimits limits)
@@ -226,6 +231,7 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
             MaxRegisterValues = Read("maxRegisterValues", defaults.MaxRegisterValues),
             MaxLoopIterations = Read("maxLoopIterations", defaults.MaxLoopIterations),
             MaxCallDepth = Read("maxCallDepth", defaults.MaxCallDepth),
+            MaxRandomScopeDepth = Read("maxRandomScopeDepth", defaults.MaxRandomScopeDepth),
             MaxRangeItems = Read("maxRangeItems", defaults.MaxRangeItems),
             MaxGeneratedCollectionItems = Read("maxGeneratedCollectionItems", defaults.MaxGeneratedCollectionItems),
             MaxDiceCount = Read("maxDiceCount", defaults.MaxDiceCount),

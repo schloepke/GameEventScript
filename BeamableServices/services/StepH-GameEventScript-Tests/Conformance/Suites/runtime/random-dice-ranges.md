@@ -408,9 +408,9 @@ steps:
 
 ---
 
-## Test: dynamic invalid seeded random seed still restores outer random scope
+## Test: invalid dynamic seed advances only a restorable copy of the current stream
 
-This runtime case exercises “dynamic invalid seeded random seed still restores outer random scope” and verifies the declared messages, values, and execution result.
+This runtime case verifies that an explicitly converted but invalid dynamic seed produces no diagnostic, while its body consumes a copy of the current random state. Leaving the block must restore the exact parent state regardless of how many values the invalid scope consumed.
 
 ### Case description
 
@@ -424,7 +424,7 @@ comparison:
     mode: ulp
     maxUlps: 4096
 sources:
-  - name: "dynamic invalid seeded random seed still restores outer random scope.ges"
+  - name: "invalid dynamic seed advances only a restorable copy of the current stream.ges"
     program: main
 ```
 
@@ -432,11 +432,16 @@ sources:
 
 ```ges
 on Start {
-  let bad as :number be nothing
-  random with bad {
-    let inner be random from 1 to 6
+  let expectedFirst be random with 777 (random from 1 to 100)
+  let expectedSecond be random with 777 ([random from 1 to 100, random from 1 to 100][2])
+  let expectedThird be random with 777 ([random from 1 to 100, random from 1 to 100, random from 1 to 100][3])
+  random with 777 {
+    let first be random from 1 to 100
+    let invalidSeed be nothing
+    let consumed be random with (invalidSeed as :number) ([random from 1 to 100, random from 1 to 100][2])
+    let after be random from 1 to 100
+    emit Done(firstMatches: first = expectedFirst, copiedStreamMatches: consumed = expectedThird, parentRestored: after = expectedSecond)
   }
-  emit Done(valuePresent: (random from 1 to 6) has value)
 }
 ```
 
@@ -457,7 +462,15 @@ steps:
     local:
       - name: "Done"
         args:
-          - name: "valuePresent"
+          - name: "firstMatches"
+            value:
+              type: ":boolean"
+              value: true
+          - name: "copiedStreamMatches"
+            value:
+              type: ":boolean"
+              value: true
+          - name: "parentRestored"
             value:
               type: ":boolean"
               value: true
@@ -1603,4 +1616,141 @@ steps:
             value:
               type: ":text"
               value: "fallback"
+```
+
+---
+
+## Test: runtime-limit cleanup restores a suspended parent random state
+
+This runtime case verifies that handler cleanup unwinds a seeded random scope when a runtime limit stops the body before its normal `RandomPop`. The following message must continue from the untouched host random stream.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: case-0018
+kind: scriptApi
+level: scenario
+runtimeLimits:
+  maxLoopIterations: 1
+random:
+  sequence: ["42"]
+sources:
+  - name: "runtime-limit cleanup restores a suspended parent random state.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Break {
+  random with 777 {
+    for item from 1 to 2 {
+      let consumed be random from 1 to 100
+    }
+  }
+}
+
+on Check {
+  emit Done(value: random from 1 to 100)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| limited | Break | completion | |
+| check | Check | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  limited:
+    input:
+      args: []
+    runtimeLimits:
+      include:
+        - name: "MaxLoopIterations"
+  check:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "value"
+            value:
+              type: ":integer"
+              value: "42"
+```
+
+---
+
+## Test: random-scope depth limit halts the handler and restores its parent stream
+
+This scenario reaches the configured random-scope depth exactly, then attempts one additional nested scope. The overpush must halt only the active handler, report the portable runtime limit once, and leave the host stream untouched for the following message.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: case-0019
+kind: scriptApi
+level: scenario
+runtimeLimits:
+  maxRandomScopeDepth: 1
+random:
+  sequence: ["42"]
+sources:
+  - name: "random scope depth limit restores parent.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Break {
+  random with 777 {
+    random with 888 {
+      emit MustNotRun(value: random from 1 to 100)
+    }
+  }
+}
+
+on Check {
+  emit Done(value: random from 1 to 100)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| limited | Break | completion | |
+| check | Check | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  limited:
+    input:
+      args: []
+    runtimeLimits:
+      include:
+        - name: "MaxRandomScopeDepth"
+          limit: 1
+  check:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "value"
+            value:
+              type: ":integer"
+              value: "42"
 ```

@@ -40,6 +40,7 @@ internal static class GesVmRegisterCallExternal
             : new GesValueArguments(state, argumentRegisters);
         var call = state.ExtensionCall;
         call.BeginCall(state, destinationRegister, context, arguments);
+        var randomBoundary = context.BeginRandomBoundary();
         try
         {
             function.Invoke(call);
@@ -56,6 +57,11 @@ internal static class GesVmRegisterCallExternal
         }
         finally
         {
+            var randomFault = context.EndRandomBoundary(randomBoundary);
+            if (randomFault == GameEventScriptRandomGenerator.ScopeBoundaryFault.BoundaryUnderflow)
+                state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeRandomStackUnderflow, "Random scope pop crossed the active extension boundary.");
+            else if (randomFault == GameEventScriptRandomGenerator.ScopeBoundaryFault.Unbalanced)
+                state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeRandomScopeImbalance, "Random scopes were not balanced when the extension returned.");
             call.EndCall();
         }
     }

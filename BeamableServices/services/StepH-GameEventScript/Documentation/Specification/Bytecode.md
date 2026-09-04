@@ -996,9 +996,16 @@ components do not need explicit zero stages.
 Seeded random no longer has a side table or helper expression opcode. The
 lowerer emits `RandomPush*`, the inline body instructions, and `RandomPop`.
 Constant seeds are unitless signed `Int64`, so negative seeds such as `-145`
-are valid source literals. Dynamic seeds must be statically visible as a
-unitless integer number, usually by declaring the value as `:number` or writing
-an explicit `as :number` cast.
+are valid source literals. A non-literal seed has already been established as
+an inferred unitless integer or explicitly converted with `as :number` by the
+source program; the lowerer emits its value directly to `RandomPush`.
+
+Both random push opcodes first save the complete active generator state.
+`RandomPushConstant` then resets it to its immediate seed. `RandomPush` resets
+it only when the register contains a unitless exact signed-64 integer; otherwise
+it leaves the copied state active without raising a diagnostic. `RandomPop`
+always restores the saved state. Thus even an invalid dynamic seed has a real,
+balanced scope and cannot consume its parent stream.
 
 Required portable value families:
 
@@ -1435,8 +1442,8 @@ separate approximate-equality opcode.
 | 0x69 | `Clamp` | - | result register | `XRegister`=value | `YRegister`=minimum | `AU`=maximum register | The only opcode with three direct source registers. |
 | 0x6A | `RandomTake` | - | result register | `XRegister`=from | `YRegister`=to | - | Takes an integer random value from integer bounds using the current random scope. |
 | 0x6B | `RandomTakeFloat` | - | result register | `XRegister`=from | `YRegister`=to | - | Takes a float random value from numeric bounds using the current random scope. |
-| 0x6C | `RandomPush` | - | - | `XRegister`=seed | - | - | Pushes a nested random scope from a dynamic unitless integer seed register. |
-| 0x6D | `RandomPushConstant` | - | - | - | - | `I64`=signed seed | Pushes a nested random scope from inline signed `Int64`. |
+| 0x6C | `RandomPush` | - | - | `XRegister`=seed | - | - | Saves the active random state and resets it from a valid dynamic unitless integer seed; an invalid seed retains the copied state. |
+| 0x6D | `RandomPushConstant` | - | - | - | - | `I64`=signed seed | Saves the active random state and resets it from an inline signed `Int64`. |
 | 0x6E | `RandomPop` | - | - | - | - | - | Restores the previous random scope. |
 | 0x6F | `Term` | - | result register | `XRegister`=series | `YRegister`=index | - | Reads a zero-based mathematical series term; non-series sources yield `nothing`. |
 | 0x70 | `Exp` | - | result register | `XRegister`=operand | - | - | Natural exponential. Unitless numeric input only; overflow to `+Infinity` is valid. |

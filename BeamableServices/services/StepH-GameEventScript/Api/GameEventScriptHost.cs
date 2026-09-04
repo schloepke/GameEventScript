@@ -41,6 +41,7 @@ public sealed class GameEventScriptHost
     private int _stepPublishedMessages;
     private GameEventScriptDiagnostic? _stepRuntimeDiagnostic;
     private int _pendingVmWarmupCapacity;
+    private GameEventScriptRandomGenerator.ScopeBoundary _activeRandomBoundary;
 
     internal GameEventScriptHost(
         GameEventScriptRandomGenerator random,
@@ -247,6 +248,11 @@ public sealed class GameEventScriptHost
                         exception.GetType().Name + ": " + exception.Message));
                 }
                 CompleteActiveHandler();
+                if (_context.RuntimeBudget.IsExhausted)
+                {
+                    runtimeLimitReached = true;
+                    break;
+                }
                 continue;
             }
 
@@ -291,7 +297,7 @@ public sealed class GameEventScriptHost
 
     internal bool EmitFromContext(GameEventScriptMessage message)
     {
-        var accepted = EnqueueMessage(message);
+        var accepted = !_random.HasActiveScopeFault && EnqueueMessage(message);
         _stepEmittedMessages++;
         _observer?.MessageEmitted(message, accepted);
         return accepted;
@@ -299,12 +305,13 @@ public sealed class GameEventScriptHost
 
     internal GameEventScriptPublishResult PublishFromContext(GameEventScriptMessage message)
     {
-        var localAccepted = EnqueueMessage(message);
-        var attempted = _publishSink is not null;
+        var randomScopeFault = _random.HasActiveScopeFault;
+        var localAccepted = !randomScopeFault && EnqueueMessage(message);
+        var attempted = !randomScopeFault && _publishSink is not null;
         var outboundAccepted = false;
-        if (_publishSink is not null)
+        if (attempted)
         {
-            try { outboundAccepted = _publishSink.Publish(message); }
+            try { outboundAccepted = _publishSink!.Publish(message); }
             catch (Exception exception)
             {
                 outboundAccepted = false;
@@ -364,13 +371,29 @@ public sealed class GameEventScriptHost
     private void StartHandler(SubscriptionEntry handler)
     {
         _activeHandler = handler;
-        _context.BeginHandler();
+        _activeRandomBoundary = _context.BeginHandler();
         _observer?.DispatchStarted(_activeMessage.Message, handler.DispatchSignatureId);
     }
 
     private void CompleteActiveHandler()
     {
         var handler = _activeHandler;
+        var randomFault = _context.EndRandomBoundary(_activeRandomBoundary);
+        if (_stepRuntimeDiagnostic is null && !_context.RuntimeBudget.IsExhausted)
+        {
+            if (randomFault == GameEventScriptRandomGenerator.ScopeBoundaryFault.BoundaryUnderflow)
+            {
+                RecordRuntimeError(CreateRuntimeDiagnostic(
+                    GameEventScriptDiagnosticCodes.RuntimeRandomStackUnderflow,
+                    "Random scope pop crossed the active handler boundary."));
+            }
+            else if (randomFault == GameEventScriptRandomGenerator.ScopeBoundaryFault.Unbalanced)
+            {
+                RecordRuntimeError(CreateRuntimeDiagnostic(
+                    GameEventScriptDiagnosticCodes.RuntimeRandomScopeImbalance,
+                    "Random scopes were not balanced when the handler returned."));
+            }
+        }
         _scriptHandlerActive = false;
         _activeHandler = null;
         if (_pendingVmWarmupCapacity > 0 && _vmState is not null && _vmState.PrepareCapacity(_pendingVmWarmupCapacity))

@@ -366,7 +366,7 @@ internal static class GesAstValidator
                     return;
                 }
 
-                scope.Declare(let.Identifier, let.DeclaredType);
+                scope.Declare(let.Identifier, let.DeclaredType ?? InferImmutableBindingType(let.Expression));
                 return;
 
             case IfStatementNode ifStatement:
@@ -399,7 +399,7 @@ internal static class GesAstValidator
 
             case SeededRandomStatementNode seededRandom:
                 ValidateExpressionReferences(parsedScriptContext, seededRandom.SeedExpression, callables, typeDefinitions, errors, scope.DeclaredTypes);
-                ValidateSeedExpression(parsedScriptContext, seededRandom.SeedExpression, callables, typeDefinitions, scope.DeclaredTypes, errors);
+                ValidateSeedExpression(parsedScriptContext, seededRandom.SeedExpression, callables, typeDefinitions, errors, scope.DeclaredTypes);
                 ValidateStatementBodyReferences(parsedScriptContext, seededRandom.Body, callables, typeDefinitions, errors, scope);
 
                 return;
@@ -512,36 +512,6 @@ internal static class GesAstValidator
             GameEventScriptSymbolKind.Predicate,
             GameEventScriptDiagnosticCodes.ValidateInvalidPredicate,
             predicateDefinition.Expression);
-    }
-
-    private static void ValidateSeedExpression(
-        ParsedScript parsedScriptContext,
-        ExpressionNode seedExpression,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
-        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        IReadOnlyDictionary<string, string> declaredTypes,
-        GesValidationErrors errors)
-    {
-        var seedType = ClassifyExpression(
-            seedExpression,
-            callables,
-            typeDefinitions,
-            declaredTypes,
-            new HashSet<string>(StringComparer.Ordinal));
-        if (seedType.Kind == StaticExpressionKind.Other &&
-            (string.Equals(seedType.TypeName, "integer", StringComparison.Ordinal) ||
-             string.Equals(seedType.TypeName, "number", StringComparison.Ordinal)))
-        {
-            return;
-        }
-
-        errors.Add(
-            parsedScriptContext,
-            "Seeded random seed must statically resolve to a unitless integer number; cast dynamic seeds explicitly with 'as :number'.",
-            "random",
-            GameEventScriptSymbolKind.Type,
-            GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor,
-            seedExpression);
     }
 
     private static IReadOnlyDictionary<string, string> BuildDeclaredTypeMap(IReadOnlyList<ParameterNode> parameters)
@@ -664,6 +634,58 @@ internal static class GesAstValidator
             null or "" => StaticExpressionInfo.Unknown,
             _ => StaticExpressionInfo.Other(typeName)
         };
+
+    private static string? InferImmutableBindingType(ExpressionNode expression)
+    {
+        if (expression is IntegerLiteralExpressionNode)
+        {
+            return "integer";
+        }
+
+        if (expression is FloatLiteralExpressionNode floatingPoint && GameEventScriptNumber.CanRepresentAsInteger(floatingPoint.Value))
+        {
+            return "integer";
+        }
+
+        return null;
+    }
+
+    private static void ValidateSeedExpression(
+        ParsedScript parsedScriptContext,
+        ExpressionNode seedExpression,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
+        GesValidationErrors errors,
+        IReadOnlyDictionary<string, string> declaredTypes)
+    {
+        var result = ClassifyExpression(seedExpression, callables, typeDefinitions, declaredTypes, new HashSet<string>(StringComparer.Ordinal));
+        if (result.TypeName is "integer" ||
+            HasExplicitNumberSeedConversion(seedExpression, declaredTypes) ||
+            seedExpression is FloatLiteralExpressionNode floatingPoint && GameEventScriptNumber.CanRepresentAsInteger(floatingPoint.Value))
+        {
+            return;
+        }
+
+        errors.Add(
+            parsedScriptContext,
+            "A random seed must be statically known as a unitless integer or explicitly converted with 'as :number'; at runtime the result is used as a seed only when it is an exact unitless signed 64-bit integer.",
+            "number",
+            GameEventScriptSymbolKind.Type,
+            GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor,
+            seedExpression);
+    }
+
+    private static bool HasExplicitNumberSeedConversion(ExpressionNode expression, IReadOnlyDictionary<string, string> declaredTypes)
+    {
+        return expression switch
+        {
+            TypeCastExpressionNode { TypeName: "number" } => true,
+            TypeConstructorExpressionNode { TypeName: "number" } => true,
+            IdentifierExpressionNode identifier => declaredTypes.TryGetValue(identifier.Name, out var declaredType) && declaredType == "number",
+            UnaryExpressionNode { Operator: GesUnaryOperator.Negate } unary => HasExplicitNumberSeedConversion(unary.Operand, declaredTypes),
+            _ => false
+        };
+    }
 
     private static StaticExpressionInfo ClassifyMemberAccess(
         MemberAccessExpressionNode memberAccess,
@@ -1002,7 +1024,7 @@ internal static class GesAstValidator
 
                 case SeededRandomExpressionNode seededRandom:
                     ValidateExpressionReferences(parsedScriptContext, seededRandom.SeedExpression, callables, typeDefinitions, errors, declaredTypes);
-                    ValidateSeedExpression(parsedScriptContext, seededRandom.SeedExpression, callables, typeDefinitions, declaredTypes, errors);
+                    ValidateSeedExpression(parsedScriptContext, seededRandom.SeedExpression, callables, typeDefinitions, errors, declaredTypes);
                     expression = seededRandom.BodyExpression;
                     continue;
 

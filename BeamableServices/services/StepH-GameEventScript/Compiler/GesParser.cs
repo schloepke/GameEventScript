@@ -1816,11 +1816,11 @@ internal sealed class GesParser
             return ParseOrderBySelector();
         }
 
-        if (Current.Kind == Tag && Current.Text.StartsWith(":", StringComparison.Ordinal))
+        if (Current.Kind == Tag && Current.Text is ":keys" or ":values" or ":entries")
         {
-            var tagToken = Advance();
-            var tag = WithRange(new TagLiteralExpressionNode(tagToken.Text[1..]), tagToken);
-            return WithRange(new ExpressionSelectorNode(tag), startToken);
+            var selectorToken = Advance();
+            var selector = WithRange(new TagLiteralExpressionNode(selectorToken.Text[1..]), selectorToken);
+            return WithRange(new ExpressionSelectorNode(selector), startToken);
         }
 
         return WithRange(new ExpressionSelectorNode(ParseExpression()), startToken);

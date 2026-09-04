@@ -116,13 +116,25 @@ festgeschrieben und durch Low-Level- sowie JSON-Conformance-Tests abgesichert:
   oberhalb von 32 Bit ab.
 - Der vollständige Int64-Bereich, vertauschte und identische Grenzen sowie deren
   exakter Stream-Verbrauch sind definiert und getestet.
-- Verschachtelte `random with`-Scopes besitzen getrennte Generatoren und setzen
-  die jeweils äußere Sequenz anschließend exakt fort.
+- Gültige verschachtelte `random with`-Scopes setzen die jeweils äußere Sequenz
+  anschließend exakt fort. Dynamische, statisch unbekannte Seeds verlangen eine
+  explizite Konvertierung mit `as :number`. Ergibt diese zur Laufzeit keinen
+  unitlosen exakten Int64, arbeitet der Body ohne Diagnose auf einer Kopie des
+  aktuellen Random-Zustands; beim Verlassen wird der Parent exakt restauriert.
 - Die Float-API heißt `NextFloat`: Sie skaliert eine `[0,1)`-Quelle auf die
   geordneten Bounds. Binary64-Rundung darf dennoch den oberen Bound erzeugen;
   auch dieser Fall ist mit einem exakten Bitmuster abgesichert.
 - NaN- und identische Bounds verbrauchen weder einen PRNG- noch einen
   `FromSequence`-Wert.
+- Jeder Host erzeugt aus Seed beziehungsweise kopierter Startsequenz einen
+  eigenen Generator; mutable Generatorinstanzen werden nicht zwischen Hosts
+  geteilt. Nach Ende einer Startsequenz übernimmt der private PRNG, in
+  Conformance mit festem Fallback-Seed.
+- `MaxRandomScopeDepth` begrenzt die tatsächlich erlaubten Scopes. Ein zusätzlich
+  reservierter Overpush-Gate-State schützt den letzten gültigen Stream, bis der
+  bestehende Handler-/Extension-Marker aufgeräumt wird. VM-Code stoppt sofort;
+  atomare Extensions und native Handler werden ohne Exceptions bei ihrer
+  Rückkehr als `RuntimeLimitReached` beendet.
 
 ## 3. C#-Kopplungen im portablen API/Core auflösen - DONE
 

@@ -289,7 +289,7 @@ Enabling it implicitly requires the core capability `program-binary`.
 
 `runtimeLimits` uses the exact portable names `maxProcessedEventsPerRun`,
 `maxQueuedMessagesPerRun`, `maxExecutionSteps`, `maxRegisterValues`,
-`maxLoopIterations`, `maxCallDepth`, `maxRangeItems`,
+`maxLoopIterations`, `maxCallDepth`, `maxRandomScopeDepth`, `maxRangeItems`,
 `maxGeneratedCollectionItems`, `maxDiceCount`, and `maxDiceSides`. Values are
 positive integers. Omitted fields use Core defaults.
 

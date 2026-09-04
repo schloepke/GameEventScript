@@ -44,9 +44,8 @@ internal class GesVmState
 
     internal GesValue[] RegisterValues { get; private set; }
 
-    internal ushort RandomGeneratorsPointer { get; private set; } = 0;
-    internal GameEventScriptRandomGenerator[] RandomGenerators { get; init; }
     internal GameEventScriptRandomGenerator RandomGenerator { get; private set; }
+    internal int RandomScopeDepth => RandomGenerator is null ? 0 : RandomGenerator.ScopeDepth;
 
     internal ushort RegisterFrameStart = 0;
     internal ushort RegisterFrameLength = 0;
@@ -77,9 +76,7 @@ internal class GesVmState
         CallStackPointer = 0;
         CallStack = new CallFrame[stackSize];
         RegisterValues = new GesValue[Math.Min(InitialRegisterCapacity, MaxRegisterCount)];
-        RandomGenerators = new GameEventScriptRandomGenerator[16];
-        RandomGeneratorsPointer = 0;
-        RandomGenerator = GameEventScriptRandomGenerator.FromSeed(0L);
+        RandomGenerator = null!;
         ExtensionCall = new GesExtensionCall();
     }
 
@@ -109,7 +106,6 @@ internal class GesVmState
         RegisterFrameStart = 0;
         StageLength = 0;
         RandomGenerator = context.Random;
-        RandomGeneratorsPointer = 0;
         if (callAsArguments)
         {
             var arguments = message.Arguments;
@@ -167,21 +163,6 @@ internal class GesVmState
     internal void CreateGroupBuilder(ushort index) => RegisterValues[index + RegisterFrameStart].SetGroupBuilder(new GesVmGroupBuilder(this));
     internal void CreateOrderBuilder(ushort index) => RegisterValues[index + RegisterFrameStart].SetOrderBuilder(new GesVmOrderBuilder());
 
-    internal bool PushRandom(GameEventScriptRandomGenerator randomGenerator)
-    {
-        if (RandomGeneratorsPointer >= RandomGenerators.Length)
-            return RaiseError(GameEventScriptDiagnosticCodes.RuntimeRandomStackOverflow, "Random generator stack overflow.");
-        RandomGenerators[RandomGeneratorsPointer++] = RandomGenerator;
-        RandomGenerator = randomGenerator;
-        return true;
-    }
-    internal bool PopRandom()
-    {
-        if (RandomGeneratorsPointer == 0)
-            return RaiseError(GameEventScriptDiagnosticCodes.RuntimeRandomStackUnderflow, "Random generator stack underflow.");
-        RandomGenerator = RandomGenerators[--RandomGeneratorsPointer];
-        return true;
-    }
     internal bool RaiseError(string code, string message, string? technicalDetails = null)
     {
         State = Error;
@@ -209,9 +190,7 @@ internal class GesVmState
         RegisterFrameStart = 0;
         RegisterFrameLength = 0;
         StageLength = 0;
-        RandomGeneratorsPointer = 0;
         for (var i = 0; i < RegisterValues.Length; i++) RegisterValues[i].SetNothing();
-        Array.Clear(RandomGenerators, 0, RandomGenerators.Length);
         RandomGenerator = null!;
         ExtensionCall.EndCall();
         _externalTypeConstructorCall?.EndCall();

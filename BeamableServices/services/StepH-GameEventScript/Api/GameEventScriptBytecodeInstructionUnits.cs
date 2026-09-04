@@ -53,6 +53,7 @@ public static class GameEventScriptBytecodeInstructionUnits
     private static GameEventScriptBytecodeInstructionUnit? ParseQuantityName(string? quantityName)
         => quantityName switch
         {
+            "none" => GameEventScriptBytecodeInstructionUnit.UnitNone,
             "degree" => GameEventScriptBytecodeInstructionUnit.UnitDegree,
             "m" or "meter" => GameEventScriptBytecodeInstructionUnit.UnitMeter,
             "s" or "second" => GameEventScriptBytecodeInstructionUnit.UnitSecond,

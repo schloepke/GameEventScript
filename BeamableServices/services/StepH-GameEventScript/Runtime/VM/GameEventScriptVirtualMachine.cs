@@ -372,13 +372,17 @@ internal static class GameEventScriptVirtualMachine
                         break;
                     case RandomPush:
                         var seed = vmState.Register(instruction.XRegister);
-                        vmState.PushRandom(seed.Kind == Integer ? GameEventScriptRandomGenerator.FromSeed(seed.IntegerValue) : vmState.RandomGenerator);
+                        var pushed = seed.Kind == Integer && seed.Unit == GameEventScriptBytecodeInstructionUnit.UnitNone
+                            ? vmState.RandomGenerator.Push(seed.IntegerValue)
+                            : vmState.RandomGenerator.Push();
+                        if (!pushed) context.RecordRandomScopeLimitReached();
                         break;
                     case RandomPushConstant:
-                        vmState.PushRandom(GameEventScriptRandomGenerator.FromSeed(instruction.I64));
+                        if (!vmState.RandomGenerator.Push(instruction.I64)) context.RecordRandomScopeLimitReached();
                         break;
                     case RandomPop:
-                        vmState.PopRandom();
+                        if (!vmState.RandomGenerator.Pop() && !context.RuntimeBudget.IsExhausted)
+                            vmState.RaiseError(GameEventScriptDiagnosticCodes.RuntimeRandomStackUnderflow, "Random scope pop crossed the active handler boundary.");
                         break;
                     case Term:
                         vmState.GesVmTerm(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));

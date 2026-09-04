@@ -17,7 +17,7 @@ internal static class ConformanceSchemaBinder
 
     private static readonly string[] RuntimeLimitNames =
     {
-        "maxProcessedEventsPerRun", "maxQueuedMessagesPerRun", "maxExecutionSteps", "maxRegisterValues", "maxLoopIterations", "maxCallDepth",
+        "maxProcessedEventsPerRun", "maxQueuedMessagesPerRun", "maxExecutionSteps", "maxRegisterValues", "maxLoopIterations", "maxCallDepth", "maxRandomScopeDepth",
         "maxRangeItems", "maxGeneratedCollectionItems", "maxDiceCount", "maxDiceSides"
     };
 

@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "A5EF74602E16762B2A47ABD3AB71F25E31D8B98533CDA10B23594EB3A29FD503",
+    "sha256": "3EF8B050357D91FC23A954E72A7714C145ABEB78165D0653CBD0E2206F962BE2",
     "documentCount": 74,
-    "caseCount": 1037
+    "caseCount": 1040
   },
   "cases": [
     {
@@ -2353,6 +2353,19 @@
     },
     {
       "id": "compile.syntax-errors/case-0041",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.syntax-errors/case-0042",
       "kind": "compileError",
       "level": "atomic",
       "requires": {
@@ -16298,6 +16311,40 @@
     },
     {
       "id": "runtime.random-dice-ranges/case-0017",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.random-dice-ranges/case-0018",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.random-dice-ranges/case-0019",
       "kind": "scriptApi",
       "level": "scenario",
       "requires": {

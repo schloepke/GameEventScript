@@ -16,10 +16,12 @@ resource metadata contains only portable integers: per-handler requirements in
 message-handler binds and their maxima in the program header model.
 
 `GameEventScriptHost` is one autonomous serial execution unit. It owns the local
-message queue, exact- and name-subscription indexes, deterministic random stream,
+message queue, exact- and name-subscription indexes, private random stream,
 runtime limits, observer, optional outbound sink, linked program instances, and
 at most one reusable `GesVmState`. A host may contain only native handlers and
-does not create a VM until the first program is loaded.
+does not create a VM until the first program is loaded. Host construction accepts
+a seed or an immutable sequence configuration, never a live mutable generator;
+building two hosts from the same configuration creates two independent streams.
 
 `GameEventScriptInstance` is one host-specific link of one program. `Load` is
 additive and returns an instance. Linking resolves extension and external-type
@@ -45,11 +47,15 @@ adapters without changing the Core contract.
 
 `GameEventScriptContext` is created once per host and passed to native handlers
 and extensions. It exposes the host random stream, limits, `Emit`, and `Publish`.
-It does not own a queue and is not a session.
+Its random generator supports nested `Push()`, `Push(Int64)`, and `Pop()` scopes.
+It does not own a queue and is not a session. A context or its random generator
+must not be retained for asynchronous use after a native or extension callback.
 
 `GameEventScriptVirtualMachine` is a stateless executor. `GesVmState` contains
 only the currently resumable execution: active linked program, instruction
-pointer, registers, frames, stages, random stack, and active message. The host
+pointer, registers, frames, stages, and active message. Random state and its
+scope stack belong to the host-owned generator so extensions observe the same
+active scoped stream as bytecode. The host
 reuses this state serially for every script handler and fully resets it after
 completion or failure. VM pooling across hosts is not part of this architecture.
 
@@ -58,6 +64,44 @@ are reported to the observer, abort/reset only the failing handler, and leave th
 remaining immutable dispatch snapshot runnable. A pump result that observed a
 handler failure uses `RuntimeError` and carries its first diagnostic. Successful
 VM stepping, resume, and dispatch do not allocate diagnostic objects.
+
+## Random Ownership, Boundaries, and Limits
+
+`MaxRandomScopeDepth` is the exact number of simultaneously active regular
+random scopes permitted in one host. Zero permits no nested scope. On first use,
+the generator allocates that many parent-state slots plus one reserved fault-gate slot;
+the gate does not reduce the configured usable depth. Runtime boundary markers
+are separate metadata and do not count as random scopes.
+
+The host marks the random scope depth when every native or script handler starts.
+An extension call adds a nested marker. A script marker remains active while its
+VM execution is paused between frames, and may therefore be released on a
+different thread from the one that created it. Markers and scope state are
+ordinary host-owned heap state; they never use thread-local, async-local, or
+native call-stack storage.
+
+The first push beyond `MaxRandomScopeDepth` copies the current valid stream into
+the reserved gate slot, latches a `MaxRandomScopeDepth` runtime-limit fault, and
+uses the current state only as disposable work until the active boundary returns.
+Further pushes increment only a suppressed-depth counter and matching pops
+decrement it; neither operation may reach the valid parent stack. Random draws
+after the fault cannot alter the saved stream. `Emit` and `Publish` attempted
+while the gate is active are observed as rejected, and Publish does not invoke
+the outbound sink.
+
+At boundary release the generator restores the gate state, unwinds every regular
+scope above the marker, and clears the gate. Bytecode observes a rejected push
+immediately and stops the current handler. An extension or native handler is an
+atomic trusted callback and cannot be preempted portably; the VM or host stops
+the handler as soon as that callback returns. No exception is part of this
+contract. The observer receives one runtime-limit event and the pump returns
+`RuntimeLimitReached`; the host remains reusable.
+
+A pop may not cross the innermost runtime marker. Crossing it is a runtime error.
+A callback that returns with otherwise balanced execution but leaves scopes open
+is also a runtime error, after the marker first restores the parent stream. If a
+different runtime limit already aborted a script body before its generated pops,
+marker cleanup is expected recovery and adds no second imbalance diagnostic.
 
 ## External Type Boundary
 
@@ -161,7 +205,9 @@ ScriptRunning
 budget is independent from safety limits and may pause only script bytecode;
 native handlers remain atomic. `RunToCompletion()` pumps synchronously until the
 host becomes idle or a runtime limit stops the run. Core code starts no thread
-and performs no synchronization.
+and performs no synchronization. A host is serial but not thread-affine: only
+one caller may access it at a time, while later frames may run on another thread
+when the embedding environment supplies the required happens-before handoff.
 
 ## C# Automatic Runner
 
@@ -186,6 +232,9 @@ synchronous core contract.
 - After warmup, queue dispatch, handler selection, frame-result creation, and VM
   resume must not allocate. Message creation, emitted value payloads, extension
   behavior, and Conformance Markdown/YAML decoding are measured separately.
+- Random boundary and scope storage is initialized on first use and retained by
+  the host. Push, Pop, marker creation, overpush gating, and frame resume allocate
+  nothing after that warmup.
 
 ## Conformance Porting Contract
 

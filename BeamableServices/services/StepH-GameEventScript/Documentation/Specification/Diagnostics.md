@@ -58,7 +58,11 @@ Linking uses `link.requiredRegisterCountExceeded`,
 Runtime uses the constants declared by `GameEventScriptDiagnosticCodes`. They
 cover VM preparation/state, instruction and capacity failures, invalid linked
 bindings and value shapes, unhandled VM/native failures, and publish-sink
-failures. New codes may be added; an existing code must not be repurposed.
+failures. `runtime.randomStackUnderflow` reports an attempted pop across an
+active runtime boundary, while `runtime.randomScopeImbalance` reports scopes
+left open by a successfully returning native or extension callback. Exceeding
+`MaxRandomScopeDepth` is a runtime-limit event rather than a diagnostic. New
+codes may be added; an existing code must not be repurposed.
 
 ## Transport and execution
 

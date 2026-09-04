@@ -1942,8 +1942,9 @@ on Start {
   let distanceValue be 100 as :quantity(m)
   let duration be :quantity(s)(5)
   let heading be :quantity(degree)(90)
+  let strippedDistance be distanceValue as :quantity(none)
   let custom be :quantity(value: 3)
-  emit Done(distance: distanceValue, duration: duration, heading: heading, distanceIsMeter: distanceValue is :quantity(m), distanceIsSecond: distanceValue is :quantity(s), symbolIsDegree: heading is :quantity(°), percentageIsMeter: 50% is :quantity(m), customIsQuantity: custom is :quantity, customValue: custom.value)
+  emit Done(distance: distanceValue, duration: duration, heading: heading, strippedDistance: strippedDistance, strippedIsUnitless: strippedDistance is :quantity(none), distanceIsMeter: distanceValue is :quantity(m), distanceIsSecond: distanceValue is :quantity(s), symbolIsDegree: heading is :quantity(°), percentageIsMeter: 50% is :quantity(m), customIsQuantity: custom is :quantity, customValue: custom.value)
 }
 ```
 
@@ -1977,6 +1978,14 @@ steps:
               type: ":integer"
               value: "90"
               unit: ":degree"
+          - name: "strippedDistance"
+            value:
+              type: ":integer"
+              value: "100"
+          - name: "strippedIsUnitless"
+            value:
+              type: ":boolean"
+              value: true
           - name: "distanceIsMeter"
             value:
               type: ":boolean"
@@ -2031,7 +2040,7 @@ sources:
 on Start {
   let integerValue be 12.0 as :number
   let floatValue be 12.5 as :number
-  emit Done(integerValue: integerValue, floatValue: floatValue, integerIsNumeric: integerValue is numeric, textIsNumeric: '12' is numeric, badTextIsNumeric: 'abc' is numeric)
+  emit Done(integerValue: integerValue, floatValue: floatValue, integerIsNumeric: integerValue is numeric, canonicalIntegerCheck: integerValue is integer, textIsNumeric: '12' is numeric, badTextIsNumeric: 'abc' is numeric, textLeftConcat: '10' + 20, textRightConcat: 10 + '20')
 }
 ```
 
@@ -2062,6 +2071,10 @@ steps:
             value:
               type: ":boolean"
               value: true
+          - name: "canonicalIntegerCheck"
+            value:
+              type: ":boolean"
+              value: true
           - name: "textIsNumeric"
             value:
               type: ":boolean"
@@ -2070,6 +2083,14 @@ steps:
             value:
               type: ":boolean"
               value: false
+          - name: "textLeftConcat"
+            value:
+              type: ":text"
+              value: "1020"
+          - name: "textRightConcat"
+            value:
+              type: ":text"
+              value: "1020"
 ```
 
 ---

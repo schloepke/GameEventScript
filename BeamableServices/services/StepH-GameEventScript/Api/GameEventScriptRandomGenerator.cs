@@ -11,6 +11,52 @@ namespace StepH.GameEventScript.Api;
 /// </summary>
 public sealed class GameEventScriptRandomGenerator
 {
+    private const int DefaultMaxScopeDepth = 16;
+
+    internal readonly struct State
+    {
+        internal State(double[]? sequence, int sequenceIndex, ulong s0, ulong s1, ulong s2, ulong s3)
+        {
+            Sequence = sequence;
+            SequenceIndex = sequenceIndex;
+            S0 = s0;
+            S1 = s1;
+            S2 = s2;
+            S3 = s3;
+        }
+
+        internal double[]? Sequence { get; }
+        internal int SequenceIndex { get; }
+        internal ulong S0 { get; }
+        internal ulong S1 { get; }
+        internal ulong S2 { get; }
+        internal ulong S3 { get; }
+    }
+
+    internal readonly struct ScopeBoundary
+    {
+        internal ScopeBoundary(int token)
+        {
+            Token = token;
+        }
+
+        internal int Token { get; }
+    }
+
+    internal enum ScopeBoundaryFault
+    {
+        None,
+        LimitExceeded,
+        BoundaryUnderflow,
+        Unbalanced
+    }
+
+    private struct ScopeBoundaryState
+    {
+        internal int Token;
+        internal int ScopeDepth;
+    }
+
     private struct SplitMix
     {
         private ulong _state;
@@ -39,7 +85,7 @@ public sealed class GameEventScriptRandomGenerator
     /// <returns>
     /// A new <c>GameEventScriptRandomGenerator</c> initialized with a default generator seed.
     /// </returns>
-    public static GameEventScriptRandomGenerator Create() => new(CreateDefaultSeed());
+    public static GameEventScriptRandomGenerator Create() => new(CreateDefaultSeed(), null, DefaultMaxScopeDepth);
 
     /// <summary>
     /// Creates and returns a new instance of <c>GameEventScriptRandomGenerator</c>
@@ -65,7 +111,7 @@ public sealed class GameEventScriptRandomGenerator
     /// </returns>
     public static GameEventScriptRandomGenerator FromSeed(long seed)
     {
-        return new GameEventScriptRandomGenerator(seed);
+        return new GameEventScriptRandomGenerator(seed, null, DefaultMaxScopeDepth);
     }
 
     /// <summary>
@@ -80,7 +126,50 @@ public sealed class GameEventScriptRandomGenerator
     /// A new <c>GameEventScriptRandomGenerator</c> initialized to use the specified
     /// sequence of random values.
     /// </returns>
-    public static GameEventScriptRandomGenerator FromSequence(params double[] values) => new(values);
+    public static GameEventScriptRandomGenerator FromSequence(params double[] values)
+        => new(CreateDefaultSeed(), CopySequence(values), DefaultMaxScopeDepth);
+
+    /// <summary>
+    /// Saves the active random stream and starts a nested scope from an identical
+    /// copy. Leaving the scope restores the saved parent stream.
+    /// </summary>
+    /// <returns><see langword="true"/> when the scope was entered; otherwise <see langword="false"/> when the configured scope limit was reached.</returns>
+    public bool Push() => PushScope(null);
+
+    /// <summary>
+    /// Saves the active random stream and starts a nested deterministic stream
+    /// initialized from <paramref name="seed"/>. Leaving the scope restores the
+    /// saved parent stream.
+    /// </summary>
+    /// <param name="seed">The signed 64-bit seed for the nested stream.</param>
+    /// <returns><see langword="true"/> when the scope was entered; otherwise <see langword="false"/> when the configured scope limit was reached.</returns>
+    public bool Push(long seed) => PushScope(seed);
+
+    /// <summary>
+    /// Leaves the most recently entered random scope and restores its parent
+    /// stream.
+    /// </summary>
+    /// <returns><see langword="true"/> when a scope was left; otherwise <see langword="false"/> when no scope can be left at the current runtime boundary.</returns>
+    public bool Pop()
+    {
+        if (_faultGateActive)
+        {
+            if (_overpushDepth > 0) _overpushDepth--;
+            if (_faultOwnerToken == 0 && _overpushDepth == 0) ClearFaultGate();
+            return false;
+        }
+
+        var boundaryDepth = _boundaryDepth == 0 ? 0 : _boundaries![_boundaryDepth - 1].ScopeDepth;
+        if (_scopeDepth <= boundaryDepth)
+        {
+            if (_boundaryDepth > 0) EnterFaultGate(ScopeBoundaryFault.BoundaryUnderflow, 0);
+            return false;
+        }
+
+        RestoreState(in _scopeStates![--_scopeDepth]);
+        _scopeStates[_scopeDepth] = default;
+        return true;
+    }
 
     /// <summary>
     /// Generates a random 64-bit signed integer between the specified minimum and maximum values, inclusive.
@@ -142,23 +231,122 @@ public sealed class GameEventScriptRandomGenerator
         return firstBound + (secondBound - firstBound) * NextUnitDouble();
     }
 
-    private GameEventScriptRandomGenerator(long seed)
-    {
-        Seed(seed);
-    }
+    internal static GameEventScriptRandomGenerator CreateForHost(int maxScopeDepth)
+        => new(CreateDefaultSeed(), null, ValidateMaxScopeDepth(maxScopeDepth));
 
-    private GameEventScriptRandomGenerator(double[] sequence)
+    internal static GameEventScriptRandomGenerator FromSeedForHost(long seed, int maxScopeDepth)
+        => new(seed, null, ValidateMaxScopeDepth(maxScopeDepth));
+
+    internal static GameEventScriptRandomGenerator FromSequenceForHost(double[] values, long? fallbackSeed, int maxScopeDepth)
+        => new(fallbackSeed ?? CreateDefaultSeed(), CopySequence(values), ValidateMaxScopeDepth(maxScopeDepth));
+
+    private GameEventScriptRandomGenerator(long seed, double[]? sequence, int maxScopeDepth)
     {
+        _maxScopeDepth = maxScopeDepth;
+        Initialize(seed);
         _sequence = sequence;
-        Seed(CreateDefaultSeed());
     }
 
-    private readonly double[]? _sequence;
+    private readonly int _maxScopeDepth;
+    private State[]? _scopeStates;
+    private ScopeBoundaryState[]? _boundaries;
+    private int _scopeDepth;
+    private int _boundaryDepth;
+    private int _nextBoundaryToken;
+    private bool _faultGateActive;
+    private int _faultOwnerToken;
+    private int _overpushDepth;
+    private ScopeBoundaryFault _fault;
+    private double[]? _sequence;
     private int _sequenceIndex;
     private ulong _s0;
     private ulong _s1;
     private ulong _s2;
     private ulong _s3;
+
+    internal int ScopeDepth => _scopeDepth;
+    internal bool HasActiveScopeFault => _faultGateActive;
+
+    internal ScopeBoundary MarkScopeBoundary()
+    {
+        var boundaries = _boundaries ??= new ScopeBoundaryState[4];
+        if (_boundaryDepth == boundaries.Length)
+        {
+            Array.Resize(ref boundaries, checked(boundaries.Length * 2));
+            _boundaries = boundaries;
+        }
+        var token = unchecked(++_nextBoundaryToken);
+        if (token == 0) token = unchecked(++_nextBoundaryToken);
+        boundaries[_boundaryDepth++] = new ScopeBoundaryState { Token = token, ScopeDepth = _scopeDepth };
+        return new ScopeBoundary(token);
+    }
+
+    internal ScopeBoundaryFault ReleaseScopeBoundary(ScopeBoundary boundary)
+    {
+        var boundaries = _boundaries;
+        if (_boundaryDepth == 0 || boundaries is null || boundaries[_boundaryDepth - 1].Token != boundary.Token)
+            throw new InvalidOperationException("Random scope boundaries must be released in reverse order.");
+
+        var state = boundaries[--_boundaryDepth];
+        boundaries[_boundaryDepth] = default;
+        var fault = ScopeBoundaryFault.None;
+        if (_faultGateActive && _faultOwnerToken == boundary.Token)
+        {
+            fault = _fault;
+            ClearFaultGate();
+        }
+
+        if (_scopeDepth != state.ScopeDepth && fault == ScopeBoundaryFault.None) fault = ScopeBoundaryFault.Unbalanced;
+        while (_scopeDepth > state.ScopeDepth)
+        {
+            RestoreState(in _scopeStates![--_scopeDepth]);
+            _scopeStates[_scopeDepth] = default;
+        }
+
+        return fault;
+    }
+
+    private bool PushScope(long? seed)
+    {
+        if (_faultGateActive)
+        {
+            _overpushDepth++;
+            return false;
+        }
+
+        if (_scopeDepth >= _maxScopeDepth)
+        {
+            EnterFaultGate(ScopeBoundaryFault.LimitExceeded, 1);
+            return false;
+        }
+
+        var scopeStates = EnsureScopeStates();
+        scopeStates[_scopeDepth++] = CaptureState();
+        if (seed is { } validSeed) ResetToSeed(validSeed);
+        return true;
+    }
+
+    private void EnterFaultGate(ScopeBoundaryFault fault, int overpushDepth)
+    {
+        EnsureScopeStates()[_maxScopeDepth] = CaptureState();
+        _faultGateActive = true;
+        _faultOwnerToken = _boundaryDepth == 0 ? 0 : _boundaries![_boundaryDepth - 1].Token;
+        _overpushDepth = overpushDepth;
+        _fault = fault;
+    }
+
+    private void ClearFaultGate()
+    {
+        RestoreState(in _scopeStates![_maxScopeDepth]);
+        _scopeStates[_maxScopeDepth] = default;
+        _faultGateActive = false;
+        _faultOwnerToken = 0;
+        _overpushDepth = 0;
+        _fault = ScopeBoundaryFault.None;
+    }
+
+    private State[] EnsureScopeStates()
+        => _scopeStates ??= new State[_maxScopeDepth + 1];
 
     private double? DequeueSequenceValue()
     {
@@ -172,7 +360,42 @@ public sealed class GameEventScriptRandomGenerator
 
     private static long ToLongSaturated(double value) => GameEventScriptNumber.ToIntegerSaturated(value);
 
-    private void Seed(long seed)
+    private static double[] CopySequence(double[] values)
+    {
+        _ = values ?? throw new ArgumentNullException(nameof(values));
+        if (values.Length == 0) return [];
+        var result = new double[values.Length];
+        Array.Copy(values, result, values.Length);
+        return result;
+    }
+
+    private static int ValidateMaxScopeDepth(int value)
+    {
+        if (value < 0 || value > ushort.MaxValue)
+            throw new ArgumentOutOfRangeException(nameof(value), "Random scope depth must be between 0 and 65,535.");
+        return value;
+    }
+
+    internal State CaptureState() => new(_sequence, _sequenceIndex, _s0, _s1, _s2, _s3);
+
+    internal void RestoreState(in State state)
+    {
+        _sequence = state.Sequence;
+        _sequenceIndex = state.SequenceIndex;
+        _s0 = state.S0;
+        _s1 = state.S1;
+        _s2 = state.S2;
+        _s3 = state.S3;
+    }
+
+    internal void ResetToSeed(long seed)
+    {
+        _sequence = null;
+        _sequenceIndex = 0;
+        Initialize(seed);
+    }
+
+    private void Initialize(long seed)
     {
         var splitMix = new SplitMix(unchecked((ulong)seed));
         _s0 = splitMix.NextUInt64();

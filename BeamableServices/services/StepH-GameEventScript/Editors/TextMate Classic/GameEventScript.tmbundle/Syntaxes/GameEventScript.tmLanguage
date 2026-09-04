@@ -256,7 +256,7 @@
 						</dict>
 					</dict>
 					<key>match</key>
-					<string>:(quantity)(\()((?:m|meter|s|second|degree|°))(\))(?=$|[^A-Za-z0-9_])</string>
+					<string>:(quantity)(\()((?:none|m|meter|s|second|degree|°))(\))(?=$|[^A-Za-z0-9_])</string>
 					<key>name</key>
 					<string>support.type.primitive.quantity.gameeventscript</string>
 				</dict>

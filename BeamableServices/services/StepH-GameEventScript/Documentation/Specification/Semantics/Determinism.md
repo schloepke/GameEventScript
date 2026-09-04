@@ -92,18 +92,51 @@ sample is less than one.
 
 `Create()` intentionally chooses a non-deterministic seed and therefore has no
 cross-platform output contract. `FromSequence` is a test adapter: supplied
-values are consumed in order and clamped to requested non-collapsed bounds.
-A conformance case must not exhaust its supplied sequence because the fallback
-stream is not part of that adapter's portable contract.
+values are copied, consumed in order, and clamped to requested non-collapsed
+bounds. After exhaustion it continues with its private generator. The public
+standalone factory seeds that fallback non-deterministically. Host configuration
+may provide an explicit fallback seed; Markdown conformance uses seed `0`, so an
+exhausted test sequence remains portable and reproducible.
+
+A host never accepts or retains an externally owned mutable generator. Its
+builder accepts a seed or immutable sequence values and constructs a private
+generator for every built host. Two hosts built from one builder therefore have
+independent state even when their initial streams are identical.
 
 ## Seeded random scopes
 
-`random with seed` pushes a newly seeded generator and restores the exact
-previous generator when the statement or expression ends. Scopes may nest;
-each nested scope advances only its own generator. Leaving an inner scope must
-therefore resume its parent at the parent's next value rather than restarting
-or advancing it. The random-generator stack is execution state and is reset
-between message handlers together with the remaining VM state.
+`random with seed` requires the seed to be statically known as a unitless exact
+integer or explicitly converted with `as :number`. A runtime seed value creates
+a newly seeded stream only when it is a unitless exact integer in the signed
+64-bit range.
+
+Every seeded-random construct first snapshots the complete active random state.
+If the runtime seed is valid, the active state is reset from that seed. If it is
+invalid, fractional, unit-bearing, or `nothing`, the active state remains an
+identical copy of its parent state and no diagnostic is reported. The body may
+consume any number of values from that copied state. Leaving the construct
+always restores the saved parent state exactly, so an invalid scoped seed can
+never advance or otherwise perturb its parent stream.
+
+Scopes may nest and the same snapshot/restore rule applies at every level. The
+random-state stack belongs to the host generator rather than the VM, allowing
+extensions to observe and explicitly create scopes on the same active stream.
+The host marks every native and script handler boundary, and every extension
+call adds a nested marker. Handler cleanup unwinds outstanding snapshots if a
+runtime limit or diagnostic prevents normal execution of a matching `RandomPop`.
+Script handler markers persist across frame pauses and are independent of the
+thread that executes a later frame.
+
+`MaxRandomScopeDepth` limits simultaneously active regular scopes. The limit is
+exact: an implementation reserves one additional state exclusively as an
+overpush gate. The first rejected push saves the last valid stream in that gate,
+latches the runtime-limit fault, and makes all subsequent random work disposable
+until boundary release. Additional rejected pushes and their pops only maintain
+a suppressed nesting count and cannot touch valid parent states. Emit and
+Publish are rejected while the gate is active. Bytecode stops immediately;
+atomic native and extension callbacks are checked when they return. No exception
+is required or observable. Boundary release restores the valid stream, and the
+host remains usable for later handlers and messages.
 
 ## Equality
 

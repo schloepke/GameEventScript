@@ -1466,3 +1466,41 @@ error:
   phase: "parse"
   code: "parse.syntax"
 ```
+
+---
+
+## Test: colon-prefixed names are not map keys
+
+This negative compiler case verifies that `:` remains reserved for structured
+selectors, type names, and extension namespaces. Map keys use member syntax,
+text, or `#` tags instead of the removed legacy `:name` spelling.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: case-0042
+kind: compileError
+level: atomic
+sources:
+  - name: "colon-prefixed names are not map keys.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let unit be [name: 'Ada']
+  emit Done(name: unit[:name])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```

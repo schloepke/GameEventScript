@@ -147,9 +147,9 @@ public static class ConformanceRunner
         technical = null;
         var collector = new RuntimeCollector(testCase.PublishSink);
         var builder = GameEventScriptHost.CreateBuilder()
-            .WithRandom(CreateRandom(testCase.Random))
             .WithRuntimeLimits(CreateRuntimeLimits(testCase.RuntimeLimits))
             .WithRuntimeObserver(collector);
+        ConfigureRandom(builder, testCase.Random);
         if (testCase.PublishSink != ConformancePublishSinkMode.Absent) builder.WithPublishSink(collector);
         if (environment.ExtensionRegistry is not null) builder.WithRegistry(environment.ExtensionRegistry);
         var externalTypeRegistry = testCase.ExternalTypeRegistry switch
@@ -1039,16 +1039,21 @@ public static class ConformanceRunner
         return result;
     }
 
-    private static GameEventScriptRandomGenerator CreateRandom(ConformanceRandomConfiguration? configuration)
+    private static void ConfigureRandom(GameEventScriptHostBuilder builder, ConformanceRandomConfiguration? configuration)
     {
-        if (configuration?.Seed is { } seed) return GameEventScriptRandomGenerator.FromSeed(seed);
+        if (configuration?.Seed is { } seed)
+        {
+            builder.WithRandomSeed(seed);
+            return;
+        }
         if (configuration is { Sequence.Count: > 0 })
         {
             var sequence = new double[configuration.Sequence.Count];
             for (var index = 0; index < sequence.Length; index++) sequence[index] = ConformanceRuntimeValueCodec.ParseBinary64(configuration.Sequence[index]);
-            return GameEventScriptRandomGenerator.FromSequence(sequence);
+            builder.WithRandomSequence(sequence, 0L);
+            return;
         }
-        return GameEventScriptRandomGenerator.FromSeed(0L);
+        builder.WithRandomSeed(0L);
     }
 
     private static GameEventScriptRuntimeLimits CreateRuntimeLimits(ConformanceRuntimeLimits limits)
@@ -1063,6 +1068,7 @@ public static class ConformanceRunner
             MaxRegisterValues = Read("maxRegisterValues", defaults.MaxRegisterValues),
             MaxLoopIterations = Read("maxLoopIterations", defaults.MaxLoopIterations),
             MaxCallDepth = Read("maxCallDepth", defaults.MaxCallDepth),
+            MaxRandomScopeDepth = Read("maxRandomScopeDepth", defaults.MaxRandomScopeDepth),
             MaxRangeItems = Read("maxRangeItems", defaults.MaxRangeItems),
             MaxGeneratedCollectionItems = Read("maxGeneratedCollectionItems", defaults.MaxGeneratedCollectionItems),
             MaxDiceCount = Read("maxDiceCount", defaults.MaxDiceCount),

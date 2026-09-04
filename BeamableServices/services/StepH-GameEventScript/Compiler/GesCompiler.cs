@@ -1986,7 +1986,8 @@ internal static class GesCompiler
                 return;
             }
 
-            _builder.RandomPush(EmitExpressionForRead(seedExpression, context, state));
+            var source = EmitExpressionForRead(seedExpression, context, state);
+            _builder.RandomPush(source);
         }
 
         private void EmitCallInto(CallExpressionNode call, GesRegisterRef destination, LoweringContext context, ExpressionState state)
@@ -2532,10 +2533,7 @@ internal static class GesCompiler
                GetBytecodeTypeKind(typeName) is not null;
 
         private static GameEventScriptBytecodeInstructionUnit? GetQuantityUnit(string typeName)
-            => GameEventScriptBytecodeInstructionUnits.ParseQuantityTypeName(typeName) is { } unit &&
-               unit != GameEventScriptBytecodeInstructionUnit.UnitNone
-                ? unit
-                : null;
+            => GameEventScriptBytecodeInstructionUnits.ParseQuantityTypeName(typeName);
 
         private static GameEventScriptBytecodeTypeKind? GetBytecodeTypeKind(string typeName)
         {

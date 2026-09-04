@@ -1609,9 +1609,9 @@ error:
 
 ---
 
-## Test: seeded random unit seed fails module build
+## Test: seeded random rejects a unit-bearing seed
 
-This negative compiler case exercises “seeded random unit seed fails module build” and verifies the required portable diagnostic.
+This compiler case verifies that a unit-bearing seed is rejected unless the script explicitly removes or converts its unit before using it as a random seed.
 
 ### Case description
 
@@ -1621,7 +1621,7 @@ id: case-0038
 kind: compileError
 level: scenario
 sources:
-  - name: "seeded random unit seed fails module build.ges"
+  - name: "seeded random rejects a unit-bearing seed.ges"
     program: main
 ```
 
@@ -1641,13 +1641,15 @@ gesBlock: expect
 error:
   phase: "validate"
   code: "validate.invalidTypeConstructor"
+  symbol: "number"
+  symbolKind: "type"
 ```
 
 ---
 
-## Test: seeded random unknown seed requires explicit integer cast
+## Test: seeded random requires an explicit conversion for an unknown seed
 
-This negative compiler case exercises “seeded random unknown seed requires explicit integer cast” and verifies the required portable diagnostic.
+This compiler case verifies that an externally supplied or otherwise statically unknown seed must explicitly state the intended numeric conversion.
 
 ### Case description
 
@@ -1657,7 +1659,7 @@ id: case-0039
 kind: compileError
 level: scenario
 sources:
-  - name: "seeded random unknown seed requires explicit integer cast.ges"
+  - name: "seeded random requires an explicit conversion for an unknown seed.ges"
     program: main
 ```
 
@@ -1677,6 +1679,8 @@ gesBlock: expect
 error:
   phase: "validate"
   code: "validate.invalidTypeConstructor"
+  symbol: "number"
+  symbolKind: "type"
 ```
 
 ---

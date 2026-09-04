@@ -1,3 +1,6 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Portable number semantics
 
 This document is the normative numeric contract for Game Event Script compiler,

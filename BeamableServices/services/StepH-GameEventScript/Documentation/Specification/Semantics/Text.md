@@ -1,3 +1,6 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Portable text and Unicode semantics
 
 This document is the normative cross-language contract for Game Event Script

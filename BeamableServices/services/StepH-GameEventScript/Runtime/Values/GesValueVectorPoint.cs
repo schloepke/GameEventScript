@@ -1,3 +1,6 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
 namespace StepH.GameEventScript.Runtime.Values;
 
 internal sealed class GesValueVectorPoint(double x, double y, double z)

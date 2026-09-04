@@ -1,6 +1,14 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Game Event Script documentation
 
 This directory is the canonical entry point for Game Event Script documentation. It separates normative, language-neutral contracts from non-normative learning material.
+
+The project is distributed under the [Apache License 2.0](../LICENSE). The
+repository header, attribution, and file-exclusion rules are defined by the
+[licensing policy](../LICENSING.md); that policy is operational rather than part
+of the language specification.
 
 ## Normative specification
 

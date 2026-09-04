@@ -1,3 +1,6 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # GameEventScript Assembler TextMate Bundle
 
 This bundle provides modern JSON TextMate-compatible syntax highlighting for

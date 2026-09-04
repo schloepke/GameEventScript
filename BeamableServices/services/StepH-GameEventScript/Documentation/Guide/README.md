@@ -1,3 +1,6 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Game Event Script guides
 
 This directory contains non-normative learning material: introductions, tutorials, recipes, examples, and integration guidance.

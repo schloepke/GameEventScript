@@ -1,3 +1,6 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # GameEventScript Editor Support
 
 - `TextMate Classic/`: XML plist bundle for CodeRunner 4 and older

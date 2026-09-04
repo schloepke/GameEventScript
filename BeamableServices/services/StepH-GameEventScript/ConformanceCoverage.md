@@ -1,3 +1,6 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Portable Conformance Coverage
 
 This is the normative coverage index from behavior to stable Conformance

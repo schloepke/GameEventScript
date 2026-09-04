@@ -1,3 +1,6 @@
+# Copyright 2026 Stephan Schlöpke
+# SPDX-License-Identifier: Apache-2.0
+
 # This file intentionally scopes every rule to the two Game Event Script projects.
 # Other Beamable services below this directory are unaffected.
 

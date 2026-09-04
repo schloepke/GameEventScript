@@ -1,3 +1,6 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Shared Markdown V1 parser fixtures
 
 These bootstrap fixtures are consumed unchanged by every language port. They

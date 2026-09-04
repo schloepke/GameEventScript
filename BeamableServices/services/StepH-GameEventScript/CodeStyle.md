@@ -1,3 +1,6 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Game Event Script C# code style
 
 This is the development formatting contract for the handwritten C# sources in

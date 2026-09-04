@@ -1,3 +1,6 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Cross-language conformance acceptance
 
 This document defines how C#, Swift, Kotlin, and C++ prove that they parsed and

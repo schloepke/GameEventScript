@@ -899,16 +899,29 @@ Abnahme:
 dotnet format --verify-no-changes passed for production and tests
 ```
 
-### 6.8 Apache-2.0-Lizenz und Copyright-Header einführen
+### 6.8 Apache-2.0-Lizenz und Copyright-Header einführen - DONE
 
-- Für den GES-Bestand die unveränderte offizielle Apache-License-2.0 als `LICENSE` aufnehmen, den Ablageort beim Umzug zum Monorepo-Root übernehmen und sämtliche Paketmetadaten auf `Apache-2.0` setzen.
-- Vor der mechanischen Header-Ergänzung den exakten Rechteinhaber und eine reproduzierbare Jahreskonvention festlegen; keine erfundenen Platzhalter oder bei jedem Build wechselnden Jahreswerte verwenden.
-- Für geeignete handgeschriebene Source-, Test-, Tooling-, Spezifikations- und Editor-Dateien einen kurzen, zum jeweiligen Kommentarformat passenden Copyright- und SPDX-Header mit `SPDX-License-Identifier: Apache-2.0` festlegen und konsistent ergänzen.
-- Dateien ohne Kommentarformat, Binärfixtures, Golden Bytes, generierte Reports und empfangene Approval-Kandidaten nicht durch Header verändern. Generierte Textdateien erhalten einen Header nur über ihre Generatoren und nur dann, wenn ihr Format beziehungsweise ihre Parser das ausdrücklich erlauben.
-- Bestehende Drittanbieterdateien und übernommene Inhalte inventarisieren. Deren Copyright- und Lizenzhinweise unverändert erhalten und erforderliche Attributionen in einer `NOTICE`- beziehungsweise Third-Party-Notices-Datei sammeln; sie dürfen nicht pauschal als eigener Apache-2.0-Code umdeklariert werden.
-- README, Paketbeschreibung und veröffentlichte Artefakte müssen die Lizenz eindeutig ausweisen. Eine `NOTICE`-Datei nur anlegen, wenn eigene Hinweise oder Drittanbieterpflichten sie tatsächlich erfordern.
-- Einen mechanischen Lizenzcheck ergänzen, der die vereinbarte Dateimenge, zulässige Ausnahmen, den exakten Lizenztext und die Paketmetadaten prüft.
-- Nach der Header-Ergänzung Golden-/Fixture-Hashes und deterministische Buildausgaben nur dort aktualisieren, wo lizenzierte Eingabedateien fachlich Bestandteil des Hashes sind; Binärformat und Conformance-Inhalte dürfen nicht unbeabsichtigt verändert werden.
+Erledigt:
+
+- Der Rechteinhaber ist dauerhaft als natürliche Person `Stephan Schlöpke` festgelegt. Die kanonische UTF-8-Schreibweise mit `ö` wird nicht parallel durch eine ASCII-Identität ersetzt; eine aktuelle oder spätere freiberufliche Geschäftsbezeichnung ist bewusst nicht Teil des stabilen Copyright-Hinweises.
+- `2026` ist das feste Erstveröffentlichungsjahr. Es wird weder beim Build noch bei späteren Routineänderungen automatisch fortgeschrieben oder in einen rollenden Zeitraum umgewandelt.
+- `StepH-GameEventScript/LICENSE` enthält bytegenau den unveränderten offiziellen Apache-License-2.0-Text. `LICENSING.md` definiert Geltungsbereich, kanonische Kurzheader, Jahreskonvention, technisch begründete Ausnahmen und den Umgang mit künftigem Drittmaterial.
+- Alle handgeschriebenen C#-Quellen in Produktion und Tests, reguläre Projekt-/Spezifikations-/Guide-/README-Markdowns, beide C#-Projektdateien, die GES-spezifische EditorConfig und Gitignore sowie XML-basierte TextMate-Dateien tragen passende Copyright- und SPDX-Header.
+- Streng geparste Conformance-Suites und Parser-Fixtures, Golden-/Received-/Report-Dateien, JSON/TSV ohne Kommentarsyntax, `.ges`-Testinputs, `.gesb`-Fixtures, Build-/Testergebnisse und Betriebssystemmetadaten bleiben absichtlich unverändert. Dadurch wurden keine Corpus-Hashes, GESA-Snapshots oder deterministischen Binary-Fixtures aktualisiert.
+- Im aktuellen Sourcebestand wurde kein vendortes Drittmaterial mit eigener Attributionspflicht identifiziert. Paketabhängigkeiten bleiben externe NuGet-Referenzen. Deshalb wird derzeit bewusst keine leere oder erfundene `NOTICE`-Datei erzeugt; künftiges Drittmaterial muss vor Aufnahme separat geprüft werden.
+- `StepH-GameEventScript.csproj` veröffentlicht Autor, Copyright, Beschreibung, `PackageLicenseExpression=Apache-2.0` und Package-README. Das erzeugte NuGet-Paket enthält `LICENSE`, `README.md`, Assembly und XML-Dokumentation.
+- Drei mechanische Lizenztests prüfen den offiziellen Lizenz-SHA-256, die bewusste `NOTICE`-Entscheidung, Paketmetadaten und Paketdateien sowie sämtliche vereinbarten Headerbereiche und Ausnahmen.
+
+Abnahme:
+
+```text
+LICENSE SHA-256 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30 matches apache.org
+NuGet package contains LICENSE, README.md, assembly, and XML documentation
+All XML TextMate assets pass plutil validation
+1152/1152 non-performance test executions passed
+6/6 performance/allocation tests passed
+dotnet format --verify-no-changes passed for production and tests
+```
 
 ### 6.9 Gesamtkonsistenz und Vollständigkeit prüfen
 

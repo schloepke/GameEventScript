@@ -1,3 +1,6 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Portable Conformance package
 
 `StepH.GameEventScript.Conformance` implements the authoring side of

@@ -1,3 +1,6 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # GameEventScript Assembler TextMate Classic Bundle
 
 This bundle provides classic XML plist TextMate-compatible syntax highlighting

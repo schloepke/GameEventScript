@@ -1,3 +1,6 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Cross-language capability matrix
 
 This matrix records implementations for the exact shared corpus identified by

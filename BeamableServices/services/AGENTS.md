@@ -28,6 +28,7 @@ dotnet test StepH-GameEventScript-Tests/StepH-GameEventScript-Tests.csproj --fil
 - Be careful with direct register refs: never hold a mutable destination ref across operations that may grow or replace register storage.
 - Use `rg` for code search.
 - Every public C# type and member requires valid XML documentation. The library build treats missing or malformed XML documentation as errors; never hide these diagnostics with `#pragma`.
+- Licensing follows `StepH-GameEventScript/LICENSING.md`: use `Copyright 2026 Stephan Schlöpke` and `SPDX-License-Identifier: Apache-2.0` exactly, preserve the fixed year, retain third-party notices, and do not insert headers into the documented strict/generated/binary exclusions.
 - Do not revert user changes unless explicitly requested.
 
 ## Current Architecture Direction
@@ -88,8 +89,38 @@ The project has a portable Game Event Script host/VM architecture with a compact
 - `StepH-GameEventScript/Documentation/README.md` is the canonical documentation
   entry point. Every specification listed there, including `PublicApi.md`, is
   normative.
+- `StepH-GameEventScript/LICENSE` is the byte-exact Apache-2.0 text;
+  `StepH-GameEventScript/LICENSING.md` owns copyright, header, exclusion, and
+  third-party attribution policy.
 
 ## Recent Completed Work
+
+### Apache-2.0 Licensing and Reproducible Headers
+
+- Game Event Script is licensed under Apache-2.0 with the stable notice
+  `Copyright 2026 Stephan Schlöpke`. The personal Unicode name and fixed
+  first-publication year are the canonical identity and year convention.
+- `LICENSE` matches the official Apache text byte-for-byte. `LICENSING.md`
+  records eligible file formats, strict/generated/binary exclusions, and the
+  future third-party review rule. No current vendored material requires a
+  `NOTICE` file.
+- Handwritten C#, regular documentation, project/configuration files, and
+  XML-based TextMate assets carry canonical SPDX headers. Executable
+  Conformance Markdown, fixtures, snapshots, generated output, and strict JSON
+  remain byte-stable and header-free.
+- NuGet metadata and packaged files expose Apache-2.0, author, copyright,
+  description, README, license text, assembly, and XML API documentation.
+- Mechanical tests pin the official license hash, package declarations,
+  deliberate NOTICE state, headers, and exception boundaries.
+
+Verification after this change:
+
+```text
+1152/1152 non-performance test executions passed
+6/6 performance/allocation tests passed
+NuGet package inspection and all XML TextMate validation passed
+dotnet format --verify-no-changes passed for production and tests
+```
 
 ### Complete C# XML API Documentation
 

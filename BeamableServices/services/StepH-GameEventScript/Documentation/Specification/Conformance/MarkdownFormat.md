@@ -1,3 +1,6 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Conformance Markdown format specification
 
 This document is the normative authoring-format specification for portable Game

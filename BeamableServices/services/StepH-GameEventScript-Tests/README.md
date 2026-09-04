@@ -1,4 +1,11 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Test hierarchy
+
+The test sources are covered by the Game Event Script
+[Apache License 2.0](../StepH-GameEventScript/LICENSE) and its
+[licensing policy](../StepH-GameEventScript/LICENSING.md).
 
 The test project has two semantic roots:
 

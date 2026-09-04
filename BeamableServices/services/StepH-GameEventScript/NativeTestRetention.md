@@ -1,3 +1,6 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Native Test Retention
 
 This inventory is the boundary between portable Markdown Conformance and native

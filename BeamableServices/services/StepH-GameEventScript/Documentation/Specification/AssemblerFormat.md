@@ -1,3 +1,6 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # `.gesa` assembler format specification
 
 This document defines the current human-readable dump produced from a validated `GameEventScriptProgram`. It is normative for bytecode snapshot text, syntax highlighting, and diagnostic presentation.

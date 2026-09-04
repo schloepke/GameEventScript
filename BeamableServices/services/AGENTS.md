@@ -85,10 +85,30 @@ The project has a portable Game Event Script host/VM architecture with a compact
   snapshot whose consumption cannot advance the restored parent. `:quantity(none)` is the canonical source form
   for removing a numeric or spatial unit, and `:...` never denotes a map key.
 - `StepH-GameEventScript/Documentation/README.md` is the canonical documentation
-  entry point. `Language.md` and every other listed specification except
-  `PublicApi.md` are normative; the public API remains the sole structural draft.
+  entry point. Every specification listed there, including `PublicApi.md`, is
+  normative.
 
 ## Recent Completed Work
+
+### Portable Public API Specification
+
+- `Documentation/Specification/PublicApi.md` now defines the language-neutral
+  public contract for Core and the independently movable Conformance package.
+- Compiler, Program/segments, binary codec, values/messages, Host lifecycle,
+  Context, random state, extensions, external types, diagnostics, Conformance
+  parsing/execution/results, and all writers have explicit ownership, nullability,
+  synchronization, callback, failure, and allocation rules.
+- C# and Unity adapters remain in `CSharpBridge`; Swift, Kotlin, and C++ may use
+  idiomatic type shapes while preserving observable semantics. All documents in
+  the canonical specification index are now normative.
+
+Verification after this change:
+
+```text
+1148/1148 non-performance test executions passed
+6/6 explicit performance tests passed
+All PublicApi.md links resolve and all Markdown code fences are balanced
+```
 
 ### Host-Owned Random Scopes and Overpush Fencing
 
@@ -207,8 +227,8 @@ All Documentation links resolve and all Markdown code fences are balanced
   `.gesa` output emitted by the Program dumper.
 - Migrated technical root specifications were removed after their links were
   redirected. `GameEventScript.Memory.md` remains untouched as history.
-- `PublicApi.md` is the only remaining structural draft. Non-normative guides
-  retain a separate documentation root.
+- Non-normative guides retain a separate documentation root; the complete
+  normative API contract is recorded above.
 
 Verification after this change:
 

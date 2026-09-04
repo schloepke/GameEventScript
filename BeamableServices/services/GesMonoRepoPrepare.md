@@ -853,53 +853,29 @@ Record type-name grammar has executable Markdown conformance coverage
 1138/1138 non-performance test executions passed
 ```
 
-### 6.6 Öffentliche portable API spezifizieren
+### 6.6 Öffentliche portable API spezifizieren - DONE
 
-Der C# API-Snapshot reicht nicht als Vorlage für andere Sprachen. `Specification/PublicApi.md` definiert die konzeptionell gemeinsame öffentliche API für:
+Erledigt:
 
-- Program, Compiler und Builder
-- Host, Context, Instance und Subscription
-- Message, Signature, Arguments und Value
-- RuntimeLimits, ExecutionResult und PublishResult
-- PublishSink und Observer
-- Extension Registry
-- External Type Catalog und Runtime Bindings
-- Program Reader, Writer, Validator und Dumper
-- ConformanceDocument, Suite und Case
-- ConformanceParser, ParseResult, ParserLimits und ConformanceDiagnostic
-- ConformanceRunner und ConformanceEnvironment
-- CapabilitySet und ResourceResolver
-- CaseResult, RunSummary und RunReport
-- maschinenlesbarer ResultWriter und menschenlesbarer MarkdownReportWriter
-- ReceivedWriter für Performance-Baselines und Bytecode-Snapshots
-- CorpusIdentity und kompakter CrossLanguageResultWriter
+- `Documentation/Specification/PublicApi.md` ist nun der normative, sprachneutrale Vertrag für Compiler, Programmodell, Bytecode-Daten, `.gesb`-Codec, Messages, Values, Host, Context, Lifecycle, Randomness, Extensions, External Types und Diagnostics.
+- Die Conformance-Oberfläche ist vollständig als getrennte konzeptionelle Modulgrenze beschrieben: Parser, immutable normalisiertes Modell, Environment, Capabilities, Resolver, Runner, Ergebnisse, Reports, Performance Provider, Received Writer und Cross-Language Writer.
+- Für die öffentlichen Familien sind Verantwortung, Ownership, Copy-/Reference-Semantik, Immutability, Nullability, Argumentfehler, synchrone Ausführung, Threading, Reentrancy, Callback-Reihenfolge, Lifecycle-Idempotenz und relevante Allokationsanforderungen festgelegt.
+- Core ist normativ synchron, threadlos und unsynchronisiert. Ein Host ist seriell, aber nicht thread-affin; Reflection, Delegates, Locks, Tasks, Filesystem-Helfer und Dictionary-Conveniences bleiben sprachspezifische Adapter.
+- Publish-Sink-Exceptions werden vom Host in eine Runtime-Diagnostic überführt und beschädigen lokales Enqueue nicht. Observer und Conformance-Result-Sinks dürfen nicht werfen; ein Verstoß liegt ausdrücklich außerhalb der Host-/Runner-Recovery-Garantien.
+- `GameEventScriptProgram` bleibt ausschließlich durch Compiler oder Reader öffentlich erzeugbar und transportiert nur `.gesb`-darstellbare Daten. Writer, Validator, Dumper und Reader besitzen getrennte, klar benannte Trust- und I/O-Grenzen.
+- Die C#-, Swift-, Kotlin-, C++- und Unity-Abbildungen müssen semantisch gleich, aber nicht namens- oder typformgleich sein. Das derzeit colocated Conformance-Package kann ohne konzeptionelle API-Änderung in ein optionales Monorepo-Modul verschoben werden.
+- `Documentation/README.md` führt nun alle Spezifikationen, einschließlich Public API, als normativ; es verbleibt kein struktureller Dokumententwurf.
 
-Für jeden Typ und jede Operation ausdrücklich festhalten:
+Abnahme:
 
-- Verantwortung, Ownership und Lebensdauer
-- Copy- versus Reference-Semantik und Immutability
-- Nullability sowie gültige und ungültige Argumente
-- synchrone Ausführung, Threading, Serialisierung und Reentrancy
-- Idempotenz und Lifecycle-Übergänge
-- Callback- und Dispatch-Reihenfolge
-- Fehler, Diagnostics und Verhalten bei Observer- oder Sink-Exceptions
-- Hot-Path- und Allokationsanforderungen, sofern sie Teil des portablen Vertrags sind
-
-Die Conformance-Oberfläche bleibt zunächst im Namespace `StepH.GameEventScript.Conformance`, muss aber ohne konzeptionelle Änderung in ein eigenes optionales Monorepo-Modul verschiebbar sein. Core-Host, VM, Compiler und Programmodell dürfen nicht von Conformance abhängen; ausschließlich Conformance hängt von den öffentlichen Core-APIs ab.
-
-Für die Conformance-API zusätzlich festhalten:
-
-- Parser und Runner sind synchron, threadlos und besitzen keine File-, Netzwerk- oder Testframework-Abhängigkeit.
-- Der Parser nimmt UTF-8-Bytes beziehungsweise Text entgegen und liefert nur ein vollständig validiertes immutable Dokument oder strukturierte Diagnostics.
-- Markdown-/YAML-Zwischenbäume sind Implementierungsdetails und nicht Teil der öffentlichen API.
-- ResourceResolver liefert externe Fixture-Bytes explizit unter konfigurierbaren Limits; der Runner öffnet niemals selbst Pfade oder URLs.
-- RunCase, RunDocument und RunCorpus sind getrennte Operationen. Testframeworks dürfen Cases einzeln registrieren und dieselben Ergebnisse ohne erneute Corpus-Ausführung aggregieren.
-- ResultWriter und MarkdownReportWriter schreiben nur in vom Aufrufer bereitgestellte Buffer beziehungsweise geben Bytes oder Text zurück.
-- ReceivedWriter erzeugt ausschließlich einen Approval-Vorschlag und überschreibt niemals selbst das ursprüngliche Markdown-Dokument.
-- Performanceprofile und Baselines dürfen sprach- und plattformbezogen sein; Workload, Korrektheit, Einheiten und Vergleichsregeln bleiben gemeinsam.
-- Öffentliche Modelle und Ergebnisse enthalten keine MSTest-, XCTest-, JUnit- oder sonstigen Framework-Typen.
-
-Jede Sprache erhält anschließend eine idiomatische Abbildung. Die APIs müssen konzeptionell und semantisch gleich sein, nicht zeichengetreu dieselben Typ- oder Methodennamen verwenden.
+```text
+PublicApi.md covers every portable public API family from the approved C# surface
+Core <- Conformance dependency direction is explicit
+All public API cross-references resolve
+All specification documents are normative
+1148/1148 non-performance test executions passed
+6/6 explicit performance tests passed
+```
 
 ### 6.7 Öffentliche XML-API-Dokumentation vervollständigen
 

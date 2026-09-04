@@ -2,9 +2,6 @@
 
 This directory is the canonical entry point for Game Event Script documentation. It separates normative, language-neutral contracts from non-normative learning material.
 
-> [!IMPORTANT]
-> Documents marked **Structural draft** define their ownership boundary but are not yet complete normative specifications. A document becomes normative only after its contract has been populated, reviewed, and marked **Normative**.
-
 ## Normative specification
 
 Every contract area has exactly one owning document. Other documents link to that owner instead of restating its rules.
@@ -12,7 +9,7 @@ Every contract area has exactly one owning document. Other documents link to tha
 | Contract area | Owning document | Responsibility | Status |
 | --- | --- | --- | --- |
 | Language | [Language](Specification/Language.md) | Lexical grammar, syntax, static semantics, and language constructs | Normative |
-| Public API | [Public API](Specification/PublicApi.md) | Language-neutral API responsibilities and per-language mappings | Structural draft |
+| Public API | [Public API](Specification/PublicApi.md) | Language-neutral API responsibilities and per-language mappings | Normative |
 | Host runtime | [Host runtime](Specification/HostRuntime.md) | Host lifecycle, dispatch, execution, context, and outbound behavior | Normative |
 | Program model | [Program model](Specification/ProgramModel.md) | Immutable transport data, ownership, validation, and linking boundary | Normative |
 | Bytecode | [Bytecode](Specification/Bytecode.md) | Instruction model, opcode semantics, operands, and control flow | Normative |
@@ -27,7 +24,7 @@ Every contract area has exactly one owning document. Other documents link to tha
 | Conformance environment | [Environment](Specification/Conformance/Environment.md) | Fixed extensions, external types, sinks, observers, and resources | Normative |
 | Cross-language acceptance | [Cross-language acceptance](Specification/Conformance/CrossLanguageAcceptance.md) | Corpus identity and acceptance criteria for language ports | Normative |
 
-The public API document remains a structural draft until its dedicated completion step. All other specification documents in the table are normative.
+All specification documents in the table are normative.
 
 ## Non-normative guides
 

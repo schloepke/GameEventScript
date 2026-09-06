@@ -1,0 +1,18 @@
+# Copyright 2026 Stephan Schlöpke
+# SPDX-License-Identifier: Apache-2.0
+
+# Local operating-system and IDE state
+.DS_Store
+.idea/
+.obsidian/
+.vscode/
+*.suo
+*.user
+
+# Generated build, test, report, and package artifacts
+artifacts/
+bin/
+obj/
+TestResults/
+*.nupkg
+*.snupkg

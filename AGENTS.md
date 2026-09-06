@@ -1,0 +1,932 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+# Agent Handoff
+
+## Workspace
+
+Root: repository root containing this `AGENTS.md`
+
+Main project: `implementation/csharp/src/StepH.GameEventScript`
+
+Tests: `implementation/csharp/tests/StepH.GameEventScript.Tests`
+
+Standard verification:
+
+```bash
+dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH-GameEventScript-Tests.csproj --filter "TestCategory!=Performance"
+```
+
+## Collaboration Rules
+
+- The user often wants analysis first when explicitly saying "nur analysieren", "nichts ändern", or similar. Otherwise implementation is usually expected.
+- Handwritten C# in `implementation/csharp/src/StepH.GameEventScript` and `implementation/csharp/tests/StepH.GameEventScript.Tests` follows `implementation/csharp/CodeStyle.md` and the scoped `.editorconfig`. The maximum line length is 250 characters; do not wrap a declaration or call merely because it has several arguments when it fits and remains readable.
+- Do not preserve legacy compatibility unless the user explicitly asks for it. The API and DSL are still in development.
+- Prefer portability toward Swift, Kotlin, C++, and similar targets.
+- Keep C#-specific code in `implementation/csharp/src/StepH.GameEventScript/CSharpBridge`.
+- The portable Core/API/Runtime/Compiler should avoid C#-specific patterns where practical.
+- `CSharpBridge` may use C# idioms such as Reflection, Attributes, `System.Type`, `out`, locks, threads, and `Try...out`.
+- In portable core code, avoid own GES-level `Try...out` concepts. Standard library calls such as `Dictionary.TryGetValue`, `TryAdd`, and `TryParse` are currently accepted.
+- HotPath VM mutation should go through `GesVmState.Set...` methods. Read-only register borrows are currently accepted for performance.
+- Be careful with direct register refs: never hold a mutable destination ref across operations that may grow or replace register storage.
+- Use `rg` for code search.
+- Every public C# type and member requires valid XML documentation. The library build treats missing or malformed XML documentation as errors; never hide these diagnostics with `#pragma`.
+- Licensing follows `LICENSING.md`: use `Copyright 2026 Stephan Schlöpke` and `SPDX-License-Identifier: Apache-2.0` exactly, preserve the fixed year, retain third-party notices, and do not insert headers into the documented strict/generated/binary exclusions.
+- Do not revert user changes unless explicitly requested.
+
+## Current Architecture Direction
+
+The project has a portable Game Event Script host/VM architecture with a compact value model:
+
+- The old polymorphic value graph has been removed or largely replaced.
+- `GesValue` / `GameEventScriptValue` are the current compact value concepts.
+- Runtime VM code lives under `implementation/csharp/src/StepH.GameEventScript/Runtime/VM`.
+- C# Reflection and annotation support lives under `implementation/csharp/src/StepH.GameEventScript/CSharpBridge`.
+- The old VM/compiler path has been removed or superseded by the new binary compiler and VM.
+- Standard extensions use dedicated opcodes where practical.
+- Series now use direct VM concepts and `CreateSeries`.
+- `GameEventScriptProgram` is the immutable reusable compiler result.
+- `GameEventScriptProgram` is the portable parsed representation of the `.gesb` V1 binary. It may contain only data that can be serialized to `.gesb` and deserialized again losslessly and language-neutrally. Host bindings, registries, delegates, reflection objects, runtime caches, and VM state belong outside the program.
+- `specs/ProgramModel.md` is the normative ownership and
+  permitted-data contract for the immutable program object graph.
+- Bytecode instructions store numeric words and payload bits; semantic aliases
+  use casts, shifts, masks, and Binary64 bit conversion rather than overlapping
+  CLR fields. The compact sequential C# struct never defines `.gesb` encoding.
+- Compilation includes `DebugSymbols`, `SourceMap`, and `SourceArchive` by default; production or size-sensitive builds opt out explicitly with `GameEventScriptDebugInfoOptions.None`.
+- Source types use PascalCase (`:Number`, `:Quantity(m)`, `:Unit`), while
+  extension namespaces/functions remain lowercase (`:math.distance`). Module
+  identifiers are dot-separated lowercase components with optional digits.
+- `constant $name be LITERAL` declares a program-wide compile-time scalar;
+  constants are inlined and never enter Program segments or runtime state.
+- `let` has only `let name be expression`; conversions belong to the expression
+  (`let name be value as :Number`). The `_number` suffix is reserved for local
+  variable bindings, while other names may contain digits without underscores.
+- Conformance distinguishes exact numeric storage with `:Number.int64` and
+  `:Number.binary64` (and corresponding Quantity/Range variants). These are
+  transport variants, not source type names.
+- `GameEventScriptHost` is the autonomous serial execution unit and can run with native handlers only.
+- `Load(program, priority)` is additive and returns an idempotently detachable `GameEventScriptInstance`.
+- Portable native handlers implement `IGameEventScriptNativeMessageHandler`.
+  C# `Action` adapters live exclusively in `CSharpBridge`.
+- Native `Subscribe` returns an idempotently detachable `GameEventScriptSubscription`.
+- Program instances and native subscriptions use stable host-local registration
+  IDs for lifecycle operations; their handles store no detach/unsubscribe closures.
+- Each host creates one `GameEventScriptContext`, owns one logical-message ring queue, and lazily creates at most one reusable `GesVmState`.
+- Each host creates and exclusively owns its random generator from an optional
+  seed or copied start sequence. The builder never accepts a live mutable
+  generator instance, so hosts cannot interfere through shared PRNG state.
+- Random scopes and runtime boundary markers belong to the host generator, not
+  the VM. `MaxRandomScopeDepth` permits exactly that many regular scopes plus an
+  internal overpush gate; native, extension, and script-handler boundaries
+  restore leaked or faulted scopes without exceptions.
+- `GameEventScriptVirtualMachine` is a stateless executor; program-specific dynamic links live in `GesLinkedProgram`.
+- External types use a declarative compiler catalog, a separate host runtime
+  registry, and portable `IGameEventScriptExternalValue` instances. CLR-backed
+  implementations remain in `CSharpBridge`.
+- `Receive` and `Emit` are local. `Publish` is local plus one optional synchronous `IGameEventScriptPublishSink`.
+- Message arguments use ordered portable `GameEventScriptMessageArgument`
+  pairs. Core has no tuple/dictionary factory; C# conveniences live in
+  `CSharpBridge`, and dictionary binding requires a known signature.
+- Core is synchronous, threadless, and unsynchronized. Optional C# automatic execution lives in `CSharpBridge/GameEventScriptCSharpHostRunner.cs`.
+- A Core host is serial but not thread-affine. One caller at a time is required,
+  but a paused handler may resume on another thread after an embedding-provided
+  happens-before handoff; runtime state must never depend on thread-local state.
+- There is no Session, isolated Run, module interface, or module-owned VM compatibility API.
+- `specs/HostRuntime.md` is the normative portable responsibility/state-machine document.
+- `specs/Semantics/Determinism.md` is normative for the
+  seeded PRNG, script/structural equality, stable ordering, iteration/ranges,
+  and equal-priority host dispatch.
+- Statically unknown `random with` seeds require an explicit `as :number`
+  conversion. Invalid runtime seeds report no diagnostic and execute against a
+  snapshot whose consumption cannot advance the restored parent. `:quantity(none)` is the canonical source form
+  for removing a numeric or spatial unit, and `:...` never denotes a map key.
+- `docs/README.md` is the canonical documentation
+  entry point. Every specification listed there, including `PublicApi.md`, is
+  normative.
+- `LICENSE` is the byte-exact Apache-2.0 text;
+  `LICENSING.md` owns copyright, header, exclusion, and
+  third-party attribution policy.
+
+## Recent Completed Work
+
+### Compile-Time Constants and Portable Name Grammar
+
+- Added program-wide scalar constants with `$` references. The compiler resolves
+  and inlines them without new bytecode, bindings, or `.gesb` sections; duplicate,
+  unresolved, and nonliteral declarations have stable diagnostics.
+- Removed the typed-let form. Type conversion is now uniformly an expression
+  operation, while callable parameters and record fields retain type declarations.
+- Source type names and constructors are PascalCase, including `:List[...]`;
+  selectors and extensions remain lowercase. Module, callable, message, tag,
+  field, constant, type, and variable grammars are independently enforced by the
+  lexer, validator, `.gesb` validator, documentation, and TextMate grammars.
+- Digits are accepted after the first character. Only variable bindings may use
+  a canonical `_number` suffix; function, predicate, type, module, constant,
+  message, tag, field, and label names reject it.
+- Portable Conformance value tags now mirror source concepts while preserving
+  exact storage: `:Number.int64`/`:Number.binary64`, Quantity and Range variants,
+  and PascalCase names for all remaining value kinds. The obsolete `rangeKind`
+  field was removed.
+- Golden `.gesb` fixtures, GESA snapshots, performance baselines, the
+  cross-language reference, API snapshot, language/bytecode/conformance
+  specifications, and both TextMate bundles were updated together.
+
+Verification after this change:
+
+```text
+1049/1049 Markdown conformance cases passed
+1166/1166 non-performance test executions passed
+5/5 explicit Markdown performance tests passed
+1/1 zero-allocation hot-path test passed
+```
+
+### Normative Documentation Consistency Gate
+
+- `Documentation/README.md` indexes all 16 normative specification documents;
+  local documentation links are mechanically required to resolve.
+- The normative behavior-to-case map now lives at
+  `specs/Conformance/Coverage.md`. Documents outside the
+  specification tree are explicitly project, licensing, development, test,
+  editor, generated, or historical material.
+- `PublicApi.md` assigns every exported reference type and all operations of its
+  declaring type to exactly one completeness-map family. The approved API
+  snapshot, allowed public namespaces, XML build gate, and that ownership map
+  are reviewed together.
+- Mechanical documentation tests compare all 199 opcode IDs, 11 public section
+  IDs, 38 `.gesb` format errors, public stable diagnostic constants, and lexer
+  word tokens with their owning specifications.
+- Runtime and Conformance diagnostic specifications now enumerate all stable
+  public codes instead of relying on C# constants or abbreviated prefixes.
+
+Verification after this change:
+
+```text
+5/5 documentation consistency tests passed
+1040/1040 Markdown conformance cases and the corpus/cross-language audit passed
+1157/1157 non-performance test executions passed
+6/6 performance/allocation tests passed
+dotnet format --verify-no-changes passed for production and tests
+```
+
+### Apache-2.0 Licensing and Reproducible Headers
+
+- Game Event Script is licensed under Apache-2.0 with the stable notice
+  `Copyright 2026 Stephan Schlöpke`. The personal Unicode name and fixed
+  first-publication year are the canonical identity and year convention.
+- `LICENSE` matches the official Apache text byte-for-byte. `LICENSING.md`
+  records eligible file formats, strict/generated/binary exclusions, and the
+  future third-party review rule. No current vendored material requires a
+  `NOTICE` file.
+- Handwritten C#, regular documentation, project/configuration files, and
+  XML-based TextMate assets carry canonical SPDX headers. Executable
+  Conformance Markdown, fixtures, snapshots, generated output, and strict JSON
+  remain byte-stable and header-free.
+- NuGet metadata and packaged files expose Apache-2.0, author, copyright,
+  description, README, license text, assembly, and XML API documentation.
+- Mechanical tests pin the official license hash, package declarations,
+  deliberate NOTICE state, headers, and exception boundaries.
+
+Verification after this change:
+
+```text
+1152/1152 non-performance test executions passed
+6/6 performance/allocation tests passed
+NuGet package inspection and all XML TextMate validation passed
+dotnet format --verify-no-changes passed for production and tests
+```
+
+### Complete C# XML API Documentation
+
+- Every public type and member in API, Runtime, `CSharpBridge`, and Conformance
+  now has XML documentation aligned with the language-neutral `PublicApi.md`;
+  the Compiler continues to export no public types.
+- The library always generates `StepH.GameEventScript.xml`. Missing summaries,
+  parameters, type parameters, malformed XML, and invalid references are build
+  errors rather than suppressed warnings.
+- All handwritten `#pragma` directives were removed from production and tests,
+  including the suppressions that hid the former `GesValueMap` warnings.
+- The API regression test guards the generated artifact, exported-type coverage,
+  the project warning gate, and pragma-free handwritten sources.
+
+Verification after this change:
+
+```text
+1585 public XML documentation member entries generated
+1149/1149 non-performance test executions passed
+6/6 performance/allocation tests passed
+dotnet format --verify-no-changes passed for production and tests
+```
+
+### Portable Public API Specification
+
+- `specs/PublicApi.md` now defines the language-neutral
+  public contract for Core and the independently movable Conformance package.
+- Compiler, Program/segments, binary codec, values/messages, Host lifecycle,
+  Context, random state, extensions, external types, diagnostics, Conformance
+  parsing/execution/results, and all writers have explicit ownership, nullability,
+  synchronization, callback, failure, and allocation rules.
+- C# and Unity adapters remain in `CSharpBridge`; Swift, Kotlin, and C++ may use
+  idiomatic type shapes while preserving observable semantics. All documents in
+  the canonical specification index are now normative.
+
+Verification after this change:
+
+```text
+1148/1148 non-performance test executions passed
+6/6 explicit performance tests passed
+All PublicApi.md links resolve and all Markdown code fences are balanced
+```
+
+### Host-Owned Random Scopes and Overpush Fencing
+
+- Host builders now accept deterministic seeds or copied start sequences and
+  create an independent generator for every host. Sequence exhaustion falls
+  through to the host's private PRNG; Conformance uses a fixed fallback seed.
+- `GameEventScriptRandomGenerator` owns nested scopes and exposes `Push()`,
+  `Push(Int64)`, and `Pop()` without allocations after first-use initialization.
+  VM, extension, and native code all observe
+  the same active scoped stream through `GameEventScriptContext`.
+- Every handler and extension call establishes a host-owned boundary marker.
+  Script markers survive frame pauses and thread handoff. Marker release restores
+  leaked scopes; boundary underflow and unbalanced native scopes are diagnosed.
+- `MaxRandomScopeDepth` is exact. One additional retained gate state protects
+  the last valid stream after overpush, suppresses further structural mutation,
+  rejects Emit/Publish, and reports one runtime limit without using exceptions.
+
+Verification after this change:
+
+```text
+1040/1040 Markdown conformance cases passed
+1148/1148 non-performance test executions passed
+6/6 performance-category tests passed (including zero-allocation hot path)
+```
+
+### Random Seed Scopes, Unit Removal, and Selector Cleanup
+
+- `random with` accepts statically known unitless integers and requires
+  `as :number` for unknown dynamic seeds. Every construct snapshots the active
+  generator state. A valid unitless signed-64 result reseeds the inner state;
+  an invalid, fractional, or unit-bearing result reports no diagnostic and uses
+  the copied state. Exiting always restores the parent without consuming it.
+- `:quantity(none)` exposes the VM's portable unit-removal operation for numeric
+  and spatial values. It is also the exact check for an already unitless value.
+- The legacy `x[:name]` map-key alias was removed. Keys use `.name`, `['name']`,
+  or `[#name]`; `:...` remains reserved for real selectors, types, and extension
+  namespaces.
+- The language specification now enumerates every supported Unicode token
+  alias, documents symmetric text addition, integer canonicalization, and
+  distinguishes ordinary value-level evaluation failure from runtime
+  diagnostics.
+
+Verification after this change:
+
+```text
+1039/1039 Markdown conformance cases passed
+1140/1140 non-performance test executions passed
+6/6 performance-category tests passed (including zero-allocation hot path)
+```
+
+### Callable Signature Overloads and No-Shadowing Scopes
+
+- Script functions and predicates resolve by callable name plus ordered external
+  argument labels. Arity is therefore part of the signature, while declared
+  types and local parameter names are not; there is no type-based overload
+  resolution.
+- Function and predicate declarations may not share a base name, even when
+  their signatures differ. The compiler, lowering tables, and untrusted
+  `.gesb` validation enforce the same identity rules.
+- `value is predicateName` resolves only a unique unary predicate overload;
+  multiple unary signatures require explicit calls and make the shorthand a
+  validation error.
+- Lexical bindings may not shadow visible ancestor bindings. This includes
+  locals, loop variables, generated-collection variables, and selector
+  variables. Sibling scopes such as the two branches of an `if` may reuse a new
+  name independently.
+
+Verification after this change:
+
+```text
+1037/1037 Markdown conformance cases passed
+1138/1138 non-performance test executions passed
+1/1 zero-allocation hot-path test passed
+```
+
+### Normative Language Specification
+
+- `specs/Language.md` now owns the complete current GES
+  language contract: source structure, portable lexing, declarations, scopes,
+  callables, acyclic calls, handlers, statements, precedence, values, casts,
+  Records, collection pipelines, randomness, extensions, and error behavior.
+- Cross-cutting Unicode, numeric, deterministic/PRNG, Host, Program, Bytecode,
+  binary, and diagnostic rules are linked to their single owning specifications
+  instead of being repeated as implementation documentation.
+- The corrected grammar is embedded in the language specification using the
+  extended BNF expression syntax understood by JetBrains Grammar-Kit. It
+  includes the complete intrinsic and selector surface plus the contextual
+  distinction between message and handler values without adopting parser
+  generation or PEG conflict resolution as language semantics.
+- The former root `GameEventScript.md` and divergent `GameEventScript.bnf` were
+  removed. A new Markdown conformance case fixes the no-numeric-suffix rule for
+  declared custom type names in the portable corpus.
+- Bracket literals are the only list-literal syntax. The awkward bare
+  `of value and value` form was removed from parser, grammar, examples, and
+  positive fixtures. `of` is a reserved lexer token used by `min`/`max`,
+  extension argument lists, value-membership phrases, and dice patterns.
+
+Verification after this change:
+
+```text
+1031/1031 Markdown conformance cases passed
+1131/1131 non-performance test executions passed
+All Documentation links resolve and all Markdown code fences are balanced
+```
+
+### Technical Specification Migration
+
+- The monorepo-ready `specs` hierarchy now owns the
+  normative host runtime, Program, bytecode, `.gesb`, `.gesa`, diagnostics,
+  portable semantics, and conformance contracts.
+- The former bytecode specification and opcode-shape document were merged into
+  one bytecode contract. Its complete numeric opcode and operand table matches
+  all 199 public opcode values.
+- `BinaryFormat.md` exclusively owns `.gesb` framing and encoding.
+  `AssemblerFormat.md` now normatively defines the complete human-readable
+  `.gesa` output emitted by the Program dumper.
+- Migrated technical root specifications were removed after their links were
+  redirected. `GameEventScript.Memory.md` remains untouched as history.
+- Non-normative guides retain a separate documentation root; the complete
+  normative API contract is recorded above.
+
+Verification after this change:
+
+```text
+17/17 documentation files present
+All Documentation and active Markdown links resolve
+199/199 opcode IDs match the public opcode enum
+9/9 concrete .gesb runtime/debug/build section IDs match the public section enum
+All GESA forms emitted by GameEventScriptProgramDumper are specified
+1128/1128 non-performance test executions passed
+```
+
+### Repository-wide C# Formatting Baseline
+
+- All handwritten C# in `implementation/csharp/src/StepH.GameEventScript` and
+  `implementation/csharp/tests/StepH.GameEventScript.Tests` has been normalized with Roslyn under the scoped
+  `.editorconfig`, including canonical `using` order.
+- Declarations that fit the 250-character contract were compacted; all remaining
+  long declarations, expressions, and embedded test strings were wrapped without
+  changing behavior or string contents.
+- Generated output, Markdown/GESA snapshots, golden files, and binary fixtures
+  remain outside the C# formatting pass. No handwritten C# line now exceeds 250
+  characters, and both projects pass `dotnet format --verify-no-changes`.
+
+Verification after this change:
+
+```text
+1128/1128 non-performance test executions passed
+6/6 performance/allocation tests passed
+```
+
+### Cross-Language Conformance Acceptance Preparation
+
+- `specs/Conformance/CrossLanguageAcceptance.md` defines an exact authored-corpus SHA-256,
+  stable-ID comparison, optional-capability skips, and complete-port acceptance.
+- `ConformanceCrossLanguageResultJsonWriter` emits a framework- and
+  implementation-neutral compact result without rerunning the corpus.
+- The checked-in C# reference is verified from the already collected individual
+  case results. Shared Markdown/YAML parser fixtures now have a hash-protected
+  language-neutral manifest, and the capability matrix distinguishes C# proof,
+  Unity DLL reuse, and not-yet-accepted Swift/Kotlin/C++ ports.
+
+Verification after this change:
+
+```text
+1029/1029 Markdown conformance cases passed
+1128/1128 non-performance test executions passed
+6/6 performance/allocation tests passed on confirmation run
+```
+
+### Portable `.gesb` Fixture Manifest and Resolver
+
+- `program.binary-format` is the executable manifest for 13 immutable `.gesb`
+  V1 resources: four valid canonical/noncanonical/opaque Programs and nine
+  targeted structural or semantic failures.
+- Every entry records stable fixture/resource IDs, packaged relative path,
+  source/compiler provenance, ProgramVersion, SHA-256, derivation and exact
+  read/validation/rewrite/runtime expectations.
+- The portable `programBinary` kind distinguishes structural `readError` from
+  semantic `validationError`, can canonically rewrite valid Programs, and can
+  execute them through the ordinary Host step pipeline.
+- `IConformanceResourceResolver` receives only resource ID and a hard maximum
+  byte count. Parser and runner remain fileless/networkless; the C# adapter owns
+  the checked fixture-root mapping.
+- The indirect cycle trust boundary is now the portable case
+  `program.binary-format/invalid-indirect-call-cycle`. Redundant native binary
+  tests were removed; 16 retained binary/Program methods cover direct C#
+  implementation concerns.
+
+Verification after this change:
+
+```text
+1029/1029 Markdown conformance cases passed
+1125/1125 non-performance test executions passed
+6/6 performance/allocation tests passed on confirmation run
+```
+
+### Portable Conformance Environment and Host Semantics
+
+- `specs/Conformance/Environment.md` defines the fixed portable extension operations
+  and manual `aim` external type used by language runners. Test documents cannot
+  embed arbitrary native code or reflection targets.
+- Script cases support `publishSink: absent|accept|reject|throw` and optional
+  exact observer traces covering Emit, Publish with the full four-field result,
+  Dispatch start/end, runtime limits, and diagnostics.
+- Declarative native handlers have stable IDs, initial subscription state and a
+  closed set of Load/Detach/Subscribe/Unsubscribe actions. Deferred programs,
+  native-only Hosts and `hostCount` scenarios cover lifecycle snapshots and
+  reuse of one immutable Program across independent Hosts.
+- `specs/Conformance/Coverage.md`
+  maps portable semantics to stable Markdown case IDs.
+
+Verification after this change:
+
+```text
+1111/1111 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+5/5 explicit Markdown performance tests passed
+```
+
+### Markdown-only Conformance Corpus and C# Adapters
+
+- The normative corpus lives in
+  `conformance/suites` and contains 75 suites and
+  1,042 semantic cases.
+- Every case has an explicit stable ID, kind, and atomic/scenario
+  level. The five performance cases contain profile-local KiB/ms baselines and
+  five separately executable GESA bytecode snapshots.
+- The active Markdown adapter exposes 1,049 independent cases, including seven
+  bytecode snapshots, plus a whole-corpus
+  identity test. Their results are collected into canonical
+  `ConformanceResults.json` and `ConformanceReport.md` artifacts without a
+  second corpus execution.
+- `docs/development/NativeTestRetention.md` classifies all 105 C# methods.
+- The shared `conformance` root contains Markdown suites, fixtures, and
+  cross-language references. The C# test project has two implementation roots:
+  `Conformance` contains its runner/parser adapters and `Native` contains the
+  remaining C#-specific tests grouped by purpose.
+- Every normative suite uses the canonical readable layout documented in
+  `specs/Conformance/MarkdownFormat.md`: caution callout, suite prose, a thematic break and
+  prose for every test, and named H3 sections for case metadata, source, steps,
+  expectations, and assembler snapshots.
+- Large matrices are split into logically named sub-suites below matching
+  directories. No normative suite exceeds 3,000 lines, and an H2 test block is
+  never split across files.
+- Five explicit C# performance tests measure the five Markdown performance
+  cases independently. They emit canonical JSON, a Markdown report, and a
+  received Markdown approval candidate. Bytecode snapshots likewise emit a
+  received candidate without overwriting the normative suite.
+- All baselines and snapshots live in their owning H2 cases.
+- Markdown V1 explicitly represents the negative message argument
+  mapping, the `any: true` runtime-limit wildcard, and embedded U+FEFF source
+  content, plus map, mixed-range, and non-finite-float comparison behavior.
+
+Verification after the completed 5.8 API/compiler audit and hierarchy cleanup:
+
+```text
+1016/1016 Markdown conformance cases passed
+1119/1119 non-performance test executions passed
+5/5 Markdown performance reference tests passed
+1/1 zero-allocation hot-path test passed
+```
+
+### Portable Conformance Result and Approval Writers
+
+- `ConformanceResultJsonWriter` emits the canonical UTF-8/LF/no-BOM machine
+  report with stable property order and portable result values.
+- `ConformanceMarkdownReportWriter` emits the informative aggregate summary,
+  capability and case tables, performance metrics, and failure/error details.
+- `ConformanceReceivedMarkdownWriter` produces fileless approval candidates by
+  replacing only measured performance references and actual GESA payload
+  ranges. It validates report/source identity and stale ranges and preserves all
+  unrelated source bytes, including BOM and original line endings.
+- Filesystem and test-framework adapters remain responsible for choosing and
+  writing result, report, and `.received.md` paths.
+
+Verification after the writer implementation:
+
+```text
+1113/1113 non-performance tests passed
+6/6 conformance writer tests passed
+1/1 zero-allocation hot-path test passed
+```
+
+### Portable Conformance V1 Contracts
+
+- `specs/Conformance/MarkdownFormat.md` normatively defines the strict UTF-8 Markdown
+  authoring structure, limited YAML subset, stable suite/case IDs, inheritance,
+  source/program grouping, ordered step tables, expectations, test kinds,
+  Binary64 comparison, performance profiles, and bytecode snapshots.
+- Semantic case and expectation data uses plain `yaml` fences for standard
+  syntax highlighting. The required root discriminator is `gesBlock: case` or
+  `gesBlock: expect`; trailing custom YAML fence info is not supported.
+- `specs/Conformance/Runner.md` normatively separates parsing from synchronous,
+  threadless execution and defines capabilities, skip/error rules, case and
+  corpus execution, canonical result JSON, aggregate Markdown reports, and
+  source-range-based received updates.
+- `## Fixtures` is documentation-only in V1. The received writer may propose
+  performance-reference and `gesa` updates but never overwrites authored input.
+- `StepH.GameEventScript.Conformance` now provides the public synchronous,
+  fileless parser, portable limits and diagnostics, immutable normalized models,
+  strict structural Markdown scanner, and restricted YAML/schema validator.
+- Semantic block/payload/table/test ranges and performance-reference ranges are
+  retained as UTF-8 byte positions for received output. Internal Markdown/YAML
+  nodes are not public, and no Host/VM/Runtime/Compiler code depends on the
+  package.
+- Native bootstrap fixtures cover valid and invalid authoring input. The runner
+  uses only the normalized public model.
+
+### Portable Conformance Runner
+
+- `ConformanceRunner` synchronously executes individual cases, documents, or
+  ordered corpora without Markdown/YAML or MSTest dependencies.
+- Its explicit environment declares identities, sorted capabilities, portable
+  registries, runner limits, and optional performance measurement support.
+- All V1 kinds are implemented: `scriptApi`, `compileError`, `loadError`,
+  `messageApi`, `compileMetadata`, `bytecode`, `bytecodeSnapshot`, and
+  `performance` after correctness execution.
+- Immutable results preserve pass/fail/skip/error, stable codes, mismatches,
+  diagnostics, runtime-limit events, assembler output, and performance bounds.
+  Canonical JSON, Markdown report, and received writers consume these results.
+- MSTest-specific discovery/display/assertion code is confined to the test
+  adapter; the runner contains no test-framework assertions.
+
+Verification after the parser/runner implementation:
+
+```text
+1107/1107 non-performance tests passed
+27/27 native Markdown parser bootstrap tests passed
+7/7 native conformance runner/adapter tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed on confirmation run
+```
+
+### Portable Program Model Hardening
+
+- Audited the complete `GameEventScriptProgram` graph and documented its
+  permitted transport-only data, ownership, construction, validation, and
+  representation rules in `specs/ProgramModel.md`.
+- Removed internal mutable backing-array exposure. All nested program sequences
+  are defensively copied and Core bulk reads receive only read-only spans or
+  immutable slices.
+- Compiler, reader, writer, and `Host.Load` are explicit shared-validator trust
+  boundaries.
+- Bytecode instructions no longer use overlapping CLR fields. Numeric word and
+  payload properties are endian-independent while the C# value type remains 16
+  bytes; `.gesb` bytes continue to be field-wise canonical Little Endian.
+- Regression tests cover deep defensive copies, public construction, complete
+  compile/write/read/rewrite/load/execute behavior, payload bits, golden bytes,
+  and numeric API IDs.
+
+Verification after this change:
+
+```text
+1073/1073 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
+
+### Portable Diagnostic Contract
+
+- Added language-neutral `parse`, `validate`, `compile`, `decode`, `link`, and
+  `runtime` diagnostics with stable ASCII codes and optional symbol/source/
+  program/handler context.
+- Parser, validator, compiler, `.gesb` decoding, dynamic linking, native handlers,
+  publish sinks, and VM failures now expose structured data; C# exceptions are
+  transport only.
+- Runtime handler diagnostics flow through the observer and execution result
+  without adding successful hot-path allocations. JSON conformance no longer
+  matches English error text.
+- `specs/Diagnostics.md` is normative.
+
+Verification after this change:
+
+```text
+1069/1069 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
+
+### Ordered Portable Message Arguments
+
+- Core message construction now consumes ordered
+  `GameEventScriptMessageArgument` pairs. Argument order remains part of the
+  signature and is never derived from dictionary/property iteration.
+- Duplicate named labels are rejected after normalization; repeated `_` labels
+  remain valid positional arguments.
+- Tuple helpers and signature-directed dictionary binding live only in
+  `CSharpBridge`.
+- All conformance input/output, nested message values, and native emits use the
+  ordered JSON `args` array. Equality is position-sensitive.
+
+Verification after this change:
+
+```text
+1067/1067 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+JSON performance allocations and binary dump match the reference; the final
+timing run reported only the long mixed case at 818.3905 ms versus an allowed
+817.833885 ms after an earlier passing run. No allocation regression remains.
+```
+
+### Portable Native Handlers and ID-Based Lifecycle
+
+- Core native subscriptions use `IGameEventScriptNativeMessageHandler`; all
+  `Action<GameEventScriptMessage, GameEventScriptContext>` convenience overloads
+  and adapters live in `CSharpBridge`.
+- Program instances and native subscriptions receive stable, non-reused,
+  host-local registration IDs. `Detach()` and `Unsubscribe()` call the host with
+  that ID and retain no `Func<bool>` closures.
+- Host lifecycle lookup uses intrusive registration links on already allocated
+  instance/subscription objects. This avoids eager registry dictionaries and the
+  load-allocation regression they would introduce.
+- Existing enqueue-time subscription snapshots remain immutable. Detaching or
+  unsubscribing removes only future dispatch visibility.
+- JSON conformance uses a manual portable native handler, while C# delegate
+  convenience and automatic serialized pumping remain covered by bridge tests.
+
+Verification after this change:
+
+```text
+1061/1061 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
+
+### Portable External-Type Boundary
+
+- External type declarations are separated from runtime bindings.
+  `GameEventScriptBuilder.WithExternalTypeCatalog(...)` consumes only portable
+  declarative definitions, while
+  `GameEventScriptHostBuilder.WithExternalTypeRegistry(...)` configures the
+  constructor bindings resolved by `Host.Load`.
+- `GameEventScriptExternalTypeDefinition` no longer contains CLR field readers,
+  delegates, or constructor bindings. Runtime instances cross the Core boundary
+  through `IGameEventScriptExternalValue`.
+- CLR objects, Reflection, Attributes, field readers, constructor invocation,
+  and conversion stay in `CSharpBridge`. Its registry implements both portable
+  inputs only as a C# convenience adapter.
+- JSON conformance uses a manual external-type catalog, runtime registry, and
+  value implementation rather than a reflected C# fixture. Reflection behavior
+  remains covered by separate bridge tests.
+
+Verification after this change:
+
+```text
+1059/1059 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
+
+### Portable Determinism Semantics
+
+- SplitMix64 plus xoshiro256** now have language-neutral raw, bounded-integer,
+  and Binary64 known-answer vectors.
+- The binary64 API is `NextFloat(firstBound, secondBound)`: it scales a
+  `[0,1)` source, while final binary64 rounding may still produce the upper
+  bound. Equal and NaN bounds consume no seeded or `FromSequence` value.
+- Reversed/equal bounds, full Int64 generation, signed/full-width seeds,
+  upper-bound rounding, and nested `random with` parent-stream restoration now
+  have direct or JSON conformance coverage.
+- Stable sorting, Unicode-scalar map/record order, last-entry-wins duplicate map
+  keys, cross-kind equality, strict nested structural equality, iterator order,
+  and equal-priority dispatch are one normative contract.
+- Range iterators now stop by their overflow-safe precomputed length. They cannot
+  wrap past `Int64` boundaries or repeat forever when a Binary64 step no longer
+  changes a large current value.
+- JSON conformance covers equality and range boundaries; existing JSON cases
+  cover stable direct/iterator ordering, map/record order, and script/native plus
+  multi-program dispatch order.
+
+Verification after this change:
+
+```text
+1057/1057 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
+
+### Portable Number Semantics
+
+- Signed-64 arithmetic, overflow fallback, binary64-to-integer saturation,
+  midpoint rounding, negative `div`/`mod`/`rem`, NaN/Infinity/zero handling, and
+  two-ULP runtime equality now use one explicit language-neutral number core.
+- Compiler constant folding and VM execution share the same rules, including
+  exact integer operations above `2^53` and the exclusive binary64 `2^63`
+  boundary.
+- Conformance JSON now writes shortest roundtrip binary64 decimals with canonical
+  exponents and compares finite floats with configurable `maxFloatUlps` (default
+  4096; zero is exact).
+- The normative contract is `specs/Semantics/Numbers.md`.
+
+Verification after this change:
+
+```text
+1041/1041 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
+
+### Portable Text and Unicode Semantics
+
+- Source input is a valid Unicode-scalar sequence; file input is strict UTF-8,
+  an optional initial BOM is removed, and `LF`, `CRLF`, and `CR` are the only
+  logical newlines. Portable horizontal whitespace is ASCII space/tab.
+- Language names and tags use explicit ASCII grammars. Runtime text is not
+  normalized; length, 1-based indexing, iteration, and text-to-list conversion
+  operate on Unicode scalar values. Ordering is scalar ordinal.
+- Compiler columns are 1-based Unicode-scalar columns while `.gesb` SourceMap
+  ranges remain UTF-8 byte offsets. The normative contract is
+  `specs/Semantics/Text.md`.
+- Linked programs precompute scalar counts for string constants so the portable
+  contract does not add per-load or per-count hot-path work.
+
+Verification after this change:
+
+```text
+1034/1034 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
+
+### Portable `.gesb` V1
+
+- Added the canonical little-endian sectioned `.gesb` V1 reader and writer,
+  bounded retention modes, opaque optional-section preservation, stable format
+  errors, and shared validation in reader, writer, and `Host.Load`.
+- `GameEventScriptProgram` now exposes immutable runtime, debug/source, build
+  metadata, and opaque segments. The compiler always optimizes and emits stable
+  C# compiler metadata plus optional DebugSymbols, SourceMap, and SourceArchive.
+- Source IDs follow `AddScript` order and source mappings use UTF-8 byte offsets.
+  `GameEventScriptProgramDumper` consumes embedded source data and interleaves
+  source-line comments. It has no legacy API for separately supplied source text.
+- Golden, invalid, retention, Unicode, runtime roundtrip, and JSON binary-roundtrip
+  tests cover the portable boundary. `specs/BinaryFormat.md` is
+  the normative container specification.
+
+Verification after this change:
+
+```text
+1024/1024 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
+
+### Static VM Resource Metadata and Acyclic Calls
+
+- The compiler rejects direct and indirect cycles in the synchronous script call
+  graph. Program loading validates the invariant again for future untrusted
+  `.gesb` input.
+- After physical register allocation, each message-handler bind stores
+  `RequiredRegisterCount` and `RequiredCallStackDepth`; the program stores the
+  maximum of both values across all message handlers.
+- Register requirements include simultaneous caller/callee frames and staged
+  values. The root handler has call-stack depth zero.
+- `Host.Load(...)` rejects programs whose declared requirements exceed
+  `MaxRegisterValues` or `MaxCallDepth` and uses the register requirement to
+  pre-warm the host-owned VM state.
+- JSON conformance covers metadata and load-limit rejection; low-level compiler
+  tests cover direct and indirect cycles.
+
+Verification after this change:
+
+```text
+1002/1002 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+```
+
+### Host / Program / VM Split
+
+- Removed `IGameEventScriptModule`, `GameEventScriptSession`, isolated runs, the module-owned VM, and automatic Core dispatch.
+- Added immutable program table views and host-specific linked-program data.
+- Added direct resumable script dispatch, immutable subscription snapshots, and a growing logical-message ring queue.
+- Added value-type execution/publish results, local-plus-outbound Publish semantics, initialization-per-instance, Detach, and Unsubscribe.
+- Markdown conformance exercises `Program -> Host.Load -> Receive -> ExecuteFrame/RunToCompletion`, including multi-program and frame-resume cases.
+- Added allocation validation showing zero queue/selection/frame/resume heap allocation after warmup when message creation and output payload creation are excluded.
+
+Verification after this architecture change:
+
+```text
+993/993 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
+
+### Custom `Try...` Cleanup
+
+The user asked why `bool TryXXXX` concepts still existed outside `CSharpBridge`.
+
+Completed cleanup:
+
+- Compiler/Rewriter custom `Try...` methods were removed or renamed:
+  - `TryEmitExpressionToRegister` -> `EmitExpressionToRegister`
+  - `TryEmitCollectionPipelineInto` -> `EmitCollectionPipelineInto`
+  - `TryEmitSpatialConstructor` -> `EmitSpatialConstructor`
+  - Rewriter helpers like `TryGetJumpTarget`, `TryInvertBranch`, `TryFoldUnary`, `TryFoldBinary`, and `TryGetLocalConstant` were converted to nullable/default-return styles.
+- Runtime/Budget/Host custom `Try...` methods were renamed:
+  - execution-step accounting now uses `ReserveExecutionSlice` / `CompleteExecutionSlice`
+  - `TryConsumeLoopIteration` -> `ConsumeLoopIterationIfAvailable`
+  - `TryEnterCall` -> `EnterCallIfAvailable`
+  - `TryCheckRangeLength` -> `CheckRangeLengthWithinLimit`
+  - `TryCheckGeneratedCollectionItemCount` -> `CheckGeneratedCollectionItemCountWithinLimit`
+  - `TryCheckDice` -> `CheckDiceWithinLimit`
+  - `TryEnqueue...` -> `Enqueue...`
+
+Verification after this cleanup:
+
+```text
+990/990 non-performance tests passed
+```
+
+Remaining `Try...` outside `CSharpBridge` should only be standard-library style uses such as:
+
+- `TryGetValue`
+- `TryAdd`
+- `TryParse`
+
+## Important Files
+
+- `implementation/csharp/src/StepH.GameEventScript/Compiler/GesCompiler.cs`
+- `implementation/csharp/src/StepH.GameEventScript/Compiler/GesBinaryBuilder.cs`
+- `implementation/csharp/src/StepH.GameEventScript/Compiler/GesBinaryBuilderRewriter.cs`
+- `implementation/csharp/src/StepH.GameEventScript/Runtime/GesRuntimeBudget.cs`
+- `implementation/csharp/src/StepH.GameEventScript/Api/GameEventScriptProgram.cs`
+- `implementation/csharp/src/StepH.GameEventScript/Api/GameEventScriptProgramReader.cs`
+- `implementation/csharp/src/StepH.GameEventScript/Api/GameEventScriptProgramWriter.cs`
+- `implementation/csharp/src/StepH.GameEventScript/Api/GameEventScriptProgramValidator.cs`
+- `implementation/csharp/src/StepH.GameEventScript/Api/GameEventScriptProgramDumper.cs`
+- `implementation/csharp/src/StepH.GameEventScript/Api/GameEventScriptHost.cs`
+- `implementation/csharp/src/StepH.GameEventScript/Api/GameEventScriptContext.cs`
+- `implementation/csharp/src/StepH.GameEventScript/Runtime/VM/GesLinkedProgram.cs`
+- `implementation/csharp/src/StepH.GameEventScript/Runtime/VM/GameEventScriptVirtualMachine.cs`
+- `implementation/csharp/src/StepH.GameEventScript/Runtime/VM/GesVmState.cs`
+- `implementation/csharp/src/StepH.GameEventScript/CSharpBridge/GameEventScriptCSharpHostRunner.cs`
+- `specs/HostRuntime.md`
+- `specs/BinaryFormat.md`
+- `specs/PublicApi.md`
+- `specs/Conformance/Coverage.md`
+
+## Architecture Backlog
+
+This is the persistent list of intentionally deferred or upcoming architecture
+work. Keep these topics in mind when changing adjacent code, but do not implement
+an item merely because it is listed here. Work on it when the user makes it part
+of the current task. Whenever a backlog item is completed, remove it from this
+section as part of the same change; record the outcome in the relevant normative
+documentation or, when useful for handoff, under `Recent Completed Work`. Do not
+leave completed or checked-off items in the backlog. Keep entries short; if this
+section grows substantially, move the details to a dedicated backlog document
+and retain a required pointer here.
+
+### Next portable architecture steps
+
+- Prioritize the language-neutral contracts, metadata, and portable Markdown
+  conformance needed for the existing Swift/Kotlin/C++/C# monorepo before deeper
+  optimizer work.
+
+### Deferred language and state features
+
+- Add a general immutable collection `fold`/`reduce` concept if concrete use cases
+  exceed the existing specialized aggregations (`sum`, `average`, `min`, `max`,
+  and `count`). Prefer a bounded collection operation over recursion or general
+  local mutation.
+- Design host-bound Tables as the future explicit mutation model. Mutations should
+  enter a deterministic modification queue; snapshot visibility, read-your-writes,
+  commit boundary, rollback, observation, persistence, and replication semantics
+  remain to be specified.
+- Finalize the product wire envelope later. The language-port conformance shape
+  is already fixed, including ordered message `args` arrays.
+
+### Deferred binary-format extensions
+
+- Specify and implement optional `.gesb` compression codecs separately; V1 only
+  reserves the codec bits and emits known sections uncompressed.
+- Specify signatures, certificates/keys, trust policy, and rollback behavior
+  separately; V1 only reserves the security section range and provides no
+  authenticity guarantee.
+
+### Deferred editor tooling
+
+- After the Kotlin port is stable, build a dedicated IntelliJ plugin with
+  native `.ges`/`.gesa` support beyond the portable TextMate highlighting and
+  `.region` folding. Keep the portable dump and TextMate bundles free of
+  IntelliJ-specific markers in the meantime.
+
+### Deferred performance work
+
+- Improve CFG/liveness-based register allocation and reuse of non-overlapping
+  locals after the monorepo-oriented contracts are stable.
+- Check whether bytecode optimizer passes still produce meaningful diffs now that
+  the compiler emits better registers directly.
+- Revisit Message/Emit allocation only when performance data justifies it.
+- Revisit a more VM-near extension call model if boxing at the extension boundary
+  becomes expensive again.

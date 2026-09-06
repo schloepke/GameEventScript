@@ -14,16 +14,16 @@ Tests: `implementation/csharp/tests/StepH.GameEventScript.Tests`
 Standard verification:
 
 ```bash
-dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH-GameEventScript-Tests.csproj --filter "TestCategory!=Performance"
+dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH.GameEventScript.Tests.csproj --filter "TestCategory!=Performance"
 ```
 
 ## Collaboration Rules
 
 - The user often wants analysis first when explicitly saying "nur analysieren", "nichts ändern", or similar. Otherwise implementation is usually expected.
-- Handwritten C# in `implementation/csharp/src/StepH.GameEventScript` and `implementation/csharp/tests/StepH.GameEventScript.Tests` follows `implementation/csharp/CodeStyle.md` and the scoped `.editorconfig`. The maximum line length is 250 characters; do not wrap a declaration or call merely because it has several arguments when it fits and remains readable.
+- Handwritten C# in `implementation/csharp/src` and `implementation/csharp/tests` follows `implementation/csharp/CodeStyle.md` and the scoped `.editorconfig`. The maximum line length is 250 characters; do not wrap a declaration or call merely because it has several arguments when it fits and remains readable.
 - Do not preserve legacy compatibility unless the user explicitly asks for it. The API and DSL are still in development.
 - Prefer portability toward Swift, Kotlin, C++, and similar targets.
-- Keep C#-specific code in `implementation/csharp/src/StepH.GameEventScript/CSharpBridge`.
+- Keep C#-specific code in `implementation/csharp/src/StepH.GameEventScript.CSharpBridge`.
 - The portable Core/API/Runtime/Compiler should avoid C#-specific patterns where practical.
 - `CSharpBridge` may use C# idioms such as Reflection, Attributes, `System.Type`, `out`, locks, threads, and `Try...out`.
 - In portable core code, avoid own GES-level `Try...out` concepts. Standard library calls such as `Dictionary.TryGetValue`, `TryAdd`, and `TryParse` are currently accepted.
@@ -41,7 +41,7 @@ The project has a portable Game Event Script host/VM architecture with a compact
 - The old polymorphic value graph has been removed or largely replaced.
 - `GesValue` / `GameEventScriptValue` are the current compact value concepts.
 - Runtime VM code lives under `implementation/csharp/src/StepH.GameEventScript/Runtime/VM`.
-- C# Reflection and annotation support lives under `implementation/csharp/src/StepH.GameEventScript/CSharpBridge`.
+- C# Reflection and annotation support lives under `implementation/csharp/src/StepH.GameEventScript.CSharpBridge`.
 - The old VM/compiler path has been removed or superseded by the new binary compiler and VM.
 - Standard extensions use dedicated opcodes where practical.
 - Series now use direct VM concepts and `CreateSeries`.
@@ -87,7 +87,7 @@ The project has a portable Game Event Script host/VM architecture with a compact
 - Message arguments use ordered portable `GameEventScriptMessageArgument`
   pairs. Core has no tuple/dictionary factory; C# conveniences live in
   `CSharpBridge`, and dictionary binding requires a known signature.
-- Core is synchronous, threadless, and unsynchronized. Optional C# automatic execution lives in `CSharpBridge/GameEventScriptCSharpHostRunner.cs`.
+- Core is synchronous, threadless, and unsynchronized. Optional C# automatic execution lives in the separate `StepH.GameEventScript.CSharpBridge` assembly.
 - A Core host is serial but not thread-affine. One caller at a time is required,
   but a paused handler may resume on another thread after an embedding-provided
   happens-before handoff; runtime state must never depend on thread-local state.
@@ -869,7 +869,7 @@ Remaining `Try...` outside `CSharpBridge` should only be standard-library style 
 - `implementation/csharp/src/StepH.GameEventScript/Runtime/VM/GesLinkedProgram.cs`
 - `implementation/csharp/src/StepH.GameEventScript/Runtime/VM/GameEventScriptVirtualMachine.cs`
 - `implementation/csharp/src/StepH.GameEventScript/Runtime/VM/GesVmState.cs`
-- `implementation/csharp/src/StepH.GameEventScript/CSharpBridge/GameEventScriptCSharpHostRunner.cs`
+- `implementation/csharp/src/StepH.GameEventScript.CSharpBridge/GameEventScriptCSharpHostRunner.cs`
 - `specs/HostRuntime.md`
 - `specs/BinaryFormat.md`
 - `specs/PublicApi.md`

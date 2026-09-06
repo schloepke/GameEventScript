@@ -6,9 +6,8 @@
 Dieses Dokument steuert den einmaligen Umzug von Game Event Script aus dem
 PlasticSCM-Workspace von BattleClub in das eigenständige Git-Monorepo. Es hält
 Entscheidungen, Reihenfolge, Abnahmen und offene Punkte fest. Die normative
-Produkt- und Sprachspezifikation verbleibt bis zum Cutover unter
-`StepH-GameEventScript/Documentation/Specification` und wird beim Umzug ohne
-inhaltliche Neuinterpretation übernommen.
+Produkt- und Sprachspezifikation wurde beim mechanischen Umzug ohne inhaltliche
+Neuinterpretation nach `specs` übernommen.
 
 ## Festgelegte Grundsätze
 
@@ -268,16 +267,21 @@ Registry-Veröffentlichung fallen, weil Package-Koordinaten dauerhaft und nur
 schwer rebrandbar sind. Die jeweilige Schreibweise darf sprachidiomatisch sein,
 die fachliche Identität und das Binary-Format müssen jedoch gleich bleiben.
 
-Noch festzulegen:
+Für den lokalen, noch unveröffentlichten C#-Cutover ist festgelegt:
 
-- ob Core/Compiler/Runtime zunächst gemeinsam in `StepH.GameEventScript`
-  bleiben; empfohlen ist ja
-- exakte öffentliche Package-Namen für `CSharpBridge` und Conformance
+- Core, Compiler und Runtime bleiben gemeinsam in `StepH.GameEventScript`;
+- die ergänzenden Packages heißen vorläufig
+  `StepH.GameEventScript.CSharpBridge` und
+  `StepH.GameEventScript.Conformance`;
+- die breit unterstützte `GameEventScript.sln` ist der gemeinsame
+  C#-Workspace; eine `.slnx` ist derzeit nicht erforderlich.
+
+Vor der ersten öffentlichen Veröffentlichung noch festzulegen:
+
 - neutrale `Ges`-/`GES`-Namen und Registry-Koordinaten vor der ersten
   Veröffentlichung
 - eigene GES-Domain sowie ein auf eine spätere Open-Source-Organisation oder
   Foundation übertragbarer Publisher-Namespace
-- Form der Solution (`.sln` oder `.slnx`) und gemeinsame MSBuild-Konfiguration
 - GitHub-Sichtbarkeit und Branch-Protection-Regeln
 
 Abnahme:
@@ -290,17 +294,17 @@ Abnahme:
 
 - [x] Plastic-Repository-Spec, Server, Workspace, Branch und aktuelles Changeset
   ermitteln.
-- [ ] Sicherstellen, dass alle relevanten Änderungen einschließlich dieses
+- [x] Sicherstellen, dass alle relevanten Änderungen einschließlich dieses
   aktualisierten Migrationsreviews eingecheckt sind.
-- [ ] Frühere Namen, Pfade und Moves von Game Event Script ermitteln.
-- [ ] Relevante Branches, Mergebeziehungen, Labels, Autoren und Zeitstempel
+- [x] Frühere Namen, Pfade und Moves von Game Event Script ermitteln.
+- [x] Relevante Branches, Mergebeziehungen, Labels, Autoren und Zeitstempel
   inventarisieren.
-- [ ] Einen maschinenlesbaren Changeset- und Pfad-History-Report erzeugen.
-- [ ] Einen unveränderlichen Snapshot des aktuellen GES-Quellstands samt
+- [x] Einen maschinenlesbaren Changeset- und Pfad-History-Report erzeugen.
+- [x] Einen unveränderlichen Snapshot des aktuellen GES-Quellstands samt
   SHA-256-Manifest sichern.
-- [ ] Prüfen, ob Xlinks, LFS-artige Inhalte, große Binärdateien oder nicht
+- [x] Prüfen, ob Xlinks, LFS-artige Inhalte, große Binärdateien oder nicht
   exportierbare Plastic-Konstrukte betroffen sind.
-- [ ] Bestätigen, dass `services/.obsidian` weder im Plastic-Ausgangspunkt noch
+- [x] Bestätigen, dass `services/.obsidian` weder im Plastic-Ausgangspunkt noch
   in einem Snapshot- oder Exportmanifest enthalten ist.
 
 Festgestellter Ausgangspunkt:
@@ -310,124 +314,146 @@ Workspace:  Battle Club Main
 Workspace:  /Users/stephan/Projects/BattleClub
 Repository: Battle Club/Battle Club@4324069@cloud
 Branch:     /main/refactor/either-to-result-and-server-logging
-Changeset:  666
-Status:     Changeset 666 war vor Aktualisierung dieses Dokuments clean
+Changeset:  667 (`4e0e0ea1-1d16-48ff-81a2-3da37fb2006e`)
+Status:     Changeset 667 ist der eingecheckte, cleane Export-Baseline
 Client:     cm 11.0.16.10042
 ```
 
-Die vorliegende Fortschritts- und Reviewaktualisierung ist nach der gemeinsamen
-Freigabe noch als letzter Plastic-Migrationsplan-Changeset einzuchecken. Erst
-dieser nachfolgende Changeset bildet den endgültigen Export-Ausgangspunkt.
+Der Baseline-Changeset trägt den Kommentar
+`GameEventScript: Prepare Game Event Script monorepo migration`. Sein
+kontrollierter GES-Snapshot umfasst 289 Dateien und besitzt den Manifest-Hash
+`5035dfbce95220feb9d419e125c0bb4de0c8fd0ea28222d5b9a68e211c63a6a4`.
 
 Abnahme:
 
-- [ ] Der aktuelle Plastic-Stand ist reproduzierbar identifiziert.
-- [ ] Alle historischen Pfade, die beim späteren Filtern berücksichtigt werden
+- [x] Der aktuelle Plastic-Stand ist reproduzierbar identifiziert.
+- [x] Alle historischen Pfade, die beim späteren Filtern berücksichtigt werden
   müssen, sind bekannt.
-- [ ] Der History-Report kann unabhängig vom Plastic-GUI gelesen werden.
+- [x] Der History-Report kann unabhängig vom Plastic-GUI gelesen werden.
 
 ## Phase 3 – Vollständigen Plastic→Git-Export erproben
 
-- [ ] `cm fast-export ... --nodata` zunächst gegen ein temporäres Ziel ausführen.
-- [ ] Exportwarnungen, Branchabbildung und erwartete Größe bewerten.
-- [ ] Den vollständigen Fast Export ausschließlich unter `_migration/plastic`
+- [x] `cm fast-export ... --nodata` zunächst gegen ein temporäres Ziel ausführen.
+- [x] Exportwarnungen, Branchabbildung und erwartete Größe bewerten.
+- [x] Den vollständigen Fast Export ausschließlich unter `_migration/plastic`
   erzeugen.
-- [ ] Den Export in ein neues lokales Git-Zwischenrepository importieren.
-- [ ] Exportdatei, Marks-Dateien und relevante Toolversionen mit Prüfsummen
+- [x] Den Export in ein neues lokales Git-Zwischenrepository importieren.
+- [x] Exportdatei, Marks-Dateien und relevante Toolversionen mit Prüfsummen
   protokollieren.
-- [ ] Noch keine Verbindung oder Push-Operation zum GitHub-Ziel ausführen.
+- [x] Noch keine Verbindung oder Push-Operation zum GitHub-Ziel ausführen.
 
 Abnahme:
 
-- [ ] Anzahl und Identität der exportierten Änderungen sind plausibel.
-- [ ] Autoren, Zeitstempel und Kommentare sind erhalten oder Abweichungen sind
+- [x] Anzahl und Identität der exportierten Änderungen sind plausibel.
+- [x] Autoren, Zeitstempel und Kommentare sind erhalten oder Abweichungen sind
   ausdrücklich dokumentiert.
-- [ ] Branches, Mergebeziehungen und Labels sind geprüft.
-- [ ] Der importierte Git-Tree des letzten relevanten Changesets stimmt mit dem
+- [x] Branches, Mergebeziehungen und Labels sind geprüft.
+- [x] Der importierte Git-Tree des letzten relevanten Changesets stimmt mit dem
   gesicherten Plastic-Snapshot überein.
 
 ## Phase 4 – GES-Historie sicher extrahieren
 
-- [ ] Den vollständigen importierten Git-Bestand ausschließlich in einer neuen
+- [x] Den vollständigen importierten Git-Bestand ausschließlich in einer neuen
   Kopie filtern.
-- [ ] Alle aktuellen und historischen GES-Pfade einschließen.
-- [ ] Nicht zu GES gehörende BattleClub-, Beamable- und Unity-Inhalte entfernen.
-- [ ] `.obsidian` und andere lokale Editor-/Vault-Metadaten unabhängig von
+- [x] Alle aktuellen und historischen GES-Pfade einschließen.
+- [x] Nicht zu GES gehörende BattleClub-, Beamable- und Unity-Inhalte entfernen.
+- [x] `.obsidian` und andere lokale Editor-/Vault-Metadaten unabhängig von
   ihrem historischen Trackingzustand aus allen veröffentlichbaren Refs entfernen.
-- [ ] Leere oder nur fachfremde Commits nach einer festgelegten Policy behandeln.
-- [ ] Plastic-Changesets soweit möglich auf resultierende Git-Commits abbilden.
-- [ ] Erreichbare Git-Objekte, große Dateien, Zugangsdaten und vertrauliche
+- [x] Leere oder nur fachfremde Commits nach einer festgelegten Policy behandeln.
+- [x] Plastic-Changesets soweit möglich auf resultierende Git-Commits abbilden.
+- [x] Erreichbare Git-Objekte, große Dateien, Zugangsdaten und vertrauliche
   Inhalte prüfen.
-- [ ] Das gefilterte Repository neu klonen oder bereinigen, damit nicht
+- [x] Das gefilterte Repository neu klonen oder bereinigen, damit nicht
   erreichbare Objekte des vollständigen Exports nicht mitgeführt werden.
 
 Abnahme:
 
-- [ ] Der aktuelle gefilterte Tree ist inhaltlich identisch zum GES-Snapshot.
-- [ ] Die relevante Datei- und Commit-Historie ist nachvollziehbar.
-- [ ] Kein fachfremder oder vertraulicher Inhalt ist über irgendeinen zu
+- [x] Der aktuelle gefilterte Tree ist inhaltlich identisch zum GES-Snapshot.
+- [x] Die relevante Datei- und Commit-Historie ist nachvollziehbar.
+- [x] Kein fachfremder oder vertraulicher Inhalt ist über irgendeinen zu
   veröffentlichenden Ref erreichbar.
-- [ ] Der vollständige ungefilterte Export bleibt ausschließlich lokal/offline.
+- [x] Der vollständige ungefilterte Export bleibt ausschließlich lokal/offline.
 
 ## Phase 5 – Historie mit dem GitHub-Ziel verbinden
 
-- [ ] Prüfen, ob das GitHub-Ziel wirklich leer ist oder Initial-Commits besitzt.
-- [ ] Bei einem leeren Ziel die gefilterte Historie als Ausgangshistorie verwenden.
-- [ ] Vorhandene sinnvolle Ziel-Commits nur bewusst übernehmen; keine ungeprüfte
+- [x] Prüfen, ob das GitHub-Ziel wirklich leer ist oder Initial-Commits besitzt.
+- [x] Bei einem leeren Ziel die gefilterte Historie als Ausgangshistorie verwenden.
+- [x] Vorhandene sinnvolle Ziel-Commits nur bewusst übernehmen; keine ungeprüfte
   `--allow-unrelated-histories`-Zusammenführung durchführen.
-- [ ] Default Branch und Commit-/Tag-Namenskonvention festlegen.
-- [ ] Vor dem ersten Push einen lokalen Backup-Tag beziehungsweise ein Bundle
+- [x] Default Branch und Commit-/Tag-Namenskonvention festlegen.
+- [x] Vor dem ersten Push einen lokalen Backup-Tag beziehungsweise ein Bundle
   des gefilterten Ausgangsstands erzeugen.
+
+Der Remote-Initialcommit `c8191b17a532aeb377779082f7699944b3168513` wurde
+nicht gemergt und bleibt in einem geprüften lokalen Bundle erhalten. `main` ist
+der künftige Default Branch. Historische Tags bleiben unverändert; neue
+öffentliche Releases verwenden nach Festlegung der Produktkoordinaten
+`vMAJOR.MINOR.PATCH`. Der importierte Stand liegt bis zur Freigabe ausschließlich
+lokal auf `migration/plastic-import`.
 
 Abnahme:
 
-- [ ] Der lokale Zielstand enthält ausschließlich die freigegebene Historie.
-- [ ] Der letzte importierte Commit repräsentiert den unveränderten Plastic-Stand.
-- [ ] Noch wurde kein struktureller oder fachlicher Umbau mit dem Import vermischt.
+- [x] Der lokale Zielstand enthält ausschließlich die freigegebene Historie.
+- [x] Der letzte importierte Commit repräsentiert den unveränderten Plastic-Stand.
+- [x] Noch wurde kein struktureller oder fachlicher Umbau mit dem Import vermischt.
 
 ## Phase 6 – Mechanischer Monorepo-Umzug
 
-- [ ] Gemeinsame Spezifikationen, Conformance-Suites, Fixtures, Reports und
+- [x] Gemeinsame Spezifikationen, Conformance-Suites, Fixtures, Reports und
   Benchmarks an ihre freigegebenen Monorepo-Orte verschieben.
-- [ ] Die C#-Implementierung und ihre nativen Tests nach
+- [x] Die C#-Implementierung und ihre nativen Tests nach
   `implementation/csharp` verschieben.
-- [ ] Bestehende Inhalte möglichst mit echten Git-Moves und ohne fachliche
+- [x] Bestehende Inhalte möglichst mit echten Git-Moves und ohne fachliche
   Änderungen umordnen.
-- [ ] Relative Links, Fixture-Auflösung, Testdatenpfade und Buildpfade anpassen.
-- [ ] `.obsidian/` in der Monorepo-`.gitignore` verankern und keine lokale
+- [x] Relative Links, Fixture-Auflösung, Testdatenpfade und Buildpfade anpassen.
+- [x] `.obsidian/` in der Monorepo-`.gitignore` verankern und keine lokale
   Vault-Konfiguration migrieren.
-- [ ] Den mechanischen Umzug als eigenen Commit abschließen.
+- [x] Den mechanischen Umzug als eigenen Commit abschließen.
 
 Abnahme:
 
-- [ ] Alle Markdown- und lokalen Dokumentationslinks lösen auf.
-- [ ] Corpus-Identität und kanonische `.gesb`-/GESA-Artefakte sind unverändert.
-- [ ] Unterschiede des Migrationscommits bestehen ausschließlich aus Moves und
+- [x] Alle Markdown- und lokalen Dokumentationslinks lösen auf.
+- [x] Corpus-Identität und kanonische `.gesb`-/GESA-Artefakte sind unverändert.
+- [x] Unterschiede des Migrationscommits bestehen ausschließlich aus Moves und
   notwendigen Pfadanpassungen.
 
 ## Phase 7 – C#-Projekt- und Package-Schnitt herstellen
 
-- [ ] Portable Core-, Compiler- und Runtime-Assembly ohne Beamable und Unity
+- [x] Portable Core-, Compiler- und Runtime-Assembly ohne Beamable und Unity
   aufbauen.
-- [ ] `CSharpBridge` als eigene C#-spezifische Assembly beziehungsweise eigenes
+- [x] `CSharpBridge` als eigene C#-spezifische Assembly beziehungsweise eigenes
   Package abtrennen.
-- [ ] Conformance-Parser/-Runner und native Testadapter entsprechend der
+- [x] Conformance-Parser/-Runner und native Testadapter entsprechend der
   spezifizierten Modulgrenzen schneiden.
-- [ ] Unnötige Package-Abhängigkeiten entfernen; insbesondere die tatsächliche
+- [x] Unnötige Package-Abhängigkeiten entfernen; insbesondere die tatsächliche
   Notwendigkeit von `System.Text.Json` je Assembly prüfen.
-- [ ] Namespace-, Assembly-, Package- und XML-Dokumentationsoberflächen prüfen.
-- [ ] Reproduzierbare lokale Build- und Testeinstiege bereitstellen.
-- [ ] Den Projekt-/Package-Umbau getrennt vom mechanischen Move committen.
+- [x] Namespace-, Assembly-, Package- und XML-Dokumentationsoberflächen prüfen.
+- [x] Reproduzierbare lokale Build- und Testeinstiege bereitstellen.
+- [x] Den Projekt-/Package-Umbau getrennt vom mechanischen Move committen.
+
+Phase 7 erzeugt drei getrennte `netstandard2.1`-Assemblies und vorläufige
+NuGet-Package-IDs: `StepH.GameEventScript`,
+`StepH.GameEventScript.CSharpBridge` und
+`StepH.GameEventScript.Conformance`. Bridge und Conformance hängen jeweils nur
+vom Core ab; der Core besitzt keine externen Package-, Beamable- oder
+Unity-Abhängigkeiten. Die gemeinsame C#-Solution und die Root-Skripte bilden
+Build, Test, Performanceprüfung, Formatprüfung und lokalen Pack-Dry-Run ab.
+
+Der Abschlusslauf umfasst 1.167 erfolgreiche Nicht-Performance-Ausführungen,
+sechs erfolgreiche Performance-/Allokationsausführungen und einen fehlerfreien
+Roslyn-Formatcheck. Die drei lokalen NuGet-Pakete wurden ausschließlich unter
+dem ignorierten `artifacts/csharp/packages` erzeugt und ihr jeweiliger
+Core-Abhängigkeitsgraph geprüft.
 
 Abnahme:
 
-- [ ] Der portable C#-Core baut ohne Beamable- und Unity-Abhängigkeiten.
-- [ ] Die komplette Nicht-Performance-Suite besteht.
-- [ ] Alle Markdown-Conformance-Fälle bestehen.
-- [ ] Public-API- und Cross-Language-Snapshots stimmen.
-- [ ] `.gesb`-Golden-/Invalid-/Roundtrip-Abnahmen bestehen.
-- [ ] Performance- und Zero-Allocation-Hot-Path-Abnahmen bestehen.
-- [ ] `dotnet format --verify-no-changes` besteht für alle C#-Projekte.
+- [x] Der portable C#-Core baut ohne Beamable- und Unity-Abhängigkeiten.
+- [x] Die komplette Nicht-Performance-Suite besteht.
+- [x] Alle Markdown-Conformance-Fälle bestehen.
+- [x] Public-API- und Cross-Language-Snapshots stimmen.
+- [x] `.gesb`-Golden-/Invalid-/Roundtrip-Abnahmen bestehen.
+- [x] Performance- und Zero-Allocation-Hot-Path-Abnahmen bestehen.
+- [x] `dotnet format --verify-no-changes` besteht für alle C#-Projekte.
 
 ## Phase 8 – C#-Distribution vorbereiten
 

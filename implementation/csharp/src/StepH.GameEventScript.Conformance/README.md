@@ -4,9 +4,9 @@
 # Portable Conformance package
 
 `StepH.GameEventScript.Conformance` implements the authoring side of
-the [Conformance Markdown specification](../../../../../specs/Conformance/MarkdownFormat.md). It is currently compiled into the Core project so
-that users can parse the same suites for self-tests, but it is deliberately an
-isolated package boundary for later extraction into its own monorepo module.
+the [Conformance Markdown specification](../../../../specs/Conformance/MarkdownFormat.md). It is a separate optional assembly and package so users
+can run the same suites for self-tests without coupling the portable Core to
+Conformance infrastructure.
 
 The public entry point is `ConformanceMarkdownParser.Parse`. It accepts UTF-8
 bytes or text and returns a fully validated immutable `ConformanceDocument`.
@@ -48,7 +48,7 @@ remain fileless and networkless.
 The C# adapter also discovers the five performance cases independently for an
 explicit, non-parallel measurement run. It writes the canonical result JSON, a
 human-readable report, and a suite-local received Markdown approval candidate
-under `Conformance/Received`; bytecode-snapshot cases produce a
+under `artifacts/conformance/received`; bytecode-snapshot cases produce a
 separate received candidate there as well. These generated files never replace
 the normative source suite automatically. The former combined text performance
 report and combined GESA dump no longer exist.
@@ -58,9 +58,9 @@ writes `ConformanceResults.json` plus `ConformanceReport.md` after a complete
 corpus run. Report generation does not execute the corpus a second time; the
 separate identity test only validates suite and case counts and stable IDs.
 
-The [Conformance environment](../../../../../specs/Conformance/Environment.md) defines the fixed extension and external-type
+The [Conformance environment](../../../../specs/Conformance/Environment.md) defines the fixed extension and external-type
 catalog that each language runner implements. The normative
-[Conformance Coverage](../../../../../specs/Conformance/Coverage.md) maps
+[Conformance Coverage](../../../../specs/Conformance/Coverage.md) maps
 portable behavior to stable case IDs and gates the reduction of
 language-specific tests. Script cases can configure all four publish-sink
 modes, exact observer traces, native-only Hosts, repeated independent Hosts and

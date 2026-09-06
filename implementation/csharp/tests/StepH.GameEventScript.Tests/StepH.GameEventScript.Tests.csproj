@@ -9,7 +9,7 @@
         <LangVersion>latest</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <AssemblyName>StepH-GameEventScript-Tests</AssemblyName>
+        <AssemblyName>StepH.GameEventScript.Tests</AssemblyName>
     </PropertyGroup>
 
     <ItemGroup>
@@ -17,7 +17,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\StepH.GameEventScript\StepH-GameEventScript.csproj" />
+        <ProjectReference Include="../../src/StepH.GameEventScript/StepH.GameEventScript.csproj" />
+        <ProjectReference Include="../../src/StepH.GameEventScript.CSharpBridge/StepH.GameEventScript.CSharpBridge.csproj" />
+        <ProjectReference Include="../../src/StepH.GameEventScript.Conformance/StepH.GameEventScript.Conformance.csproj" />
     </ItemGroup>
 
     <ItemGroup>

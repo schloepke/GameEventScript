@@ -1012,7 +1012,7 @@ dotnet format --verify-no-changes passed for production and tests
 Die portable C#-Library liegt derzeit innerhalb eines Beamable Service und hängt
 über dessen Projektstruktur indirekt an Beamable- und Unity-Paketen, obwohl im
 portablen Produktionscode keine Beamable-Verwendung gefunden wurde. Siehe
-[StepH-GameEventScript.csproj](../../implementation/csharp/src/StepH.GameEventScript/StepH-GameEventScript.csproj).
+[StepH.GameEventScript.csproj](../../implementation/csharp/src/StepH.GameEventScript/StepH.GameEventScript.csproj).
 
 Diese Abhängigkeiten werden nicht mehr separat in der bestehenden Struktur
 bereinigt. Beamable besitzt oder regeneriert möglicherweise Teile der Service-

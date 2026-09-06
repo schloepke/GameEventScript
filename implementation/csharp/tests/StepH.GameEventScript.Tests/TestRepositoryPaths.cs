@@ -11,6 +11,12 @@ internal static class TestRepositoryPaths
 
     internal static string LibraryProjectDirectory { get; } = Path.Combine(Root, "implementation", "csharp", "src", "StepH.GameEventScript");
 
+    internal static string CSharpBridgeProjectDirectory { get; } = Path.Combine(Root, "implementation", "csharp", "src", "StepH.GameEventScript.CSharpBridge");
+
+    internal static string ConformanceProjectDirectory { get; } = Path.Combine(Root, "implementation", "csharp", "src", "StepH.GameEventScript.Conformance");
+
+    internal static IReadOnlyList<string> ProductProjectDirectories { get; } = [LibraryProjectDirectory, CSharpBridgeProjectDirectory, ConformanceProjectDirectory];
+
     internal static string TestProjectDirectory { get; } = Path.Combine(Root, "implementation", "csharp", "tests", "StepH.GameEventScript.Tests");
 
     internal static string SpecificationsDirectory { get; } = Path.Combine(Root, "specs");
@@ -28,7 +34,7 @@ internal static class TestRepositoryPaths
         {
             if (File.Exists(Path.Combine(directory.FullName, "LICENSE")) &&
                 File.Exists(Path.Combine(directory.FullName, "specs", "Language.md")) &&
-                File.Exists(Path.Combine(directory.FullName, "implementation", "csharp", "src", "StepH.GameEventScript", "StepH-GameEventScript.csproj")))
+                File.Exists(Path.Combine(directory.FullName, "implementation", "csharp", "src", "StepH.GameEventScript", "StepH.GameEventScript.csproj")))
             {
                 return directory.FullName;
             }

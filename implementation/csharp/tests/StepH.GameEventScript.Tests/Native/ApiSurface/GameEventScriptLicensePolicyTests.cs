@@ -29,31 +29,42 @@ public sealed class GameEventScriptLicensePolicyTests
     [TestMethod]
     public void PackageMetadataIdentifiesLicenseAndCopyrightOwner()
     {
-        var projectDirectory = TestRepositoryPaths.LibraryProjectDirectory;
-        var project = XDocument.Load(Path.Combine(projectDirectory, "StepH-GameEventScript.csproj"));
+        var projects = new[]
+        {
+            (TestRepositoryPaths.LibraryProjectDirectory, "StepH.GameEventScript", "Portable, deterministic Game Event Script compiler, binary format, serial message host, and runtime."),
+            (TestRepositoryPaths.CSharpBridgeProjectDirectory, "StepH.GameEventScript.CSharpBridge", "C# adapters for Game Event Script reflection, delegates, dictionaries, and automatic host execution."),
+            (TestRepositoryPaths.ConformanceProjectDirectory, "StepH.GameEventScript.Conformance", "Portable Markdown parser, runner, and report writers for the Game Event Script conformance corpus.")
+        };
 
-        Assert.AreEqual("Stephan Schlöpke", SingleValue(project, "Authors"));
-        Assert.AreEqual(CopyrightText, SingleValue(project, "Copyright"));
-        Assert.AreEqual("Portable, deterministic Game Event Script compiler, binary format, serial message host, runtime, and conformance APIs.", SingleValue(project, "Description"));
-        Assert.AreEqual("Apache-2.0", SingleValue(project, "PackageLicenseExpression"));
-        Assert.AreEqual("README.md", SingleValue(project, "PackageReadmeFile"));
+        foreach (var (projectDirectory, packageId, description) in projects)
+        {
+            var project = XDocument.Load(Directory.EnumerateFiles(projectDirectory, "*.csproj", SearchOption.TopDirectoryOnly).Single());
+            Assert.AreEqual(packageId, SingleValue(project, "PackageId"));
+            Assert.AreEqual("0.1.0", SingleValue(project, "Version"));
+            Assert.AreEqual("Stephan Schlöpke", SingleValue(project, "Authors"));
+            Assert.AreEqual(CopyrightText, SingleValue(project, "Copyright"));
+            Assert.AreEqual(description, SingleValue(project, "Description"));
+            Assert.AreEqual("Apache-2.0", SingleValue(project, "PackageLicenseExpression"));
+            Assert.AreEqual("README.md", SingleValue(project, "PackageReadmeFile"));
+            Assert.AreEqual("https://github.com/schloepke/GameEventScript", SingleValue(project, "RepositoryUrl"));
 
-        AssertPackageFile(project, "LICENSE");
-        AssertPackageFile(project, "README.md");
+            AssertPackageFile(project, "LICENSE");
+            AssertPackageFile(project, "README.md");
+            Assert.IsFalse(project.Descendants("PackageReference").Any(), $"{packageId} must not acquire an external package dependency.");
+        }
     }
 
     [TestMethod]
     public void HandwrittenFilesCarryTheCanonicalHeaderWhereTheirFormatAllowsIt()
     {
         var workspace = TestRepositoryPaths.Root;
-        var library = TestRepositoryPaths.LibraryProjectDirectory;
         var tests = TestRepositoryPaths.TestProjectDirectory;
         var failures = new List<string>();
 
-        foreach (var path in EnumerateSourceFiles(library, "*.cs").Concat(EnumerateSourceFiles(tests, "*.cs")))
+        foreach (var path in TestRepositoryPaths.ProductProjectDirectories.SelectMany(root => EnumerateSourceFiles(root, "*.cs")).Concat(EnumerateSourceFiles(tests, "*.cs")))
             RequirePrefix(path, $"// {CopyrightText}\n// {SpdxText}\n", failures);
 
-        foreach (var path in EnumerateSourceFiles(library, "*.md")
+        foreach (var path in TestRepositoryPaths.ProductProjectDirectories.SelectMany(root => EnumerateSourceFiles(root, "*.md"))
                      .Concat(EnumerateSourceFiles(tests, "*.md"))
                      .Concat(EnumerateSourceFiles(TestRepositoryPaths.SpecificationsDirectory, "*.md"))
                      .Concat(EnumerateSourceFiles(TestRepositoryPaths.DocumentationDirectory, "*.md"))
@@ -62,14 +73,18 @@ public sealed class GameEventScriptLicensePolicyTests
                      .Where(IsHeaderEligibleTestMarkdown))
             RequirePrefix(path, $"<!-- {CopyrightText} -->\n<!-- {SpdxText} -->\n", failures);
 
-        foreach (var path in new[] { "AGENTS.md", "LICENSING.md", "MigrationsTodo.md" })
+        foreach (var path in new[] { "AGENTS.md", "LICENSING.md", "MigrationsTodo.md", "README.md" })
             RequirePrefix(Path.Combine(workspace, path), $"<!-- {CopyrightText} -->\n<!-- {SpdxText} -->\n", failures);
 
         RequirePrefix(Path.Combine(workspace, ".editorconfig"), $"# {CopyrightText}\n# {SpdxText}\n", failures);
         RequirePrefix(Path.Combine(workspace, ".gitignore"), $"# {CopyrightText}\n# {SpdxText}\n", failures);
+        RequireNearStart(Path.Combine(workspace, "GameEventScript.sln"), failures);
 
-        RequireNearStart(Path.Combine(library, "StepH-GameEventScript.csproj"), failures);
-        RequireNearStart(Path.Combine(tests, "StepH-GameEventScript-Tests.csproj"), failures);
+        foreach (var path in EnumerateSourceFiles(Path.Combine(workspace, "scripts"), "*.sh"))
+            RequireNearStart(path, failures);
+
+        foreach (var projectDirectory in TestRepositoryPaths.ProductProjectDirectories.Append(tests))
+            RequireNearStart(Directory.EnumerateFiles(projectDirectory, "*.csproj", SearchOption.TopDirectoryOnly).Single(), failures);
         var editors = Path.Combine(workspace, "tools", "editors");
         foreach (var pattern in new[] { "*.plist", "*.tmLanguage", "*.tmPreferences" })
             foreach (var path in EnumerateSourceFiles(editors, pattern))
@@ -98,7 +113,9 @@ public sealed class GameEventScriptLicensePolicyTests
     {
         var text = File.ReadAllText(path, Encoding.UTF8).TrimStart('\uFEFF');
         var prefix = text[..Math.Min(text.Length, 512)];
-        if (!prefix.Contains($"<!-- {CopyrightText} -->\n<!-- {SpdxText} -->", StringComparison.Ordinal)) failures.Add(path + ": missing canonical XML header");
+        var hasXmlHeader = prefix.Contains($"<!-- {CopyrightText} -->\n<!-- {SpdxText} -->", StringComparison.Ordinal);
+        var hasLineHeader = prefix.Contains($"# {CopyrightText}\n# {SpdxText}", StringComparison.Ordinal);
+        if (!hasXmlHeader && !hasLineHeader) failures.Add(path + ": missing canonical header near the start");
     }
 
     private static string SingleValue(XDocument document, string name)
@@ -106,7 +123,9 @@ public sealed class GameEventScriptLicensePolicyTests
 
     private static void AssertPackageFile(XDocument project, string fileName)
     {
-        var item = project.Descendants("None").SingleOrDefault(element => string.Equals((string?)element.Attribute("Update"), fileName, StringComparison.Ordinal));
+        var item = project.Descendants("None").SingleOrDefault(element =>
+            string.Equals((string?)element.Attribute("Link"), fileName, StringComparison.Ordinal) ||
+            string.Equals((string?)element.Attribute("Update"), fileName, StringComparison.Ordinal));
         Assert.IsNotNull(item, $"Package file '{fileName}' is not declared.");
         Assert.AreEqual("true", (string?)item.Attribute("Pack"));
         Assert.AreEqual("/", (string?)item.Attribute("PackagePath"));

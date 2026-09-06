@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Conformance;
+using StepH.GameEventScript.CSharpBridge;
 
 namespace StepH_GameEventScript_Tests.Native.ApiSurface;
 
@@ -49,7 +50,8 @@ public sealed class GameEventScriptDocumentationConsistencyTests
         };
         CollectionAssert.AreEqual(expectedFamilies, actualFamilies, "PublicApi.md ownership families changed without updating the consistency gate.");
 
-        var actualNamespaces = typeof(GameEventScriptProgram).Assembly.GetExportedTypes()
+        var actualNamespaces = new[] { typeof(GameEventScriptProgram).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly, typeof(ConformanceRunner).Assembly }
+            .SelectMany(assembly => assembly.GetExportedTypes())
             .Select(type => type.Namespace ?? string.Empty)
             .Distinct(StringComparer.Ordinal)
             .OrderBy(value => value, StringComparer.Ordinal)

@@ -5,6 +5,8 @@ using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Conformance;
+using StepH.GameEventScript.CSharpBridge;
 
 namespace StepH_GameEventScript_Tests.Native.ApiSurface;
 
@@ -16,9 +18,9 @@ public sealed class GameEventScriptPublicApiSurfaceTests
     {
         var actual = BuildPublicSurfaceSnapshot();
         var approvedPath = FindApprovedSnapshotPath();
-        var receivedPath = Path.Combine(
-            Path.GetDirectoryName(approvedPath) ?? throw new DirectoryNotFoundException("Approved snapshot directory was not found."),
-            "PublicApiSurface.received.txt");
+        var receivedDirectory = Path.Combine(TestRepositoryPaths.Root, "artifacts", "csharp", "api");
+        Directory.CreateDirectory(receivedDirectory);
+        var receivedPath = Path.Combine(receivedDirectory, "PublicApiSurface.received.txt");
 
         File.WriteAllText(receivedPath, actual);
 
@@ -42,43 +44,69 @@ public sealed class GameEventScriptPublicApiSurfaceTests
         Assert.HasCount(0, leakedTypes, "Public compiler types leaked:\n" + string.Join("\n", leakedTypes));
     }
 
+    [TestMethod]
+    public void PublicTypesAndDependenciesFollowAssemblyBoundaries()
+    {
+        var core = typeof(GameEventScriptProgram).Assembly;
+        var bridge = typeof(GameEventScriptCSharpHostRunner).Assembly;
+        var conformance = typeof(ConformanceRunner).Assembly;
+
+        Assert.AreEqual("StepH.GameEventScript", core.GetName().Name);
+        Assert.AreEqual("StepH.GameEventScript.CSharpBridge", bridge.GetName().Name);
+        Assert.AreEqual("StepH.GameEventScript.Conformance", conformance.GetName().Name);
+
+        Assert.HasCount(0, core.GetExportedTypes().Where(type => IsNamespace(type, "StepH.GameEventScript.CSharpBridge") || IsNamespace(type, "StepH.GameEventScript.Conformance")));
+        Assert.IsTrue(bridge.GetExportedTypes().All(type => IsNamespace(type, "StepH.GameEventScript.CSharpBridge")));
+        Assert.IsTrue(conformance.GetExportedTypes().All(type => IsNamespace(type, "StepH.GameEventScript.Conformance")));
+
+        var coreReferences = core.GetReferencedAssemblies().Select(reference => reference.Name).ToHashSet(StringComparer.Ordinal);
+        Assert.DoesNotContain("StepH.GameEventScript.CSharpBridge", coreReferences);
+        Assert.DoesNotContain("StepH.GameEventScript.Conformance", coreReferences);
+        Assert.IsFalse(coreReferences.Any(reference => reference is not null && (reference.StartsWith("Beamable", StringComparison.Ordinal) || reference.StartsWith("Unity", StringComparison.Ordinal))));
+
+        CollectionAssert.Contains(bridge.GetReferencedAssemblies().Select(reference => reference.Name).ToArray(), "StepH.GameEventScript");
+        CollectionAssert.Contains(conformance.GetReferencedAssemblies().Select(reference => reference.Name).ToArray(), "StepH.GameEventScript");
+    }
+
     /// <summary>
     /// Verifies that the XML-documentation build gate remains active, every exported type reaches the artifact, and handwritten library sources contain no pragma directives.
     /// </summary>
     [TestMethod]
     public void PublicApiDocumentationAndPragmasRemainComplete()
     {
-        var assembly = typeof(GameEventScriptProgram).Assembly;
-        var xmlPath = Path.ChangeExtension(assembly.Location, ".xml");
-        Assert.IsTrue(File.Exists(xmlPath), "The public XML documentation artifact was not generated.");
-
-        var documentation = XDocument.Load(xmlPath);
-        var documentedMembers = documentation
-            .Descendants("member")
-            .Select(member => (string?)member.Attribute("name"))
-            .Where(name => name is not null)
-            .ToHashSet(StringComparer.Ordinal);
-
-        var undocumentedTypes = assembly
-            .GetExportedTypes()
-            .Select(type => "T:" + (type.FullName ?? type.Name).Replace('+', '.'))
-            .Where(typeId => !documentedMembers.Contains(typeId))
-            .OrderBy(typeId => typeId, StringComparer.Ordinal)
-            .ToArray();
-        Assert.HasCount(0, undocumentedTypes, "Exported types without XML documentation:\n" + string.Join("\n", undocumentedTypes));
-
-        var projectDirectory = TestRepositoryPaths.LibraryProjectDirectory;
-        var project = XDocument.Load(Path.Combine(projectDirectory, "StepH-GameEventScript.csproj"));
-        var generatedDocumentation = project.Descendants("GenerateDocumentationFile").SingleOrDefault()?.Value;
-        Assert.AreEqual("true", generatedDocumentation, "The library must continue to generate its public XML documentation artifact.");
-
-        var warningsAsErrors = project.Descendants("WarningsAsErrors").SingleOrDefault()?.Value ?? string.Empty;
-        foreach (var diagnostic in new[] { "CS0419", "CS1570", "CS1572", "CS1573", "CS1574", "CS1580", "CS1581", "CS1584", "CS1587", "CS1591", "CS1658", "CS1711", "CS1712" })
+        var undocumentedTypes = new List<string>();
+        foreach (var assembly in PublicAssemblies())
         {
-            Assert.Contains(diagnostic, warningsAsErrors, $"XML documentation diagnostic {diagnostic} must remain a build error.");
+            var xmlPath = Path.ChangeExtension(assembly.Location, ".xml");
+            Assert.IsTrue(File.Exists(xmlPath), $"The public XML documentation artifact for {assembly.GetName().Name} was not generated.");
+
+            var documentedMembers = XDocument.Load(xmlPath)
+                .Descendants("member")
+                .Select(member => (string?)member.Attribute("name"))
+                .Where(name => name is not null)
+                .ToHashSet(StringComparer.Ordinal);
+
+            undocumentedTypes.AddRange(assembly
+                .GetExportedTypes()
+                .Select(type => "T:" + (type.FullName ?? type.Name).Replace('+', '.'))
+                .Where(typeId => !documentedMembers.Contains(typeId)));
         }
 
-        var pragmaDirectives = new[] { TestRepositoryPaths.LibraryProjectDirectory, TestRepositoryPaths.TestProjectDirectory }
+        undocumentedTypes.Sort(StringComparer.Ordinal);
+        Assert.HasCount(0, undocumentedTypes, "Exported types without XML documentation:\n" + string.Join("\n", undocumentedTypes));
+
+        foreach (var projectDirectory in TestRepositoryPaths.ProductProjectDirectories)
+        {
+            var projectPath = Directory.EnumerateFiles(projectDirectory, "*.csproj", SearchOption.TopDirectoryOnly).Single();
+            var project = XDocument.Load(projectPath);
+            Assert.AreEqual("true", project.Descendants("GenerateDocumentationFile").SingleOrDefault()?.Value, $"{Path.GetFileName(projectPath)} must generate public XML documentation.");
+
+            var warningsAsErrors = project.Descendants("WarningsAsErrors").SingleOrDefault()?.Value ?? string.Empty;
+            foreach (var diagnostic in new[] { "CS0419", "CS1570", "CS1572", "CS1573", "CS1574", "CS1580", "CS1581", "CS1584", "CS1587", "CS1591", "CS1658", "CS1711", "CS1712" })
+                Assert.Contains(diagnostic, warningsAsErrors, $"XML documentation diagnostic {diagnostic} must remain a build error in {Path.GetFileName(projectPath)}.");
+        }
+
+        var pragmaDirectives = TestRepositoryPaths.ProductProjectDirectories.Append(TestRepositoryPaths.TestProjectDirectory)
             .SelectMany(sourceRoot => Directory.EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories))
             .Where(path => !HasDirectorySegment(path, "bin") && !HasDirectorySegment(path, "obj"))
             .SelectMany(path => File.ReadLines(path).Select((line, index) => new { Path = path, Line = line, Number = index + 1 }))
@@ -90,9 +118,8 @@ public sealed class GameEventScriptPublicApiSurfaceTests
 
     internal static string BuildPublicSurfaceSnapshot()
     {
-        var assembly = typeof(GameEventScriptProgram).Assembly;
         var output = new StringBuilder();
-        foreach (var type in assembly.GetExportedTypes().OrderBy(type => type.FullName, StringComparer.Ordinal))
+        foreach (var type in PublicAssemblies().SelectMany(assembly => assembly.GetExportedTypes()).OrderBy(type => type.FullName, StringComparer.Ordinal))
         {
             output.AppendLine(FormatKind(type) + " " + (type.FullName ?? type.Name).Replace("+", "."));
             if (type.IsEnum)
@@ -238,4 +265,7 @@ public sealed class GameEventScriptPublicApiSurfaceTests
         => type.Namespace is { } typeNamespace &&
            (string.Equals(typeNamespace, namespacePrefix, StringComparison.Ordinal) ||
             typeNamespace.StartsWith(namespacePrefix + ".", StringComparison.Ordinal));
+
+    private static Assembly[] PublicAssemblies()
+        => [typeof(GameEventScriptProgram).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly, typeof(ConformanceRunner).Assembly];
 }

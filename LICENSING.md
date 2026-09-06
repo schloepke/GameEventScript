@@ -45,7 +45,8 @@ per distribution instead of being duplicated in every file.
 
 The header applies to handwritten production and test C#, product documentation,
 specifications, guides, README files, C# project files, the scoped EditorConfig,
-the root Git ignore file, and XML-based TextMate bundle files.
+the root Git ignore file, solution and shell entry-point files, and XML-based
+TextMate bundle files.
 
 ## Intentional header exclusions
 

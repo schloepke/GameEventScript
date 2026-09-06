@@ -27,9 +27,9 @@ GameEventScript Conformance
 ```
 
 Core, compiler, host, VM, and program code must not depend on Conformance.
-Conformance is currently delivered in the C# Core assembly under the
-`StepH.GameEventScript.Conformance` namespace, but its public contract must be
-movable into a separate optional monorepo module without conceptual API changes.
+Conformance is delivered as the separate optional
+`StepH.GameEventScript.Conformance` package. Its public contract is independent
+of the reference test framework and filesystem adapters.
 
 The following documents own detailed behavior and are incorporated by reference:
 
@@ -805,9 +805,9 @@ caller-supplied ordered documents and never reads discovery paths.
 
 ### C# and Unity
 
-The portable API is exposed by `StepH.GameEventScript.Api`,
-`StepH.GameEventScript.Runtime.Values`, and the currently colocated
-`StepH.GameEventScript.Conformance` package. `CSharpBridge` supplies:
+The portable API is exposed by the `StepH.GameEventScript` Core package and the
+optional `StepH.GameEventScript.Conformance` package. The separate
+`StepH.GameEventScript.CSharpBridge` package supplies:
 
 - tuple/dictionary message and Context conveniences;
 - delegate native-handler adapters;

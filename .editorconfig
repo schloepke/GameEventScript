@@ -4,7 +4,7 @@
 # These rules apply to the handwritten C# implementation and its native test
 # adapter inside the monorepo.
 
-[implementation/csharp/{src/StepH.GameEventScript,tests/StepH.GameEventScript.Tests}/**/*.cs]
+[implementation/csharp/**/*.cs]
 charset = utf-8
 end_of_line = lf
 insert_final_newline = true

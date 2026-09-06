@@ -39,10 +39,16 @@ All specification documents in the table are normative.
 
 [Guide](guide/README.md) contains tutorials, explanations, and examples intended for learning. A guide may simplify presentation but must link to the owning specification for exact behavior.
 
+## Historical material
+
+[GameEventScript Memory](history/GameEventScript.Memory.md) preserves the former
+development memory as historical context. It is not a normative contract and
+may describe intermediate states that the current specifications supersede.
+
 ## Documentation rules
 
 - Normative documents describe only the current contract. They contain no migration history, superseded architecture, or implementation diary.
 - A rule is defined once. Cross-cutting documents use explicit links to the owning document.
 - C#, Swift, Kotlin, C++, and Unity integrations may be idiomatic, but their observable behavior must satisfy the same language-neutral contracts.
-- Work plans, backlogs, test inventories, generated reports, editor bundles, and historical memory files remain outside this directory.
+- Work plans, backlogs, test inventories, generated reports, and editor bundles remain outside the normative specification tree. Historical memory is isolated under `history` and is explicitly non-normative.
 - Public API names shown in a language mapping are not automatically language-neutral requirements unless the public API specification says so explicitly.

@@ -73,8 +73,9 @@ archiviert.
 - [x] Die AIR-generierte Basisstruktur unter
   `_migration/review/generated-scaffold` bereitstellen.
 - [x] Keine der beiden Strukturen vor der Analyse zusammenführen.
-- [ ] GitHub-Remote, Default Branch, Sichtbarkeit, Branch Protection und
-  vorhandene Initial-Commits dokumentieren.
+- [x] GitHub-Remote, Default Branch, private Sichtbarkeit und vorhandene
+  Initial-Commits dokumentieren.
+- [ ] Branch Protection vor dem finalen `main`-Cutover prüfen und festlegen.
 
 ## Phase 1 – Bestehendes Monorepo und Scaffold analysieren
 
@@ -477,6 +478,12 @@ Abnahme:
 - [ ] Unity kann die freigegebenen C#-DLLs in einem externen Testprojekt laden.
 
 ## Phase 9 – GitHub-Cutover
+
+Remote-Zwischenstand: Der private Branch `migration/plastic-import` enthält den
+lokal geprüften Phase-7-Stand
+`036147b82c72cd353569144a6e0492a6b9e52c98`. `origin/main` bleibt unverändert auf dem unabhängigen
+Initialcommit `c8191b17a532aeb377779082f7699944b3168513`. Es wurden noch keine Tags
+und kein finaler Default-Branch-Stand veröffentlicht.
 
 - [ ] Vollständige lokale Abnahme des Zielrepositories protokollieren.
 - [ ] GitHub-Remote und Zielorganisation nochmals prüfen.

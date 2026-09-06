@@ -1004,47 +1004,22 @@ Corpus-Fingerprint 8FED2D7804CE9D6A2A7D593AF4692B0CFB0D97F800DD72F52BFEDEA9132DE
 dotnet format --verify-no-changes passed for production and tests
 ```
 
-## 7. Opcode- und Formatdefinition zentralisieren
+## 7. Monorepo-Migration und Packaging-/Integrationsschnitt
 
-[Bytecode.md](/Users/stephan/Projects/BattleClub/BeamableServices/services/StepH-GameEventScript/Documentation/Specification/Bytecode.md) und die C#-Enums duplizieren momentan Informationen manuell.
+Die portable C#-Library liegt derzeit innerhalb eines Beamable Service und hängt
+über dessen Projektstruktur indirekt an Beamable- und Unity-Paketen, obwohl im
+portablen Produktionscode keine Beamable-Verwendung gefunden wurde. Siehe
+[StepH-GameEventScript.csproj](/Users/stephan/Projects/BattleClub/BeamableServices/services/StepH-GameEventScript/StepH-GameEventScript.csproj).
 
-Für das Monorepo sollte es eine zentrale maschinenlesbare Definition geben, etwa YAML oder JSON:
+Diese Abhängigkeiten werden nicht mehr separat in der bestehenden Struktur
+bereinigt. Beamable besitzt oder regeneriert möglicherweise Teile der Service-
+und Projektstruktur; isolierte Änderungen daran könnten deshalb Beamable-Tooling
+und Deployment beschädigen oder später überschrieben werden. Die Trennung
+erfolgt zusammen mit dem Umzug in das bereits bestehende Monorepo.
 
-- Opcode-ID
-- Name
-- Operanden
-- Flags
-- Einheiten
-- gültige Kombinationen
-- Bind-Kinds
-- Value-Kinds
-- Binary-Versionen
+Im Monorepo wird zunächst ausschließlich die vorhandene C#-Implementierung aufgenommen. Weitere Sprachverzeichnisse müssen nicht vorab mit Platzhaltern oder noch nicht nutzbarem generiertem Code befüllt werden.
 
-Daraus können generiert werden:
-
-- C#-, Swift-, Kotlin- und C++-Enums
-- Validator-Tabellen
-- Opcode-Dokumentation
-- Dumper-Metadaten
-
-Das verhindert unbemerkte numerische Abweichungen.
-
-## 8. Projekt- und Packaging-Abhängigkeiten bereinigen
-
-Die portable C#-Library hängt momentan über das Projekt an Beamable und damit indirekt an Unity-Paketen, obwohl im Produktionscode keine Beamable-Verwendung gefunden wurde. Siehe [StepH-GameEventScript.csproj](/Users/stephan/Projects/BattleClub/BeamableServices/services/StepH-GameEventScript/StepH-GameEventScript.csproj).
-
-Vor beziehungsweise während des Imports:
-
-- `Beamable.Common` aus dem portablen Projekt entfernen
-- Beamable-Integration als eigenes Adapter-/Packaging-Projekt
-- prüfen, ob `System.Text.Json` im Core überhaupt gebraucht wird; derzeit offenbar nicht
-- Core ohne Unity-Abhängigkeiten bauen
-- CSharpBridge als klar getrenntes Package/Assembly
-- Unity-Package definieren, das die C#-DLL konsumiert
-- IL2CPP-, AOT- und Trimming-Verhalten prüfen
-- Reflection-Registrierung für Unity gegebenenfalls durch manuelle oder generierte Registries ergänzen
-
-## 9. Monorepo-Struktur
+### Zielstruktur
 
 Empfohlene logische Struktur:
 
@@ -1064,9 +1039,6 @@ Empfohlene logische Struktur:
 
 /implementations
   csharp
-  swift
-  kotlin
-  cpp
 
 /integrations
   unity
@@ -1077,32 +1049,62 @@ Empfohlene logische Struktur:
   baselines
 
 /tools
-  opcode-generation
   binary-inspection
   conformance-runner
 ```
 
+`swift`, `kotlin`, `cpp` und `opcode-generation` werden erst angelegt, wenn die jeweilige Arbeit tatsächlich beginnt.
+
 Wichtig:
 
 - Specs und Fixtures existieren genau einmal.
-- Keine Sprache bekommt eine eigene Kopie der JSON-Dateien.
+- Keine Implementierung bekommt eine eigene Kopie des Conformance-Corpus oder der Fixtures.
 - Alle Implementierungen referenzieren dieselbe Bytecode-Version.
 - Buildartefakte und generierte Dateien werden klar getrennt.
-- Import möglichst mit erhaltener Git-Historie.
+- Eine eindeutige Source of Truth wird beim Umschalten hergestellt; die Implementierung darf nicht dauerhaft im Beamable Service und im Monorepo parallel gepflegt werden.
+- Soweit die vorhandene Historie fachlich hilfreich und ohne unverhältnismäßigen
+  Aufwand übertragbar ist, wird sie erhalten. Fehlende oder wenig aussagekräftige
+  Althistorie darf den Umzug nicht blockieren.
 - Lizenz, Package-Namen, Versionierung und Releaseprozess festlegen.
 
-Die konkrete Einpassung in das bereits existierende Monorepo konnte ich nicht prüfen, weil es in diesem Workspace nicht vorliegt.
+### Packaging- und Integrationsgrenzen beim Umzug
 
-## 10. CI-Matrix
+- Portable Core, Compiler und Runtime werden als Beamable- und Unity-unabhängige C#-Assembly aufgebaut.
+- `CSharpBridge` wird eine getrennte Assembly beziehungsweise ein getrenntes
+  Package für Reflection, Delegates, Threading und andere C#-spezifische Komfortfunktionen.
+- Es wird geprüft, ob `System.Text.Json` außerhalb des Conformance- oder
+  Adapterbereichs überhaupt benötigt wird; der portable Runtime-Core soll davon unabhängig bleiben.
+- Beamable erhält eine eigene Integration, welche die unabhängigen Assemblies
+  über einen von Beamable unterstützten und nicht bei Regeneration verlorenen Mechanismus konsumiert.
+- Unity konsumiert die C#-DLL beziehungsweise später ein eigenes Unity-Package; der Core übernimmt keine Unity-Abhängigkeit.
+- IL2CPP-, AOT- und Trimming-Verhalten werden an der Unity-Integration geprüft.
+- Reflection-basierte Registrierung kann für Unity bei Bedarf durch manuelle oder später generierte Registries ergänzt werden.
+
+### Migrationsprinzip
+
+1. Eigentum und Regenerationsverhalten der aktuellen Beamable-Dateien und Projektdateien feststellen.
+2. Die tatsächliche Struktur und die bestehenden Konventionen des Ziel-Monorepos untersuchen.
+3. Specs, Conformance-Corpus, Fixtures und Benchmarks als gemeinsame, sprachneutrale Bestände übernehmen.
+4. Unabhängige C#-Projekte für Core, `CSharpBridge`, Conformance und native Tests im Monorepo erzeugen.
+5. Erst in diesen neuen Projekten Beamable-, Unity- und unnötige Package-Abhängigkeiten entfernen.
+6. Den vollständigen C#-Referenzstand im Monorepo bauen und gegen dieselben Conformance-, Binary-, API-, Performance- und Allokationsreferenzen prüfen.
+7. Beamable- und Unity-Integrationen gegen die neuen Assemblies anbinden und ihre jeweiligen Build-/Deploymentwege prüfen.
+8. Nach erfolgreichem Cutover die alte Implementierung aus dem Beamable Service entfernen oder auf einen schmalen Integrationsadapter reduzieren.
+
+Die konkrete Einpassung muss anhand des bereits existierenden Monorepos geplant
+werden; dessen tatsächliche Struktur, Buildsysteme und Konventionen haben
+Vorrang vor der obigen schematischen Darstellung.
+
+## 8. CI-Matrix
 
 Das Monorepo braucht gemeinsame Gates:
 
 - alle Sprachimplementierungen bauen
-- JSON Schema validieren
+- alle Conformance-Markdowns strikt parsen und validieren
 - alle Conformance-Runner ausführen
 - kanonische `.gesb`-Fixtures lesen
 - Writer-Ergebnisse byteweise vergleichen
-- Generated Opcode-Dateien auf Drift prüfen
+- nach Einführung einer zentralen Opcode-Definition deren generierte Dateien auf Drift prüfen
 - Compilerfehler und Source Ranges vergleichen
 - Sanitizer für C++
 - Swift/Kotlin/C# Unit Tests
@@ -1116,13 +1118,13 @@ Zusätzlich empfehlenswert:
 - Property Tests für Writer/Reader
 - Corpus für beschädigte `.gesb`-Dateien
 
-## 11. Performance- und Allokationsvertrag
+## 9. Performance- und Allokationsvertrag
 
 Performance-Conformance sollte nicht einfach Laufzeiten verschiedener CI-Maschinen vergleichen.
 
 Stattdessen:
 
-- gemeinsame JSON-Workloads
+- gemeinsame Markdown-Conformance-Workloads
 - native Benchmark-Harnesses je Sprache
 - Message-Erzeugung, JSON-Decoding, Linking und VM-Ausführung getrennt messen
 - Warmup eindeutig definieren
@@ -1141,55 +1143,69 @@ Stattdessen:
 
 C++ benötigt dabei eher Allocator-Instrumentierung, Swift Instruments/XCTest-Metriken, Kotlin JMH beziehungsweise Android-Benchmarks und C# BenchmarkDotNet/GC-Zähler.
 
-## 12. Dokumentation konsolidieren
+## 10. Bytecode weiterentwickeln und Opcode-/Formatdefinition zentralisieren
 
-Vor Beginn der Ports sollten die Dokumente in drei Klassen geteilt werden:
+Dieser Punkt wird ausdrücklich erst nach der Monorepo-Migration bearbeitet.
+[Bytecode.md](/Users/stephan/Projects/BattleClub/BeamableServices/services/StepH-GameEventScript/Documentation/Specification/Bytecode.md)
+und die C#-Enums duplizieren momentan Informationen manuell; die bestehende
+mechanische Konsistenzprüfung ist dafür vorerst ausreichend.
 
-- normative Spezifikation
-- Implementierungsnotizen
-- historisches Memory/Handoff
+Das aktuelle Opcodeformat ist stabil genug als Referenz, aber noch nicht als endgültige Grundlage eines sprachübergreifenden Generators beschlossen. Zuvor sollen im Monorepo insbesondere folgende Möglichkeiten untersucht und gemessen werden:
 
-Normativ sollten sein:
+- I64- und Binary64-Konstanten in Constant Pools
+- Immediate-Operanden für Formen wie `Add r0, r1, #12345`
+- Unterscheidung von Register-, Immediate- und Constant-Pool-Operanden
+- kompaktere feste oder gegebenenfalls variable Instruction-Layouts
+- Adressbreiten, Constant-Pool-Indizes und Decoding-Kosten
+- Auswirkungen auf `.gesb`, Validator, Dumper, VM-Hot-Path und Portierbarkeit
 
-- Sprachsemantik
-- Bytecodeformat
-- Opcodeformen
-- Host-State-Machine
-- API-Verantwortlichkeiten
-- Conformance-Schema
-- Fehlercodes
+Erst nach dieser Stabilisierung wird das Autorenformat für eine zentrale
+maschinenlesbare Definition festgelegt. JSON ist keine Vorentscheidung; eine
+tabellarische Darstellung, TSV, YAML oder eine kleine deklarative DSL müssen
+anhand des dann tatsächlichen Modells verglichen werden.
 
-[GameEventScript.Memory.md](/Users/stephan/Projects/BattleClub/BeamableServices/services/StepH-GameEventScript/GameEventScript.Memory.md) sollte nicht als Portierungsvertrag dienen, sondern nur als Historie. Widersprüche zwischen Code, Memory und Specs müssen vor der jeweiligen Portierung aufgelöst werden.
+Die spätere zentrale Definition kann mindestens enthalten:
+
+- Opcode-ID und Name
+- erlaubte Operandenformen
+- Flags, Einheiten und gültige Kombinationen
+- Bind-, Value- und Section-Kinds
+- relevante Binary- und Bytecodeversionen
+
+Daraus können eingecheckte C#-, Swift-, Kotlin- und C++-Enums beziehungsweise
+Deskriptortabellen, Validator-Metadaten, Dumper-Metadaten und Dokumentation
+erzeugt werden. Der Generator ist ein Maintainer-Tool; normale IDE- und
+Produkt-Builds konsumieren eingecheckte generierte Quellen und benötigen ihn
+nicht. CI prüft Definition und generierte Ausgaben auf Drift.
 
 ## Empfohlene Reihenfolge
 
-### Phase A – vor oder direkt beim Import
+### Phase A – Monorepo-Cutover mit C# als Referenz
 
-1. Zielumfang je Sprache festlegen: Compiler, Runtime oder beides.
-2. Monorepo-Verzeichnisse und gemeinsame Spec-Ablage anlegen.
-3. sprachneutrale Text-, Zahlen-, Fehler- und Ownership-Verträge festlegen.
-4. External-Type-Metadaten von CLR-Bindings trennen.
-5. JSON-Schema und Runner-Vertrag definieren.
-6. die bereits festgelegte Binary-Version 1 übernehmen und Opcode-IDs über eine
-   zentrale maschinenlesbare Definition stabilisieren.
-7. Beamable/Unity-Abhängigkeit aus dem Core lösen.
+1. Ziel-Monorepo, Buildsysteme, Ownership und bestehende Konventionen untersuchen.
+2. Den gegenwärtigen grünen C#-Stand und seine kanonischen Artefakte als Migrationsbaseline festhalten.
+3. Die von Beamable kontrollierten oder regenerierten Teile der aktuellen Struktur identifizieren.
+4. gemeinsame Spec-, Conformance-, Fixture- und Benchmark-Ablagen im Monorepo einrichten.
+5. unabhängige C#-Projekte für Core, `CSharpBridge`, Conformance und Tests aufbauen und die bestehenden Quellen übernehmen.
+6. Beamable-, Unity- und unnötige Package-Abhängigkeiten ausschließlich an der neuen Source of Truth entfernen.
+7. alle bisherigen C#-Abnahmen im Monorepo reproduzieren.
+8. Beamable- und Unity-Adapter anbinden, ihre Toolingwege prüfen und anschließend den alten Standort stilllegen.
 
-### Phase B – erstes gemeinsames Portierungs-Gate
+### Phase B – Bytecodeentwicklung und gemeinsame Definition
 
-8. kanonische Golden- und Invalid-`.gesb`-Fixtures samt sprachneutralem Manifest
-   aus der bestehenden C#-Implementierung erzeugen und einchecken.
-9. geordnete JSON-Argumentdarstellung einführen.
-10. portable Registry-Fixtures für Extensions und External Types einführen.
-11. portable C#-Tests in JSON überführen.
-12. C# muss sämtliche neuen Fixtures bestehen.
+9. Constant-Pool-, Immediate- und Instruction-Layout-Varianten spezifizieren und messen.
+10. die nächste stabile Bytecode-/Binarygrenze festlegen und durch Fixtures absichern.
+11. anhand dieses Modells ein pflegbares zentrales Autorenformat auswählen.
+12. Generierung eingecheckter Sprachquellen und Dokumentation sowie eine CI-Driftprüfung einführen.
 
 ### Phase C – erste zweite Runtime
 
-13. kleinste Runtime, vermutlich Kotlin oder Swift, gegen bestehende `.gesb`-Fixtures implementieren.
-14. Differential Tests gegen C#.
-15. Host- und Runtime-Conformance vollständig herstellen.
-16. Performance-/Allokationsmessung der zweiten Runtime.
-17. danach weitere Sprachen und Compilerportierungen.
+13. Zielumfang der ersten weiteren Sprache festlegen: zunächst Runtime oder zusätzlich Compiler.
+14. die kleinste weitere Runtime, vermutlich Kotlin oder Swift, gegen bestehende `.gesb`-Fixtures implementieren.
+15. Differential Tests gegen C# ausführen.
+16. Host- und Runtime-Conformance vollständig herstellen.
+17. Performance-/Allokationsmessung der zweiten Runtime ergänzen.
+18. danach weitere Sprachen und Compilerportierungen beginnen.
 
 ## Kein Monorepo-Blocker
 
@@ -1202,8 +1218,10 @@ Diese Backlog-Themen können weiterhin warten:
 - weitere Message-/Emit-Allokationsoptimierung
 - endgültiges Produkt-Wire-Messageformat
 
-Das Conformance-JSON muss allerdings unabhängig davon jetzt stabilisiert werden. Es ist ein Testformat und sollte nicht mit dem späteren Netzwerkformat gekoppelt werden.
+Das Conformance-Format bleibt unabhängig vom späteren Netzwerkformat. Sein
+bereits stabilisierter Vertrag und die vorhandenen `.gesb`-Fixtures bilden
+zusammen mit dem grünen C#-Stand die Abnahmebasis des Umzugs.
 
 Der kritischste Pfad ist damit:
 
-**portabler Semantikvertrag → External-Binding-Trennung → JSON-Schema und Runner-Vertrag → portable `.gesb`-Fixtures → erste zweite Runtime.**
+**Ziel-Monorepo untersuchen → C#-Referenzbestand migrieren und entkoppeln → Beamable/Unity über Integrationen anbinden → Bytecode im Monorepo weiterentwickeln → zentrale Definition stabilisieren → erste zweite Runtime.**

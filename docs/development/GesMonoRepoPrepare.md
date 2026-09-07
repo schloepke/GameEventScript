@@ -3,9 +3,11 @@
 
 ## Ergebnis
 
-Deine drei Punkte sind richtig, reichen aber noch nicht ganz. Vor allem fehlen sprachneutrale Verträge, ohne die Swift, Kotlin, C++ und C# trotz identischer Conformance-Fälle unterschiedlich reagieren könnten.
-
-Wichtig: Der physische Umzug ins Monorepo muss nicht warten, bis alle Punkte fertig sind. Sinnvoll ist, zuerst Struktur und gemeinsame Verträge anzulegen und die weitere Portabilitätsarbeit anschließend direkt im Monorepo durchzuführen.
+Die für den C#-Referenzstand und den Monorepo-Cutover erforderlichen Arbeiten
+sind abgeschlossen. Punkte 1 bis 8 beschreiben den erreichten Sollzustand.
+Reifegradabhängige Benchmarkarbeit sowie die gemeinsame Opcode-/Formatgenerierung
+sind keine Cutover-Voraussetzungen und werden ausschließlich in
+[BACKLOG.md](../../BACKLOG.md) geführt.
 
 ## 1. `.gesb`-Binary vollständig definieren - DONE
 
@@ -702,20 +704,24 @@ Corpus-Fingerprint BB8FFCBBD98EBF330D6ADBBBFFA7DACFEF885CD9B40DAB44231D329DCE98B
 
 ## 6. Normative Dokumentation und öffentliche sprachneutrale API - DONE
 
-Vor der eigentlichen API-Spezifikation werden Sourcecode und Dokumentation auf eine eindeutige, für die Sprachports geeignete Grundlage gebracht. Die neue normative Dokumentation beschreibt ausschließlich den gültigen Ist- und Sollvertrag; Entwicklungshistorie, Migrationen und ersetzte Architekturen gehören nicht hinein. `GameEventScript.Memory.md` bleibt außerhalb der normativen Dokumentation als historische Wissensquelle erhalten.
+Sourcecode und Dokumentation besitzen eine eindeutige, für Sprachports geeignete
+Grundlage. Die normative Dokumentation beschreibt ausschließlich den gültigen
+Vertrag; Entwicklungshistorie, Migrationen und ersetzte Architekturen gehören
+nicht hinein. Die Memory-Datei bleibt unter `../../docs/history` als historische
+Wissensquelle erhalten.
 
 ### 6.1 Formatierungsvertrag festlegen - DONE
 
 Erledigt:
 
-- Die gemeinsame `.editorconfig` enthält ausschließlich Sections für `StepH-GameEventScript` und `StepH-GameEventScript-Tests`; andere Services im Workspace bleiben unbeeinflusst.
-- `CodeStyle.md` definiert den verbindlichen Entwicklungsvertrag für handgeschriebenen C#-Source.
+- Die Root-`.editorconfig` gilt für die C#-Implementierung und ihre Tests, ohne
+  fremde Produkt-Workspaces einzubeziehen.
+- `../../implementation/csharp/CodeStyle.md` definiert den verbindlichen
+  Entwicklungsvertrag für handgeschriebenen C#-Source.
 - Die maximale Zeilenlänge beträgt 250 Zeichen. Deklarationen, Aufrufe und Konstruktoren bleiben einzeilig, solange sie vollständig hineinpassen und lesbar bleiben; eine feste Argumentanzahl erzwingt keinen Umbruch.
 - Notwendige mehrzeilige Parameter-, Argument-, Initializer- und Fluent-Chain-Formen sowie typische C#-Einrückungs-, Klammer-, Spacing- und `using`-Regeln sind festgelegt.
 - Der Vertrag unterscheidet ausdrücklich zwischen Editor-/Roslyn-Regeln und der zusätzlich mechanisch zu prüfenden Zeilenlänge.
 - `AGENTS.md` verweist auf diesen Vertrag, damit spätere Änderungen und Sprachport-Arbeiten dieselben Regeln verwenden.
-
-Die vorhandenen C#-Dateien wurden in diesem Schritt bewusst noch nicht verändert; ihre mechanische Reformattierung ist Gegenstand von 6.2.
 
 Abnahme:
 
@@ -728,11 +734,14 @@ Ausgangsbestand für 6.2: 76 Produktions- und 10 Testzeilen sind länger als 250
 
 Erledigt:
 
-- Alle handgeschriebenen `.cs`-Dateien in `StepH-GameEventScript` und `StepH-GameEventScript-Tests` wurden mit Roslyn nach dem Vertrag aus 6.1 formatiert; dazu gehört auch die kanonische `using`-Reihenfolge.
+- Alle handgeschriebenen `.cs`-Dateien unter `../../implementation/csharp`
+  entsprechen dem Vertrag aus 6.1; dazu gehört auch die kanonische
+  `using`-Reihenfolge.
 - Unnötig fragmentierte Deklarationen wurden wieder zusammengezogen, wenn die vollständige Deklaration einschließlich Einrückung innerhalb von 250 Zeichen bleibt.
 - Die zuvor vorhandenen 76 Produktions- und 10 Testzeilen über 250 Zeichen wurden kontrolliert und ohne fachliche Änderung umgebrochen. Eingebettete Markdown-Testdaten behalten dabei ihren exakten Laufzeitinhalt.
 - Generierte Ausgaben, Golden Files, Markdown-/GESA-Snapshots und Binärfixtures wurden nicht als C#-Source formatiert.
-- Beide Projekte bestehen `dotnet format --verify-no-changes`; keine handgeschriebene C#-Zeile überschreitet 250 Zeichen.
+- Die vollständige Solution besteht `dotnet format --verify-no-changes`; keine
+  handgeschriebene C#-Zeile überschreitet 250 Zeichen.
 - API-Snapshot, vollständige Markdown-Conformance und alle übrigen Nicht-Performance-Tests sowie Performance-/Allokationsreferenzen sind unverändert erfolgreich.
 
 Abnahme:
@@ -743,46 +752,43 @@ Abnahme:
 0 C# source lines exceed 250 characters
 ```
 
-Die bereits bekannten XML-Dokumentationswarnungen für `GesValueMap` bleiben unverändert und gehören nicht zu diesem mechanischen Formatierungsschritt.
+Öffentliche XML-Dokumentationswarnungen werden nicht unterdrückt und sind als
+Buildfehler konfiguriert.
 
 ### 6.3 Normative Dokumentationsstruktur anlegen - DONE
 
 Erledigt:
 
-- Unter `StepH-GameEventScript/Documentation` wurde die eindeutige Zielstruktur angelegt:
+- Die eindeutige Dokumentationsstruktur ist:
 
 ```text
-Documentation/
+docs/
   README.md
-  Specification/
-    Language.md
-    PublicApi.md
-    HostRuntime.md
-    ProgramModel.md
-    Bytecode.md
-    BinaryFormat.md
-    AssemblerFormat.md
-    Diagnostics.md
-    Semantics/
-      Text.md
-      Numbers.md
-      Determinism.md
-    Conformance/
-      MarkdownFormat.md
-      Runner.md
-      Environment.md
-      CrossLanguageAcceptance.md
-  Guide/
+  guide/
     README.md
+  development/
+  history/
+specs/
+  Language.md
+  PublicApi.md
+  HostRuntime.md
+  ProgramModel.md
+  Bytecode.md
+  BinaryFormat.md
+  AssemblerFormat.md
+  Diagnostics.md
+  Semantics/
+  Conformance/
 ```
 
-- `Documentation/README.md` ist der zentrale Einstieg und ordnet jeden Vertragsbereich genau einem verantwortlichen Dokument zu; sämtliche aufgeführten Dokumente sind von dort erreichbar.
-- Jedes Zieldokument besitzt bereits eine eindeutige Scope- und Abgrenzungsbeschreibung mit Links auf die jeweils zuständigen Nachbardokumente.
-- Die neuen Spezifikationsdateien sind bis zur inhaltlichen Überführung ausdrücklich als `Structural draft` markiert und erheben noch keinen unvollständigen normativen Anspruch.
-- `Guide/README.md` definiert Lernmaterial ausdrücklich als nicht normativ und verweist für exaktes Verhalten auf den Spezifikationsindex.
-- Arbeitsdokumente, Testinventare, Backlogs, Handoffs, Editor-Dokumente und `GameEventScript.Memory.md` bleiben außerhalb der normativen Struktur.
-- Sämtliche bisherigen technischen Quelldokumente bleiben bis 6.4 beziehungsweise 6.5 unverändert an ihrem bisherigen Ort; dieser Schritt hat keine Inhalte vorzeitig verschoben oder entfernt.
-- Dateinamen, Verzeichnisse und relative Verlinkung sind bereits ohne konzeptionelle Umbenennung in das Monorepo übernehmbar.
+- `../../docs/README.md` ist der zentrale Einstieg und ordnet jeden
+  Vertragsbereich genau einem verantwortlichen Dokument zu.
+- Jedes Spezifikationsdokument besitzt eine eindeutige Scope- und
+  Abgrenzungsbeschreibung mit Links auf die zuständigen Nachbardokumente.
+- `../../docs/guide/README.md` definiert Lernmaterial als nicht normativ und
+  verweist für exaktes Verhalten auf den Spezifikationsindex.
+- Arbeitsdokumente, Backlog, Editor-Dokumente und historische Aufzeichnungen
+  bleiben außerhalb der normativen Struktur.
 
 Abnahme:
 
@@ -796,15 +802,27 @@ All pre-existing source documents remain available for 6.4/6.5
 
 Erledigt:
 
-- Die technischen Verträge wurden an ihre endgültigen Orte unter `../../specs` überführt und dort als normativ markiert. `Language.md` und `PublicApi.md` bleiben bis 6.5 beziehungsweise 6.6 die einzigen strukturellen Entwürfe.
-- Die bisherigen Bytecode-Dokumente wurden in `Specification/Bytecode.md` zusammengeführt. Das Dokument definiert Instruction-Layout, vollständige Opcode-IDs und Operandenformen, Flags, Units, Kontrollfluss, Calls, Validierung und Ausführungssemantik.
-- `.gesb`-Container, Sections, Little-Endian-Encoding, Reader-Retention und Formatvalidierung liegen ausschließlich in `Specification/BinaryFormat.md`.
-- `Specification/AssemblerFormat.md` wurde anhand des Dumpers und der Conformance-Snapshots als vollständiger Vertrag für das menschenlesbare `.gesa`-Format erstellt. Er umfasst Dokumentdirektiven, Segmente, Regions, Source-Zeilen, Labels, symbolische Register und sämtliche Operandformen.
+- Die technischen Verträge liegen an ihren endgültigen Orten unter `../../specs`
+  und sind dort normativ. `Language.md` und `PublicApi.md` sind vollständig in
+  den kanonischen Spezifikationsindex eingebunden.
+- Die Bytecode-Verträge sind in `../../specs/Bytecode.md` zusammengeführt. Das
+  Dokument definiert Instruction-Layout, vollständige Opcode-IDs und
+  Operandenformen, Flags, Units, Kontrollfluss, Calls, Validierung und
+  Ausführungssemantik.
+- `.gesb`-Container, Sections, Little-Endian-Encoding, Reader-Retention und
+  Formatvalidierung liegen ausschließlich in `../../specs/BinaryFormat.md`.
+- `../../specs/AssemblerFormat.md` ist der vollständige Vertrag für das
+  menschenlesbare `.gesa`-Format. Er umfasst Dokumentdirektiven, Segmente,
+  Regions, Source-Zeilen, Labels, symbolische Register und sämtliche
+  Operandformen.
 - Host-State-Machine und Laufzeitverantwortlichkeiten liegen in `HostRuntime.md`, Program-Ownership und Serialisierbarkeit in `ProgramModel.md`, Diagnostics in `Diagnostics.md` und die portablen Detailsemantiken unter `Semantics`.
 - Conformance-Autorenformat, Runner, feste Umgebung und Cross-Language-Abnahme wurden in die vier Conformance-Spezifikationen überführt.
 - Alle aktiven Verweise wurden auf die endgültigen Pfade umgestellt. Die vollständig abgelösten technischen Root-Dokumente wurden entfernt; es gibt keine Redirect-, Legacy- oder Historienkapitel in den normativen Zieldokumenten.
-- `GameEventScript.md` bleibt ausschließlich als Wissensquelle für 6.5 bestehen. `GameEventScript.Memory.md` bleibt als historische Aufzeichnung unverändert außerhalb der normativen Struktur.
-- Punkt 7 bleibt für die spätere maschinenlesbare Opcode-Quelle verantwortlich. Die aktuelle manuelle Opcode-Tabelle ist vollständig und wurde mechanisch gegen den öffentlichen Enum geprüft.
+- Die historische Memory-Datei liegt ausschließlich unter `../../docs/history`
+  und ist keine normative oder operative Quelle.
+- Die aktuelle manuelle Opcode-Tabelle ist vollständig und wird mechanisch gegen
+  den öffentlichen Enum geprüft. Eine mögliche spätere maschinenlesbare Quelle
+  steht ausschließlich in [BACKLOG.md](../../BACKLOG.md).
 
 Abnahme:
 
@@ -850,8 +868,11 @@ Erledigt:
 - Core ist normativ synchron, threadlos und unsynchronisiert. Ein Host ist seriell, aber nicht thread-affin; Reflection, Delegates, Locks, Tasks, Filesystem-Helfer und Dictionary-Conveniences bleiben sprachspezifische Adapter.
 - Publish-Sink-Exceptions werden vom Host in eine Runtime-Diagnostic überführt und beschädigen lokales Enqueue nicht. Observer und Conformance-Result-Sinks dürfen nicht werfen; ein Verstoß liegt ausdrücklich außerhalb der Host-/Runner-Recovery-Garantien.
 - `GameEventScriptProgram` bleibt ausschließlich durch Compiler oder Reader öffentlich erzeugbar und transportiert nur `.gesb`-darstellbare Daten. Writer, Validator, Dumper und Reader besitzen getrennte, klar benannte Trust- und I/O-Grenzen.
-- Die C#-, Swift-, Kotlin-, C++- und Unity-Abbildungen müssen semantisch gleich, aber nicht namens- oder typformgleich sein. Das derzeit colocated Conformance-Package kann ohne konzeptionelle API-Änderung in ein optionales Monorepo-Modul verschoben werden.
-- `Documentation/README.md` führt nun alle Spezifikationen, einschließlich Public API, als normativ; es verbleibt kein struktureller Dokumententwurf.
+- Die C#-, Swift-, Kotlin-, C++- und Unity-Abbildungen müssen semantisch gleich,
+  aber nicht namens- oder typformgleich sein. Das Conformance-Package liegt als
+  unabhängig verschiebbares Projekt neben Core und `CSharpBridge`.
+- `../../docs/README.md` führt alle Spezifikationen einschließlich Public API
+  als normativ; es verbleibt kein struktureller Dokumententwurf.
 
 Abnahme:
 
@@ -868,7 +889,10 @@ All specification documents are normative
 
 Erledigt:
 
-- Sämtliche öffentlich sichtbaren C#-Typen und Member in API, Runtime, `CSharpBridge` und Conformance besitzen XML-Dokumentation; der Compiler exportiert weiterhin keine öffentlichen Typen. Vorhandene fachliche Kommentare wurden bewahrt und zentrale Eingangs-APIs gegen `Specification/PublicApi.md` inhaltlich geschärft.
+- Sämtliche öffentlich sichtbaren C#-Typen und Member in API, Runtime,
+  `CSharpBridge` und Conformance besitzen XML-Dokumentation; der Compiler
+  exportiert weiterhin keine öffentlichen Typen. Zentrale Eingangs-APIs sind
+  gegen `../../specs/PublicApi.md` dokumentiert.
 - Host, Context, Program-Codec, Lifecycle, Publish, Observer, C#-Auto-Runner sowie Conformance-Parser und -Runner dokumentieren die jeweils relevanten Ownership-, Lebensdauer-, Nullability-, Seiteneffekt-, Synchronitäts-, Reentrancy- und Fehlerverträge. Die XML-Kommentare bleiben die konkrete C#-Abbildung; die sprachneutrale Norm liegt weiterhin ausschließlich in `PublicApi.md`.
 - Das Hauptprojekt erzeugt bei jedem Build `StepH.GameEventScript.xml`. Fehlende öffentliche Dokumentation sowie ungültige XML-Struktur, Parameter-, Typparameter- und `cref`-Angaben sind als Buildfehler konfiguriert statt unterdrückt zu werden.
 - Alle handgeschriebenen `#pragma`-Direktiven wurden aus Produktions- und Testcode entfernt. Damit sind insbesondere die früher unterdrückten `GesValueMap`-Dokumentationswarnungen tatsächlich behoben.
@@ -892,11 +916,20 @@ Erledigt:
 
 - Der Rechteinhaber ist dauerhaft als natürliche Person `Stephan Schlöpke` festgelegt. Die kanonische UTF-8-Schreibweise mit `ö` wird nicht parallel durch eine ASCII-Identität ersetzt; eine aktuelle oder spätere freiberufliche Geschäftsbezeichnung ist bewusst nicht Teil des stabilen Copyright-Hinweises.
 - `2026` ist das feste Erstveröffentlichungsjahr. Es wird weder beim Build noch bei späteren Routineänderungen automatisch fortgeschrieben oder in einen rollenden Zeitraum umgewandelt.
-- `StepH-GameEventScript/LICENSE` enthält bytegenau den unveränderten offiziellen Apache-License-2.0-Text. `LICENSING.md` definiert Geltungsbereich, kanonische Kurzheader, Jahreskonvention, technisch begründete Ausnahmen und den Umgang mit künftigem Drittmaterial.
-- Alle handgeschriebenen C#-Quellen in Produktion und Tests, reguläre Projekt-/Spezifikations-/Guide-/README-Markdowns, beide C#-Projektdateien, die GES-spezifische EditorConfig und Gitignore sowie XML-basierte TextMate-Dateien tragen passende Copyright- und SPDX-Header.
+- `../../LICENSE` enthält bytegenau den unveränderten offiziellen
+  Apache-License-2.0-Text. `../../LICENSING.md` definiert Geltungsbereich,
+  kanonische Kurzheader, Jahreskonvention, technisch begründete Ausnahmen und
+  den Umgang mit künftigem Drittmaterial.
+- Alle handgeschriebenen C#-Quellen in Produktion und Tests, reguläre
+  Projekt-/Spezifikations-/Guide-/README-Markdowns, C#-Projektdateien,
+  EditorConfig, Gitignore sowie XML-basierte TextMate-Dateien tragen passende
+  Copyright- und SPDX-Header.
 - Streng geparste Conformance-Suites und Parser-Fixtures, Golden-/Received-/Report-Dateien, JSON/TSV ohne Kommentarsyntax, `.ges`-Testinputs, `.gesb`-Fixtures, Build-/Testergebnisse und Betriebssystemmetadaten bleiben absichtlich unverändert. Dadurch wurden keine Corpus-Hashes, GESA-Snapshots oder deterministischen Binary-Fixtures aktualisiert.
 - Im aktuellen Sourcebestand wurde kein vendortes Drittmaterial mit eigener Attributionspflicht identifiziert. Paketabhängigkeiten bleiben externe NuGet-Referenzen. Deshalb wird derzeit bewusst keine leere oder erfundene `NOTICE`-Datei erzeugt; künftiges Drittmaterial muss vor Aufnahme separat geprüft werden.
-- `StepH-GameEventScript.csproj` veröffentlicht Autor, Copyright, Beschreibung, `PackageLicenseExpression=Apache-2.0` und Package-README. Das erzeugte NuGet-Paket enthält `LICENSE`, `README.md`, Assembly und XML-Dokumentation.
+- Die drei veröffentlichbaren C#-Projekte deklarieren Autor, Copyright,
+  Beschreibung, `PackageLicenseExpression=Apache-2.0` und Package-README. Die
+  erzeugten NuGet-Pakete enthalten `LICENSE`, `README.md`, Assembly und
+  XML-Dokumentation.
 - Drei mechanische Lizenztests prüfen den offiziellen Lizenz-SHA-256, die bewusste `NOTICE`-Entscheidung, Paketmetadaten und Paketdateien sowie sämtliche vereinbarten Headerbereiche und Ausnahmen.
 
 Abnahme:
@@ -914,12 +947,12 @@ dotnet format --verify-no-changes passed for production and tests
 
 Erledigt:
 
-- `Documentation/README.md` indiziert alle 16 normativen
+- `../../docs/README.md` indiziert alle 16 normativen
   Spezifikationsdokumente genau einmal. Sämtliche lokalen Links innerhalb der
-  Dokumentationshierarchie werden mechanisch auf ein vorhandenes Ziel geprüft.
-- Der bisher außerhalb liegende normative `ConformanceCoverage.md` wurde nach
-  `../../specs/Conformance/Coverage.md` verschoben. Außerhalb
-  der Dokumentationshierarchie verbleiben nur Projekt-/Lizenz-Einstiege,
+  Spezifikationshierarchie werden mechanisch auf ein vorhandenes Ziel geprüft.
+- Der normative Coverage-Vertrag liegt in
+  `../../specs/Conformance/Coverage.md`. Außerhalb der Spezifikationshierarchie
+  verbleiben nur Projekt-/Lizenz-Einstiege,
   Entwicklungsregeln, Implementierungs- und Testinventare, Editorunterlagen,
   ausführbare Testdokumente, generierte Reports und die historische Memory-Datei.
 - `PublicApi.md` legt nun ausdrücklich fest, dass jeder exportierte C#-Typ genau
@@ -1061,71 +1094,13 @@ Weitere CI-Erweiterungen sind ausschließlich in
 [BACKLOG.md](../../BACKLOG.md) geführt und blockieren den abgeschlossenen
 C#-Monorepo-Cutover nicht.
 
-## 9. Performance- und Allokationsvertrag
+## Abschluss
 
-Performance-Conformance sollte nicht einfach Laufzeiten verschiedener CI-Maschinen vergleichen.
-
-Stattdessen:
-
-- gemeinsame Markdown-Conformance-Workloads
-- native Benchmark-Harnesses je Sprache
-- Message-Erzeugung, JSON-Decoding, Linking und VM-Ausführung getrennt messen
-- Warmup eindeutig definieren
-- Zero-allocation-Anforderungen für:
-    - Queue-Dispatch
-    - Handlerauswahl
-    - VM-Resume
-    - Frame-Result
-- erlaubte Allokationen bei:
-    - Program Load
-    - Queue-Wachstum
-    - Register-Wachstum
-    - Output-Message-Erzeugung
-- Speicher-Maxima und Wachstumsregeln dokumentieren
-- Regression-Baselines pro Sprache und Plattform
-
-C++ benötigt dabei eher Allocator-Instrumentierung, Swift Instruments/XCTest-Metriken, Kotlin JMH beziehungsweise Android-Benchmarks und C# BenchmarkDotNet/GC-Zähler.
-
-## 10. Bytecode weiterentwickeln und Opcode-/Formatdefinition zentralisieren
-
-Dieser Punkt wird ausdrücklich erst nach der Monorepo-Migration bearbeitet.
-[Bytecode.md](../../specs/Bytecode.md)
-und die C#-Enums duplizieren momentan Informationen manuell; die bestehende
-mechanische Konsistenzprüfung ist dafür vorerst ausreichend.
-
-Das aktuelle Opcodeformat ist stabil genug als Referenz, aber noch nicht als endgültige Grundlage eines sprachübergreifenden Generators beschlossen. Zuvor sollen im Monorepo insbesondere folgende Möglichkeiten untersucht und gemessen werden:
-
-- I64- und Binary64-Konstanten in Constant Pools
-- Immediate-Operanden für Formen wie `Add r0, r1, #12345`
-- Unterscheidung von Register-, Immediate- und Constant-Pool-Operanden
-- kompaktere feste oder gegebenenfalls variable Instruction-Layouts
-- Adressbreiten, Constant-Pool-Indizes und Decoding-Kosten
-- Auswirkungen auf `.gesb`, Validator, Dumper, VM-Hot-Path und Portierbarkeit
-
-Erst nach dieser Stabilisierung wird das Autorenformat für eine zentrale
-maschinenlesbare Definition festgelegt. JSON ist keine Vorentscheidung; eine
-tabellarische Darstellung, TSV, YAML oder eine kleine deklarative DSL müssen
-anhand des dann tatsächlichen Modells verglichen werden.
-
-Die spätere zentrale Definition kann mindestens enthalten:
-
-- Opcode-ID und Name
-- erlaubte Operandenformen
-- Flags, Einheiten und gültige Kombinationen
-- Bind-, Value- und Section-Kinds
-- relevante Binary- und Bytecodeversionen
-
-Daraus können eingecheckte C#-, Swift-, Kotlin- und C++-Enums beziehungsweise
-Deskriptortabellen, Validator-Metadaten, Dumper-Metadaten und Dokumentation
-erzeugt werden. Der Generator ist ein Maintainer-Tool; normale IDE- und
-Produkt-Builds konsumieren eingecheckte generierte Quellen und benötigen ihn
-nicht. CI prüft Definition und generierte Ausgaben auf Drift.
-
-## Weiteres Vorgehen
-
-Monorepo-Cutover, Packaging-Schnitt und C#-CI sind abgeschlossen. Dieses
-Arbeitsdokument setzt mit Punkt 9 und anschließend Punkt 10 fort. Sobald ein
-dort ebenfalls genanntes Backlog-Thema aktiv bearbeitet wird, wird sein Eintrag
-in [BACKLOG.md](../../BACKLOG.md) im selben Änderungssatz entfernt. Alle übrigen
-Sprachport-, Integrations- und Optimierungsthemen werden ausschließlich im
-Backlog geführt.
+Das Monorepo-Prework ist vollständig abgeschlossen. Die vorhandenen
+Performance- und Allokationstests bleiben bewusst Regression-Gates gegen den
+etablierten C#-Stand und beanspruchen noch nicht, ein plattformübergreifendes
+Benchmarksystem zu sein. Der aktuelle manuell gepflegte Bytecodevertrag bleibt
+durch mechanische Konsistenztests geschützt. Reale Benchmark-Infrastruktur und
+eine mögliche zentrale Opcode-/Formatgenerierung werden erst bei entsprechendem
+Projekt- und Portierungsreifegrad aus [BACKLOG.md](../../BACKLOG.md) in einen
+aktiven Arbeitsplan übernommen.

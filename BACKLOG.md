@@ -32,13 +32,16 @@ here.
 
 - Redesign numeric and other constant pools together with immediate operands and
   measure compact instruction layouts, including forms such as arithmetic with a
-  directly addressed constant.
+  directly addressed constant. Start this work with the first Swift port rather
+  than optimizing the current C#-only representation for hypothetical consumers.
 - Stabilize the next bytecode and binary boundary with canonical fixtures before
   making it the input to additional runtimes.
-- After the format stabilizes, choose a maintainable central tabular opcode and
-  format definition, generate checked-in language sources and documentation, and
-  add a CI drift gate. Normal product and IDE builds must not require the
-  generator.
+- During the first Swift port, allow an explicit, mechanically checked duplicate
+  opcode and format description long enough to expose the real commonalities and
+  language-specific differences. Based on that evidence, decide whether a
+  maintainable central tabular definition is beneficial; only then generate
+  checked-in language sources and documentation and add a CI drift gate. Normal
+  product and IDE builds must never require the generator.
 - Specify and implement optional `.gesb` compression codecs separately; V1 only
   reserves the codec bits and emits known sections uncompressed.
 - Specify signatures, certificates or keys, trust policy and rollback behavior
@@ -66,8 +69,6 @@ here.
 - Add an independent CI job with build, unit tests, strict shared Conformance,
   canonical `.gesb` fixtures and cross-language result comparison for every new
   implementation. A future C runtime additionally requires sanitizer jobs.
-- Add a real benchmark and allocation harness for each port rather than comparing
-  platform-specific results through the C# harness.
 - Add SwiftPM and Maven publication only with their real implementations; do not
   introduce empty package scaffolds.
 - Consider a C runtime and optional thin C++ facade when gaming adoption or a
@@ -93,6 +94,12 @@ here.
 
 ## Performance and optimizer follow-ups
 
+- Treat the current performance and allocation tests as regression gates against
+  the established C# baseline. In a more mature multi-runtime state, design a
+  real benchmark system with representative multi-program workloads, separated
+  compile/load/message/VM measurements, native harnesses per language and a
+  documented build-host/toolchain calibration index instead of comparing raw
+  timings from unrelated machines.
 - Add bounded fuzzing for the `.gesb` reader and property-based Reader/Writer
   tests without weakening the existing canonical and malformed fixture corpus.
 - Improve CFG/liveness-based register allocation and reuse of non-overlapping

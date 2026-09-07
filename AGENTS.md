@@ -39,6 +39,15 @@ dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH.GameEv
 - `BACKLOG.md` is the canonical list of deferred work. Consult it when changing
   adjacent architecture, but implement an entry only when the user makes it part
   of the current task. Remove completed entries in the completing change.
+- Observable behavior changes must update the implementation, shared Markdown
+  Conformance cases, and the owning normative specification together.
+- Source-syntax changes must additionally update both TextMate grammars under
+  `tools/editors`.
+- Public API changes must additionally update XML documentation,
+  `specs/PublicApi.md`, and the approved API snapshot.
+- Bytecode or `.gesb` changes must additionally update the owning specification,
+  validators, canonical/invalid fixtures, Golden bytes, and affected GESA
+  snapshots.
 
 ## Current Architecture Direction
 
@@ -378,7 +387,7 @@ All Documentation links resolve and all Markdown code fences are balanced
   `AssemblerFormat.md` now normatively defines the complete human-readable
   `.gesa` output emitted by the Program dumper.
 - Migrated technical root specifications were removed after their links were
-  redirected. `GameEventScript.Memory.md` remains untouched as history.
+  redirected.
 - Non-normative guides retain a separate documentation root; the complete
   normative API contract is recorded above.
 

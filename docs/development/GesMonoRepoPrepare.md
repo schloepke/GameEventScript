@@ -1003,7 +1003,7 @@ Abnahme:
 1166/1166 non-performance test executions passed
 5/5 explicit Markdown performance tests passed
 1/1 zero-allocation hot-path test passed
-Corpus-Fingerprint 8FED2D7804CE9D6A2A7D593AF4692B0CFB0D97F800DD72F52BFEDEA9132DE958
+Corpus-Fingerprint 87677320758639E5B213474857AD3E82E2E68A5F50A12063F762D6EAB6347637
 dotnet format --verify-no-changes passed for production and tests
 ```
 

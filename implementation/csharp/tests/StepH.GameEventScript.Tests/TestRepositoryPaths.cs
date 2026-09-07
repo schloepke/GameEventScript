@@ -1,8 +1,6 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-using System.Runtime.CompilerServices;
-
 namespace StepH_GameEventScript_Tests;
 
 internal static class TestRepositoryPaths
@@ -27,9 +25,18 @@ internal static class TestRepositoryPaths
 
     internal static string ConformanceArtifactsDirectory { get; } = Path.Combine(Root, "artifacts", "conformance");
 
-    private static string FindRoot([CallerFilePath] string sourceFile = "")
+    private static string FindRoot()
     {
-        var directory = new DirectoryInfo(Path.GetDirectoryName(sourceFile)!);
+        foreach (var candidate in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
+            if (FindRootFrom(candidate) is { } root)
+                return root;
+
+        throw new DirectoryNotFoundException("Could not locate the Game Event Script monorepo root.");
+    }
+
+    private static string? FindRootFrom(string path)
+    {
+        var directory = new DirectoryInfo(path);
         while (directory is not null)
         {
             if (File.Exists(Path.Combine(directory.FullName, "LICENSE")) &&
@@ -42,6 +49,6 @@ internal static class TestRepositoryPaths
             directory = directory.Parent;
         }
 
-        throw new DirectoryNotFoundException("Could not locate the Game Event Script monorepo root.");
+        return null;
     }
 }

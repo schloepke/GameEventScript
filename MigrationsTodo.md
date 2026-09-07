@@ -458,24 +458,40 @@ Abnahme:
 
 ## Phase 8 – C#-Distribution vorbereiten
 
-- [ ] Reproduzierbare C#-DLL- und NuGet-Artefakte ausschließlich unter dem
+- [x] Reproduzierbare C#-DLL- und NuGet-Artefakte ausschließlich unter dem
   ignorierten lokalen `artifacts/`-Pfad erzeugen.
-- [ ] Package-Inhalt, Lizenz, README, XML-Dokumentation, Symbole und
+- [x] Package-Inhalt, Lizenz, README, XML-Dokumentation, Symbole und
   Abhängigkeitsgraph prüfen.
-- [ ] Einen GitHub-Actions-Releaseweg mit kurzlebiger NuGet-Authentifizierung
+- [x] Einen GitHub-Actions-Releaseweg mit kurzlebiger NuGet-Authentifizierung
   vorbereiten, ohne während der Migration ein öffentliches Release auszulösen.
-- [ ] Die DLLs als ersten dokumentierten Unity-Verwendungsweg prüfen; noch keine
+- [x] Die DLLs als ersten dokumentierten Unity-Verwendungsweg prüfen; noch keine
   vorweggenommene Editor- oder MonoBehaviour-Abstraktion in den Core aufnehmen.
-- [ ] Die spätere SwiftPM- und Maven-Struktur dokumentieren, aber weder leere
+- [x] Die spätere SwiftPM- und Maven-Struktur dokumentieren, aber weder leere
   Ports noch funktionslose Package-Gerüste erzeugen.
 
 Abnahme:
 
-- [ ] Ein lokaler Dry Run erzeugt dieselben veröffentlichbaren C#-Artefakte wie
+- [x] Ein lokaler Dry Run erzeugt dieselben veröffentlichbaren C#-Artefakte wie
   CI.
-- [ ] Keine generierte Release-Datei ist im Git-Index enthalten.
-- [ ] Der portable Core enthält keine Beamable- oder Unity-Abhängigkeit.
+- [x] Keine generierte Release-Datei ist im Git-Index enthalten.
+- [x] Der portable Core enthält keine Beamable- oder Unity-Abhängigkeit.
 - [ ] Unity kann die freigegebenen C#-DLLs in einem externen Testprojekt laden.
+
+Der exakte Unity-DLL-Satz wird bereits durch ein externes, projektfreies
+.NET-Consumer-Projekt geladen und ausgeführt. Die letzte Abnahme bleibt bewusst
+offen, bis ein echtes Unity-Projekt den dort gewählten Scripting-Backend- und
+API-Kompatibilitätsstand geprüft hat; eine gewöhnliche .NET-Ausführung wird
+nicht fälschlich als Unity-Abnahme gewertet.
+
+Umgesetzt sind ein gepinnter SDK-Build, deterministische Assemblies und portable
+PDBs, kanonisch normalisierte unsignierte NuGet-/Symbolpakete, ein Paket- und
+Direkt-DLL-Consumer sowie getrennte CI-, Performance- und Release-Candidate-
+Workflows. Der Release-Candidate-Workflow publiziert nur bei explizitem
+manuellem Schalter, freigeschalteter Repository-Variable und geschützter NuGet-
+Environment über einen kurzlebigen OIDC-Key. Die bisherige Performance-Shell
+hatte entgegen dem Profilnamen Debug-Binaries gebaut; sie verwendet jetzt
+Release, und nur die dadurch reproduzierbar geänderten Allokationsreferenzen
+wurden über den Received-Workflow neu bestätigt.
 
 ## Phase 9 – GitHub-Cutover
 

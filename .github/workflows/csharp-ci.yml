@@ -1,0 +1,58 @@
+# Copyright 2026 Stephan Schlöpke
+# SPDX-License-Identifier: Apache-2.0
+
+name: C# CI
+
+on:
+  push:
+    branches:
+      - main
+      - "migration/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install pinned .NET SDK and test runtime
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.201
+
+      - name: Restore solution
+        run: dotnet restore GameEventScript.sln
+
+      - name: Verify C# formatting
+        run: dotnet format GameEventScript.sln --no-restore --verify-no-changes
+
+      - name: Run non-performance tests
+        run: dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH.GameEventScript.Tests.csproj --configuration Release --no-restore --filter "TestCategory!=Performance"
+
+      - name: Run zero-allocation hot-path gate
+        run: dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH.GameEventScript.Tests.csproj --configuration Release --no-restore --filter "TestCategory=Allocation"
+
+      - name: Build and consume release artifacts
+        run: ./scripts/release-csharp-dry-run.sh 0.1.0-ci.${{ github.run_number }}
+
+      - name: Verify package reproducibility
+        run: ./scripts/verify-csharp-reproducibility.sh 0.1.0-repro.${{ github.run_number }}
+
+      - name: Upload verified C# artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: csharp-artifacts
+          path: |
+            artifacts/csharp/dll/
+            artifacts/csharp/packages/
+          if-no-files-found: error
+          retention-days: 14

@@ -25,6 +25,9 @@ dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH.GameEv
 - Prefer portability toward Swift, Kotlin, C++, and similar targets.
 - Keep C#-specific code in `implementation/csharp/src/StepH.GameEventScript.CSharpBridge`.
 - The portable Core/API/Runtime/Compiler should avoid C#-specific patterns where practical.
+- Generated DLL, NuGet, symbol, report, and release-candidate files belong only
+  under the ignored `artifacts/` tree. Local and CI C# release preparation use
+  `scripts/release-csharp-dry-run.sh`; it must never publish.
 - `CSharpBridge` may use C# idioms such as Reflection, Attributes, `System.Type`, `out`, locks, threads, and `Try...out`.
 - In portable core code, avoid own GES-level `Try...out` concepts. Standard library calls such as `Dictionary.TryGetValue`, `TryAdd`, and `TryParse` are currently accepted.
 - HotPath VM mutation should go through `GesVmState.Set...` methods. Read-only register borrows are currently accepted for performance.
@@ -106,6 +109,10 @@ The project has a portable Game Event Script host/VM architecture with a compact
 - `LICENSE` is the byte-exact Apache-2.0 text;
   `LICENSING.md` owns copyright, header, exclusion, and
   third-party attribution policy.
+- Unsigned NuGet and symbol packages are normalized into a canonical ZIP form
+  and verified before consumption. Never normalize a signed package; signing
+  and public publishing happen only after package IDs and publisher identity are
+  approved.
 
 ## Recent Completed Work
 

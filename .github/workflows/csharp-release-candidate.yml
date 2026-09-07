@@ -1,0 +1,86 @@
+# Copyright 2026 Stephan Schlöpke
+# SPDX-License-Identifier: Apache-2.0
+
+name: C# Release Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: NuGet package version to prepare
+        required: true
+        default: 0.1.0-rc.1
+        type: string
+      publish:
+        description: Publish after environment approval (disabled by default)
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install pinned .NET SDK and test runtime
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.201
+
+      - name: Restore and test
+        run: |
+          dotnet restore GameEventScript.sln
+          dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH.GameEventScript.Tests.csproj --configuration Release --no-restore --filter "TestCategory!=Performance"
+
+      - name: Prepare release candidate without publishing
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: ./scripts/release-csharp-dry-run.sh "$RELEASE_VERSION"
+
+      - name: Upload release candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: csharp-release-${{ inputs.version }}
+          path: |
+            artifacts/csharp/dll/${{ inputs.version }}/
+            artifacts/csharp/packages/*${{ inputs.version }}.*nupkg
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-nuget:
+    if: ${{ inputs.publish && vars.NUGET_PUBLISH_ENABLED == 'true' }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: nuget
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.201
+
+      - name: Download verified release candidate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: csharp-release-${{ inputs.version }}
+          path: release-candidate
+
+      - name: Acquire short-lived NuGet API key
+        id: nuget-login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Publish NuGet packages
+        run: dotnet nuget push "release-candidate/packages/*.nupkg" --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json

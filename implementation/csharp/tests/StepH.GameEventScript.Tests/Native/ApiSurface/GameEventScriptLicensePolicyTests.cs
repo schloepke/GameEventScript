@@ -58,14 +58,13 @@ public sealed class GameEventScriptLicensePolicyTests
     public void HandwrittenFilesCarryTheCanonicalHeaderWhereTheirFormatAllowsIt()
     {
         var workspace = TestRepositoryPaths.Root;
-        var tests = TestRepositoryPaths.TestProjectDirectory;
+        var csharp = Path.Combine(workspace, "implementation", "csharp");
         var failures = new List<string>();
 
-        foreach (var path in TestRepositoryPaths.ProductProjectDirectories.SelectMany(root => EnumerateSourceFiles(root, "*.cs")).Concat(EnumerateSourceFiles(tests, "*.cs")))
+        foreach (var path in EnumerateSourceFiles(csharp, "*.cs"))
             RequirePrefix(path, $"// {CopyrightText}\n// {SpdxText}\n", failures);
 
-        foreach (var path in TestRepositoryPaths.ProductProjectDirectories.SelectMany(root => EnumerateSourceFiles(root, "*.md"))
-                     .Concat(EnumerateSourceFiles(tests, "*.md"))
+        foreach (var path in EnumerateSourceFiles(csharp, "*.md")
                      .Concat(EnumerateSourceFiles(TestRepositoryPaths.SpecificationsDirectory, "*.md"))
                      .Concat(EnumerateSourceFiles(TestRepositoryPaths.DocumentationDirectory, "*.md"))
                      .Concat(EnumerateSourceFiles(TestRepositoryPaths.ConformanceDirectory, "*.md"))
@@ -78,13 +77,14 @@ public sealed class GameEventScriptLicensePolicyTests
 
         RequirePrefix(Path.Combine(workspace, ".editorconfig"), $"# {CopyrightText}\n# {SpdxText}\n", failures);
         RequirePrefix(Path.Combine(workspace, ".gitignore"), $"# {CopyrightText}\n# {SpdxText}\n", failures);
+        RequireNearStart(Path.Combine(workspace, "Directory.Build.props"), failures);
         RequireNearStart(Path.Combine(workspace, "GameEventScript.sln"), failures);
 
         foreach (var path in EnumerateSourceFiles(Path.Combine(workspace, "scripts"), "*.sh"))
             RequireNearStart(path, failures);
 
-        foreach (var projectDirectory in TestRepositoryPaths.ProductProjectDirectories.Append(tests))
-            RequireNearStart(Directory.EnumerateFiles(projectDirectory, "*.csproj", SearchOption.TopDirectoryOnly).Single(), failures);
+        foreach (var path in EnumerateSourceFiles(csharp, "*.csproj")) RequireNearStart(path, failures);
+        foreach (var path in EnumerateSourceFiles(Path.Combine(workspace, ".github", "workflows"), "*.yml")) RequirePrefix(path, $"# {CopyrightText}\n# {SpdxText}\n", failures);
         var editors = Path.Combine(workspace, "tools", "editors");
         foreach (var pattern in new[] { "*.plist", "*.tmLanguage", "*.tmPreferences" })
             foreach (var path in EnumerateSourceFiles(editors, pattern))

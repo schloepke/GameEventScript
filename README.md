@@ -34,11 +34,17 @@ points:
 ./scripts/test-csharp-performance.sh
 ./scripts/format-csharp.sh
 ./scripts/pack-csharp.sh
+./scripts/release-csharp-dry-run.sh 0.1.0-rc.1
+./scripts/verify-csharp-reproducibility.sh 0.1.0-rc.1
 ```
 
 Normal build and test output remains below project-local `bin`/`obj` directories.
 Packages and generated reports are written only below the ignored `artifacts`
 directory.
+
+The [C# distribution guide](docs/guide/distribution/CSharp.md) documents package
+contents, the staged Unity DLL set, reproducibility, and the deliberately gated
+NuGet release workflow.
 
 ## License
 

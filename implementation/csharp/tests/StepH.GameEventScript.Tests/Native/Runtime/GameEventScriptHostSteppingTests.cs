@@ -273,6 +273,7 @@ public sealed class GameEventScriptHostSteppingTests
 
     [TestMethod]
     [TestCategory("Performance")]
+    [TestCategory("Allocation")]
     public void WarmQueueDispatchFrameResultAndVmResumeDoNotAllocate()
     {
         const int iterations = 1_000;

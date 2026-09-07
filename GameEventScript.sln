@@ -2,7 +2,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Copyright 2026 Stephan Schlöpke
 # SPDX-License-Identifier: Apache-2.0
-# Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "implementation", "implementation", "{D596A9B8-B564-04A1-0652-AF983A8D2206}"
@@ -20,6 +19,10 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{F33FEF7E-C1E0-826D-2307-BC8AE74F3057}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StepH.GameEventScript.Tests", "implementation\csharp\tests\StepH.GameEventScript.Tests\StepH.GameEventScript.Tests.csproj", "{1EDB9439-2A86-4B42-8C8A-7EA0B7703148}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{E57CA560-02C8-014B-F406-CB1A60B03E94}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StepH.GameEventScript.PackageTool", "implementation\csharp\tools\StepH.GameEventScript.PackageTool\StepH.GameEventScript.PackageTool.csproj", "{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -79,6 +82,18 @@ Global
 		{1EDB9439-2A86-4B42-8C8A-7EA0B7703148}.Release|x64.Build.0 = Release|Any CPU
 		{1EDB9439-2A86-4B42-8C8A-7EA0B7703148}.Release|x86.ActiveCfg = Release|Any CPU
 		{1EDB9439-2A86-4B42-8C8A-7EA0B7703148}.Release|x86.Build.0 = Release|Any CPU
+		{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}.Debug|x64.Build.0 = Debug|Any CPU
+		{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}.Debug|x86.Build.0 = Debug|Any CPU
+		{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}.Release|x64.ActiveCfg = Release|Any CPU
+		{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}.Release|x64.Build.0 = Release|Any CPU
+		{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}.Release|x86.ActiveCfg = Release|Any CPU
+		{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -91,5 +106,7 @@ Global
 		{95941FB4-E5D4-4AA7-B607-E324F7FA7B31} = {8134A286-E9FF-87CC-ECF8-244F31C8CB00}
 		{F33FEF7E-C1E0-826D-2307-BC8AE74F3057} = {06BB3288-E347-B2E0-C7F5-FEAA4FC752AC}
 		{1EDB9439-2A86-4B42-8C8A-7EA0B7703148} = {F33FEF7E-C1E0-826D-2307-BC8AE74F3057}
+		{E57CA560-02C8-014B-F406-CB1A60B03E94} = {06BB3288-E347-B2E0-C7F5-FEAA4FC752AC}
+		{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F} = {E57CA560-02C8-014B-F406-CB1A60B03E94}
 	EndGlobalSection
 EndGlobal

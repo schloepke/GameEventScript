@@ -45,8 +45,8 @@ per distribution instead of being duplicated in every file.
 
 The header applies to handwritten production and test C#, product documentation,
 specifications, guides, README files, C# project files, the scoped EditorConfig,
-the root Git ignore file, solution and shell entry-point files, and XML-based
-TextMate bundle files.
+the root Git ignore file, MSBuild configuration, GitHub Actions workflows,
+solution and shell entry-point files, and XML-based TextMate bundle files.
 
 ## Intentional header exclusions
 
@@ -60,7 +60,7 @@ by the top-level license but intentionally have no inserted header:
 - generated Conformance reports, result JSON, received approval candidates,
   API snapshots, test results, build outputs, and crash dumps;
 - `.gesb` binary fixtures and other binary assets;
-- strict JSON, TSV, plist-independent JSON TextMate grammars, and other formats
+- strict JSON (including `global.json`), TSV, plist-independent JSON TextMate grammars, and other formats
   that do not admit comments without changing their schema;
 - standalone `.ges` test inputs whose exact source is part of the test;
 - operating-system metadata such as `.DS_Store`.

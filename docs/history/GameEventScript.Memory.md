@@ -3,9 +3,15 @@
 
 # GameEventScript Memory
 
+> [!NOTE]
+> This file preserves architectural reasoning and development history. It is not
+> a current specification, work plan, or backlog. Current contracts live under
+> `specs`, operational guidance lives in `AGENTS.md`, and deferred work lives in
+> `BACKLOG.md`.
+
 ## Portable text and Unicode contract
 
-Text/source portability is now normative in `PortableTextSemantics.md`. Source
+Text/source portability is normative in `specs/Semantics/Text.md`. Source
 files are strict UTF-8 with an optional stripped initial BOM. Names and tags use
 explicit ASCII grammars; no platform Unicode classification defines the
 language. Runtime text preserves exact, unnormalized Unicode scalar sequences,
@@ -16,25 +22,22 @@ programs cache string scalar counts outside the serializable Program.
 
 ## Purpose
 
-This document captures the current architectural state of GameEventScript in the
-standalone `StepH.GameEventScript` module. Future changes should start from
-this file and treat this module as the source of truth.
+This document captures the reasoning and architectural state accumulated before
+and during extraction into the standalone monorepo. It is retained for context,
+but the repository root, `AGENTS.md`, `BACKLOG.md`, and the normative
+specifications supersede its operational instructions.
 
 ## Module Boundary
 
-- Production project: `StepH-GameEventScript/StepH-GameEventScript.csproj`
-- Test project: `StepH-GameEventScript-Tests/StepH-GameEventScript-Tests.csproj`
-- Assembly name: `StepH.GameEventScript`
-- Root namespace: `StepH.GameEventScript`
-- Target framework: `netstandard2.1`
-- Main public docs:
-  - `StepH-GameEventScript/GameEventScript.md`
-  - `StepH-GameEventScript/BytecodeSpec.md`
-  - `StepH-GameEventScript/GameEventScript.bnf`
-
-Legacy pre-rename documentation artifacts were removed. Do not recreate or
-reference pre-rename documentation artifacts. The canonical names are
-`GameEventScript.md`, `GameEventScript.Memory.md`, and `GameEventScript.bnf`.
+- Portable C# Core: `implementation/csharp/src/StepH.GameEventScript`
+- C# adapters: `implementation/csharp/src/StepH.GameEventScript.CSharpBridge`
+- Portable Conformance parser and runner:
+  `implementation/csharp/src/StepH.GameEventScript.Conformance`
+- C# tests: `implementation/csharp/tests/StepH.GameEventScript.Tests`
+- Shared Conformance corpus: `conformance`
+- Normative specifications: `specs`
+- Canonical documentation index: `docs/README.md`
+- Portable library target framework: `netstandard2.1`
 
 ## Namespace Predicate
 
@@ -47,8 +50,10 @@ Expected namespace shape:
 - `StepH.GameEventScript.Api`
 - `StepH.GameEventScript.Compiler`
 - `StepH.GameEventScript.Runtime`
-- `StepH.GameEventScript.BytecodeExecutor`
-- `StepH.GameEventScript.Types`
+- `StepH.GameEventScript.Runtime.VM`
+- `StepH.GameEventScript.Runtime.Values`
+- `StepH.GameEventScript.CSharpBridge`
+- `StepH.GameEventScript.Conformance`
 
 ## Current Architecture
 
@@ -82,7 +87,7 @@ The old AST interpreter, experimental VM paths, `IGameEventScriptModule`,
 module-owned VM, `GameEventScriptSession`, isolated run objects, and automatic
 core dispatcher are removed without compatibility layers.
 
-See `HostArchitecture.md` for the normative responsibility split and portable
+See `specs/HostRuntime.md` for the normative responsibility split and portable
 host state machine.
 
 Lexer, parser, tokens, and AST nodes are internal compiler implementation
@@ -455,7 +460,7 @@ Point(_,_)
 These are distinct signatures. Missing, extra, reordered, or mismatched labels
 produce no subscriber match rather than a runtime exception.
 
-Portable JSON conformance encodes message arguments as an array of `{name,
+Portable Conformance values encode message arguments as an array of `{name,
 value}` objects in signature order. This applies uniformly to input, expected
 local/outbound output, nested `:message` values, and native conformance emits.
 
@@ -488,7 +493,7 @@ Stable language decisions:
   double `NaN`, depending on whether the result is absent or mathematically
   invalid.
 - For mathematical operations, use the newer `NaN`/`Nothing` metaphor anchored
-  in the new `BytecodeExecutor` VM: `Nothing` means absence/unknown and
+  in the register VM: `Nothing` means absence/unknown and
   propagates as `Nothing`; invalid mathematical combinations may produce
   internal numeric `NaN`, but the DSL-visible boundary normalizes NaN to
   `nothing`. The spelling `:nan` is an ordinary tag with no numeric meaning;
@@ -585,7 +590,7 @@ Current performance notes:
   can short-circuit.
 - The indexed list-like path should stay allocation-conscious for normal
   collections.
-- `BytecodeExecutor` is the performance-oriented runtime path. Its design
+- The register VM is the performance-oriented runtime path. Its design
   explores lower allocation execution with persistent register
   storage, staged argument frames, direct opcode helper dispatch, and compact
   VM-native value handling.
@@ -670,7 +675,7 @@ Current observer events are:
 - `RuntimeError`
 
 `RuntimeError` carries the language-neutral diagnostic defined by
-`PortableDiagnostics.md`. A failing handler is aborted/reset while later handlers
+`specs/Diagnostics.md`. A failing handler is aborted/reset while later handlers
 in the captured dispatch snapshot continue. The pump result uses `RuntimeError`
 and carries the first handler diagnostic observed in that pump call. Optional
 debug metadata is for dumps/source lookup and is not required for diagnostics.
@@ -703,14 +708,14 @@ separately.
 
 ## Tests and Conformance
 
-Behavioral tests live in `StepH-GameEventScript-Tests`.
+Behavioral tests live under
+`implementation/csharp/tests/StepH.GameEventScript.Tests`.
 
 Important test areas:
 
-- portable Markdown suites, fixtures and reports under
-  `StepH-GameEventScript-Tests/Conformance`
+- portable Markdown suites and fixtures under `conformance`
 - C#-specific API, compiler, runtime, bridge and Conformance-bootstrap tests
-  under `StepH-GameEventScript-Tests/Native`
+  under `implementation/csharp/tests/StepH.GameEventScript.Tests/Native`
 
 Conformance tests are the portable language/runtime contract. They should test
 observable compile/runtime behavior:
@@ -728,61 +733,51 @@ messages and technical details never determine success.
 Primary verification command:
 
 ```bash
-dotnet test StepH-GameEventScript-Tests/StepH-GameEventScript-Tests.csproj --no-restore
+dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH.GameEventScript.Tests.csproj --filter "TestCategory!=Performance"
 ```
 
 Current verification baseline:
 
-- `dotnet test StepH-GameEventScript-Tests/StepH-GameEventScript-Tests.csproj --no-restore`
-  is the primary validation command.
-- Flow tests are intentionally out of scope for GameEventScript work unless the
-  user explicitly asks for them.
-- `BytecodeExecutorRuntimeCostCanBeReported` is a useful local signal, but it is not a
-  complete performance benchmark for the final VM.
-- JSON conformance is strict against the `BytecodeExecutor` runtime. Conformance
-  mismatches must fail the test run, while the failure output should keep the
-  focused value diffs plus VM state, bytecode, and script dumps for debugging.
+- 1,167 non-performance executions pass in a clean checkout.
+- The zero-allocation hot-path gate passes independently.
+- All six performance/allocation executions pass against the local profile.
+- The release dry run, package and direct-DLL consumers, and byte-identical
+  package reproduction pass.
 
 Conformance includes a runtime collection test for iterable range selectors
 short-circuiting before range materialization. Keep this coverage when changing
 pipeline execution.
 
-Future idea: JSON conformance specs may later move to Markdown-based specs.
-The preferred shape is human-readable Markdown with machine-readable islands:
-YAML frontmatter provides suite metadata, fenced `ges` blocks contain scripts,
-Markdown tables define ordered steps, and ordinary fenced `yaml` blocks use
-`gesBlock: case` or `gesBlock: expect` for typed metadata and expectations.
-Typical Markdown extensions such as tables, admonitions and YAML frontmatter are
-acceptable. A test section should be parseable by convention, for example
-`## Test: name`, followed by one `ges` script block and one or more expectation
-blocks. This keeps conformance close to documentation without forcing the
-expected values back into full JSON blobs.
+The former JSON corpus has been replaced by the normative Markdown format in
+`specs/Conformance/MarkdownFormat.md`. The public fileless parser and runner are
+part of the independently movable Conformance package. Aggregate JSON results,
+Markdown reports, performance references and received approval candidates are
+generated from the shared corpus without a second semantic execution.
 
 The public API snapshot lives at
-`StepH-GameEventScript-Tests/Native/ApiSurface/PublicApiSurface.approved.txt`. Update it only
-when intentionally changing exported API.
+`implementation/csharp/tests/StepH.GameEventScript.Tests/Native/ApiSurface/PublicApiSurface.approved.txt`.
+Update it only when intentionally changing exported API.
 
 ## Documentation
 
-`GameEventScript.md` should remain the human-readable language guide.
-
-`BytecodeSpec.md` should remain the public portable bytecode design reference.
-
-`GameEventScript.bnf` should remain the compact grammar reference.
-It documents skipped trivia as a lexical convention rather than as an ordinary
-parser production. `:number` is the numeric `TypeTag`; `numeric`, `integer`,
-and `fractional` are only valid as `is ...` check keywords.
+`docs/README.md` is the canonical documentation index. The language-neutral
+contract is split by ownership under `specs`, including `Language.md`,
+`Bytecode.md`, `BinaryFormat.md`, `HostRuntime.md`, `PublicApi.md`, the portable
+semantics documents and the Conformance specifications. Human-oriented learning
+material belongs under `docs/guide`; editor support belongs under
+`tools/editors`.
 
 When changing language syntax, update in this order:
 
 1. parser/compiler/runtime implementation
-2. JSON conformance specs
-3. `GameEventScript.md`
-4. `GameEventScript.bnf`
-5. TextMate and TextMate Classic grammars under `StepH-GameEventScript/Editors`
-   when syntax highlighting should reflect the new source syntax
-6. `BytecodeSpec.md` when the portable bytecode shape changes
-7. this memory file when architecture or major semantics change
+2. shared Markdown Conformance cases under `conformance`
+3. the owning normative specification under `specs`
+4. TextMate and TextMate Classic grammars under `tools/editors` when syntax
+   highlighting should reflect the new source syntax
+5. public API and cross-language snapshots when their contracts change
+
+This historical memory is updated only when its context would otherwise direct
+maintainers to removed files or obsolete workflows.
 
 ## Maintenance Checks
 
@@ -791,12 +786,13 @@ Before major GameEventScript changes, verify:
 - production namespaces and using directives resolve inside
   `StepH.GameEventScript`
 - generated `bin`/`obj` files are ignored and not used as source truth
-- docs and tests reference `StepH.GameEventScript`
+- specifications and the shared corpus remain language-neutral
+- deferred work is recorded only in `BACKLOG.md`
 
 ## Intentional Non-Goals
 
-- No long-term second production runtime engine. The old `BytecodeVM` reference
-  runtime has been removed; `BytecodeExecutor` is the only production VM.
+- No long-term second production runtime engine. Historical interpreter and VM
+  experiments have been removed; the register VM is the only production VM.
 - No AST interpreter as reference behavior.
 - No named-argument reordering.
 - No exception-based normal script control flow.
@@ -810,31 +806,15 @@ serial actor, bot, match controller, or other execution unit. A host may load
 multiple reusable programs and native handlers. The host owns deterministic
 random state, its one context, runtime queue, and at most one VM state.
 
-Future game integration should define:
-
-- program loading during host setup or dynamic host operation
-- deterministic seed handshake for multiplayer/replay
-- inbound game messages such as `TurnStarted` or `ActionRequested`
-- outbound script messages such as `ApplyDamage` or `SpawnUnit`
-- domain object converters to and from `GesValue`
-- runtime observer forwarding into game logs/telemetry
-- optional development-only hot reload
-
-Open integration questions:
-
-- Does GameEventScript run server-authoritative only, or also client-side for
-  prediction?
-- Must dispatch run on the Unity main thread, or can it run on a worker with
-  explicit main-thread marshalling?
-- Should queued messages survive reconnect/restart, or stay in-memory only?
-- For replay, do we persist seed plus inbound events, or the full published
-  trace?
-- Which outbound script messages are allowed to mutate game state?
-- How are script versions pinned per match and migrated across live updates?
+Concrete game products own their loading, seed handshake, message vocabulary,
+domain conversion, threading, persistence, replay, versioning and authorization
+policies. They are not portable Core semantics. Reusable GES follow-up work,
+including Unity packaging and development-only hot reload, is tracked only in
+`BACKLOG.md`.
 
 ## Portable number contract
 
-- `PortableNumberSemantics.md` is normative for signed-64 overflow, binary64
+- `specs/Semantics/Numbers.md` is normative for signed-64 overflow, binary64
   special values, saturation, rounding, negative division/modulo, ULP equality,
   transcendental portability, and canonical conformance JSON.
 - Compiler folding and VM execution share `GameEventScriptNumber`; do not
@@ -843,11 +823,11 @@ Open integration questions:
   cross-libm tolerance; set it to `0` for exact finite binary64 cases. Runtime
   script equality remains a separate fixed two-ULP contract.
 - Verification: 1041 non-performance tests, the zero-allocation hot-path test,
-  and the JSON performance reference test pass.
+  and the performance reference test pass.
 
 ## Portable determinism contract
 
-- `PortableDeterminismSemantics.md` is normative for SplitMix64/xoshiro256**,
+- `specs/Semantics/Determinism.md` is normative for SplitMix64/xoshiro256**,
   bounded sampling, script versus structural equality, stable heterogeneous
   ordering, map/record order, iterator/range boundaries, and host dispatch order.
 - Seeded random ports must match the checked-in raw UInt64, bounded integer, and
@@ -870,6 +850,6 @@ Open integration questions:
   performance reference test pass.
 - External types now use separate declarative compile catalogs and host runtime
   registries. Portable runtime values implement `IGameEventScriptExternalValue`;
-  CLR objects and reflection remain in `CSharpBridge`, while JSON conformance
+  CLR objects and reflection remain in `CSharpBridge`, while Markdown Conformance
   uses a manual implementation. Verification: 1059 non-performance tests, the
-  zero-allocation hot-path test, and the JSON performance reference test pass.
+  zero-allocation hot-path test, and the performance reference test pass.

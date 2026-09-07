@@ -36,6 +36,9 @@ dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH.GameEv
 - Every public C# type and member requires valid XML documentation. The library build treats missing or malformed XML documentation as errors; never hide these diagnostics with `#pragma`.
 - Licensing follows `LICENSING.md`: use `Copyright 2026 Stephan Schlöpke` and `SPDX-License-Identifier: Apache-2.0` exactly, preserve the fixed year, retain third-party notices, and do not insert headers into the documented strict/generated/binary exclusions.
 - Do not revert user changes unless explicitly requested.
+- `BACKLOG.md` is the canonical list of deferred work. Consult it when changing
+  adjacent architecture, but implement an entry only when the user makes it part
+  of the current task. Remove completed entries in the completing change.
 
 ## Current Architecture Direction
 
@@ -115,6 +118,21 @@ The project has a portable Game Event Script host/VM architecture with a compact
   approved.
 
 ## Recent Completed Work
+
+### Git Monorepo Cutover
+
+- The filtered PlasticSCM history, current C# implementation, portable
+  specifications, shared Conformance corpus, editor tooling and historical
+  memory now live in this standalone GitHub monorepo.
+- `main` is the only active GES development line. The former PlasticSCM source
+  remains historical product context; its Beamable/Unity cleanup is tracked in
+  Plastic rather than in this repository.
+- A fresh checkout passed Release build, formatting, 1,167 non-performance test
+  executions, the zero-allocation hot-path gate, all six
+  performance/allocation executions, package and direct-DLL consumption, and
+  byte-identical package reproduction.
+- Deferred work formerly recorded by the migration plan and this handoff now
+  lives only in `BACKLOG.md`. The completed migration plan was removed.
 
 ### Compile-Time Constants and Portable Name Grammar
 
@@ -574,7 +592,7 @@ Verification after the parser/runner implementation:
 27/27 native Markdown parser bootstrap tests passed
 7/7 native conformance runner/adapter tests passed
 1/1 zero-allocation hot-path test passed
-1/1 JSON performance reference test passed on confirmation run
+1/1 performance reference test passed on confirmation run
 ```
 
 ### Portable Program Model Hardening
@@ -599,7 +617,7 @@ Verification after this change:
 ```text
 1073/1073 non-performance tests passed
 1/1 zero-allocation hot-path test passed
-1/1 JSON performance reference test passed
+1/1 performance reference test passed
 ```
 
 ### Portable Diagnostic Contract
@@ -611,7 +629,7 @@ Verification after this change:
   publish sinks, and VM failures now expose structured data; C# exceptions are
   transport only.
 - Runtime handler diagnostics flow through the observer and execution result
-  without adding successful hot-path allocations. JSON conformance no longer
+  without adding successful hot-path allocations. Portable Conformance no longer
   matches English error text.
 - `specs/Diagnostics.md` is normative.
 
@@ -620,7 +638,7 @@ Verification after this change:
 ```text
 1069/1069 non-performance tests passed
 1/1 zero-allocation hot-path test passed
-1/1 JSON performance reference test passed
+1/1 performance reference test passed
 ```
 
 ### Ordered Portable Message Arguments
@@ -632,15 +650,15 @@ Verification after this change:
   remain valid positional arguments.
 - Tuple helpers and signature-directed dictionary binding live only in
   `CSharpBridge`.
-- All conformance input/output, nested message values, and native emits use the
-  ordered JSON `args` array. Equality is position-sensitive.
+- All Conformance input/output, nested message values, and native emits use the
+  ordered `args` array. Equality is position-sensitive.
 
 Verification after this change:
 
 ```text
 1067/1067 non-performance tests passed
 1/1 zero-allocation hot-path test passed
-JSON performance allocations and binary dump match the reference; the final
+Performance allocations and binary dump match the reference; the final
 timing run reported only the long mixed case at 818.3905 ms versus an allowed
 817.833885 ms after an earlier passing run. No allocation regression remains.
 ```
@@ -658,7 +676,7 @@ timing run reported only the long mixed case at 818.3905 ms versus an allowed
   load-allocation regression they would introduce.
 - Existing enqueue-time subscription snapshots remain immutable. Detaching or
   unsubscribing removes only future dispatch visibility.
-- JSON conformance uses a manual portable native handler, while C# delegate
+- Portable Conformance uses a manual native handler, while C# delegate
   convenience and automatic serialized pumping remain covered by bridge tests.
 
 Verification after this change:
@@ -666,7 +684,7 @@ Verification after this change:
 ```text
 1061/1061 non-performance tests passed
 1/1 zero-allocation hot-path test passed
-1/1 JSON performance reference test passed
+1/1 performance reference test passed
 ```
 
 ### Portable External-Type Boundary
@@ -682,7 +700,7 @@ Verification after this change:
 - CLR objects, Reflection, Attributes, field readers, constructor invocation,
   and conversion stay in `CSharpBridge`. Its registry implements both portable
   inputs only as a C# convenience adapter.
-- JSON conformance uses a manual external-type catalog, runtime registry, and
+- Portable Conformance uses a manual external-type catalog, runtime registry, and
   value implementation rather than a reflected C# fixture. Reflection behavior
   remains covered by separate bridge tests.
 
@@ -691,7 +709,7 @@ Verification after this change:
 ```text
 1059/1059 non-performance tests passed
 1/1 zero-allocation hot-path test passed
-1/1 JSON performance reference test passed
+1/1 performance reference test passed
 ```
 
 ### Portable Determinism Semantics
@@ -703,14 +721,14 @@ Verification after this change:
   bound. Equal and NaN bounds consume no seeded or `FromSequence` value.
 - Reversed/equal bounds, full Int64 generation, signed/full-width seeds,
   upper-bound rounding, and nested `random with` parent-stream restoration now
-  have direct or JSON conformance coverage.
+  have direct or portable Conformance coverage.
 - Stable sorting, Unicode-scalar map/record order, last-entry-wins duplicate map
   keys, cross-kind equality, strict nested structural equality, iterator order,
   and equal-priority dispatch are one normative contract.
 - Range iterators now stop by their overflow-safe precomputed length. They cannot
   wrap past `Int64` boundaries or repeat forever when a Binary64 step no longer
   changes a large current value.
-- JSON conformance covers equality and range boundaries; existing JSON cases
+- Portable Conformance covers equality and range boundaries; existing cases
   cover stable direct/iterator ordering, map/record order, and script/native plus
   multi-program dispatch order.
 
@@ -719,7 +737,7 @@ Verification after this change:
 ```text
 1057/1057 non-performance tests passed
 1/1 zero-allocation hot-path test passed
-1/1 JSON performance reference test passed
+1/1 performance reference test passed
 ```
 
 ### Portable Number Semantics
@@ -740,7 +758,7 @@ Verification after this change:
 ```text
 1041/1041 non-performance tests passed
 1/1 zero-allocation hot-path test passed
-1/1 JSON performance reference test passed
+1/1 performance reference test passed
 ```
 
 ### Portable Text and Unicode Semantics
@@ -762,7 +780,7 @@ Verification after this change:
 ```text
 1034/1034 non-performance tests passed
 1/1 zero-allocation hot-path test passed
-1/1 JSON performance reference test passed
+1/1 performance reference test passed
 ```
 
 ### Portable `.gesb` V1
@@ -776,7 +794,7 @@ Verification after this change:
 - Source IDs follow `AddScript` order and source mappings use UTF-8 byte offsets.
   `GameEventScriptProgramDumper` consumes embedded source data and interleaves
   source-line comments. It has no legacy API for separately supplied source text.
-- Golden, invalid, retention, Unicode, runtime roundtrip, and JSON binary-roundtrip
+- Golden, invalid, retention, Unicode, runtime roundtrip, and Conformance binary-roundtrip
   tests cover the portable boundary. `specs/BinaryFormat.md` is
   the normative container specification.
 
@@ -785,7 +803,7 @@ Verification after this change:
 ```text
 1024/1024 non-performance tests passed
 1/1 zero-allocation hot-path test passed
-1/1 JSON performance reference test passed
+1/1 performance reference test passed
 ```
 
 ### Static VM Resource Metadata and Acyclic Calls
@@ -801,7 +819,7 @@ Verification after this change:
 - `Host.Load(...)` rejects programs whose declared requirements exceed
   `MaxRegisterValues` or `MaxCallDepth` and uses the register requirement to
   pre-warm the host-owned VM state.
-- JSON conformance covers metadata and load-limit rejection; low-level compiler
+- Portable Conformance covers metadata and load-limit rejection; low-level compiler
   tests cover direct and indirect cycles.
 
 Verification after this change:
@@ -825,7 +843,7 @@ Verification after this architecture change:
 ```text
 993/993 non-performance tests passed
 1/1 zero-allocation hot-path test passed
-1/1 JSON performance reference test passed
+1/1 performance reference test passed
 ```
 
 ### Custom `Try...` Cleanup
@@ -882,58 +900,8 @@ Remaining `Try...` outside `CSharpBridge` should only be standard-library style 
 - `specs/PublicApi.md`
 - `specs/Conformance/Coverage.md`
 
-## Architecture Backlog
+## Backlog
 
-This is the persistent list of intentionally deferred or upcoming architecture
-work. Keep these topics in mind when changing adjacent code, but do not implement
-an item merely because it is listed here. Work on it when the user makes it part
-of the current task. Whenever a backlog item is completed, remove it from this
-section as part of the same change; record the outcome in the relevant normative
-documentation or, when useful for handoff, under `Recent Completed Work`. Do not
-leave completed or checked-off items in the backlog. Keep entries short; if this
-section grows substantially, move the details to a dedicated backlog document
-and retain a required pointer here.
-
-### Next portable architecture steps
-
-- Prioritize the language-neutral contracts, metadata, and portable Markdown
-  conformance needed for the existing Swift/Kotlin/C++/C# monorepo before deeper
-  optimizer work.
-
-### Deferred language and state features
-
-- Add a general immutable collection `fold`/`reduce` concept if concrete use cases
-  exceed the existing specialized aggregations (`sum`, `average`, `min`, `max`,
-  and `count`). Prefer a bounded collection operation over recursion or general
-  local mutation.
-- Design host-bound Tables as the future explicit mutation model. Mutations should
-  enter a deterministic modification queue; snapshot visibility, read-your-writes,
-  commit boundary, rollback, observation, persistence, and replication semantics
-  remain to be specified.
-- Finalize the product wire envelope later. The language-port conformance shape
-  is already fixed, including ordered message `args` arrays.
-
-### Deferred binary-format extensions
-
-- Specify and implement optional `.gesb` compression codecs separately; V1 only
-  reserves the codec bits and emits known sections uncompressed.
-- Specify signatures, certificates/keys, trust policy, and rollback behavior
-  separately; V1 only reserves the security section range and provides no
-  authenticity guarantee.
-
-### Deferred editor tooling
-
-- After the Kotlin port is stable, build a dedicated IntelliJ plugin with
-  native `.ges`/`.gesa` support beyond the portable TextMate highlighting and
-  `.region` folding. Keep the portable dump and TextMate bundles free of
-  IntelliJ-specific markers in the meantime.
-
-### Deferred performance work
-
-- Improve CFG/liveness-based register allocation and reuse of non-overlapping
-  locals after the monorepo-oriented contracts are stable.
-- Check whether bytecode optimizer passes still produce meaningful diffs now that
-  the compiler emits better registers directly.
-- Revisit Message/Emit allocation only when performance data justifies it.
-- Revisit a more VM-near extension call model if boxing at the extension boundary
-  becomes expensive again.
+The persistent project backlog lives in [`BACKLOG.md`](BACKLOG.md). Keep only
+active deferred work there, remove completed entries as part of the completing
+change, and put normative outcomes in their owning specifications.

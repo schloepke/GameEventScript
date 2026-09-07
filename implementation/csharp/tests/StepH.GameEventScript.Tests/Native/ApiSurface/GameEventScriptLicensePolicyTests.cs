@@ -72,7 +72,7 @@ public sealed class GameEventScriptLicensePolicyTests
                      .Where(IsHeaderEligibleTestMarkdown))
             RequirePrefix(path, $"<!-- {CopyrightText} -->\n<!-- {SpdxText} -->\n", failures);
 
-        foreach (var path in new[] { "AGENTS.md", "LICENSING.md", "MigrationsTodo.md", "README.md" })
+        foreach (var path in new[] { "AGENTS.md", "BACKLOG.md", "LICENSING.md", "README.md" })
             RequirePrefix(Path.Combine(workspace, path), $"<!-- {CopyrightText} -->\n<!-- {SpdxText} -->\n", failures);
 
         RequirePrefix(Path.Combine(workspace, ".editorconfig"), $"# {CopyrightText}\n# {SpdxText}\n", failures);

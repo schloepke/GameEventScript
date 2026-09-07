@@ -4,7 +4,7 @@
 # Portable number semantics
 
 This document is the normative numeric contract for Game Event Script compiler,
-runtime, `.gesb`, and JSON conformance implementations. Swift, Kotlin, C++, C#,
+runtime, `.gesb`, and portable Conformance implementations. Swift, Kotlin, C++, C#,
 and future ports must implement these results independently of their language's
 default overflow, conversion, formatting, or math-library conventions.
 

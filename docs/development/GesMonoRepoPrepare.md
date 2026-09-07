@@ -3,7 +3,7 @@
 
 ## Ergebnis
 
-Deine drei Punkte sind richtig, reichen aber noch nicht ganz. Vor allem fehlen sprachneutrale Verträge, ohne die Swift, Kotlin, C++ und C# trotz identischer JSON-Tests unterschiedlich reagieren könnten.
+Deine drei Punkte sind richtig, reichen aber noch nicht ganz. Vor allem fehlen sprachneutrale Verträge, ohne die Swift, Kotlin, C++ und C# trotz identischer Conformance-Fälle unterschiedlich reagieren könnten.
 
 Wichtig: Der physische Umzug ins Monorepo muss nicht warten, bis alle Punkte fertig sind. Sinnvoll ist, zuerst Struktur und gemeinsame Verträge anzulegen und die weitere Portabilitätsarbeit anschließend direkt im Monorepo durchzuführen.
 
@@ -27,7 +27,7 @@ Abgeschlossen sind:
 - unabhängige optionale Segmente für DebugSymbols, SourceMap, SourceArchive und
   BuildMetadata
 - Retention unbekannter optionaler Sections sowie kanonisches erneutes Schreiben
-- Golden-, Invalid-, Retention-, Unicode-, Runtime- und JSON-Roundtrip-Tests
+- Golden-, Invalid-, Retention-, Unicode-, Runtime- und Conformance-Roundtrip-Tests
 
 Festgelegte Abgrenzungen:
 
@@ -63,14 +63,14 @@ umgesetzt:
   es findet keine Normalisierung statt.
 - Compilerzeilen/-spalten sind 1-basiert und Scalar-basiert; SourceMaps bleiben
   UTF-8-Byte-basiert.
-- JSON-Conformance deckt Supplementary-Plane-Zeichen, kombinierende Zeichen,
+- Markdown-Conformance deckt Supplementary-Plane-Zeichen, kombinierende Zeichen,
   Scalar-Sortierung und unzulässige Unicode-Namen/Whitespace ab.
 
 ### 2.2 Zahlen - DONE
 
 Der sprachneutrale Vertrag ist in
 [Numbers.md](../../specs/Semantics/Numbers.md)
-festgeschrieben und in Compiler, VM, Value-Modell sowie JSON-Conformance
+festgeschrieben und in Compiler, VM, Value-Modell sowie Markdown-Conformance
 umgesetzt:
 
 - Int64-Operationen erkennen Überlauf ohne CLR-Checked-Kontext und wechseln bei
@@ -80,18 +80,18 @@ umgesetzt:
 - NaN, Infinity, negative Null und alle Rundungsmodi sind festgelegt.
 - `div`, `mod` und `rem` besitzen definierte Regeln für negative Operanden.
 - Transzendente Funktionen verwenden die Plattform-Binary64-Mathematik mit
-  konfigurierbarer ULP-Toleranz in JSON-Tests; Runtime-Gleichheit bleibt bei zwei
+  konfigurierbarer ULP-Toleranz in Conformance-Tests; Runtime-Gleichheit bleibt bei zwei
   ULPs.
 - Conformance-Floats verwenden kürzeste Roundtrip-Dezimaldarstellung mit
   kanonischem Exponenten statt eines C#-spezifischen festen Formats.
 - Grenzfälle liegen sowohl als direkte Low-Level-Tests als auch als portable
-  JSON-Conformance vor.
+  Markdown-Conformance vor.
 
 ### 2.3 Determinismus - DONE
 
 Der sprachneutrale Vertrag ist in
 [Determinism.md](../../specs/Semantics/Determinism.md)
-festgeschrieben und durch Low-Level- sowie JSON-Conformance-Tests abgesichert:
+festgeschrieben und durch Low-Level- sowie Markdown-Conformance-Tests abgesichert:
 
 - `:sort` und `:order by` sind aufsteigend wie absteigend stabil; gleiche
   Schlüssel behalten ihre Quellreihenfolge.
@@ -110,7 +110,7 @@ festgeschrieben und durch Low-Level- sowie JSON-Conformance-Tests abgesichert:
 
 Der sprachneutrale Random-Vertrag ist ebenfalls in
 [Determinism.md](../../specs/Semantics/Determinism.md)
-festgeschrieben und durch Low-Level- sowie JSON-Conformance-Tests abgesichert:
+festgeschrieben und durch Low-Level- sowie Markdown-Conformance-Tests abgesichert:
 
 - SplitMix64 initialisiert den xoshiro256**-Zustand aus dem vollständigen
   signed Int64 Seed; Zustandsübergang und Wrapping-Operationen sind normativ.
@@ -162,7 +162,7 @@ Compilerbeschreibung und ausführbare Runtime-Bindings sind getrennt:
 - CLR-Objekte, Reflection, Attributes, Reader, Converter und Aufrufe liegen im
   `CSharpBridge`. Der C#-Adapter kombiniert Katalog und Registry lediglich als
   Komfortoberfläche.
-- JSON-Conformance verwendet einen manuellen Katalog, eine manuelle Registry und
+- Markdown-Conformance verwendet einen manuellen Katalog, eine manuelle Registry und
   einen manuellen `aim`-Wert; C#-Reflection bleibt in separaten Bridge-Tests.
 
 ### 3.2 Native Handler und Lebenszyklus - DONE
@@ -179,7 +179,7 @@ Compilerbeschreibung und ausführbare Runtime-Bindings sind getrennt:
 - Idempotenz und Enqueue-Snapshot-Semantik bleiben erhalten: bereits
   eingereihte Handler laufen weiter, spätere Nachrichten sehen entfernte
   Registrierungen nicht mehr.
-- JSON-Conformance verwendet einen manuellen portablen Handler; Native-only-
+- Markdown-Conformance verwendet einen manuellen portablen Handler; Native-only-
   Host, dynamische Registrierung und C#-Auto-Runner bleiben separat getestet.
 
 ### 3.3 Geordnete Message-Argumente - DONE
@@ -203,7 +203,7 @@ Compilerbeschreibung und ausführbare Runtime-Bindings sind getrennt:
 - Das gilt für Input, erwartete lokale/outbound Messages, verschachtelte
   Message-Werte und externe Emits. Der Conformance-Vergleich prüft Namen und
   Werte positionsgetreu.
-- JSON-Conformance deckt unterschiedliche Reihenfolgen, leere Argumentlisten,
+- Markdown-Conformance deckt unterschiedliche Reihenfolgen, leere Argumentlisten,
   doppelte normalisierte Namen und Signaturmatching ab.
 
 ### 3.4 Stabiler Fehlervertrag - DONE
@@ -219,7 +219,7 @@ Compilerbeschreibung und ausführbare Runtime-Bindings sind getrennt:
   Observer gemeldet und als `RuntimeError` plus erster Diagnose im Execution-
   Result sichtbar. Der fehlerhafte Handler wird resetet; der Dispatch-Snapshot
   läuft deterministisch weiter.
-- JSON-Conformance verwendet ausschließlich Phase plus Code und optionale
+- Markdown-Conformance verwendet ausschließlich Phase plus Code und optionale
   strukturierte Felder. `messageContains` wurde aus portablen Fehlererwartungen
   entfernt; Runtime-Diagnosen sind als geordnete Observer-Ereignisse prüfbar.
 - Der normative Vertrag steht in `../../specs/Diagnostics.md`.
@@ -294,26 +294,13 @@ Regressionstests statt eines weiteren großen Umbaus.
   kanonischen Bytes und expliziten Enum-/Opcode-IDs.
 - Der Abschluss ist in `../../specs/ProgramModel.md` und `AGENTS.md` festgehalten.
 
-## 5. Portable Conformance ausbauen
+## 5. Portable Conformance ausbauen - DONE
 
-Es gibt derzeit 34 JSON-Spec-Dateien mit 956 Fällen, davon 839 `scriptApi`-
-Fälle. Die Infrastruktur ist bereits eine gute semantische Basis, ihr Format,
-Runner und Ergebnisweg sind aber noch C#- und MSTest-zentriert.
-
-Insbesondere fehlen ein formales Schema, explizite stabile Case-IDs,
-Capabilities, portable Skip-Regeln und ein sprachneutraler Ergebnisvertrag. Die
-heutige abgeleitete ID `SuiteName/Test.Name` ist nicht stabil und bereits ein
-Anzeigename kommt innerhalb derselben Suite doppelt vor. Der C#-Reader
-akzeptiert außerdem Kommentare, Trailing Commas und Property-Namen unabhängig
-von Groß-/Kleinschreibung; andere JSON-Implementierungen müssen dieses Verhalten
-nicht teilen.
-
-Als zukünftiges Autorenformat ist Markdown vorgesehen. YAML-Frontmatter enthält
-die Suite-Einstellungen und Defaults. Ein `## Test: ...` leitet einen Testfall
-ein; der Fall endet am nächsten solchen H2-Heading oder am Dateiende. Normaler
-GES-Source steht in `ges`-Codeblöcken, Testmetadaten und Erwartungen verwenden
-ein eingeschränktes YAML-Profil, und geordnete Testschritte werden als klar
-definierte Markdown-Tabellen geschrieben. Freie Prosa, Notes und sonstige
+Der gemeinsame sprachneutrale Corpus liegt ausschließlich unter `conformance`.
+YAML-Frontmatter enthält Suite-Einstellungen und Defaults; jedes H2 leitet einen
+Fall ein. GES-Source steht in `ges`-Codeblöcken, Testmetadaten und Erwartungen
+verwenden das normativ eingeschränkte YAML-Profil und geordnete Schritte werden
+als definierte Markdown-Tabellen geschrieben. Freie Prosa, Notes und sonstige
 Markdown-Inhalte bleiben nichtnormativ.
 
 Semantische YAML-Blöcke verwenden ausschließlich den normalen Fence-Info-String
@@ -321,22 +308,18 @@ Semantische YAML-Blöcke verwenden ausschließlich den normalen Fence-Info-Strin
 Pflichtfeld `gesBlock` im Root-Mapping unterscheidet `case` von `expect`;
 zusätzliche Fence-Tokens wie `yaml ges-case` gehören nicht zum Format.
 
-Ein optionaler reservierter Abschnitt `## Fixtures` darf Werte und Matrizen zur
+Ein optionaler Abschnitt `## Fixtures` darf Werte und Matrizen zur
 besseren Lesbarkeit dokumentieren, wird in V1 aber vollständig vom Runner
 ignoriert. Falls später parameterisierte beziehungsweise Matrix-Tests daraus
 erzeugt werden sollen, benötigen sie ein neues explizites und versioniertes
 Konstrukt. Eine spätere Formatversion darf vorhandene dokumentierende Fixtures
 nicht still in ausführbare Semantik umdeuten.
 
-Das Autorenformat darf den sprachneutralen semantischen Vertrag nicht mit einem
-bestimmten Testframework oder einer Implementierungssprache koppeln. Ein
-normalisiertes maschinenlesbares Testmodell und Ergebnisformat bleiben
-erforderlich.
-
-Die Umsetzung erfolgt bewusst vor der Ergänzung weiterer Conformance-Fälle.
-Neue Semantik soll nicht mehr in das auslaufende JSON-Autorenformat eingebaut
-werden. Die bestehende Suite wird zunächst ohne fachliche Änderungen in das
-neue Format überführt; Erweiterungen folgen erst nach nachgewiesener Parität.
+Der öffentliche synchrone Parser und Runner sind von Dateisystem, Netzwerk,
+MSTest und C#-spezifischen Testmodellen unabhängig. Stabile Suite-/Case-IDs,
+Capabilities, Skip-Regeln, Ergebnisse, Reports, Performance-Referenzen und
+Received-Updates besitzen einen normativen portablen Vertrag. Neue Semantik wird
+ausschließlich im Markdown-Corpus ergänzt.
 
 ### 5.1 Markdown- und Runner-Vertrag normativ spezifizieren - DONE
 
@@ -1007,119 +990,76 @@ Corpus-Fingerprint 87677320758639E5B213474857AD3E82E2E68A5F50A12063F762D6EAB6347
 dotnet format --verify-no-changes passed for production and tests
 ```
 
-## 7. Monorepo-Migration und Packaging-/Integrationsschnitt
+## 7. Monorepo-Migration und Packaging-/Integrationsschnitt - DONE
 
-Die portable C#-Library liegt derzeit innerhalb eines Beamable Service und hängt
-über dessen Projektstruktur indirekt an Beamable- und Unity-Paketen, obwohl im
-portablen Produktionscode keine Beamable-Verwendung gefunden wurde. Siehe
-[StepH.GameEventScript.csproj](../../implementation/csharp/src/StepH.GameEventScript/StepH.GameEventScript.csproj).
+Das eigenständige GitHub-Monorepo ist die einzige aktive Source of Truth für
+Game Event Script. Die übernommene PlasticSCM-Historie bleibt außerhalb dieses
+Repositories als historischer Produktkontext erhalten. Beamable- und
+Unity-Bereinigung am ehemaligen Standort sind Aufgaben des jeweiligen Produkts
+und keine Abhängigkeit der portablen Library.
 
-Diese Abhängigkeiten werden nicht mehr separat in der bestehenden Struktur
-bereinigt. Beamable besitzt oder regeneriert möglicherweise Teile der Service-
-und Projektstruktur; isolierte Änderungen daran könnten deshalb Beamable-Tooling
-und Deployment beschädigen oder später überschrieben werden. Die Trennung
-erfolgt zusammen mit dem Umzug in das bereits bestehende Monorepo.
+Die tatsächliche Monorepo-Struktur ist:
 
-Im Monorepo wird zunächst ausschließlich die vorhandene C#-Implementierung aufgenommen. Weitere Sprachverzeichnisse müssen nicht vorab mit Platzhaltern oder noch nicht nutzbarem generiertem Code befüllt werden.
-
-### Zielstruktur
-
-Empfohlene logische Struktur:
-
-```
-/spec
-  language
-  bytecode
-  host
-  api
-  schemas
-
+```text
+/specs
 /conformance
-  specs
-  binaries
-  malformed-binaries
-  runner-contract
-
-/implementations
-  csharp
-
-/integrations
-  unity
-  beamable
-
-/benchmarks
-  workloads
-  baselines
-
-/tools
-  binary-inspection
-  conformance-runner
+/implementation/csharp
+  /src/StepH.GameEventScript
+  /src/StepH.GameEventScript.CSharpBridge
+  /src/StepH.GameEventScript.Conformance
+  /tests
+  /tools
+/docs
+/scripts
+/tools/editors
+/.github/workflows
 ```
 
-`swift`, `kotlin`, `cpp` und `opcode-generation` werden erst angelegt, wenn die jeweilige Arbeit tatsächlich beginnt.
+- `specs` besitzt die normative sprachneutrale Dokumentation genau einmal.
+- `conformance` besitzt den gemeinsamen Markdown-Corpus, `.gesb`- und
+  Parser-Fixtures sowie die Cross-Language-Referenz genau einmal.
+- Die portable C#-Assembly enthält Core, Compiler, Host und Runtime ohne
+  Beamable-, Unity-, Reflection-, Threading- oder JSON-Abhängigkeit.
+- `CSharpBridge` kapselt Reflection, Delegates, CLR-Konvertierung und den
+  optionalen automatischen Host-Runner in einer getrennten Assembly und einem
+  getrennten Package.
+- Der portable Conformance-Parser und -Runner bilden eine dritte, unabhängig
+  verschiebbare Assembly und ein eigenes Package.
+- Unity konsumiert zunächst die reproduzierbar gestagten C#-DLLs. Es existiert
+  keine leere oder ungeprüfte Unity-/Beamable-Integration im Monorepo.
+- Weitere Sprach- und Integrationsverzeichnisse entstehen erst mit einer realen
+  Implementierung. Entsprechende Folgearbeiten stehen in
+  [BACKLOG.md](../../BACKLOG.md).
+- Build-, Test-, Pack-, Direct-DLL-, Package-Consumer- und
+  Reproduzierbarkeitsabläufe sind durch Root-Skripte ausführbar; erzeugte
+  Artefakte liegen ausschließlich im ignorierten `artifacts`-Verzeichnis.
+- Apache-2.0-Lizenz, feste Copyright-Konvention, Package-Metadaten und der
+  deaktivierte, explizit freizugebende NuGet-Publishweg sind festgelegt.
 
-Wichtig:
+## 8. C#-CI-Matrix - DONE
 
-- Specs und Fixtures existieren genau einmal.
-- Keine Implementierung bekommt eine eigene Kopie des Conformance-Corpus oder der Fixtures.
-- Alle Implementierungen referenzieren dieselbe Bytecode-Version.
-- Buildartefakte und generierte Dateien werden klar getrennt.
-- Eine eindeutige Source of Truth wird beim Umschalten hergestellt; die Implementierung darf nicht dauerhaft im Beamable Service und im Monorepo parallel gepflegt werden.
-- Soweit die vorhandene Historie fachlich hilfreich und ohne unverhältnismäßigen
-  Aufwand übertragbar ist, wird sie erhalten. Fehlende oder wenig aussagekräftige
-  Althistorie darf den Umzug nicht blockieren.
-- Lizenz, Package-Namen, Versionierung und Releaseprozess festlegen.
+Die aktuelle Referenzimplementierung besitzt drei getrennte GitHub-Workflows:
 
-### Packaging- und Integrationsgrenzen beim Umzug
+- `C# CI` läuft bei Push und Pull Request. Der Workflow stellt die gepinnten
+  .NET-SDKs bereit, restauriert die Solution, prüft die Formatierung, führt alle
+  Nicht-Performance-Tests und den separaten Zero-Allocation-Hot-Path-Gate aus,
+  baut und konsumiert Release-Artefakte und prüft deren byteidentische
+  Reproduzierbarkeit.
+- Die Nicht-Performance-Suite parst und validiert den vollständigen gemeinsamen
+  Markdown-Corpus, führt den C#-Conformance-Runner aus, liest kanonische und
+  beschädigte `.gesb`-Fixtures, prüft Writer-Goldens, Compilerdiagnosen,
+  Source-Ranges, Dokumentationskonsistenz und die öffentliche API.
+- `C# Performance Gate` führt die profilgebundenen Performance- und
+  Allokationstests bewusst manuell auf dem vorgesehenen selbst gehosteten
+  macOS/ARM64-Runner aus und veröffentlicht die Reports als Artefakt.
+- `C# Release Candidate` baut nach manueller Auslösung eine geprüfte
+  Release-Version und veröffentlicht sie als Workflow-Artefakt. NuGet-Publishing
+  bleibt zusätzlich durch Eingabe, Repositoryvariable, Environment und
+  kurzlebige Zugangsdaten gesperrt.
 
-- Portable Core, Compiler und Runtime werden als Beamable- und Unity-unabhängige C#-Assembly aufgebaut.
-- `CSharpBridge` wird eine getrennte Assembly beziehungsweise ein getrenntes
-  Package für Reflection, Delegates, Threading und andere C#-spezifische Komfortfunktionen.
-- Es wird geprüft, ob `System.Text.Json` außerhalb des Conformance- oder
-  Adapterbereichs überhaupt benötigt wird; der portable Runtime-Core soll davon unabhängig bleiben.
-- Beamable erhält eine eigene Integration, welche die unabhängigen Assemblies
-  über einen von Beamable unterstützten und nicht bei Regeneration verlorenen Mechanismus konsumiert.
-- Unity konsumiert die C#-DLL beziehungsweise später ein eigenes Unity-Package; der Core übernimmt keine Unity-Abhängigkeit.
-- IL2CPP-, AOT- und Trimming-Verhalten werden an der Unity-Integration geprüft.
-- Reflection-basierte Registrierung kann für Unity bei Bedarf durch manuelle oder später generierte Registries ergänzt werden.
-
-### Migrationsprinzip
-
-1. Eigentum und Regenerationsverhalten der aktuellen Beamable-Dateien und Projektdateien feststellen.
-2. Die tatsächliche Struktur und die bestehenden Konventionen des Ziel-Monorepos untersuchen.
-3. Specs, Conformance-Corpus, Fixtures und Benchmarks als gemeinsame, sprachneutrale Bestände übernehmen.
-4. Unabhängige C#-Projekte für Core, `CSharpBridge`, Conformance und native Tests im Monorepo erzeugen.
-5. Erst in diesen neuen Projekten Beamable-, Unity- und unnötige Package-Abhängigkeiten entfernen.
-6. Den vollständigen C#-Referenzstand im Monorepo bauen und gegen dieselben Conformance-, Binary-, API-, Performance- und Allokationsreferenzen prüfen.
-7. Beamable- und Unity-Integrationen gegen die neuen Assemblies anbinden und ihre jeweiligen Build-/Deploymentwege prüfen.
-8. Nach erfolgreichem Cutover die alte Implementierung aus dem Beamable Service entfernen oder auf einen schmalen Integrationsadapter reduzieren.
-
-Die konkrete Einpassung muss anhand des bereits existierenden Monorepos geplant
-werden; dessen tatsächliche Struktur, Buildsysteme und Konventionen haben
-Vorrang vor der obigen schematischen Darstellung.
-
-## 8. CI-Matrix
-
-Das Monorepo braucht gemeinsame Gates:
-
-- alle Sprachimplementierungen bauen
-- alle Conformance-Markdowns strikt parsen und validieren
-- alle Conformance-Runner ausführen
-- kanonische `.gesb`-Fixtures lesen
-- Writer-Ergebnisse byteweise vergleichen
-- nach Einführung einer zentralen Opcode-Definition deren generierte Dateien auf Drift prüfen
-- Compilerfehler und Source Ranges vergleichen
-- Sanitizer für C++
-- Swift/Kotlin/C# Unit Tests
-- Unity Compile-/PlayMode-Smoke-Test
-- Release-Artefakte reproduzierbar bauen
-
-Zusätzlich empfehlenswert:
-
-- Fuzzing des Binary Readers
-- Differential Tests zwischen C# und neuen Implementierungen
-- Property Tests für Writer/Reader
-- Corpus für beschädigte `.gesb`-Dateien
+Weitere CI-Erweiterungen sind ausschließlich in
+[BACKLOG.md](../../BACKLOG.md) geführt und blockieren den abgeschlossenen
+C#-Monorepo-Cutover nicht.
 
 ## 9. Performance- und Allokationsvertrag
 
@@ -1181,50 +1121,11 @@ erzeugt werden. Der Generator ist ein Maintainer-Tool; normale IDE- und
 Produkt-Builds konsumieren eingecheckte generierte Quellen und benötigen ihn
 nicht. CI prüft Definition und generierte Ausgaben auf Drift.
 
-## Empfohlene Reihenfolge
+## Weiteres Vorgehen
 
-### Phase A – Monorepo-Cutover mit C# als Referenz
-
-1. Ziel-Monorepo, Buildsysteme, Ownership und bestehende Konventionen untersuchen.
-2. Den gegenwärtigen grünen C#-Stand und seine kanonischen Artefakte als Migrationsbaseline festhalten.
-3. Die von Beamable kontrollierten oder regenerierten Teile der aktuellen Struktur identifizieren.
-4. gemeinsame Spec-, Conformance-, Fixture- und Benchmark-Ablagen im Monorepo einrichten.
-5. unabhängige C#-Projekte für Core, `CSharpBridge`, Conformance und Tests aufbauen und die bestehenden Quellen übernehmen.
-6. Beamable-, Unity- und unnötige Package-Abhängigkeiten ausschließlich an der neuen Source of Truth entfernen.
-7. alle bisherigen C#-Abnahmen im Monorepo reproduzieren.
-8. Beamable- und Unity-Adapter anbinden, ihre Toolingwege prüfen und anschließend den alten Standort stilllegen.
-
-### Phase B – Bytecodeentwicklung und gemeinsame Definition
-
-9. Constant-Pool-, Immediate- und Instruction-Layout-Varianten spezifizieren und messen.
-10. die nächste stabile Bytecode-/Binarygrenze festlegen und durch Fixtures absichern.
-11. anhand dieses Modells ein pflegbares zentrales Autorenformat auswählen.
-12. Generierung eingecheckter Sprachquellen und Dokumentation sowie eine CI-Driftprüfung einführen.
-
-### Phase C – erste zweite Runtime
-
-13. Zielumfang der ersten weiteren Sprache festlegen: zunächst Runtime oder zusätzlich Compiler.
-14. die kleinste weitere Runtime, vermutlich Kotlin oder Swift, gegen bestehende `.gesb`-Fixtures implementieren.
-15. Differential Tests gegen C# ausführen.
-16. Host- und Runtime-Conformance vollständig herstellen.
-17. Performance-/Allokationsmessung der zweiten Runtime ergänzen.
-18. danach weitere Sprachen und Compilerportierungen beginnen.
-
-## Kein Monorepo-Blocker
-
-Diese Backlog-Themen können weiterhin warten:
-
-- bessere Liveness/Register-Wiederverwendung
-- allgemeines `fold`/`reduce`
-- Tables und Mutation Queue
-- VM-nähere Extension-Optimierung
-- weitere Message-/Emit-Allokationsoptimierung
-- endgültiges Produkt-Wire-Messageformat
-
-Das Conformance-Format bleibt unabhängig vom späteren Netzwerkformat. Sein
-bereits stabilisierter Vertrag und die vorhandenen `.gesb`-Fixtures bilden
-zusammen mit dem grünen C#-Stand die Abnahmebasis des Umzugs.
-
-Der kritischste Pfad ist damit:
-
-**Ziel-Monorepo untersuchen → C#-Referenzbestand migrieren und entkoppeln → Beamable/Unity über Integrationen anbinden → Bytecode im Monorepo weiterentwickeln → zentrale Definition stabilisieren → erste zweite Runtime.**
+Monorepo-Cutover, Packaging-Schnitt und C#-CI sind abgeschlossen. Dieses
+Arbeitsdokument setzt mit Punkt 9 und anschließend Punkt 10 fort. Sobald ein
+dort ebenfalls genanntes Backlog-Thema aktiv bearbeitet wird, wird sein Eintrag
+in [BACKLOG.md](../../BACKLOG.md) im selben Änderungssatz entfernt. Alle übrigen
+Sprachport-, Integrations- und Optimierungsthemen werden ausschließlich im
+Backlog geführt.

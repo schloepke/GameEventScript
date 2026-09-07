@@ -63,6 +63,9 @@ here.
 - Implement Swift as the first additional language port and Kotlin as the next
   port, using `.gesb` fixtures and the shared Markdown Conformance corpus for
   differential acceptance against C#.
+- Add an independent CI job with build, unit tests, strict shared Conformance,
+  canonical `.gesb` fixtures and cross-language result comparison for every new
+  implementation. A future C runtime additionally requires sanitizer jobs.
 - Add a real benchmark and allocation harness for each port rather than comparing
   platform-specific results through the C# harness.
 - Add SwiftPM and Maven publication only with their real implementations; do not
@@ -76,7 +79,8 @@ here.
 ## Unity and editor integration
 
 - Validate the staged C# DLL set in a real Unity project with the selected
-  scripting backend and API compatibility level.
+  scripting backend and API compatibility level, then add Compile- and
+  PlayMode-smoke tests to CI for the extracted Unity package.
 - Develop Unity editor integration, prepared MonoBehaviours and an installable
   Unity package in a real Unity project before extracting reusable integration
   sources into this monorepo.
@@ -89,6 +93,8 @@ here.
 
 ## Performance and optimizer follow-ups
 
+- Add bounded fuzzing for the `.gesb` reader and property-based Reader/Writer
+  tests without weakening the existing canonical and malformed fixture corpus.
 - Improve CFG/liveness-based register allocation and reuse of non-overlapping
   locals.
 - Check whether bytecode optimizer passes still produce meaningful changes now

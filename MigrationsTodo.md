@@ -495,20 +495,52 @@ wurden über den Received-Workflow neu bestätigt.
 
 ## Phase 9 – GitHub-Cutover
 
-Remote-Zwischenstand: Der private Branch `migration/plastic-import` enthält den
-lokal geprüften Phase-7-Stand
-`036147b82c72cd353569144a6e0492a6b9e52c98`. `origin/main` bleibt unverändert auf dem unabhängigen
-Initialcommit `c8191b17a532aeb377779082f7699944b3168513`. Es wurden noch keine Tags
-und kein finaler Default-Branch-Stand veröffentlicht.
+Der Cutover erfolgte am 7. September 2026 in das private Repository
+`schloepke/GameEventScript`. Der unabhängige GitHub-Initialcommit
+`c8191b17a532aeb377779082f7699944b3168513` wurde nicht mit der importierten
+Historie vermischt. `main` wurde mit einem auf genau diesen Commit begrenzten
+`--force-with-lease` auf den geprüften Importstand
+`56d6f291da1b33e5a7daf34b3cc1333bdaa7bdcb` gesetzt. Der historische Tag
+`EndOfOldVM` ist veröffentlicht; der ursprüngliche Initialcommit bleibt im
+lokalen Phase-5-Bundle erhalten.
 
-- [ ] Vollständige lokale Abnahme des Zielrepositories protokollieren.
-- [ ] GitHub-Remote und Zielorganisation nochmals prüfen.
-- [ ] Freigegebene Branches und Tags pushen.
-- [ ] CI ausführen und Ergebnisse mit der lokalen Abnahme vergleichen.
-- [ ] Branch Protection, Required Checks und Releaseberechtigungen aktivieren.
-- [ ] GitHub zum einzigen aktiven Entwicklungsort erklären.
-- [ ] Im PlasticSCM-Workspace Game Event Script erst nach bestätigtem GitHub-
+Die lokale Abnahme dieses Stands ergab:
+
+- Release-Build mit null Warnungen und null Fehlern;
+- unveränderte Roslyn-Formatierung;
+- 1.167 von 1.167 erfolgreiche Nicht-Performance-Ausführungen;
+- ein erfolgreiches Zero-Allocation-Hot-Path-Gate;
+- sechs von sechs erfolgreiche Performance-/Allokationsausführungen;
+- drei NuGet- und drei Symbolpakete mit erfolgreichen Package- und
+  Direkt-DLL-Consumer-Prüfungen;
+- zwei unabhängige, byteidentische kanonische Paketläufe.
+
+Der erste `C# CI`-Lauf auf `main` (`34073167616`) bestätigte denselben Stand:
+Formatierung, Nicht-Performance-Suite, Zero-Allocation-Gate, Release-Artefakte,
+Paket-Reproduzierbarkeit und Artifact-Upload waren erfolgreich. Das Repository
+verwendet standardmäßig nur lesende Workflow-Berechtigungen. Das Environment
+`nuget` ist angelegt und `NUGET_PUBLISH_ENABLED=false` ist ausdrücklich gesetzt;
+ohne freigegebene Package-IDs, Publisheridentität, `NUGET_USER` und externe
+NuGet-Trusted-Publishing-Policy ist daher kein Publish möglich.
+
+- [x] Vollständige lokale Abnahme des Zielrepositories protokollieren.
+- [x] GitHub-Remote und Zielorganisation nochmals prüfen.
+- [x] Freigegebene Branches und Tags pushen.
+- [x] CI ausführen und Ergebnisse mit der lokalen Abnahme vergleichen.
+- [ ] Branch Protection und `C# CI / verify` als Required Check aktivieren.
+- [x] Den Releaseweg mit eigenem Environment und explizit deaktiviertem
+  Publish-Schalter absichern.
+- [x] GitHub zum einzigen aktiven Entwicklungsort erklären.
+- [x] Im PlasticSCM-Workspace Game Event Script erst nach bestätigtem GitHub-
   und Integrationsbetrieb entfernen oder auf den benötigten Adapter reduzieren.
+
+Branch Protection und Repository-Rulesets sind für dieses private Repository im
+aktuellen GitHub-Tarif nicht verfügbar; GitHub beantwortet beide
+Konfigurationswege mit HTTP 403. Dieser Governance-Punkt bleibt sichtbar offen,
+bis das Repository öffentlich wird oder der Account einen Tarif mit Schutz für
+private Repositories verwendet. Seit dem Cutover ist GitHub die einzige aktive
+Entwicklungsquelle. Der PlasticSCM-Stand bleibt bis zur Phase-10-Abnahme
+unverändert und dient nicht mehr als paralleler Entwicklungsbranch.
 
 ## Phase 10 – Lokale Migration abschließen
 

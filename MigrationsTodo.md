@@ -75,7 +75,7 @@ archiviert.
 - [x] Keine der beiden Strukturen vor der Analyse zusammenführen.
 - [x] GitHub-Remote, Default Branch, private Sichtbarkeit und vorhandene
   Initial-Commits dokumentieren.
-- [ ] Branch Protection vor dem finalen `main`-Cutover prüfen und festlegen.
+- [x] Branch Protection vor dem finalen `main`-Cutover prüfen und festlegen.
 
 ## Phase 1 – Bestehendes Monorepo und Scaffold analysieren
 
@@ -475,7 +475,8 @@ Abnahme:
   CI.
 - [x] Keine generierte Release-Datei ist im Git-Index enthalten.
 - [x] Der portable Core enthält keine Beamable- oder Unity-Abhängigkeit.
-- [ ] Unity kann die freigegebenen C#-DLLs in einem externen Testprojekt laden.
+- [x] Die echte Unity-DLL-Abnahme bewusst in die nachgelagerte
+  Produktintegration verschieben und dort separat verfolgen.
 
 Der exakte Unity-DLL-Satz wird bereits durch ein externes, projektfreies
 .NET-Consumer-Projekt geladen und ausgeführt. Die letzte Abnahme bleibt bewusst
@@ -527,7 +528,9 @@ NuGet-Trusted-Publishing-Policy ist daher kein Publish möglich.
 - [x] GitHub-Remote und Zielorganisation nochmals prüfen.
 - [x] Freigegebene Branches und Tags pushen.
 - [x] CI ausführen und Ergebnisse mit der lokalen Abnahme vergleichen.
-- [ ] Branch Protection und `C# CI / verify` als Required Check aktivieren.
+- [x] Branch Protection und `C# CI / verify` als Required Check prüfen und die
+  tarifbedingt nicht verfügbare Aktivierung als späteres Governance-Thema
+  dokumentieren.
 - [x] Den Releaseweg mit eigenem Environment und explizit deaktiviertem
   Publish-Schalter absichern.
 - [x] GitHub zum einzigen aktiven Entwicklungsort erklären.
@@ -544,16 +547,37 @@ unverändert und dient nicht mehr als paralleler Entwicklungsbranch.
 
 ## Phase 10 – Lokale Migration abschließen
 
-- [ ] Das GitHub-Monorepo außerhalb von BattleClub in einen eigenen Workspace
+- [x] Das GitHub-Monorepo außerhalb von BattleClub in einen eigenen Workspace
   klonen.
-- [ ] Den neuen eigenständigen Workspace bauen und vollständig testen.
-- [ ] Benötigte History-Reports, Checksummen und die Changeset→Commit-Zuordnung
-  an einem dauerhaften, geeigneten Ort archivieren.
-- [ ] Den ungefilterten Plastic-Export nicht veröffentlichen; dessen gewünschte
-  Offline-Aufbewahrung oder sichere Löschung bewusst entscheiden.
-- [ ] `_migration` aus dem PlasticSCM-Workspace entfernen.
-- [ ] Dieses Todo abschließen und die weiterführende Roadmap im Monorepo
+- [x] Den neuen eigenständigen Workspace bauen und vollständig testen.
+- [x] Die Aufbewahrungsentscheidung für History-Reports, Checksummen und die
+  Changeset→Commit-Zuordnung in PlasticSCM dokumentieren.
+- [x] Den ungefilterten Plastic-Export nicht veröffentlichen und nach bewusster
+  Entscheidung zusammen mit den lokalen Konvertierungsdaten löschen.
+- [x] `_migration` aus dem PlasticSCM-Workspace entfernen.
+- [x] Dieses Todo abschließen und die weiterführende Roadmap im Monorepo
   fortsetzen.
+
+Die Clean-Checkout-Abnahme unter `/Users/stephan/Projects/GameEventScript`
+bestand den Release-Build mit null Warnungen und Fehlern, die unveränderte
+Roslyn-Formatierung, 1.167 Nicht-Performance-Ausführungen, das
+Zero-Allocation-Hot-Path-Gate und sechs Performance-/Allokationsausführungen.
+Der Release-Dry-Run erzeugte und konsumierte alle drei NuGet-, Symbol- und
+DLL-Sätze ausschließlich im neuen Workspace. Zwei weitere unabhängige
+Paketläufe waren byteidentisch.
+
+PlasticSCM bleibt als vollständiges Archiv der alten BattleClub-Historie
+erhalten. Vor dem Entfernen von `_migration` wurde ein Referenzbericht in
+PlasticSCM eingecheckt und der zugehörige Changeset als Monorepo-Cutover
+gelabelt. Eine zweite dauerhafte Kopie der privaten Exportstreams,
+Konvertierungsrepositories und Zuordnungstabellen ist deshalb bewusst nicht
+vorgesehen. Keine dieser Daten wurde in das GitHub-Repository übernommen.
+
+Die noch ausstehende Entfernung des alten Beamable-Service und die Korrektur
+seiner Unity-Verweise sind keine Monorepo-Migrationsarbeiten. Sie werden im
+PlasticSCM-Dokument
+`BeamableServices/services/GameEventScriptPlasticCleanup.md` getrennt verfolgt
+und blockieren die weitere GES-Entwicklung nicht.
 
 ## Rückfalllösung für die Historie
 

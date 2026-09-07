@@ -4,8 +4,8 @@
 # Portable number semantics
 
 This document is the normative numeric contract for Game Event Script compiler,
-runtime, `.gesb`, and portable Conformance implementations. Swift, Kotlin, C++, C#,
-and future ports must implement these results independently of their language's
+runtime, `.gesb`, and portable Conformance implementations. Every language port
+must implement these results independently of its language's
 default overflow, conversion, formatting, or math-library conventions.
 
 ## Numeric representations
@@ -124,8 +124,8 @@ Runtime `=` is unaffected and always uses its two-ULP rule.
 
 ## Canonical conformance scalar encoding
 
-The YAML value schema described here is test interchange data, not the future
-product wire-message format.
+The YAML value schema described here is test interchange data and does not
+define a product wire-message format.
 
 - Int64 and binary64 payloads are strings so YAML implementations cannot first
   round them through an implementation-defined numeric type.

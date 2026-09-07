@@ -55,7 +55,7 @@ retention mode. All remaining flag bits are invalid in V1.
 | `0x0022` | SourceArchiveSegment | zero or one | no |
 | `0x0030` | BuildMetadataSegment | zero or one | no |
 | `0x0040` | ReservedSignatureSegment | reserved | undefined |
-| `0x0041`–`0x004F` | future security sections | reserved | undefined |
+| `0x0041`–`0x004F` | security sections | reserved | undefined |
 | `0x8000`–`0xFFFD` | private/experimental | any | no |
 | `0xFFFE` | NamedCustomSection | reserved | no |
 

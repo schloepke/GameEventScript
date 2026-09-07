@@ -10,5 +10,5 @@ Guides optimize for understanding and may omit edge cases. Exact behavior is def
 ## Distribution
 
 - [C# distribution](distribution/CSharp.md) describes reproducible NuGet,
-  symbol, and DLL artifacts, the initial Unity DLL path, and the guarded release
+  symbol, and DLL artifacts, the Unity DLL path, and the guarded release
   workflow.

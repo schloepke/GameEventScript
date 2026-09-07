@@ -2054,7 +2054,7 @@ internal sealed class GesParser
             IsNextSignificantToken(LeftBracket))
         {
             var setToken = Current;
-            throw new GameEventScriptParseException("Type ':set' has been removed; use lists or key-only maps.", setToken);
+            throw new GameEventScriptParseException("Type ':set' is not supported; use lists or key-only maps.", setToken);
         }
 
         if (Match(GesTokenKind.Float))
@@ -2537,7 +2537,7 @@ internal sealed class GesParser
         var (extensionName, functionName, _) = ParseExtensionSymbol();
         if (extensionName is "integer" or "degree")
         {
-            throw new GameEventScriptParseException($"Standard extension namespace ':{extensionName}' has been removed; use direct math intrinsics instead.", startToken);
+            throw new GameEventScriptParseException($"Standard extension namespace ':{extensionName}' is not supported; use direct math intrinsics.", startToken);
         }
 
         SkipNewLines();

@@ -22,5 +22,5 @@ The test project has two semantic roots:
 Portable public behavior is added to Markdown first. A native test remains only
 for a language adapter, implementation detail, performance/allocation property,
 or bootstrap behavior that cannot use the corpus as its sole oracle. The
-current audit is recorded in
-[Native test retention](../../../../docs/development/NativeTestRetention.md).
+portable coverage map is maintained in
+[Conformance Coverage](../../../../specs/Conformance/Coverage.md).

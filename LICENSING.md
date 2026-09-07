@@ -14,13 +14,13 @@ The canonical notice is:
 Copyright 2026 Stephan Schlöpke
 ```
 
-The personal name identifies the individual author independently of a current
-or future business designation. UTF-8 capable formats use the canonical spelling
+The personal name identifies the individual author independently of a business
+designation. UTF-8 capable formats use the canonical spelling
 with `ö`; an ASCII transliteration is not an alternative identity.
 
 `2026` is the fixed first-publication year. It is not calculated from the clock
-and does not become a rolling range during builds or routine edits. A future
-copyright holder or contributor keeps existing notices intact and adds a
+and does not become a rolling range during builds or routine edits. A copyright
+holder or contributor keeps existing notices intact and adds a
 separate notice only when legally appropriate.
 
 ## Short file headers

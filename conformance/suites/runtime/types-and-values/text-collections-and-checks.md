@@ -1100,9 +1100,9 @@ steps:
 
 ---
 
-## Test: old unit names remain ordinary tags
+## Test: word-like unit names are ordinary tags
 
-This runtime case exercises “old unit names remain ordinary tags” and verifies the declared messages, values, and execution result.
+This runtime case verifies that names such as `meter`, `degree`, and `seconds` have no special meaning when written as tags.
 
 ### Case description
 
@@ -1116,7 +1116,7 @@ comparison:
     mode: ulp
     maxUlps: 4096
 sources:
-  - name: "old unit names remain ordinary tags.ges"
+  - name: "word-like unit names are ordinary tags.ges"
     program: main
 ```
 

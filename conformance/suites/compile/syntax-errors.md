@@ -127,9 +127,9 @@ error:
 
 ---
 
-## Test: legacy percent modulo operator is rejected
+## Test: percent modulo operator is rejected
 
-This negative compiler case exercises “legacy percent modulo operator is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “percent modulo operator is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -139,7 +139,7 @@ id: case-0004
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy percent modulo operator is rejected.ges"
+  - name: "percent modulo operator is rejected.ges"
     program: main
 ```
 
@@ -197,9 +197,9 @@ error:
 
 ---
 
-## Test: legacy external handler syntax is rejected
+## Test: external handler syntax is rejected
 
-This negative compiler case exercises “legacy external handler syntax is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “external handler syntax is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -209,7 +209,7 @@ id: case-0006
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy external handler syntax is rejected.ges"
+  - name: "external handler syntax is rejected.ges"
     program: main
 ```
 
@@ -265,9 +265,9 @@ error:
 
 ---
 
-## Test: legacy untagged type declaration is rejected
+## Test: untagged type declaration is rejected
 
-This negative compiler case exercises “legacy untagged type declaration is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “untagged type declaration is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -277,7 +277,7 @@ id: case-0008
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy untagged type declaration is rejected.ges"
+  - name: "untagged type declaration is rejected.ges"
     program: main
 ```
 
@@ -300,9 +300,9 @@ error:
 
 ---
 
-## Test: legacy untagged unary form is rejected
+## Test: untagged unary form is rejected
 
-This negative compiler case exercises “legacy untagged unary form is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “untagged unary form is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -312,7 +312,7 @@ id: case-0009
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy untagged unary form is rejected.ges"
+  - name: "untagged unary form is rejected.ges"
     program: main
 ```
 
@@ -335,9 +335,9 @@ error:
 
 ---
 
-## Test: legacy random tag operator is rejected
+## Test: random tag operator is rejected
 
-This negative compiler case exercises “legacy random tag operator is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “random tag operator is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -347,7 +347,7 @@ id: case-0010
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy random tag operator is rejected.ges"
+  - name: "random tag operator is rejected.ges"
     program: main
 ```
 
@@ -370,9 +370,9 @@ error:
 
 ---
 
-## Test: legacy clamp tag operator is rejected
+## Test: clamp tag operator is rejected
 
-This negative compiler case exercises “legacy clamp tag operator is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “clamp tag operator is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -382,7 +382,7 @@ id: case-0011
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy clamp tag operator is rejected.ges"
+  - name: "clamp tag operator is rejected.ges"
     program: main
 ```
 
@@ -405,9 +405,9 @@ error:
 
 ---
 
-## Test: legacy min tag operator is rejected
+## Test: min tag operator is rejected
 
-This negative compiler case exercises “legacy min tag operator is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “min tag operator is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -417,7 +417,7 @@ id: case-0012
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy min tag operator is rejected.ges"
+  - name: "min tag operator is rejected.ges"
     program: main
 ```
 
@@ -440,9 +440,9 @@ error:
 
 ---
 
-## Test: legacy max tag operator is rejected
+## Test: max tag operator is rejected
 
-This negative compiler case exercises “legacy max tag operator is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “max tag operator is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -452,7 +452,7 @@ id: case-0013
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy max tag operator is rejected.ges"
+  - name: "max tag operator is rejected.ges"
     program: main
 ```
 
@@ -475,9 +475,9 @@ error:
 
 ---
 
-## Test: legacy zip tag operator is rejected
+## Test: zip tag operator is rejected
 
-This negative compiler case exercises “legacy zip tag operator is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “zip tag operator is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -487,7 +487,7 @@ id: case-0014
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy zip tag operator is rejected.ges"
+  - name: "zip tag operator is rejected.ges"
     program: main
 ```
 
@@ -510,9 +510,9 @@ error:
 
 ---
 
-## Test: legacy dice tag roll is rejected
+## Test: dice tag roll is rejected
 
-This negative compiler case exercises “legacy dice tag roll is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “dice tag roll is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -522,7 +522,7 @@ id: case-0015
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy dice tag roll is rejected.ges"
+  - name: "dice tag roll is rejected.ges"
     program: main
 ```
 
@@ -545,9 +545,9 @@ error:
 
 ---
 
-## Test: legacy default tag operator is rejected
+## Test: default tag operator is rejected
 
-This negative compiler case exercises “legacy default tag operator is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “default tag operator is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -557,7 +557,7 @@ id: case-0016
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy default tag operator is rejected.ges"
+  - name: "default tag operator is rejected.ges"
     program: main
 ```
 
@@ -580,9 +580,9 @@ error:
 
 ---
 
-## Test: legacy emit tag literal form is rejected
+## Test: emit tag literal form is rejected
 
-This negative compiler case exercises “legacy emit tag literal form is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “emit tag literal form is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -592,7 +592,7 @@ id: case-0017
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy emit tag literal form is rejected.ges"
+  - name: "emit tag literal form is rejected.ges"
     program: main
 ```
 
@@ -615,9 +615,9 @@ error:
 
 ---
 
-## Test: legacy handler matching tag literal form is rejected
+## Test: handler matching tag literal form is rejected
 
-This negative compiler case exercises “legacy handler matching tag literal form is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “handler matching tag literal form is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -627,7 +627,7 @@ id: case-0018
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy handler matching tag literal form is rejected.ges"
+  - name: "handler matching tag literal form is rejected.ges"
     program: main
 ```
 
@@ -650,9 +650,9 @@ error:
 
 ---
 
-## Test: legacy handler without tag literal form is rejected
+## Test: handler without tag literal form is rejected
 
-This negative compiler case exercises “legacy handler without tag literal form is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “handler without tag literal form is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -662,7 +662,7 @@ id: case-0019
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy handler without tag literal form is rejected.ges"
+  - name: "handler without tag literal form is rejected.ges"
     program: main
 ```
 
@@ -685,9 +685,9 @@ error:
 
 ---
 
-## Test: legacy floor prefix builtin is rejected
+## Test: floor prefix builtin is rejected
 
-This negative compiler case exercises “legacy floor prefix builtin is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “floor prefix builtin is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -697,7 +697,7 @@ id: case-0020
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy floor prefix builtin is rejected.ges"
+  - name: "floor prefix builtin is rejected.ges"
     program: main
 ```
 
@@ -720,9 +720,9 @@ error:
 
 ---
 
-## Test: legacy wrapDegree prefix builtin is rejected
+## Test: wrapDegree prefix builtin is rejected
 
-This negative compiler case exercises “legacy wrapDegree prefix builtin is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “wrapDegree prefix builtin is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -732,7 +732,7 @@ id: case-0021
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy wrapDegree prefix builtin is rejected.ges"
+  - name: "wrapDegree prefix builtin is rejected.ges"
     program: main
 ```
 
@@ -1473,7 +1473,7 @@ error:
 
 This negative compiler case verifies that `:` remains reserved for structured
 selectors, type names, and extension namespaces. Map keys use member syntax,
-text, or `#` tags instead of the removed legacy `:Name` spelling.
+text, or `#` tags; a colon-prefixed name is not a map-key expression.
 
 ### Case description
 

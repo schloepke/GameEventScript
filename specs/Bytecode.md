@@ -44,7 +44,7 @@ expressions are layout-free direct instructions.
 - Keep domain-heavy collection operations high-level when that is faster or
   simpler than expanding them into many tiny instructions.
 - Preserve iterating and short-circuit behavior where the language requires it.
-- Keep the public artifact portable: no VM session state, executable delegates, no
+- Keep the public artifact portable: no VM execution state, executable delegates, no
   bound extension functions, no AST nodes, and no runtime value constants.
 
 ## Non-Goals
@@ -125,9 +125,9 @@ instruction word are encoded by typed load opcodes:
 
 Constants are concrete. For example `1`, `1.0`, `1m`, and `1s` remain distinct
 loads. Runtime operations and explicit `:Number` casts may normalize finite
-integral results to integer values. Larger constants such as future vector/point
-literals should use a normalized data segment instead of reintroducing an object
-constant pool.
+integral results to integer values. Aggregate values are created by their
+current constructors and collection operations rather than an object constant
+pool.
 
 String payloads are strict UTF-8 in `.gesb`. Runtime text length, indexing, and
 iteration use Unicode scalar values, while SourceMap locations use UTF-8 byte
@@ -144,9 +144,9 @@ bits 0..4  UnitId        0..31
 bits 5..7  Reserved      must be zero in portable bytecode
 ```
 
-Reserved bits are intended to be consumed from the most significant bit
-downward. Bit 5 is kept as the last-resort reserved bit so the UnitId field can
-grow to 6 bits later if those opcode flags are never needed.
+Reserved bits are consumed from the most significant bit downward. Bit 5 stays
+reserved so the UnitId field can be extended to 6 bits without reshaping the
+instruction field.
 
 The UnitId map keeps the defined ids stable and reserves
 room for likely game-domain units:
@@ -170,11 +170,11 @@ room for likely game-domain units:
 | `14` | byte | Storage amount. |
 | `15` | bit per second | Bandwidth and communication throughput. |
 | `16` | kelvin | Temperature; Celsius/Fahrenheit syntax should normalize to Kelvin. |
-| `17..31` | reserved | Future built-in or domain units. |
+| `17..31` | reserved | Additional built-in or domain units. |
 
-The compiler must only emit units supported by its matching runtime. The extended
-map is a binary-format target so future unit additions do not need to reshape
-the instruction word.
+The compiler must only emit units supported by its matching runtime. The
+extended map keeps additional unit IDs representable without reshaping the
+instruction word.
 
 ## Parameter Type Hints
 
@@ -312,7 +312,7 @@ Opcode values are grouped in aligned operation-family blocks. Every family
 starts at a `0x_0` boundary, and larger families may span multiple 16-value
 pages. The VM still dispatches directly on the full opcode byte; the high nibble
 is a portable layout convention and may be used by validators, dumpers, or
-future decoders. Each group owns exactly one reserved tail range at the end of
+decoders. Each group owns exactly one reserved tail range at the end of
 the group; reserved opcode pages are not modeled as separate groups. The defined
 groups are:
 
@@ -996,8 +996,8 @@ Vector and point constructors are fixed built-ins. Their source arguments are
 lowered into staged component values in canonical `x, y, z` order; `immediateX`
 stores the first staged component index (`0`, `1`, or `2`) so leading missing
 components do not need explicit zero stages.
-Seeded random no longer has a side table or helper expression opcode. The
-lowerer emits `RandomPush*`, the inline body instructions, and `RandomPop`.
+Seeded random uses no side table or helper expression opcode. The lowerer emits
+`RandomPush*`, the inline body instructions, and `RandomPop`.
 Constant seeds are unitless signed `Int64`, so negative seeds such as `-145`
 are valid source literals. A non-literal seed has already been established as
 an inferred unitless integer or explicitly converted with `as :Number` by the
@@ -1052,10 +1052,11 @@ on BusEvent(value) matching #radio without #blocked {
 }
 ```
 
-`Emit` targets the current event space. `Publish` targets the configured publish
-hook; when no hook exists, it falls back to `Emit`. This keeps the language
-host-independent while allowing the runtime to redirect published messages to a
-bus, broadcaster, or parent dispatcher later.
+`Emit` enqueues only in the current Host. `Publish` first performs the same local
+enqueue and then invokes the configured outbound sink exactly once when one is
+present. Without a sink, its outbound attempt is absent while the local enqueue
+is unchanged. The embedding may connect the sink to a bus, broadcaster, parent
+dispatcher, or transport adapter.
 
 `with` attaches delivery tags to the message. Tags are not part of
 `SignatureId`, not part of handler parameter binding, and are normalized to a
@@ -1121,9 +1122,9 @@ remain distinguishable through their binding kind.
 
 ### Collection DSL
 
-Collection operations should stay high-level enough to avoid exploding code size
-and losing optimized paths, but pipeline selectors no longer live in public
-metadata pools. Prefix selectors and selector expressions are lowered into
+Collection operations stay high-level enough to avoid exploding code size and
+losing optimized paths. Pipeline selectors use ordinary instructions rather
+than public metadata pools. Prefix selectors and selector expressions are lowered into
 ordinary bytecode loops so every expression participates in normal slice
 execution and opcode budgeting.
 

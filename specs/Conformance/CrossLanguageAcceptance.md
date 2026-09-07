@@ -91,7 +91,7 @@ They remain available in the full `ConformanceResults.json` and Markdown
 report. The compact artifact is only the stable cross-language comparison
 surface.
 
-The checked-in initial reference is
+The canonical C# reference is
 `conformance/cross-language/CSharpReferenceResults.json`.
 The C# adapter writes
 `Received/CSharpReferenceResults.received.json` from the results already

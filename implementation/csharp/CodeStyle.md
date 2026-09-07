@@ -10,9 +10,9 @@ portable Game Event Script product specification.
 
 ## Automated foundation
 
-The scoped `../.editorconfig` defines the formatting options understood by
-Roslyn, Rider, and compatible editors. Its sections match only the production
-and test projects; sibling Beamable services are unaffected.
+The root `../../.editorconfig` defines the formatting options understood by
+Roslyn, Rider, and compatible editors. Its C# sections apply to the reference
+implementation and its tests.
 
 Source files use UTF-8 without BOM, `LF`, a terminal newline, four spaces per
 indentation level, standard C# brace placement, and standard spacing. System
@@ -30,8 +30,8 @@ initializers stay on one line when the complete construct fits within 250
 characters and remains readable. Argument count alone never causes wrapping. A
 call with three short arguments normally remains on one line.
 
-Existing multiline code may be joined when it satisfies those conditions. Do
-not retain vertical expansion merely because a construct was previously split.
+Multiline code may be joined when it satisfies those conditions. Do not retain
+vertical expansion without a readability or line-length reason.
 
 ## Necessary wrapping
 

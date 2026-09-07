@@ -177,7 +177,7 @@ public static class ConformanceReceivedMarkdownWriter
         for (var index = 0; index < actual.Length; index++) actual[index] = source[offset + index];
         var decoded = Utf8.GetString(actual);
         if (!string.Equals(NormalizeLf(decoded), NormalizeLf(expectedLogical), StringComparison.Ordinal))
-            throw Error(ConformanceReceivedWriterCodes.StaleRange, "A replacement range no longer contains its parsed expectation.");
+            throw Error(ConformanceReceivedWriterCodes.StaleRange, "A replacement range does not contain its parsed expectation.");
         var replacement = preserveLineEndings ? ApplyLineEnding(NormalizeLf(replacementLogical), UnambiguousLineEnding(document.Source.Utf8Bytes)) : replacementLogical;
         replacements.Add(new Replacement(offset, range.ByteLength, Utf8.GetBytes(replacement)));
     }

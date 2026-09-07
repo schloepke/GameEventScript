@@ -319,7 +319,7 @@ when not found. It never converts the collection to unordered semantics.
 
 `Message.Create(name, arguments?, tags?)` validates and copies the logical
 inputs. Absent arguments/tags mean empty. `WithTags(tags)` returns a new Message
-whose normalized tag set is the stable merge of old and new tags; it does not
+whose normalized tag set is the stable merge of existing and supplied tags; it does not
 mutate the original. `HasTag(tag)` uses normalized ordinal matching.
 
 Message equality compares signature, argument values in order, and normalized
@@ -466,7 +466,7 @@ overloads construct a message from name and ordered arguments. `Publish(message)
 first attempts the identical local enqueue, then invokes the configured outbound
 sink once unless a random fault gate forbids delivery. It returns PublishResult.
 
-Context has no independent queue, session, VM, or scheduler. It must not be used
+Context has no independent queue, VM, or scheduler. It must not be used
 concurrently or retained for asynchronous calls after its callback. Emit and
 Publish do not recursively dispatch the new message.
 
@@ -863,6 +863,6 @@ duplicated as a second source of truth here.
 | Result, Markdown, Received, and CrossLanguage writers plus CorpusIdentity | Conformance writer API |
 | CSharpBridge reflection, delegate, dictionary, and automatic-runner adapters | Language-binding requirements; non-portable |
 
-No Session, module-owned VM, isolated Run, public VM state, AST, parser tree,
-filesystem service, network client, task scheduler, or reflection object belongs
-to the portable public API.
+The portable public API is limited to the families above. VM execution state,
+compiler trees, filesystem services, network clients, task schedulers, and
+reflection objects remain private or embedding-specific.

@@ -71,11 +71,10 @@ must import both assemblies together.
 
 The repository verifies the exact staged pair through an external project with
 ordinary assembly references. This proves that the staged dependency set loads
-and executes without project references, Beamable, or Unity dependencies. A
-real Unity project remains the final engine compatibility gate because only
-Unity can validate its selected scripting backend, API compatibility level,
-and asset importer. Unity Editor tooling, MonoBehaviours, and a UPM package will
-be developed in such a project before reusable integration code is moved here.
+and executes without project references or Unity dependencies. A real Unity
+project remains the final engine compatibility gate because only Unity can
+validate its selected scripting backend, API compatibility level, and asset
+importer. Unity follow-up work is tracked in `BACKLOG.md`.
 
 ## CI and publishing boundary
 
@@ -95,15 +94,7 @@ publishing is additionally gated by all of the following:
 - secret `NUGET_USER`, used by the official NuGet login action to request a
   short-lived API key through GitHub OIDC.
 
-During migration the repository variable remains absent or false, so the
-publishing job cannot run. The final package IDs and publisher identity must be
-approved before that gate is enabled.
-
-## Future native package layouts
-
-Swift and Kotlin receive package structure only when their real ports begin.
-The Swift implementation will own its `Package.swift` and SwiftPM product under
-`implementation/swift`; the Kotlin implementation will own its Gradle build and
-Maven publication under `implementation/kotlin`. Coordinates, signing, registry
-accounts, and platform matrices are decided with each implementation. Empty
-ports and placeholder packages are deliberately not checked in.
+The repository variable is absent or false by default, so the publishing job
+cannot run. The final package IDs and publisher identity must be approved before
+that gate is enabled. Language-port and publication follow-up work is tracked in
+`BACKLOG.md`.

@@ -8,8 +8,7 @@ The backlog is informative: an entry is implemented only when the user makes it
 part of the current task.
 
 When an item is completed, remove it from this file in the same change and
-record the resulting contract in the owning specification. Do not retain
-completed entries or turn this file into a checked history. Keep detailed design
+record the resulting contract in the owning specification. Keep detailed design
 decisions in specifications or dedicated plans and keep only a concise pointer
 here.
 
@@ -20,8 +19,7 @@ here.
   represent Game Event Script or a later product position such as Guided Event
   Script.
 - Register or select a GES-specific domain and transferable publisher namespace;
-  align NuGet, Maven, SwiftPM, GitHub and future organization ownership. The old
-  `org.jbasics` identity is unrelated and must not be used.
+  align NuGet, Maven, SwiftPM, GitHub and future organization ownership.
 - Finalize package IDs, publisher identity, repository visibility and release
   signing before enabling `NUGET_PUBLISH_ENABLED` or any other public registry
   publication.
@@ -104,8 +102,8 @@ here.
   tests without weakening the existing canonical and malformed fixture corpus.
 - Improve CFG/liveness-based register allocation and reuse of non-overlapping
   locals.
-- Check whether bytecode optimizer passes still produce meaningful changes now
-  that the compiler emits better register assignments directly.
+- Measure whether the bytecode optimizer passes produce meaningful changes with
+  the compiler's direct register assignments.
 - Revisit Message/Emit allocation only when measurements show a material hot-path
   benefit.
 - Revisit a more VM-near extension-call model if boxing at the extension boundary

@@ -41,7 +41,7 @@ All specification documents in the table are normative.
 
 ## Documentation rules
 
-- Normative documents describe only the current contract. They contain no migration history, superseded architecture, or implementation diary.
+- Normative documents describe only the current contract.
 - A rule is defined once. Cross-cutting documents use explicit links to the owning document.
 - C#, Swift, Kotlin, C++, and Unity integrations may be idiomatic, but their observable behavior must satisfy the same language-neutral contracts.
 - Work plans, backlogs, test inventories, generated reports, and editor bundles remain outside the normative specification tree.

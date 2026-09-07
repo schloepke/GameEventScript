@@ -5,7 +5,8 @@
 
 Game Event Script is a portable, deterministic scripting language and serial
 message host for game logic. The current C# implementation is the reference for
-the planned Swift, Kotlin, C++, C#, and Unity ports.
+the language-neutral contracts. Additional language implementations are tracked
+in [`BACKLOG.md`](BACKLOG.md).
 
 The canonical documentation starts at [Documentation](docs/README.md).
 Portable behavior is defined by the normative specifications and executable
@@ -16,7 +17,7 @@ Markdown conformance corpus; the C# API is one language-specific mapping.
 - [`specs`](specs) contains the normative language-neutral specifications.
 - [`conformance`](conformance) contains the shared executable corpus and fixtures.
 - [`implementation/csharp`](implementation/csharp) contains the current reference implementation and native tests.
-- [`docs`](docs) contains guides and development material.
+- [`docs`](docs) contains guides and supporting documentation.
 - [`tools`](tools) contains editor support and repository tooling.
 - [`BACKLOG.md`](BACKLOG.md) contains deliberately deferred project work and is not a normative specification.
 

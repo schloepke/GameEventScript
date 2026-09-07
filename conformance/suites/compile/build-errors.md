@@ -948,9 +948,9 @@ error:
 
 ---
 
-## Test: ref type has been removed
+## Test: ref type is unsupported
 
-This negative compiler case exercises “ref type has been removed” and verifies the required portable diagnostic.
+This negative compiler case verifies that `:Ref` is not a supported source type and produces the required portable diagnostic.
 
 ### Case description
 
@@ -960,7 +960,7 @@ id: case-0025
 kind: compileError
 level: scenario
 sources:
-  - name: "ref type has been removed.ges"
+  - name: "ref type is unsupported.ges"
     program: main
 ```
 
@@ -1861,9 +1861,9 @@ error:
 
 ---
 
-## Test: legacy prefix tag math operator is rejected
+## Test: prefix tag math operator is rejected
 
-This negative compiler case exercises “legacy prefix tag math operator is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “prefix tag math operator is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -1873,7 +1873,7 @@ id: case-0045
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy prefix tag math operator is rejected.ges"
+  - name: "prefix tag math operator is rejected.ges"
     program: main
 ```
 
@@ -1896,9 +1896,9 @@ error:
 
 ---
 
-## Test: legacy numeric tag constant is rejected
+## Test: numeric tag constant is rejected
 
-This negative compiler case exercises “legacy numeric tag constant is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “numeric tag constant is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -1908,7 +1908,7 @@ id: case-0046
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy numeric tag constant is rejected.ges"
+  - name: "numeric tag constant is rejected.ges"
     program: main
 ```
 
@@ -1931,9 +1931,9 @@ error:
 
 ---
 
-## Test: legacy integer standard extension is rejected
+## Test: integer standard extension is rejected
 
-This negative compiler case exercises “legacy integer standard extension is rejected” and verifies the required portable diagnostic.
+This negative compiler case exercises “integer standard extension is rejected” and verifies the required portable diagnostic.
 
 ### Case description
 
@@ -1943,7 +1943,7 @@ id: case-0047
 kind: compileError
 level: scenario
 sources:
-  - name: "legacy integer standard extension is rejected.ges"
+  - name: "integer standard extension is rejected.ges"
     program: main
 ```
 

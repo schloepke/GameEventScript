@@ -50,8 +50,7 @@ explicit, non-parallel measurement run. It writes the canonical result JSON, a
 human-readable report, and a suite-local received Markdown approval candidate
 under `artifacts/conformance/received`; bytecode-snapshot cases produce a
 separate received candidate there as well. These generated files never replace
-the normative source suite automatically. The former combined text performance
-report and combined GESA dump no longer exist.
+the normative source suite automatically.
 
 The C# Markdown adapter collects the independently executed case results and
 writes `ConformanceResults.json` plus `ConformanceReport.md` after a complete

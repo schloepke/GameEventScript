@@ -76,6 +76,5 @@ semantics also has a portable case:
 - C# allocation measurements and platform/runtime benchmark profiles.
 
 These tests must not become required behavior for Swift, Kotlin or C++ ports.
-The complete file-level inventory and the reason every remaining native C# test
-still exists are maintained in
-[Native Test Retention](../../docs/development/NativeTestRetention.md).
+The test-project structure and retention rule are documented in the
+[C# test README](../../implementation/csharp/tests/StepH.GameEventScript.Tests/README.md).

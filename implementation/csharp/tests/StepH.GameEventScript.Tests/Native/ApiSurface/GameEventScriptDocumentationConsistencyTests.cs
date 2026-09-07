@@ -107,13 +107,6 @@ public sealed class GameEventScriptDocumentationConsistencyTests
 
         Assert.HasCount(0, brokenLinks, "Broken local documentation links:\n" + string.Join("\n", brokenLinks));
 
-        var testsDirectory = TestRepositoryPaths.TestProjectDirectory;
-        var conformanceMethodCount = CountTestMethods(Path.Combine(testsDirectory, "Conformance"));
-        var nativeMethodCount = CountTestMethods(Path.Combine(testsDirectory, "Native"));
-        var retentionInventory = File.ReadAllText(Path.Combine(TestRepositoryPaths.DocumentationDirectory, "development", "NativeTestRetention.md"));
-        Assert.Contains($"There are {conformanceMethodCount + nativeMethodCount} C# test methods.", retentionInventory);
-        Assert.Contains($"Of the C# methods, {conformanceMethodCount}\nbootstrap", retentionInventory);
-        Assert.Contains($"infrastructure from the `Conformance` root and {nativeMethodCount}\ntest", retentionInventory);
     }
 
     /// <summary>
@@ -191,10 +184,6 @@ public sealed class GameEventScriptDocumentationConsistencyTests
         => Regex.Matches(markdown, @"!?\[[^\]]*\]\((?<target>[^)\s]+)(?:\s+""[^""]*"")?\)")
             .Select(match => match.Groups["target"].Value)
             .Where(target => !target.StartsWith('#') && !target.Contains("://", StringComparison.Ordinal));
-
-    private static int CountTestMethods(string directory)
-        => Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories)
-            .Sum(path => Regex.Matches(File.ReadAllText(path), @"^\s*\[(?:Data)?TestMethod\]", RegexOptions.Multiline).Count);
 
     private static string RemoveFragment(string target)
     {

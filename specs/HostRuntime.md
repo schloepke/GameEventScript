@@ -51,8 +51,8 @@ adapters without changing the Core contract.
 `GameEventScriptContext` is created once per host and passed to native handlers
 and extensions. It exposes the host random stream, limits, `Emit`, and `Publish`.
 Its random generator supports nested `Push()`, `Push(Int64)`, and `Pop()` scopes.
-It does not own a queue and is not a session. A context or its random generator
-must not be retained for asynchronous use after a native or extension callback.
+It does not own a queue, VM, or scheduler. A context or its random generator must
+not be retained for asynchronous use after a native or extension callback.
 
 `GameEventScriptVirtualMachine` is a stateless executor. `GesVmState` contains
 only the currently resumable execution: active linked program, instruction

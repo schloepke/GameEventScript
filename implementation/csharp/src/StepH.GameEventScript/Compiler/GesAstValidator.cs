@@ -1721,7 +1721,7 @@ internal static class GesAstValidator
         {
             errors.Add(
                 parsedScriptContext,
-                "Type ':optional' has been removed; use nothing to represent absence.",
+                "Type ':optional' is not supported; use nothing to represent absence.",
                 typeName,
                 GameEventScriptSymbolKind.Type,
                 GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor,
@@ -1733,7 +1733,7 @@ internal static class GesAstValidator
         {
             errors.Add(
                 parsedScriptContext,
-                "Type ':set' has been removed; use lists or key-only maps.",
+                "Type ':set' is not supported; use lists or key-only maps.",
                 typeName,
                 GameEventScriptSymbolKind.Type,
                 GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor,
@@ -1745,7 +1745,7 @@ internal static class GesAstValidator
         {
             errors.Add(
                 parsedScriptContext,
-                "Type ':Uuid' has been removed; use ':Text' or ':Number' ids in scripts.",
+                "Type ':Uuid' is not supported; use ':Text' or ':Number' ids in scripts.",
                 typeName,
                 GameEventScriptSymbolKind.Type,
                 GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor,
@@ -1757,7 +1757,7 @@ internal static class GesAstValidator
         {
             errors.Add(
                 parsedScriptContext,
-                "Type ':ref' has been removed; future mutation handles will be table/agent based.",
+                "Type ':ref' is not supported.",
                 typeName,
                 GameEventScriptSymbolKind.Type,
                 GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor,

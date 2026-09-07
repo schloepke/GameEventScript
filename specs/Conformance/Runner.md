@@ -475,7 +475,7 @@ explicit approval candidate.
 The portable writer updates every performance measurement and actual assembler
 present in the selected report results for the source suite. A report may be a
 whole-corpus report, but matching full/local IDs, title, kind, level, performance
-profile, metric set, old reference, and unit must agree with the parsed source.
+profile, metric set, current reference, and unit must agree with the parsed source.
 It reports `conformance.received.invalidReport`,
 `conformance.received.missingCase`, `conformance.received.missingRange`,
 `conformance.received.staleRange`, or

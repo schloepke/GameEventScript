@@ -41,8 +41,7 @@ dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH.GameEv
   request.
 
 Handwritten C# follows `implementation/csharp/CodeStyle.md` and the root
-`.editorconfig`. The maximum line length is 250 characters. Keep declarations
-and calls on one line when they fit and remain readable.
+`.editorconfig`.
 
 Every public C# type and member requires valid XML documentation. Missing or
 malformed XML documentation is a build error and must not be hidden with

@@ -60,6 +60,16 @@ binary64 before an exact in-range integer operation.
 
 ## Conversion and rounding
 
+An existing Int64 number cast with `as :Number` retains its exact value and
+quantity unit. The cast must not pass that value through Binary64, including
+when the result is used as a dynamic random seed. Compiler constant evaluation
+and runtime conversion use the same rules.
+
+Explicit text-to-Number conversion accepts `Infinity` and `-Infinity` as the
+corresponding observable Binary64 values. `NaN` and invalid numeric text produce
+`nothing`. These rules apply equally to literals, named constants, and values
+received at runtime.
+
 Binary64-to-Int64 conversion first truncates toward zero and then saturates:
 
 | Input | Result |
@@ -95,6 +105,9 @@ host language's similarly named default overload.
 - `mod` is the floor-modulo companion of `div`. A non-zero result has the sign
   of the right operand: `-7 mod 3 = 2`, `7 mod -3 = -2`.
 - `mod` or `rem` by zero is invalid mathematics and becomes `nothing`.
+- `Int64.MinValue mod -1` and `Int64.MinValue rem -1` are exactly integer zero;
+  they do not overflow. Integer `div` by zero uses the same infinity or
+  `nothing` outcomes as `/` by zero.
 - For binary64 operands, `rem` uses the IEEE/C `fmod`-style truncating remainder;
   `mod` adjusts a non-zero remainder once by the divisor to obtain its sign.
 

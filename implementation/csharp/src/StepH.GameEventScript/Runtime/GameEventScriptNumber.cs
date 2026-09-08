@@ -3,6 +3,8 @@
 
 using System;
 using System.Globalization;
+using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Runtime;
 
@@ -16,6 +18,25 @@ internal static class GameEventScriptNumber
     internal const int RuntimeEqualityUlps = 2;
     internal const double Int64UpperExclusive = 9223372036854775808d;
     internal const double Int64LowerInclusive = -9223372036854775808d;
+
+    internal static GesValue Cast(in GesValue value)
+    {
+        if (value.Kind == GameEventScriptBytecodeTypeKind.Integer) return value;
+        if (value.Kind == GameEventScriptBytecodeTypeKind.Text)
+        {
+            return double.TryParse(value.TextValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed)
+                ? GesValue.GesFloat(parsed)
+                : GesValue.GesNothing();
+        }
+
+        if (value.Kind == GameEventScriptBytecodeTypeKind.Series && value.ObjectValue is GesSeries series)
+        {
+            var first = series.GetTerm(0);
+            return Cast(in first);
+        }
+
+        return GesValue.GesFloat(value.AsNumeric, value.Kind == GameEventScriptBytecodeTypeKind.Float ? value.Unit : GameEventScriptBytecodeInstructionUnit.UnitNone);
+    }
 
     internal static bool CanRepresentAsInteger(double value)
         => double.IsFinite(value) &&

@@ -1847,3 +1847,295 @@ steps:
           - name: value
             value: { type: ":Number.int64", value: "0" }
 ```
+
+---
+
+## Test: quantity-negative-floor through direct Program
+
+This case requires floor division with a nonzero remainder above 2^53 to cancel matching units, while modulo and remainder retain the dividend unit and their distinct sign rules.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: quantity-negative-floor-direct
+compile:
+  binaryRoundTrip: false
+```
+
+### Source code under test
+
+```ges
+module integerprecision
+constant $dividend be -9007199254740994m
+constant $divisor be 3m
+on Start(value, divisor) {
+  emit Literal(quotient: (-9007199254740994m) div (3m), modulo: (-9007199254740994m) mod (3m), remainder: (-9007199254740994m) rem (3m))
+  emit Constant(quotient: $dividend div $divisor, modulo: $dividend mod $divisor, remainder: $dividend rem $divisor)
+  emit Runtime(quotient: value div divisor, modulo: value mod divisor, remainder: value rem divisor)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: value
+          value: { type: ":Quantity.int64", value: "-9007199254740994", unit: ":meter" }
+        - name: divisor
+          value: { type: ":Quantity.int64", value: "3", unit: ":meter" }
+    local:
+      - name: Literal
+        args:
+          - name: quotient
+            value: { type: ":Number.int64", value: "-3002399751580332" }
+          - name: modulo
+            value: { type: ":Quantity.int64", value: "2", unit: ":meter" }
+          - name: remainder
+            value: { type: ":Quantity.int64", value: "-1", unit: ":meter" }
+      - name: Constant
+        args:
+          - name: quotient
+            value: { type: ":Number.int64", value: "-3002399751580332" }
+          - name: modulo
+            value: { type: ":Quantity.int64", value: "2", unit: ":meter" }
+          - name: remainder
+            value: { type: ":Quantity.int64", value: "-1", unit: ":meter" }
+      - name: Runtime
+        args:
+          - name: quotient
+            value: { type: ":Number.int64", value: "-3002399751580332" }
+          - name: modulo
+            value: { type: ":Quantity.int64", value: "2", unit: ":meter" }
+          - name: remainder
+            value: { type: ":Quantity.int64", value: "-1", unit: ":meter" }
+```
+
+---
+
+## Test: quantity-negative-floor through binary Program
+
+This case requires floor division with a nonzero remainder above 2^53 to cancel matching units, while modulo and remainder retain the dividend unit and their distinct sign rules.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: quantity-negative-floor-binary
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+module integerprecision
+constant $dividend be -9007199254740994m
+constant $divisor be 3m
+on Start(value, divisor) {
+  emit Literal(quotient: (-9007199254740994m) div (3m), modulo: (-9007199254740994m) mod (3m), remainder: (-9007199254740994m) rem (3m))
+  emit Constant(quotient: $dividend div $divisor, modulo: $dividend mod $divisor, remainder: $dividend rem $divisor)
+  emit Runtime(quotient: value div divisor, modulo: value mod divisor, remainder: value rem divisor)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: value
+          value: { type: ":Quantity.int64", value: "-9007199254740994", unit: ":meter" }
+        - name: divisor
+          value: { type: ":Quantity.int64", value: "3", unit: ":meter" }
+    local:
+      - name: Literal
+        args:
+          - name: quotient
+            value: { type: ":Number.int64", value: "-3002399751580332" }
+          - name: modulo
+            value: { type: ":Quantity.int64", value: "2", unit: ":meter" }
+          - name: remainder
+            value: { type: ":Quantity.int64", value: "-1", unit: ":meter" }
+      - name: Constant
+        args:
+          - name: quotient
+            value: { type: ":Number.int64", value: "-3002399751580332" }
+          - name: modulo
+            value: { type: ":Quantity.int64", value: "2", unit: ":meter" }
+          - name: remainder
+            value: { type: ":Quantity.int64", value: "-1", unit: ":meter" }
+      - name: Runtime
+        args:
+          - name: quotient
+            value: { type: ":Number.int64", value: "-3002399751580332" }
+          - name: modulo
+            value: { type: ":Quantity.int64", value: "2", unit: ":meter" }
+          - name: remainder
+            value: { type: ":Quantity.int64", value: "-1", unit: ":meter" }
+```
+
+---
+
+## Test: zero-divisor through direct Program
+
+This case requires a zero divisor to produce negative infinity for div and nothing for mod/rem in every evaluation path, without an implementation arithmetic exception.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: zero-divisor-direct
+compile:
+  binaryRoundTrip: false
+```
+
+### Source code under test
+
+```ges
+module integerprecision
+constant $dividend be -9223372036854775808
+constant $divisor be 0
+on Start(value, divisor) {
+  emit Literal(quotient: (-9223372036854775808) div (0), modulo: (-9223372036854775808) mod (0), remainder: (-9223372036854775808) rem (0))
+  emit Constant(quotient: $dividend div $divisor, modulo: $dividend mod $divisor, remainder: $dividend rem $divisor)
+  emit Runtime(quotient: value div divisor, modulo: value mod divisor, remainder: value rem divisor)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: value
+          value: { type: ":Number.int64", value: "-9223372036854775808" }
+        - name: divisor
+          value: { type: ":Number.int64", value: "0" }
+    local:
+      - name: Literal
+        args:
+          - name: quotient
+            value: { type: ":Number.binary64", value: "-Infinity" }
+          - name: modulo
+            value: { type: ":Nothing" }
+          - name: remainder
+            value: { type: ":Nothing" }
+      - name: Constant
+        args:
+          - name: quotient
+            value: { type: ":Number.binary64", value: "-Infinity" }
+          - name: modulo
+            value: { type: ":Nothing" }
+          - name: remainder
+            value: { type: ":Nothing" }
+      - name: Runtime
+        args:
+          - name: quotient
+            value: { type: ":Number.binary64", value: "-Infinity" }
+          - name: modulo
+            value: { type: ":Nothing" }
+          - name: remainder
+            value: { type: ":Nothing" }
+```
+
+---
+
+## Test: zero-divisor through binary Program
+
+This case requires a zero divisor to produce negative infinity for div and nothing for mod/rem in every evaluation path, without an implementation arithmetic exception.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: zero-divisor-binary
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+module integerprecision
+constant $dividend be -9223372036854775808
+constant $divisor be 0
+on Start(value, divisor) {
+  emit Literal(quotient: (-9223372036854775808) div (0), modulo: (-9223372036854775808) mod (0), remainder: (-9223372036854775808) rem (0))
+  emit Constant(quotient: $dividend div $divisor, modulo: $dividend mod $divisor, remainder: $dividend rem $divisor)
+  emit Runtime(quotient: value div divisor, modulo: value mod divisor, remainder: value rem divisor)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: value
+          value: { type: ":Number.int64", value: "-9223372036854775808" }
+        - name: divisor
+          value: { type: ":Number.int64", value: "0" }
+    local:
+      - name: Literal
+        args:
+          - name: quotient
+            value: { type: ":Number.binary64", value: "-Infinity" }
+          - name: modulo
+            value: { type: ":Nothing" }
+          - name: remainder
+            value: { type: ":Nothing" }
+      - name: Constant
+        args:
+          - name: quotient
+            value: { type: ":Number.binary64", value: "-Infinity" }
+          - name: modulo
+            value: { type: ":Nothing" }
+          - name: remainder
+            value: { type: ":Nothing" }
+      - name: Runtime
+        args:
+          - name: quotient
+            value: { type: ":Number.binary64", value: "-Infinity" }
+          - name: modulo
+            value: { type: ":Nothing" }
+          - name: remainder
+            value: { type: ":Nothing" }
+```

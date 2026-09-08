@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Runtime.Values;
@@ -568,14 +567,7 @@ internal static class GesAstOptimizer
         {
             case "number":
             case "numeric":
-                if (ReadNumberForCast(source) is { } number)
-                {
-                    return double.IsFinite(number.Number)
-                        ? CreateNumber(number.Number, number.Unit, Math.Truncate(number.Number) == number.Number)
-                        : GesValue.GesFloat(number.Number, number.Unit);
-                }
-
-                return GesValue.GesNothing();
+                return GameEventScriptNumber.Cast(in source);
             default:
                 return null;
         }
@@ -709,15 +701,30 @@ internal static class GesAstOptimizer
             return GesValue.GesNothing();
         }
 
+        var sameUnit = left.Unit == right.Unit;
+        var bothIntegers = left.Kind == GameEventScriptBytecodeTypeKind.Integer &&
+                           right.Kind == GameEventScriptBytecodeTypeKind.Integer;
+        if (bothIntegers && sameUnit)
+        {
+            switch (binary.Operator)
+            {
+                case GesBinaryOperator.IntegerDivide:
+                    return GameEventScriptNumber.FloorDivideExact(left.IntegerValue, right.IntegerValue) is { } quotient
+                        ? GesValue.GesInteger(quotient, DivideResultUnit(left.Unit))
+                        : GesValue.GesFloat(Math.Floor((double)left.IntegerValue / right.IntegerValue), DivideResultUnit(left.Unit));
+                case GesBinaryOperator.Modulo:
+                    return right.IntegerValue == 0 ? GesValue.GesNothing() : GesValue.GesInteger(GameEventScriptNumber.Modulo(left.IntegerValue, right.IntegerValue), left.Unit);
+                case GesBinaryOperator.Remainder:
+                    return right.IntegerValue == 0 ? GesValue.GesNothing() : GesValue.GesInteger(GameEventScriptNumber.Remainder(left.IntegerValue, right.IntegerValue), left.Unit);
+            }
+        }
+
         if (ReadFiniteNumber(left) is not { } leftNumber ||
             ReadFiniteNumber(right) is not { } rightNumber)
         {
             return null;
         }
 
-        var sameUnit = left.Unit == right.Unit;
-        var bothIntegers = left.Kind == GameEventScriptBytecodeTypeKind.Integer &&
-                           right.Kind == GameEventScriptBytecodeTypeKind.Integer;
         switch (binary.Operator)
         {
             case GesBinaryOperator.Equal:
@@ -920,26 +927,6 @@ internal static class GesAstOptimizer
         }
 
         return null;
-    }
-
-    private static (double Number, GameEventScriptBytecodeInstructionUnit Unit)? ReadNumberForCast(GesValue value)
-    {
-        switch (value.Kind)
-        {
-            case GameEventScriptBytecodeTypeKind.Integer:
-            case GameEventScriptBytecodeTypeKind.Float:
-            case GameEventScriptBytecodeTypeKind.Percentage:
-                return double.IsNaN(value.AsNumber()) ? null : (value.AsNumber(), value.Unit);
-            case GameEventScriptBytecodeTypeKind.Boolean:
-                return (value.AsBoolean() ? 1d : 0d, value.Unit);
-            case GameEventScriptBytecodeTypeKind.Text:
-                return double.TryParse(value.TextValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) &&
-                       double.IsFinite(number)
-                    ? (number, value.Unit)
-                    : null;
-            default:
-                return null;
-        }
     }
 
     private static double? ReadFiniteNumber(GesValue value)

@@ -13,7 +13,7 @@ here. Add or update this matrix in the same change as new portable behavior.
 | Behavior | Stable portable case IDs |
 | --- | --- |
 | Reader and canonical writer validate deep acyclic graphs and reject deep cycles within V1 limits without ending the embedding process | all four `program.call-graph-depth` cases: shallow/deep valid chains and invalid cycles, with deep fixtures containing 21,845 routines and 65,535 instructions |
-| Exact folded and runtime `div`, `mod`, and `rem` above 2^53, with negative operands, Int64 limits, and binary roundtrip | all 30 `runtime.numeric.integer-precision` cases |
+| Exact folded and runtime `div`, `mod`, and `rem` above 2^53, with negative operands, Int64 limits, quantities, zero divisors, and binary roundtrip | all 34 `runtime.numeric.integer-precision` cases |
 | Number cast Int64 and Quantity identity, including explicit dynamic random seeds and parent-stream restoration | `runtime.numeric.number-casts/identity-*`, `runtime.numeric.number-casts/random-seed-*`, each with `direct` and `binary` variants |
 | Folded and runtime text conversion of signed infinity, NaN, invalid text, and finite numbers | `runtime.numeric.number-casts/text-*`, each with `direct` and `binary` variants |
 | Conformance comparison rejects wrong numeric storage and infinite units, recursively, in exact and ULP modes | all 48 `api.conformance-comparison` cases, including exact Int64 range fields, nested records/messages, NaN, duplicate keys, and positive tolerance controls |

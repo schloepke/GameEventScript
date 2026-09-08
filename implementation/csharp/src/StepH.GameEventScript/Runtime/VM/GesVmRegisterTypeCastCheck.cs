@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
-using System.Globalization;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Runtime.Values;
@@ -141,31 +140,7 @@ internal static class GesVmRegisterTypeCastCheck
         vmState.SetValue(destinationRegister, in dst);
     }
     internal static GesValue GesVmCastNumeric(in GesValue xValue, GesVmState state)
-    {
-        var dst = new GesValue();
-        if (xValue.Kind is Text)
-        {
-            if (double.TryParse(xValue.TextValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
-            {
-                dst.SetFloat(parsed);
-            }
-            else
-            {
-                dst.SetNothing();
-            }
-
-            return dst;
-        }
-
-        if (xValue.Kind is Series && xValue.ObjectValue is GesSeries series)
-        {
-            dst = series.GetTerm(0);
-            return GesVmCastNumeric(in dst, state);
-        }
-
-        dst.SetFloat(xValue.AsNumeric, xValue.Kind is Integer or Float ? xValue.Unit : UnitNone);
-        return dst;
-    }
+        => GameEventScriptNumber.Cast(in xValue);
     internal static void GesVmCastCustom(this GesVmState vmState, ushort destinationRegister, in GesValue xValue, ushort typeTextPointer)
     {
         var dst = new GesValue();

@@ -34,7 +34,7 @@ as `case` or `expect`; custom trailing fence info strings are intentionally not
 accepted.
 
 The complete portable corpus lives under
-`conformance/suites`. Its 80 suites contain 1,197 semantic cases and seven
+`conformance/suites`. Its 80 suites contain 1,201 semantic cases and seven
 independent bytecode snapshots. Every case
 has an explicit stable ID, kind, and level and is exposed independently through
 the C# test adapter. Markdown is the sole normative authoring format for

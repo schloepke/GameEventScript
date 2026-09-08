@@ -212,6 +212,17 @@ and performs no synchronization. A host is serial but not thread-affine: only
 one caller may access it at a time, while later frames may run on another thread
 when the embedding environment supplies the required happens-before handoff.
 
+The processed-message limit counts completed logical messages, after all of
+their captured handlers have finished. After completing the configured number,
+the pump reports `RuntimeLimitReached` and one corresponding observer event only
+if another logical message remains queued. That next message stays queued and
+is not started until a later pump call. If completing the last message drains
+the queue exactly at the limit, the pump returns `Completed` without a
+processed-message-limit observation, unless an independent error or limit
+determines the result. These rules apply to both `ExecuteFrame` and
+`RunToCompletion`, to native and script handlers, and to messages enqueued by
+handlers during the pump.
+
 ## C# Automatic Runner
 
 `CSharpBridge.GameEventScriptCSharpHostRunner` is optional. It serializes access

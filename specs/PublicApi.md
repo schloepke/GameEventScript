@@ -439,7 +439,7 @@ rules are in [Host runtime](HostRuntime.md).
 | `Subscribe(signature, handler, requiredTags?, excludedTags?, priority = 0)` | Adds one exact-signature native subscription and returns a Subscription. Inputs are copied/retained as immutable registration data. |
 | `SubscribeMessageName(name, handler, requiredTags?, excludedTags?, priority = 0)` | Adds a native subscription matching every signature of that normalized message name. |
 | `Receive(message)` | Captures current matching subscriptions and attempts to enqueue the logical message locally. Returns whether accepted. It never pumps and never publishes outbound. |
-| `ExecuteFrame(opcodeBudget)` | Synchronously pumps on the caller until the scheduler budget pauses script execution, the Host becomes idle, or a handler runtime limit/error ends the call. Budget must be positive. |
+| `ExecuteFrame(opcodeBudget)` | Synchronously pumps on the caller until the scheduler budget pauses script execution, the Host becomes idle, or a runtime limit/error ends the call. Budget must be positive. |
 | `RunToCompletion()` | Synchronously pumps until idle or a runtime limit/error terminates this pump call. It creates no worker thread. |
 | `IsIdle` | True only when no active message/handler and no queued logical message exists. |
 | `PendingMessageCount` | Number of queued logical messages according to HostRuntime; it never counts handler invocations. |
@@ -525,7 +525,7 @@ The states are:
 - `Paused`: a script handler remains resumable because ExecuteFrame exhausted
   its scheduler opcode budget;
 - `Completed`: the pump reached idle without a stopping limit/error;
-- `RuntimeLimitReached`: a handler safety limit stopped the pump;
+- `RuntimeLimitReached`: a configured safety limit stopped the pump;
 - `RuntimeError`: at least one runtime diagnostic occurred during the pump; the
   Host still completes the remaining captured dispatch work unless another
   stopping limit is reached.

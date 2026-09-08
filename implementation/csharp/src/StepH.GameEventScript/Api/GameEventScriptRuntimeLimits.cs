@@ -24,13 +24,13 @@ public sealed class GameEventScriptRuntimeLimits
     public static GameEventScriptRuntimeLimits Default { get; } = new();
 
     /// <summary>
-    /// Specifies the maximum number of events that can be processed by an explicit
-    /// run-to-completion execution.
+    /// Specifies the maximum number of logical messages completed by a pump before
+    /// it stops with a processing-limit result while more messages remain queued.
     /// </summary>
     /// <remarks>
-    /// The default value is set to 64 but can be customized to suit specific application requirements.
-    /// Persistent manual and automatic hosts use queue limits and opcode budgets for flow control
-    /// and do not apply this limit to their long-lived queue.
+    /// The default is 64; a nonpositive value disables this limit. Each message counts once,
+    /// after all captured handlers finish. Exactly reaching the limit while draining the queue
+    /// completes normally. Otherwise pending messages remain queued for a later pump call.
     /// </remarks>
     public int MaxProcessedEventsPerRun { get; init; } = 64;
 

@@ -291,7 +291,7 @@ public sealed class GameEventScriptHost
                 _hasActiveMessage = false;
                 _stepProcessedMessages++;
                 if (_limits.MaxProcessedEventsPerRun > 0 &&
-                    _stepProcessedMessages >= _limits.MaxProcessedEventsPerRun)
+                    _stepProcessedMessages >= _limits.MaxProcessedEventsPerRun && _queue.Count > 0)
                 {
                     _context.RecordRuntimeLimitReached(
                         nameof(GameEventScriptRuntimeLimits.MaxProcessedEventsPerRun),

@@ -250,7 +250,7 @@ steps:
 
 ## Test: Emit and runtime-limit observer order
 
-This runtime case exercises “Emit and runtime-limit observer order” and verifies the declared messages, values, and execution result.
+This case stops before the pending message starts, preserves observer order, and resumes that message on the next pump without reporting another processing limit. The unmatched Probe input is rejected and adds no work before that second pump.
 
 ### Case description
 
@@ -273,6 +273,7 @@ on Deferred() {}
 | step | receive | pump | budget |
 | --- | --- | --- | --- |
 | run | Start | completion | |
+| resume | Probe | completion | |
 
 ### Expectation
 
@@ -280,6 +281,7 @@ on Deferred() {}
 gesBlock: expect
 steps:
   run:
+    paused: false
     local:
       - name: Deferred
     runtimeLimits:
@@ -300,6 +302,20 @@ steps:
         runtimeLimit:
           name: MaxProcessedEventsPerRun
           limit: 1
+  resume:
+    accepted: false
+    paused: false
+    runtimeLimits:
+      exclude:
+        - name: MaxProcessedEventsPerRun
+          limit: 1
+    trace:
+      - event: dispatchStarted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+      - event: dispatchCompleted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
 ```
 
 ---
@@ -815,6 +831,287 @@ steps:
       exclude:
         - name: MaxProcessedEventsPerRun
           limit: 2
+    trace:
+      - event: dispatchStarted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: emit
+        message: { name: Deferred }
+        accepted: true
+      - event: dispatchCompleted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: dispatchStarted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+      - event: dispatchCompleted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+```
+
+---
+
+## Test: Pending native message resumes after a completion processing-limit stop
+
+This case stops before the pending message starts, preserves observer order, and resumes that message on the next pump without reporting another processing limit. The unmatched Probe input is rejected and adds no work before that second pump.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: processed-limit-pending-native-completion
+runtimeLimits:
+  maxProcessedEventsPerRun: 1
+nativeHandlers:
+  - id: start
+    message: Start
+    parameters: []
+    emit:
+      - name: Deferred
+        args: []
+  - id: deferred
+    message: Deferred
+    parameters: []
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+| resume | Probe | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    paused: false
+    local:
+      - name: Deferred
+    runtimeLimits:
+      include:
+        - name: MaxProcessedEventsPerRun
+          limit: 1
+    trace:
+      - event: dispatchStarted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: emit
+        message: { name: Deferred }
+        accepted: true
+      - event: dispatchCompleted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: runtimeLimit
+        runtimeLimit:
+          name: MaxProcessedEventsPerRun
+          limit: 1
+  resume:
+    accepted: false
+    paused: false
+    runtimeLimits:
+      exclude:
+        - name: MaxProcessedEventsPerRun
+          limit: 1
+    trace:
+      - event: dispatchStarted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+      - event: dispatchCompleted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+```
+
+---
+
+## Test: Pending native message resumes after a frame processing-limit stop
+
+This case stops before the pending message starts, preserves observer order, and resumes that message on the next pump without reporting another processing limit. The unmatched Probe input is rejected and adds no work before that second pump.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: processed-limit-pending-native-frame
+runtimeLimits:
+  maxProcessedEventsPerRun: 1
+nativeHandlers:
+  - id: start
+    message: Start
+    parameters: []
+    emit:
+      - name: Deferred
+        args: []
+  - id: deferred
+    message: Deferred
+    parameters: []
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | frame | 1000 |
+| resume | Probe | frame | 1000 |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    paused: false
+    local:
+      - name: Deferred
+    runtimeLimits:
+      include:
+        - name: MaxProcessedEventsPerRun
+          limit: 1
+    trace:
+      - event: dispatchStarted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: emit
+        message: { name: Deferred }
+        accepted: true
+      - event: dispatchCompleted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: runtimeLimit
+        runtimeLimit:
+          name: MaxProcessedEventsPerRun
+          limit: 1
+  resume:
+    accepted: false
+    paused: false
+    runtimeLimits:
+      exclude:
+        - name: MaxProcessedEventsPerRun
+          limit: 1
+    trace:
+      - event: dispatchStarted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+      - event: dispatchCompleted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+```
+
+---
+
+## Test: Pending script message resumes after a frame processing-limit stop
+
+This case stops before the pending message starts, preserves observer order, and resumes that message on the next pump without reporting another processing limit. The unmatched Probe input is rejected and adds no work before that second pump.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: processed-limit-pending-script-frame
+runtimeLimits:
+  maxProcessedEventsPerRun: 1
+```
+
+### Source code under test
+
+```ges
+on Start() { emit Deferred() }
+on Deferred() {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | frame | 1000 |
+| resume | Probe | frame | 1000 |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    paused: false
+    local:
+      - name: Deferred
+    runtimeLimits:
+      include:
+        - name: MaxProcessedEventsPerRun
+          limit: 1
+    trace:
+      - event: dispatchStarted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: emit
+        message: { name: Deferred }
+        accepted: true
+      - event: dispatchCompleted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: runtimeLimit
+        runtimeLimit:
+          name: MaxProcessedEventsPerRun
+          limit: 1
+  resume:
+    accepted: false
+    paused: false
+    runtimeLimits:
+      exclude:
+        - name: MaxProcessedEventsPerRun
+          limit: 1
+    trace:
+      - event: dispatchStarted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+      - event: dispatchCompleted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+```
+
+---
+
+## Test: A generated message chain finishes below the processing limit
+
+This case processes two logical messages with a limit of three. Both dispatches complete without a processing-limit observation, including the message emitted by the first handler.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: processed-limit-below-script-completion
+runtimeLimits:
+  maxProcessedEventsPerRun: 3
+```
+
+### Source code under test
+
+```ges
+on Start() { emit Deferred() }
+on Deferred() {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    paused: false
+    local:
+      - name: Deferred
+    runtimeLimits:
+      exclude:
+        - name: MaxProcessedEventsPerRun
+          limit: 3
     trace:
       - event: dispatchStarted
         message: { name: Start }

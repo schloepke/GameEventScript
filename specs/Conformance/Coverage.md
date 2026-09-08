@@ -85,7 +85,8 @@ semantics also has a portable case:
 
 - C# public API snapshots;
 - Reflection, attributes and CLR conversion adapters;
-- C# auto-runner synchronization and threading;
+- C# auto-runner synchronization and threading, including takeover of queued or
+  paused work and disposal before the initial pump;
 - internal builder/rewriter structure and optimizer pass tests;
 - concrete C# struct layouts and defensive-array implementation checks;
 - mutation attempts through C# collection interfaces on public message tags,

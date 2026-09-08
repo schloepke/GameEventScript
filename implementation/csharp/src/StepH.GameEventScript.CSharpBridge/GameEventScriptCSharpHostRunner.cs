@@ -36,11 +36,20 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
 
     /// <summary>
     /// Wraps a host with serialized access and automatic pumping on the shared C# dispatcher.
+    /// Schedules any already queued messages, initialization, or paused script execution.
     /// </summary>
     /// <param name="host">The host whose access becomes owned by the returned runner.</param>
     /// <returns>A runner using <see cref="GameEventScriptCSharpDispatcher.Shared"/>.</returns>
+    /// <remarks>Direct host access must stop when ownership is transferred. Pending callbacks may start before this method returns.</remarks>
     public static GameEventScriptCSharpHostRunner Create(GameEventScriptHost host)
-        => new(host, GameEventScriptCSharpDispatcher.Shared);
+    {
+        var runner = new GameEventScriptCSharpHostRunner(host, GameEventScriptCSharpDispatcher.Shared);
+        lock (runner._gate)
+        {
+            if (!runner._host.IsIdle) runner.Schedule();
+        }
+        return runner;
+    }
 
     /// <summary>
     /// Thread-safely enqueues a message and schedules one pump job when accepted.
@@ -244,10 +253,11 @@ public static class GameEventScriptCSharpHostExtensions
             priority);
 
     /// <summary>
-    /// Creates a thread-safe C# runner that automatically pumps accepted messages on the shared dispatcher.
+    /// Creates a thread-safe C# runner that automatically pumps existing work and later accepted messages on the shared dispatcher.
     /// </summary>
     /// <param name="host">The host whose access becomes owned by the runner.</param>
     /// <returns>The automatic host runner.</returns>
+    /// <remarks>Direct host access must stop when ownership is transferred. Pending callbacks may start before this method returns.</remarks>
     public static GameEventScriptCSharpHostRunner RunAutomatically(this GameEventScriptHost host)
         => GameEventScriptCSharpHostRunner.Create(RequireHost(host));
 

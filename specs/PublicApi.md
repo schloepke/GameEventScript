@@ -834,7 +834,8 @@ optional `StepH.GameEventScript.Conformance` package. The separate
 - tuple/dictionary message and Context conveniences;
 - delegate native-handler adapters;
 - reflection/attribute extension and external-type registries;
-- an optional lock-based automatic Host runner.
+- an optional lock-based automatic Host runner with the ownership-transfer and
+  scheduling rules in [HostRuntime](HostRuntime.md#c-automatic-runner).
 
 These adapters must delegate to the portable semantics. Unity consumes the C#
 DLL and may choose main-thread/manual pumping instead of the automatic runner.

@@ -228,7 +228,18 @@ handlers during the pump.
 `CSharpBridge.GameEventScriptCSharpHostRunner` is optional. It serializes access
 to one host with a C# lock and schedules at most one pump job for that host on a
 shared dispatcher. Concurrent `Receive`, `Load`, subscribe, detach, and
-unsubscribe calls go through the runner. Swift, Kotlin, C++, and Unity provide
+unsubscribe calls go through the runner. Creating a runner immediately schedules
+one pump when its host already has pending work, including queued messages,
+initialization, or a paused script handler. No later `Receive` or `Load` is
+required to start that work. An idle host waits for later accepted work.
+
+The initial scheduling uses the same serialization gate and outstanding-job
+guard as subsequent runner operations. The caller stops accessing the host
+directly when transferring ownership; pending callbacks may start before
+runner creation returns. Disposing the runner suppresses scheduled pumps that
+have not started, while preserving the host's pending work.
+
+Swift, Kotlin, C++, and Unity provide
 their own actor, executor, event-loop, or main-thread policy around the same
 synchronous core contract.
 

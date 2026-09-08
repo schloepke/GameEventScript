@@ -97,10 +97,14 @@ internal static class GesProgramCallGraphValidator
         var states = new byte[entries.Length];
         var path = new int[entries.Length];
         var nextCalls = new int[entries.Length];
+        var completed = new int[entries.Length];
+        var completedCount = 0;
         for (var routineIndex = 0; routineIndex < entries.Length; routineIndex++)
         {
-            RejectCycle(routineIndex, calls, states, path, nextCalls, entries, entryNames);
+            RejectCycle(routineIndex, calls, states, path, nextCalls, entries, entryNames, completed, ref completedCount);
         }
+
+        new GesProgramResourceValidator(program, entries, entryIndexes, recordEntriesById, recordEntriesByName).Validate(completed);
     }
 
     private static bool IsExecutableBind(GameEventScriptBinaryBindKind kind)
@@ -122,7 +126,17 @@ internal static class GesProgramCallGraphValidator
         calls.Add(targetIndex);
     }
 
-    private static void RejectCycle(int routineIndex, IReadOnlyList<List<int>> calls, byte[] states, int[] path, int[] nextCalls, ushort[] entries, IReadOnlyDictionary<ushort, string> entryNames)
+    private static void RejectCycle(
+        int routineIndex,
+        IReadOnlyList<List<int>> calls,
+        byte[] states,
+        int[] path,
+        int[] nextCalls,
+        ushort[] entries,
+        IReadOnlyDictionary<ushort, string> entryNames,
+        int[] completed,
+        ref int completedCount
+    )
     {
         if (states[routineIndex] == 2) return;
         var depth = 1;
@@ -134,6 +148,7 @@ internal static class GesProgramCallGraphValidator
             if (nextCalls[current] == calls[current].Count)
             {
                 states[current] = 2;
+                completed[completedCount++] = current;
                 depth--;
                 continue;
             }

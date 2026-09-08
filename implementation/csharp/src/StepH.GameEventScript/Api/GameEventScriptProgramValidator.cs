@@ -227,6 +227,21 @@ public static class GameEventScriptProgramValidator
         => part != GameEventScriptOpcodePrinter.OperandPart.OutboundMessage &&
            (part is >= GameEventScriptOpcodePrinter.OperandPart.TargetRegister and <= GameEventScriptOpcodePrinter.OperandPart.AuxDRegister || part == GameEventScriptOpcodePrinter.OperandPart.FaceRegister);
 
+    internal static void ValidateInstructionFrame(GameEventScriptProgram program, GameEventScriptBytecodeInstruction instruction, int instructionIndex, int frameLength)
+    {
+        var operands = GameEventScriptOpcodePrinter.PrintInstruction(instruction);
+        for (var index = 0; index < operands.Length; index++)
+        {
+            var operand = operands[index];
+            if (IsRegisterOperand(operand) && ReadRegisterOperand(instruction, operand, index) >= frameLength)
+                InvalidOperand("Instruction references a register outside its active frame.", instructionIndex);
+            if (!IsListOperand(operand) || operand is GameEventScriptOpcodePrinter.OperandPart.MessageShapeList or GameEventScriptOpcodePrinter.OperandPart.ArgumentNameList or GameEventScriptOpcodePrinter.OperandPart.KeyNameList) continue;
+            var list = program.UInt16IndexLists.Resolve(ReadListOperand(instruction, operand));
+            for (var element = 0; element < list.Length; element++)
+                if (list[element] >= frameLength) InvalidOperand("Instruction list references a register outside its active frame.", instructionIndex);
+        }
+    }
+
     private static ushort ReadRegisterOperand(GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part, int operandIndex)
         => part switch
         {

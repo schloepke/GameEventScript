@@ -473,7 +473,7 @@ public static class GameEventScriptProgramDumper
         }
     }
 
-    private static void AppendInstructionComment(StringBuilder builder, DisassemblyContext context, GameEventScriptBytecodeInstruction instruction, IReadOnlyList<GameEventScriptOpcodePrinter.OperandPart> operands)
+    private static void AppendInstructionComment(StringBuilder builder, DisassemblyContext context, GameEventScriptBytecodeInstruction instruction, ReadOnlySpan<GameEventScriptOpcodePrinter.OperandPart> operands)
     {
         var comments = new List<string>();
         foreach (var operand in operands)

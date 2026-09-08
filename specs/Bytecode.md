@@ -97,6 +97,41 @@ that calls nothing has depth `0`. The program-level fields are the maxima across
 all message handlers and allow a host to reject or pre-warm a program at load
 time without executing it.
 
+These declarations are conservative upper bounds, not trusted evidence of the
+code's requirements. Complete Program validation independently derives the
+reachable frame, staging, and call requirements and rejects any handler whose
+declared bound is smaller. A larger declaration is valid; the program-level
+fields must still equal the maxima of the handler declarations.
+
+For this analysis, routine entries are executable binding addresses and direct
+`Call` targets. A routine extends up to the next entry, or the end of the Code
+segment. Its initial frame contains its arguments; a message-name handler has
+one implicit Message argument. Bindings and calls to the same entry must agree
+on the argument count. Direct call targets without a binding derive that count
+from their callers' staged arguments.
+
+Validation follows both successors of conditional branches and iterators.
+Branches and fallthrough stay inside their routine; only calls and returns cross
+routine boundaries. Each reachable instruction has one consistent incoming
+frame length and staged-value count across all paths. `RegisterLocals` applies
+its signed adjustment to that frame, and every register operand, including
+register-list elements, must address the active frame. Frame lengths cannot be
+negative or exceed the V1 register limit. Balanced local allocation/release in
+loops is valid; a loop that repeatedly grows its frame is invalid. Staged
+arguments follow the contiguous staging rule below and are cleared by their
+consumer. Calls and record creation must stage exactly the callee's arguments.
+
+The register bound is the maximum of the active frame plus staging and, at each
+call site, the live caller frame plus the callee's register bound. Staged call
+arguments become the callee's initial frame and are not counted twice. Call
+depth is one plus the callee's depth, or zero for a routine without calls.
+`CreateRecord` and the possible record-constructor call of `CastCustom` count as
+synchronous calls. Requirements are propagated through the acyclic call graph,
+including all branches regardless of runtime input. Requirements exceeding the
+V1 field limits or inconsistent frame/staging states are invalid resource
+metadata. Underdeclared resources are rejected at the Compiler, Reader, Writer,
+and `Host.Load` validation boundaries before execution.
+
 The synchronous call graph must be acyclic. Direct and indirect recursion are
 compile errors, and a loader must validate the same invariant for deserialized
 programs before accepting them. Loops and bounded collection operations are the

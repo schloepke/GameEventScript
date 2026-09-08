@@ -947,3 +947,552 @@ binary:
   outcome: validationError
   errorCode: InvalidResourceMetadata
 ```
+
+---
+
+## Test: valid-resource-staging
+
+This case validates the resource contract independently of the stored declarations. Canonical compiler output; code is retained unchanged by its underdeclaration variants.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-resource-staging
+binaryFixture:
+  id: gesb-v1-valid-resource-staging
+  resourceId: gesb-v1.valid-resource-staging
+  relativePath: GesbV1/valid-resource-staging.gesb
+  sha256: 9ADB846D67388DD07ECFD27E5E1B5B6404FA73DB02BFAA24A35491ADDA9E0A2B
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: false
+  derivation: "Canonical compiler output; code is retained unchanged by its underdeclaration variants."
+```
+
+### Source code under test
+
+```ges
+module resourceproof
+on Start { let values be [1, 2, 3]
+ emit Done(value: values) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: 9ADB846D67388DD07ECFD27E5E1B5B6404FA73DB02BFAA24A35491ADDA9E0A2B
+  moduleName: resourceproof
+  requiredRegisterCount: 4
+  requiredCallStackDepth: 0
+  opaqueSectionCount: 0
+```
+
+---
+
+## Test: underdeclared-resource-staging-registers
+
+This case validates the resource contract independently of the stored declarations. Reduce only the selected handler register requirement by one and set the program requirement to the same value; retain every instruction.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underdeclared-resource-staging-registers
+binaryFixture:
+  id: gesb-v1-underdeclared-resource-staging-registers
+  resourceId: gesb-v1.underdeclared-resource-staging-registers
+  relativePath: GesbV1/underdeclared-resource-staging-registers.gesb
+  sha256: 644BE694E2EB1D05AF248D2DC0739D2093318949852CA514CC5B6E89A803787B
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: false
+  derivation: "Reduce only the selected handler register requirement by one and set the program requirement to the same value; retain every instruction."
+```
+
+### Source code under test
+
+```ges
+module resourceproof
+on Start { let values be [1, 2, 3]
+ emit Done(value: values) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidResourceMetadata
+```
+
+---
+
+## Test: invalid-resource-interrupted-stage
+
+This case validates the resource contract independently of the stored declarations. Replace the middle StageInteger of the three-value sequence with Nop; keep all resource declarations.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-resource-interrupted-stage
+binaryFixture:
+  id: gesb-v1-invalid-resource-interrupted-stage
+  resourceId: gesb-v1.invalid-resource-interrupted-stage
+  relativePath: GesbV1/invalid-resource-interrupted-stage.gesb
+  sha256: F80EEE903232D7B16DFBEB5967C2F42A6834333931C7430DF29C91B2C7FE0DB4
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: false
+  derivation: "Replace the middle StageInteger of the three-value sequence with Nop; keep all resource declarations."
+```
+
+### Source code under test
+
+```ges
+module resourceproof
+on Start { let values be [1, 2, 3]
+ emit Done(value: values) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidResourceMetadata
+```
+
+---
+
+## Test: invalid-resource-growing-loop
+
+This case validates the resource contract independently of the stored declarations. Replace the final ReturnVoid with Jump to the entry prolog. Each iteration would allocate the frame again.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-resource-growing-loop
+binaryFixture:
+  id: gesb-v1-invalid-resource-growing-loop
+  resourceId: gesb-v1.invalid-resource-growing-loop
+  relativePath: GesbV1/invalid-resource-growing-loop.gesb
+  sha256: B1E0C0E33CCA5EB56047BBDE6BA74B5907FB707D027040EDB02122BCE701E516
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: false
+  derivation: "Replace the final ReturnVoid with Jump to the entry prolog. Each iteration would allocate the frame again."
+```
+
+### Source code under test
+
+```ges
+module resourceproof
+on Start { let values be [1, 2, 3]
+ emit Done(value: values) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidResourceMetadata
+```
+
+---
+
+## Test: valid-resource-balanced-loop
+
+This case validates the resource contract independently of the stored declarations. Direct V1 control-flow fixture: reserve one root local, reserve/release one iteration local, then return to the unchanged one-local loop header. Peak is two registers, depth zero. This validation fixture is not executed.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-resource-balanced-loop
+binaryFixture:
+  id: gesb-v1-valid-resource-balanced-loop
+  resourceId: gesb-v1.valid-resource-balanced-loop
+  relativePath: GesbV1/valid-resource-balanced-loop.gesb
+  sha256: 81CCBEF01CFB24565EC06A4CD9CCF2489A058CB49B3C6C46BA794EFB75F5EC0A
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: false
+  derivation: "Direct V1 control-flow fixture: reserve one root local, reserve/release one iteration local, then return to the unchanged one-local loop header. Peak is two registers, depth zero. This validation fixture is not executed."
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: 81CCBEF01CFB24565EC06A4CD9CCF2489A058CB49B3C6C46BA794EFB75F5EC0A
+  moduleName: resourceproof
+  requiredRegisterCount: 2
+  requiredCallStackDepth: 0
+  opaqueSectionCount: 0
+```
+
+---
+
+## Test: valid-resource-record-create
+
+This case validates the resource contract independently of the stored declarations. Canonical compiler output; code is retained unchanged by its underdeclaration variants.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-resource-record-create
+binaryFixture:
+  id: gesb-v1-valid-resource-record-create
+  resourceId: gesb-v1.valid-resource-record-create
+  relativePath: GesbV1/valid-resource-record-create.gesb
+  sha256: D29690D35FEC9C984EE468DA493F1B68D94130BA26F7F98FFDA91CA2F84DC23C
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: false
+  derivation: "Canonical compiler output; code is retained unchanged by its underdeclaration variants."
+```
+
+### Source code under test
+
+```ges
+module resourceproof
+record :Item as { value: :Number }
+on Start(value) { let item be :Item(value: value)
+ emit Done(value: item.value) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: D29690D35FEC9C984EE468DA493F1B68D94130BA26F7F98FFDA91CA2F84DC23C
+  moduleName: resourceproof
+  requiredRegisterCount: 7
+  requiredCallStackDepth: 1
+  opaqueSectionCount: 0
+```
+
+---
+
+## Test: underdeclared-resource-record-create-registers
+
+This case validates the resource contract independently of the stored declarations. Reduce only the selected handler register requirement by one and set the program requirement to the same value; retain every instruction.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underdeclared-resource-record-create-registers
+binaryFixture:
+  id: gesb-v1-underdeclared-resource-record-create-registers
+  resourceId: gesb-v1.underdeclared-resource-record-create-registers
+  relativePath: GesbV1/underdeclared-resource-record-create-registers.gesb
+  sha256: 357605C8341EF8B68D11F851BB1A193EA422233536EAA6B0444CF6C7104BC9AA
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: false
+  derivation: "Reduce only the selected handler register requirement by one and set the program requirement to the same value; retain every instruction."
+```
+
+### Source code under test
+
+```ges
+module resourceproof
+record :Item as { value: :Number }
+on Start(value) { let item be :Item(value: value)
+ emit Done(value: item.value) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidResourceMetadata
+```
+
+---
+
+## Test: underdeclared-resource-record-create-depth
+
+This case validates the resource contract independently of the stored declarations. Set handler and program call depth to zero; retain the constructor call and all other bytes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underdeclared-resource-record-create-depth
+binaryFixture:
+  id: gesb-v1-underdeclared-resource-record-create-depth
+  resourceId: gesb-v1.underdeclared-resource-record-create-depth
+  relativePath: GesbV1/underdeclared-resource-record-create-depth.gesb
+  sha256: 79BE8A60FB1E262A716A95B6F9384C94D2E595FD0DD0D656A2489BB877F35A51
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: false
+  derivation: "Set handler and program call depth to zero; retain the constructor call and all other bytes."
+```
+
+### Source code under test
+
+```ges
+module resourceproof
+record :Item as { value: :Number }
+on Start(value) { let item be :Item(value: value)
+ emit Done(value: item.value) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidResourceMetadata
+```
+
+---
+
+## Test: valid-resource-record-cast
+
+This case validates the resource contract independently of the stored declarations. Canonical compiler output; code is retained unchanged by its underdeclaration variants.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-resource-record-cast
+binaryFixture:
+  id: gesb-v1-valid-resource-record-cast
+  resourceId: gesb-v1.valid-resource-record-cast
+  relativePath: GesbV1/valid-resource-record-cast.gesb
+  sha256: 1278A351FC903AE22163091F2EC53BB7EB59AE8156A2C21CD4A0F9874EBB1EC0
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: false
+  derivation: "Canonical compiler output; code is retained unchanged by its underdeclaration variants."
+```
+
+### Source code under test
+
+```ges
+module resourceproof
+record :Item as { value: :Number }
+on Start(value) { let item be ([value: value]) as :Item
+ emit Done(value: item.value) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: 1278A351FC903AE22163091F2EC53BB7EB59AE8156A2C21CD4A0F9874EBB1EC0
+  moduleName: resourceproof
+  requiredRegisterCount: 7
+  requiredCallStackDepth: 1
+  opaqueSectionCount: 0
+```
+
+---
+
+## Test: underdeclared-resource-record-cast-registers
+
+This case validates the resource contract independently of the stored declarations. Reduce only the selected handler register requirement by one and set the program requirement to the same value; retain every instruction.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underdeclared-resource-record-cast-registers
+binaryFixture:
+  id: gesb-v1-underdeclared-resource-record-cast-registers
+  resourceId: gesb-v1.underdeclared-resource-record-cast-registers
+  relativePath: GesbV1/underdeclared-resource-record-cast-registers.gesb
+  sha256: F0F47B7BFCC2173AA682884B574EFE4015D5643778F739B72D16FA6590BA28C2
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: false
+  derivation: "Reduce only the selected handler register requirement by one and set the program requirement to the same value; retain every instruction."
+```
+
+### Source code under test
+
+```ges
+module resourceproof
+record :Item as { value: :Number }
+on Start(value) { let item be ([value: value]) as :Item
+ emit Done(value: item.value) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidResourceMetadata
+```
+
+---
+
+## Test: underdeclared-resource-record-cast-depth
+
+This case validates the resource contract independently of the stored declarations. Set handler and program call depth to zero; retain the constructor call and all other bytes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underdeclared-resource-record-cast-depth
+binaryFixture:
+  id: gesb-v1-underdeclared-resource-record-cast-depth
+  resourceId: gesb-v1.underdeclared-resource-record-cast-depth
+  relativePath: GesbV1/underdeclared-resource-record-cast-depth.gesb
+  sha256: 38D00E426972285BCBF82654970E043A82FDFFB3B7CC99FAF98132BB0DFB9A1A
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: false
+  derivation: "Set handler and program call depth to zero; retain the constructor call and all other bytes."
+```
+
+### Source code under test
+
+```ges
+module resourceproof
+record :Item as { value: :Number }
+on Start(value) { let item be ([value: value]) as :Item
+ emit Done(value: item.value) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidResourceMetadata
+```
+
+---
+
+## Test: valid-resource-per-handler
+
+This case validates the resource contract independently of the stored declarations. Canonical compiler output; code is retained unchanged by its underdeclaration variants.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-resource-per-handler
+binaryFixture:
+  id: gesb-v1-valid-resource-per-handler
+  resourceId: gesb-v1.valid-resource-per-handler
+  relativePath: GesbV1/valid-resource-per-handler.gesb
+  sha256: 9FB5EC245800D7AC681BA6E9229D0D951CC978125D85D30C3C2F8584D380FFE6
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: false
+  derivation: "Canonical compiler output; code is retained unchanged by its underdeclaration variants."
+```
+
+### Source code under test
+
+```ges
+module resourceproof
+function add(_ value) be value + 1
+on First(value) {
+ emit Done(value: add(value)) }
+on Second(value) {
+ emit Done(value: add(add(value))) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: 9FB5EC245800D7AC681BA6E9229D0D951CC978125D85D30C3C2F8584D380FFE6
+  moduleName: resourceproof
+  requiredRegisterCount: 5
+  requiredCallStackDepth: 1
+  opaqueSectionCount: 0
+```
+
+---
+
+## Test: underdeclared-resource-per-handler-registers
+
+This case validates the resource contract independently of the stored declarations. Reduce only the selected handler register requirement by one; retain the larger program maximum supplied by the other handler.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underdeclared-resource-per-handler-registers
+binaryFixture:
+  id: gesb-v1-underdeclared-resource-per-handler-registers
+  resourceId: gesb-v1.underdeclared-resource-per-handler-registers
+  relativePath: GesbV1/underdeclared-resource-per-handler-registers.gesb
+  sha256: DFF5E5A0B803AC9D40621241E10448B21FEC7E91710CA70FBEB9ED4B4F70FEC5
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: false
+  derivation: "Reduce only the selected handler register requirement by one; retain the larger program maximum supplied by the other handler."
+```
+
+### Source code under test
+
+```ges
+module resourceproof
+function add(_ value) be value + 1
+on First(value) {
+ emit Done(value: add(value)) }
+on Second(value) {
+ emit Done(value: add(add(value))) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidResourceMetadata
+```

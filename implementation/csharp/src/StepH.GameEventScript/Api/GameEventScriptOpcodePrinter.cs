@@ -94,7 +94,7 @@ internal static class GameEventScriptOpcodePrinter
         ExternalReference
     }
 
-    internal static OperandPart[] PrintInstruction(GameEventScriptBytecodeInstruction instruction)
+    internal static ReadOnlySpan<OperandPart> PrintInstruction(GameEventScriptBytecodeInstruction instruction)
     {
         return instruction.OpCode switch
         {

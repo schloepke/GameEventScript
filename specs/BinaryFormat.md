@@ -134,6 +134,11 @@ argument-name list. Duplicate signatures are invalid. Function and predicate
 names may not overlap even when their argument-name lists differ; declared
 source types and local parameter names are not encoded identity components.
 
+Matching resource declarations alone do not establish validity. The independent
+code-derived bounds and frame/staging rules are defined in
+[Bytecode](Bytecode.md). Underdeclarations and inconsistent resource states are
+reported as `InvalidResourceMetadata` by complete Program validation.
+
 CodeSegment:
 
 ```text

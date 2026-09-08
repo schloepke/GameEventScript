@@ -1456,6 +1456,7 @@ public sealed class ConformanceMessageApiCase
         IReadOnlyList<ConformanceValueEntry> unorderedArguments,
         ConformanceMessageSignatureDefinition? compareSignature,
         ConformanceMessage? compareMessage,
+        ConformanceMessage? compareConformanceMessage,
         ConformanceMessageSignatureDefinition? compareHandler,
         IReadOnlyList<ConformanceValue> createArguments)
     {
@@ -1466,6 +1467,7 @@ public sealed class ConformanceMessageApiCase
         UnorderedArguments = ConformanceDocument.Copy(unorderedArguments);
         CompareSignature = compareSignature;
         CompareMessage = compareMessage;
+        CompareConformanceMessage = compareConformanceMessage;
         CompareHandler = compareHandler;
         CreateArguments = ConformanceDocument.Copy(createArguments);
     }
@@ -1498,6 +1500,10 @@ public sealed class ConformanceMessageApiCase
     /// Gets the compare message.
     /// </summary>
     public ConformanceMessage? CompareMessage { get; }
+    /// <summary>
+    /// Gets the expected transport message to compare against the constructed message using the runner's conformance comparison rules.
+    /// </summary>
+    public ConformanceMessage? CompareConformanceMessage { get; }
     /// <summary>
     /// Gets the compare handler.
     /// </summary>
@@ -1544,6 +1550,7 @@ public sealed class ConformanceMessageApiExpectation
         bool? signatureHashEquals,
         bool? messageEquals,
         bool? messageHashEquals,
+        bool? conformanceEquals,
         bool? handlerEquals,
         bool? handlerHashEquals,
         string? createdMessageSignatureId,
@@ -1558,6 +1565,7 @@ public sealed class ConformanceMessageApiExpectation
         SignatureHashEquals = signatureHashEquals;
         MessageEquals = messageEquals;
         MessageHashEquals = messageHashEquals;
+        ConformanceEquals = conformanceEquals;
         HandlerEquals = handlerEquals;
         HandlerHashEquals = handlerHashEquals;
         CreatedMessageSignatureId = createdMessageSignatureId;
@@ -1600,6 +1608,10 @@ public sealed class ConformanceMessageApiExpectation
     /// Gets the message hash equals.
     /// </summary>
     public bool? MessageHashEquals { get; }
+    /// <summary>
+    /// Gets the expected result of comparing the transport expectation against the constructed message using conformance comparison rules.
+    /// </summary>
+    public bool? ConformanceEquals { get; }
     /// <summary>
     /// Gets the handler equals.
     /// </summary>
@@ -1893,11 +1905,12 @@ public sealed class ConformanceOpcodeExpectation
 /// </summary>
 public sealed class ConformancePerformanceWorkload
 {
-    internal ConformancePerformanceWorkload(uint iterations, uint warmupIterations, uint compileWarmupIterations)
+    internal ConformancePerformanceWorkload(uint iterations, uint warmupIterations, uint compileWarmupIterations, bool observeRuntime)
     {
         Iterations = iterations;
         WarmupIterations = warmupIterations;
         CompileWarmupIterations = compileWarmupIterations;
+        ObserveRuntime = observeRuntime;
     }
 
     /// <summary>
@@ -1912,6 +1925,11 @@ public sealed class ConformancePerformanceWorkload
     /// Gets the compile warmup iterations.
     /// </summary>
     public uint CompileWarmupIterations { get; }
+
+    /// <summary>
+    /// Gets whether measured execution installs an allocation-free counting observer. Defaults to true and does not affect the separate correctness execution.
+    /// </summary>
+    public bool ObserveRuntime { get; }
 }
 
 /// <summary>

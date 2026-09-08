@@ -1174,6 +1174,7 @@ sealed class StepH.GameEventScript.Conformance.ConformanceMessage
   property System.Collections.Generic.IReadOnlyList<System.String> Tags { get }
   property System.String Name { get }
 sealed class StepH.GameEventScript.Conformance.ConformanceMessageApiCase
+  property StepH.GameEventScript.Conformance.ConformanceMessage CompareConformanceMessage { get }
   property StepH.GameEventScript.Conformance.ConformanceMessage CompareMessage { get }
   property StepH.GameEventScript.Conformance.ConformanceMessage Message { get }
   property StepH.GameEventScript.Conformance.ConformanceMessageSignatureDefinition CompareHandler { get }
@@ -1184,6 +1185,7 @@ sealed class StepH.GameEventScript.Conformance.ConformanceMessageApiCase
   property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
   property System.String SignatureName { get }
 sealed class StepH.GameEventScript.Conformance.ConformanceMessageApiExpectation
+  property System.Boolean? ConformanceEquals { get }
   property System.Boolean? HandlerEquals { get }
   property System.Boolean? HandlerHashEquals { get }
   property System.Boolean? Matches { get }
@@ -1300,6 +1302,7 @@ sealed class StepH.GameEventScript.Conformance.ConformancePerformanceResult
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformancePerformanceMetricResult> Metrics { get }
   property System.String ProfileId { get }
 sealed class StepH.GameEventScript.Conformance.ConformancePerformanceWorkload
+  property System.Boolean ObserveRuntime { get }
   property System.UInt32 CompileWarmupIterations { get }
   property System.UInt32 Iterations { get }
   property System.UInt32 WarmupIterations { get }

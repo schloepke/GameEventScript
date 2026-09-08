@@ -24,6 +24,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{E57CA560
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StepH.GameEventScript.PackageTool", "implementation\csharp\tools\StepH.GameEventScript.PackageTool\StepH.GameEventScript.PackageTool.csproj", "{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StepH.GameEventScript.Conformance.Worker", "implementation\csharp\tests\StepH.GameEventScript.Conformance.Worker\StepH.GameEventScript.Conformance.Worker.csproj", "{1729A9EB-DE64-414E-886F-3B0B47115067}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -34,6 +36,18 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1729A9EB-DE64-414E-886F-3B0B47115067}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1729A9EB-DE64-414E-886F-3B0B47115067}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1729A9EB-DE64-414E-886F-3B0B47115067}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1729A9EB-DE64-414E-886F-3B0B47115067}.Debug|x64.Build.0 = Debug|Any CPU
+		{1729A9EB-DE64-414E-886F-3B0B47115067}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1729A9EB-DE64-414E-886F-3B0B47115067}.Debug|x86.Build.0 = Debug|Any CPU
+		{1729A9EB-DE64-414E-886F-3B0B47115067}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1729A9EB-DE64-414E-886F-3B0B47115067}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1729A9EB-DE64-414E-886F-3B0B47115067}.Release|x64.ActiveCfg = Release|Any CPU
+		{1729A9EB-DE64-414E-886F-3B0B47115067}.Release|x64.Build.0 = Release|Any CPU
+		{1729A9EB-DE64-414E-886F-3B0B47115067}.Release|x86.ActiveCfg = Release|Any CPU
+		{1729A9EB-DE64-414E-886F-3B0B47115067}.Release|x86.Build.0 = Release|Any CPU
 		{2E43DDEB-85D7-40A2-BC6F-32BB12029CEC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2E43DDEB-85D7-40A2-BC6F-32BB12029CEC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2E43DDEB-85D7-40A2-BC6F-32BB12029CEC}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -99,6 +113,7 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{1729A9EB-DE64-414E-886F-3B0B47115067} = {F33FEF7E-C1E0-826D-2307-BC8AE74F3057}
 		{06BB3288-E347-B2E0-C7F5-FEAA4FC752AC} = {D596A9B8-B564-04A1-0652-AF983A8D2206}
 		{8134A286-E9FF-87CC-ECF8-244F31C8CB00} = {06BB3288-E347-B2E0-C7F5-FEAA4FC752AC}
 		{2E43DDEB-85D7-40A2-BC6F-32BB12029CEC} = {8134A286-E9FF-87CC-ECF8-244F31C8CB00}

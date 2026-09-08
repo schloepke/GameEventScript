@@ -13,6 +13,71 @@ public sealed class ConformanceRunnerTests
     private static readonly string[] RuntimeCapabilities = ["compiler", "host", "observer", "publish-sink", "vm"];
 
     [TestMethod]
+    [DataRow(true, ConformanceCaseStatus.Passed)]
+    [DataRow(false, ConformanceCaseStatus.Failed)]
+    public void ConformanceComparisonAssertsItsResultAndPreservesTransportInput(bool expectedEqual, ConformanceCaseStatus expectedStatus)
+    {
+        var document = Parse("messageApi", """
+```yaml
+gesBlock: case
+id: case
+messageApi:
+  signature: { name: Done, parameters: [value] }
+  message:
+    name: Done
+    args: [{ name: value, value: { type: ":Number.binary64", value: "1.5" } }]
+  compareConformanceMessage:
+    name: Done
+    args: [{ name: value, value: { type: ":Number.binary64", value: "1.5" } }]
+```
+```yaml
+gesBlock: expect
+message:
+  conformanceEquals: EXPECTED
+```
+""".Replace("EXPECTED", expectedEqual ? "true" : "false", StringComparison.Ordinal), includeDefaultCase: false);
+
+        var input = document.Cases[0].MessageApi!.CompareConformanceMessage!;
+        Assert.AreEqual(":Number.binary64", input.Arguments[0].Value.Type);
+        Assert.AreEqual("1.5", input.Arguments[0].Value.Value);
+        var result = ConformanceRunner.RunCase(document, "case", Environment(["message-api"]));
+        Assert.AreEqual(expectedStatus, result.Status);
+        if (expectedEqual) Assert.AreEqual(ConformanceRunnerCodes.Passed, result.Code);
+        else
+        {
+            Assert.AreEqual(ConformanceRunnerCodes.AssertionMismatch, result.Code);
+            Assert.AreEqual("/message/conformanceEquals", result.Mismatches[0].Path);
+        }
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public void ConformanceComparisonRequiresPairedInputAndExpectation(bool includeInput)
+    {
+        var body = """
+```yaml
+gesBlock: case
+id: case
+messageApi:
+  signature: { name: Done, parameters: [] }
+  message: { name: Done }
+INPUT
+```
+```yaml
+gesBlock: expect
+message:
+  name: Done
+EXPECTATION
+```
+""".Replace("INPUT", includeInput ? "  compareConformanceMessage: { name: Done }" : string.Empty, StringComparison.Ordinal)
+            .Replace("EXPECTATION", includeInput ? string.Empty : "  conformanceEquals: true", StringComparison.Ordinal);
+
+        var exception = Assert.ThrowsExactly<ConformanceParseException>(() => Parse("messageApi", body, includeDefaultCase: false));
+        Assert.AreEqual(ConformanceDiagnosticCodes.SchemaInvalidValue, exception.Diagnostics[0].Code);
+    }
+
+    [TestMethod]
     public void RunsRuntimeCaseWithoutMSTestAssertionsInRunner()
     {
         var document = Parse("scriptApi", """
@@ -245,6 +310,45 @@ performance:
         Assert.AreEqual(ConformanceCaseStatus.Passed, result.Status);
         Assert.AreEqual(1, provider.CallCount);
         Assert.AreEqual("1.1", result.Performance!.Metrics[0].Allowed);
+    }
+
+    [TestMethod]
+    [DataRow("", true)]
+    [DataRow(", observeRuntime: true", true)]
+    [DataRow(", observeRuntime: false", false)]
+    [DataRow(", observeRuntime: absent", null)]
+    public void PerformanceObserverOptionIsTypedAndDefaultsToEnabled(string option, bool? expected)
+    {
+        var body = """
+```yaml
+gesBlock: case
+id: case
+performance: { iterations: 1OBSERVE }
+```
+```ges
+on Start() {}
+```
+### Steps
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+```yaml
+gesBlock: expect
+performance:
+  profiles:
+    test-profile:
+      metrics:
+        run.allocated: { reference: 0, maximum: 0, unit: B }
+```
+""".Replace("OBSERVE", option, StringComparison.Ordinal);
+        if (expected is null)
+        {
+            var exception = Assert.ThrowsExactly<ConformanceParseException>(() => Parse("performance", body, includeDefaultCase: false));
+            Assert.AreEqual(ConformanceDiagnosticCodes.SchemaInvalidValue, exception.Diagnostics[0].Code);
+            return;
+        }
+        var document = Parse("performance", body, includeDefaultCase: false);
+        Assert.AreEqual(expected.Value, document.Cases[0].Performance!.ObserveRuntime);
     }
 
     [TestMethod]

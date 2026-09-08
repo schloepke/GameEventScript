@@ -469,6 +469,11 @@ public static class ConformanceRunner
                 CheckOptional(mismatches, "/message/handlerEquals", expected.HandlerEquals, left.Equals(right));
                 CheckOptional(mismatches, "/message/handlerHashEquals", expected.HandlerHashEquals, left.GetHashCode() == right.GetHashCode());
             }
+            if (definition.CompareConformanceMessage is { } compareConformanceMessage)
+            {
+                CheckOptional(mismatches, "/message/conformanceEquals", expected.ConformanceEquals,
+                    ConformanceRuntimeValueCodec.MessagesEqual(compareConformanceMessage, message, testCase.Comparison));
+            }
             if (definition.CreateArguments.Count > 0 || expected.CreatedMessageSignatureId is not null)
             {
                 var arguments = new GesValue[definition.CreateArguments.Count];

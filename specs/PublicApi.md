@@ -694,6 +694,17 @@ by [Conformance Markdown](Conformance/MarkdownFormat.md):
   `MessageApiExpectation`, `ValueApiExpectation`, `ExternalTypeApiExpectation`,
   `PerformanceExpectation`, `PerformanceProfile`, and `PerformanceMetric`.
 
+`ConformanceMessageApiCase.CompareConformanceMessage` and
+`ConformanceMessageApiExpectation.ConformanceEquals` expose the optional paired
+transport comparison input and result defined in the Markdown format. They
+exercise the same conformance comparison as runtime message expectations.
+
+`ConformancePerformanceWorkload.ObserveRuntime` exposes the Boolean measurement
+observer selection, defaulting to true, defined by the Markdown format. It does
+not disable observations in the separate correctness execution. Platform
+allocation counters remain behind `PerformanceProvider`, outside the portable
+model and runner.
+
 Enum-like model values have the closed sets specified by MarkdownFormat:
 `TestKind`, `TestLevel`, `PumpMode`, `PublishSinkMode`,
 `ExternalTypeRegistryMode`, `ObserverEventKind`, `NativeActionKind`,

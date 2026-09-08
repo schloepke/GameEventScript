@@ -80,7 +80,7 @@ public sealed class GameEventScriptHost
     /// Validates and links an immutable program into this host and registers all of its handlers.
     /// </summary>
     /// <param name="program">The portable program to load. The program remains reusable by other hosts.</param>
-    /// <param name="priority">The dispatch priority shared by the program's handlers. Lower values run first.</param>
+    /// <param name="priority">The dispatch priority shared by the program's handlers. Higher values run first; equal priorities retain registration order.</param>
     /// <returns>A host-local instance handle that can detach the program.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="program"/> is <see langword="null"/>.</exception>
     /// <exception cref="GameEventScriptProgramFormatException">Thrown when the program is structurally or semantically invalid.</exception>
@@ -151,7 +151,7 @@ public sealed class GameEventScriptHost
     /// <param name="message">The message name.</param>
     /// <param name="parameterNames">The ordered parameter names that form the signature.</param>
     /// <param name="handler">The synchronous native handler.</param>
-    /// <param name="priority">The dispatch priority. Lower values run first; equal priorities retain registration order.</param>
+    /// <param name="priority">The dispatch priority. Higher values run first; equal priorities retain registration order.</param>
     /// <returns>An idempotently removable subscription handle.</returns>
     public GameEventScriptSubscription Subscribe(string message, IReadOnlyCollection<string> parameterNames, IGameEventScriptNativeMessageHandler handler, int priority = NormalPriority)
         => Subscribe(GameEventScriptMessageSignature.Create(message, parameterNames), handler, null, null, priority);
@@ -161,7 +161,7 @@ public sealed class GameEventScriptHost
     /// </summary>
     /// <param name="signature">The exact ordered message signature.</param>
     /// <param name="handler">The synchronous native handler.</param>
-    /// <param name="priority">The dispatch priority. Lower values run first; equal priorities retain registration order.</param>
+    /// <param name="priority">The dispatch priority. Higher values run first; equal priorities retain registration order.</param>
     /// <returns>An idempotently removable subscription handle.</returns>
     public GameEventScriptSubscription Subscribe(GameEventScriptMessageSignature signature, IGameEventScriptNativeMessageHandler handler, int priority = NormalPriority)
         => Subscribe(signature, handler, null, null, priority);
@@ -173,7 +173,7 @@ public sealed class GameEventScriptHost
     /// <param name="handler">The synchronous native handler.</param>
     /// <param name="matchingTags">Tags all of which must be present, or <see langword="null"/> for no required tags.</param>
     /// <param name="withoutTags">Tags all of which must be absent, or <see langword="null"/> for no exclusions.</param>
-    /// <param name="priority">The dispatch priority. Lower values run first; equal priorities retain registration order.</param>
+    /// <param name="priority">The dispatch priority. Higher values run first; equal priorities retain registration order.</param>
     /// <returns>An idempotently removable subscription handle.</returns>
     public GameEventScriptSubscription Subscribe(
         GameEventScriptMessageSignature signature,
@@ -202,7 +202,7 @@ public sealed class GameEventScriptHost
     /// <param name="handler">The synchronous native handler.</param>
     /// <param name="matchingTags">Tags all of which must be present, or <see langword="null"/> for no required tags.</param>
     /// <param name="withoutTags">Tags all of which must be absent, or <see langword="null"/> for no exclusions.</param>
-    /// <param name="priority">The dispatch priority. Lower values run first; equal priorities retain registration order.</param>
+    /// <param name="priority">The dispatch priority. Higher values run first; equal priorities retain registration order.</param>
     /// <returns>An idempotently removable subscription handle.</returns>
     public GameEventScriptSubscription SubscribeMessageName(
         string messageName,

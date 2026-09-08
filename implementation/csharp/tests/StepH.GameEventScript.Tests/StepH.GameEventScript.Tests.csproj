@@ -20,10 +20,13 @@
         <ProjectReference Include="../../src/StepH.GameEventScript/StepH.GameEventScript.csproj" />
         <ProjectReference Include="../../src/StepH.GameEventScript.CSharpBridge/StepH.GameEventScript.CSharpBridge.csproj" />
         <ProjectReference Include="../../src/StepH.GameEventScript.Conformance/StepH.GameEventScript.Conformance.csproj" />
+        <ProjectReference Include="../StepH.GameEventScript.Conformance.Worker/StepH.GameEventScript.Conformance.Worker.csproj" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
     <ItemGroup>
         <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting"/>
+        <AssemblyMetadata Include="BuildSdkVersion" Value="$(NETCoreSdkVersion)" />
+        <Compile Include="../StepH.GameEventScript.Conformance.Worker/WorkerProtocol.cs" Link="Conformance/WorkerProtocol.cs" />
     </ItemGroup>
 
 </Project>

@@ -29,6 +29,9 @@ internal static class ConformanceCSharpTestEnvironment
     internal static ConformanceRunnerEnvironment Measured()
         => Create(ConformanceCSharpPerformanceProvider.Instance);
 
+    internal static ConformanceRunnerEnvironment MeasuredAllocation()
+        => Create(ConformanceCSharpAllocationProvider.Instance, ConformanceCSharpAllocationProvider.ProfileId);
+
     internal static ConformanceRunReport Report(ConformanceRunnerEnvironment environment, IReadOnlyList<ConformanceCaseResult> results)
     {
         var passed = results.Count(result => result.Status == ConformanceCaseStatus.Passed);
@@ -49,14 +52,14 @@ internal static class ConformanceCSharpTestEnvironment
             results);
     }
 
-    private static ConformanceRunnerEnvironment Create(IConformancePerformanceProvider provider)
+    private static ConformanceRunnerEnvironment Create(IConformancePerformanceProvider provider, string profileId = PerformanceProfile)
         => new(
             "steph.ges.conformance.csharp", "0.1.0", "steph.ges.csharp", "0.1.0",
             Capabilities,
             GameEventScriptConformanceExternalTypes.Catalog,
             ConformanceTestExtensionRegistry.Instance,
             GameEventScriptConformanceExternalTypes.Registry,
-            PerformanceProfile,
+            profileId,
             provider,
             LoadedResources.Value);
 

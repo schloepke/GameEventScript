@@ -12,6 +12,13 @@ here. Add or update this matrix in the same change as new portable behavior.
 
 | Behavior | Stable portable case IDs |
 | --- | --- |
+| Reader and canonical writer validate deep acyclic graphs and reject deep cycles within V1 limits without ending the embedding process | all four `program.call-graph-depth` cases: shallow/deep valid chains and invalid cycles, with deep fixtures containing 21,845 routines and 65,535 instructions |
+| Exact folded and runtime `div`, `mod`, and `rem` above 2^53, with negative operands, Int64 limits, and binary roundtrip | all 30 `runtime.numeric.integer-precision` cases |
+| Number cast Int64 and Quantity identity, including explicit dynamic random seeds and parent-stream restoration | `runtime.numeric.number-casts/identity-*`, `runtime.numeric.number-casts/random-seed-*`, each with `direct` and `binary` variants |
+| Folded and runtime text conversion of signed infinity, NaN, invalid text, and finite numbers | `runtime.numeric.number-casts/text-*`, each with `direct` and `binary` variants |
+| Conformance comparison rejects wrong numeric storage and infinite units, recursively, in exact and ULP modes | all 24 `api.conformance-comparison` cases, including positive controls |
+| Binary resources agree with executable call depth and live frame register requirements | `program.binary-format/valid-direct-call`, `program.binary-format/valid-nested-call`, `program.binary-format/underdeclared-depth-direct-call`, `program.binary-format/underdeclared-depth-nested-call`, `program.binary-format/underdeclared-registers-direct-call`, `program.binary-format/underdeclared-registers-nested-call` |
+| Exactly reaching the processed-message limit while draining all work emits no limit observation, for native/script handlers and completion/frame pumps | the eight `runtime.host-observer/processed-limit-*` cases; pending-work control: `runtime.host-observer/emit-and-runtime-limit-order` |
 | Message normalization, signature construction and matching | `api.messages/case-0001` through `api.messages/case-0012`, `api.messages/signature-equality`, `api.messages/signature-create-message` |
 | Signature, Message and Handler equality/hash contracts | `api.messages/signature-equality`, `api.messages/signature-parameter-inequality`, `api.messages/signature-arity-inequality`, `api.messages/message-equality`, `api.messages/message-argument-inequality`, `api.messages/message-tag-inequality`, `api.messages/unlabeled-message-equality`, `api.messages/handler-equality`, `api.messages/handler-inequality` |
 | Explicit ordered arguments and rejection of unordered/duplicate forms | `api.messages/case-0001`, `api.messages/case-0004`, `api.messages/case-0005`, `api.messages/case-0006` |
@@ -54,7 +61,7 @@ here. Add or update this matrix in the same change as new portable behavior.
 | Fixed extension environment (`echo`, `fail`, `floor`, navigation) | `runtime.atomic.external-access/case-0010`, `runtime.atomic.control-flow/case-0002`, `runtime.extensions-sequences/case-0001` |
 
 The complete portable `.gesb` fixture manifest is
-`program.binary-format`. It covers canonical and noncanonical valid Programs,
+`program.binary-format` together with `program.call-graph-depth`. It covers canonical and noncanonical valid Programs,
 opaque optional data, stable structural errors, stable semantic validation
 errors, bounded resource resolution, rewrite identity, and runtime execution.
 
@@ -64,6 +71,14 @@ and the compact C# reference result are defined in
 stable IDs in this coverage index and the executable corpus.
 
 ## Intentionally language-specific coverage
+
+Shared allocation workloads live in all 16 `performance.low-allocation` cases.
+They pair exact and message-name dispatch, counting-observer off/on, completion
+with one handler and frames with two handlers, and 1000/2000 iterations. Their
+zero bound exercises the existing warmed allocation contract. Native adapters
+provide the measurements; a correctness-only corpus pass does not qualify an
+allocation profile. The C# managed-thread evidence does not qualify other heaps
+or Kotlin/Swift runtimes.
 
 The following tests remain implementation tests even when the underlying
 semantics also has a portable case:

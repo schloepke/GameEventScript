@@ -390,3 +390,445 @@ steps:
         message: { name: B }
         signatureId: "B()"
 ```
+
+---
+
+## Test: Exactly 1 script messages finish at the limit during completion
+
+This case reaches the configured message count exactly while draining all work.
+The final dispatch must complete without reporting MaxProcessedEventsPerRun;
+the existing pending-message case supplies the over-limit control.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: processed-limit-script-completion-1
+runtimeLimits:
+  maxProcessedEventsPerRun: 1
+```
+
+### Source code under test
+
+```ges
+on Start() {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    paused: false
+    runtimeLimits:
+      exclude:
+        - name: MaxProcessedEventsPerRun
+          limit: 1
+    trace:
+      - event: dispatchStarted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: dispatchCompleted
+        message: { name: Start }
+        signatureId: "Start()"
+```
+
+---
+
+## Test: Exactly 2 script messages finish at the limit during completion
+
+This case reaches the configured message count exactly while draining all work.
+The final dispatch must complete without reporting MaxProcessedEventsPerRun;
+the existing pending-message case supplies the over-limit control.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: processed-limit-script-completion-2
+runtimeLimits:
+  maxProcessedEventsPerRun: 2
+```
+
+### Source code under test
+
+```ges
+on Start() { emit Deferred() }
+on Deferred() {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    paused: false
+    local:
+      - name: Deferred
+    runtimeLimits:
+      exclude:
+        - name: MaxProcessedEventsPerRun
+          limit: 2
+    trace:
+      - event: dispatchStarted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: emit
+        message: { name: Deferred }
+        accepted: true
+      - event: dispatchCompleted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: dispatchStarted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+      - event: dispatchCompleted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+```
+
+---
+
+## Test: Exactly 1 script messages finish at the limit during frame
+
+This case reaches the configured message count exactly while draining all work.
+The final dispatch must complete without reporting MaxProcessedEventsPerRun;
+the existing pending-message case supplies the over-limit control.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: processed-limit-script-frame-1
+runtimeLimits:
+  maxProcessedEventsPerRun: 1
+```
+
+### Source code under test
+
+```ges
+on Start() {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | frame | 1000 |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    paused: false
+    runtimeLimits:
+      exclude:
+        - name: MaxProcessedEventsPerRun
+          limit: 1
+    trace:
+      - event: dispatchStarted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: dispatchCompleted
+        message: { name: Start }
+        signatureId: "Start()"
+```
+
+---
+
+## Test: Exactly 2 script messages finish at the limit during frame
+
+This case reaches the configured message count exactly while draining all work.
+The final dispatch must complete without reporting MaxProcessedEventsPerRun;
+the existing pending-message case supplies the over-limit control.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: processed-limit-script-frame-2
+runtimeLimits:
+  maxProcessedEventsPerRun: 2
+```
+
+### Source code under test
+
+```ges
+on Start() { emit Deferred() }
+on Deferred() {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | frame | 1000 |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    paused: false
+    local:
+      - name: Deferred
+    runtimeLimits:
+      exclude:
+        - name: MaxProcessedEventsPerRun
+          limit: 2
+    trace:
+      - event: dispatchStarted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: emit
+        message: { name: Deferred }
+        accepted: true
+      - event: dispatchCompleted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: dispatchStarted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+      - event: dispatchCompleted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+```
+
+---
+
+## Test: Exactly 1 native messages finish at the limit during completion
+
+This case reaches the configured message count exactly while draining all work.
+The final dispatch must complete without reporting MaxProcessedEventsPerRun;
+the existing pending-message case supplies the over-limit control.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: processed-limit-native-completion-1
+runtimeLimits:
+  maxProcessedEventsPerRun: 1
+nativeHandlers:
+  - id: start
+    message: Start
+    parameters: []
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    paused: false
+    runtimeLimits:
+      exclude:
+        - name: MaxProcessedEventsPerRun
+          limit: 1
+    trace:
+      - event: dispatchStarted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: dispatchCompleted
+        message: { name: Start }
+        signatureId: "Start()"
+```
+
+---
+
+## Test: Exactly 2 native messages finish at the limit during completion
+
+This case reaches the configured message count exactly while draining all work.
+The final dispatch must complete without reporting MaxProcessedEventsPerRun;
+the existing pending-message case supplies the over-limit control.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: processed-limit-native-completion-2
+runtimeLimits:
+  maxProcessedEventsPerRun: 2
+nativeHandlers:
+  - id: start
+    message: Start
+    parameters: []
+    emit:
+      - name: Deferred
+        args: []
+  - id: deferred
+    message: Deferred
+    parameters: []
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    paused: false
+    local:
+      - name: Deferred
+    runtimeLimits:
+      exclude:
+        - name: MaxProcessedEventsPerRun
+          limit: 2
+    trace:
+      - event: dispatchStarted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: emit
+        message: { name: Deferred }
+        accepted: true
+      - event: dispatchCompleted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: dispatchStarted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+      - event: dispatchCompleted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+```
+
+---
+
+## Test: Exactly 1 native messages finish at the limit during frame
+
+This case reaches the configured message count exactly while draining all work.
+The final dispatch must complete without reporting MaxProcessedEventsPerRun;
+the existing pending-message case supplies the over-limit control.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: processed-limit-native-frame-1
+runtimeLimits:
+  maxProcessedEventsPerRun: 1
+nativeHandlers:
+  - id: start
+    message: Start
+    parameters: []
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | frame | 1000 |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    paused: false
+    runtimeLimits:
+      exclude:
+        - name: MaxProcessedEventsPerRun
+          limit: 1
+    trace:
+      - event: dispatchStarted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: dispatchCompleted
+        message: { name: Start }
+        signatureId: "Start()"
+```
+
+---
+
+## Test: Exactly 2 native messages finish at the limit during frame
+
+This case reaches the configured message count exactly while draining all work.
+The final dispatch must complete without reporting MaxProcessedEventsPerRun;
+the existing pending-message case supplies the over-limit control.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: processed-limit-native-frame-2
+runtimeLimits:
+  maxProcessedEventsPerRun: 2
+nativeHandlers:
+  - id: start
+    message: Start
+    parameters: []
+    emit:
+      - name: Deferred
+        args: []
+  - id: deferred
+    message: Deferred
+    parameters: []
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | frame | 1000 |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    paused: false
+    local:
+      - name: Deferred
+    runtimeLimits:
+      exclude:
+        - name: MaxProcessedEventsPerRun
+          limit: 2
+    trace:
+      - event: dispatchStarted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: emit
+        message: { name: Deferred }
+        accepted: true
+      - event: dispatchCompleted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: dispatchStarted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+      - event: dispatchCompleted
+        message: { name: Deferred }
+        signatureId: "Deferred()"
+```

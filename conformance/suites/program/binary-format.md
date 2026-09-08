@@ -654,3 +654,296 @@ binary:
   outcome: validationError
   errorCode: CyclicCallGraph
 ```
+
+---
+
+## Test: valid-direct-call
+
+This case preserves the compiled resource requirements of 5 registers and call depth 1, including live caller frames.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-direct-call
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-valid-direct-call
+  resourceId: gesb-v1.valid-direct-call
+  relativePath: GesbV1/valid-direct-call.gesb
+  sha256: 55A73F1384849C446D560603DD03CCFEEF62329B1FE63CC7E55101E26A833903
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: true
+```
+
+### Source code under test
+
+```ges
+module resources
+function add(_ value) be value + 1
+on Start(value) { emit Done(value: add(value)) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| execute | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: 55A73F1384849C446D560603DD03CCFEEF62329B1FE63CC7E55101E26A833903
+  moduleName: resources
+  requiredRegisterCount: 5
+  requiredCallStackDepth: 1
+  opaqueSectionCount: 0
+steps:
+  execute:
+    input:
+      args:
+        - name: value
+          value: { type: ":Number.int64", value: "2" }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "3" }
+```
+
+---
+
+## Test: underdeclared-depth-direct-call
+
+This case lowers the declared call depth in both the Program metadata and its handler. The declarations still agree with each other, but contradict the unchanged executable code. The reader must reject this Program before execution.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underdeclared-depth-direct-call
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-underdeclared-depth-direct-call
+  resourceId: gesb-v1.underdeclared-depth-direct-call
+  relativePath: GesbV1/underdeclared-depth-direct-call.gesb
+  sha256: 4B8758F404BD571E65F5D99F9A9C46B144E69964CA7C557AE63EAC4B2CD3DE04
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  derivation: patch RequiredCallStackDepth in ProgramMetadata and handler binding 0 to 0 at file byte offsets 32 and 181 (u16 Little Endian); retain all code and other bytes
+```
+
+### Source code under test
+
+```ges
+module resources
+function add(_ value) be value + 1
+on Start(value) { emit Done(value: add(value)) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidResourceMetadata
+```
+
+---
+
+## Test: underdeclared-registers-direct-call
+
+This case lowers the declared register requirement in both the Program metadata and its handler. The declarations still agree with each other, but contradict the unchanged executable code. The reader must reject this Program before execution.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underdeclared-registers-direct-call
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-underdeclared-registers-direct-call
+  resourceId: gesb-v1.underdeclared-registers-direct-call
+  relativePath: GesbV1/underdeclared-registers-direct-call.gesb
+  sha256: A543CE814AF066B4E991D262C8805807D6CE3FF9FF9D0833A88770DC287B687E
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  derivation: patch RequiredRegisterCount in ProgramMetadata and handler binding 0 to 3 at file byte offsets 30 and 179 (u16 Little Endian); retain all code and other bytes
+```
+
+### Source code under test
+
+```ges
+module resources
+function add(_ value) be value + 1
+on Start(value) { emit Done(value: add(value)) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidResourceMetadata
+```
+
+---
+
+## Test: valid-nested-call
+
+This case preserves the compiled resource requirements of 9 registers and call depth 2, including live caller frames.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-nested-call
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-valid-nested-call
+  resourceId: gesb-v1.valid-nested-call
+  relativePath: GesbV1/valid-nested-call.gesb
+  sha256: 64AC5E356FFFAD78F56A09B173B8B538B830546E6C0FB20CAC85110A336D5A2D
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: true
+```
+
+### Source code under test
+
+```ges
+module resources
+function add(_ value) be value + 1
+function twice(_ value) be add(value) + add(value)
+on Start(value) { emit Done(value: twice(value)) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| execute | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: 64AC5E356FFFAD78F56A09B173B8B538B830546E6C0FB20CAC85110A336D5A2D
+  moduleName: resources
+  requiredRegisterCount: 9
+  requiredCallStackDepth: 2
+  opaqueSectionCount: 0
+steps:
+  execute:
+    input:
+      args:
+        - name: value
+          value: { type: ":Number.int64", value: "2" }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "6" }
+```
+
+---
+
+## Test: underdeclared-depth-nested-call
+
+This case lowers the declared call depth in both the Program metadata and its handler. The declarations still agree with each other, but contradict the unchanged executable code. The reader must reject this Program before execution.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underdeclared-depth-nested-call
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-underdeclared-depth-nested-call
+  resourceId: gesb-v1.underdeclared-depth-nested-call
+  relativePath: GesbV1/underdeclared-depth-nested-call.gesb
+  sha256: 2E8CAFA6A91AA09A0B241599038D86651097ACCD9679FC167126FE820744F0C5
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  derivation: patch RequiredCallStackDepth in ProgramMetadata and handler binding 0 to 1 at file byte offsets 32 and 190 (u16 Little Endian); retain all code and other bytes
+```
+
+### Source code under test
+
+```ges
+module resources
+function add(_ value) be value + 1
+function twice(_ value) be add(value) + add(value)
+on Start(value) { emit Done(value: twice(value)) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidResourceMetadata
+```
+
+---
+
+## Test: underdeclared-registers-nested-call
+
+This case lowers the declared register requirement in both the Program metadata and its handler. The declarations still agree with each other, but contradict the unchanged executable code. The reader must reject this Program before execution.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underdeclared-registers-nested-call
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-underdeclared-registers-nested-call
+  resourceId: gesb-v1.underdeclared-registers-nested-call
+  relativePath: GesbV1/underdeclared-registers-nested-call.gesb
+  sha256: 5F4645897C5E4158815C5CA20397D048ED460241A352E97D53D7D5D58EED8B3E
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  derivation: patch RequiredRegisterCount in ProgramMetadata and handler binding 0 to 4 at file byte offsets 30 and 188 (u16 Little Endian); retain all code and other bytes
+```
+
+### Source code under test
+
+```ges
+module resources
+function add(_ value) be value + 1
+function twice(_ value) be add(value) + add(value)
+on Start(value) { emit Done(value: twice(value)) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidResourceMetadata
+```

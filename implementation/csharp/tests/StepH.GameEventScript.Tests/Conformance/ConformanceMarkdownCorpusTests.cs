@@ -16,10 +16,17 @@ public sealed class ConformanceMarkdownCorpusTests
     public TestContext TestContext { get; set; } = null!;
 
     public static IEnumerable<object[]> Cases()
+        => SelectCases(isolated: false);
+
+    public static IEnumerable<object[]> IsolatedCases()
+        => SelectCases(isolated: true);
+
+    private static IEnumerable<object[]> SelectCases(bool isolated)
     {
         foreach (var document in ConformanceCSharpTestEnvironment.Documents)
-            foreach (var data in ConformanceMSTestAdapter.Cases(document))
-                yield return data;
+            foreach (var testCase in document.Cases)
+                if (ConformanceProcessIsolation.IsRequired(testCase) == isolated)
+                    yield return [document, testCase.Id];
     }
 
     public static string DisplayName(MethodInfo method, object[] data)
@@ -29,7 +36,8 @@ public sealed class ConformanceMarkdownCorpusTests
     [DynamicData(nameof(Cases), DynamicDataDisplayName = nameof(DisplayName))]
     public void ConformanceCasePasses(ConformanceDocument document, string caseId)
     {
-        var result = ConformanceRunner.RunCase(
+        var testCase = document.Cases.Single(testCase => testCase.Id == caseId);
+        var result = ConformanceProcessIsolation.IsRequired(testCase) ? ConformanceProcessIsolation.Run(document, testCase) : ConformanceRunner.RunCase(
             document,
             caseId,
             ConformanceCSharpTestEnvironment.Deterministic(),
@@ -39,15 +47,21 @@ public sealed class ConformanceMarkdownCorpusTests
     }
 
     [TestMethod]
+    [TestCategory("Isolation")]
+    [DynamicData(nameof(IsolatedCases), DynamicDataDisplayName = nameof(DisplayName))]
+    public void IsolatedConformanceCasePasses(ConformanceDocument document, string caseId)
+        => ConformanceCasePasses(document, caseId);
+
+    [TestMethod]
     public void ConformanceCorpusHasStableUniqueIdentityAndExpectedCounts()
     {
         var documents = ConformanceCSharpTestEnvironment.Documents;
-        Assert.HasCount(75, documents);
-        Assert.AreEqual(1049, documents.Sum(document => document.Cases.Count));
-        Assert.AreEqual(1042, documents.Sum(document => document.Cases.Count(testCase => testCase.Kind != ConformanceTestKind.BytecodeSnapshot)));
+        Assert.HasCount(80, documents);
+        Assert.AreEqual(1163, documents.Sum(document => document.Cases.Count));
+        Assert.AreEqual(1156, documents.Sum(document => document.Cases.Count(testCase => testCase.Kind != ConformanceTestKind.BytecodeSnapshot)));
         Assert.AreEqual(7, documents.Sum(document => document.Cases.Count(testCase => testCase.Kind == ConformanceTestKind.BytecodeSnapshot)));
-        Assert.AreEqual(75, documents.Select(document => document.SuiteId).Distinct(StringComparer.Ordinal).Count());
-        Assert.AreEqual(1049, documents.SelectMany(document => document.Cases).Select(testCase => testCase.FullId).Distinct(StringComparer.Ordinal).Count());
+        Assert.AreEqual(80, documents.Select(document => document.SuiteId).Distinct(StringComparer.Ordinal).Count());
+        Assert.AreEqual(1163, documents.SelectMany(document => document.Cases).Select(testCase => testCase.FullId).Distinct(StringComparer.Ordinal).Count());
         AssertCanonicalReadableLayout();
     }
 
@@ -114,7 +128,8 @@ public sealed class ConformanceMarkdownCorpusTests
             var root = Path.Combine(ConformanceCSharpTestEnvironment.GetConformanceArtifactsDirectory(), "received");
             Directory.CreateDirectory(root);
             File.WriteAllBytes(Path.Combine(root, "ConformanceResults.json"), ConformanceResultJsonWriter.ToArray(report));
-            File.WriteAllText(Path.Combine(root, "ConformanceReport.md"), ConformanceMarkdownReportWriter.ToText(report));
+            const string measurementNotice = "> Performance values in this correctness-only run are echoed references, not measurements. This report does not qualify an allocation profile.\n\n";
+            File.WriteAllText(Path.Combine(root, "ConformanceReport.md"), measurementNotice + ConformanceMarkdownReportWriter.ToText(report));
 
             var crossLanguage = ConformanceCrossLanguageResultJsonWriter.ToText(documents, report);
             File.WriteAllText(Path.Combine(root, "CSharpReferenceResults.received.json"), crossLanguage);

@@ -244,6 +244,12 @@ graph, resource declarations, and debug/source ranges. Failures use
 `GameEventScriptProgramFormatException` with a stable error code and, where
 available, byte offset, section type, and entry index.
 
+Call-graph depth within the V1 data limits is not an additional format error.
+Validation of an acyclic graph must complete, and a cyclic graph must produce
+`CyclicCallGraph`, without terminating the embedding process through exhaustion
+of the native implementation stack. Host execution limits do not replace this
+validation at the reader boundary.
+
 The portable numeric error codes are fixed as follows:
 
 | Code | Name | Code | Name |

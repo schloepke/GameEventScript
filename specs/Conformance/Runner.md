@@ -194,6 +194,13 @@ Otherwise every present normalized property expectation is exact. Optional
 comparisons cover signature, message and handler equality plus the equal-value
 hash invariant; ordered values may also be bound through a signature.
 
+When `compareConformanceMessage` is supplied, the runner compares that transport
+expectation against the constructed actual message through the runtime-message
+conformance comparison operation. Its result must equal `conformanceEquals`.
+This operation uses case comparison options and tests the comparison contract
+itself; it must not be replaced by public message equality or by a separate
+comparison implementation used only for these tests.
+
 ### Value API
 
 The runner constructs a portable value, optionally mutates its source arrays,
@@ -266,6 +273,30 @@ error rather than a regression failure. A finite value above the bound is a
 
 Performance values never affect non-performance cases and are not normative
 cross-platform equivalence values.
+
+For warmed zero-allocation workloads, input and observer creation, compilation,
+linking, initialization, and declared warmup are outside the measurement.
+The measured region includes input enqueueing and the declared pump mode;
+`frames` must perform the specified frame budget and resume until completion.
+Providers observe completed work and, when enabled, counting-observer callbacks
+without allocating in those callbacks. Unsupported modes are errors, never
+silently measured as another mode.
+
+Allocation evidence measures cumulative allocations, including objects freed
+during the interval; live-heap differences and RSS are not substitutes. Each
+sample must satisfy a zero bound. Aggregation uses the maximum allocated value,
+independently of elapsed-time selection. Positive escaping-allocation and
+nonallocating controls verify the measurement mechanism. A missing or inadequate
+counter cannot produce a zero-allocation pass.
+
+Native adapters record measurement provenance alongside the portable result:
+runtime and build SDK/compiler identity, versions, build configuration, OS and
+architecture, memory management, instrumentation, included/excluded scope,
+sample values and coverage gaps. Evidence qualifies only the declared scope;
+a managed-thread counter cannot certify native heaps or another runtime.
+Every port uses the shared workloads with its own suitable instrumentation.
+The test adapter's correctness-only reference echo is explicitly not measured
+allocation evidence and must be identified as such in its human-readable report.
 
 ## Binary64 comparison
 
@@ -505,3 +536,20 @@ artifacts. It must:
 Framework assertions, reflection-based discovery, environment-variable lookup,
 and filesystem paths belong to adapters, not to the portable parser, normalized
 model, runner, result writers, or received writer.
+
+Adapters execute crash-sensitive cases under process isolation. Their documented
+selection must apply to individual and full-corpus runs, with every case executed
+exactly once. The shared `program.call-graph-depth` suite requires this isolation,
+including its shallow controls. Its semantic contract remains ordinary
+`programBinary` validation and canonical rewriting; no process or stack-setting
+fields are added to Markdown.
+
+The worker runs the existing parser and runner for exactly the requested full
+case ID. The adapter bounds wall time and captured output and validates one
+complete result against the case and input identities before incorporating it
+into the corpus report. Process termination, timeout, output overflow, and
+missing, malformed, duplicate, or unrelated results fail the case rather than
+passing or skipping it. A structured worker failure remains a failure. Native
+exit codes and requested thread-stack sizes are technical evidence, never
+binary expectations. Process control, timers, threads, and result transport
+remain native adapter responsibilities.

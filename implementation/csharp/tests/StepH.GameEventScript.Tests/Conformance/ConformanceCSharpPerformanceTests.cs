@@ -21,10 +21,16 @@ public sealed class ConformanceCSharpPerformanceTests
     public TestContext TestContext { get; set; } = null!;
 
     public static IEnumerable<object[]> Cases()
+        => SelectCases(allocation: false);
+
+    public static IEnumerable<object[]> AllocationCases()
+        => SelectCases(allocation: true);
+
+    private static IEnumerable<object[]> SelectCases(bool allocation)
     {
         foreach (var document in ConformanceCSharpTestEnvironment.Documents)
             for (var index = 0; index < document.Cases.Count; index++)
-                if (document.Cases[index].Kind == ConformanceTestKind.Performance)
+                if (document.Cases[index].Kind == ConformanceTestKind.Performance && document.Cases[index].Categories.Contains("allocation") == allocation)
                     yield return [document, document.Cases[index].Id];
     }
 
@@ -36,8 +42,17 @@ public sealed class ConformanceCSharpPerformanceTests
     [TestCategory("Explicit")]
     [DynamicData(nameof(Cases), DynamicDataDisplayName = nameof(DisplayName))]
     public void MarkdownPerformanceCaseMeetsReference(ConformanceDocument document, string caseId)
+        => RunMeasured(document, caseId, ConformanceCSharpTestEnvironment.Measured());
+
+    [TestMethod]
+    [TestCategory("Performance")]
+    [TestCategory("Allocation")]
+    [DynamicData(nameof(AllocationCases), DynamicDataDisplayName = nameof(DisplayName))]
+    public void MarkdownAllocationCaseMeetsProfile(ConformanceDocument document, string caseId)
+        => RunMeasured(document, caseId, ConformanceCSharpTestEnvironment.MeasuredAllocation());
+
+    private void RunMeasured(ConformanceDocument document, string caseId, ConformanceRunnerEnvironment environment)
     {
-        var environment = ConformanceCSharpTestEnvironment.Measured();
         var result = ConformanceRunner.RunCase(document, caseId, environment, new ConformanceRunnerOptions
         {
             IncludeTechnicalDetails = true
@@ -61,6 +76,8 @@ public sealed class ConformanceCSharpPerformanceTests
         File.WriteAllBytes(Path.Combine(root, document.SuiteId + ".received.md"), ConformanceReceivedMarkdownWriter.ToArray(document, report));
         File.WriteAllBytes(Path.Combine(root, document.SuiteId + ".results.json"), ConformanceResultJsonWriter.ToArray(report));
         File.WriteAllText(Path.Combine(root, document.SuiteId + ".report.md"), ConformanceMarkdownReportWriter.ToText(report));
+        if (environment.PerformanceProvider is ConformanceCSharpAllocationProvider)
+            ConformanceCSharpAllocationProvider.WriteManifest(Path.Combine(root, document.SuiteId + ".measurement.json"), ordered);
     }
 }
 
@@ -74,6 +91,8 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
     {
         if (!string.Equals(profileId, ConformanceCSharpTestEnvironment.PerformanceProfile, StringComparison.Ordinal))
             throw new InvalidOperationException("The C# performance provider received an unsupported profile.");
+        if (testCase.Categories.Contains("allocation"))
+            return ConformanceCSharpAllocationProvider.Instance.Measure(testCase, ConformanceCSharpAllocationProvider.ProfileId);
         if (testCase.Performance is null || testCase.Sources.Count == 0 || testCase.Sources.Select(source => source.ProgramId).Distinct(StringComparer.Ordinal).Count() != 1)
             throw new InvalidOperationException("C# performance cases require one non-empty program.");
         if (testCase.NativeHandlers.Count != 0)
@@ -122,7 +141,7 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
         return new ConformancePerformanceMeasurement(metrics);
     }
 
-    private static GameEventScriptBuilder CreateBuilder(ConformanceCase testCase)
+    internal static GameEventScriptBuilder CreateBuilder(ConformanceCase testCase)
     {
         var builder = GameEventScriptBuilder.Create()
             .WithExternalTypeCatalog(GameEventScriptConformanceExternalTypes.Catalog);
@@ -185,14 +204,13 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
 
     private static GameEventScriptHost CreateHost(ConformanceCase testCase)
     {
-        var emitted = 0;
         var outbound = 0;
         var builder = GameEventScriptHost.CreateBuilder()
             .WithRegistry(ConformanceTestExtensionRegistry.Instance)
             .WithExternalTypeRegistry(GameEventScriptConformanceExternalTypes.Registry)
             .WithRuntimeLimits(CreateRuntimeLimits(testCase.RuntimeLimits))
-            .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(_ => emitted++, _ => emitted++))
             .WithPublishSink(new TestPublishSink(_ => outbound++));
+        if (testCase.Performance!.ObserveRuntime) builder.WithRuntimeObserver(new ConformanceCSharpAllocationProvider.CountingObserver());
         ConfigureRandom(builder, testCase.Random);
         return builder.Build();
     }
@@ -204,7 +222,7 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
             .WithRuntimeLimits(CreateRuntimeLimits(testCase.RuntimeLimits))
             .Build();
 
-    private static void ConfigureRandom(GameEventScriptHostBuilder builder, ConformanceRandomConfiguration? configuration)
+    internal static void ConfigureRandom(GameEventScriptHostBuilder builder, ConformanceRandomConfiguration? configuration)
     {
         if (configuration?.Seed is { } seed)
         {
@@ -221,7 +239,7 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
         builder.WithRandomSeed(0L);
     }
 
-    private static GameEventScriptRuntimeLimits CreateRuntimeLimits(ConformanceRuntimeLimits limits)
+    internal static GameEventScriptRuntimeLimits CreateRuntimeLimits(ConformanceRuntimeLimits limits)
     {
         var defaults = GameEventScriptRuntimeLimits.Default;
         if (limits.Values.Count == 0) return defaults;
@@ -242,7 +260,7 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
         };
     }
 
-    private static GameEventScriptDebugInfoOptions DebugInfo(IReadOnlyList<string> values)
+    internal static GameEventScriptDebugInfoOptions DebugInfo(IReadOnlyList<string> values)
     {
         var result = GameEventScriptDebugInfoOptions.None;
         for (var index = 0; index < values.Count; index++)

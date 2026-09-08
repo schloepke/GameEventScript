@@ -34,19 +34,24 @@ as `case` or `expect`; custom trailing fence info strings are intentionally not
 accepted.
 
 The complete portable corpus lives under
-`conformance/suites`. Its 75 suites contain 1,042 semantic cases and seven
+`conformance/suites`. Its 80 suites contain 1,156 semantic cases and seven
 independent bytecode snapshots. Every case
 has an explicit stable ID, kind, and level and is exposed independently through
 the C# test adapter. Markdown is the sole normative authoring format for
 conformance cases.
 
-`program.binary-format` is also the executable `.gesb` V1 fixture manifest.
+`program.binary-format` and `program.call-graph-depth` are also the executable
+`.gesb` V1 fixture manifests. The latter includes shallow controls and deep
+acyclic/cyclic graphs; native adapters run its four cases in isolated processes.
 The immutable resources live below `conformance/fixtures/GesbV1`; adapters map
 stable resource IDs to packaged bytes, while the portable parser and runner
 remain fileless and networkless.
 
-The C# adapter also discovers the five performance cases independently for an
-explicit, non-parallel measurement run. It writes the canonical result JSON, a
+The C# adapter also discovers five general performance cases and 16 warmed
+allocation cases independently for non-parallel measurement runs. The latter
+run in the Release `Allocation` gate, with exact byte counts and measurement
+provenance for the managed heap on the executing .NET thread. Other heaps and
+runtimes are not qualified by that measurement. It writes the canonical result JSON, a
 human-readable report, and a suite-local received Markdown approval candidate
 under `artifacts/conformance/received`; bytecode-snapshot cases produce a
 separate received candidate there as well. These generated files never replace

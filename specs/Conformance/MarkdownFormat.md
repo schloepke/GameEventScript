@@ -674,6 +674,7 @@ messageApi:
     args: []
   compareSignature: { name: Start, parameters: [a, b] }
   compareMessage: { name: Start, args: [] }
+  compareConformanceMessage: { name: Start, args: [] }
   compareHandler: { name: Start, parameters: [a, b] }
   createArguments: []
 ```
@@ -697,6 +698,7 @@ message:
   signatureHashEquals: true
   messageEquals: true
   messageHashEquals: true
+  conformanceEquals: true
   handlerEquals: true
   handlerHashEquals: true
   createdMessageSignatureId: "Start(a,b)"
@@ -705,6 +707,16 @@ message:
 
 If `error` is present, successful construction fails the case and the other
 fields must be absent. Message error codes are stable ASCII identifiers.
+
+`compareConformanceMessage` and `message.conformanceEquals` must occur together.
+The former is an expected transport message; `messageApi.message` is constructed
+through the public API and supplies the actual message. The runner applies the
+same comparison operation used for runtime message expectations, under the
+case's `comparison` options, and asserts its boolean result. The expected
+transport's numeric storage variants and units remain exact, including inside
+containers and at infinity. A false expectation is a negative conformance
+comparison test, not a request to treat a failed case as passing. This pair is
+unavailable with an `error` expectation.
 
 ### `valueApi`
 
@@ -850,10 +862,16 @@ performance:
   iterations: 1000
   warmupIterations: 10
   compileWarmupIterations: 3
+  observeRuntime: true
 ```
 
-All counts are non-negative UInt32 and `iterations` is positive. The expectation
-adds profile-specific baselines:
+All counts are non-negative UInt32 and `iterations` is positive.
+`observeRuntime` is an optional Boolean, defaulting to true. It controls only
+measured execution: true installs a counting runtime observer whose callbacks
+do not allocate; false installs no runtime observer. The separate correctness
+execution still observes the complete declared outputs and traces. A provider
+that cannot honor the requested observer configuration reports an error.
+The expectation adds profile-specific baselines:
 
 ```yaml
 performance:
@@ -886,6 +904,17 @@ an improvement never fails. All values are finite non-negative Binary64 values.
 
 Workload and correctness are shared across ports. Profiles and their baselines
 may be language-, runtime-, configuration-, OS-, and architecture-specific.
+
+The `performance.low-allocation` suite exercises the warmed allocation contract
+owned by [Public API](../PublicApi.md#allocation-contract). Its `run.allocated`
+metric counts cumulative allocated bytes across all measured iterations; a
+zero maximum allows no tolerance or rounding of a positive count to zero.
+Reusing inputs and avoiding new payloads isolates dispatch and VM work.
+Paired 1000/2000-iteration cases test recurring allocation, with completion,
+frame pause/resume, exact/message-name matching, and observer off/on.
+Measurement coverage is qualified separately from semantic correctness, as
+defined in [Runner](Runner.md#performance). Nonzero payload-allocation budgets
+remain profile-specific and do not define portable object sizes.
 
 ## Normalized immutable document model
 

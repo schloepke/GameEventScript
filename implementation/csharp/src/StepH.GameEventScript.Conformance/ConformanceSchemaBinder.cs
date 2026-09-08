@@ -68,6 +68,8 @@ internal static class ConformanceSchemaBinder
             var binaryFixture = BindBinaryFixture(Optional(caseNode, "binaryFixture"));
             var workload = BindPerformanceWorkload(Optional(caseNode, "performance"));
             var expectations = BindExpectation(defaults.Kind.Value, expectationNode);
+            if ((messageApi?.CompareConformanceMessage is not null) != (expectations.MessageApi?.ConformanceEquals is not null))
+                throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "compareConformanceMessage and conformanceEquals must be supplied together.", caseNode.Range);
             ValidateCardinality(defaults.Kind.Value, testSyntax, expectationNode, sources.Count, nativeHandlers.Count, messageApi, valueApi, externalTypeApi, binaryFixture, workload);
             if (defaults.Kind == ConformanceTestKind.ScriptApi && sources.Count == 0 && defaults.Compile.BinaryRoundTrip)
                 throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A native-only scriptApi case cannot request a program binary roundtrip.", caseNode.Range);
@@ -316,7 +318,7 @@ internal static class ConformanceSchemaBinder
     private static ConformanceMessageApiCase? BindMessageApi(YamlNode? node)
     {
         if (node is null) return null;
-        Closed(node, "signature", "message", "compareSignature", "compareMessage", "compareHandler", "createArguments");
+        Closed(node, "signature", "message", "compareSignature", "compareMessage", "compareConformanceMessage", "compareHandler", "createArguments");
         var signature = BindSignature(Required(node, "signature"));
         var messageNode = Required(node, "message");
         Closed(messageNode, "name", "tags", "args");
@@ -332,6 +334,7 @@ internal static class ConformanceSchemaBinder
                 signature.Name, signature.Parameters,
                 new ConformanceMessage(name, tags, Array.Empty<ConformanceArgument>()), true, unordered,
                 BindOptionalSignature(Optional(node, "compareSignature")), BindOptionalMessage(Optional(node, "compareMessage")),
+                BindOptionalMessage(Optional(node, "compareConformanceMessage")),
                 BindOptionalSignature(Optional(node, "compareHandler")), BindValues(Optional(node, "createArguments")));
         }
         var message = new ConformanceMessage(name, tags, args is null ? Array.Empty<ConformanceArgument>() : BindArguments(args));
@@ -339,6 +342,7 @@ internal static class ConformanceSchemaBinder
             signature.Name, signature.Parameters,
             message, false, Array.Empty<ConformanceValueEntry>(),
             BindOptionalSignature(Optional(node, "compareSignature")), BindOptionalMessage(Optional(node, "compareMessage")),
+            BindOptionalMessage(Optional(node, "compareConformanceMessage")),
             BindOptionalSignature(Optional(node, "compareHandler")), BindValues(Optional(node, "createArguments")));
     }
 
@@ -421,10 +425,10 @@ internal static class ConformanceSchemaBinder
     private static ConformancePerformanceWorkload? BindPerformanceWorkload(YamlNode? node)
     {
         if (node is null) return null;
-        Closed(node, "iterations", "warmupIterations", "compileWarmupIterations");
+        Closed(node, "iterations", "warmupIterations", "compileWarmupIterations", "observeRuntime");
         var iterations = RequiredUInt32(node, "iterations");
         if (iterations == 0) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "performance.iterations must be positive.", Property(node, "iterations")!.Value.Range);
-        return new ConformancePerformanceWorkload(iterations, OptionalUInt32(node, "warmupIterations") ?? 0, OptionalUInt32(node, "compileWarmupIterations") ?? 0);
+        return new ConformancePerformanceWorkload(iterations, OptionalUInt32(node, "warmupIterations") ?? 0, OptionalUInt32(node, "compileWarmupIterations") ?? 0, OptionalBoolean(node, "observeRuntime") ?? true);
     }
 
     private static List<ConformanceStep> BindSteps(IReadOnlyList<MarkdownStepSyntax> syntaxSteps, YamlNode? expectation, IReadOnlyDictionary<string, IReadOnlyList<ConformanceNativeAction>> stepActions)
@@ -674,7 +678,8 @@ internal static class ConformanceSchemaBinder
 
     private static ConformanceMessageApiExpectation BindMessageApiExpectation(YamlNode node)
     {
-        Closed(node, "name", "signatureId", "messageSignatureId", "matches", "argumentCount", "signatureEquals", "signatureHashEquals", "messageEquals", "messageHashEquals", "handlerEquals", "handlerHashEquals", "createdMessageSignatureId", "error");
+        Closed(node, "name", "signatureId", "messageSignatureId", "matches", "argumentCount", "signatureEquals", "signatureHashEquals", "messageEquals", "messageHashEquals",
+            "conformanceEquals", "handlerEquals", "handlerHashEquals", "createdMessageSignatureId", "error");
         if (node.Properties.Count == 0) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, "At least one message expectation field is required.", node.Range);
         var error = OptionalString(node, "error");
         if (error is not null && node.Properties.Count != 1) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A messageApi error expectation cannot contain success fields.", node.Range);
@@ -683,6 +688,7 @@ internal static class ConformanceSchemaBinder
             OptionalBoolean(node, "matches"), OptionalUInt32(node, "argumentCount"),
             OptionalBoolean(node, "signatureEquals"), OptionalBoolean(node, "signatureHashEquals"),
             OptionalBoolean(node, "messageEquals"), OptionalBoolean(node, "messageHashEquals"),
+            OptionalBoolean(node, "conformanceEquals"),
             OptionalBoolean(node, "handlerEquals"), OptionalBoolean(node, "handlerHashEquals"),
             OptionalString(node, "createdMessageSignatureId"), error);
     }

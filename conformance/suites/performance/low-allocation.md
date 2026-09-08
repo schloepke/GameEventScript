@@ -16,6 +16,8 @@ categories: [conformance, allocation]
 
 This suite checks warmed dispatch with reused inputs and no new payloads. Exact and message-name handlers share zero-allocation expectations, with and without a counting observer. Completion uses one handler; frames use two handlers and a one-opcode budget. Paired N and 2N batches expose recurring allocations. Correctness traces are collected separately from measurement even when the measured observer is disabled.
 
+The measured dispatch includes obtaining the signature used by VM entry and observer callbacks. Repeated message-name dispatch must preserve the expected `Start(*)` trace labels without allocating a new label for each invocation or callback.
+
 The managed profile measures cumulative bytes on the calling .NET thread. Other heaps are outside that evidence; ports require their own instrumentation and profile. The macOS profile entry also permits the existing deterministic corpus adapter to check correctness and report shape; its echoed values are not allocation measurements.
 
 ---
@@ -1145,4 +1147,3 @@ performance:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
 ```
-

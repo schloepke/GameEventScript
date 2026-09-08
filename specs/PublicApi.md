@@ -121,6 +121,11 @@ allocate heap objects by themselves. Value-style execution and publish results
 must therefore remain representable without heap allocation. User callbacks,
 extension implementations, emitted messages, and values may allocate.
 
+The dispatch guarantee applies equally to exact-signature and message-name
+handlers, with no observer or with observer callbacks that allocate nothing.
+Obtaining the dispatch signature for VM entry or observer callbacks is part of
+the runtime's own dispatch work and must not allocate after warmup.
+
 ## Compiler API
 
 ### CompilerBuilder

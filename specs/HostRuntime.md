@@ -238,6 +238,8 @@ synchronous core contract.
   per-invocation delegate closure, runner object, or invocation interface exists.
 - The queue is a preallocated growing ring of logical message envelopes.
 - Dispatch selection walks captured arrays without constructing handler lists.
+- Handler registrations prepare their dispatch signature once and reuse it for
+  VM entry, observer callbacks, and diagnostics.
 - Execution and publish results are value types.
 - Program loading prewarms VM register capacity. Later register growth is
   geometric and bounded by `MaxRegisterValues`.

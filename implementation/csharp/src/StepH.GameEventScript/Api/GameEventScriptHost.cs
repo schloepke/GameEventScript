@@ -670,6 +670,7 @@ public sealed class GameEventScriptHost
             RequiredTags = requiredTags;
             ExcludedTags = excludedTags;
             MatchArguments = matchArguments;
+            DispatchSignatureId = matchArguments ? signature.SignatureId : $"{signature.Name}(*)";
             Priority = priority;
             RegistrationOrder = registrationOrder;
             RegistrationId = registrationId;
@@ -689,7 +690,7 @@ public sealed class GameEventScriptHost
         internal GameEventScriptInstance? Instance { get; }
         internal ushort EntryAddress { get; }
         internal SubscriptionEntry? NextNativeRegistration { get; set; }
-        internal string DispatchSignatureId => MatchArguments ? Signature.SignatureId : $"{Signature.Name}(*)";
+        internal string DispatchSignatureId { get; }
 
         internal static SubscriptionEntry ForNative(
             long registrationId,

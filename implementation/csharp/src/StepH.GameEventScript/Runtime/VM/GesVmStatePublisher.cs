@@ -14,7 +14,7 @@ internal static class GesVmStatePublisher
     {
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
-        if (!signature.IsValid || argumentRegisters.Length != signature.ArgumentNames.Length) return false;
+        if (!signature.IsValid || argumentRegisters.Length != signature.ArgumentNames.Count) return false;
 
         try
         {
@@ -52,7 +52,7 @@ internal static class GesVmStatePublisher
     {
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
-        if (!signature.IsValid || argumentRegisters.Length != signature.ArgumentNames.Length) return false;
+        if (!signature.IsValid || argumentRegisters.Length != signature.ArgumentNames.Count) return false;
 
         var tags = new GameEventScriptTagBuffer(tagRegisters.Length);
         for (var index = 0; index < tagRegisters.Length; index++)

@@ -67,7 +67,7 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     public GameEventScriptMessageArguments Arguments { get; }
 
     /// <summary>
-    /// Gets the normalized delivery tags associated with this message. Tags do not affect the message signature.
+    /// Gets an immutable view of the normalized delivery tags associated with this message. Tags do not affect the message signature.
     /// </summary>
     public IReadOnlyList<string> Tags { get; }
 
@@ -227,8 +227,8 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     internal static GameEventScriptMessage CreatePrecomputed(string normalizedName, GameEventScriptMessageArguments arguments, string signatureId, IEnumerable<string>? tags = null)
         => new(normalizedName, arguments, signatureId, NormalizeTags(tags));
 
-    internal static GameEventScriptMessage CreatePrecomputedWithNormalizedTags(string normalizedName, GameEventScriptMessageArguments arguments, string signatureId, IReadOnlyList<string>? tags = null)
-        => new(normalizedName, arguments, signatureId, tags ?? []);
+    internal static GameEventScriptMessage CreatePrecomputedWithNormalizedTags(string normalizedName, GameEventScriptMessageArguments arguments, string signatureId, string[]? tags = null)
+        => new(normalizedName, arguments, signatureId, FreezeTags(tags ?? []));
 
     internal static string NormalizeTagName(string? tag)
     {
@@ -252,7 +252,7 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
             buffer.Add(tag);
         }
 
-        return buffer.ToArrayOrEmpty();
+        return FreezeTags(buffer.ToArrayOrEmpty());
     }
 
     private static IReadOnlyList<string> MergeTags(IReadOnlyList<string> existingTags, IEnumerable<string>? newTags)
@@ -279,7 +279,7 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
             return existingTags;
         }
 
-        return buffer.ToArrayOrEmpty();
+        return FreezeTags(buffer.ToArrayOrEmpty());
     }
 
     private static IReadOnlyList<string> MergeNormalizedTags(IReadOnlyList<string> existingTags, IReadOnlyList<string>? newTags)
@@ -343,13 +343,15 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
 
         if (count == result.Length)
         {
-            return result;
+            return FreezeTags(result);
         }
 
         var compact = new string[count];
         Array.Copy(result, compact, count);
-        return compact;
+        return FreezeTags(compact);
     }
+
+    private static IReadOnlyList<string> FreezeTags(string[] tags) => tags.Length == 0 ? [] : GameEventScriptReadOnlyArray<string>.FromOwnedArray(tags);
 
     private static int GetKnownCount(IEnumerable<string> values)
     {

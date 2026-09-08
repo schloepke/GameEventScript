@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
+using System.Collections.Generic;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryBindKind;
 using static StepH.GameEventScript.Api.GameEventScriptBindingSegment;
@@ -15,14 +16,14 @@ internal sealed class GesLinkedProgram
         internal OutboundMessageSignature(string name, string[] argumentNames, string signatureId)
         {
             Name = name;
-            ArgumentNames = argumentNames;
+            ArgumentNames = GameEventScriptReadOnlyArray<string>.FromOwnedArray(argumentNames);
             SignatureId = signatureId;
             IsValid = true;
         }
 
         internal bool IsValid { get; }
         internal string Name { get; }
-        internal string[] ArgumentNames { get; }
+        internal IReadOnlyList<string> ArgumentNames { get; }
         internal string SignatureId { get; }
     }
 

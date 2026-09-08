@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Collections;
+using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.CSharpBridge;
 using StepH.GameEventScript.Runtime.Values;
@@ -61,6 +62,77 @@ public sealed class GameEventScriptMessageImmutabilityTests
         AssertMessageShape(signature.WithArguments(GesValue.GesInteger(8)), 8);
     }
 
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void SignatureMessageFactoriesCopyCallerOwnedValues(bool useWithArguments)
+    {
+        var signature = GameEventScriptMessageSignature.Create("Shape", ["original"]);
+        var values = new[] { GesValue.GesInteger(7) };
+        var message = useWithArguments ? signature.WithArguments(values) : signature.CreateMessage((IReadOnlyList<GesValue>)values)!;
+        var hash = message.GetHashCode();
+
+        values[0] = GesValue.GesInteger(99);
+
+        AssertMessageShape(message, 7);
+        Assert.AreEqual(hash, message.GetHashCode());
+        Assert.AreEqual(signature.WithArguments(GesValue.GesInteger(7)), message);
+    }
+
+    [TestMethod]
+    public void MergedTagsCannotChangeOriginalOrCopiedMessages()
+    {
+        var originalTags = new[] { "green" };
+        var addedTags = new[] { "blue", "green" };
+        var original = GameEventScriptMessage.Create("Tagged", [], originalTags);
+        var merged = original.WithTags(addedTags);
+        var unchanged = merged.WithTags("green");
+        var hash = merged.GetHashCode();
+
+        originalTags[0] = "red";
+        addedTags[0] = "red";
+        MutateFirstItemIfWritable(original.Tags, "red");
+        MutateFirstItemIfWritable(merged.Tags, "red");
+        MutateFirstItemIfWritable(unchanged.Tags, "red");
+
+        CollectionAssert.AreEqual(new[] { "green" }, original.Tags.ToArray());
+        CollectionAssert.AreEqual(new[] { "green", "blue" }, merged.Tags.ToArray());
+        CollectionAssert.AreEqual(new[] { "green", "blue" }, unchanged.Tags.ToArray());
+        Assert.AreEqual(hash, merged.GetHashCode());
+        Assert.AreEqual(GameEventScriptMessage.Create("Tagged", [], ["green", "blue"]), merged);
+    }
+
+    [TestMethod]
+    [DataRow("emit Shape(original: 7) with #green")]
+    [DataRow("let message be Shape(original: 7)\n emit message with #green")]
+    [DataRow("let handler be Shape(original)\n let message be handler(original: 7)\n emit message with #green")]
+    public void ScriptMessageViewsCannotChangeCurrentOrSubsequentDeliveries(string body)
+    {
+        var program = GameEventScriptManager.CreateScriptBuilder().AddScript("module immutablemessages\non Start { " + body + "\n }").Compile();
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        var delivered = new List<GameEventScriptMessage>();
+        host.Subscribe(GameEventScriptMessageSignature.Create("Shape", ["original"]), (message, _) =>
+        {
+            MutateFirstItemIfWritable(message.Arguments.SignatureLabels, "changed");
+            MutateFirstItemIfWritable(message.Tags, "red");
+            delivered.Add(message);
+        }, ["green"]);
+        host.Load(program);
+
+        for (var iteration = 0; iteration < 2; iteration++)
+        {
+            Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Start")));
+            Assert.AreEqual(GameEventScriptExecutionState.Completed, host.RunToCompletion().State);
+        }
+
+        Assert.HasCount(2, delivered);
+        foreach (var message in delivered)
+        {
+            AssertMessageShape(message, 7);
+            CollectionAssert.AreEqual(new[] { "green" }, message.Tags.ToArray());
+        }
+    }
+
     private static void AssertMessageShape(GameEventScriptMessage message, long value)
     {
         Assert.AreEqual("Shape(original)", message.SignatureId);
@@ -78,7 +150,16 @@ public sealed class GameEventScriptMessageImmutabilityTests
         try
         {
             if (view is IList<string> generic) generic[0] = replacement;
-            else if (view is IList nongeneric) nongeneric[0] = replacement;
+        }
+        catch (NotSupportedException) { }
+        try
+        {
+            if (view is IList nongeneric) nongeneric[0] = replacement;
+        }
+        catch (NotSupportedException) { }
+        try
+        {
+            if (view is ICollection { SyncRoot: IList storage }) storage[0] = replacement;
         }
         catch (NotSupportedException) { }
     }

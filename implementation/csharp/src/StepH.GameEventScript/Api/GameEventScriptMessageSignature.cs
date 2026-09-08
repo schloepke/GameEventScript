@@ -116,7 +116,7 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
     public string Name { get; }
 
     /// <summary>
-    /// Gets the collection of normalized parameter names that define the structure of the message.
+    /// Gets an immutable view of the normalized parameter names that define the structure of the message.
     /// Each parameter name in this collection is standardized for use in the message signature
     /// and helps uniquely identify the signature when paired with the message name.
     /// </summary>
@@ -152,6 +152,7 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
 
     /// <summary>
     /// Creates a message by binding the provided values to this signature's parameters in declaration order.
+    /// Copies the values so later changes to the supplied array cannot modify the message.
     /// </summary>
     /// <param name="arguments">The ordered argument values to bind to the signature parameters.</param>
     /// <returns>A message with this signature's name and parameter names.</returns>
@@ -163,6 +164,7 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
 
     /// <summary>
     /// Creates a message by binding ordered values to this signature's parameter names.
+    /// Copies the values so later changes to the supplied collection cannot modify the message.
     /// </summary>
     /// <param name="arguments">The ordered argument values to bind to the signature parameters.</param>
     /// <returns>The created message when the argument count matches; otherwise <c>null</c>.</returns>
@@ -180,10 +182,10 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
             values[index] = arguments[index];
         }
 
-        return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptMessageArguments.CreateOrdered((string[])Parameters, values), SignatureId);
+        return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptMessageArguments.CreatePrecomputed(Parameters, values), SignatureId);
     }
 
-    internal GameEventScriptMessage? CreateMessage(GesValue[] arguments)
+    internal GameEventScriptMessage? CreateMessageFromOwnedValues(GesValue[] arguments)
     {
         if (Name.Length == 0) return null;
         if (arguments.Length != Parameters.Count) return null;
@@ -192,13 +194,13 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
             return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptMessageArguments.Empty, SignatureId);
         }
 
-        return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptMessageArguments.CreatePrecomputed((string[])Parameters, arguments), SignatureId);
+        return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptMessageArguments.CreatePrecomputed(Parameters, arguments), SignatureId);
     }
 
     private GameEventScriptMessageSignature(string name, IEnumerable<string>? parameters)
     {
         Name = NormalizeMessageName(name);
-        Parameters = NormalizeParameterNames(parameters);
+        Parameters = GameEventScriptReadOnlyArray<string>.FromOwnedArray(NormalizeParameterNames(parameters));
         SignatureId = CreateSignatureId(Name, Parameters);
     }
 

@@ -309,6 +309,9 @@ plus ordered parameter labels. Tags and values are not part of a signature.
 
 Signature equality and hashing use canonical signature content. `Empty` is a
 read-only sentinel and cannot create a message.
+Public parameter views cannot change the signature or any message created from
+it. Message factories snapshot caller-owned value collections; later changes to
+those collections cannot change an existing message.
 
 ### Message and arguments
 
@@ -321,6 +324,9 @@ when not found. It never converts the collection to unordered semantics.
 inputs. Absent arguments/tags mean empty. `WithTags(tags)` returns a new Message
 whose normalized tag set is the stable merge of existing and supplied tags; it does not
 mutate the original. `HasTag(tag)` uses normalized ordinal matching.
+Public tag and argument-label views cannot modify a message, its signature, or
+any other message sharing its immutable data. This also applies after a message
+has been enqueued: its delivery tags and argument labels remain unchanged.
 
 Message equality compares signature, argument values in order, and normalized
 tags in order. Hashing must preserve the equal-values-have-equal-hash invariant.

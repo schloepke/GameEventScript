@@ -88,6 +88,8 @@ semantics also has a portable case:
 - C# auto-runner synchronization and threading;
 - internal builder/rewriter structure and optimizer pass tests;
 - concrete C# struct layouts and defensive-array implementation checks;
+- mutation attempts through C# collection interfaces on public message tags,
+  signature parameters, and argument-label views;
 - C# allocation measurements and platform/runtime benchmark profiles.
 
 These tests must not become required behavior for Swift, Kotlin or C++ ports.

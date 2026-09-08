@@ -60,7 +60,7 @@ internal static class GesVmRegisterMessages
         }
         try
         {
-            var arguments = GameEventScriptMessageArguments.CreatePrecomputed(argumentNames, values);
+            var arguments = GameEventScriptMessageArguments.CreatePrecomputed(GameEventScriptReadOnlyArray<string>.FromOwnedArray(argumentNames), values);
             var signatureId = GameEventScriptMessageSignature.CreateSignatureId(messageName, argumentNames);
             vmState.SetMessage(destinationRegister, GameEventScriptMessage.CreatePrecomputed(messageName, arguments, signatureId));
         }
@@ -79,7 +79,7 @@ internal static class GesVmRegisterMessages
 
         if (argumentRegisters.Length == 0)
         {
-            var emptyMessage = signature.CreateMessage(Array.Empty<GesValue>());
+            var emptyMessage = signature.CreateMessageFromOwnedValues(Array.Empty<GesValue>());
             if (emptyMessage is not null)
             {
                 vmState.SetMessage(destinationRegister, emptyMessage);
@@ -97,7 +97,7 @@ internal static class GesVmRegisterMessages
         {
             arguments[index] = vmState.Register(argumentRegisters[index]);
         }
-        var message = signature.CreateMessage(arguments);
+        var message = signature.CreateMessageFromOwnedValues(arguments);
         if (message is not null)
         {
             vmState.SetMessage(destinationRegister, message);

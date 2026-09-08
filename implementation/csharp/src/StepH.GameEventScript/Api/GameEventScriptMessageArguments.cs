@@ -47,17 +47,15 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
     /// <summary>
     /// Gets the empty.
     /// </summary>
-    public static GameEventScriptMessageArguments Empty { get; } = new([], [], []);
+    public static GameEventScriptMessageArguments Empty { get; } = new([], []);
 
-    private readonly string[] _names;
+    private readonly IReadOnlyList<string> _names;
     private readonly GesValue[] _values;
-    private readonly IReadOnlyList<string> _signatureLabels;
 
-    private GameEventScriptMessageArguments(string[] names, GesValue[] values, IReadOnlyList<string> signatureLabels)
+    private GameEventScriptMessageArguments(IReadOnlyList<string> names, GesValue[] values)
     {
         _names = names;
         _values = values;
-        _signatureLabels = signatureLabels;
     }
 
     /// <summary>
@@ -66,9 +64,9 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
     public int Count => _values.Length;
 
     /// <summary>
-    /// Gets the signature labels.
+    /// Gets an immutable view of the normalized signature labels in argument order.
     /// </summary>
-    public IReadOnlyList<string> SignatureLabels => _signatureLabels;
+    public IReadOnlyList<string> SignatureLabels => _names;
 
     /// <summary>
     /// Gets the keys.
@@ -250,9 +248,9 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
             return -1;
         }
 
-        for (var index = 0; index < _signatureLabels.Count; index++)
+        for (var index = 0; index < _names.Count; index++)
         {
-            if (string.Equals(_signatureLabels[index], normalizedName, StringComparison.Ordinal))
+            if (string.Equals(_names[index], normalizedName, StringComparison.Ordinal))
             {
                 return index;
             }
@@ -328,14 +326,15 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
         return CreateOrderedCore(names, values);
     }
 
-    internal static GameEventScriptMessageArguments CreatePrecomputed(string[] normalizedNames, GesValue[] values)
+    // Labels must already be immutable; ownership of the values is transferred to the message.
+    internal static GameEventScriptMessageArguments CreatePrecomputed(IReadOnlyList<string> normalizedNames, GesValue[] values)
     {
         if (values.Length == 0)
         {
             return Empty;
         }
 
-        return new GameEventScriptMessageArguments(normalizedNames, values, normalizedNames);
+        return new GameEventScriptMessageArguments(normalizedNames, values);
     }
 
     internal ref readonly GesValue VmValueAt(int index) => ref _values[index];
@@ -354,7 +353,6 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
             throw new ArgumentException("Argument name count must match argument value count.", nameof(names));
         }
 
-        var signatureLabels = new string[names.Length];
         for (var index = 0; index < names.Length; index++)
         {
             var normalizedName = GameEventScriptMessageSignature.NormalizeParameterName(names[index]);
@@ -362,18 +360,17 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
             {
                 for (var previous = 0; previous < index; previous++)
                 {
-                    if (string.Equals(signatureLabels[previous], normalizedName, StringComparison.Ordinal))
+                    if (string.Equals(names[previous], normalizedName, StringComparison.Ordinal))
                     {
                         throw new ArgumentException($"Message argument name '{normalizedName}' occurs more than once after normalization.", nameof(names));
                     }
                 }
             }
 
-            signatureLabels[index] = normalizedName;
             names[index] = normalizedName;
         }
 
-        return new GameEventScriptMessageArguments(names, values, signatureLabels);
+        return new GameEventScriptMessageArguments(GameEventScriptReadOnlyArray<string>.FromOwnedArray(names), values);
     }
 
     private int IndexOfRequired(string name)
@@ -387,7 +384,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
         return index;
     }
 
-    private sealed class KeyEnumerable(string[] names) : IEnumerable<string>, IEnumerator<string>
+    private sealed class KeyEnumerable(IReadOnlyList<string> names) : IEnumerable<string>, IEnumerator<string>
     {
         private int _index = -1;
 
@@ -406,7 +403,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
         public bool MoveNext()
         {
             var next = _index + 1;
-            if (next >= names.Length)
+            if (next >= names.Count)
             {
                 return false;
             }

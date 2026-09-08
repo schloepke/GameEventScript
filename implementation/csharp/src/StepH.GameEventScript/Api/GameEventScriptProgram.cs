@@ -151,6 +151,11 @@ public readonly struct GameEventScriptReadOnlyArray<T> : IReadOnlyList<T>
 {
     private readonly T[]? _items;
 
+    private GameEventScriptReadOnlyArray(T[] ownedItems) => _items = ownedItems;
+
+    // The caller transfers exclusive ownership; no mutable reference may escape or be retained.
+    internal static GameEventScriptReadOnlyArray<T> FromOwnedArray(T[] items) => new(items);
+
     /// <summary>
     /// Takes an immutable snapshot, reusing storage only when the input is already a GameEventScriptReadOnlyArray of the same element type.
     /// </summary>

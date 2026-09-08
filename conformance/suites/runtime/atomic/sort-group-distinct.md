@@ -631,7 +631,7 @@ steps:
               value: "2.5"
           - name: "floatRange2"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "3"
           - name: "floatRange3"
             value:

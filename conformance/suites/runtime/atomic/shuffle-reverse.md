@@ -290,7 +290,7 @@ steps:
             value:
               type: ":List"
               items:
-                - type: ":Number.binary64"
+                - type: ":Number.int64"
                   value: "2"
                 - type: ":Number.binary64"
                   value: "2.5"

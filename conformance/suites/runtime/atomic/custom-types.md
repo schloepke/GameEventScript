@@ -515,7 +515,7 @@ steps:
               entries:
                 - key: "bearing"
                   value:
-                    type: ":Quantity.binary64"
+                    type: ":Quantity.int64"
                     unit: ":degree"
                     value: "90"
                 - key: "checksum"
@@ -531,7 +531,7 @@ steps:
                     z: "3"
                 - key: "range"
                   value:
-                    type: ":Quantity.binary64"
+                    type: ":Quantity.int64"
                     unit: ":meter"
                     value: "12"
                 - key: "steps"
@@ -541,7 +541,7 @@ steps:
                     value: "4"
           - name: "bearing"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               unit: ":degree"
               value: "90"
           - name: "checksum"
@@ -550,7 +550,7 @@ steps:
               value: "106"
           - name: "directionZ"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               unit: ":meter"
               value: "3"
           - name: "aimList"
@@ -567,7 +567,7 @@ steps:
               entries:
                 - key: "bearing"
                   value:
-                    type: ":Quantity.binary64"
+                    type: ":Quantity.int64"
                     unit: ":degree"
                     value: "90"
                 - key: "checksum"
@@ -583,7 +583,7 @@ steps:
                     z: "3"
                 - key: "range"
                   value:
-                    type: ":Quantity.binary64"
+                    type: ":Quantity.int64"
                     unit: ":meter"
                     value: "12"
                 - key: "steps"
@@ -597,7 +597,7 @@ steps:
               value: "106"
           - name: "mapDirectionZ"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               unit: ":meter"
               value: "3"
           - name: "aimKeys"
@@ -618,7 +618,7 @@ steps:
             value:
               type: ":List"
               items:
-                - type: ":Quantity.binary64"
+                - type: ":Quantity.int64"
                   unit: ":degree"
                   value: "90"
                 - type: ":Number.int64"
@@ -628,7 +628,7 @@ steps:
                   x: "1"
                   y: "2"
                   z: "3"
-                - type: ":Quantity.binary64"
+                - type: ":Quantity.int64"
                   unit: ":meter"
                   value: "12"
                 - type: ":Quantity.int64"
@@ -646,7 +646,7 @@ steps:
                         value: "bearing"
                     - key: "value"
                       value:
-                        type: ":Quantity.binary64"
+                        type: ":Quantity.int64"
                         unit: ":degree"
                         value: "90"
                 - type: ":Map"
@@ -680,7 +680,7 @@ steps:
                         value: "range"
                     - key: "value"
                       value:
-                        type: ":Quantity.binary64"
+                        type: ":Quantity.int64"
                         unit: ":meter"
                         value: "12"
                 - type: ":Map"

@@ -65,9 +65,14 @@ every nested segment or entry own immutable copies of their table and payload
 data. No mutable array or collection owned by a program may be exposed to a
 caller or another Core component.
 
+Entries may share storage that is already immutable. Repeated references to one
+encoded index list must not require a separate copy of its elements for every
+binding. This sharing does not expose mutable aliases or change program data.
+
 The C# implementation enforces this through `GameEventScriptReadOnlyArray<T>`:
 
-- construction copies the supplied sequence;
+- construction copies the supplied sequence, or reuses the immutable storage of
+  another `GameEventScriptReadOnlyArray<T>`;
 - public access is read-only and indexed;
 - internal bulk reads use `ReadOnlySpan<T>` and never expose the backing array;
 - nested reference entries are themselves immutable and defensively copy their

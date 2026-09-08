@@ -160,7 +160,7 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "4"
       - name: "SeenByScript"
         args:
@@ -248,7 +248,7 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "4"
       - name: "ExternalFirst"
         args:
@@ -332,7 +332,7 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "4"
       - name: "SeenByExternal"
         args:
@@ -410,13 +410,13 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "4"
       - name: "ExternalOk"
         args:
           - name: "value"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "4"
     diagnostics:
       - phase: "runtime"
@@ -487,19 +487,19 @@ steps:
         args:
           - name: "value"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "2"
       - name: "Done"
         args:
           - name: "value"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "2"
       - name: "Final"
         args:
           - name: "value"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "2"
 ```
 

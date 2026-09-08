@@ -170,7 +170,7 @@ steps:
               value: "0.25"
           - name: "heading"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "90"
               unit: ":degree"
           - name: "position"
@@ -509,15 +509,15 @@ steps:
               value: "10.5"
           - name: "y"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "4"
           - name: "z"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "3"
           - name: "labeledX"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "4"
 ```
 
@@ -730,12 +730,12 @@ steps:
               unit: ":meter"
           - name: "x"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "13"
               unit: ":meter"
           - name: "z"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "7"
               unit: ":meter"
           - name: "isPoint"
@@ -839,11 +839,11 @@ steps:
               value: "10.5"
           - name: "y"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "-2"
           - name: "z"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "3"
           - name: "listFirst"
             value:
@@ -851,7 +851,7 @@ steps:
               value: "10.5"
           - name: "dictZ"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "3"
           - name: "isVectorPosition"
             value:
@@ -937,22 +937,22 @@ steps:
               unit: ":meter"
           - name: "x"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "3"
               unit: ":meter"
           - name: "y"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "4"
               unit: ":meter"
           - name: "listY"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "4"
               unit: ":meter"
           - name: "dictX"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "3"
               unit: ":meter"
           - name: "rawPosition"
@@ -1131,12 +1131,12 @@ steps:
               z: "0"
           - name: "length2"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "5"
               unit: ":meter"
           - name: "length3"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "3"
 ```
 

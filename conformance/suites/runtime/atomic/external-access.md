@@ -493,7 +493,7 @@ steps:
               unit: ":meter"
           - name: "unitFloat"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "90"
               unit: ":degree"
           - name: "percentageValue"
@@ -1011,7 +1011,7 @@ steps:
               value: "-12"
           - name: "wrapDegree"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "10"
               unit: ":degree"
           - name: "radians"
@@ -1020,7 +1020,7 @@ steps:
               value: "3.141592653589793"
           - name: "degrees"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "180"
               unit: ":degree"
           - name: "naturalIsSeries"
@@ -1117,19 +1117,19 @@ steps:
         args:
           - name: "floored"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "10"
           - name: "flooredCall"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "10"
           - name: "maxed"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "8"
           - name: "turn"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "20"
               unit: ":degree"
           - name: "northPredicate"
@@ -1138,7 +1138,7 @@ steps:
               value: true
           - name: "vectorTotal"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "6"
               unit: ":meter"
           - name: "echoNothing"

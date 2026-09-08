@@ -890,7 +890,7 @@ steps:
               value: "15"
           - name: "fractionalSecond"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "2"
           - name: "indexZero"
             value:

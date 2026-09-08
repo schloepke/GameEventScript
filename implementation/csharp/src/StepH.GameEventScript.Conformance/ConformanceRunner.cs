@@ -499,7 +499,6 @@ public static class ConformanceRunner
         var value = definition.MutateSourceAfterCreate
             ? ConformanceRuntimeValueCodec.DecodeValueAndMutateSource(definition.Value)
             : ConformanceRuntimeValueCodec.DecodeValue(definition.Value);
-        var normalized = ConformanceRuntimeValueCodec.DecodeValue(expected.Normalized);
         var mismatches = new List<ConformanceMismatch>();
         CheckOptional(mismatches, "/value/isNumeric", expected.IsNumeric, value.IsNumeric);
         CheckOptional(mismatches, "/value/hasValue", expected.HasValue, value.HasValue);
@@ -510,7 +509,7 @@ public static class ConformanceRunner
             AddMismatch(mismatches, "/value/length", length.ToString(CultureInfo.InvariantCulture), value.Length.ToString(CultureInfo.InvariantCulture));
         if (expected.CustomTypeName is not null && !string.Equals(expected.CustomTypeName, value.CustomTypeName, StringComparison.Ordinal))
             AddMismatch(mismatches, "/value/customTypeName", expected.CustomTypeName, value.CustomTypeName);
-        if (!ConformanceRuntimeValueCodec.ValuesEqual(in normalized, in value, testCase.Comparison))
+        if (!ConformanceRuntimeValueCodec.ValuesEqual(expected.Normalized, in value, testCase.Comparison))
             AddMismatch(mismatches, "/value/normalized", "expected portable value", "different portable value");
         if (expected.Normalized.Type == ":Range.int64" && value.IntegerRange is null)
             AddMismatch(mismatches, "/value/normalized/type", ":Range.int64", ":Range.binary64");

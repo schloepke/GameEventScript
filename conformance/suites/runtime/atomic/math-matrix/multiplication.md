@@ -577,8 +577,9 @@ steps:
               value: "NaN"
           - name: "tagInfinity"
             value:
-              type: ":Number.binary64"
+              type: ":Quantity.binary64"
               value: "Infinity"
+              unit: ":meter"
           - name: "vector"
             value:
               type: ":Vector"
@@ -1236,8 +1237,9 @@ steps:
               value: "Infinity"
           - name: "meter"
             value:
-              type: ":Number.binary64"
+              type: ":Quantity.binary64"
               value: "Infinity"
+              unit: ":meter"
           - name: "boolean"
             value:
               type: ":Number.binary64"

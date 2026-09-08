@@ -67,23 +67,23 @@ steps:
         args:
           - name: "sinZero"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "0"
           - name: "sinParen"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "0"
           - name: "sinDegree"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "1"
           - name: "cosPi"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "-1"
           - name: "tanZero"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "0"
           - name: "asinOne"
             value:
@@ -91,7 +91,7 @@ steps:
               value: "1.5707963267949"
           - name: "acosOne"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "0"
           - name: "atanOne"
             value:
@@ -103,7 +103,7 @@ steps:
               value: "0.785398163397448"
           - name: "atanTwoZero"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "0"
           - name: "invalidUnit"
             value:
@@ -174,15 +174,15 @@ steps:
         args:
           - name: "hypotTwo"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "5"
           - name: "hypotThree"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "13"
           - name: "hypotUnit"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               unit: ":meter"
               value: "5"
           - name: "hypotMismatch"
@@ -190,37 +190,37 @@ steps:
               type: ":Nothing"
           - name: "scalarDistance"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               unit: ":meter"
               value: "6"
           - name: "coordinateDistanceTwo"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "5"
           - name: "coordinateDistanceThree"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "7"
           - name: "pointDistance"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               unit: ":meter"
               value: "5"
           - name: "scalarDistanceSquared"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "36"
           - name: "coordinateDistanceSquaredTwo"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "25"
           - name: "coordinateDistanceSquaredThree"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "49"
           - name: "pointDistanceSquared"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "25"
           - name: "invalidTextDistance"
             value:
@@ -281,15 +281,15 @@ steps:
         args:
           - name: "lengthObject"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "14"
           - name: "lengthTwo"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "25"
           - name: "lengthThree"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "9"
           - name: "normalizeObject"
             value:
@@ -314,15 +314,15 @@ steps:
               type: ":Nothing"
           - name: "dotObject"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "32"
           - name: "dotTwo"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "11"
           - name: "dotThree"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "32"
           - name: "crossObject"
             value:
@@ -332,7 +332,7 @@ steps:
               z: "1"
           - name: "crossTwo"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "1"
           - name: "crossThree"
             value:

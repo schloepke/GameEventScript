@@ -190,15 +190,16 @@ public static class GameEventScriptProgramReader
         var count = reader.ReadCount(limits.MaxBindings);
         if (count > reader.Remaining / 20 || reader.Remaining != count * 20) Throw(GameEventScriptProgramFormatErrorCode.InvalidPayloadLength, "BindingSegment length does not match EntryCount.", reader.AbsoluteOffset, section.Type);
         var entries = new GameEventScriptBinaryBindEntry[count];
+        var resolvedLists = new IReadOnlyList<ushort>?[lists.Slices.Count];
         for (var index = 0; index < count; index++)
         {
             var kind = (GameEventScriptBinaryBindKind)reader.ReadByte();
             if (reader.ReadByte() != 0) Throw(GameEventScriptProgramFormatErrorCode.InvalidSectionFlags, "Binding Flags must be zero.", reader.AbsoluteOffset - 1, section.Type, index);
             var id = reader.ReadUInt16();
             var name = reader.ReadUInt16();
-            var arguments = ResolveList(lists, reader.ReadUInt16(), section, index);
-            var requiredTags = ResolveList(lists, reader.ReadUInt16(), section, index);
-            var excludedTags = ResolveList(lists, reader.ReadUInt16(), section, index);
+            var arguments = ResolveList(lists, resolvedLists, reader.ReadUInt16(), section, index);
+            var requiredTags = ResolveList(lists, resolvedLists, reader.ReadUInt16(), section, index);
+            var excludedTags = ResolveList(lists, resolvedLists, reader.ReadUInt16(), section, index);
             var entryAddress = reader.ReadUInt16();
             var requiredRegisters = reader.ReadUInt16();
             var requiredDepth = reader.ReadUInt16();
@@ -310,14 +311,15 @@ public static class GameEventScriptProgramReader
         return new GameEventScriptBuildMetadataSegment(compilerId, compilerVersion);
     }
 
-    private static ushort[] ResolveList(GameEventScriptUInt16IndexListSegment lists, ushort index, SectionDescriptor section, int entryIndex)
+    private static IReadOnlyList<ushort>? ResolveList(GameEventScriptUInt16IndexListSegment lists, IReadOnlyList<ushort>?[] resolvedLists, ushort index, SectionDescriptor section, int entryIndex)
     {
-        if (index == ushort.MaxValue) return [];
+        if (index == ushort.MaxValue) return null;
         if (index >= lists.Slices.Count) Throw(GameEventScriptProgramFormatErrorCode.InvalidListIndex, "Binding references a missing UInt16 index list.", section.PayloadOffset, section.Type, entryIndex);
+        if (resolvedLists[index] is { } resolved) return resolved;
         var list = lists.Resolve(index);
         var result = new ushort[list.Length];
         for (var element = 0; element < list.Length; element++) result[element] = list[element];
-        return result;
+        return resolvedLists[index] = new GameEventScriptReadOnlyArray<ushort>(result);
     }
 
     private static SectionDescriptor Require(List<SectionDescriptor> sections, GameEventScriptSectionType type)

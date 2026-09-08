@@ -304,6 +304,14 @@ Exact mode compares IEEE-754 Binary64 bits after the portable value
 canonicalization rules. Consequently stored zero is canonical positive zero and
 invalid scalar NaN is observable as `nothing`, not as a NaN payload.
 
+Expected values are compared directly in their declared transport variants.
+They must not pass through implementation value factories that can convert
+Binary64 to Int64 or otherwise change their declared type. The `NaN` spelling
+of invalid mathematics defined by [Number semantics](../Semantics/Numbers.md)
+remains an alias for `nothing`. Units remain exact even for infinities.
+Int64 range bounds and steps are compared as Int64 values without conversion to
+Binary64; Binary64 ranges require Binary64 storage for all three fields.
+
 ULP mode uses the ordered-bit distance algorithm from
 [Number semantics](../Semantics/Numbers.md) and the declared non-negative maximum. The mode
 applies recursively to finite Binary64 fields in floats, percentages, vectors,

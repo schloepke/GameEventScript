@@ -95,10 +95,11 @@ internal static class GesProgramCallGraphValidator
         }
 
         var states = new byte[entries.Length];
-        var path = new List<int>();
+        var path = new int[entries.Length];
+        var nextCalls = new int[entries.Length];
         for (var routineIndex = 0; routineIndex < entries.Length; routineIndex++)
         {
-            RejectCycle(routineIndex, calls, states, path, entries, entryNames);
+            RejectCycle(routineIndex, calls, states, path, nextCalls, entries, entryNames);
         }
     }
 
@@ -121,35 +122,43 @@ internal static class GesProgramCallGraphValidator
         calls.Add(targetIndex);
     }
 
-    private static void RejectCycle(int routineIndex, IReadOnlyList<List<int>> calls, byte[] states, List<int> path, ushort[] entries, IReadOnlyDictionary<ushort, string> entryNames)
+    private static void RejectCycle(int routineIndex, IReadOnlyList<List<int>> calls, byte[] states, int[] path, int[] nextCalls, ushort[] entries, IReadOnlyDictionary<ushort, string> entryNames)
     {
         if (states[routineIndex] == 2) return;
-        if (states[routineIndex] == 1)
+        var depth = 1;
+        path[0] = routineIndex;
+        states[routineIndex] = 1;
+        while (depth > 0)
         {
-            var cycleStart = 0;
-            while (cycleStart < path.Count && path[cycleStart] != routineIndex) cycleStart++;
-            var names = new string[path.Count - cycleStart + 1];
-            for (var index = cycleStart; index < path.Count; index++)
+            var current = path[depth - 1];
+            if (nextCalls[current] == calls[current].Count)
             {
-                names[index - cycleStart] = ResolveName(path[index], entries, entryNames);
+                states[current] = 2;
+                depth--;
+                continue;
             }
 
-            names[^1] = ResolveName(routineIndex, entries, entryNames);
-            throw LinkError(GameEventScriptDiagnosticCodes.LinkCyclicCallGraph,
-                "Recursive calls are not allowed. Cyclic call path: " + string.Join(" -> ", names) + ".",
-                names[0]);
-        }
+            var target = calls[current][nextCalls[current]++];
+            if (states[target] == 2) continue;
+            if (states[target] == 1)
+            {
+                var cycleStart = 0;
+                while (path[cycleStart] != target) cycleStart++;
+                var names = new string[depth - cycleStart + 1];
+                for (var index = cycleStart; index < depth; index++)
+                {
+                    names[index - cycleStart] = ResolveName(path[index], entries, entryNames);
+                }
 
-        states[routineIndex] = 1;
-        path.Add(routineIndex);
-        var routineCalls = calls[routineIndex];
-        for (var index = 0; index < routineCalls.Count; index++)
-        {
-            RejectCycle(routineCalls[index], calls, states, path, entries, entryNames);
-        }
+                names[^1] = ResolveName(target, entries, entryNames);
+                throw LinkError(GameEventScriptDiagnosticCodes.LinkCyclicCallGraph,
+                    "Recursive calls are not allowed. Cyclic call path: " + string.Join(" -> ", names) + ".",
+                    names[0]);
+            }
 
-        path.RemoveAt(path.Count - 1);
-        states[routineIndex] = 2;
+            states[target] = 1;
+            path[depth++] = target;
+        }
     }
 
     private static string ResolveName(int routineIndex, IReadOnlyList<ushort> entries, IReadOnlyDictionary<ushort, string> entryNames)

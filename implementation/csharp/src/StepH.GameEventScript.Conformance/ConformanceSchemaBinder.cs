@@ -918,7 +918,12 @@ internal static class ConformanceSchemaBinder
         if (type is ":Text" or ":Tag") _ = RequiredString(node, "value");
         if (Optional(node, "unit") is { } unit) _ = String(unit);
         if (type is ":Number.binary64" or ":Quantity.binary64" or ":Percentage") RequireFiniteOrSpecialBinary64(RequiredString(node, "value"), Required(node, "value").Range);
-        foreach (var name in new[] { "x", "y", "z", "from", "to", "step" }) if (Optional(node, name) is { } numeric) RequireFiniteOrSpecialBinary64(String(numeric), numeric.Range);
+        foreach (var name in new[] { "x", "y", "z", "from", "to", "step" })
+        {
+            if (Optional(node, name) is not { } numeric) continue;
+            var text = String(numeric);
+            if (type != ":Range.int64") RequireFiniteOrSpecialBinary64(text, numeric.Range);
+        }
         if (type == ":Dice") RequireKind(Required(node, "rolls"), YamlNodeKind.Sequence, "dice.rolls must be a sequence.");
         if (type == ":Range.int64")
         {

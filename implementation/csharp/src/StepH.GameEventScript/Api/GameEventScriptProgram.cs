@@ -152,11 +152,17 @@ public readonly struct GameEventScriptReadOnlyArray<T> : IReadOnlyList<T>
     private readonly T[]? _items;
 
     /// <summary>
-    /// Initializes a new instance of Game Event Script Read Only Array.
+    /// Takes an immutable snapshot, reusing storage only when the input is already a GameEventScriptReadOnlyArray of the same element type.
     /// </summary>
     /// <param name="items">The items value.</param>
     public GameEventScriptReadOnlyArray(IReadOnlyList<T>? items)
     {
+        if (items is GameEventScriptReadOnlyArray<T> immutable)
+        {
+            _items = immutable._items;
+            return;
+        }
+
         if (items is null || items.Count == 0)
         {
             _items = [];

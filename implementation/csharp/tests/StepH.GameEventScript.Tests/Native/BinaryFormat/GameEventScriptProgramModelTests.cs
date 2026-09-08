@@ -16,8 +16,12 @@ public sealed class GameEventScriptProgramModelTests
     {
         var rawValues = new[] { 1, 2 };
         var readOnlyValues = new GameEventScriptReadOnlyArray<int>(rawValues);
+        var wrappedValues = new GameEventScriptReadOnlyArray<int>(Array.AsReadOnly(rawValues));
+        var sharedValues = new GameEventScriptReadOnlyArray<int>(readOnlyValues);
         rawValues[0] = 9;
         Assert.AreEqual(1, readOnlyValues[0]);
+        Assert.AreEqual(1, wrappedValues[0]);
+        Assert.AreEqual(1, sharedValues[0]);
 
         var stringSlices = new[] { new GameEventScriptStringConstantSegment.SliceEntry { Start = 0, Length = 1 } };
         var stringBytes = new byte[] { (byte)'A' };

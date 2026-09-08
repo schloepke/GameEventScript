@@ -9,6 +9,8 @@ namespace StepH_GameEventScript_Tests.Native.BinaryFormat;
 [TestClass]
 public sealed class GameEventScriptProgramReaderAllocationTests
 {
+    public TestContext TestContext { get; set; } = null!;
+
     [TestMethod]
     [TestCategory("Performance")]
     [TestCategory("Allocation")]
@@ -27,6 +29,8 @@ public sealed class GameEventScriptProgramReaderAllocationTests
         var before = GC.GetAllocatedBytesForCurrentThread();
         var program = GameEventScriptProgramReader.Read(bytes);
         var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        TestContext.WriteLine($"Reading {bytes.Length} bytes with {bindingCount} references to one {argumentCount}-element list allocated {allocated} bytes; C# budget: {maximumAllocatedBytes} bytes.");
 
         Assert.HasCount(bindingCount, program.Bindings.Entries);
         Assert.HasCount(1, program.UInt16IndexLists.Slices);

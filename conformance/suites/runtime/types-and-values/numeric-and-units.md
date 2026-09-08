@@ -372,7 +372,7 @@ steps:
               unit: ":meter"
           - name: "meterMultiplyPercentLeft"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "5"
               unit: ":meter"
           - name: "meterDividePercent"
@@ -497,22 +497,22 @@ steps:
               unit: ":degree"
           - name: "wrapNegative"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "350"
               unit: ":degree"
           - name: "wrapOver"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "10"
               unit: ":degree"
           - name: "wrapLarge"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "280"
               unit: ":degree"
           - name: "wrapCast"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "90"
               unit: ":degree"
           - name: "textValue"
@@ -606,7 +606,7 @@ steps:
               unit: ":degree"
           - name: "multiplyPercentLeft"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "12"
               unit: ":degree"
           - name: "multiplyFloat"
@@ -626,7 +626,7 @@ steps:
               unit: ":degree"
           - name: "wrappedDividePercent"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "120"
               unit: ":degree"
           - name: "moduloDegree"
@@ -640,8 +640,9 @@ steps:
               value: "NaN"
           - name: "divideZero"
             value:
-              type: ":Number.binary64"
+              type: ":Quantity.binary64"
               value: "Infinity"
+              unit: ":degree"
           - name: "moduloZero"
             value:
               type: ":Number.binary64"
@@ -926,12 +927,12 @@ steps:
               value: "-12"
           - name: "wrapNegative"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "350"
               unit: ":degree"
           - name: "wrapUnitless"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "10"
               unit: ":degree"
           - name: "radians"
@@ -940,7 +941,7 @@ steps:
               value: "3.141592653589793"
           - name: "degrees"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "180"
               unit: ":degree"
           - name: "wrapWrongUnit"

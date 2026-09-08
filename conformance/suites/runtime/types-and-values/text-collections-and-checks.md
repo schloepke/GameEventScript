@@ -128,7 +128,7 @@ steps:
               value: "12.5"
           - name: "naturalOne"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "1"
           - name: "naturalZero"
             value:
@@ -158,11 +158,11 @@ steps:
               value: "NaN"
           - name: "boundedHigh"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "99"
           - name: "boundedLow"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "0"
           - name: "boundedNothingValue"
             value:
@@ -176,7 +176,7 @@ steps:
               value: "NaN"
           - name: "boundedInfinity"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "99"
           - name: "highest"
             value:

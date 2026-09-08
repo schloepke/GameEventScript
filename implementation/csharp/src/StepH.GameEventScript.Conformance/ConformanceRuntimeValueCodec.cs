@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime.Values;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.Conformance;
 
@@ -142,108 +143,109 @@ internal static class ConformanceRuntimeValueCodec
         for (var index = 0; index < expected.Arguments.Count; index++)
         {
             if (!string.Equals(expected.Arguments[index].Name, actual.Arguments.NameAt(index), StringComparison.Ordinal)) return false;
-            var expectedValue = DecodeValue(expected.Arguments[index].Value);
             var actualValue = actual.Arguments.ValueAt(index);
-            if (!ValuesEqual(in expectedValue, in actualValue, comparison)) return false;
+            if (!ValuesEqual(expected.Arguments[index].Value, in actualValue, comparison)) return false;
         }
         return true;
     }
 
-    internal static bool ValuesEqual(in GesValue expected, in GesValue actual, ConformanceComparisonOptions comparison)
+    internal static bool ValuesEqual(ConformanceValue expected, in GesValue actual, ConformanceComparisonOptions comparison)
     {
-        if (expected.ValueKind != actual.ValueKind) return false;
-        switch (expected.ValueKind)
+        // Expected transport values must not pass through factories that normalize storage kinds.
+        // NaN is the explicitly supported conformance spelling of invalid mathematics (nothing).
+        var kind = actual.ValueKind;
+        switch (expected.Type)
         {
-            case GameEventScriptBytecodeTypeKind.Nothing: return actual.IsNothing;
-            case GameEventScriptBytecodeTypeKind.Boolean: return expected.AsBoolean() == actual.AsBoolean();
-            case GameEventScriptBytecodeTypeKind.Integer: return expected.ValueUnit == actual.ValueUnit && expected.AsInteger() == actual.AsInteger();
-            case GameEventScriptBytecodeTypeKind.Float:
-                return (!double.IsFinite(expected.AsNumber()) || expected.ValueUnit == actual.ValueUnit) &&
-                       Binary64Equal(expected.AsNumber(), actual.AsNumber(), comparison);
-            case GameEventScriptBytecodeTypeKind.Percentage:
-                return Binary64Equal(expected.AsNumber(), actual.AsNumber(), comparison);
-            case GameEventScriptBytecodeTypeKind.Text:
-            case GameEventScriptBytecodeTypeKind.Tag: return string.Equals(expected.AsText(), actual.AsText(), StringComparison.Ordinal);
-            case GameEventScriptBytecodeTypeKind.Vector:
-            case GameEventScriptBytecodeTypeKind.Point:
-                return expected.ValueUnit == actual.ValueUnit && Binary64Equal(expected.X, actual.X, comparison) && Binary64Equal(expected.Y, actual.Y, comparison) && Binary64Equal(expected.Z, actual.Z, comparison);
-            case GameEventScriptBytecodeTypeKind.List:
+            case ":Nothing": return actual.IsNothing;
+            case ":Boolean": return kind == GameEventScriptBytecodeTypeKind.Boolean && (expected.Value == "true") == actual.AsBoolean();
+            case ":Number.int64":
+            case ":Quantity.int64":
+                return kind == Integer && ParseUnit(expected.Unit) == actual.ValueUnit && ParseInt64(expected.Value!) == actual.AsInteger();
+            case ":Number.binary64":
+            case ":Quantity.binary64":
+            case ":Percentage":
             {
-                var left = expected.AsList();
+                var number = ParseBinary64(expected.Value!);
+                if (double.IsNaN(number)) return actual.IsNothing;
+                return kind == (expected.Type == ":Percentage" ? Percentage : Float) && ParseUnit(expected.Unit) == actual.ValueUnit && Binary64Equal(number, actual.AsNumber(), comparison);
+            }
+            case ":Text": return kind == Text && string.Equals(expected.Value, actual.AsText(), StringComparison.Ordinal);
+            case ":Tag": return kind == Tag && string.Equals(expected.Value, actual.AsText(), StringComparison.Ordinal);
+            case ":Vector":
+            case ":Point":
+            {
+                var x = ParseBinary64(expected.X!);
+                var y = ParseBinary64(expected.Y!);
+                var z = ParseBinary64(expected.Z!);
+                if (double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z)) return actual.IsNothing;
+                return kind == (expected.Type == ":Vector" ? Vector : Point) && ParseUnit(expected.Unit) == actual.ValueUnit &&
+                       Binary64Equal(x, actual.X, comparison) && Binary64Equal(y, actual.Y, comparison) && Binary64Equal(z, actual.Z, comparison);
+            }
+            case ":List":
+            {
+                if (kind != List) return false;
                 var right = actual.AsList();
-                if (left.Length != right.Length) return false;
-                for (var index = 0; index < left.Length; index++)
+                if (expected.Items.Count != right.Length) return false;
+                for (var index = 0; index < right.Length; index++)
                 {
-                    var leftValue = left[index];
                     var rightValue = right[index];
-                    if (!ValuesEqual(in leftValue, in rightValue, comparison)) return false;
+                    if (!ValuesEqual(expected.Items[index], in rightValue, comparison)) return false;
                 }
                 return true;
             }
-            case GameEventScriptBytecodeTypeKind.Map:
-            case GameEventScriptBytecodeTypeKind.Custom:
+            case ":Map": return kind == Map && MapEntriesEqual(expected.Entries, actual.AsMap(), comparison);
+            case ":Dice":
             {
-                if (expected.ValueKind == GameEventScriptBytecodeTypeKind.Custom &&
-                    !string.Equals(expected.CustomTypeName, actual.CustomTypeName, StringComparison.Ordinal)) return false;
-                var left = expected.AsMap();
-                var right = actual.AsMap();
-                if (left is null || right is null || left.Length != right.Length) return false;
-                for (var index = 0; index < left.StorageLength; index++)
-                {
-                    var rightValue = right.Get(left.KeyAt(index));
-                    if (rightValue is null) return false;
-                    var leftValue = left.ValueAt(index);
-                    var rightCopy = rightValue.Value;
-                    if (!ValuesEqual(in leftValue, in rightCopy, comparison)) return false;
-                }
-                return true;
-            }
-            case GameEventScriptBytecodeTypeKind.Dice:
-            {
-                var left = expected.AsDice();
+                if (kind != Dice) return false;
                 var right = actual.AsDice();
-                if (left.Length != right.Length) return false;
-                for (var index = 0; index < left.Length; index++) if (left[index] != right[index]) return false;
+                if (expected.Rolls.Count != right.Length) return false;
+                for (var index = 0; index < right.Length; index++) if (expected.Rolls[index] != right[index]) return false;
                 return true;
             }
-            case GameEventScriptBytecodeTypeKind.Range:
+            case ":Range.int64":
+                return kind == GameEventScriptBytecodeTypeKind.Range && actual.IntegerRange is { } integerRange &&
+                       ParseInt64(expected.From!) == integerRange.From && ParseInt64(expected.To!) == integerRange.To && ParseInt64(expected.Step!) == integerRange.Step;
+            case ":Range.binary64":
             {
-                var leftFrom = expected.IntegerRange?.From ?? expected.FloatRange?.From;
-                var leftTo = expected.IntegerRange?.To ?? expected.FloatRange?.To;
-                var leftStep = expected.IntegerRange?.Step ?? expected.FloatRange?.Step;
-                var rightFrom = actual.IntegerRange?.From ?? actual.FloatRange?.From;
-                var rightTo = actual.IntegerRange?.To ?? actual.FloatRange?.To;
-                var rightStep = actual.IntegerRange?.Step ?? actual.FloatRange?.Step;
-                return leftFrom is not null && leftTo is not null && leftStep is not null &&
-                       rightFrom is not null && rightTo is not null && rightStep is not null &&
-                       Binary64Equal(leftFrom.Value, rightFrom.Value, comparison) &&
-                       Binary64Equal(leftTo.Value, rightTo.Value, comparison) &&
-                       Binary64Equal(leftStep.Value, rightStep.Value, comparison);
+                var from = ParseBinary64(expected.From!);
+                var to = ParseBinary64(expected.To!);
+                var step = ParseBinary64(expected.Step!);
+                if (double.IsNaN(from) || double.IsNaN(to) || double.IsNaN(step)) return actual.IsNothing;
+                return kind == GameEventScriptBytecodeTypeKind.Range && actual.FloatRange is { } floatRange && Binary64Equal(from, floatRange.From, comparison) &&
+                       Binary64Equal(to, floatRange.To, comparison) && Binary64Equal(step, floatRange.Step, comparison);
             }
-            case GameEventScriptBytecodeTypeKind.Message:
-                return expected.Message is not null && actual.Message is not null && RuntimeMessagesEqual(expected.Message, actual.Message, comparison);
-            default: return expected.Equals(actual);
+            case ":Message": return kind == Message && expected.Message is not null && actual.Message is not null && MessagesEqual(expected.Message, actual.Message, comparison);
+            default:
+                return kind == Custom && string.Equals(expected.Type.Substring(1), actual.CustomTypeName, StringComparison.Ordinal) && MapEntriesEqual(expected.Entries, actual.AsMap(), comparison);
         }
     }
 
-    private static bool RuntimeMessagesEqual(GameEventScriptMessage expected, GameEventScriptMessage actual, ConformanceComparisonOptions comparison)
+    private static bool MapEntriesEqual(IReadOnlyList<ConformanceValueEntry> expected, GesValueMap? actual, ConformanceComparisonOptions comparison)
     {
-        if (!string.Equals(expected.Name, actual.Name, StringComparison.Ordinal) || expected.Tags.Count != actual.Tags.Count || expected.Arguments.Count != actual.Arguments.Count) return false;
-        for (var index = 0; index < expected.Tags.Count; index++) if (!string.Equals(expected.Tags[index], actual.Tags[index], StringComparison.Ordinal)) return false;
-        for (var index = 0; index < expected.Arguments.Count; index++)
+        if (actual is null) return false;
+        var entries = new Dictionary<string, ConformanceValue>(StringComparer.Ordinal);
+        for (var index = 0; index < expected.Count; index++) entries[expected[index].Key] = expected[index].Value;
+        if (entries.Count != actual.Length) return false;
+        foreach (var entry in entries)
         {
-            if (!string.Equals(expected.Arguments.NameAt(index), actual.Arguments.NameAt(index), StringComparison.Ordinal)) return false;
-            var left = expected.Arguments.ValueAt(index);
-            var right = actual.Arguments.ValueAt(index);
-            if (!ValuesEqual(in left, in right, comparison)) return false;
+            var value = actual.Get(entry.Key);
+            if (value is not { } right || !ValuesEqual(entry.Value, in right, comparison)) return false;
         }
         return true;
     }
+
+    private static long ParseInt64(string value) => long.Parse(value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
 
     internal static string Describe(GameEventScriptMessage message) => message.ToString();
 
     private static GameEventScriptBytecodeInstructionUnit ParseUnit(string? unit)
-        => unit is null ? GameEventScriptBytecodeInstructionUnit.UnitNone : GameEventScriptBytecodeInstructionUnits.ParseTypeName(unit.TrimStart(':')) ?? GameEventScriptBytecodeInstructionUnit.UnitInvalid;
+        => unit?.TrimStart(':') switch
+        {
+            null => GameEventScriptBytecodeInstructionUnit.UnitNone,
+            "m" => GameEventScriptBytecodeInstructionUnit.UnitMeter,
+            "s" => GameEventScriptBytecodeInstructionUnit.UnitSecond,
+            var name => GameEventScriptBytecodeInstructionUnits.ParseTypeName(name) ?? GameEventScriptBytecodeInstructionUnit.UnitInvalid
+        };
 
     internal static double ParseBinary64(string value) => value switch
     {

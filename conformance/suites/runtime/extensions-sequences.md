@@ -90,27 +90,27 @@ steps:
         args:
           - name: "floored"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "10"
           - name: "flooredCall"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "10"
           - name: "floorPredicate"
             value:
               type: ":Nothing"
           - name: "maxed"
             value:
-              type: ":Number.binary64"
+              type: ":Number.int64"
               value: "8"
           - name: "turnA"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "20"
               unit: ":degree"
           - name: "turnB"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "20"
               unit: ":degree"
           - name: "northA"
@@ -123,7 +123,7 @@ steps:
               value: true
           - name: "vectorTotal"
             value:
-              type: ":Quantity.binary64"
+              type: ":Quantity.int64"
               value: "6"
               unit: ":meter"
           - name: "valuesIsList"

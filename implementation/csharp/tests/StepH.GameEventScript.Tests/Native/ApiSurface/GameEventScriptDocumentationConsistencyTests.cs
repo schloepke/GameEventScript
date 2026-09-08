@@ -46,7 +46,7 @@ public sealed class GameEventScriptDocumentationConsistencyTests
             "Conformance parser, limits/diagnostics, Document/Case and normalized nested models",
             "Environment/options/limits, resolver/provider/sink, Runner, results/report/summary",
             "Result, Markdown, Received, and CrossLanguage writers plus CorpusIdentity",
-            "CSharpBridge reflection, delegate, dictionary, and automatic-runner adapters"
+            "CSharpBridge filesystem, reflection, delegate, dictionary, and automatic-runner adapters"
         };
         CollectionAssert.AreEqual(expectedFamilies, actualFamilies, "PublicApi.md ownership families changed without updating the consistency gate.");
 

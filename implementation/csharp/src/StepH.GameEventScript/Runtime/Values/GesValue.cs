@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -228,35 +227,6 @@ public struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Performs the ges map operation.
-    /// </summary>
-    /// <param name="entries">The entries value.</param>
-    /// <returns>The result of the operation.</returns>
-    public static GesValue GesMap(IReadOnlyDictionary<string, GesValue>? entries)
-    {
-        if (entries is null || entries.Count == 0)
-        {
-            var empty = new GesValue();
-            empty.SetMap(new GesValueMap([], [], 0));
-            return empty;
-        }
-
-        var keys = new string[entries.Count];
-        var values = new GesValue[entries.Count];
-        var index = 0;
-        foreach (var entry in entries)
-        {
-            keys[index] = entry.Key;
-            values[index] = entry.Value;
-            index++;
-        }
-
-        var value = new GesValue();
-        value.SetMap(new GesValueMap(keys, values, entries.Count));
-        return value;
-    }
-
-    /// <summary>
     /// Performs the ges record operation.
     /// </summary>
     /// <param name="typeName">The type name value.</param>
@@ -268,34 +238,6 @@ public struct GesValue : IEquatable<GesValue>
         var value = new GesValue();
         value.SetRecord(typeName ?? string.Empty, new GesValueMap(keys, values, keys.Length < values.Length ? keys.Length : values.Length));
         return value;
-    }
-
-    /// <summary>
-    /// Performs the ges record operation.
-    /// </summary>
-    /// <param name="typeName">The type name value.</param>
-    /// <param name="fields">The fields value.</param>
-    /// <returns>The result of the operation.</returns>
-    public static GesValue GesRecord(string typeName, IReadOnlyDictionary<string, GesValue>? fields)
-    {
-        if (fields is null || fields.Count == 0)
-        {
-            var empty = new GesValue();
-            empty.SetRecord(typeName ?? string.Empty, new GesValueMap([], [], 0));
-            return empty;
-        }
-
-        var keys = new string[fields.Count];
-        var values = new GesValue[fields.Count];
-        var index = 0;
-        foreach (var field in fields)
-        {
-            keys[index] = field.Key;
-            values[index] = field.Value;
-            index++;
-        }
-
-        return GesRecord(typeName, keys, values);
     }
 
     /// <summary>

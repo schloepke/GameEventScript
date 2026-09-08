@@ -3,8 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
 using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptDiagnosticCodes;
@@ -18,7 +16,6 @@ namespace StepH.GameEventScript.Api;
 /// </summary>
 public sealed class GameEventScriptBuilder
 {
-    private static readonly UTF8Encoding StrictUtf8 = new(false, true);
     private readonly List<SourceInput> _sources = [];
     private GameEventScriptCompileOptions _options = new();
     private IGameEventScriptExternalTypeCatalog _externalTypeCatalog = GameEventScriptEmptyExternalTypeCatalog.Instance;
@@ -83,22 +80,6 @@ public sealed class GameEventScriptBuilder
         var source = GameEventScriptText.PrepareSource(text ?? throw new ArgumentNullException(nameof(text)), nameof(text));
         _sources.Add(new SourceInput(source, sourceName));
         return this;
-    }
-
-    /// <summary>
-    /// Adds a GameEventScript source file by reading its content from the specified file path.
-    /// </summary>
-    /// <param name="path">The path to the script file to be added.</param>
-    /// <returns>
-    /// The current instance of <see cref="GameEventScriptBuilder"/> to allow method chaining.
-    /// </returns>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when the provided <paramref name="path"/> is null.
-    /// </exception>
-    public GameEventScriptBuilder AddFile(string path)
-    {
-        _ = path ?? throw new ArgumentNullException(nameof(path));
-        return AddScript(StrictUtf8.GetString(File.ReadAllBytes(path)), path);
     }
 
     /// <summary>

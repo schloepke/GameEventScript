@@ -2,11 +2,635 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "31E7BD13EF7DBDF7637BD4C492C136973CA24616DFAA9E6C153A6DDA7FB885FB",
-    "documentCount": 75,
-    "caseCount": 1049
+    "sha256": "D68038336228E2E554786462A96C9209E1D80C4C97CD50471CEF1DA3A4B1EF2C",
+    "documentCount": 80,
+    "caseCount": 1208
   },
   "cases": [
+    {
+      "id": "api.conformance-comparison/binary64-is-not-int64-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/binary64-is-not-int64-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/binary64-tolerance-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/binary64-tolerance-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/different-int64-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/different-int64-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/infinite-unit-is-not-scalar-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/infinite-unit-is-not-scalar-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/infinite-units-differ-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/infinite-units-differ-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/infinity-signs-differ-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/infinity-signs-differ-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/large-int64-range-from-differs-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/large-int64-range-from-differs-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/large-int64-range-step-differs-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/large-int64-range-step-differs-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/large-int64-range-to-differs-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/large-int64-range-to-differs-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/map-last-entry-wins-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/map-last-entry-wins-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/negative-infinite-units-differ-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/negative-infinite-units-differ-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/nested-list-storage-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/nested-list-storage-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/nested-map-infinite-unit-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/nested-map-infinite-unit-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/nested-message-infinite-unit-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/nested-message-infinite-unit-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/nested-record-storage-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/nested-record-storage-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/quantity-binary64-is-not-int64-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/quantity-binary64-is-not-int64-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/range-binary64-is-not-int64-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/range-binary64-is-not-int64-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/range-binary64-tolerance-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/range-binary64-tolerance-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/range-int64-is-not-binary64-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/range-int64-is-not-binary64-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/same-fraction-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/same-fraction-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/same-infinite-unit-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/same-infinite-unit-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/same-int64-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/same-int64-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/same-large-int64-range-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/same-large-int64-range-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/scalar-nan-is-nothing-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/scalar-nan-is-nothing-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
     {
       "id": "api.external-types/duplicate-type-name",
       "kind": "externalTypeApi",
@@ -2673,6 +3297,310 @@
       "code": "conformance.passed"
     },
     {
+      "id": "performance.low-allocation/exact-completion-observer-off-1000",
+      "kind": "performance",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": [
+          "performance"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "performance.low-allocation/exact-completion-observer-off-2000",
+      "kind": "performance",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": [
+          "performance"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "performance.low-allocation/exact-completion-observer-on-1000",
+      "kind": "performance",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": [
+          "performance"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "performance.low-allocation/exact-completion-observer-on-2000",
+      "kind": "performance",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": [
+          "performance"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "performance.low-allocation/exact-frames-observer-off-1000",
+      "kind": "performance",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": [
+          "performance"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "performance.low-allocation/exact-frames-observer-off-2000",
+      "kind": "performance",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": [
+          "performance"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "performance.low-allocation/exact-frames-observer-on-1000",
+      "kind": "performance",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": [
+          "performance"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "performance.low-allocation/exact-frames-observer-on-2000",
+      "kind": "performance",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": [
+          "performance"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "performance.low-allocation/message-name-completion-observer-off-1000",
+      "kind": "performance",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": [
+          "performance"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "performance.low-allocation/message-name-completion-observer-off-2000",
+      "kind": "performance",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": [
+          "performance"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "performance.low-allocation/message-name-completion-observer-on-1000",
+      "kind": "performance",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": [
+          "performance"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "performance.low-allocation/message-name-completion-observer-on-2000",
+      "kind": "performance",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": [
+          "performance"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "performance.low-allocation/message-name-frames-observer-off-1000",
+      "kind": "performance",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": [
+          "performance"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "performance.low-allocation/message-name-frames-observer-off-2000",
+      "kind": "performance",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": [
+          "performance"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "performance.low-allocation/message-name-frames-observer-on-1000",
+      "kind": "performance",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": [
+          "performance"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "performance.low-allocation/message-name-frames-observer-on-2000",
+      "kind": "performance",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": [
+          "performance"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "program.binary-format/invalid-duplicate-strings",
       "kind": "programBinary",
       "level": "atomic",
@@ -2738,6 +3666,32 @@
       "code": "conformance.passed"
     },
     {
+      "id": "program.binary-format/invalid-resource-growing-loop",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/invalid-resource-interrupted-stage",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "program.binary-format/invalid-string-index",
       "kind": "programBinary",
       "level": "atomic",
@@ -2790,6 +3744,136 @@
       "code": "conformance.passed"
     },
     {
+      "id": "program.binary-format/underdeclared-depth-direct-call",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/underdeclared-depth-nested-call",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/underdeclared-registers-direct-call",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/underdeclared-registers-nested-call",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/underdeclared-resource-per-handler-registers",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/underdeclared-resource-record-cast-depth",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/underdeclared-resource-record-cast-registers",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/underdeclared-resource-record-create-depth",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/underdeclared-resource-record-create-registers",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/underdeclared-resource-staging-registers",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "program.binary-format/valid-debug",
       "kind": "programBinary",
       "level": "atomic",
@@ -2797,6 +3881,42 @@
         "core": [
           "compiler",
           "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/valid-direct-call",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/valid-nested-call",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
         ],
         "optional": []
       },
@@ -2832,6 +3952,71 @@
       "code": "conformance.passed"
     },
     {
+      "id": "program.binary-format/valid-resource-balanced-loop",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/valid-resource-per-handler",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/valid-resource-record-cast",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/valid-resource-record-create",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/valid-resource-staging",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "program.binary-format/valid-runtime",
       "kind": "programBinary",
       "level": "atomic",
@@ -2843,6 +4028,58 @@
           "program-binary",
           "publish-sink",
           "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.call-graph-depth/invalid-deep-call-cycle",
+      "kind": "programBinary",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.call-graph-depth/invalid-shallow-call-cycle",
+      "kind": "programBinary",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.call-graph-depth/valid-deep-call-chain",
+      "kind": "programBinary",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.call-graph-depth/valid-shallow-call-chain",
+      "kind": "programBinary",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "program-binary"
         ],
         "optional": []
       },
@@ -15654,6 +16891,198 @@
       "code": "conformance.passed"
     },
     {
+      "id": "runtime.host-observer/processed-limit-below-script-completion",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-observer/processed-limit-native-completion-1",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "host",
+          "native-handlers",
+          "observer"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-observer/processed-limit-native-completion-2",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "host",
+          "native-handlers",
+          "observer"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-observer/processed-limit-native-frame-1",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "host",
+          "native-handlers",
+          "observer"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-observer/processed-limit-native-frame-2",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "host",
+          "native-handlers",
+          "observer"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-observer/processed-limit-pending-native-completion",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "host",
+          "native-handlers",
+          "observer"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-observer/processed-limit-pending-native-frame",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "host",
+          "native-handlers",
+          "observer"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-observer/processed-limit-pending-script-frame",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-observer/processed-limit-script-completion-1",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-observer/processed-limit-script-completion-2",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-observer/processed-limit-script-frame-1",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-observer/processed-limit-script-frame-2",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "runtime.host-observer/publish-accepted",
       "kind": "scriptApi",
       "level": "scenario",
@@ -15860,6 +17289,1056 @@
       "id": "runtime.messages-handlers/case-0008",
       "kind": "scriptApi",
       "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/div-above53-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/div-above53-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/div-int64-max-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/div-int64-max-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/div-int64-min-overflow-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/div-int64-min-overflow-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/div-negative-above53-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/div-negative-above53-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/div-negative-divisor-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/div-negative-divisor-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/mod-above53-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/mod-above53-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/mod-int64-max-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/mod-int64-max-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/mod-int64-min-overflow-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/mod-int64-min-overflow-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/mod-negative-above53-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/mod-negative-above53-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/mod-negative-divisor-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/mod-negative-divisor-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/quantity-negative-floor-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/quantity-negative-floor-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/rem-above53-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/rem-above53-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/rem-int64-max-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/rem-int64-max-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/rem-int64-min-overflow-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/rem-int64-min-overflow-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/rem-negative-above53-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/rem-negative-above53-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/rem-negative-divisor-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/rem-negative-divisor-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/zero-divisor-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.integer-precision/zero-divisor-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/identity-above53-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/identity-above53-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/identity-int64-max-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/identity-int64-max-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/identity-int64-min-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/identity-int64-min-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/identity-negative-above53-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/identity-negative-above53-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/identity-quantity-above53-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/identity-quantity-above53-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/random-seed-above53-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/random-seed-above53-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/random-seed-int64-max-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/random-seed-int64-max-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/random-seed-int64-min-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/random-seed-int64-min-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/text-finite-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/text-finite-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/text-invalid-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/text-invalid-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/text-nan-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/text-nan-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/text-negative-infinity-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/text-negative-infinity-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/text-positive-infinity-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.number-casts/text-positive-infinity-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
       "requires": {
         "core": [
           "compiler",

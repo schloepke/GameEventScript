@@ -36,7 +36,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBuildMetadataSegment
   property System.String CompilerVersion { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptBuilder
   ctor GameEventScriptBuilder()
-  method StepH.GameEventScript.Api.GameEventScriptBuilder AddFile(System.String path)
   method StepH.GameEventScript.Api.GameEventScriptBuilder AddScript(System.String text, System.String sourceName)
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithDebugInfo(StepH.GameEventScript.Api.GameEventScriptDebugInfoOptions options)
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithExternalTypeCatalog(StepH.GameEventScript.Api.IGameEventScriptExternalTypeCatalog catalog)
@@ -902,6 +901,8 @@ interface StepH.GameEventScript.Api.IGameEventScriptRuntimeObserver
   method System.Void MessagePublished(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptPublishResult result)
   method System.Void RuntimeError(StepH.GameEventScript.Api.GameEventScriptDiagnostic diagnostic)
   method System.Void RuntimeLimitReached(System.String limitName, System.String detail, System.Int32 limit)
+static class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpBuilderExtensions
+  method static StepH.GameEventScript.Api.GameEventScriptBuilder AddFile(StepH.GameEventScript.Api.GameEventScriptBuilder builder, System.String path)
 static class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpContextExtensions
   method static StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(StepH.GameEventScript.Api.GameEventScriptContext context, StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> arguments)
   method static StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(StepH.GameEventScript.Api.GameEventScriptContext context, System.String message, System.ValueTuple<System.String, StepH.GameEventScript.Runtime.Values.GesValue>[] arguments)
@@ -942,6 +943,9 @@ static class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpMessage
   method static StepH.GameEventScript.Api.GameEventScriptMessage Create(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> arguments, System.Collections.Generic.IEnumerable<System.String> tags)
   method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IEnumerable<System.String> tags, System.ValueTuple<System.String, StepH.GameEventScript.Runtime.Values.GesValue>[] arguments)
   method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.ValueTuple<System.String, StepH.GameEventScript.Runtime.Values.GesValue>[] arguments)
+static class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpValue
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesMap(System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> entries)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesRecord(System.String typeName, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> fields)
 sealed class StepH.GameEventScript.CSharpBridge.GesConstructAttribute
   ctor GesConstructAttribute()
 sealed class StepH.GameEventScript.CSharpBridge.GesExtensionAttribute
@@ -1545,7 +1549,6 @@ struct StepH.GameEventScript.Runtime.Values.GesValue
   method static StepH.GameEventScript.Runtime.Values.GesValue GesHandler(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature)
   method static StepH.GameEventScript.Runtime.Values.GesValue GesInteger(System.Int64 integer, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method static StepH.GameEventScript.Runtime.Values.GesValue GesList(StepH.GameEventScript.Runtime.Values.GesValue[] items)
-  method static StepH.GameEventScript.Runtime.Values.GesValue GesMap(System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> entries)
   method static StepH.GameEventScript.Runtime.Values.GesValue GesMap(System.String[] keys, StepH.GameEventScript.Runtime.Values.GesValue[] values)
   method static StepH.GameEventScript.Runtime.Values.GesValue GesMessage(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method static StepH.GameEventScript.Runtime.Values.GesValue GesNothing()
@@ -1554,7 +1557,6 @@ struct StepH.GameEventScript.Runtime.Values.GesValue
   method static StepH.GameEventScript.Runtime.Values.GesValue GesPoint(System.Double x, System.Double y, System.Double z, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method static StepH.GameEventScript.Runtime.Values.GesValue GesRange(System.Double from, System.Double to, System.Double step)
   method static StepH.GameEventScript.Runtime.Values.GesValue GesRange(System.Int64 from, System.Int64 to, System.Int64 step)
-  method static StepH.GameEventScript.Runtime.Values.GesValue GesRecord(System.String typeName, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> fields)
   method static StepH.GameEventScript.Runtime.Values.GesValue GesRecord(System.String typeName, System.String[] keys, StepH.GameEventScript.Runtime.Values.GesValue[] values)
   method static StepH.GameEventScript.Runtime.Values.GesValue GesTag(System.String tag)
   method static StepH.GameEventScript.Runtime.Values.GesValue GesText(System.String text)

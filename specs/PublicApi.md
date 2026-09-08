@@ -137,7 +137,6 @@ It owns snapshots of all inputs needed after an operation returns.
 | --- | --- |
 | `Create()` | Returns an empty builder with debug information set to `All`, program version `0`, and no external-type catalog. |
 | `AddScript(text, sourceName?)` | Adds one logical source in call order. Text is required and must be valid Unicode. The optional source name is diagnostic/debug identity, not a path to open; absence uses the implementation's stable unknown-source name. The builder retains its own source snapshot. |
-| `AddFile(path)` | C# convenience that synchronously reads a file before adding it. File access is not part of the portable compiler Core; ports may place this operation in an adapter. |
 | `WithDebugInfo(options)` | Replaces the debug emission mask. `None`, `DebugSymbols`, `SourceMap`, and `SourceArchive` are independent flags; `All` is their union. |
 | `WithProgramVersion(version)` | Sets the exact unsigned 64-bit application program version; zero means development/unspecified. |
 | `WithExternalTypeCatalog(catalog)` | Sets the immutable declarative catalog used for compile-time resolution. The catalog is required when configured and contains no runtime callbacks. |
@@ -355,8 +354,9 @@ struct or another compact representation. Public factory operations create:
 
 Factory operations snapshot mutable arrays/maps before returning. The portable
 ordered map/record model must not derive order from platform dictionary
-iteration. C# dictionary factory overloads are conveniences whose canonical
-ordering is governed by [Determinism](Semantics/Determinism.md).
+iteration. C# dictionary factories belong to CSharpBridge and delegate to the
+portable ordered factories; their canonical ordering is governed by
+[Determinism](Semantics/Determinism.md).
 
 `ValueKind`, `ValueUnit`, `HasValue`, `IsNothing`, `IsNumeric`, `HasUnit`,
 `Length`, `CustomTypeName`, coordinate/range/message/handler views, and typed
@@ -831,6 +831,16 @@ The portable API is exposed by the `StepH.GameEventScript` Core package and the
 optional `StepH.GameEventScript.Conformance` package. The separate
 `StepH.GameEventScript.CSharpBridge` package supplies:
 
+- `GameEventScriptCSharpBuilderExtensions.AddFile(builder, path)`, also callable
+  as `builder.AddFile(path)`, synchronously reads strict UTF-8 and delegates to
+  `AddScript(text, path)`. The supplied path becomes the source identity; a
+  leading BOM follows the portable source rules. Reading and decoding finish
+  before the builder changes, and no file handle is retained;
+- `GameEventScriptCSharpValue.GesMap(entries)` and
+  `GameEventScriptCSharpValue.GesRecord(typeName, fields)` snapshot dictionary
+  entries and delegate to the portable ordered value factories. Null or empty
+  dictionaries mean no entries; dictionary enumeration order does not determine
+  the resulting canonical key order;
 - tuple/dictionary message and Context conveniences;
 - delegate native-handler adapters;
 - reflection/attribute extension and external-type registries;
@@ -884,7 +894,7 @@ duplicated as a second source of truth here.
 | Conformance parser, limits/diagnostics, Document/Case and normalized nested models | Conformance parser API |
 | Environment/options/limits, resolver/provider/sink, Runner, results/report/summary | Conformance runner API |
 | Result, Markdown, Received, and CrossLanguage writers plus CorpusIdentity | Conformance writer API |
-| CSharpBridge reflection, delegate, dictionary, and automatic-runner adapters | Language-binding requirements; non-portable |
+| CSharpBridge filesystem, reflection, delegate, dictionary, and automatic-runner adapters | Language-binding requirements; non-portable |
 
 The portable public API is limited to the families above. VM execution state,
 compiler trees, filesystem services, network clients, task schedulers, and

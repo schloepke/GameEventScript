@@ -9,7 +9,7 @@ and final package coordinates are chosen:
 
 - `StepH.GameEventScript` contains the portable compiler, Program codec, Host,
   and runtime.
-- `StepH.GameEventScript.CSharpBridge` contains optional C# delegate,
+- `StepH.GameEventScript.CSharpBridge` contains optional C# filesystem, delegate,
   reflection, dictionary, and automatic-runner adapters and depends only on the
   Core package.
 - `StepH.GameEventScript.Conformance` contains the portable Markdown parser,

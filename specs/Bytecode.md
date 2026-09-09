@@ -101,7 +101,13 @@ These declarations are conservative upper bounds, not trusted evidence of the
 code's requirements. Complete Program validation independently derives the
 reachable frame, staging, and call requirements and rejects any handler whose
 declared bound is smaller. A larger declaration is valid; the program-level
-fields must still equal the maxima of the handler declarations.
+fields must still equal the maxima of the handler declarations. An unused
+function, predicate, record constructor, or helper does not increase these
+handler bounds; a Program without handlers declares zero for both fields.
+Register operands are checked against their owning routine's frame, not the
+Program's handler maximum. All retained routines are validated, including those
+unreachable from handlers; unreachable instructions within a routine must still
+fit that routine's maximum frame. Code outside any routine has no registers.
 
 For this analysis, routine entries are executable binding addresses and direct
 `Call` targets. A routine extends up to the next entry, or the end of the Code

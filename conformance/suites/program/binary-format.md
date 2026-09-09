@@ -1815,3 +1815,191 @@ binary:
   sectionType: 16
   entryIndex: 1
 ```
+
+---
+
+## Test: valid-unused-routine
+
+This case retains a fully instrumented unused function whose frame exceeds the handler resource maximum.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-unused-routine
+binaryFixture:
+  id: gesb-v1-valid-unused-routine
+  resourceId: gesb-v1.valid-unused-routine
+  relativePath: GesbV1/valid-unused-routine.gesb
+  sha256: 70A5C7CB18ADCF365FCDF34F0A37AB577D4676263CEB1E1D2987E0BF099D6C56
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Canonical compiler output with all debug sections."
+  compareCompiledRuntime: true
+```
+
+### Source code under test
+
+```ges
+module unusedfixture
+function unused(first, second) be first + second
+on Start(value) { emit Done(value: value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| execute | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: 70A5C7CB18ADCF365FCDF34F0A37AB577D4676263CEB1E1D2987E0BF099D6C56
+  moduleName: unusedfixture
+  requiredRegisterCount: 1
+  requiredCallStackDepth: 0
+  opaqueSectionCount: 0
+steps:
+  execute:
+    input:
+      args:
+        - name: value
+          value: { type: ":Number.int64", value: "42" }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "42" }
+```
+
+---
+
+## Test: valid-unused-routine-no-handler
+
+This case retains a fully instrumented unused function whose frame exceeds the handler resource maximum.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-unused-routine-no-handler
+binaryFixture:
+  id: gesb-v1-valid-unused-routine-no-handler
+  resourceId: gesb-v1.valid-unused-routine-no-handler
+  relativePath: GesbV1/valid-unused-routine-no-handler.gesb
+  sha256: 6B70F8FEF7312D2255C302AADF8107479062B7489953D8CF90E8A0277C7D05EE
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Canonical compiler output with all debug sections."
+  compareCompiledRuntime: true
+```
+
+### Source code under test
+
+```ges
+module unusedfixture
+function unused(first, second) be first + second
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: 6B70F8FEF7312D2255C302AADF8107479062B7489953D8CF90E8A0277C7D05EE
+  moduleName: unusedfixture
+  requiredRegisterCount: 0
+  requiredCallStackDepth: 0
+  opaqueSectionCount: 0
+```
+
+---
+
+## Test: invalid-unused-routine-register
+
+This case rejects register 100 in the unused function, whose frame has only three registers.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-unused-routine-register
+binaryFixture:
+  id: gesb-v1-invalid-unused-routine-register
+  resourceId: gesb-v1.invalid-unused-routine-register
+  relativePath: GesbV1/invalid-unused-routine-register.gesb
+  sha256: 66577A4197605BE0D59D4AF35C0E27988E87A338B27E4F5631BED5297B86770B
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "From valid-unused-routine.gesb, set the Add instruction X register at code index 4 to 100."
+```
+
+### Source code under test
+
+```ges
+module unusedfixture
+function unused(first, second) be first + second
+on Start(value) { emit Done(value: value) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 4
+```
+
+---
+
+## Test: invalid-unused-routine-debug-register
+
+This case rejects debug register 100 in an unused function, independent of handler reachability.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-unused-routine-debug-register
+binaryFixture:
+  id: gesb-v1-invalid-unused-routine-debug-register
+  resourceId: gesb-v1.invalid-unused-routine-debug-register
+  relativePath: GesbV1/invalid-unused-routine-debug-register.gesb
+  sha256: 363815E791997490234EFB298E78D55940B6549AFB404B48B6C627CCF0FE62A1
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "From valid-unused-routine.gesb, set the first DebugSymbols record RegisterId to 100."
+```
+
+### Source code under test
+
+```ges
+module unusedfixture
+function unused(first, second) be first + second
+on Start(value) { emit Done(value: value) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidDebugSymbol
+  sectionType: 32
+  entryIndex: 0
+```

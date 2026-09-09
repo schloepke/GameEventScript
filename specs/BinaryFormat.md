@@ -179,7 +179,10 @@ repeat SymbolCount:
 
 Only explicit script parameters and locals are named. IDs are physical registers
 after final allocation. Multiple non-overlapping ranges may later name the same
-physical register; compiler temporaries remain unnamed.
+physical register; compiler temporaries remain unnamed. Each symbol's code range
+lies within one routine, and its register ID is below that routine's maximum
+frame length. This also applies to unused routines whose frames exceed the
+Program's handler resource bounds.
 
 SourceMapSegment uses stable source IDs assigned in `AddScript` order:
 

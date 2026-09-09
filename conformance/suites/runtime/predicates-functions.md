@@ -1150,3 +1150,223 @@ steps:
       exclude:
         - any: true
 ```
+
+---
+
+## Test: r24-unused-function
+
+This case accepts an unused routine with a larger frame than any reachable handler and retains valid debug and binary data.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r24-unused-function
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+  debugInfo: [debugSymbols, sourceMap, sourceArchive]
+```
+
+### Source code under test
+
+```ges
+function unused(first, second) be first + second
+on Start(value) { emit Done(value: value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Number.int64"
+            value: "42"
+    local:
+      - name: Done
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "42"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r24-unused-record
+
+This case accepts an unused routine with a larger frame than any reachable handler and retains valid debug and binary data.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r24-unused-record
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+  debugInfo: [debugSymbols, sourceMap, sourceArchive]
+```
+
+### Source code under test
+
+```ges
+record :Unused as { first: :Number, second: :Number }
+on Start(value) { emit Done(value: value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Number.int64"
+            value: "42"
+    local:
+      - name: Done
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "42"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r24-unused-predicate
+
+This case accepts an unused routine with a larger frame than any reachable handler and retains valid debug and binary data.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r24-unused-predicate
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+  debugInfo: [debugSymbols, sourceMap, sourceArchive]
+```
+
+### Source code under test
+
+```ges
+predicate unused(first, second) be first > second
+on Start(value) { emit Done(value: value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Number.int64"
+            value: "42"
+    local:
+      - name: Done
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "42"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r24-unused-helper
+
+This case accepts an unused routine with a larger frame than any reachable handler and retains valid debug and binary data.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r24-unused-helper
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+  debugInfo: [debugSymbols, sourceMap, sourceArchive]
+```
+
+### Source code under test
+
+```ges
+function unused(first, second) be first[:map x by x => x + second]
+on Start(value) { emit Done(value: value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Number.int64"
+            value: "42"
+    local:
+      - name: Done
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "42"
+    runtimeLimits:
+      exclude:
+        - any: true
+```

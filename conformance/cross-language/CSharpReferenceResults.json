@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "62F089E1AF0E09FAD4DFEE78899FE70CA96167E70DAE36F6AE3688A3B2D702A3",
+    "sha256": "C0F9B29FA596C0ECDCFAEAAA33A7BE31F5BA46AE23544195C07BBD21F8F75F34",
     "documentCount": 86,
-    "caseCount": 1371
+    "caseCount": 1379
   },
   "cases": [
     {
@@ -4502,6 +4502,32 @@
       "code": "conformance.passed"
     },
     {
+      "id": "program.binary-format/invalid-unused-routine-debug-register",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/invalid-unused-routine-register",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "program.binary-format/invalid-utf8",
       "kind": "programBinary",
       "level": "atomic",
@@ -4817,6 +4843,38 @@
           "program-binary",
           "publish-sink",
           "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/valid-unused-routine",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/valid-unused-routine-no-handler",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "program-binary"
         ],
         "optional": []
       },
@@ -20479,6 +20537,78 @@
     },
     {
       "id": "runtime.predicates-functions/r21-reversed-source-order",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.predicates-functions/r24-unused-function",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.predicates-functions/r24-unused-helper",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.predicates-functions/r24-unused-predicate",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.predicates-functions/r24-unused-record",
       "kind": "scriptApi",
       "level": "atomic",
       "requires": {

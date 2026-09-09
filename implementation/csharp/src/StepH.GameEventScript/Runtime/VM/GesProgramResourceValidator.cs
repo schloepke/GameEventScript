@@ -21,9 +21,10 @@ internal readonly struct GesProgramResourceValidator
     private Span<int> Arguments => _workspace.AsSpan(0, _entries.Length);
     private Span<int> Registers => _workspace.AsSpan(_entries.Length, _entries.Length);
     private Span<int> Depths => _workspace.AsSpan(2 * _entries.Length, _entries.Length);
-    private Span<int> Frames => _workspace.AsSpan(3 * _entries.Length, _program.Code.Count);
-    private Span<int> Stages => _workspace.AsSpan(3 * _entries.Length + _program.Code.Count, _program.Code.Count);
-    private Span<int> Pending => _workspace.AsSpan(3 * _entries.Length + 2 * _program.Code.Count, _program.Code.Count);
+    private Span<int> MaximumFrames => _workspace.AsSpan(3 * _entries.Length, _entries.Length);
+    private Span<int> Frames => _workspace.AsSpan(4 * _entries.Length, _program.Code.Count);
+    private Span<int> Stages => _workspace.AsSpan(4 * _entries.Length + _program.Code.Count, _program.Code.Count);
+    private Span<int> Pending => _workspace.AsSpan(4 * _entries.Length + 2 * _program.Code.Count, _program.Code.Count);
 
     internal GesProgramResourceValidator(
         GameEventScriptProgram program,
@@ -39,7 +40,7 @@ internal readonly struct GesProgramResourceValidator
         _recordEntriesById = recordEntriesById;
         _recordEntriesByName = recordEntriesByName;
         // Keep all bounded analysis scratch in one allocation; nothing is retained by the Program.
-        _workspace = new int[3 * entries.Length + 3 * program.Code.Count];
+        _workspace = new int[4 * entries.Length + 3 * program.Code.Count];
         Arguments.Fill(-1);
         Frames.Fill(-1);
     }
@@ -70,6 +71,7 @@ internal readonly struct GesProgramResourceValidator
         }
 
         foreach (var routine in completed) Analyze(routine);
+        ValidateInactiveCodeAndDebugSymbols();
         for (var index = 0; index < _program.Bindings.Entries.Count; index++)
         {
             var bind = _program.Bindings.Entries[index];
@@ -84,12 +86,39 @@ internal readonly struct GesProgramResourceValidator
         }
     }
 
+    private void ValidateInactiveCodeAndDebugSymbols()
+    {
+        // Even retained, unreachable code must reference a register in its own routine.
+        var routine = -1;
+        for (var index = 0; index < _program.Code.Count; index++)
+        {
+            if (routine + 1 < _entries.Length && index == _entries[routine + 1]) routine++;
+            if (Frames[index] >= 0) continue;
+            GameEventScriptProgramValidator.ValidateInstructionFrame(_program, _program.Code[index], index, routine < 0 ? 0 : MaximumFrames[routine]);
+        }
+
+        if (_program.DebugSymbols is not { } debug) return;
+        for (var index = 0; index < debug.Symbols.Count; index++)
+        {
+            var symbol = debug.Symbols[index];
+            routine = Array.BinarySearch(_entries, checked((ushort)symbol.CodeStart));
+            if (routine < 0) routine = ~routine - 1;
+            var end = routine + 1 < _entries.Length ? _entries[routine + 1] : _program.Code.Count;
+            if (routine < 0 || (ulong)symbol.CodeStart + symbol.CodeLength > (ulong)end || symbol.RegisterId >= MaximumFrames[routine])
+            {
+                throw new GameEventScriptProgramFormatException(GameEventScriptProgramFormatErrorCode.InvalidDebugSymbol,
+                    "Debug symbol is outside its routine frame or code range.", sectionType: (ushort)GameEventScriptSectionType.DebugSymbols, entryIndex: index);
+            }
+        }
+    }
+
     private void Analyze(int routine)
     {
         var start = _entries[routine];
         var end = routine + 1 < _entries.Length ? _entries[routine + 1] : _program.Code.Count;
         var count = 0;
         Registers[routine] = Math.Max(0, Arguments[routine]);
+        MaximumFrames[routine] = Registers[routine];
         Enqueue(start, Registers[routine], 0, start, end, ref count);
         for (var cursor = 0; cursor < count; cursor++)
         {
@@ -104,6 +133,7 @@ internal readonly struct GesProgramResourceValidator
                 frame += instruction.Count;
                 if (frame is < 0 or > ushort.MaxValue) Invalid("Local register adjustment exceeds the frame bounds.", index);
             }
+            MaximumFrames[routine] = Math.Max(MaximumFrames[routine], frame);
             GameEventScriptProgramValidator.ValidateInstructionFrame(_program, instruction, index, frame);
             if (IsStage(opcode)) stage++;
             Registers[routine] = Math.Max(Registers[routine], frame + stage);

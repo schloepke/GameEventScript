@@ -188,7 +188,7 @@ public static class GameEventScriptProgramValidator
             if (IsRegisterOperand(operand))
             {
                 var register = ReadRegisterOperand(instruction, operand, operandIndex);
-                if (register >= program.RequiredRegisterCount) InvalidOperand("Instruction references a register outside RequiredRegisterCount.", instructionIndex);
+                if (register == ushort.MaxValue) InvalidOperand("Instruction references a register outside the V1 frame limit.", instructionIndex);
                 continue;
             }
             if (IsAddressOperand(operand))
@@ -301,7 +301,7 @@ public static class GameEventScriptProgramValidator
         {
             if (textIndexes && list[index] >= program.StringConstants.Slices.Count)
                 Throw(GameEventScriptProgramFormatErrorCode.InvalidStringIndex, "Instruction list references a missing string.", (ushort)GameEventScriptSectionType.Code, instructionIndex);
-            if (!textIndexes && list[index] >= program.RequiredRegisterCount) InvalidOperand("Instruction list references a register outside RequiredRegisterCount.", instructionIndex);
+            if (!textIndexes && list[index] == ushort.MaxValue) InvalidOperand("Instruction list references a register outside the V1 frame limit.", instructionIndex);
             if (!textIndexes) continue;
             if (role == GameEventScriptOpcodePrinter.OperandPart.MessageShapeList && index == 0)
             {
@@ -473,7 +473,7 @@ public static class GameEventScriptProgramValidator
                 var symbol = program.DebugSymbols.Symbols[index];
                 if (!Enum.IsDefined(typeof(GameEventScriptDebugSymbolKind), symbol.Kind) ||
                     symbol.Name is null || (symbol.Name != GameEventScriptMessageSignature.UnlabeledParameterName && !GameEventScriptText.IsIdentifier(symbol.Name)) || symbol.CodeLength == 0 ||
-                    (ulong)symbol.CodeStart + symbol.CodeLength > (ulong)program.Code.Count || symbol.RegisterId >= program.RequiredRegisterCount)
+                    (ulong)symbol.CodeStart + symbol.CodeLength > (ulong)program.Code.Count || symbol.RegisterId == ushort.MaxValue)
                     Throw(GameEventScriptProgramFormatErrorCode.InvalidDebugSymbol, "Debug symbol has an invalid kind, name, register, or code range.", (ushort)GameEventScriptSectionType.DebugSymbols, index);
             }
         }

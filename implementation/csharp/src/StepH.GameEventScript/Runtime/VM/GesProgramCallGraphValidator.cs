@@ -52,7 +52,6 @@ internal static class GesProgramCallGraphValidator
             }
         }
 
-        if (entryAddresses.Count == 0) return;
         var entries = new ushort[entryAddresses.Count];
         entryAddresses.CopyTo(entries);
         Array.Sort(entries);

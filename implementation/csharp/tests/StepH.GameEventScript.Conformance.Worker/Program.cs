@@ -13,6 +13,8 @@ internal static class Program
 
     private static int Main(string[] args)
     {
+        // The compiler probe also exercises the larger frames of unoptimized Debug builds.
+        if (args.Length == 2 && args[0] == "--source-nesting") return SourceNestingProbe.Run(args[1], 512 * 1024);
         if (args.Length == 2 && args[0] == "--probe") return Probe(args[1]);
         if (args.Length != 3) return 64;
         try

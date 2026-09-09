@@ -22,7 +22,12 @@ internal abstract record IterationSourceNode : ScriptNode;
 
 internal abstract record ScriptNode
 {
-    public GameEventScriptSourceLocation? SourceRange { get; init; }
+    // Parser construction assigns metadata before attaching a fresh node to its
+    // parent. Subsequent compiler passes retain copy-on-rewrite semantics.
+    public GameEventScriptSourceLocation? SourceRange { get; set; }
+
+    // Parser-only source depth, including parentheses removed from the semantic tree.
+    public int SourceNesting { get; set; }
 }
 
 // Root node of the syntax tree

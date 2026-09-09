@@ -1624,6 +1624,34 @@ Their stable language-neutral codes and locations are defined by
 - record field definitions
 - unknown or invalid type forms
 
+### Source nesting limits
+
+Compilation accepts expression nesting up to **32** and statement-body nesting
+up to **32**, inclusive. These are fixed portable source limits, independent of
+the native call stack, optimization, debug options, and runtime Host limits.
+Exceeding either limit fails compilation with `parse.sourceNestingExceeded`
+and a source location; it must not terminate the embedding process. A limit
+failure may stop parsing immediately without further syntax-error recovery.
+
+Expression depth is measured before constant folding. A literal or name has
+depth one. A parenthesized expression adds one. Each unary or binary operation,
+call, constructor, collection literal, member/selector access, range, random
+expression, generated collection, or guarded choice adds one to the greatest
+depth of its contained expressions. Binary chains follow the language's
+associativity, so `a + b + c` and `a ^ b ^ c` each have depth three. Negated
+tests/membership count the test and its negation separately. Nested object-match
+patterns add one per pattern; argument labels, map entries, selector metadata,
+and choice-branch separators add no level. Sibling expressions use the maximum,
+not the sum. Parentheses belonging to call syntax add no separate grouping level.
+
+Statement-body depth counts enclosing `if`/`else`, `for`, and `random with`
+bodies, whether braced or single-statement. The top-level handler body does not
+count. Conditions and expressions inside statements retain their independent
+expression limit. Depth resets between sibling bodies and source documents.
+Whitespace, comments, and delimiters inside text literals do not add depth.
+
+### Runtime limits
+
 Runtime limits cover:
 
 - maximum processed events

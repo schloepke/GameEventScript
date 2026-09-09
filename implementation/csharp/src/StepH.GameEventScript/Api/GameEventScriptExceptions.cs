@@ -49,6 +49,8 @@ public static class GameEventScriptDiagnosticCodes
     /// Defines the parse syntax value.
     /// </summary>
     public const string ParseSyntax = "parse.syntax";
+    /// <summary>Source exceeds the portable expression or statement nesting limit.</summary>
+    public const string ParseSourceNestingExceeded = "parse.sourceNestingExceeded";
     /// <summary>
     /// Defines the validate duplicate type value.
     /// </summary>

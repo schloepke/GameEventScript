@@ -150,6 +150,11 @@ modifies an earlier Program.
 
 An empty builder produces the valid empty Program named `EmptyModule`.
 Malformed source fails with one or more structured diagnostics.
+The fixed source nesting limits in [Language](Language.md#source-nesting-limits)
+apply to every compilation. Exceeding them produces the Parse diagnostic
+`parse.sourceNestingExceeded` (`DiagnosticCodes.ParseSourceNestingExceeded` in
+C#), including source identity and location. CompileOptions cannot disable
+these limits.
 `CompileException` is the C# transport carrying an ordered,
 non-empty diagnostic list. A port may return a result union instead. Diagnostics
 remain the portable failure value.

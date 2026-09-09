@@ -48,6 +48,8 @@ internal sealed class GesParser
     private readonly List<GameEventScriptDiagnostic> _errors;
     private string? _moduleName;
     private string? _sourceName;
+    private int _expressionNesting;
+    private int _statementNesting;
 
     private GesParser(GesTokenReader reader, string? sourceName, uint? sourceId)
     {
@@ -84,13 +86,33 @@ internal sealed class GesParser
     }
 
     private T WithRange<T>(T node, GesToken startToken) where T : ScriptNode
-        => node with { SourceRange = CreateRange(startToken, Previous) };
+        => WithRange(node, CreateRange(startToken, Previous));
 
     private T WithRange<T>(T node, GesToken startToken, GesToken endToken) where T : ScriptNode
-        => node with { SourceRange = CreateRange(startToken, endToken) };
+        => WithRange(node, CreateRange(startToken, endToken));
 
     private T WithRange<T>(T node, ScriptNode? first, ScriptNode? last = null) where T : ScriptNode
-        => node with { SourceRange = MergeRanges(first, last) };
+        => WithRange(node, MergeRanges(first, last));
+
+    private T WithRange<T>(T node, GameEventScriptSourceLocation? location) where T : ScriptNode
+    {
+        var depth = GesSourceNesting.Measure(node);
+        if (depth > GesSourceNesting.MaximumExpressionDepth) ThrowNestingLimit(location);
+        node.SourceRange = location;
+        node.SourceNesting = depth;
+        return node;
+    }
+
+    private T CheckNesting<T>(T node) where T : ScriptNode
+        => WithRange(node, node.SourceRange);
+
+    private void ThrowNestingLimit(GameEventScriptSourceLocation? location)
+        => throw new GameEventScriptCompileException([new GameEventScriptDiagnostic(
+            GameEventScriptDiagnosticPhase.Parse,
+            GameEventScriptDiagnosticCodes.ParseSourceNestingExceeded,
+            "Source exceeds the portable expression or statement nesting limit.",
+            SourceLocation: location ?? CreateRange(Current),
+            ProgramName: ModuleName)]);
 
     private ExpressionNode ApplyIsNegation(ExpressionNode expression, bool negated)
         => negated
@@ -748,6 +770,14 @@ internal sealed class GesParser
 
     private StatementBodyNode ParseStatementBody()
     {
+        if (_statementNesting >= GesSourceNesting.MaximumStatementDepth) ThrowNestingLimit(CreateRange(Current));
+        _statementNesting++;
+        try { return ParseStatementBodyCore(); }
+        finally { _statementNesting--; }
+    }
+
+    private StatementBodyNode ParseStatementBodyCore()
+    {
         var startToken = Current;
         SkipNewLines();
         if (Match(LeftBrace))
@@ -809,7 +839,11 @@ internal sealed class GesParser
         }
 
         SkipNewLines();
-        var right = ParseImplicationExpression();
+        if (_expressionNesting >= GesSourceNesting.MaximumExpressionDepth) ThrowNestingLimit(CreateRange(Current));
+        _expressionNesting++;
+        ExpressionNode right;
+        try { right = ParseImplicationExpression(); }
+        finally { _expressionNesting--; }
         return WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Implies, right), expression, right);
     }
 
@@ -1346,6 +1380,14 @@ internal sealed class GesParser
 
     private ExpressionNode ParseUnaryExpression()
     {
+        if (_expressionNesting >= GesSourceNesting.MaximumExpressionDepth) ThrowNestingLimit(CreateRange(Current));
+        _expressionNesting++;
+        try { return ParseUnaryExpressionCore(); }
+        finally { _expressionNesting--; }
+    }
+
+    private ExpressionNode ParseUnaryExpressionCore()
+    {
         SkipNewLines();
         if (Match(OperatorMinus))
         {
@@ -1672,7 +1714,7 @@ internal sealed class GesParser
             SkipNewLines();
             if (Is(LeftBracket))
             {
-                return new ObjectMatchSelectorNode(ParseObjectMatchPattern());
+                return CheckNesting(new ObjectMatchSelectorNode(ParseObjectMatchPattern()));
             }
 
             return WithRange(new PatternSelectorNode(ParseDicePattern()), startToken);
@@ -1979,6 +2021,14 @@ internal sealed class GesParser
 
     private ObjectMatchPatternNode ParseObjectMatchPattern()
     {
+        if (_expressionNesting >= GesSourceNesting.MaximumExpressionDepth) ThrowNestingLimit(CreateRange(Current));
+        _expressionNesting++;
+        try { return ParseObjectMatchPatternCore(); }
+        finally { _expressionNesting--; }
+    }
+
+    private ObjectMatchPatternNode ParseObjectMatchPatternCore()
+    {
         var startToken = Current;
         Expect(LeftBracket);
         SkipNewLines();
@@ -2136,7 +2186,7 @@ internal sealed class GesParser
             var expression = ParseExpression();
             SkipNewLines();
             Expect(RightParen);
-            return expression;
+            return CheckNesting(expression with { SourceNesting = expression.SourceNesting + 1 });
         }
 
         var token = Current;

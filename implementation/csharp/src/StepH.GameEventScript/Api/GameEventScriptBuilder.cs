@@ -87,6 +87,10 @@ public sealed class GameEventScriptBuilder
     /// </summary>
     /// <param name="options">Optional compilation options that specify settings for bytecode generation.</param>
     /// <returns>The generated GameEventScript bytecode.</returns>
+    /// <exception cref="GameEventScriptCompileException">
+    /// Thrown for invalid source, including a <see cref="GameEventScriptDiagnosticCodes.ParseSourceNestingExceeded"/>
+    /// diagnostic when the portable source nesting limits are exceeded.
+    /// </exception>
     public GameEventScriptProgram Compile(GameEventScriptCompileOptions? options = null)
     {
         var compileOptions = options ?? _options;

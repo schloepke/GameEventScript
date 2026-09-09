@@ -29,7 +29,9 @@ runtime/link context. Symbol kinds are the numerically specified
 
 ## Stable codes
 
-Parse uses `parse.syntax`. Validation uses the following semantic codes:
+Parse uses `parse.syntax` for malformed syntax and `parse.sourceNestingExceeded`
+for the portable source limits defined in [Language](Language.md#source-nesting-limits).
+Validation uses the following semantic codes:
 
 - `validate.duplicateType`, `validate.duplicatePredicate`,
   `validate.duplicateFunction`, `validate.predicateFunctionConflict`;

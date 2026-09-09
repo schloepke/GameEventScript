@@ -27,7 +27,7 @@ public interface IGameEventScriptExternalTypeRegistry
 public interface IGameEventScriptExternalTypeCatalog
 {
     /// <summary>
-    /// Gets the types.
+    /// Gets immutable type definitions in declaration order without exposing writable collection storage.
     /// </summary>
     IReadOnlyList<GameEventScriptExternalTypeDefinition> Types { get; }
 
@@ -81,11 +81,11 @@ public sealed class GameEventScriptExternalTypeCatalog : IGameEventScriptExterna
             definitions.Add(definition);
         }
 
-        Types = Array.AsReadOnly(definitions.ToArray());
+        Types = GameEventScriptReadOnlyArray<GameEventScriptExternalTypeDefinition>.FromOwnedArray(definitions.ToArray());
     }
 
     /// <summary>
-    /// Gets the types.
+    /// Gets immutable type definitions in declaration order without exposing writable collection storage.
     /// </summary>
     public IReadOnlyList<GameEventScriptExternalTypeDefinition> Types { get; }
 
@@ -232,9 +232,9 @@ public sealed class GameEventScriptExternalTypeDefinition
         var copiedFields = CopyFields(fields ?? throw new ArgumentNullException(nameof(fields)));
         var copiedConstructors = CopyConstructors(constructors ?? throw new ArgumentNullException(nameof(constructors)));
         ValidateFields(copiedFields);
-        Fields = Array.AsReadOnly(copiedFields);
+        Fields = GameEventScriptReadOnlyArray<GameEventScriptExternalTypeFieldDefinition>.FromOwnedArray(copiedFields);
         ValidateConstructors(copiedConstructors);
-        Constructors = Array.AsReadOnly(copiedConstructors);
+        Constructors = GameEventScriptReadOnlyArray<GameEventScriptExternalTypeConstructorDefinition>.FromOwnedArray(copiedConstructors);
     }
 
     /// <summary>
@@ -243,12 +243,12 @@ public sealed class GameEventScriptExternalTypeDefinition
     public string Name { get; }
 
     /// <summary>
-    /// Gets the fields.
+    /// Gets the immutable ordered fields without exposing writable collection storage.
     /// </summary>
     public IReadOnlyList<GameEventScriptExternalTypeFieldDefinition> Fields { get; }
 
     /// <summary>
-    /// Gets the constructors.
+    /// Gets the immutable ordered constructors without exposing writable collection storage.
     /// </summary>
     public IReadOnlyList<GameEventScriptExternalTypeConstructorDefinition> Constructors { get; }
 
@@ -530,7 +530,7 @@ public sealed class GameEventScriptExternalTypeConstructorDefinition
             if (!names.Add(parameter.Name))
                 throw new ArgumentException($"External constructor for ':{TypeName}' declares parameter '{parameter.Name}' more than once.", nameof(parameters));
         }
-        Parameters = Array.AsReadOnly(copiedParameters);
+        Parameters = GameEventScriptReadOnlyArray<GameEventScriptExternalTypeParameterDefinition>.FromOwnedArray(copiedParameters);
         SignatureId = GameEventScriptExternalTypeConstructorReference.CreateSignatureId(TypeName, CreateParameterNameArray(Parameters));
     }
 
@@ -540,7 +540,7 @@ public sealed class GameEventScriptExternalTypeConstructorDefinition
     public string TypeName { get; }
 
     /// <summary>
-    /// Gets the parameters.
+    /// Gets the immutable ordered parameters used to derive the constructor signature.
     /// </summary>
     public IReadOnlyList<GameEventScriptExternalTypeParameterDefinition> Parameters { get; }
 

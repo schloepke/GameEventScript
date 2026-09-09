@@ -221,14 +221,12 @@ public sealed class ConformanceResourceResult
         if (status == ConformanceResourceStatus.Found)
         {
             if (bytes is null) throw new ArgumentNullException(nameof(bytes));
-            var copy = new byte[bytes.Count];
-            for (var index = 0; index < copy.Length; index++) copy[index] = bytes[index];
-            Bytes = Array.AsReadOnly(copy);
+            Bytes = ConformanceDocument.Copy(bytes);
         }
         else
         {
             if (bytes is not null) throw new ArgumentException("A failed resource result cannot contain bytes.", nameof(bytes));
-            Bytes = Array.AsReadOnly(Array.Empty<byte>());
+            Bytes = new GameEventScriptReadOnlyArray<byte>();
         }
         ErrorCode = errorCode;
     }
@@ -238,7 +236,7 @@ public sealed class ConformanceResourceResult
     /// </summary>
     public ConformanceResourceStatus Status { get; }
     /// <summary>
-    /// Gets the bytes.
+    /// Gets an immutable snapshot of the resource bytes without exposing their writable storage.
     /// </summary>
     public IReadOnlyList<byte> Bytes { get; }
     /// <summary>
@@ -338,7 +336,7 @@ public sealed class ConformanceRunnerEnvironment
         var index = 0;
         foreach (var capability in capabilities) copy[index++] = capability;
         Array.Sort(copy, StringComparer.Ordinal);
-        Capabilities = Array.AsReadOnly(copy);
+        Capabilities = GameEventScriptReadOnlyArray<string>.FromOwnedArray(copy);
         ExternalTypeCatalog = externalTypeCatalog;
         ExtensionRegistry = extensionRegistry;
         ExternalTypeRegistry = externalTypeRegistry;
@@ -364,7 +362,7 @@ public sealed class ConformanceRunnerEnvironment
     /// </summary>
     public string ImplementationVersion { get; }
     /// <summary>
-    /// Gets the capabilities.
+    /// Gets the immutable ordinally sorted snapshot of the supplied capability IDs.
     /// </summary>
     public IReadOnlyList<string> Capabilities { get; }
     /// <summary>

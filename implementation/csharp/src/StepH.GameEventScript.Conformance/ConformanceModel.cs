@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.Conformance;
 
@@ -230,18 +231,18 @@ public enum ConformanceNativeActionKind
 /// </summary>
 public sealed class ConformanceSourceDocument
 {
-    private readonly byte[] _utf8Bytes;
+    private readonly GameEventScriptReadOnlyArray<byte> _utf8Bytes;
 
     internal ConformanceSourceDocument(byte[] utf8Bytes, bool hasByteOrderMark, string lineEnding)
     {
-        _utf8Bytes = utf8Bytes;
-        Utf8Bytes = Array.AsReadOnly(_utf8Bytes);
+        _utf8Bytes = GameEventScriptReadOnlyArray<byte>.FromOwnedArray(utf8Bytes);
+        Utf8Bytes = _utf8Bytes;
         HasByteOrderMark = hasByteOrderMark;
         LineEnding = lineEnding;
     }
 
     /// <summary>
-    /// Gets the utf8 bytes.
+    /// Gets the immutable original UTF-8 bytes without exposing their writable storage.
     /// </summary>
     public IReadOnlyList<byte> Utf8Bytes { get; }
     /// <summary>
@@ -253,7 +254,7 @@ public sealed class ConformanceSourceDocument
     /// </summary>
     public string LineEnding { get; }
 
-    internal ReadOnlySpan<byte> Utf8Span => _utf8Bytes;
+    internal ReadOnlySpan<byte> Utf8Span => _utf8Bytes.AsSpan();
 }
 
 /// <summary>
@@ -284,7 +285,7 @@ public sealed class ConformanceDocument
     /// </summary>
     public string Title { get; }
     /// <summary>
-    /// Gets the cases.
+    /// Gets the immutable ordered cases whose validated identities cannot be replaced through collection views.
     /// </summary>
     public IReadOnlyList<ConformanceCase> Cases { get; }
     /// <summary>
@@ -297,11 +298,7 @@ public sealed class ConformanceDocument
     public ConformanceSourceRange FrontmatterRange { get; }
 
     internal static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> source)
-    {
-        var copy = new T[source.Count];
-        for (var index = 0; index < source.Count; index++) copy[index] = source[index];
-        return Array.AsReadOnly(copy);
-    }
+        => new GameEventScriptReadOnlyArray<T>(source);
 }
 
 /// <summary>
@@ -616,7 +613,7 @@ public sealed class ConformanceBinaryFixture
 public sealed class ConformanceRuntimeLimits
 {
     internal ConformanceRuntimeLimits(IReadOnlyDictionary<string, ulong> values)
-        => Values = new System.Collections.ObjectModel.ReadOnlyDictionary<string, ulong>(new Dictionary<string, ulong>(values, StringComparer.Ordinal));
+        => Values = new ConformanceReadOnlyDictionary<ulong>(values);
 
     /// <summary>
     /// Gets the values.
@@ -1883,8 +1880,8 @@ public sealed class ConformanceOpcodeExpectation
     {
         Contains = ConformanceDocument.Copy(contains);
         Excludes = ConformanceDocument.Copy(excludes);
-        Counts = new System.Collections.ObjectModel.ReadOnlyDictionary<string, ulong>(new Dictionary<string, ulong>(counts, StringComparer.Ordinal));
-        MinimumCounts = new System.Collections.ObjectModel.ReadOnlyDictionary<string, ulong>(new Dictionary<string, ulong>(minimumCounts, StringComparer.Ordinal));
+        Counts = new ConformanceReadOnlyDictionary<ulong>(counts);
+        MinimumCounts = new ConformanceReadOnlyDictionary<ulong>(minimumCounts);
     }
 
     /// <summary>

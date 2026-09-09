@@ -194,7 +194,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
     }
 
     /// <summary>
-    /// Gets the types.
+    /// Gets immutable registered type definitions consistent with name and constructor lookup.
     /// </summary>
     public IReadOnlyList<GameEventScriptExternalTypeDefinition> Types => _types;
 
@@ -210,7 +210,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
             registry.RegisterType(type ?? throw new ArgumentException("External type list contains null.", nameof(types)));
         }
 
-        registry._types = Array.AsReadOnly(registry._typesByName.Values.ToArray());
+        registry._types = GameEventScriptReadOnlyArray<GameEventScriptExternalTypeDefinition>.FromOwnedArray(registry._typesByName.Values.ToArray());
         return registry;
     }
 

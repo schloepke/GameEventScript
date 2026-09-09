@@ -145,7 +145,7 @@ public readonly struct GameEventScriptProgramMetadataSegment
 }
 
 /// <summary>
-/// Immutable array view used by the portable program representation.
+/// Immutable array view used by portable programs and other immutable API models.
 /// </summary>
 public readonly struct GameEventScriptReadOnlyArray<T> : IReadOnlyList<T>
 {

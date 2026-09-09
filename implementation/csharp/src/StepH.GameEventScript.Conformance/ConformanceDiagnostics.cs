@@ -177,13 +177,11 @@ public sealed class ConformanceParseException : Exception
     internal ConformanceParseException(IReadOnlyList<ConformanceDiagnostic> diagnostics)
         : base(diagnostics.Count == 0 ? "The conformance document is invalid." : diagnostics[0].Message)
     {
-        var copy = new ConformanceDiagnostic[diagnostics.Count];
-        for (var index = 0; index < diagnostics.Count; index++) copy[index] = diagnostics[index];
-        Diagnostics = Array.AsReadOnly(copy);
+        Diagnostics = ConformanceDocument.Copy(diagnostics);
     }
 
     /// <summary>
-    /// Gets the diagnostics.
+    /// Gets the immutable ordered diagnostics for this parse failure.
     /// </summary>
     public IReadOnlyList<ConformanceDiagnostic> Diagnostics { get; }
 }

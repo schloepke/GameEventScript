@@ -613,11 +613,15 @@ ordered unique parameters, and derived SignatureId.
 Construction copies sequences and rejects null entries, duplicate fields,
 duplicate constructor signatures, duplicate parameter labels, constructors for
 another type, and constructor parameters that are not declared fields.
+The resulting field, constructor, and parameter views must not expose mutable
+backing storage through collection adapters or auxiliary collection APIs.
 
 `ExternalTypeCatalog.Types` is immutable declaration order.
 `Resolve(typeName)` normalizes and returns a definition or absence. Catalog
 construction rejects duplicate type names. The catalog contains no constructor,
 field accessor, delegate, reflection object, or host instance.
+Its public enumeration and name lookup must continue to describe the same
+definitions after construction; accessing a collection view cannot alter either.
 
 ### Runtime bindings
 
@@ -688,6 +692,8 @@ title, frontmatter range, and ordered Cases. `ConformanceSourceDocument` retains
 immutable original UTF-8 bytes, BOM presence, and detected line-ending style so
 a ReceivedWriter can preserve authoring bytes. `ConformanceSourceRange` is a
 value containing UTF-8 byte offset/length and one-based line/column bounds.
+Source bytes, nested sequences, and lookup maps expose no writable backing
+storage through their public collection views, including map key/value views.
 
 `ConformanceCase` owns normalized identity (`Id`, `SuiteId`, `FullId`, title),
 kind, level, categories, tags, capability requirements, sources, steps, compile
@@ -729,6 +735,8 @@ observer selection, defaulting to true, defined by the Markdown format. It does
 not disable observations in the separate correctness execution. Platform
 allocation counters remain behind `PerformanceProvider`, outside the portable
 model and runner.
+The same collection immutability requirement covers parser diagnostics,
+resource bytes, environment capabilities, measurements, and runner reports.
 
 Enum-like model values have the closed sets specified by MarkdownFormat:
 `TestKind`, `TestLevel`, `PumpMode`, `PublishSinkMode`,

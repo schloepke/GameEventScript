@@ -597,7 +597,7 @@ code
 
         Assert.AreNotEqual((byte)0xef, document.Source.Utf8Bytes[0]);
         Assert.AreEqual((byte)'-', document.Source.Utf8Bytes[0]);
-        Assert.IsInstanceOfType<System.Collections.ObjectModel.ReadOnlyCollection<ConformanceCase>>(document.Cases);
+        Assert.AreEqual("one", document.Cases.Single().Id);
     }
 
     [TestMethod]

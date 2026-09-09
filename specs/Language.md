@@ -885,7 +885,11 @@ Power with quantity units is intentionally narrow because compound units such
 as `m²` are not represented. A quantity may be raised only to a unitless
 numeric exponent of `0` or `1`; booleans participate in the normal lenient
 numeric coercion, so `10m ^ true` is `10m` and `10m ^ false` is unitless `1`.
-Other quantity powers produce numeric `NaN` unless an operand is `nothing`.
+An exponent carrying a quantity unit is invalid for every base, including
+exponents `0m` and `1m` and units matching the base. Other quantity powers
+produce numeric `NaN` unless an operand is `nothing`. These rules apply equally
+to literal operands, program constants, and values supplied at runtime;
+constant folding must preserve the same value and unit semantics.
 
 Numeric checks are keyword constructs, not `:` type references:
 

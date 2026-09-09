@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "7991BF15375D9A2EB14548C6701DB540213730AF89580D6E55851C19C560DEC3",
-    "documentCount": 83,
-    "caseCount": 1285
+    "sha256": "FD23FADD447EDFF7B70AB4C24943F5B532CC4A20C9CAF0F7EF9AB1648F461C36",
+    "documentCount": 84,
+    "caseCount": 1301
   },
   "cases": [
     {
@@ -19603,6 +19603,286 @@
     },
     {
       "id": "runtime.numeric.number-casts/text-positive-infinity-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.quantity-powers/absent-base-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.quantity-powers/absent-base-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.quantity-powers/absent-exponent-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.quantity-powers/absent-exponent-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.quantity-powers/fractional-unit-exponents-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.quantity-powers/fractional-unit-exponents-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.quantity-powers/fractional-unitless-exponents-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.quantity-powers/fractional-unitless-exponents-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.quantity-powers/integer-unit-exponents-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.quantity-powers/integer-unit-exponents-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.quantity-powers/integer-unitless-exponents-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.quantity-powers/integer-unitless-exponents-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.quantity-powers/nonnumeric-base-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.quantity-powers/nonnumeric-base-direct",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.quantity-powers/unitless-base-controls-binary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.numeric.quantity-powers/unitless-base-controls-direct",
       "kind": "scriptApi",
       "level": "atomic",
       "requires": {

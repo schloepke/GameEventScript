@@ -694,6 +694,8 @@ internal static class GesAstOptimizer
                 return GesValue.GesBoolean(left.AsBoolean() ^ right.AsBoolean());
             case GesBinaryOperator.Implies:
                 return EvaluateConstantImplies(left, right);
+            case GesBinaryOperator.Power:
+                return GameEventScriptNumber.Power(in left, in right);
         }
 
         if (left.IsNothing || right.IsNothing)
@@ -775,8 +777,6 @@ internal static class GesAstOptimizer
             {
                 return CreateNumber(leftNumber % rightNumber, left.Unit, bothIntegers);
             }
-            case GesBinaryOperator.Power when sameUnit:
-                return CreateNumber(Math.Pow(leftNumber, rightNumber), left.Unit, false);
             default:
                 return null;
         }

@@ -38,6 +38,25 @@ internal static class GameEventScriptNumber
         return GesValue.GesFloat(value.AsNumeric, value.Kind == GameEventScriptBytecodeTypeKind.Float ? value.Unit : GameEventScriptBytecodeInstructionUnit.UnitNone);
     }
 
+    internal static GesValue Power(in GesValue value, in GesValue exponent)
+    {
+        if (value.IsNothing || exponent.IsNothing) return GesValue.GesNothing();
+        if (exponent.HasUnit) return GesValue.GesFloat(double.NaN);
+
+        var right = exponent.AsNumeric;
+        if (double.IsNaN(right)) return GesValue.GesFloat(double.NaN);
+
+        var unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
+        if (value.HasUnit)
+        {
+            if (right == 1d) unit = value.Unit;
+            else if (right != 0d) return GesValue.GesFloat(double.NaN);
+        }
+
+        var left = value.AsNumeric;
+        return GesValue.GesFloat(double.IsNaN(left) ? double.NaN : Math.Pow(left, right), unit);
+    }
+
     internal static bool CanRepresentAsInteger(double value)
         => double.IsFinite(value) &&
            value >= Int64LowerInclusive &&

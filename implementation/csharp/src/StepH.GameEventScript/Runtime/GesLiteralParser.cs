@@ -143,6 +143,7 @@ internal struct GesLiteralParser
     private string? ReadKey()
     {
         SkipWhitespace();
+        if (_position < _text.Length && _text[_position] is '\'' or '"') return TextLiteralReader.Read(_text, ref _position);
         var start = _position;
         if (_position == _text.Length || _text[_position] is < 'a' or > 'z') return null;
         _position++;

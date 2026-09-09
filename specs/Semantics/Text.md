@@ -143,9 +143,15 @@ formatting must distinguish Text from similarly spelled numbers, booleans, and
 For example, a List containing the two Text values `1` and `say "hi"` is written
 as `["1", "say ""hi"""]`.
 
-Lists separate items with comma and space. Non-empty Maps use the source Map
+Lists separate items with comma and space. Non-empty Maps use the Map
 form `[key: value, ...]`, with explicit values and ascending key order as defined
-by [Determinism](Determinism.md#ordering-and-stable-sorting). The identity rule
+by [Determinism](Determinism.md#ordering-and-stable-sorting). Keys matching
+`LowerName` are written bare; every other key is written as a double-quoted Text
+literal using the same escaping as nested Text values. This preserves arbitrary
+Text keys produced by host data or `:group by`, including empty keys and keys
+containing punctuation, whitespace, quotes, or non-ASCII scalars. For example,
+the single key `a: 1, b` with value `2` is written as `["a: 1, b": 2]`.
+The identity rule
 for casting an existing Text value still applies outside container formatting.
 Formatting a nested Text value does not perform or change that identity cast.
 
@@ -174,9 +180,12 @@ are returned as Text and are not recursively parsed a second time.
 
 Recognized data literals are `nothing`, lowercase `true`/`false`, Number,
 Percentage, scalar Quantity, quoted Text, `#` Tag names following the source
-name grammar, and recursively nested Lists/Maps. A Map uses source identifier
-keys, permits key-only entries as `true`, and resolves duplicate keys with the
-last value before sorting. Empty List and Map use `[]` and `[:]`. Trailing
+name grammar, and recursively nested Lists/Maps. A Map recognizes bare `LowerName`
+keys or quoted Text keys. Quoted keys follow the same single- or double-quoted
+Text rules as values, including doubled delimiters. Map key syntax inside Text
+therefore represents arbitrary keys even when they cannot be written as source
+field names. A Map permits key-only entries as `true` and resolves duplicate
+keys by decoded Text identity with the last value before sorting. Empty List and Map use `[]` and `[:]`. Trailing
 commas are invalid. Other value representations, constructors, and literal
 forms are not recognized. A non-Text operand produces `nothing`.
 

@@ -7134,3 +7134,761 @@ steps:
       include:
         - name: "MaxLiteralItems"
 ```
+
+---
+
+## Test: r22-map-key-roundtrip-01
+
+This case preserves a dynamically produced Map key and its values through Text, including delimiter-like content.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r22-map-key-roundtrip-01
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) {
+  let grouped be [1][:group by x => value]
+  let restored be parse (grouped as :Text)
+  emit Done(equal: restored = grouped, count: restored[:count], item: restored[:values][1][1])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "name"
+    local:
+      - name: Done
+        args:
+          - name: "equal"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "count"
+            value:
+              type: ":Number.int64"
+              value: "1"
+          - name: "item"
+            value:
+              type: ":Number.int64"
+              value: "1"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r22-map-key-roundtrip-02
+
+This case preserves a dynamically produced Map key and its values through Text, including delimiter-like content.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r22-map-key-roundtrip-02
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) {
+  let grouped be [1][:group by x => value]
+  let restored be parse (grouped as :Text)
+  emit Done(equal: restored = grouped, count: restored[:count], item: restored[:values][1][1])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "1"
+    local:
+      - name: Done
+        args:
+          - name: "equal"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "count"
+            value:
+              type: ":Number.int64"
+              value: "1"
+          - name: "item"
+            value:
+              type: ":Number.int64"
+              value: "1"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r22-map-key-roundtrip-03
+
+This case preserves a dynamically produced Map key and its values through Text, including delimiter-like content.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r22-map-key-roundtrip-03
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) {
+  let grouped be [1][:group by x => value]
+  let restored be parse (grouped as :Text)
+  emit Done(equal: restored = grouped, count: restored[:count], item: restored[:values][1][1])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "a: 1, b"
+    local:
+      - name: Done
+        args:
+          - name: "equal"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "count"
+            value:
+              type: ":Number.int64"
+              value: "1"
+          - name: "item"
+            value:
+              type: ":Number.int64"
+              value: "1"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r22-map-key-roundtrip-04
+
+This case preserves a dynamically produced Map key and its values through Text, including delimiter-like content.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r22-map-key-roundtrip-04
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) {
+  let grouped be [1][:group by x => value]
+  let restored be parse (grouped as :Text)
+  emit Done(equal: restored = grouped, count: restored[:count], item: restored[:values][1][1])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: ""
+    local:
+      - name: Done
+        args:
+          - name: "equal"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "count"
+            value:
+              type: ":Number.int64"
+              value: "1"
+          - name: "item"
+            value:
+              type: ":Number.int64"
+              value: "1"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r22-map-key-roundtrip-05
+
+This case preserves a dynamically produced Map key and its values through Text, including delimiter-like content.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r22-map-key-roundtrip-05
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) {
+  let grouped be [1][:group by x => value]
+  let restored be parse (grouped as :Text)
+  emit Done(equal: restored = grouped, count: restored[:count], item: restored[:values][1][1])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "Ready"
+    local:
+      - name: Done
+        args:
+          - name: "equal"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "count"
+            value:
+              type: ":Number.int64"
+              value: "1"
+          - name: "item"
+            value:
+              type: ":Number.int64"
+              value: "1"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r22-map-key-roundtrip-06
+
+This case preserves a dynamically produced Map key and its values through Text, including delimiter-like content.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r22-map-key-roundtrip-06
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) {
+  let grouped be [1][:group by x => value]
+  let restored be parse (grouped as :Text)
+  emit Done(equal: restored = grouped, count: restored[:count], item: restored[:values][1][1])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "a_b"
+    local:
+      - name: Done
+        args:
+          - name: "equal"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "count"
+            value:
+              type: ":Number.int64"
+              value: "1"
+          - name: "item"
+            value:
+              type: ":Number.int64"
+              value: "1"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r22-map-key-roundtrip-07
+
+This case preserves a dynamically produced Map key and its values through Text, including delimiter-like content.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r22-map-key-roundtrip-07
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) {
+  let grouped be [1][:group by x => value]
+  let restored be parse (grouped as :Text)
+  emit Done(equal: restored = grouped, count: restored[:count], item: restored[:values][1][1])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "say \"hi\""
+    local:
+      - name: Done
+        args:
+          - name: "equal"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "count"
+            value:
+              type: ":Number.int64"
+              value: "1"
+          - name: "item"
+            value:
+              type: ":Number.int64"
+              value: "1"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r22-map-key-roundtrip-08
+
+This case preserves a dynamically produced Map key and its values through Text, including delimiter-like content.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r22-map-key-roundtrip-08
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) {
+  let grouped be [1][:group by x => value]
+  let restored be parse (grouped as :Text)
+  emit Done(equal: restored = grouped, count: restored[:count], item: restored[:values][1][1])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "a\nb\\c"
+    local:
+      - name: Done
+        args:
+          - name: "equal"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "count"
+            value:
+              type: ":Number.int64"
+              value: "1"
+          - name: "item"
+            value:
+              type: ":Number.int64"
+              value: "1"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r22-map-key-roundtrip-09
+
+This case preserves a dynamically produced Map key and its values through Text, including delimiter-like content.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r22-map-key-roundtrip-09
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) {
+  let grouped be [1][:group by x => value]
+  let restored be parse (grouped as :Text)
+  emit Done(equal: restored = grouped, count: restored[:count], item: restored[:values][1][1])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "\u96ea\ud83d\ude00"
+    local:
+      - name: Done
+        args:
+          - name: "equal"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "count"
+            value:
+              type: ":Number.int64"
+              value: "1"
+          - name: "item"
+            value:
+              type: ":Number.int64"
+              value: "1"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r22-quoted-and-bare-duplicate-key
+
+This case treats quoted and bare spellings of the same Map key identically and keeps the last value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r22-quoted-and-bare-duplicate-key
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) {
+  let restored be parse value
+  emit Done(count: restored[:count], name: restored.name)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "[\"name\": 1, name: 2]"
+    local:
+      - name: Done
+        args:
+          - name: "count"
+            value:
+              type: ":Number.int64"
+              value: "1"
+          - name: "name"
+            value:
+              type: ":Number.int64"
+              value: "2"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r22-quoted-key-only
+
+This case decodes doubled single quotes in a key and retains the key-only true shorthand.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r22-quoted-key-only
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) {
+  let restored be parse value
+  emit Done(count: restored[:count], value: restored[:values][1])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "['a''b':]"
+    local:
+      - name: Done
+        args:
+          - name: "count"
+            value:
+              type: ":Number.int64"
+              value: "1"
+          - name: "value"
+            value:
+              type: ":Boolean"
+              value: true
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r22-malformed-quoted-key
+
+This case preserves the entire original Text when a Map key has malformed quoting.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r22-malformed-quoted-key
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) { emit Done(value: parse value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "[\"broken: 1]"
+    local:
+      - name: Done
+        args:
+          - name: "value"
+            value:
+              type: ":Text"
+              value: "[\"broken: 1]"
+    runtimeLimits:
+      exclude:
+        - any: true
+```

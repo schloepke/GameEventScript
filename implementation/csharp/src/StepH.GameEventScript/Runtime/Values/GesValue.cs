@@ -1108,7 +1108,9 @@ public struct GesValue : IEquatable<GesValue>
         {
             if (!first) builder.Append(", ");
             first = false;
-            builder.Append(valueMap.KeyAt(i));
+            var key = valueMap.KeyAt(i);
+            if (GameEventScriptText.IsFieldName(key)) builder.Append(key);
+            else TextLiteralReader.AppendQuoted(builder, key);
             builder.Append(": ");
             GesValue tempQualifier = valueMap.ValueAt(i);
             AppendNestedText(builder, in tempQualifier);

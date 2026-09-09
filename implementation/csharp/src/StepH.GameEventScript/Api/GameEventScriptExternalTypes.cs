@@ -601,7 +601,7 @@ public sealed class GameEventScriptExternalTypeConstructorDefinition
 }
 
 /// <summary>
-/// Represents a game event script external type constructor reference.
+/// Represents an immutable normalized external type name and constructor argument signature.
 /// </summary>
 public sealed class GameEventScriptExternalTypeConstructorReference
 {
@@ -613,7 +613,7 @@ public sealed class GameEventScriptExternalTypeConstructorReference
     public GameEventScriptExternalTypeConstructorReference(string typeName, IEnumerable<string?>? argumentLabels)
     {
         TypeName = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
-        ArgumentLabels = NormalizeAndSortLabels(argumentLabels);
+        ArgumentLabels = GameEventScriptReadOnlyArray<string>.FromOwnedArray(NormalizeAndSortLabels(argumentLabels));
         SignatureId = CreateSignatureId(TypeName, ArgumentLabels);
     }
 
@@ -623,7 +623,7 @@ public sealed class GameEventScriptExternalTypeConstructorReference
     public string TypeName { get; }
 
     /// <summary>
-    /// Gets the argument labels.
+    /// Gets the immutable normalized argument labels copied during construction.
     /// </summary>
     public IReadOnlyList<string> ArgumentLabels { get; }
 

@@ -584,7 +584,10 @@ outside, preventing cross-Host random-state interference.
 ### ExtensionRegistry and references
 
 `ExtensionReference` is immutable normalized `(extensionName, functionName,
-orderedArgumentLabels)` data with a canonical SignatureId. It copies labels.
+orderedArgumentLabels)` data with a canonical SignatureId. It copies labels;
+neither caller-owned input nor a returned collection view may change them.
+Collection adapters must not expose mutable backing storage, and label
+enumeration must remain consistent with SignatureId for the reference lifetime.
 
 `ExtensionRegistry.Resolve(reference) -> Optional<ExtensionFunction>` is called
 during Host.Load, not for each invocation. Absence causes a stable link failure.
@@ -634,8 +637,10 @@ definitions after construction; accessing a collection view cannot alter either.
 ### Runtime bindings
 
 `ExternalTypeConstructorReference` is immutable normalized type name plus ordered
-argument labels and canonical SignatureId. `CreateSignatureId` is a pure canonical
-formatter.
+argument labels and canonical SignatureId. It copies labels and exposes only
+immutable views, so caller mutations and collection adapters cannot change the
+reference or make its labels disagree with SignatureId. `CreateSignatureId` is
+a pure canonical formatter.
 
 `ExternalTypeRegistry.Resolve(reference) -> Optional<ExternalTypeConstructor>`
 runs during Host.Load. Absence or a returned constructor whose `Definition`

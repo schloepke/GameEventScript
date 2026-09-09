@@ -203,7 +203,7 @@ current C# implementation, not cross-platform benchmark claims.
 Current clean-checkout baseline:
 
 ```text
-1607/1607 non-performance test executions passed
+1611/1611 non-performance test executions passed
 1/1 zero-allocation hot-path test passed
 36/36 performance/allocation executions passed
 ```

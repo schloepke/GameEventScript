@@ -45,7 +45,7 @@ internal sealed class GameEventScriptEmptyExtensionRegistry : IGameEventScriptEx
 }
 
 /// <summary>
-/// Represents a game event script extension reference.
+/// Represents an immutable normalized extension name, function name, and ordered argument signature.
 /// </summary>
 public sealed class GameEventScriptExtensionReference
 {
@@ -59,7 +59,7 @@ public sealed class GameEventScriptExtensionReference
     {
         ExtensionName = NormalizeName(extensionName);
         FunctionName = NormalizeName(functionName);
-        ArgumentLabels = NormalizeArgumentLabels(argumentLabels);
+        ArgumentLabels = GameEventScriptReadOnlyArray<string>.FromOwnedArray(NormalizeArgumentLabels(argumentLabels));
         SignatureId = CreateSignatureId(ExtensionName, FunctionName, ArgumentLabels);
     }
 
@@ -74,7 +74,7 @@ public sealed class GameEventScriptExtensionReference
     public string FunctionName { get; }
 
     /// <summary>
-    /// Gets the argument labels.
+    /// Gets the immutable ordered argument labels copied during construction.
     /// </summary>
     public IReadOnlyList<string> ArgumentLabels { get; }
 

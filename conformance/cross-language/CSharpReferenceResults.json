@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "C0F9B29FA596C0ECDCFAEAAA33A7BE31F5BA46AE23544195C07BBD21F8F75F34",
+    "sha256": "A0ACD5BA48408EB1F8FF989CAB5B7F8EB756A4E3F52DC0B25F2B6943531ACBB0",
     "documentCount": 86,
-    "caseCount": 1379
+    "caseCount": 1382
   },
   "cases": [
     {
@@ -17390,6 +17390,60 @@
           "compiler",
           "host",
           "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.extensions-sequences/r25-extension-parse-precedence",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.extensions-sequences/r25-extension-short-form-parse-number",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.extensions-sequences/r25-extension-short-form-parse-text",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
           "publish-sink",
           "vm"
         ],

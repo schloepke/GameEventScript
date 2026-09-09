@@ -2887,7 +2887,7 @@ internal sealed class GesParser
             IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound or
             IntrinsicSin or IntrinsicCos or IntrinsicTan or IntrinsicAsin or IntrinsicAcos or IntrinsicAtan or IntrinsicAtan2 or
             IntrinsicHypot or IntrinsicDistance or IntrinsicSquared or IntrinsicLength or IntrinsicNormalize or IntrinsicDot or IntrinsicCross or IntrinsicAngle or
-            KeywordRandom or Series or Clamp or Min or Max or Roll or
+            KeywordParse or KeywordRandom or Series or Clamp or Min or Max or Roll or
             LeftBracket or LeftParen or OperatorMinus or Has or Empty or OperatorNot;
 
     private bool IsArgumentLabelStart()

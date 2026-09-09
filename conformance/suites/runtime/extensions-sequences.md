@@ -269,3 +269,170 @@ steps:
               to: "5"
               step: "2"
 ```
+
+---
+
+## Test: r25-extension-short-form-parse-number
+
+This case accepts parse as a unary extension argument and agrees with the parenthesized call form.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r25-extension-short-form-parse-number
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) { emit Done(short: :test.echo parse value, parenthesized: :test.echo(parse value)) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "42"
+    local:
+      - name: Done
+        args:
+          - name: "short"
+            value:
+              type: ":Number.int64"
+              value: "42"
+          - name: "parenthesized"
+            value:
+              type: ":Number.int64"
+              value: "42"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r25-extension-short-form-parse-text
+
+This case accepts parse as a unary extension argument and agrees with the parenthesized call form.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r25-extension-short-form-parse-text
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) { emit Done(short: :test.echo parse value, parenthesized: :test.echo(parse value)) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "Hello"
+    local:
+      - name: Done
+        args:
+          - name: "short"
+            value:
+              type: ":Text"
+              value: "Hello"
+          - name: "parenthesized"
+            value:
+              type: ":Text"
+              value: "Hello"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r25-extension-parse-precedence
+
+This case keeps parse inside the unary extension argument and addition outside that argument.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r25-extension-parse-precedence
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) { emit Done(value: :math.floor parse value + 1.5) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "2.7"
+    local:
+      - name: Done
+        args:
+          - name: "value"
+            value:
+              type: ":Number.binary64"
+              value: "3.5"
+    runtimeLimits:
+      exclude:
+        - any: true
+```

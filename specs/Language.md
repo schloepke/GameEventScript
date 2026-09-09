@@ -1544,6 +1544,11 @@ argument model as script callables and may use any of these source shapes:
 :clock.now
 ```
 
+The unlabeled unary form accepts any unary expression, including `parse`:
+`:test.echo parse value` has the same argument as `:test.echo(parse value)`.
+A following binary operator remains outside that unary argument; for example,
+`:test.echo parse value + 1` means `(:test.echo(parse value)) + 1`.
+
 The compiler binds an extension by namespace, function name, and ordered
 argument labels. The declarative compiler registry must contain that exact
 signature. Runtime linking then resolves the same identity against the host

@@ -436,6 +436,8 @@ encoded `u16` range for linking; zero permits only root handlers. Random scope
 depth alone must be in `0...65535` and is validated at Build. Host.Load checks
 static register/call requirements before registration. Dynamic limit exhaustion
 is a structured runtime-limit result/observation, not a thrown script exception.
+The counting rules and boundary behavior for loops and incrementally generated
+collections are defined in [Host runtime](HostRuntime.md#iterator-and-generated-collection-limits).
 
 ### Host
 

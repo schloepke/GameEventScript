@@ -1230,8 +1230,8 @@ Only a true truth view passes a filter or satisfies a predicate; false and
 indeterminate results do not. `:any` short-circuits on the first true result and
 is false for an empty source. `:all` short-circuits on the first non-true result
 and is true for an empty source. `:select` materializes projected values in
-source order. Iterator-backed operations are bounded by the host's loop and
-generated-collection limits.
+source order. Iterator-backed operations are bounded by the host's
+[iterator and generated-collection limits](HostRuntime.md#iterator-and-generated-collection-limits).
 
 ### Aggregates
 

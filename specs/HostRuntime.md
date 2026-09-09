@@ -223,6 +223,43 @@ determines the result. These rules apply to both `ExecuteFrame` and
 `RunToCompletion`, to native and script handlers, and to messages enqueued by
 handlers during the pump.
 
+### Iterator and Generated-Collection Limits
+
+`MaxLoopIterations` counts successful iterator advances across all loops and
+iterator-backed selectors in one handler. A present `nothing` item consumes one
+iteration, just like any other value. Exhaustion and non-iterable sources consume
+no iteration. Exactly the configured number of advances is allowed; attempting
+another successful advance stops the handler before its loop body or selector
+expression executes. Nested and sequential loops share this counter. Frame
+pauses retain it, and starting the next handler resets it.
+
+`MaxGeneratedCollectionItems` bounds each collection incrementally materialized
+by generated lists and iterator-backed selectors. The limit applies to retained
+items, rather than the number of source items visited or a cumulative total
+across separate collections:
+
+- List projections, filters, and generated lists count every appended result,
+  including `nothing`.
+- Map projections count distinct accepted keys. Replacing an existing key's value
+  does not grow the map; skipped empty or `nothing` keys do not count.
+- Distinct-by projections count retained distinct keys, so discarded duplicates
+  do not count again.
+- Order-by projections count every buffered source item.
+- Group-by projections limit both the number of groups in the result map and
+  the number of items in each group's list, independently.
+
+Exactly the configured collection size is allowed. Before an insertion would
+exceed it, the runtime rejects that insertion without growing the collection and
+stops the handler without returning a partial projection result. Previously
+completed effects remain observable. This is an incremental materialization
+limit, not a byte-allocation budget or a bound on existing input collections.
+
+For either limit, a nonpositive value disables that limit. An exceeded limit
+produces one structured runtime-limit observation for the failing handler and
+stops the pump with `RuntimeLimitReached`. Normal handler cleanup restores random
+boundaries and clears VM state. Remaining handlers and queued messages stay
+available for a later pump call.
+
 ## C# Automatic Runner
 
 `CSharpBridge.GameEventScriptCSharpHostRunner` is optional. It serializes access

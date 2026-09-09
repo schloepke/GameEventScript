@@ -56,12 +56,12 @@ public sealed class ConformanceMarkdownCorpusTests
     public void ConformanceCorpusHasStableUniqueIdentityAndExpectedCounts()
     {
         var documents = ConformanceCSharpTestEnvironment.Documents;
-        Assert.HasCount(81, documents);
-        Assert.AreEqual(1240, documents.Sum(document => document.Cases.Count));
-        Assert.AreEqual(1233, documents.Sum(document => document.Cases.Count(testCase => testCase.Kind != ConformanceTestKind.BytecodeSnapshot)));
+        Assert.HasCount(82, documents);
+        Assert.AreEqual(1277, documents.Sum(document => document.Cases.Count));
+        Assert.AreEqual(1270, documents.Sum(document => document.Cases.Count(testCase => testCase.Kind != ConformanceTestKind.BytecodeSnapshot)));
         Assert.AreEqual(7, documents.Sum(document => document.Cases.Count(testCase => testCase.Kind == ConformanceTestKind.BytecodeSnapshot)));
-        Assert.AreEqual(81, documents.Select(document => document.SuiteId).Distinct(StringComparer.Ordinal).Count());
-        Assert.AreEqual(1240, documents.SelectMany(document => document.Cases).Select(testCase => testCase.FullId).Distinct(StringComparer.Ordinal).Count());
+        Assert.AreEqual(82, documents.Select(document => document.SuiteId).Distinct(StringComparer.Ordinal).Count());
+        Assert.AreEqual(1277, documents.SelectMany(document => document.Cases).Select(testCase => testCase.FullId).Distinct(StringComparer.Ordinal).Count());
         AssertCanonicalReadableLayout();
     }
 

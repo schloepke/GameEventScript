@@ -15,7 +15,7 @@ internal static class GesVmRegisterIterators
         else vmState.SetNothing(destinationRegister);
     }
 
-    internal static void GesVmIteratorNext(this GesVmState vmState, ushort destinationRegister, in GesValue iterator, ushort noMoreAddress)
+    internal static bool GesVmIteratorNext(this GesVmState vmState, ushort destinationRegister, in GesValue iterator, ushort noMoreAddress)
     {
         if (iterator is { Kind: Iterator, ObjectValue: IGesIterator it })
         {
@@ -23,13 +23,14 @@ internal static class GesVmRegisterIterators
             if (next.HasValue)
             {
                 vmState.SetValue(destinationRegister, in next.Value);
-                return;
+                return true;
             }
         }
 
         var result = default(GesValue);
         vmState.SetValue(destinationRegister, in result);
         vmState.JumpAddress(noMoreAddress);
+        return false;
     }
 
     internal static void GesVmIteratorClose(this GesVmState vmState, ushort iteratorRegister)

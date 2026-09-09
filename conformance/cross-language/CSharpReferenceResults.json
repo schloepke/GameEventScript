@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "5E5BFE0440B7AD1AB6E1769ABEED9C155AA2FEDB069BA42DBB72EF58F43B1A40",
-    "documentCount": 81,
-    "caseCount": 1240
+    "sha256": "093A7E0834E45B58C872F42FC381B4E8B43B741500166C35EE1A41B2F58DFB2B",
+    "documentCount": 82,
+    "caseCount": 1277
   },
   "cases": [
     {
@@ -17647,6 +17647,640 @@
           "host",
           "native-handlers",
           "observer"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-distinct-duplicates-at-limit",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-distinct-new-key-exceeded",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-distinct-nothing-at-limit",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-filter-exceeded",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-filter-retained-items",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-frames-exact",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-frames-exceeded",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-group-bucket-exceeded",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-group-count-exceeded",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-group-independent-buckets",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-group-nothing-bucket-exceeded",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-independent-collections",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-list-below",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-list-empty",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-list-exact",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-list-exceeded",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-list-nothing-exact",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-list-nothing-exceeded",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-map-new-key-exceeded",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-map-overwrite-and-skipped-keys",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-order-duplicates-exceeded",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-order-exact",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-order-exceeded",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/generated-range-cleanup-and-reuse",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/loop-empty",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/loop-empty-after-exact-budget",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/loop-filter-rejected-nothing",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/loop-frames-exact",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/loop-frames-exceeded",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/loop-mixed-exceeded",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/loop-nested-shared-budget",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/loop-non-iterable",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/loop-nothing-cleanup-and-reuse",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/loop-nothing-exact",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/loop-nothing-exceeded",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/loop-reset-per-handler",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.iterator-limits/loop-sequential-shared-budget",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
         ],
         "optional": []
       },

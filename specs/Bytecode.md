@@ -892,7 +892,10 @@ each item into an item register and jumps to the close block when exhausted, and
 body runs inside an iteration scope. Literal I16 ranges should use
 `CreateRangeIteratorShort`; dynamic ranges and collection sources use the register-based
 iterator opcodes. Generated collections use the same iterator opcodes plus
-VM-internal collection builder opcodes.
+VM-internal collection builder opcodes. Every successful `IteratorNext` consumes
+one loop iteration, including an item whose value is `nothing`; the exhaustion
+jump does not. The limit is checked before executing the following loop body,
+as defined in [Host runtime](HostRuntime.md#iterator-and-generated-collection-limits).
 
 ### Calls and Returns
 
@@ -1318,10 +1321,13 @@ Direct ranges after `in` remain invalid at source level. Range iteration should
 use explicit range-source syntax.
 
 At runtime, collection builders are VM-internal values and are not visible as DSL
-values. `ListBuilderAdd` applies `MaxGeneratedCollectionItems` while
-materializing the result. Map projections use VM-internal map builders in the
-same linear loop shape; `MapBuilderAdd` skips empty or `nothing` keys and
-overwrites duplicate keys with the later value.
+values. `ListBuilderAdd`, `MapBuilderAdd`, `DistinctBuilderAdd`, `GroupBuilderAdd`,
+and `OrderBuilderAdd` enforce `MaxGeneratedCollectionItems` before growing their
+result collections, according to the counting and failure rules in
+[Host runtime](HostRuntime.md#iterator-and-generated-collection-limits).
+Map projections use VM-internal map builders in the same linear loop shape;
+`MapBuilderAdd` skips empty or `nothing` keys and overwrites duplicate keys with
+the later value.
 
 ## Format Invariants
 
@@ -1571,7 +1577,7 @@ separate approximate-equality opcode.
 | 0xC5 | `Reverse` | - | result register | `XRegister`=source | - | - | Reverses list, dice, range, or iterator sources. Dice and iterators materialize lists; ranges stay ranges. |
 | 0xC6 | `Shuffle` | - | result register | `XRegister`=source | - | - | Shuffles list, dice, range, or iterator sources. Result is a list. |
 | 0xC7 | `ListBuilderCreate` | - | builder register | - | - | - | Creates a VM-internal list builder for generated collections. |
-| 0xC8 | `ListBuilderAdd` | - | - | `XRegister`=builder | `YRegister`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
+| 0xC8 | `ListBuilderAdd` | - | - | `XRegister`=builder | `YRegister`=item | - | Checks `MaxGeneratedCollectionItems` before adding an item. |
 | 0xC9 | `ListBuilderFinish` | - | result register | `XRegister`=builder | - | - | Materializes the list builder as a list. |
 | 0xCA | `MapBuilderCreate` | - | builder register | - | - | - | Creates a VM-internal map builder for generated map projections. |
 | 0xCB | `MapBuilderAdd` | - | - | `XRegister`=builder | `YRegister`=key | `AU`=value register | Adds or overwrites a map entry; empty/nothing keys are skipped. |

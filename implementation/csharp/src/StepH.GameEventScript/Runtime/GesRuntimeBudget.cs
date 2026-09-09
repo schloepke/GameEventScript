@@ -111,15 +111,16 @@ internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEvent
         return false;
     }
 
-    public bool CheckGeneratedCollectionItemCountWithinLimit(int count, string detail)
+    public bool CheckGeneratedCollectionItemCountWithinLimit(long count)
     {
+        if (_exhausted) return false;
         var limit = Limits.MaxGeneratedCollectionItems;
         if (limit <= 0 || count <= limit)
         {
             return true;
         }
 
-        ReportLimit("MaxGeneratedCollectionItems", detail, limit);
+        MarkExhausted("MaxGeneratedCollectionItems", "Generated collection exceeds the configured item limit.", limit);
         return false;
     }
 

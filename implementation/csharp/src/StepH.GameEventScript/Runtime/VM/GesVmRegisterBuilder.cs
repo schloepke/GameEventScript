@@ -76,7 +76,7 @@ internal sealed class GesVmMapBuilder
         return false;
     }
 
-    internal void Set(string key, GesValue value)
+    internal void Set(string key, GesValue value, GesRuntimeBudget? budget = null)
     {
         for (var i = 0; i < _count; i++)
         {
@@ -84,6 +84,8 @@ internal sealed class GesVmMapBuilder
             _values[i] = value;
             return;
         }
+
+        if (budget is not null && !budget.CheckGeneratedCollectionItemCountWithinLimit((long)_count + 1)) return;
 
         if (_count == _keys.Length)
         {
@@ -246,7 +248,7 @@ internal sealed class GesVmGroupBuilder
         _counts = new int[size];
     }
 
-    internal void Add(string key, GesValue value)
+    internal void Add(string key, GesValue value, GesRuntimeBudget budget)
     {
         var groupIndex = -1;
         for (var i = 0; i < _count; i++)
@@ -258,6 +260,7 @@ internal sealed class GesVmGroupBuilder
 
         if (groupIndex < 0)
         {
+            if (!budget.CheckGeneratedCollectionItemCountWithinLimit((long)_count + 1)) return;
             if (_count == _keys.Length)
             {
                 var nextSize = _keys.Length << 1;
@@ -279,6 +282,7 @@ internal sealed class GesVmGroupBuilder
 
         var bucket = _buckets[groupIndex];
         var itemCount = _counts[groupIndex];
+        if (!budget.CheckGeneratedCollectionItemCountWithinLimit((long)itemCount + 1)) return;
         if (itemCount == bucket.Length)
         {
             var resized = new GesValue[bucket.Length << 1];
@@ -323,7 +327,7 @@ internal sealed class GesVmDistinctBuilder
         _values = new GesValue[size];
     }
 
-    internal void Add(in GesValue key, in GesValue value)
+    internal void Add(in GesValue key, in GesValue value, GesRuntimeBudget budget)
     {
         for (var i = 0; i < _count; i++)
         {
@@ -331,6 +335,8 @@ internal sealed class GesVmDistinctBuilder
             var candidate = key;
             if (existing.EqualsValue(in candidate)) return;
         }
+
+        if (!budget.CheckGeneratedCollectionItemCountWithinLimit((long)_count + 1)) return;
 
         if (_count == _keys.Length)
         {
@@ -370,8 +376,9 @@ internal sealed class GesVmOrderBuilder
         _values = new GesValue[size];
     }
 
-    internal void Add(in GesValue key, in GesValue value)
+    internal void Add(in GesValue key, in GesValue value, GesRuntimeBudget budget)
     {
+        if (!budget.CheckGeneratedCollectionItemCountWithinLimit((long)_count + 1)) return;
         if (_count == _keys.Length)
         {
             var nextSize = _keys.Length << 1;

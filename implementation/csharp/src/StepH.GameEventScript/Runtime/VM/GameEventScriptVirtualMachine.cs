@@ -611,8 +611,7 @@ internal static class GameEventScriptVirtualMachine
                         break;
                     case IteratorNext:
                     {
-                        vmState.GesVmIteratorNext(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.TargetAddress);
-                        if (vmState.Register(instruction.DestinationRegister).Kind is not Nothing)
+                        if (vmState.GesVmIteratorNext(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.TargetAddress))
                         {
                             context.RuntimeBudget.ConsumeLoopIterationIfAvailable("For loop iteration exceeds the configured limit.");
                         }
@@ -647,7 +646,7 @@ internal static class GameEventScriptVirtualMachine
                         vmState.GesVmCreateListBuilder(instruction.DestinationRegister);
                         break;
                     case ListBuilderAdd:
-                        vmState.GesVmListBuilderAdd(vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister));
+                        vmState.GesVmListBuilderAdd(vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister), context.RuntimeBudget);
                         break;
                     case ListBuilderFinish:
                         vmState.GesVmListBuilderFinish(instruction.DestinationRegister, in vmState.Register(instruction.XRegister));
@@ -656,7 +655,7 @@ internal static class GameEventScriptVirtualMachine
                         vmState.GesVmCreateMapBuilder(instruction.DestinationRegister);
                         break;
                     case MapBuilderAdd:
-                        vmState.GesVmMapBuilderAdd(vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister), in vmState.Register(instruction.AU));
+                        vmState.GesVmMapBuilderAdd(vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister), in vmState.Register(instruction.AU), context.RuntimeBudget);
                         break;
                     case MapBuilderFinish:
                         vmState.GesVmMapBuilderFinish(instruction.DestinationRegister, in vmState.Register(instruction.XRegister));
@@ -665,7 +664,7 @@ internal static class GameEventScriptVirtualMachine
                         vmState.GesVmCreateDistinctBuilder(instruction.DestinationRegister);
                         break;
                     case DistinctBuilderAdd:
-                        vmState.GesVmDistinctBuilderAdd(vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister), in vmState.Register(instruction.AU));
+                        vmState.GesVmDistinctBuilderAdd(vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister), in vmState.Register(instruction.AU), context.RuntimeBudget);
                         break;
                     case DistinctBuilderFinish:
                         vmState.GesVmDistinctBuilderFinish(instruction.DestinationRegister, in vmState.Register(instruction.XRegister));
@@ -674,7 +673,7 @@ internal static class GameEventScriptVirtualMachine
                         vmState.GesVmCreateGroupBuilder(instruction.DestinationRegister);
                         break;
                     case GroupBuilderAdd:
-                        vmState.GesVmGroupBuilderAdd(vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister), in vmState.Register(instruction.AU));
+                        vmState.GesVmGroupBuilderAdd(vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister), in vmState.Register(instruction.AU), context.RuntimeBudget);
                         break;
                     case GroupBuilderFinish:
                         vmState.GesVmGroupBuilderFinish(instruction.DestinationRegister, in vmState.Register(instruction.XRegister));
@@ -683,7 +682,7 @@ internal static class GameEventScriptVirtualMachine
                         vmState.GesVmCreateOrderBuilder(instruction.DestinationRegister);
                         break;
                     case OrderBuilderAdd:
-                        vmState.GesVmOrderBuilderAdd(vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister), in vmState.Register(instruction.AU));
+                        vmState.GesVmOrderBuilderAdd(vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister), in vmState.Register(instruction.AU), context.RuntimeBudget);
                         break;
                     case OrderBuilderFinishAscending:
                         vmState.GesVmOrderBuilderFinishAscending(instruction.DestinationRegister, in vmState.Register(instruction.XRegister));

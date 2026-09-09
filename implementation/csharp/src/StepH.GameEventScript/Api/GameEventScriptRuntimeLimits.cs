@@ -63,14 +63,13 @@ public sealed class GameEventScriptRuntimeLimits
     public int MaxRegisterValues { get; init; } = 512;
 
     /// <summary>
-    /// Defines the maximum number of iterations allowed for loops during the execution of a game event script.
-    /// This property sets an upper limit to prevent scripts from running indefinitely or consuming excessive resources.
+    /// Specifies the maximum number of successful iterator advances across loops and iterator-backed selectors in one handler.
     /// </summary>
     /// <remarks>
-    /// A value of 100,000 is the default limit, ensuring a balance between flexibility in script design
-    /// and safeguarding system performance. Custom limits can be configured through the runtime specification
-    /// if needed for specific use cases. When this limit is reached, the script execution is halted
-    /// to preserve resources and maintain stability.
+    /// The default is 100,000; a nonpositive value disables this limit. A present nothing item counts,
+    /// but iterator exhaustion does not. Exactly the limit is allowed; the next successful advance
+    /// stops the handler before its body or selector expression executes. The counter persists across
+    /// frame pauses and resets for each handler.
     /// </remarks>
     public int MaxLoopIterations { get; init; } = 100_000;
 
@@ -116,13 +115,14 @@ public sealed class GameEventScriptRuntimeLimits
     public int MaxRangeItems { get; init; } = 10_000;
 
     /// <summary>
-    /// Specifies the maximum number of items that can be generated in a collection during script execution.
+    /// Specifies the maximum size of each collection incrementally materialized by generated lists and iterator-backed selectors.
     /// </summary>
     /// <remarks>
-    /// This limit serves to control resource usage by restricting the size of dynamically created collections
-    /// within game event scripts. When the count of generated items in a collection exceeds this limit,
-    /// the script runtime will signal that the limit has been reached, preventing further additions to the collection.
-    /// Adjusting this value allows customization of runtime behavior based on application requirements.
+    /// The default is 10,000; a nonpositive value disables this limit. Counts include retained nothing items,
+    /// but exclude discarded duplicates and skipped map keys. Grouping limits the number of groups and
+    /// each group's size independently. Before an insertion would exceed the limit, the runtime rejects
+    /// it and stops the handler without returning a partial result. Separate collections have separate
+    /// size limits; this property does not bound existing inputs or allocated bytes.
     /// </remarks>
     public int MaxGeneratedCollectionItems { get; init; } = 10_000;
 

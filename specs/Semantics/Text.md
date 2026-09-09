@@ -61,9 +61,9 @@ Consequences:
 - Regular message names use `MessageName`. The lowercase system endpoint names
   `initialization` and `undeliverable` are reserved grammar tokens rather than
   ordinary message names.
-- Script tag literals and message delivery tags use `TagName` without `_`.
-  Tag-typed values supplied as message arguments may start with either ASCII
-  case, but remain case-sensitive.
+- Tags, including script literals, message delivery tags, and Tag-typed message
+  arguments, use `TagName` without `_`. They start with a lowercase ASCII letter
+  and remain case-sensitive: `#ready` and `#isReady` are valid; `#Ready` is not.
 - Declared constants are written as `$ConstantName`. Type names use `TypeName`.
   A linked extension binding is `LowerName.LowerName`.
 - Module declarations use `ModuleName`; every dot-separated component is

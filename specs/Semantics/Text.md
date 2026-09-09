@@ -102,6 +102,108 @@ representation. That choice must not change the observable unit above. A host
 may precompute scalar counts for linked string constants; this metadata is a
 runtime cache and never part of `GameEventScriptProgram`.
 
+## Casting Text to Text
+
+An explicit `as :Text` cast of a Text value preserves its exact Unicode scalar
+sequence. It adds no surrounding quote characters and performs no escaping.
+Existing quotes, whitespace, and logical newlines remain part of the value
+unchanged. In particular, casting the Text value `Hello` yields the same Text
+value `Hello`, rather than a text containing a quoted source literal.
+
+Numeric output and its roundtrip guarantees are owned by
+[Number semantics](Numbers.md#numeric-text-output-and-roundtrip).
+
+## Text output of data values
+
+For the following data values, `as :Text` produces the representation below.
+The output column describes the actual Text contents, not an additional layer
+of source quoting.
+
+| Value | Text contents |
+| --- | --- |
+| Text `Hello` | `Hello` |
+| Text `123` | `123` |
+| empty Text | empty Text |
+| Number `123` | `123`, or an equivalent permitted numeric spelling |
+| Percentage `10%` | percentage magnitude followed by `%`, such as `10%` |
+| Quantity `10m` | numeric magnitude followed by the unit, such as `10m` |
+| Boolean true / false | `true` / `false` |
+| `nothing` | `nothing` |
+| List containing Number `1` and Text `Hello` | `[1, "Hello"]` |
+| Map with field `name` containing Text `Ada` | `[name: "Ada"]` |
+| empty List | `[]` |
+| empty Map | `[:]` |
+
+List and Map output recursively formats its values. Text values inside either
+container are written as double-quoted source text literals, with each contained
+double quote doubled. Backslash retains its ordinary text meaning. Container
+formatting must distinguish Text from similarly spelled numbers, booleans, and
+`nothing`, and must preserve commas or brackets contained in Text values.
+For example, a List containing the two Text values `1` and `say "hi"` is written
+as `["1", "say ""hi"""]`.
+
+Lists separate items with comma and space. Non-empty Maps use the source Map
+form `[key: value, ...]`, with explicit values and ascending key order as defined
+by [Determinism](Determinism.md#ordering-and-stable-sorting). The identity rule
+for casting an existing Text value still applies outside container formatting.
+Formatting a nested Text value does not perform or change that identity cast.
+
+## Literal recognition from Text
+
+The `parse` expression is a built-in language operation with a dynamically
+determined result kind. It recognizes one complete data literal in its Text
+operand. Its source expression syntax is owned by
+[Language](../Language.md#parse-expression).
+
+Recognition follows an all-or-nothing rule:
+
+- A fully recognized literal produces that literal's value and kind.
+- If the input is not a complete valid literal, the result is the original Text
+  unchanged, including whitespace, quote characters, and logical newlines.
+- A successfully recognized `nothing` is a value, not a recognition failure.
+- Trailing non-whitespace input, malformed quoting, and malformed containers
+  fail recognition of the whole input. There is no partial result and no
+  implicit conversion of an invalid nested literal to a Text element.
+
+Quoted Text follows the complete source text-literal grammar: matching single
+or double delimiters, with the chosen delimiter escaped by doubling it. Quote
+characters merely appearing at both ends do not establish a valid literal.
+Recognition decodes exactly one layer. The contents of a recognized Text literal
+are returned as Text and are not recursively parsed a second time.
+
+Independent scalar literals and recursively nested Lists/Maps are data.
+Literal recognition does not evaluate variables, expressions, calls, selectors,
+or random operations. Numeric decoding uses
+[Number semantics](Numbers.md#text-and-number-conversion), including its exact
+rounding and Percentage scaling rules. A `%` literal produces Percentage;
+an explicit `as :Number` cast instead reads its unitless ratio. Numeric output
+spellings, including exponent notation, must be recognized. Commas in literal
+containers remain structural separators.
+
+The following examples show the actual input Text contents:
+
+| Input contents | Result |
+| --- | --- |
+| `Hello` | Text `Hello` |
+| `123` | Number `123` |
+| `true` | Boolean true |
+| `"123"` | Text `123` |
+| `"true"` | Text `true` |
+| `""` | empty Text |
+| `"say ""hi"""` | Text `say "hi"` |
+| `nothing` | `nothing` |
+| `[1, "1"]` | List containing Number `1` and Text `1` |
+| `[1, broken]` | unchanged Text `[1, broken]` |
+| `"Hello` | unchanged Text including the opening double quote |
+| `1 extra` | unchanged Text `1 extra` |
+
+There is no universal type-preserving roundtrip for arbitrary top-level Text.
+Text `123` and Number `123` can have the same `as :Text` output, which `parse`
+recognizes as Number. The exact numeric roundtrip guarantees remain in force.
+Explicit `as :Number` and `as :Percentage` casts retain their own failure result
+of `nothing`; the Text fallback belongs to `parse`. Resource-limit handling is
+separate from literal-recognition failure.
+
 ## Compiler and debug positions
 
 - Diagnostic lines and columns are 1-based.

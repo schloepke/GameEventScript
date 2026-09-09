@@ -24,7 +24,7 @@ Every contract area has exactly one owning document. Other documents link to tha
 | Binary format | [Binary format](../specs/BinaryFormat.md) | `.gesb` container, segments, encoding, retention, and decoding | Normative |
 | Assembler format | [Assembler format](../specs/AssemblerFormat.md) | Human-readable `.gesa` dump syntax and presentation metadata | Normative |
 | Diagnostics | [Diagnostics](../specs/Diagnostics.md) | Stable phases, codes, locations, and propagation rules | Normative |
-| Text semantics | [Text](../specs/Semantics/Text.md) | Unicode, source text, names, ordering, and scalar operations | Normative |
+| Text semantics | [Text](../specs/Semantics/Text.md) | Unicode, source text, names, ordering, scalar operations, data formatting, and literal recognition | Normative |
 | Number semantics | [Numbers](../specs/Semantics/Numbers.md) | Integer, Binary64, units, arithmetic, conversion, and equality | Normative |
 | Determinism | [Determinism](../specs/Semantics/Determinism.md) | Randomness, iteration, stable ordering, and deterministic dispatch | Normative |
 | Conformance Markdown | [Markdown format](../specs/Conformance/MarkdownFormat.md) | Portable suite authoring syntax and normalized test model | Normative |

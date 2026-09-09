@@ -14,6 +14,16 @@ messages and values. Wall-clock time, thread scheduling, object identity,
 platform hash iteration, and the non-seeded `Create()` random source are not
 deterministic inputs.
 
+This cross-implementation guarantee is subject to the explicitly permitted
+numeric variation in [Number semantics](Numbers.md), including math-library
+rounding and numeric text spellings. Numeric text output must be repeatable
+within a fixed implementation and version, but may differ across ports as
+defined by [numeric text output](Numbers.md#numeric-text-output-and-roundtrip).
+Text operations still observe the actual spelling exactly. Consequently a
+script that compares formatted numbers to fixed strings, uses them as keys,
+or branches on their characters can also produce different subsequent results
+across ports. The numeric roundtrip guarantee does not make those strings equal.
+
 ## Seeded random generator
 
 `GameEventScriptRandomGenerator.FromSeed(Int64)` is a portable seeded stream.

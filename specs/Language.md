@@ -210,6 +210,11 @@ let duration be 2s             // second quantity
 let angle be 90°               // degree quantity
 ```
 
+Literal value decoding shares the numeric conversion rules with text casts as
+defined in [Number semantics](Semantics/Numbers.md#shared-conversion-and-source-token-boundaries).
+The source lexer still owns token boundaries; in particular, commas remain
+argument and list separators rather than numeric digit separators.
+
 ## Messages and Dispatch
 
 Messages have a name, ordered argument names, argument values, and tags. The
@@ -488,7 +493,7 @@ From high to low precedence:
 
 1. Postfix: member access `x.y`, lookup/selector `x[...]`
 2. Power: `^`, `²`, `³`
-3. Unary: `-`, `not`, `!`, `~`, `¬`, `empty`, prefix intrinsics
+3. Unary: `-`, `not`, `!`, `~`, `¬`, `empty`, `parse`, prefix intrinsics
 4. Multiplicative: `*`, `×`, `·`, `⋅`, `/`, `÷`, `div`, `mod`, `rem`
 5. Additive: `+`, `-`, `−`
 6. Relational: `<`, `>`, `<=`, `>=`, `≤`, `≥`
@@ -788,10 +793,10 @@ component constructors.
 | --- | --- |
 | `:Nothing` | always `nothing` |
 | `:Boolean` | true exactly when the source truth view is true; false otherwise |
-| `:Number` | uses the numeric view, parses invariant numeric text, or reads series term zero; failure is `nothing` |
-| `:Percentage` | rejects units and non-numeric values; integers are percentages divided by 100, while finite fractional ratios in `[-1, 1]` remain ratios and other finite numeric magnitudes are divided by 100 |
+| `:Number` | uses the numeric view, parses numeric text according to [Number semantics](Semantics/Numbers.md#text-and-number-conversion), or reads series term zero; failure is `nothing` |
+| `:Percentage` | interprets a finite unitless numeric view as a ratio, or parses numeric text, according to [Number semantics](Semantics/Numbers.md#conversion-to-percentage); failure is `nothing` |
 | `:Quantity(unit)` | applies the unit to numeric or spatial input that is unitless or already has that unit; a conflicting unit is invalid; `none` removes any supported unit |
-| `:Text` | returns the canonical text representation of any value |
+| `:Text` | preserves existing Text and formats data values according to [Text semantics](Semantics/Text.md#text-output-of-data-values); numeric spellings and roundtrip guarantees are defined in [Number semantics](Semantics/Numbers.md#numeric-text-output-and-roundtrip) |
 | `:Tag` | follows the strict tag rules below |
 | `:Vector`, `:Point` | follows the structural conversion rules below |
 | `:List` | preserves lists; expands text/tags into Unicode scalars, spatial values into three components, dice into rolls, and ranges into terms; unsupported values become `[]` |
@@ -814,8 +819,11 @@ text is a valid tag name; the text values `'true'`, `'True'`, `'false'`, and
 write `#true` or `#false`.
 
 Text casts are formatting casts and keep using the value's text representation;
-they do not require the formatted text to be a valid tag. Numeric text is parsed
-only by an explicit `as :Number` cast. Invalid numeric text casts to `nothing`.
+they do not require the formatted text to be a valid tag. Numeric text casts use
+explicit `as :Number` and `as :Percentage`, with the grammar,
+suffix interpretation, and rounding rules owned by
+[Number semantics](Semantics/Numbers.md#text-and-number-conversion).
+Invalid numeric text casts to `nothing`.
 
 Vector and point casts are structural conversions. A vector can be cast to a
 point by copying `x`, `y`, `z`, and the optional unit; a point can be cast to a
@@ -826,6 +834,20 @@ list, range, map, or record read up to three components and fill missing
 components with zero. List items and named `x`, `y`, `z` fields must be finite
 numeric values. Direct numeric inputs become the `x` component. An invalid
 component makes the whole result `nothing`.
+
+### Parse expression
+
+`parse` is a reserved prefix keyword at unary precedence. Its operand may be
+parenthesized when a complete lower-precedence expression is required:
+
+```ges
+let value be parse input
+let restored be parse (value as :Text)
+```
+
+For example, `parse input as :Number` means `(parse input) as :Number`.
+Literal recognition, quoted Text decoding, and the exact original-Text fallback
+are owned by [Text semantics](Semantics/Text.md#literal-recognition-from-text).
 
 ### Type checks
 
@@ -920,10 +942,12 @@ parse text as described below.
 Text values are not numeric for implicit mathematics or numeric checks:
 `'100' is numeric` is false. Addition is the deliberate exception: if either
 present operand is text, both `'10' + 20` and `10 + '20'` concatenate their
-canonical text representations and produce `'1020'`. Other arithmetic
-operators do not parse text implicitly. An
-explicit `as :Number` cast parses text with invariant numeric syntax; invalid
-text casts to `nothing`. Series are also not numeric for implicit mathematics
+text representations. For a formatter that writes these integers as `10` and
+`20`, both produce `'1020'`; the permitted numeric spellings are owned by
+[Number semantics](Semantics/Numbers.md#numeric-text-output-and-roundtrip).
+Other arithmetic operators do not parse text implicitly. An explicit
+`as :Number` cast parses text according to that document's numeric text grammar;
+invalid text casts to `nothing`. Series are also not numeric for implicit mathematics
 or numeric checks, but an explicit `as :Number` cast reads the first term and
 casts that term to a number.
 
@@ -1006,6 +1030,9 @@ A percentage literal stores a ratio:
 25%       // ratio 0.25
 100%      // ratio 1.0
 ```
+
+Explicit Percentage casts and their Number/Text roundtrip guarantees are owned
+by [Number semantics](Semantics/Numbers.md#conversion-to-percentage).
 
 Percentages can be combined with percentages. For value-plus-percentage forms,
 the non-percentage value must be on the left:
@@ -1114,8 +1141,9 @@ let callback be Done(value)
 ### Presence and Emptiness
 
 `nothing` is the absence value. NaN is not a DSL value or special tag. If an
-internal numeric operation produces NaN, the script-visible value behaves as
-`nothing`. The spelling `#nan` is an ordinary tag with no numeric meaning.
+internal numeric operation or conversion produces NaN, the script-visible value
+behaves as `nothing`. The spelling `#nan` is an ordinary tag with no numeric
+meaning.
 
 `empty` is true for:
 
@@ -1781,7 +1809,7 @@ type_operation ::= 'as' type_reference |
 relational_expression ::= additive_expression (('<' | '>' | '<=' | '>=' | '≤' | '≥') additive_expression)*
 additive_expression ::= multiplicative_expression (('+' | '-' | '−') multiplicative_expression)*
 multiplicative_expression ::= unary_expression (('*' | '×' | '·' | '⋅' | '/' | '÷' | 'div' | 'mod' | 'rem') unary_expression)*
-unary_expression ::= ('-' | '−' | not_operator | 'empty') unary_expression | unary_intrinsic_expression | power_expression
+unary_expression ::= ('-' | '−' | not_operator | 'empty' | 'parse') unary_expression | unary_intrinsic_expression | power_expression
 not_operator ::= 'not' | '!' | '~' | '¬'
 power_expression ::= power_base_expression [('^' unary_expression) | '²' | '³']
 power_base_expression ::= series_expression | extension_call_expression | intrinsic_call_expression | clamp_expression | variadic_expression | postfix_expression

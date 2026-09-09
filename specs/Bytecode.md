@@ -550,8 +550,13 @@ Units are not declared type kinds: unit casts and checks use
 `CastUnit`/`CheckUnit` with the target unit in `UnitAndFlags`.
 `:Number` lowers to `CastNumeric`; numeric casts keep integral values as
 integers and use floats only when the value does not fit the integer
-representation. `CastNumeric` is the only numeric path that parses text; invalid
-text writes `nothing`. `CastNumeric` also accepts series by casting the first
+representation. `CastNumeric` parses numeric text; invalid text writes
+`nothing`. `Cast :Percentage` also accepts numeric text and interprets numeric
+input as a ratio according to
+[Percentage conversion](Semantics/Numbers.md#conversion-to-percentage).
+Text grammar, suffix interpretation, and exact rounding are owned by
+[Number semantics](Semantics/Numbers.md#text-and-number-conversion).
+`CastNumeric` also accepts series by casting the first
 term. `is numeric`, `is integer`, and `is fractional` are source-level check
 constructs that lower to `CheckNumeric`, `CheckInteger`, and `CheckFractional`;
 they do not parse text and do not treat series as numeric. `CheckNumeric` is
@@ -578,7 +583,9 @@ tag only when the raw text is a valid tag name. Text values `true`, `True`,
 `false`, and `False` are accepted and normalized to `#true` and `#false`.
 
 `Cast :Text` is the formatting cast and does not validate the formatted text as
-a tag. `Cast :Vector` and `Cast :Point` are structural conversions: vector to
+a tag. Its numeric spellings and roundtrip guarantees follow
+[Number semantics](Semantics/Numbers.md#numeric-text-output-and-roundtrip).
+`Cast :Vector` and `Cast :Point` are structural conversions: vector to
 point and point to vector copy the three components and optional unit directly.
 These conversions are casts, not affine vector/point arithmetic.
 
@@ -1373,7 +1380,7 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x14 | `Cast` | - | result register | `XRegister`=source | `TypeOperand`=type kind | - | Converts `X` to the declared built-in type. Custom/record types use `CastCustom`. `Cast :Tag` validates tag syntax; invalid tag text writes `nothing`. `Cast :Vector`/`:Point` structurally convert between vectors and points by copying components and unit. |
 | 0x15 | `CastCustom` | - | result register | `XRegister`=source | `TypeOperand`=custom type string | - | Converts `X` to a custom/record type identified by `Y`. |
 | 0x16 | `CastUnit` | target numeric unit | result register | `XRegister`=source | - | - | Converts `X` to the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
-| 0x17 | `CastNumeric` | - | result register | `XRegister`=source | - | - | Coerces `X` through the source-level `:Number` type. This is the only numeric path that parses text; invalid text writes `nothing`. Integral values stay integer; otherwise the result is float. |
+| 0x17 | `CastNumeric` | - | result register | `XRegister`=source | - | - | Coerces `X` through the source-level `:Number` type, including explicit numeric text parsing; invalid text writes `nothing`. Integral values stay integer; otherwise the result is float. |
 | 0x18 | `CheckType` | - | result register | `XRegister`=source | `TypeOperand`=type kind | - | Writes whether `X` has the declared built-in type. Custom/record types use `CheckCustomType`. |
 | 0x19 | `CheckCustomType` | - | result register | `XRegister`=source | `TypeOperand`=custom type string | - | Writes whether `X` has the custom/record type identified by `Y`. |
 | 0x1A | `CheckUnit` | target numeric unit | result register | `XRegister`=source | - | - | Writes whether `X` has the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |

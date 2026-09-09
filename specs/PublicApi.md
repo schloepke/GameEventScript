@@ -231,6 +231,9 @@ binary specifications and must reject undefined values at validation boundaries:
 - `BinaryBindKind`, `SectionType`, `SectionFlags`, and
   `DebugSymbolKind`.
 
+`BytecodeOpCode.ParseLiteral` exposes the portable `parse` operation at opcode
+`0xD9`, with operand and limit semantics owned by [Bytecode](Bytecode.md).
+
 `BytecodeInstructionUnits` supplies pure conversions between type names, units,
 and suffixes. Parse operations return absence for an unknown valid string;
 predicate operations never use locale; formatting returns canonical GES text.

@@ -3,7 +3,6 @@
 
 using System;
 using System.Globalization;
-using System.Text;
 using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.Compiler;
@@ -58,6 +57,7 @@ internal enum GesTokenKind
     IntrinsicCross,
     IntrinsicAngle,
     KeywordRandom,
+    KeywordParse,
     Series,
     Fibonacci,
     Factorial,
@@ -151,24 +151,16 @@ internal enum GesTokenKind
 
 internal readonly record struct GesToken(GesTokenKind Kind, string Text, int Line, int Column, int EndLine, int EndColumn, string UnitName = "")
 {
-    public double FloatValue => double.Parse(NormalizedNumericText, CultureInfo.InvariantCulture);
+    private Runtime.Values.GesValue NumericValue => TextNumberCast.Read(Text, percentage: Kind == GesTokenKind.Percentage,
+        allowGrouping: false, percentageMagnitude: Kind == GesTokenKind.Percentage) ?? Runtime.Values.GesValue.GesNothing();
+
+    public double FloatValue => NumericValue.AsNumber();
 
     public long? GetIntegerValue()
     {
-        if (Kind is GesTokenKind.Float or GesTokenKind.UnitNumber &&
-            Text.IndexOf('.') < 0 &&
-            long.TryParse(NormalizeNumericText(Text), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
-        {
-            return value;
-        }
-
-        return null;
+        var value = NumericValue;
+        return value.Kind == Api.GameEventScriptBytecodeTypeKind.Integer ? value.IntegerValue : null;
     }
-
-    public string NormalizedNumericText => NormalizeNumericText(Text);
-
-    private static string NormalizeNumericText(string text)
-        => text.IndexOf('_') < 0 ? text : text.Replace("_", string.Empty, StringComparison.Ordinal);
 
     public override string ToString() => $"{Kind}('{Text}', {Line}:{Column}-{EndLine}:{EndColumn})";
 }
@@ -329,6 +321,7 @@ internal sealed class GesLexer
         if (IsWordAt(start, length, "when")) return new GesToken(GesTokenKind.When, "when", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "otherwise")) return new GesToken(GesTokenKind.Otherwise, "otherwise", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "has")) return new GesToken(GesTokenKind.Has, "has", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "parse")) return new GesToken(GesTokenKind.KeywordParse, "parse", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "empty")) return new GesToken(GesTokenKind.Empty, "empty", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "if")) return new GesToken(GesTokenKind.If, "if", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "else")) return new GesToken(GesTokenKind.Else, "else", line, column, endLine, endColumn);
@@ -617,31 +610,12 @@ internal sealed class GesLexer
     private GesToken ReadTextToken(int line, int column)
     {
         var start = _index;
-        var quote = Current;
-        Advance();
-        var builder = new StringBuilder();
-        while (!IsAtEnd)
-        {
-            if (Current == quote)
-            {
-                if (Peek() == quote)
-                {
-                    builder.Append(quote);
-                    Advance();
-                    Advance();
-                    continue;
-                }
-
-                Advance();
-                return CreateToken(GesTokenKind.Text, builder.ToString(), line, column);
-            }
-
-            builder.Append(Current);
-            if (char.IsHighSurrogate(Current)) builder.Append(Peek());
-            Advance();
-        }
-
-        return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
+        var end = _index;
+        var text = TextLiteralReader.Read(_input, ref end);
+        while (_index < end) Advance();
+        return text is null
+            ? CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column)
+            : CreateToken(GesTokenKind.Text, text, line, column);
     }
 
     private GesToken ReadOperatorToken(int line, int column)

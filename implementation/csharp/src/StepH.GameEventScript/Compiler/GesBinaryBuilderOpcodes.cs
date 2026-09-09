@@ -81,6 +81,9 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder CastUnit(GesRegisterRef destination, GesRegisterRef source, GameEventScriptBytecodeInstructionUnit unit)
         => AddOpcode(GameEventScriptBytecodeOpCode.CastUnit, unit, dst: GesOperand.Register(destination), x: GesOperand.Register(source));
 
+    public GesBinaryBuilder ParseLiteral(GesRegisterRef destination, GesRegisterRef source)
+        => AddOpcode(GameEventScriptBytecodeOpCode.ParseLiteral, dst: GesOperand.Register(destination), x: GesOperand.Register(source));
+
     public GesBinaryBuilder CastNumeric(GesRegisterRef destination, GesRegisterRef source)
         => AddOpcode(GameEventScriptBytecodeOpCode.CastNumeric, dst: GesOperand.Register(destination), x: GesOperand.Register(source));
 

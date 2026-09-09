@@ -48,55 +48,12 @@ here.
 
 ## Language and state
 
-- Implement the agreed [Text and number conversion contract](specs/Semantics/Numbers.md#text-and-number-conversion)
-  in the compiler/runtime and shared Markdown corpus. Cover decimal/exponent
-  input, underscore separators, strict text-only comma grouping, exact Int64
-  parsing, Binary64 rounding boundaries, Quantity suffixes, and Percentage
-  scaling/roundtrip. Replace Percentage cast magnitude/storage heuristics with
-  the uniform ratio rule, add direct Text-to-Percentage conversion, and verify
-  exact Number/Text roundtrips at zero, negative values, `100%`, and above.
-  Centralize C# numeric text reading and writing in an internal static
-  `TextNumberCast` class, shared by compiler literal decoding, constant folding,
-  and runtime casts. Number and Percentage decoding must use the same numeric
-  conversion rules while preserving source token boundaries, target value kinds,
-  and the distinction between compiler diagnostics and invalid runtime casts.
-  Adapt existing numeric-text assertions to
-  permit the specified output variants while preserving exact ordinary Text
-  comparison. The contract was specified before implementation; the current C#
-  parser and corpus do not yet establish conformance to it. Select platform
-  conversion routines or a dedicated implementation based on correctness and
-  measured allocation/performance results.
-- Implement the agreed [parse expression](specs/Language.md#parse-expression),
-  [literal recognition](specs/Semantics/Text.md#literal-recognition-from-text),
-  and [data-value text output](specs/Semantics/Text.md#text-output-of-data-values)
-  in the compiler/runtime and shared Markdown corpus. These contracts were
-  specified before implementation; the current parser and corpus do not yet
-  establish conformance to them. Finalize the accepted data-only literal subset,
-  non-Text-input behavior, and portable input/nesting/item limits before coding.
-  Start with independent scalar values and recursively nested Lists/Maps;
-  handle Handler, Series, record reconstruction, and external-value contracts
-  separately. Handler signatures and built-in Series kind/offset are data and
-  can receive literal representations without capturing executable host state.
-  Reuse numeric conversion and source literal rules without evaluating script
-  expressions or constructing a runtime Compiler/Program. Compare a direct
-  value reader sharing scanner/decoder routines with a literal-only entry point
-  in the existing parser; the existing parser builds AST/source metadata that
-  runtime parsing does not need. Align exponent/special-value recognition with
-  the numeric writer while keeping commas structural in literal containers.
-  Enter parsing through a dedicated bytecode operation, with no parser setup,
-  persistent parser state, or additional parse-mode checks on ordinary VM
-  instructions. Verify existing scripts without `parse` against unchanged
-  performance/allocation gates, and measure parsing/formatting separately.
-  Add Markdown coverage for plain Text, explicitly quoted numeric/Boolean-looking
-  Text, doubled quotes, malformed quotes/containers, complete input consumption,
-  exact original-Text fallback, and successful `nothing` recognition. Verify
-  root Text identity and nested Text quoting independently, including mixed
-  lists such as `[1, "1"]`. Preserve the exact numeric roundtrip assertions;
-  ordinary script `=` is not a sufficient oracle for exact kind, unit, and
-  nested structure because it has numeric coercion/tolerance and propagates
-  `nothing`. Preserve the Boolean truth-view and Text-to-List scalar-expansion
-  casts. Synchronize bytecode/binary validators and fixtures, both editor
-  grammars, and the shared Markdown corpus when implementing the contract.
+- Specify data-literal representations and `parse` reconstruction for the
+  remaining value kinds: Vector/Point, Dice/Range, Message/Handler, Series,
+  records, and external values. Independent numeric/Boolean/Text/Tag values
+  and recursive Lists/Maps are implemented. Handler signatures and built-in
+  Series kind/offset are data and can receive representations without capturing
+  executable host state; reconstruction of bound values needs a separate contract.
 - Add a general immutable collection `fold`/`reduce` operation if concrete use
   cases exceed the existing specialized aggregations (`sum`, `average`, `min`,
   `max`, and `count`). Prefer a bounded collection operation over recursion or

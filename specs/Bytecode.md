@@ -365,7 +365,7 @@ groups are:
 0xA0 Group 3: collection slicing, text/collection operators, map projections
 0xB0 Group 3 membership, collection algebra, map projections, element terminals
 0xC0 Group 3 iterators, aggregations, weighted terminals, collect terminals
-0xD0 Group 3 generated collection/order/group/distinct builders, pattern operators, reserved tail 0xDC..0xFF
+0xD0 Group 3 generated collection/order/group/distinct builders, pattern operators, literal parsing, reserved tail 0xDA..0xFF
 ```
 
 The exhaustive [canonical opcode field map](#canonical-opcode-field-map) in this document lists every defined opcode as its own row, and every group ends with one `reserved` row for its unused tail range.
@@ -1542,6 +1542,13 @@ separate approximate-equality opcode.
 
 ### Group 3 - Text, Collections, Iterators
 
+`ParseLiteral dst src` implements the `parse` expression described by
+[Text semantics](Semantics/Text.md#literal-recognition-from-text). Non-Text input
+writes `nothing`. It reads `XRegister` before writing the destination; source
+and destination may alias. `YRegister`, payload words, and flags are zero.
+Runtime parse limits can stop the handler, so this instruction is not removable
+as a dead write and must not be folded past runtime-limit checks.
+
 | Hex | Opcode | UnitAndFlags | DestinationRegister | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 0xA0 | `TakeFirst` | - | result register | `XRegister`=source | `ImmediateY`=count | - | Takes the first `Y` values from a series, list, dice, range, or iterator source. |
@@ -1601,7 +1608,8 @@ separate approximate-equality opcode.
 | 0xD6 | `OrderBuilderFinishDescending` | - | result register | `XRegister`=builder | - | - | Sorts by stored keys descending and materializes the ordered values as a list. |
 | 0xD7 | `HasPattern` | - | result register | `XRegister`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face register for `CountFace` | Tests a dice/card pattern and returns boolean. |
 | 0xD8 | `TakePattern` | - | result register | `XRegister`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face register for `CountFace` | Takes items matching a dice/card pattern. Dice sources produce dice; list sources produce lists. |
-| 0xD9..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3 for future collection, iterator, pipeline, extension, or VM opcodes. |
+| 0xD9 | `ParseLiteral` | - | result register | `XRegister`=Text input | - | - | Recognizes one complete data literal, preserving original Text on recognition failure. |
+| 0xDA..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3 for future collection, iterator, pipeline, extension, or VM opcodes. |
 
 ## Side-Table Summary
 

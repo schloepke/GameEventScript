@@ -106,6 +106,12 @@ internal static class GameEventScriptVirtualMachine
                         vmState.GesVmPublishMessageValueWithTags(in vmState.Register(instruction.XRegister), vmState.Program.UInt16IndexLists.Resolve(instruction.ListIndex), true, context);
                         break;
 
+                    case ParseLiteral:
+                    {
+                        var parsed = GesLiteralParser.Parse(in vmState.Register(instruction.XRegister), context);
+                        vmState.SetValue(instruction.DestinationRegister, in parsed);
+                        break;
+                    }
                     case Cast:
                         vmState.GesVmCast(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.TypeKind, context);
                         break;

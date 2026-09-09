@@ -250,6 +250,25 @@ determines the result. These rules apply to both `ExecuteFrame` and
 `RunToCompletion`, to native and script handlers, and to messages enqueued by
 handlers during the pump.
 
+### Literal parsing limits
+
+Each `parse` invocation has fixed portable bounds, applied only while executing
+`ParseLiteral`: at most 1,048,576 input Unicode scalars (`MaxLiteralInputScalars`),
+64 nested List/Map containers (`MaxLiteralDepth`), and 65,536 total List items
+and Map entries across the whole input (`MaxLiteralItems`). Duplicate Map keys
+still count as entries. Scalar roots do not consume an item or nesting slot.
+Exactly each bound is allowed; the next scalar, nested container, or item
+exceeds it. Input length is checked before recognition. Nesting and item bounds
+are checked incrementally before creating the next container or reading the
+next item; trailing syntax errors do not undo a limit already encountered.
+
+Exceeding a bound exhausts the current handler with the existing runtime-limit
+mechanism and the corresponding stable limit name and numeric bound. It does
+not return original Text as a recognition fallback or emit a partial value.
+Previously completed effects remain observable and subsequent queued messages
+can run normally. The counters are local to one parse invocation; programs
+without `parse` maintain no parsing state or counters.
+
 ### Iterator and Generated-Collection Limits
 
 `MaxLoopIterations` counts successful iterator advances across all loops and

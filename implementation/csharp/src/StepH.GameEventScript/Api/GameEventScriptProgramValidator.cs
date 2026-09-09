@@ -177,6 +177,10 @@ public static class GameEventScriptProgramValidator
             (encodedFlags & ~(byte)GameEventScriptInstructionFlag.NormalizeResultAsPredicate) != 0)
             InvalidOperand("Instruction contains an unknown unit or instruction flag.", instructionIndex);
 
+        if (instruction.OpCode == GameEventScriptBytecodeOpCode.ParseLiteral &&
+            (instruction.UnitAndFlags != 0 || instruction.YRegister != 0 || instruction.Payload != 0))
+            InvalidOperand("ParseLiteral reserves the unit/flag byte, Y word, and payload.", instructionIndex);
+
         var operands = GameEventScriptOpcodePrinter.PrintInstruction(instruction);
         for (var operandIndex = 0; operandIndex < operands.Length; operandIndex++)
         {

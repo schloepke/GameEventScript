@@ -173,6 +173,7 @@ internal sealed record ExpressionStatementNode(ExpressionNode Expression) : Stat
 
 internal enum GesUnaryOperator
 {
+    Parse,
     Negate,
     Not,
     HasValue,
@@ -249,6 +250,7 @@ internal static class GesOperatorText
     public static string ToSourceText(this GesUnaryOperator op)
         => op switch
         {
+            GesUnaryOperator.Parse => "parse",
             GesUnaryOperator.Negate => "-",
             GesUnaryOperator.Not => "!",
             GesUnaryOperator.HasValue => "has value",
@@ -358,10 +360,10 @@ internal sealed record TypeConstructorExpressionNode(string TypeName, ArgumentLi
 
 internal sealed record BooleanLiteralExpressionNode(bool Value) : ExpressionNode;
 internal sealed record NothingLiteralExpressionNode : ExpressionNode;
-internal sealed record IntegerLiteralExpressionNode(long Value) : ExpressionNode;
+internal sealed record IntegerLiteralExpressionNode(long Value, bool HasDecimalPoint = false) : ExpressionNode;
 internal sealed record FloatLiteralExpressionNode(double Value) : ExpressionNode;
-internal sealed record PercentageLiteralExpressionNode(double PercentValue) : ExpressionNode;
-internal sealed record UnitIntegerLiteralExpressionNode(long Value, string UnitName) : ExpressionNode;
+internal sealed record PercentageLiteralExpressionNode(double RatioValue) : ExpressionNode;
+internal sealed record UnitIntegerLiteralExpressionNode(long Value, string UnitName, bool HasDecimalPoint = false) : ExpressionNode;
 internal sealed record UnitFloatLiteralExpressionNode(double Value, string UnitName) : ExpressionNode;
 internal sealed record TextLiteralExpressionNode(string Value) : ExpressionNode;
 internal sealed record ListLiteralExpressionNode(IReadOnlyList<ExpressionNode> Items) : ExpressionNode;

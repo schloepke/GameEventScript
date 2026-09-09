@@ -160,7 +160,7 @@ binaryFixture:
   compilerVersion: 0.1.0
   programVersion: 42
   compareCompiledRuntime: true
-  derivation: append optional private section 0x8001 version 7
+  derivation: "append optional private section 0x8001 version 7"
 ```
 
 ### Source code under test
@@ -209,7 +209,7 @@ binaryFixture:
   compilerVersion: 0.1.0
   programVersion: 42
   compareCompiledRuntime: true
-  derivation: reverse complete section frames without changing payloads
+  derivation: "reverse complete section frames without changing payloads"
 ```
 
 ### Source code under test
@@ -256,7 +256,7 @@ binaryFixture:
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
-  derivation: replace first GESB magic byte with X
+  derivation: "replace first GESB magic byte with X"
 ```
 
 ### Source code under test
@@ -301,7 +301,7 @@ binaryFixture:
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
-  derivation: remove final payload byte and update FileSize
+  derivation: "remove final payload byte and update FileSize"
 ```
 
 ### Source code under test
@@ -348,7 +348,7 @@ binaryFixture:
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
-  derivation: remove required CodeSegment
+  derivation: "remove required CodeSegment"
 ```
 
 ### Source code under test
@@ -394,7 +394,7 @@ binaryFixture:
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
-  derivation: append duplicate StringConstantSegment
+  derivation: "append duplicate StringConstantSegment"
 ```
 
 ### Source code under test
@@ -441,7 +441,7 @@ binaryFixture:
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
-  derivation: replace first BindingSegment name index with 0xFFFE
+  derivation: "replace first BindingSegment name index with 0xFFFE"
 ```
 
 ### Source code under test
@@ -488,7 +488,7 @@ binaryFixture:
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
-  derivation: replace first module-name UTF-8 byte with 0xFF
+  derivation: "replace first module-name UTF-8 byte with 0xFF"
 ```
 
 ### Source code under test
@@ -536,7 +536,7 @@ binaryFixture:
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
-  derivation: append private section 0x8000 with Required flag
+  derivation: "append private section 0x8000 with Required flag"
 ```
 
 ### Source code under test
@@ -583,7 +583,7 @@ binaryFixture:
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
-  derivation: set reserved compression codec 1 on ProgramMetadataSegment
+  derivation: "set reserved compression codec 1 on ProgramMetadataSegment"
 ```
 
 ### Source code under test
@@ -631,7 +631,7 @@ binaryFixture:
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 7
-  derivation: replace helper ReturnValue with Call to Start entry address
+  derivation: "replace helper ReturnValue with Call to Start entry address"
 ```
 
 ### Source code under test
@@ -739,7 +739,7 @@ binaryFixture:
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
-  derivation: patch RequiredCallStackDepth in ProgramMetadata and handler binding 0 to 0 at file byte offsets 32 and 181 (u16 Little Endian); retain all code and other bytes
+  derivation: "patch RequiredCallStackDepth in ProgramMetadata and handler binding 0 to 0 at file byte offsets 32 and 181 (u16 Little Endian); retain all code and other bytes"
 ```
 
 ### Source code under test
@@ -780,7 +780,7 @@ binaryFixture:
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
-  derivation: patch RequiredRegisterCount in ProgramMetadata and handler binding 0 to 3 at file byte offsets 30 and 179 (u16 Little Endian); retain all code and other bytes
+  derivation: "patch RequiredRegisterCount in ProgramMetadata and handler binding 0 to 3 at file byte offsets 30 and 179 (u16 Little Endian); retain all code and other bytes"
 ```
 
 ### Source code under test
@@ -885,7 +885,7 @@ binaryFixture:
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
-  derivation: patch RequiredCallStackDepth in ProgramMetadata and handler binding 0 to 1 at file byte offsets 32 and 190 (u16 Little Endian); retain all code and other bytes
+  derivation: "patch RequiredCallStackDepth in ProgramMetadata and handler binding 0 to 1 at file byte offsets 32 and 190 (u16 Little Endian); retain all code and other bytes"
 ```
 
 ### Source code under test
@@ -927,7 +927,7 @@ binaryFixture:
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 42
-  derivation: patch RequiredRegisterCount in ProgramMetadata and handler binding 0 to 4 at file byte offsets 30 and 188 (u16 Little Endian); retain all code and other bytes
+  derivation: "patch RequiredRegisterCount in ProgramMetadata and handler binding 0 to 4 at file byte offsets 30 and 188 (u16 Little Endian); retain all code and other bytes"
 ```
 
 ### Source code under test
@@ -1495,4 +1495,323 @@ gesBlock: expect
 binary:
   outcome: validationError
   errorCode: InvalidResourceMetadata
+```
+
+---
+
+## Test: valid-parse-literal
+
+This case checks the ParseLiteral binary contract. Canonical ParseLiteral with a separate input and output register.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-parse-literal
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-valid-parse-literal
+  resourceId: gesb-v1.valid-parse-literal
+  relativePath: GesbV1/valid-parse-literal.gesb
+  sha256: 7ED102B0D8264E5A7E1D2BF1E80D4711D8E514D9348CEFC9D2BBB97BFCE11D07
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Canonical ParseLiteral with a separate input and output register."
+  compareCompiledRuntime: true
+```
+
+### Source code under test
+
+```ges
+module parsefixture
+on Start(value) { emit Done(value: parse value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| execute | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: 7ED102B0D8264E5A7E1D2BF1E80D4711D8E514D9348CEFC9D2BBB97BFCE11D07
+  moduleName: parsefixture
+  requiredRegisterCount: 2
+  requiredCallStackDepth: 0
+  opaqueSectionCount: 0
+steps:
+  execute:
+    input:
+      args:
+        - name: value
+          value: { type: ":Text", value: "[1, \"1\"]" }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":List"
+              items:
+                - { type: ":Number.int64", value: "1" }
+                - { type: ":Text", value: "1" }
+```
+
+---
+
+## Test: invalid-parse-source
+
+This case checks the ParseLiteral binary contract. Replace byte(s) at ParseLiteral instruction 1, operand offset 4, with ffff.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-parse-source
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-parse-source
+  resourceId: gesb-v1.invalid-parse-source
+  relativePath: GesbV1/invalid-parse-source.gesb
+  sha256: 8B6E8431FEF718314A38F9F335F5B0ED8FC9A19FE009998AE943555A1FC4E66E
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace byte(s) at ParseLiteral instruction 1, operand offset 4, with ffff."
+```
+
+### Source code under test
+
+```ges
+module parsefixture
+on Start(value) { emit Done(value: parse value) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 1
+```
+
+---
+
+## Test: invalid-parse-target
+
+This case checks the ParseLiteral binary contract. Replace byte(s) at ParseLiteral instruction 1, operand offset 2, with ffff.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-parse-target
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-parse-target
+  resourceId: gesb-v1.invalid-parse-target
+  relativePath: GesbV1/invalid-parse-target.gesb
+  sha256: FAC1069083B1EE1D43D2D0C49133F55F8371DC81207DF64AE50BDC2D32568093
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace byte(s) at ParseLiteral instruction 1, operand offset 2, with ffff."
+```
+
+### Source code under test
+
+```ges
+module parsefixture
+on Start(value) { emit Done(value: parse value) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 1
+```
+
+---
+
+## Test: invalid-parse-flags
+
+This case checks the ParseLiteral binary contract. Replace byte(s) at ParseLiteral instruction 1, operand offset 1, with 01.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-parse-flags
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-parse-flags
+  resourceId: gesb-v1.invalid-parse-flags
+  relativePath: GesbV1/invalid-parse-flags.gesb
+  sha256: 03A8AC49A85A700B043BA0B7B81E8642FD658A61831A6EE6052F3033E4ED36BA
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace byte(s) at ParseLiteral instruction 1, operand offset 1, with 01."
+```
+
+### Source code under test
+
+```ges
+module parsefixture
+on Start(value) { emit Done(value: parse value) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 1
+```
+
+---
+
+## Test: invalid-parse-unused-word
+
+This case checks the ParseLiteral binary contract. Replace byte(s) at ParseLiteral instruction 1, operand offset 6, with 01.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-parse-unused-word
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-parse-unused-word
+  resourceId: gesb-v1.invalid-parse-unused-word
+  relativePath: GesbV1/invalid-parse-unused-word.gesb
+  sha256: 40A09D9F516880F94C6E79877C018752076F8EDEBC2CF0105D49557F3B622194
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace byte(s) at ParseLiteral instruction 1, operand offset 6, with 01."
+```
+
+### Source code under test
+
+```ges
+module parsefixture
+on Start(value) { emit Done(value: parse value) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 1
+```
+
+---
+
+## Test: invalid-parse-payload
+
+This case checks the ParseLiteral binary contract. Replace byte(s) at ParseLiteral instruction 1, operand offset 8, with 01.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-parse-payload
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-parse-payload
+  resourceId: gesb-v1.invalid-parse-payload
+  relativePath: GesbV1/invalid-parse-payload.gesb
+  sha256: BC42434037383F709C20400B3381784FF4E89E94D986A329A1AD2FD0C4B5015B
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace byte(s) at ParseLiteral instruction 1, operand offset 8, with 01."
+```
+
+### Source code under test
+
+```ges
+module parsefixture
+on Start(value) { emit Done(value: parse value) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 1
+```
+
+---
+
+## Test: invalid-reserved-opcode-da
+
+This case checks the ParseLiteral binary contract. Replace byte(s) at ParseLiteral instruction 1, operand offset 0, with da.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-reserved-opcode-da
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-reserved-opcode-da
+  resourceId: gesb-v1.invalid-reserved-opcode-da
+  relativePath: GesbV1/invalid-reserved-opcode-da.gesb
+  sha256: 2D8F30057069590D1D38A5A50B4B3BCE72B514B324333ECA4AD518021373BA87
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace byte(s) at ParseLiteral instruction 1, operand offset 0, with da."
+```
+
+### Source code under test
+
+```ges
+module parsefixture
+on Start(value) { emit Done(value: parse value) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOpcode
+  sectionType: 16
+  entryIndex: 1
 ```

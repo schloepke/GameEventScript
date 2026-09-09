@@ -496,7 +496,7 @@ internal static class GesCompiler
                     _builder.LoadFloat(destination, number.Value, ResolveUnitOrNone(number.UnitName));
                     return true;
                 case PercentageLiteralExpressionNode percentage:
-                    _builder.LoadPercentage(destination, percentage.PercentValue / 100d);
+                    _builder.LoadPercentage(destination, percentage.RatioValue);
                     return true;
                 case TextLiteralExpressionNode text:
                     _builder.LoadText(destination, text.Value);
@@ -593,8 +593,8 @@ internal static class GesCompiler
                 {
                     var from = EmitExpressionForRead(random.FromExpression, context, state);
                     var to = EmitExpressionForRead(random.ToExpression, context, state);
-                    if (random.FromExpression is FloatLiteralExpressionNode or UnitFloatLiteralExpressionNode ||
-                        random.ToExpression is FloatLiteralExpressionNode or UnitFloatLiteralExpressionNode)
+                    if (random.FromExpression is FloatLiteralExpressionNode or UnitFloatLiteralExpressionNode or IntegerLiteralExpressionNode { HasDecimalPoint: true } or UnitIntegerLiteralExpressionNode { HasDecimalPoint: true } ||
+                        random.ToExpression is FloatLiteralExpressionNode or UnitFloatLiteralExpressionNode or IntegerLiteralExpressionNode { HasDecimalPoint: true } or UnitIntegerLiteralExpressionNode { HasDecimalPoint: true })
                     {
                         _builder.RandomTakeFloat(destination, from, to);
                     }
@@ -1974,7 +1974,7 @@ internal static class GesCompiler
                     _builder.StageFloat(number.Value, ResolveUnitOrNone(number.UnitName));
                     return;
                 case PercentageLiteralExpressionNode percentage:
-                    _builder.StagePercentage(percentage.PercentValue / 100d);
+                    _builder.StagePercentage(percentage.RatioValue);
                     return;
                 case TextLiteralExpressionNode text:
                     _builder.StageText(text.Value);
@@ -2208,6 +2208,9 @@ internal static class GesCompiler
         {
             switch (operation)
             {
+                case GesUnaryOperator.Parse:
+                    _builder.ParseLiteral(destination, operand);
+                    break;
                 case GesUnaryOperator.Negate:
                     _builder.Negate(destination, operand);
                     return;

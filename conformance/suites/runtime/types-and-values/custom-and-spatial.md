@@ -276,7 +276,7 @@ steps:
                 - key: "percentage"
                   value:
                     type: ":Percentage"
-                    value: "0.01"
+                    value: "1"
           - name: "isMeter"
             value:
               type: ":Boolean"
@@ -358,7 +358,7 @@ steps:
           - name: "ratio"
             value:
               type: ":Percentage"
-              value: "0.25"
+              value: "25"
           - name: "textValue"
             value:
               type: ":Text"
@@ -592,7 +592,7 @@ steps:
                 - key: "percentage"
                   value:
                     type: ":Percentage"
-                    value: "0.01"
+                    value: "1"
           - name: "current"
             value:
               type: ":Number.int64"
@@ -600,7 +600,7 @@ steps:
           - name: "percentage"
             value:
               type: ":Percentage"
-              value: "0.01"
+              value: "1"
           - name: "isMeter"
             value:
               type: ":Boolean"

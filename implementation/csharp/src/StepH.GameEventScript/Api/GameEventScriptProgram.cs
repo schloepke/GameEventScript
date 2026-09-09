@@ -2115,6 +2115,10 @@ public enum GameEventScriptBytecodeOpCode : byte
     /// Identifies the take pattern value.
     /// </summary>
     TakePattern = 0xD8,
+    /// <summary>
+    /// Recognizes a complete data literal from Text, preserving the original Text on recognition failure.
+    /// </summary>
+    ParseLiteral = 0xD9,
 
     #endregion
 }

@@ -124,6 +124,7 @@ internal static class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.CastCustom => [TargetRegister, SourceRegister, CustomTypeName],
             GameEventScriptBytecodeOpCode.CastUnit => [TargetRegister, SourceRegister, Unit],
             GameEventScriptBytecodeOpCode.CastNumeric => [TargetRegister, SourceRegister],
+            GameEventScriptBytecodeOpCode.ParseLiteral => [TargetRegister, SourceRegister],
             GameEventScriptBytecodeOpCode.CheckType => [TargetRegister, SourceRegister, TypeKind],
             GameEventScriptBytecodeOpCode.CheckCustomType => [TargetRegister, SourceRegister, CustomTypeName],
             GameEventScriptBytecodeOpCode.CheckUnit => [TargetRegister, SourceRegister, Unit],

@@ -208,3 +208,7 @@ Reference-resolving comments may follow an instruction. They show string content
 - DebugSymbols, SourceMap, and SourceArchive enrich a dump but are never required to execute the Program.
 - VM state is not part of `.gesa`; a VM-state diagnostic may embed a Program dump alongside separate execution-state information.
 - `.gesa` does not promise parse/write roundtripping, binary identity, or a stable wire protocol.
+
+`compile.program-dumps/parse-literal` covers the `ParseLiteral r1, r0` instruction
+with optional source metadata omitted. Like other instructions, its symbolic
+name and ordered operand roles follow the Bytecode registry.

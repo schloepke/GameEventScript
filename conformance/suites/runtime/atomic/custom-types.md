@@ -93,7 +93,7 @@ steps:
                 - key: "percentage"
                   value:
                     type: ":Percentage"
-                    value: "0.01"
+                    value: "1"
           - name: "current"
             value:
               type: ":Number.int64"
@@ -101,7 +101,7 @@ steps:
           - name: "percentage"
             value:
               type: ":Percentage"
-              value: "0.01"
+              value: "1"
           - name: "gaugeFromMap"
             value:
               type: ":Gauge"
@@ -117,7 +117,7 @@ steps:
                 - key: "percentage"
                   value:
                     type: ":Percentage"
-                    value: "0.01"
+                    value: "1"
           - name: "fromMapCurrent"
             value:
               type: ":Number.int64"
@@ -125,7 +125,7 @@ steps:
           - name: "fromMapPercentage"
             value:
               type: ":Percentage"
-              value: "0.01"
+              value: "1"
           - name: "fromMapIsGauge"
             value:
               type: ":Boolean"
@@ -153,7 +153,7 @@ steps:
                 - key: "percentage"
                   value:
                     type: ":Percentage"
-                    value: "0.01"
+                    value: "1"
           - name: "mapCurrent"
             value:
               type: ":Number.int64"
@@ -161,7 +161,7 @@ steps:
           - name: "mapPercentage"
             value:
               type: ":Percentage"
-              value: "0.01"
+              value: "1"
           - name: "recordKeys"
             value:
               type: ":List"
@@ -181,7 +181,7 @@ steps:
                 - type: ":Number.int64"
                   value: "100"
                 - type: ":Percentage"
-                  value: "0.01"
+                  value: "1"
           - name: "recordEntries"
             value:
               type: ":List"
@@ -215,7 +215,7 @@ steps:
                     - key: "value"
                       value:
                         type: ":Percentage"
-                        value: "0.01"
+                        value: "1"
           - name: "isGauge"
             value:
               type: ":Boolean"
@@ -777,7 +777,7 @@ steps:
                 - key: "percentage"
                   value:
                     type: ":Percentage"
-                    value: "0.01"
+                    value: "1"
           - name: "current"
             value:
               type: ":Number.int64"
@@ -789,7 +789,7 @@ steps:
           - name: "percentage"
             value:
               type: ":Percentage"
-              value: "0.01"
+              value: "1"
           - name: "isGauge"
             value:
               type: ":Boolean"

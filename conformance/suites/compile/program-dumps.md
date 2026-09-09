@@ -270,3 +270,91 @@ Ping:				 // handler Ping as message
 // -------------------------------------------------------------------------------
 
 ```
+
+---
+
+## Test: parse-literal
+
+This snapshot checks the dedicated literal-reading instruction and its register operands without optional source metadata.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: parse-literal
+compile:
+  debugInfo: []
+```
+
+### Source code under test
+
+```ges
+module parsefixture
+on Start(value) { emit Done(value: parse value) }
+```
+
+### Expected Game Event Script Assembler
+
+```gesa
+// -------------------------------------------------------------------------------
+//  Module: parsefixture
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "parsefixture"
+.program-version 0
+
+// -------------------------------------------------------------------------------
+.region "Text"
+
+.segment text
+
+T_value:			.text "value"
+T_Start:			.text "Start"
+T_Done:				.text "Done"
+T_parsefixture:		.text "parsefixture"
+
+.region-end "Text"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Lists"
+
+.segment lists
+
+U16_0:				.u16 [0]
+U16_1:				.u16 []
+Args_2:				.registers [r1]
+
+.region-end "Lists"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Bindings"
+
+.segment bind
+
+Handler_Start:		.bind MessageHandler id=0 name=T_Start args=[T_value] entry=Start // "Start(value)"
+Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_value] // "Done(value)"
+
+.region-end "Bindings"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Code"
+
+.segment code
+
+// compiler-generated
+Start:				 // handler Start(value)
+					RegisterLocals #1
+					ParseLiteral r1, r0
+					EmitMessage Outbound_Done, Args_2 // "Done(value)"
+					ReturnVoid
+
+.region-end "Code"
+// -------------------------------------------------------------------------------
+
+```

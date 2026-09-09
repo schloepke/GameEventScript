@@ -987,7 +987,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:random|clamp|min|max|zip|default)\b</string>
+					<string>\b(?:parse|random|clamp|min|max|zip|default)\b</string>
 					<key>name</key>
 					<string>keyword.operator.word.gameeventscript</string>
 				</dict>

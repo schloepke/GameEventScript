@@ -287,6 +287,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field OrderBuilderFinishDescending = 214
   enum-field HasPattern = 215
   enum-field TakePattern = 216
+  enum-field ParseLiteral = 217
 enum StepH.GameEventScript.Api.GameEventScriptBytecodePatternKind
   enum-field CountAny = 0
   enum-field CountFace = 1

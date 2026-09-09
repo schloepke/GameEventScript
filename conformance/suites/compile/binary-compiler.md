@@ -367,7 +367,7 @@ steps:
           - name: "percentage"
             value:
               type: ":Percentage"
-              value: "0.01"
+              value: "1"
           - name: "isGauge"
             value:
               type: ":Boolean"

@@ -203,9 +203,9 @@ current C# implementation, not cross-platform benchmark claims.
 Current clean-checkout baseline:
 
 ```text
-1167/1167 non-performance test executions passed
+1577/1577 non-performance test executions passed
 1/1 zero-allocation hot-path test passed
-6/6 performance/allocation executions passed
+36/36 performance/allocation executions passed
 ```
 
 ## Documentation and backlog

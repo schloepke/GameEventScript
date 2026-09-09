@@ -72,16 +72,7 @@ internal static class GesVmRegisterTypeCastCheck
                 dst.SetFloat(xValue.AsNumeric, xValue.Kind is Integer or Float ? xValue.Unit : UnitNone);
                 return dst;
             case Percentage:
-                if (xValue.HasUnit)
-                {
-                    dst.SetNothing();
-                    return dst;
-                }
-
-                var percentageNumber = xValue.AsNumeric;
-                if (double.IsFinite(percentageNumber)) dst.SetPercentage(xValue.Kind is Integer || percentageNumber is > 1d or < -1d ? percentageNumber / 100d : percentageNumber);
-                else dst.SetNothing();
-                return dst;
+                return TextNumberCast.Percentage(in xValue);
             case Text:
                 return CastText(in xValue);
             case Tag:

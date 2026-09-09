@@ -359,7 +359,8 @@ internal static class GesAstOptimizer
 
     private static ExpressionNode? FoldConstantExpression(ExpressionNode expression)
     {
-        if (expression is FloatLiteralExpressionNode or UnitFloatLiteralExpressionNode)
+        // Preserve decimal source spelling metadata used to select continuous random bounds.
+        if (expression is FloatLiteralExpressionNode or UnitFloatLiteralExpressionNode or IntegerLiteralExpressionNode or UnitIntegerLiteralExpressionNode)
         {
             return null;
         }
@@ -507,7 +508,7 @@ internal static class GesAstOptimizer
                     ? GesValue.GesFloat(unitFloatLiteral.Value, unit)
                     : GesValue.GesNothing();
             case PercentageLiteralExpressionNode percentageLiteral:
-                return GesValue.GesPercentage(percentageLiteral.PercentValue / 100d);
+                return GesValue.GesPercentage(percentageLiteral.RatioValue);
             case TextLiteralExpressionNode textLiteral:
                 return GesValue.GesText(textLiteral.Value);
             case TagLiteralExpressionNode tagLiteral:
@@ -995,7 +996,7 @@ internal static class GesAstOptimizer
                     ? new UnitFloatLiteralExpressionNode(value.AsNumber(), value.Unit.ToTypeName())
                     : new FloatLiteralExpressionNode(value.AsNumber());
             case GameEventScriptBytecodeTypeKind.Percentage:
-                return new PercentageLiteralExpressionNode(value.AsNumber() * 100d);
+                return new PercentageLiteralExpressionNode(value.AsNumber());
             case GameEventScriptBytecodeTypeKind.Text:
                 return new TextLiteralExpressionNode(value.TextValue);
             case GameEventScriptBytecodeTypeKind.Tag:

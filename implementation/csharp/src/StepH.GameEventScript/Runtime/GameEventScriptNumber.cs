@@ -24,9 +24,7 @@ internal static class GameEventScriptNumber
         if (value.Kind == GameEventScriptBytecodeTypeKind.Integer) return value;
         if (value.Kind == GameEventScriptBytecodeTypeKind.Text)
         {
-            return double.TryParse(value.TextValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed)
-                ? GesValue.GesFloat(parsed)
-                : GesValue.GesNothing();
+            return TextNumberCast.Read(value.TextValue) ?? GesValue.GesNothing();
         }
 
         if (value.Kind == GameEventScriptBytecodeTypeKind.Series && value.ObjectValue is GesSeries series)

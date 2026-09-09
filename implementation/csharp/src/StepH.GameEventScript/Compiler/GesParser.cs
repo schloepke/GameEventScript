@@ -1397,6 +1397,13 @@ internal sealed class GesParser
             return WithRange(new UnaryExpressionNode(GesUnaryOperator.Negate, negativeOperand), opToken, Previous);
         }
 
+        if (Match(KeywordParse))
+        {
+            var opToken = Previous;
+            var parsedOperand = ParseUnaryExpression();
+            return WithRange(new UnaryExpressionNode(GesUnaryOperator.Parse, parsedOperand), opToken, Previous);
+        }
+
         if (Match(Empty))
         {
             var opToken = Previous;
@@ -2110,19 +2117,22 @@ internal sealed class GesParser
         if (Match(GesTokenKind.Float))
         {
             return Previous.GetIntegerValue() is { } integerValue
-                ? WithRange(new IntegerLiteralExpressionNode(integerValue), Previous)
+                ? WithRange(new IntegerLiteralExpressionNode(integerValue, Previous.Text.IndexOf('.') >= 0), Previous)
                 : WithRange(new FloatLiteralExpressionNode(Previous.FloatValue), Previous);
         }
 
         if (Match(Percentage))
         {
-            return WithRange(new PercentageLiteralExpressionNode(Previous.FloatValue), Previous);
+            var ratio = Previous.FloatValue;
+            return double.IsFinite(ratio)
+                ? WithRange(new PercentageLiteralExpressionNode(ratio), Previous)
+                : WithRange(new NothingLiteralExpressionNode(), Previous);
         }
 
         if (Match(GesTokenKind.UnitNumber))
         {
             return Previous.GetIntegerValue() is { } integerValue
-                ? WithRange(new UnitIntegerLiteralExpressionNode(integerValue, Previous.UnitName), Previous)
+                ? WithRange(new UnitIntegerLiteralExpressionNode(integerValue, Previous.UnitName, Previous.Text.IndexOf('.') >= 0), Previous)
                 : WithRange(new UnitFloatLiteralExpressionNode(Previous.FloatValue, Previous.UnitName), Previous);
         }
 
@@ -2712,7 +2722,8 @@ internal sealed class GesParser
 
     private int ParsePositiveInteger(GesToken numberToken, string name)
     {
-        if (!double.TryParse(numberToken.NormalizedNumericText, NumberStyles.Number, CultureInfo.InvariantCulture, out var value) ||
+        var value = numberToken.FloatValue;
+        if (!double.IsFinite(value) ||
             value <= 0 ||
             value != Math.Truncate(value))
         {

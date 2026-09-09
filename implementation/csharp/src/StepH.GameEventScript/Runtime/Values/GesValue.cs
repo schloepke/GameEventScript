@@ -1044,13 +1044,13 @@ public struct GesValue : IEquatable<GesValue>
 
     internal readonly string ToText => Kind switch
     {
-        Nothing => string.Empty,
+        Nothing => "nothing",
         Integer => FormatNumber(IntegerValue, Unit),
         Float => FormatNumber(FloatValue, Unit),
-        Percentage => $"{GameEventScriptNumber.FormatCanonicalFloat(FloatValue * 100d)}%",
-        GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? "True" : "False",
+        Percentage => TextNumberCast.FormatPercentage(FloatValue),
+        GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? "true" : "false",
         Text => TextValue,
-        Tag => ":" + TextValue,
+        Tag => "#" + TextValue,
         Vector when ObjectValue is GesValueVectorPoint vector => FormatTriplet("vector", vector, Unit),
         Point when ObjectValue is GesValueVectorPoint point => FormatTriplet("point", point, Unit),
         Dice when ObjectValue is int[] dice => FormatDice(dice),
@@ -1065,15 +1065,8 @@ public struct GesValue : IEquatable<GesValue>
         _ => Kind.ToString()
     };
 
-    private static string FormatNumber(long value, GameEventScriptBytecodeInstructionUnit unit)
-        => unit.IsNumericUnit()
-            ? $"{value.ToString(CultureInfo.InvariantCulture)}{unit.ToSuffix()}"
-            : value.ToString(CultureInfo.InvariantCulture);
-    private static string FormatNumber(double value, GameEventScriptBytecodeInstructionUnit unit)
-    {
-        var formatted = GameEventScriptNumber.FormatCanonicalFloat(value);
-        return unit.IsNumericUnit() ? $"{formatted}{unit.ToSuffix()}" : formatted;
-    }
+    private static string FormatNumber(long value, GameEventScriptBytecodeInstructionUnit unit) => TextNumberCast.Format(value, unit);
+    private static string FormatNumber(double value, GameEventScriptBytecodeInstructionUnit unit) => TextNumberCast.Format(value, unit);
     private static string FormatTriplet(string typeName, GesValueVectorPoint triplet, GameEventScriptBytecodeInstructionUnit unit)
         => $"{typeName}[x: {FormatNumber(triplet.X, unit)}, y: {FormatNumber(triplet.Y, unit)}, z: {FormatNumber(triplet.Z, unit)}]";
     private static string FormatDice(int[] dice)
@@ -1090,13 +1083,18 @@ public struct GesValue : IEquatable<GesValue>
         builder.Append(']');
         return builder.ToString();
     }
+    private static void AppendNestedText(StringBuilder builder, in GesValue value)
+    {
+        if (value.Kind == Text) TextLiteralReader.AppendQuoted(builder, value.TextValue);
+        else builder.Append(value.ToText);
+    }
     private static string FormatList(GesValue[] list)
     {
         var builder = new StringBuilder("[");
         for (var i = 0; i < list.Length; i++)
         {
             if (i > 0) builder.Append(", ");
-            builder.Append(list[i].ToText);
+            AppendNestedText(builder, in list[i]);
         }
 
         builder.Append(']');
@@ -1104,7 +1102,7 @@ public struct GesValue : IEquatable<GesValue>
     }
     private static string FormatMap(GesValueMap valueMap)
     {
-        var builder = new StringBuilder("map[");
+        var builder = new StringBuilder(valueMap.Length == 0 ? "[:" : "[");
         var first = true;
         for (var i = 0; i < valueMap.StorageLength; i++)
         {
@@ -1113,7 +1111,7 @@ public struct GesValue : IEquatable<GesValue>
             builder.Append(valueMap.KeyAt(i));
             builder.Append(": ");
             GesValue tempQualifier = valueMap.ValueAt(i);
-            builder.Append(tempQualifier.ToText);
+            AppendNestedText(builder, in tempQualifier);
         }
 
         builder.Append(']');

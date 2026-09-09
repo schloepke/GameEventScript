@@ -63,7 +63,7 @@
           "name": "keyword.operator.word.gameeventscript"
         },
         {
-          "match": "\\b(?:random|clamp|min|max|zip|default)\\b",
+          "match": "\\b(?:parse|random|clamp|min|max|zip|default)\\b",
           "name": "keyword.operator.word.gameeventscript"
         },
         {

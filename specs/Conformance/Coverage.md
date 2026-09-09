@@ -12,6 +12,11 @@ here. Add or update this matrix in the same change as new portable behavior.
 
 | Behavior | Stable portable case IDs |
 | --- | --- |
+| Shared exact decimal decoding for compiler literals, constants, Number/Percentage casts, exponent/separator grammar, units, ties, underflow and overflow | `runtime.text-literal-conversion/numeric-text-grammar`, `invalid-number-text-and-fallback`, `exact-decimal-boundaries`, `compiler-literal-01` through `compiler-literal-07`, `percentage-literal-overflow` |
+| Uniform Percentage ratios and exact numeric/Text/parse roundtrips without a fixed decimal spelling | `runtime.text-literal-conversion/uniform-percentage-ratios`, `percentage-exact-roundtrips`, `number-quantity-text-roundtrips`, `nested-data-roundtrips` |
+| Complete literal recognition, unchanged original-Text fallback, quoted and nested Text, prefix precedence and independent truth casts | `runtime.text-literal-conversion/literal-recognition-and-exact-fallback`, `parse-non-text`, `root-and-nested-text-formatting`, `prefix-precedence`, `text-truth-view-stays-independent` |
+| Exact input-scalar, container-depth, aggregate-item and duplicate-key bounds, with handler recovery after exhaustion | all `runtime.text-literal-conversion/parse-depth-*`, `parse-limit-recovery`, `input-*`, `items-*`, `duplicate-items-*`, and `nested-items-*` cases |
+| ParseLiteral canonical binary encoding, operand validation and reserved opcode rejection | `program.binary-format/valid-parse-literal`, all five `program.binary-format/invalid-parse-*` cases, `program.binary-format/invalid-reserved-opcode-da`, `compile.program-dumps/parse-literal` |
 | Reader and canonical writer validate deep acyclic graphs and reject deep cycles within V1 limits without ending the embedding process | all four `program.call-graph-depth` cases: shallow/deep valid chains and invalid cycles, with deep fixtures containing 21,845 routines and 65,535 instructions |
 | Exact folded and runtime `div`, `mod`, and `rem` above 2^53, with negative operands, Int64 limits, quantities, zero divisors, and binary roundtrip | all 34 `runtime.numeric.integer-precision` cases |
 | Number cast Int64 and Quantity identity, including explicit dynamic random seeds and parent-stream restoration | `runtime.numeric.number-casts/identity-*`, `runtime.numeric.number-casts/random-seed-*`, each with `direct` and `binary` variants |
@@ -79,6 +84,13 @@ zero bound exercises the existing warmed allocation contract. Native adapters
 provide the measurements; a correctness-only corpus pass does not qualify an
 allocation profile. The C# managed-thread evidence does not qualify other heaps
 or Kotlin/Swift runtimes.
+
+The ten `performance.text-conversion` cases pair N/2N dynamic Number/Percentage
+casts, numeric literal parsing, plain-Text fallback, and Percentage formatting
+followed by parsing. They require zero managed allocation for the reading paths
+and a separate bounded budget for formatting. These budgets are C# profile
+properties; their portable scripts and correctness expectations can be reused
+by other platforms with independently qualified budgets.
 
 The following tests remain implementation tests even when the underlying
 semantics also has a portable case:

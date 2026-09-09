@@ -160,7 +160,7 @@ on Start {
   let vTagInfinity be infinity
   let vVector be :Vector(1, 2, 3)
   let vPoint be :Point(1, 2, 3)
-  emit Done(nothing: a + vNothing, integer: a + vInteger, float: a + vFloat, percentage: a + vPercentage, meter: a + vMeter, boolean: a + vBoolean, textNumber: a + vTextNumber, textInvalid: a + vTextInvalid, tagPi: a + vTagPi, tagNan: a + vTagNan, tagInfinity: a + vTagInfinity, vector: a + vVector, point: a + vPoint)
+  emit Done(nothing: a + vNothing, integer: a + vInteger, float: a + vFloat, percentage: a + vPercentage, meter: a + vMeter, boolean: a + vBoolean, textNumber: ((a + vTextNumber) is :Text and (a + vTextNumber) = ((a as :Text) + (vTextNumber as :Text))), textInvalid: ((a + vTextInvalid) is :Text and (a + vTextInvalid) = ((a as :Text) + (vTextInvalid as :Text))), tagPi: a + vTagPi, tagNan: a + vTagNan, tagInfinity: a + vTagInfinity, vector: a + vVector, point: a + vPoint)
 }
 ```
 
@@ -205,12 +205,12 @@ steps:
               value: "11"
           - name: "textNumber"
             value:
-              type: ":Text"
-              value: "1010.3"
+              type: ":Boolean"
+              value: true
           - name: "textInvalid"
             value:
-              type: ":Text"
-              value: "10hello"
+              type: ":Boolean"
+              value: true
           - name: "tagPi"
             value:
               type: ":Number.binary64"
@@ -271,7 +271,7 @@ on Start {
   let vTagInfinity be infinity
   let vVector be :Vector(1, 2, 3)
   let vPoint be :Point(1, 2, 3)
-  emit Done(nothing: a + vNothing, integer: a + vInteger, float: a + vFloat, percentage: a + vPercentage, meter: a + vMeter, boolean: a + vBoolean, textNumber: a + vTextNumber, textInvalid: a + vTextInvalid, tagPi: a + vTagPi, tagNan: a + vTagNan, tagInfinity: a + vTagInfinity, vector: a + vVector, point: a + vPoint)
+  emit Done(nothing: a + vNothing, integer: a + vInteger, float: a + vFloat, percentage: a + vPercentage, meter: a + vMeter, boolean: a + vBoolean, textNumber: ((a + vTextNumber) is :Text and (a + vTextNumber) = ((a as :Text) + (vTextNumber as :Text))), textInvalid: ((a + vTextInvalid) is :Text and (a + vTextInvalid) = ((a as :Text) + (vTextInvalid as :Text))), tagPi: a + vTagPi, tagNan: a + vTagNan, tagInfinity: a + vTagInfinity, vector: a + vVector, point: a + vPoint)
 }
 ```
 
@@ -316,12 +316,12 @@ steps:
               value: "11.3"
           - name: "textNumber"
             value:
-              type: ":Text"
-              value: "10.310.3"
+              type: ":Boolean"
+              value: true
           - name: "textInvalid"
             value:
-              type: ":Text"
-              value: "10.3hello"
+              type: ":Boolean"
+              value: true
           - name: "tagPi"
             value:
               type: ":Number.binary64"
@@ -382,7 +382,7 @@ on Start {
   let vTagInfinity be infinity
   let vVector be :Vector(1, 2, 3)
   let vPoint be :Point(1, 2, 3)
-  emit Done(nothing: a + vNothing, integer: a + vInteger, float: a + vFloat, percentage: a + vPercentage, meter: a + vMeter, boolean: a + vBoolean, textNumber: a + vTextNumber, textInvalid: a + vTextInvalid, tagPi: a + vTagPi, tagNan: a + vTagNan, tagInfinity: a + vTagInfinity, vector: a + vVector, point: a + vPoint)
+  emit Done(nothing: a + vNothing, integer: a + vInteger, float: a + vFloat, percentage: a + vPercentage, meter: a + vMeter, boolean: a + vBoolean, textNumber: ((a + vTextNumber) is :Text and (a + vTextNumber) = ((a as :Text) + (vTextNumber as :Text))), textInvalid: ((a + vTextInvalid) is :Text and (a + vTextInvalid) = ((a as :Text) + (vTextInvalid as :Text))), tagPi: a + vTagPi, tagNan: a + vTagNan, tagInfinity: a + vTagInfinity, vector: a + vVector, point: a + vPoint)
 }
 ```
 
@@ -424,12 +424,12 @@ steps:
               type: ":Nothing"
           - name: "textNumber"
             value:
-              type: ":Text"
-              value: "10%10.3"
+              type: ":Boolean"
+              value: true
           - name: "textInvalid"
             value:
-              type: ":Text"
-              value: "10%hello"
+              type: ":Boolean"
+              value: true
           - name: "tagPi"
             value:
               type: ":Nothing"
@@ -488,7 +488,7 @@ on Start {
   let vTagInfinity be infinity
   let vVector be :Vector(1, 2, 3)
   let vPoint be :Point(1, 2, 3)
-  emit Done(nothing: a + vNothing, integer: a + vInteger, float: a + vFloat, percentage: a + vPercentage, meter: a + vMeter, boolean: a + vBoolean, textNumber: a + vTextNumber, textInvalid: a + vTextInvalid, tagPi: a + vTagPi, tagNan: a + vTagNan, tagInfinity: a + vTagInfinity, vector: a + vVector, point: a + vPoint)
+  emit Done(nothing: a + vNothing, integer: a + vInteger, float: a + vFloat, percentage: a + vPercentage, meter: a + vMeter, boolean: a + vBoolean, textNumber: ((a + vTextNumber) is :Text and (a + vTextNumber) = ((a as :Text) + (vTextNumber as :Text))), textInvalid: ((a + vTextInvalid) is :Text and (a + vTextInvalid) = ((a as :Text) + (vTextInvalid as :Text))), tagPi: a + vTagPi, tagNan: a + vTagNan, tagInfinity: a + vTagInfinity, vector: a + vVector, point: a + vPoint)
 }
 ```
 
@@ -533,12 +533,12 @@ steps:
               type: ":Nothing"
           - name: "textNumber"
             value:
-              type: ":Text"
-              value: "10m10.3"
+              type: ":Boolean"
+              value: true
           - name: "textInvalid"
             value:
-              type: ":Text"
-              value: "10mhello"
+              type: ":Boolean"
+              value: true
           - name: "tagPi"
             value:
               type: ":Nothing"
@@ -643,11 +643,11 @@ steps:
           - name: "textNumber"
             value:
               type: ":Text"
-              value: "True10.3"
+              value: "true10.3"
           - name: "textInvalid"
             value:
               type: ":Text"
-              value: "Truehello"
+              value: "truehello"
           - name: "tagPi"
             value:
               type: ":Number.binary64"
@@ -708,7 +708,7 @@ on Start {
   let vTagInfinity be infinity
   let vVector be :Vector(1, 2, 3)
   let vPoint be :Point(1, 2, 3)
-  emit Done(nothing: a + vNothing, integer: a + vInteger, float: a + vFloat, percentage: a + vPercentage, meter: a + vMeter, boolean: a + vBoolean, textNumber: a + vTextNumber, textInvalid: a + vTextInvalid, tagPi: a + vTagPi, tagNan: a + vTagNan, tagInfinity: a + vTagInfinity, vector: a + vVector, point: a + vPoint)
+  emit Done(nothing: a + vNothing, integer: ((a + vInteger) is :Text and (a + vInteger) = ((a as :Text) + (vInteger as :Text))), float: ((a + vFloat) is :Text and (a + vFloat) = ((a as :Text) + (vFloat as :Text))), percentage: ((a + vPercentage) is :Text and (a + vPercentage) = ((a as :Text) + (vPercentage as :Text))), meter: ((a + vMeter) is :Text and (a + vMeter) = ((a as :Text) + (vMeter as :Text))), boolean: a + vBoolean, textNumber: a + vTextNumber, textInvalid: a + vTextInvalid, tagPi: ((a + vTagPi) is :Text and (a + vTagPi) = ((a as :Text) + (vTagPi as :Text))), tagNan: a + vTagNan, tagInfinity: ((a + vTagInfinity) is :Text and (a + vTagInfinity) = ((a as :Text) + (vTagInfinity as :Text))), vector: a + vVector, point: a + vPoint)
 }
 ```
 
@@ -734,24 +734,24 @@ steps:
               type: ":Nothing"
           - name: "integer"
             value:
-              type: ":Text"
-              value: "10.310"
+              type: ":Boolean"
+              value: true
           - name: "float"
             value:
-              type: ":Text"
-              value: "10.310.3"
+              type: ":Boolean"
+              value: true
           - name: "percentage"
             value:
-              type: ":Text"
-              value: "10.310%"
+              type: ":Boolean"
+              value: true
           - name: "meter"
             value:
-              type: ":Text"
-              value: "10.310m"
+              type: ":Boolean"
+              value: true
           - name: "boolean"
             value:
               type: ":Text"
-              value: "10.3True"
+              value: "10.3true"
           - name: "textNumber"
             value:
               type: ":Text"
@@ -762,16 +762,16 @@ steps:
               value: "10.3hello"
           - name: "tagPi"
             value:
-              type: ":Text"
-              value: "10.33.141592653589793"
+              type: ":Boolean"
+              value: true
           - name: "tagNan"
             value:
               type: ":Text"
-              value: "10.3:nan"
+              value: "10.3#nan"
           - name: "tagInfinity"
             value:
-              type: ":Text"
-              value: "10.3Infinity"
+              type: ":Boolean"
+              value: true
           - name: "vector"
             value:
               type: ":Text"
@@ -823,7 +823,7 @@ on Start {
   let vTagInfinity be infinity
   let vVector be :Vector(1, 2, 3)
   let vPoint be :Point(1, 2, 3)
-  emit Done(nothing: a + vNothing, integer: a + vInteger, float: a + vFloat, percentage: a + vPercentage, meter: a + vMeter, boolean: a + vBoolean, textNumber: a + vTextNumber, textInvalid: a + vTextInvalid, tagPi: a + vTagPi, tagNan: a + vTagNan, tagInfinity: a + vTagInfinity, vector: a + vVector, point: a + vPoint)
+  emit Done(nothing: a + vNothing, integer: ((a + vInteger) is :Text and (a + vInteger) = ((a as :Text) + (vInteger as :Text))), float: ((a + vFloat) is :Text and (a + vFloat) = ((a as :Text) + (vFloat as :Text))), percentage: ((a + vPercentage) is :Text and (a + vPercentage) = ((a as :Text) + (vPercentage as :Text))), meter: ((a + vMeter) is :Text and (a + vMeter) = ((a as :Text) + (vMeter as :Text))), boolean: a + vBoolean, textNumber: a + vTextNumber, textInvalid: a + vTextInvalid, tagPi: ((a + vTagPi) is :Text and (a + vTagPi) = ((a as :Text) + (vTagPi as :Text))), tagNan: a + vTagNan, tagInfinity: ((a + vTagInfinity) is :Text and (a + vTagInfinity) = ((a as :Text) + (vTagInfinity as :Text))), vector: a + vVector, point: a + vPoint)
 }
 ```
 
@@ -849,24 +849,24 @@ steps:
               type: ":Nothing"
           - name: "integer"
             value:
-              type: ":Text"
-              value: "hello10"
+              type: ":Boolean"
+              value: true
           - name: "float"
             value:
-              type: ":Text"
-              value: "hello10.3"
+              type: ":Boolean"
+              value: true
           - name: "percentage"
             value:
-              type: ":Text"
-              value: "hello10%"
+              type: ":Boolean"
+              value: true
           - name: "meter"
             value:
-              type: ":Text"
-              value: "hello10m"
+              type: ":Boolean"
+              value: true
           - name: "boolean"
             value:
               type: ":Text"
-              value: "helloTrue"
+              value: "hellotrue"
           - name: "textNumber"
             value:
               type: ":Text"
@@ -877,16 +877,16 @@ steps:
               value: "hellohello"
           - name: "tagPi"
             value:
-              type: ":Text"
-              value: "hello3.141592653589793"
+              type: ":Boolean"
+              value: true
           - name: "tagNan"
             value:
               type: ":Text"
-              value: "hello:nan"
+              value: "hello#nan"
           - name: "tagInfinity"
             value:
-              type: ":Text"
-              value: "helloInfinity"
+              type: ":Boolean"
+              value: true
           - name: "vector"
             value:
               type: ":Text"
@@ -938,7 +938,7 @@ on Start {
   let vTagInfinity be infinity
   let vVector be :Vector(1, 2, 3)
   let vPoint be :Point(1, 2, 3)
-  emit Done(nothing: a + vNothing, integer: a + vInteger, float: a + vFloat, percentage: a + vPercentage, meter: a + vMeter, boolean: a + vBoolean, textNumber: a + vTextNumber, textInvalid: a + vTextInvalid, tagPi: a + vTagPi, tagNan: a + vTagNan, tagInfinity: a + vTagInfinity, vector: a + vVector, point: a + vPoint)
+  emit Done(nothing: a + vNothing, integer: a + vInteger, float: a + vFloat, percentage: a + vPercentage, meter: a + vMeter, boolean: a + vBoolean, textNumber: ((a + vTextNumber) is :Text and (a + vTextNumber) = ((a as :Text) + (vTextNumber as :Text))), textInvalid: ((a + vTextInvalid) is :Text and (a + vTextInvalid) = ((a as :Text) + (vTextInvalid as :Text))), tagPi: a + vTagPi, tagNan: a + vTagNan, tagInfinity: a + vTagInfinity, vector: a + vVector, point: a + vPoint)
 }
 ```
 
@@ -983,12 +983,12 @@ steps:
               value: "4.14159265358979"
           - name: "textNumber"
             value:
-              type: ":Text"
-              value: "3.14159265358979310.3"
+              type: ":Boolean"
+              value: true
           - name: "textInvalid"
             value:
-              type: ":Text"
-              value: "3.141592653589793hello"
+              type: ":Boolean"
+              value: true
           - name: "tagPi"
             value:
               type: ":Number.binary64"
@@ -1091,11 +1091,11 @@ steps:
           - name: "textNumber"
             value:
               type: ":Text"
-              value: ":nan10.3"
+              value: "#nan10.3"
           - name: "textInvalid"
             value:
               type: ":Text"
-              value: ":nanhello"
+              value: "#nanhello"
           - name: "tagPi"
             value:
               type: ":Nothing"
@@ -1154,7 +1154,7 @@ on Start {
   let vTagInfinity be infinity
   let vVector be :Vector(1, 2, 3)
   let vPoint be :Point(1, 2, 3)
-  emit Done(nothing: a + vNothing, integer: a + vInteger, float: a + vFloat, percentage: a + vPercentage, meter: a + vMeter, boolean: a + vBoolean, textNumber: a + vTextNumber, textInvalid: a + vTextInvalid, tagPi: a + vTagPi, tagNan: a + vTagNan, tagInfinity: a + vTagInfinity, vector: a + vVector, point: a + vPoint)
+  emit Done(nothing: a + vNothing, integer: a + vInteger, float: a + vFloat, percentage: a + vPercentage, meter: a + vMeter, boolean: a + vBoolean, textNumber: ((a + vTextNumber) is :Text and (a + vTextNumber) = ((a as :Text) + (vTextNumber as :Text))), textInvalid: ((a + vTextInvalid) is :Text and (a + vTextInvalid) = ((a as :Text) + (vTextInvalid as :Text))), tagPi: a + vTagPi, tagNan: a + vTagNan, tagInfinity: a + vTagInfinity, vector: a + vVector, point: a + vPoint)
 }
 ```
 
@@ -1199,12 +1199,12 @@ steps:
               value: "Infinity"
           - name: "textNumber"
             value:
-              type: ":Text"
-              value: "Infinity10.3"
+              type: ":Boolean"
+              value: true
           - name: "textInvalid"
             value:
-              type: ":Text"
-              value: "Infinityhello"
+              type: ":Boolean"
+              value: true
           - name: "tagPi"
             value:
               type: ":Number.binary64"

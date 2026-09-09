@@ -127,6 +127,7 @@ of source quoting.
 | Number `123` | `123`, or an equivalent permitted numeric spelling |
 | Percentage `10%` | percentage magnitude followed by `%`, such as `10%` |
 | Quantity `10m` | numeric magnitude followed by the unit, such as `10m` |
+| Tag `#ready` | `#ready` |
 | Boolean true / false | `true` / `false` |
 | `nothing` | `nothing` |
 | List containing Number `1` and Text `Hello` | `[1, "Hello"]` |
@@ -171,6 +172,20 @@ characters merely appearing at both ends do not establish a valid literal.
 Recognition decodes exactly one layer. The contents of a recognized Text literal
 are returned as Text and are not recursively parsed a second time.
 
+Recognized data literals are `nothing`, lowercase `true`/`false`, Number,
+Percentage, scalar Quantity, quoted Text, `#` Tag names following the source
+name grammar, and recursively nested Lists/Maps. A Map uses source identifier
+keys, permits key-only entries as `true`, and resolves duplicate keys with the
+last value before sorting. Empty List and Map use `[]` and `[:]`. Trailing
+commas are invalid. Other value representations, constructors, and literal
+forms are not recognized. A non-Text operand produces `nothing`.
+
+ASCII space/tab and `LF`, `CRLF`, or `CR` may surround a literal and separate
+container elements. They are preserved inside quoted Text. Other whitespace,
+comments, and BOM markers are not trivia for this operation. Comma grouping is
+accepted by explicit numeric casts only: `parse "1,003"` preserves that Text,
+while `parse "[1,003]"` yields the List `[1, 3]`.
+
 Independent scalar literals and recursively nested Lists/Maps are data.
 Literal recognition does not evaluate variables, expressions, calls, selectors,
 or random operations. Numeric decoding uses
@@ -202,7 +217,8 @@ Text `123` and Number `123` can have the same `as :Text` output, which `parse`
 recognizes as Number. The exact numeric roundtrip guarantees remain in force.
 Explicit `as :Number` and `as :Percentage` casts retain their own failure result
 of `nothing`; the Text fallback belongs to `parse`. Resource-limit handling is
-separate from literal-recognition failure.
+separate from literal-recognition failure and follows the fixed
+[Host runtime parse limits](../HostRuntime.md#literal-parsing-limits).
 
 ## Compiler and debug positions
 

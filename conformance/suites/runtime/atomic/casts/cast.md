@@ -96,7 +96,7 @@ steps:
           - name: "toText"
             value:
               type: ":Text"
-              value: ""
+              value: "nothing"
           - name: "toTag"
             value:
               type: ":Nothing"
@@ -214,7 +214,7 @@ steps:
           - name: "toText"
             value:
               type: ":Text"
-              value: "True"
+              value: "true"
           - name: "toTag"
             value:
               type: ":Tag"
@@ -300,7 +300,7 @@ on Start {
   let toRange be (source) as :Range
   let toMessage be (source) as :Message
   let toSeries be (source) as :Series
-  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)
+  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, textRoundtrip: toText as :Number, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)
 }
 ```
 
@@ -335,10 +335,10 @@ steps:
           - name: "toPercentage"
             value:
               type: ":Percentage"
-              value: "0.12"
-          - name: "toText"
+              value: "12"
+          - name: "textRoundtrip"
             value:
-              type: ":Text"
+              type: ":Number.int64"
               value: "12"
           - name: "toTag"
             value:
@@ -426,7 +426,7 @@ on Start {
   let toRange be (source) as :Range
   let toMessage be (source) as :Message
   let toSeries be (source) as :Series
-  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)
+  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, textRoundtrip: toText as :Number, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)
 }
 ```
 
@@ -461,10 +461,10 @@ steps:
           - name: "toPercentage"
             value:
               type: ":Percentage"
-              value: "0.125"
-          - name: "toText"
+              value: "12.5"
+          - name: "textRoundtrip"
             value:
-              type: ":Text"
+              type: ":Number.binary64"
               value: "12.5"
           - name: "toTag"
             value:
@@ -552,7 +552,7 @@ on Start {
   let toRange be (source) as :Range
   let toMessage be (source) as :Message
   let toSeries be (source) as :Series
-  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)
+  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, textRoundtrip: toText as :Number, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)
 }
 ```
 
@@ -588,10 +588,11 @@ steps:
           - name: "toPercentage"
             value:
               type: ":Nothing"
-          - name: "toText"
+          - name: "textRoundtrip"
             value:
-              type: ":Text"
-              value: "12m"
+              type: ":Quantity.int64"
+              value: "12"
+              unit: ":meter"
           - name: "toTag"
             value:
               type: ":Nothing"
@@ -680,7 +681,7 @@ on Start {
   let toRange be (source) as :Range
   let toMessage be (source) as :Message
   let toSeries be (source) as :Series
-  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)
+  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, textRoundtrip: toText as :Number, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)
 }
 ```
 
@@ -716,10 +717,10 @@ steps:
             value:
               type: ":Percentage"
               value: "0.25"
-          - name: "toText"
+          - name: "textRoundtrip"
             value:
-              type: ":Text"
-              value: "25%"
+              type: ":Number.binary64"
+              value: "0.25"
           - name: "toTag"
             value:
               type: ":Nothing"
@@ -838,7 +839,8 @@ steps:
               value: "12.5"
           - name: "toPercentage"
             value:
-              type: ":Nothing"
+              type: ":Percentage"
+              value: "12.5"
           - name: "toText"
             value:
               type: ":Text"
@@ -1056,7 +1058,7 @@ on Start {
   let toRange be (source) as :Range
   let toMessage be (source) as :Message
   let toSeries be (source) as :Series
-  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)
+  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, textRoundtrip: toText as :Number, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)
 }
 ```
 
@@ -1091,10 +1093,10 @@ steps:
           - name: "toPercentage"
             value:
               type: ":Percentage"
-              value: "0.0314159265358979"
-          - name: "toText"
+              value: "3.141592653589793"
+          - name: "textRoundtrip"
             value:
-              type: ":Text"
+              type: ":Number.binary64"
               value: "3.141592653589793"
           - name: "toTag"
             value:
@@ -1219,7 +1221,7 @@ steps:
           - name: "toText"
             value:
               type: ":Text"
-              value: ":custom"
+              value: "#custom"
           - name: "toTag"
             value:
               type: ":Tag"
@@ -1599,7 +1601,7 @@ on Start {
   let toRange be (source) as :Range
   let toMessage be (source) as :Message
   let toSeries be (source) as :Series
-  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)
+  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, textRoundtrip: parse toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)
 }
 ```
 
@@ -1633,10 +1635,16 @@ steps:
           - name: "toPercentage"
             value:
               type: ":Nothing"
-          - name: "toText"
+          - name: "textRoundtrip"
             value:
-              type: ":Text"
-              value: "[1, 2, 3]"
+              type: ":List"
+              items:
+                - type: ":Number.int64"
+                  value: "1"
+                - type: ":Number.int64"
+                  value: "2"
+                - type: ":Number.int64"
+                  value: "3"
           - name: "toTag"
             value:
               type: ":Nothing"
@@ -1730,7 +1738,7 @@ on Start {
   let toRange be (source) as :Range
   let toMessage be (source) as :Message
   let toSeries be (source) as :Series
-  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)
+  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, textRoundtrip: parse toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)
 }
 ```
 
@@ -1764,10 +1772,22 @@ steps:
           - name: "toPercentage"
             value:
               type: ":Nothing"
-          - name: "toText"
+          - name: "textRoundtrip"
             value:
-              type: ":Text"
-              value: "map[x: 1, y: 2, z: 3]"
+              type: ":Map"
+              entries:
+                - key: "x"
+                  value:
+                    type: ":Number.int64"
+                    value: "1"
+                - key: "y"
+                  value:
+                    type: ":Number.int64"
+                    value: "2"
+                - key: "z"
+                  value:
+                    type: ":Number.int64"
+                    value: "3"
           - name: "toTag"
             value:
               type: ":Nothing"
@@ -1899,7 +1919,7 @@ steps:
           - name: "toPercentage"
             value:
               type: ":Percentage"
-              value: "0.06"
+              value: "6"
           - name: "toText"
             value:
               type: ":Text"

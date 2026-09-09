@@ -444,6 +444,10 @@ bindings created inside a braced loop body do not escape the iteration body.
 
 Any expression may be used as a statement. It is evaluated for its observable
 effects, such as an extension invocation, and its resulting value is discarded.
+A discarded record conversion still evaluates the constructor's field casts,
+clamps, and computed expressions. Their extension calls, random consumption,
+and runtime-limit observations are preserved even when no caller reads the
+constructed record.
 An expression statement does not implicitly emit or publish a message.
 
 ### Seeded Random Scope

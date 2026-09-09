@@ -795,3 +795,140 @@ steps:
               type: ":Boolean"
               value: true
 ```
+
+---
+
+## Test: r23-discarded-record-cast-consumes-random
+
+This case requires an unused Record conversion to retain the random draw made by a computed field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r23-discarded-record-cast-consumes-random
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+random:
+  sequence: ["2", "5"]
+```
+
+### Source code under test
+
+```ges
+record :Sample as { value: :Number, rolled: :Number computed by random 1 to 6 }
+on Start(value) {
+  let data be [value: value]
+  let a be value
+  let b be value
+  let c be value
+  data as :Sample
+  emit Done(next: random 1 to 6, a: a, b: b, c: c)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Number.int64"
+            value: "42"
+    local:
+      - name: Done
+        args:
+          - name: "next"
+            value:
+              type: ":Number.int64"
+              value: "5"
+          - name: "a"
+            value:
+              type: ":Number.int64"
+              value: "42"
+          - name: "b"
+            value:
+              type: ":Number.int64"
+              value: "42"
+          - name: "c"
+            value:
+              type: ":Number.int64"
+              value: "42"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r23-discarded-record-cast-keeps-parse-limit
+
+This case checks the following contract: A discarded Record conversion still evaluates its computed fields and stops the handler when literal parsing reaches its depth limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "r23-discarded-record-cast-keeps-parse-limit"
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+comparison:
+  binary64:
+    mode: "ulp"
+    maxUlps: 0
+```
+
+### Source code under test
+
+```ges
+record :Parsed as { value: :Text, result: :List computed by parse value }
+on Start(value) {
+  let data be [value: value]
+  let a be value
+  let b be value
+  let c be value
+  emit Before
+  data as :Parsed
+  emit After(a: a, b: b, c: c)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[0]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]"
+    local:
+      - name: "Before"
+        args: []
+    runtimeLimits:
+      include:
+        - name: "MaxLiteralDepth"
+```

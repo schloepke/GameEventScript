@@ -822,10 +822,10 @@ internal sealed partial class GesBinaryBuilder
 
         private static bool CanRemoveDeadWrite(GameEventScriptBytecodeOpCode opcode)
         {
+            // Record conversions execute constructors, including computed fields and their observable effects.
             return opcode switch
             {
                 GameEventScriptBytecodeOpCode.Cast or
-                    GameEventScriptBytecodeOpCode.CastCustom or
                     GameEventScriptBytecodeOpCode.CastUnit or
                     GameEventScriptBytecodeOpCode.CastNumeric or
                     GameEventScriptBytecodeOpCode.CheckType or

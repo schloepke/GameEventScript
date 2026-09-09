@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "0318EAD5E2D6F0E9ADDE699C1CAE0568424817D27FFC1DD82C82851B9480372C",
+    "sha256": "62F089E1AF0E09FAD4DFEE78899FE70CA96167E70DAE36F6AE3688A3B2D702A3",
     "documentCount": 86,
-    "caseCount": 1369
+    "caseCount": 1371
   },
   "cases": [
     {
@@ -9408,6 +9408,42 @@
           "compiler",
           "host",
           "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.custom-types/r23-discarded-record-cast-consumes-random",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.custom-types/r23-discarded-record-cast-keeps-parse-limit",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
           "publish-sink",
           "vm"
         ],

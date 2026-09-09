@@ -211,6 +211,11 @@ helpers for immutable ordered access. A port may use its native immutable list
 or slice type instead. `Count` and `Length` are aliases where both exist in C#;
 they must report the same value.
 
+An index into a resolved `UInt16IndexList` is zero-based relative to that list.
+Only `0 <= index < Length` is valid, irrespective of storage before or after the
+slice. An empty list has no valid index. Access outside these relative bounds
+fails as an argument/index error before applying the storage offset.
+
 ### Instruction and numeric identifier types
 
 `BytecodeInstruction` exposes opcode, unit/flag byte, three `u16` words, and a

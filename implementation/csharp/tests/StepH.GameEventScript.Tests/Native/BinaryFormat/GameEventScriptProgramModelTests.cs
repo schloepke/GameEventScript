@@ -132,6 +132,65 @@ public sealed class GameEventScriptProgramModelTests
     }
 
     [TestMethod]
+    [DataRow(0, 3, 0, 10)]
+    [DataRow(0, 3, 2, 30)]
+    [DataRow(1, 1, 0, 20)]
+    [DataRow(1, 2, 1, 30)]
+    public void UInt16IndexListReadsValidIndicesRelativeToSlice(int start, int length, int index, int expected)
+    {
+        var segment = new GameEventScriptUInt16IndexListSegment([new() { Start = start, Length = length }], new ushort[] { 10, 20, 30 });
+        var list = segment.Resolve(0);
+
+        Assert.AreEqual(start, list.Start);
+        Assert.AreEqual(length, list.Length);
+        Assert.AreEqual((ushort)expected, list[index]);
+    }
+
+    [TestMethod]
+    [DataRow(-1)]
+    [DataRow(1)]
+    [DataRow(int.MinValue)]
+    [DataRow(int.MaxValue)]
+    public void UInt16IndexListRejectsIndicesOutsideSlice(int index)
+    {
+        var segment = new GameEventScriptUInt16IndexListSegment([new() { Start = 1, Length = 1 }], new ushort[] { 10, 20, 30 });
+        var list = segment.Resolve(0);
+
+        var exception = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => _ = list[index]);
+
+        Assert.AreEqual("index", exception.ParamName);
+    }
+
+    [TestMethod]
+    [DataRow(0, -1)]
+    [DataRow(0, 0)]
+    [DataRow(1, -1)]
+    [DataRow(1, 0)]
+    [DataRow(3, -1)]
+    [DataRow(3, 0)]
+    public void EmptyUInt16IndexListRejectsIndicesRegardlessOfBackingStorage(int start, int index)
+    {
+        var segment = new GameEventScriptUInt16IndexListSegment([new() { Start = start, Length = 0 }], new ushort[] { 10, 20, 30 });
+        var list = segment.Resolve(0);
+
+        var exception = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => _ = list[index]);
+
+        Assert.AreEqual("index", exception.ParamName);
+    }
+
+    [TestMethod]
+    [DataRow(-1)]
+    [DataRow(0)]
+    public void DefaultUInt16IndexListRejectsIndices(int index)
+    {
+        var list = default(GameEventScriptUInt16IndexList);
+
+        var exception = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => _ = list[index]);
+
+        Assert.AreEqual("index", exception.ParamName);
+    }
+
+    [TestMethod]
     public void ProgramHasNoPublicConstructor()
     {
         Assert.IsTrue(typeof(GameEventScriptProgram).IsSealed);

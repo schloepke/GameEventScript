@@ -407,7 +407,7 @@ public readonly struct GameEventScriptStringConstantSegment
 }
 
 /// <summary>
-/// Represents a game event script u int16 index list.
+/// Represents an immutable slice of unsigned 16-bit indices.
 /// </summary>
 public readonly struct GameEventScriptUInt16IndexList
 {
@@ -421,20 +421,28 @@ public readonly struct GameEventScriptUInt16IndexList
     }
 
     /// <summary>
-    /// Gets the start.
+    /// Gets the slice's starting offset in the segment storage.
     /// </summary>
     public int Start { get; }
 
     /// <summary>
-    /// Gets the length.
+    /// Gets the number of indices in the slice.
     /// </summary>
     public int Length { get; }
 
     /// <summary>
-    /// Gets the value at the specified index.
+    /// Gets the value at the specified zero-based index relative to this slice.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    public ushort this[int index] => _data[Start + index];
+    /// <param name="index">The relative index, which must be nonnegative and less than <see cref="Length"/>.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The index is outside this slice. An empty slice has no valid index.</exception>
+    public ushort this[int index]
+    {
+        get
+        {
+            if (index < 0 || index >= Length) throw new ArgumentOutOfRangeException(nameof(index));
+            return _data[Start + index];
+        }
+    }
 }
 
 /// <summary>

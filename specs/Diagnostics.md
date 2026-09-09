@@ -59,7 +59,10 @@ Linking uses `link.requiredRegisterCountExceeded`,
 `link.requiredCallStackDepthExceeded`, `link.invalidExtensionReference`,
 `link.missingExtension`, `link.missingExternalTypeConstructor`,
 `link.mismatchedExternalTypeConstructor`, `link.cyclicCallGraph`, and
-`link.invalidProgram`.
+`link.invalidProgram`. `link.initializationQueueFull` rejects loading when the
+host cannot enqueue the instance's initialization snapshot. It carries the
+Program's module name in `programName`; its atomicity and retry rules are defined
+in [Host runtime](HostRuntime.md#program-load-atomicity).
 
 Runtime uses these stable codes:
 

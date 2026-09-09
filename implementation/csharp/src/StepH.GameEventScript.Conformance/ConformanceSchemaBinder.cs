@@ -233,8 +233,8 @@ internal static class ConformanceSchemaBinder
         RequireKind(node, YamlNodeKind.Sequence, "nativeHandlers.actions must be a sequence.");
         foreach (var item in node.Items)
         {
-            Closed(item, "loadProgram", "detachProgram", "subscribeHandler", "unsubscribeHandler", "expectResult");
-            var operations = item.Properties.Where(property => property.Name != "expectResult").ToArray();
+            Closed(item, "loadProgram", "detachProgram", "subscribeHandler", "unsubscribeHandler", "expectResult", "expectError");
+            var operations = item.Properties.Where(property => property.Name is not ("expectResult" or "expectError")).ToArray();
             if (operations.Length != 1) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "A native handler action requires exactly one operation.", item.Range);
             var operation = operations[0];
             var kind = operation.Name switch
@@ -246,7 +246,11 @@ internal static class ConformanceSchemaBinder
             };
             var target = String(operation.Value);
             RequireId(target, operation.Value.Range);
-            result.Add(new ConformanceNativeAction(kind, target, OptionalBoolean(item, "expectResult")));
+            var expectedResult = OptionalBoolean(item, "expectResult");
+            var expectedError = Optional(item, "expectError") is { } error ? BindDiagnostic(error) : null;
+            if (expectedError is not null && (kind != ConformanceNativeActionKind.LoadProgram || expectedResult is not null || expectedError.Phase != "link"))
+                throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "expectError requires a loadProgram action, a link diagnostic, and no expectResult.", item.Range);
+            result.Add(new ConformanceNativeAction(kind, target, expectedResult, expectedError));
         }
         return result;
     }

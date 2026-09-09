@@ -68,6 +68,33 @@ remaining immutable dispatch snapshot runnable. A pump result that observed a
 handler failure uses `RuntimeError` and carries its first diagnostic. Successful
 VM stepping, resume, and dispatch do not allocate diagnostic objects.
 
+## Program Load Atomicity
+
+`Load` must either register the complete instance and enqueue its initialization
+snapshot, or reject the operation without changing the host's registrations,
+queued messages, active dispatch, VM state, or random stream. Validation and
+dynamic linking complete before the host commits any registration.
+
+When the Program has initialization handlers, their single logical-message
+snapshot requires one queue slot. After linking and before registering handlers
+or preparing VM storage, `Load` checks that this slot is available under
+`MaxQueuedMessagesPerRun`. A full queue rejects the load with the structured
+link diagnostic `link.initializationQueueFull`. The caller receives no instance,
+and no initialization message is dropped or deferred implicitly. This rejected
+load does not emit a queue runtime-limit observation or fault an active handler
+whose native caller handles the link failure.
+
+The active message does not occupy a queued-message slot. One remaining slot is
+sufficient, and a Program without initialization handlers needs no queue slot.
+A nonpositive queue limit permits loading without this capacity restriction.
+Successful initialization keeps its position after older queued messages and
+before later messages. Existing captured dispatch snapshots remain unchanged.
+
+After pending messages have been processed, the caller may retry the same
+immutable Program. A successful retry creates one instance and queues its
+initialization exactly once. These rules also apply when loading inside a native
+callback or between frames of a paused script handler.
+
 ## Random Ownership, Boundaries, and Limits
 
 `MaxRandomScopeDepth` is the exact number of simultaneously active regular

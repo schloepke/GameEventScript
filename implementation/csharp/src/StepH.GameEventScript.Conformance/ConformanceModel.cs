@@ -772,11 +772,12 @@ public sealed class ConformanceNativeHandler
 /// </summary>
 public sealed class ConformanceNativeAction
 {
-    internal ConformanceNativeAction(ConformanceNativeActionKind kind, string target, bool? expectedResult)
+    internal ConformanceNativeAction(ConformanceNativeActionKind kind, string target, bool? expectedResult, ConformanceExpectedDiagnostic? expectedError)
     {
         Kind = kind;
         Target = target;
         ExpectedResult = expectedResult;
+        ExpectedError = expectedError;
     }
 
     /// <summary>
@@ -791,6 +792,10 @@ public sealed class ConformanceNativeAction
     /// Gets the expected result.
     /// </summary>
     public bool? ExpectedResult { get; }
+    /// <summary>
+    /// Gets the expected link diagnostic for a rejected load operation, or null when loading must succeed.
+    /// </summary>
+    public ConformanceExpectedDiagnostic? ExpectedError { get; }
 }
 
 /// <summary>

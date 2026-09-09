@@ -82,9 +82,14 @@ public sealed class GameEventScriptHost
     /// <param name="program">The portable program to load. The program remains reusable by other hosts.</param>
     /// <param name="priority">The dispatch priority shared by the program's handlers. Higher values run first; equal priorities retain registration order.</param>
     /// <returns>A host-local instance handle that can detach the program.</returns>
+    /// <remarks>
+    /// Loading is atomic. When initialization needs a queue slot, capacity is checked before any host
+    /// registration or VM preparation. A full queue rejects loading with the link diagnostic
+    /// <c>link.initializationQueueFull</c>; the unchanged host can retry after pending messages are processed.
+    /// </remarks>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="program"/> is <see langword="null"/>.</exception>
     /// <exception cref="GameEventScriptProgramFormatException">Thrown when the program is structurally or semantically invalid.</exception>
-    /// <exception cref="GameEventScriptDynamicLinkException">Thrown when runtime bindings are unavailable or the program exceeds host limits.</exception>
+    /// <exception cref="GameEventScriptDynamicLinkException">Thrown when runtime bindings are unavailable, the program exceeds host limits, or its initialization cannot fit in the queue.</exception>
     public GameEventScriptInstance Load(GameEventScriptProgram program, int priority = NormalPriority)
     {
         _ = program ?? throw new ArgumentNullException(nameof(program));
@@ -110,6 +115,15 @@ public sealed class GameEventScriptHost
         }
 
         var linked = new GesLinkedProgram(program, _extensionRegistry, _externalTypeRegistry);
+        if (IsMessageQueueFull)
+        {
+            for (var index = 0; index < linked.Handlers.Length; index++)
+            {
+                if (!GameEventScriptSystemEndpoints.IsInitializationName(linked.Handlers[index].Signature.Name)) continue;
+                throw LinkError(GameEventScriptDiagnosticCodes.LinkInitializationQueueFull, "The host message queue has no capacity for program initialization.", program);
+            }
+        }
+
         _vmState ??= new GesVmState((ushort)maxRegisterCount, (ushort)maxCallStackDepth);
         if (!_vmState.PrepareCapacity(linked))
             _pendingVmWarmupCapacity = Math.Max(_pendingVmWarmupCapacity, linked.RequiredRegisterCapacity);
@@ -132,7 +146,8 @@ public sealed class GameEventScriptHost
         if (initialization.Count > 0)
         {
             var message = GameEventScriptSystemEndpoints.CreateInitializationMessage();
-            EnqueuePlan(new PendingMessage(message, Sort(initialization.ToArray()), []));
+            // No host callbacks occur between the capacity check and this initialization enqueue.
+            _queue.Enqueue(new PendingMessage(message, Sort(initialization.ToArray()), []));
         }
 
         return instance;
@@ -490,9 +505,11 @@ public sealed class GameEventScriptHost
         return EnqueuePlan(new PendingMessage(message, exact, names));
     }
 
+    private bool IsMessageQueueFull => _limits.MaxQueuedMessagesPerRun > 0 && _queue.Count >= _limits.MaxQueuedMessagesPerRun;
+
     private bool EnqueuePlan(PendingMessage message)
     {
-        if (_limits.MaxQueuedMessagesPerRun > 0 && _queue.Count >= _limits.MaxQueuedMessagesPerRun)
+        if (IsMessageQueueFull)
         {
             _context.RecordRuntimeLimitReached(nameof(GameEventScriptRuntimeLimits.MaxQueuedMessagesPerRun),
                 $"Message queue limit reached. Dropped '{message.Message.Name}'.", _limits.MaxQueuedMessagesPerRun);

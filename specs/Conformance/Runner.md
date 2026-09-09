@@ -139,6 +139,13 @@ not an implementation exception escaping the runner.
   exactly once, and `enqueue` performs no pump. Frame modes record whether a
   result was paused. When an action declares `expectResult`, its boolean result
   is compared before `Receive`.
+- A `loadProgram` action may declare `expectError` with a structured link
+  diagnostic. The runner compares phase, code, and every specified context
+  field, records the diagnostic in the case result, and continues after the
+  handled failure. A successful load or mismatched diagnostic is an assertion
+  failure. Expected action diagnostics do not become runtime observer events.
+  Both error and boolean expectations are checked for `stepActions` and actions
+  executed inside native handlers.
 - Native handlers are atomic according to the portable Host contract.
 - Local messages, outbound sink messages, runtime-limit observations, and
   runtime diagnostics are recorded and compared separately. When an expectation

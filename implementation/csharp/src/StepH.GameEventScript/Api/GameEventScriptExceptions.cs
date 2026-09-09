@@ -156,6 +156,10 @@ public static class GameEventScriptDiagnosticCodes
     /// </summary>
     public const string LinkRequiredCallStackDepthExceeded = "link.requiredCallStackDepthExceeded";
     /// <summary>
+    /// Loading requires an initialization message but the host's logical-message queue is full.
+    /// </summary>
+    public const string LinkInitializationQueueFull = "link.initializationQueueFull";
+    /// <summary>
     /// Defines the link invalid extension reference value.
     /// </summary>
     public const string LinkInvalidExtensionReference = "link.invalidExtensionReference";

@@ -188,7 +188,7 @@ public static class ConformanceRunner
             _ => environment.ExternalTypeRegistry
         };
         if (externalTypeRegistry is not null) builder.WithExternalTypeRegistry(externalTypeRegistry);
-        var state = new HostScenarioState(builder.Build(), programs, testCase.NativeHandlers, testCase.DeferredPrograms);
+        var state = new HostScenarioState(builder.Build(), programs, testCase.NativeHandlers, testCase.DeferredPrograms, mismatches, collector.AllDiagnostics, pathPrefix);
         state.Configure();
 
         state.Host.RunToCompletion();
@@ -200,13 +200,8 @@ public static class ConformanceRunner
         {
             var step = testCase.Steps[stepIndex];
             collector.Clear();
-            for (var actionIndex = 0; actionIndex < step.Actions.Count; actionIndex++)
-            {
-                var action = step.Actions[actionIndex];
-                var actionResult = state.Apply(action);
-                if (action.ExpectedResult is { } expectedActionResult && actionResult != expectedActionResult)
-                    AddMismatch(mismatches, pathPrefix + "/steps/" + step.Id + "/actions/" + actionIndex.ToString(CultureInfo.InvariantCulture) + "/result", expectedActionResult ? "true" : "false", actionResult ? "true" : "false");
-            }
+            state.ActionPath = pathPrefix + "/steps/" + step.Id;
+            state.ApplyActions(step.Actions, state.ActionPath + "/actions");
             var accepted = state.Host.Receive(ConformanceRuntimeValueCodec.DecodeMessage(step.Expectation.Input));
             var paused = false;
             if (step.Pump == ConformancePumpMode.Completion)
@@ -712,7 +707,7 @@ public static class ConformanceRunner
         public void Handle(GameEventScriptMessage message, GameEventScriptContext context)
         {
             if (_definition.Throws) throw new InvalidOperationException("Configured conformance native handler failure.");
-            for (var actionIndex = 0; actionIndex < _definition.Actions.Count; actionIndex++) _state.Apply(_definition.Actions[actionIndex]);
+            _state.ApplyActions(_definition.Actions, _state.ActionPath + "/nativeHandlers/" + _definition.Id + "/actions");
             for (var emitIndex = 0; emitIndex < _definition.Emits.Count; emitIndex++)
             {
                 var emit = _definition.Emits[emitIndex];
@@ -737,20 +732,34 @@ public static class ConformanceRunner
         private readonly IReadOnlyList<CompiledProgram> _programs;
         private readonly IReadOnlyList<ConformanceNativeHandler> _definitions;
         private readonly HashSet<string> _deferred;
+        private readonly List<ConformanceMismatch> _mismatches;
+        private readonly List<ConformanceResultDiagnostic> _diagnostics;
         private readonly Dictionary<string, GameEventScriptInstance> _instances = new(StringComparer.Ordinal);
         private readonly Dictionary<string, GameEventScriptSubscription> _subscriptions = new(StringComparer.Ordinal);
         private readonly Dictionary<string, DeclarativeNativeHandler> _handlers = new(StringComparer.Ordinal);
 
-        internal HostScenarioState(GameEventScriptHost host, IReadOnlyList<CompiledProgram> programs, IReadOnlyList<ConformanceNativeHandler> definitions, IReadOnlyList<string> deferred)
+        internal HostScenarioState(
+            GameEventScriptHost host,
+            IReadOnlyList<CompiledProgram> programs,
+            IReadOnlyList<ConformanceNativeHandler> definitions,
+            IReadOnlyList<string> deferred,
+            List<ConformanceMismatch> mismatches,
+            List<ConformanceResultDiagnostic> diagnostics,
+            string pathPrefix
+        )
         {
             Host = host;
             _programs = programs;
             _definitions = definitions;
             _deferred = new HashSet<string>(deferred, StringComparer.Ordinal);
+            _mismatches = mismatches;
+            _diagnostics = diagnostics;
+            ActionPath = pathPrefix + "/initialization";
             for (var index = 0; index < definitions.Count; index++) _handlers.Add(definitions[index].Id, new DeclarativeNativeHandler(definitions[index], this));
         }
 
         internal GameEventScriptHost Host { get; }
+        internal string ActionPath { get; set; }
 
         internal void Configure()
         {
@@ -758,7 +767,30 @@ public static class ConformanceRunner
             for (var index = 0; index < _definitions.Count; index++) if (_definitions[index].InitiallySubscribed) Subscribe(_definitions[index].Id);
         }
 
-        internal bool Apply(ConformanceNativeAction action)
+        internal void ApplyActions(IReadOnlyList<ConformanceNativeAction> actions, string path)
+        {
+            for (var index = 0; index < actions.Count; index++)
+            {
+                var action = actions[index];
+                var actionPath = path + "/" + index.ToString(CultureInfo.InvariantCulture);
+                bool result;
+                try { result = Apply(action); }
+                catch (GameEventScriptDynamicLinkException exception) when (action.ExpectedError is not null)
+                {
+                    _diagnostics.Add(ConvertDiagnostic(exception.Diagnostic));
+                    if (!DiagnosticMatches(action.ExpectedError, exception.Diagnostic))
+                        _mismatches.Add(DiagnosticMismatch(actionPath + "/error", action.ExpectedError, new[] { exception.Diagnostic }));
+                    continue;
+                }
+
+                if (action.ExpectedError is { } expectedError)
+                    AddMismatch(_mismatches, actionPath + "/error", expectedError.Phase + ":" + expectedError.Code, "success");
+                if (action.ExpectedResult is { } expectedResult && result != expectedResult)
+                    AddMismatch(_mismatches, actionPath + "/result", expectedResult ? "true" : "false", result ? "true" : "false");
+            }
+        }
+
+        private bool Apply(ConformanceNativeAction action)
         {
             switch (action.Kind)
             {

@@ -412,14 +412,34 @@ one of `forwardArguments: true` or an ordered `args` sequence.
 
 Each action mapping contains exactly one of `loadProgram`, `detachProgram`,
 `subscribeHandler`, or `unsubscribeHandler`, plus an optional boolean
-`expectResult`. Its operation value is an existing program
+`expectResult` or diagnostic `expectError`. Its operation value is an existing program
 or native-handler ID of the appropriate kind. Only a program listed in
 `deferredPrograms` may be a `loadProgram` target. Actions execute in metadata
 order before emits. `expectResult` compares the portable boolean operation
 result. Repeated detach/unsubscribe operations return false after the first
-state change; load/subscribe ensure the target is active and return true. The
-set is intentionally closed and declarative; arbitrary native code is not test
-data.
+state change; load/subscribe ensure the target is active and return true.
+
+Only `loadProgram` accepts `expectError`, which is mutually exclusive with
+`expectResult`. It uses the structured diagnostic fields described below,
+requires `phase: link` and a `code`, and may constrain context such as
+`programName`:
+
+```yaml
+stepActions:
+  rejected:
+    - loadProgram: deferred-rules
+      expectError:
+        phase: link
+        code: link.initializationQueueFull
+        programName: rules
+```
+
+The runner requires the load to fail with that diagnostic, handles the expected
+failure, and continues subsequent actions and steps. Successful loading or a
+different diagnostic fails the assertion. The diagnostic is an action result,
+not a RuntimeError observer callback. The same rules apply to actions inside a
+native handler. The set remains closed and declarative; arbitrary native code
+is not test data.
 
 A `scriptApi` case with at least one native handler may have no GES source and
 thereby defines a native-only Host. `hostCount` is bounded by the parser's

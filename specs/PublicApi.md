@@ -459,6 +459,9 @@ rules are in [Host runtime](HostRuntime.md).
 Equal priority uses stable registration order. A logical message completes all
 captured handlers before the next logical message. Load/Subscribe/Detach/
 Unsubscribe changes affect snapshots captured afterward only.
+`Load` rejects insufficient initialization-queue capacity with
+`link.initializationQueueFull`. The full atomicity and retry contract is defined
+in [Host runtime](HostRuntime.md#program-load-atomicity).
 
 `Instance` is a Host-owned lifecycle handle for one linked Program. `Program`
 is the original immutable object. `Detach()` returns true exactly once when it
@@ -716,6 +719,10 @@ by [Conformance Markdown](Conformance/MarkdownFormat.md):
 `ConformanceMessageApiExpectation.ConformanceEquals` expose the optional paired
 transport comparison input and result defined in the Markdown format. They
 exercise the same conformance comparison as runtime message expectations.
+
+`ConformanceNativeAction.ExpectedError` exposes the optional structured link
+diagnostic expected from `loadProgram`. The Markdown format defines its
+exclusivity with `ExpectedResult` and the runner's continuation behavior.
 
 `ConformancePerformanceWorkload.ObserveRuntime` exposes the Boolean measurement
 observer selection, defaulting to true, defined by the Markdown format. It does

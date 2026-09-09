@@ -40,6 +40,9 @@ internal sealed partial class GesBinaryBuilder
         => BeginRoutine(null, name, argumentNames, id: null);
 
     private GesBinaryRoutineScope BeginRoutine(GameEventScriptBinaryBindKind? kind, string name, IReadOnlyList<string>? argumentNames, ushort? id, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null)
+        => BeginRoutine(DeclareRoutine(kind, name, argumentNames, id, requiredTags, excludedTags));
+
+    public RoutinePlan DeclareRoutine(GameEventScriptBinaryBindKind? kind, string name, IReadOnlyList<string>? argumentNames = null, ushort? id = null, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Routine name must be non-empty.", nameof(name));
         if (kind is null && id.HasValue) throw new ArgumentException("Helper routines cannot have bind ids.", nameof(id));
@@ -53,8 +56,21 @@ internal sealed partial class GesBinaryBuilder
         var entryLabel = AddLabel(name);
         var routine = new RoutinePlan(routineId, parentRoutineId, kind, name, entryLabel, CopyStringList(argumentNames));
         _routines.Add(routine);
-        _routineStack.Push(routineId);
-        MarkLabel(entryLabel);
+        if (kind.HasValue)
+        {
+            routine.Bind = AddBind(kind.Value, name, routine.ArgumentNames, entryLabel, id, requiredTags, excludedTags);
+        }
+
+        return routine;
+    }
+
+    public GesBinaryRoutineScope BeginRoutine(RoutinePlan routine)
+    {
+        if (routine.Id >= _routines.Count || !ReferenceEquals(_routines[routine.Id], routine)) throw new ArgumentException("Unknown routine declaration.", nameof(routine));
+        if (routine.IsStarted || routine.ParentRoutineId != CurrentRoutineId) throw new InvalidOperationException("Routine must be started once in its declaring scope.");
+        routine.IsStarted = true;
+        _routineStack.Push(routine.Id);
+        MarkLabel(routine.EntryLabel);
 
         var arguments = new List<GesRegisterRef>(routine.ArgumentNames.Count);
         for (var index = 0; index < routine.ArgumentNames.Count; index++)
@@ -64,11 +80,6 @@ internal sealed partial class GesBinaryBuilder
         }
 
         routine.ArgumentRegisters = arguments;
-        if (kind.HasValue)
-        {
-            routine.Bind = AddBind(kind.Value, name, routine.ArgumentNames, entryLabel, id, requiredTags, excludedTags);
-        }
-
         RegisterLocals(0);
         return new GesBinaryRoutineScope(this, routine);
     }
@@ -242,6 +253,7 @@ internal sealed partial class GesBinaryBuilder
         public IReadOnlyList<GesRegisterRef> ArgumentRegisters { get; set; } = [];
         public List<PlanItem> Items { get; } = [];
         public GesBindRef? Bind { get; set; }
+        public bool IsStarted { get; set; }
         public bool IsClosed { get; set; }
     }
 

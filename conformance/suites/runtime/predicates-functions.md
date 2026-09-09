@@ -874,3 +874,279 @@ steps:
               type: ":Number.int64"
               value: "15"
 ```
+
+---
+
+## Test: r21-forward-call-chain
+
+This case verifies that declaration references resolve independently of source and alphabetical order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r21-forward-call-chain
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+function a(value) be middle(value: value)
+function middle(value) be z(value: value)
+function z(value) be value
+on Start(value) { emit Done(value: a(value: value)) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Number.int64"
+            value: "42"
+    local:
+      - name: Done
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "42"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r21-reversed-source-order
+
+This case verifies that declaration references resolve independently of source and alphabetical order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r21-reversed-source-order
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+function z(value) be value
+function a(value) be z(value: value)
+on Start(value) { emit Done(value: a(value: value)) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Number.int64"
+            value: "42"
+    local:
+      - name: Done
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "42"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r21-forward-predicate-call
+
+This case verifies that declaration references resolve independently of source and alphabetical order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r21-forward-predicate-call
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+predicate a(value) be z(value: value)
+predicate z(value) be value > 0
+on Start(value) { emit Done(value: a(value: value)) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Number.int64"
+            value: "42"
+    local:
+      - name: Done
+        args:
+          - name: "value"
+            value:
+              type: ":Boolean"
+              value: true
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r21-function-record-constructor
+
+This case verifies that declaration references resolve independently of source and alphabetical order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r21-function-record-constructor
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+function a(value) be :Pair(first: value, second: value).first
+record :Pair as { first: :Number, second: :Number }
+on Start(value) { emit Done(value: a(value: value)) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Number.int64"
+            value: "42"
+    local:
+      - name: Done
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "42"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: r21-forward-record-constructor
+
+This case verifies that declaration references resolve independently of source and alphabetical order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r21-forward-record-constructor
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+record :Alpha as { input: :Number, value: :Number computed by :Zulu(value: input).value }
+record :Zulu as { value: :Number }
+on Start(value) { emit Done(value: :Alpha(input: value).value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Number.int64"
+            value: "42"
+    local:
+      - name: Done
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "42"
+    runtimeLimits:
+      exclude:
+        - any: true
+```

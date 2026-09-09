@@ -36,15 +36,30 @@ internal static class GesCompiler
 
         private readonly Dictionary<string, GesBindRef> _outboundMessages = new(StringComparer.Ordinal);
         private readonly Dictionary<string, GesBindRef> _extensionCalls = new(StringComparer.Ordinal);
-        private readonly Dictionary<string, GesBindRef> _recordConstructors = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, GesBinaryBuilder.RoutinePlan> _recordConstructors = new(StringComparer.Ordinal);
         private readonly Dictionary<string, GesBindRef> _externalTypeConstructors = new(StringComparer.Ordinal);
-        private readonly Dictionary<string, GesLabelRef> _callableEntries = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, GesBinaryBuilder.RoutinePlan> _callableRoutines = new(StringComparer.Ordinal);
         private int _helperIndex;
 
         public GameEventScriptProgram Build()
         {
-            EmitCallables();
-            EmitRecordConstructors();
+            var callables = ReadOrderedCallables(module.Callables);
+            var types = ReadOrderedTypes(module.TypeDefinitions);
+            for (var index = 0; index < callables.Length; index++)
+            {
+                var callable = callables[index];
+                var kind = callable.Kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptBinaryBindKind.Predicate : GameEventScriptBinaryBindKind.Function;
+                _callableRoutines.Add(callable.SignatureId, _builder.DeclareRoutine(kind, callable.Name, callable.SignatureLabels));
+            }
+
+            for (var index = 0; index < types.Length; index++)
+            {
+                var type = types[index];
+                _recordConstructors.Add(type.Name, _builder.DeclareRoutine(GameEventScriptBinaryBindKind.Record, type.Name, ReadConstructorArgumentNames(type.Fields)));
+            }
+
+            EmitCallables(callables);
+            EmitRecordConstructors(types);
             EmitHandlers();
             return _builder.Build();
         }
@@ -228,16 +243,13 @@ internal static class GesCompiler
             throw CompileFailure(GameEventScriptDiagnosticCodes.CompileInvalidArity, "Message-name handler can only have one message parameter.");
         }
 
-        private void EmitRecordConstructors()
+        private void EmitRecordConstructors(TypeDefinitionNode[] orderedTypes)
         {
-            var orderedTypes = ReadOrderedTypes(module.TypeDefinitions);
             for (var typeIndex = 0; typeIndex < orderedTypes.Length; typeIndex++)
             {
                 var type = orderedTypes[typeIndex];
                 using var sourceRange = _builder.SourceRange(type.SourceRange);
-                var argumentNames = ReadConstructorArgumentNames(type.Fields);
-                using var routine = _builder.BeginRecordConstructor(type.Name, argumentNames);
-                _recordConstructors[type.Name] = routine.Bind;
+                using var routine = _builder.BeginRoutine(_recordConstructors[type.Name]);
 
                 var context = LoweringContext.ForRoutine(routine);
                 var fieldRegisters = new GesRegisterRef[type.Fields.Count];
@@ -317,21 +329,13 @@ internal static class GesCompiler
             }
         }
 
-        private void EmitCallables()
+        private void EmitCallables(GesCallableDefinition[] orderedCallables)
         {
-            var orderedCallables = ReadOrderedCallables(module.Callables);
             for (var callableIndex = 0; callableIndex < orderedCallables.Length; callableIndex++)
             {
                 var callable = orderedCallables[callableIndex];
-                var kind = callable.Kind == GameEventScriptCallableKind.PredicateCall
-                    ? GameEventScriptBinaryBindKind.Predicate
-                    : GameEventScriptBinaryBindKind.Function;
                 using var sourceRange = _builder.SourceRange(callable.SourceRange);
-                using var routine = kind == GameEventScriptBinaryBindKind.Predicate
-                    ? _builder.BeginPredicate(callable.Name, callable.SignatureLabels)
-                    : _builder.BeginFunction(callable.Name, callable.SignatureLabels);
-
-                _callableEntries[callable.SignatureId] = routine.EntryLabel;
+                using var routine = _builder.BeginRoutine(_callableRoutines[callable.SignatureId]);
                 var context = LoweringContext.ForRoutine(routine);
                 for (var index = 0; index < callable.Parameters.Count; index++)
                 {
@@ -2005,14 +2009,14 @@ internal static class GesCompiler
         private void EmitCallInto(CallExpressionNode call, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
             var callable = GesCallableSignatures.Resolve(module.Callables, call);
-            if (callable is null || !_callableEntries.TryGetValue(callable.SignatureId, out var entry))
+            if (callable is null || !_callableRoutines.TryGetValue(callable.SignatureId, out var entry))
             {
                 throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript binary compiler could not resolve callable '{call.Name}'.", call.Name);
             }
 
             EmitStageArguments(call.Arguments, context, state);
 
-            _builder.Call(destination, entry, callable.Kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptInstructionFlag.NormalizeResultAsPredicate : GameEventScriptInstructionFlag.None);
+            _builder.Call(destination, entry.EntryLabel, callable.Kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptInstructionFlag.NormalizeResultAsPredicate : GameEventScriptInstructionFlag.None);
         }
 
         private void EmitHandlerBindCallInto(CallExpressionNode call, GesRegisterRef destination, LoweringContext context, ExpressionState state)
@@ -2038,13 +2042,13 @@ internal static class GesCompiler
         private void EmitPredicateCallInto(PredicateCallExpressionNode predicate, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
             var callable = GesCallableSignatures.ResolveSingleParameterPredicate(module.Callables, predicate.PredicateName);
-            if (callable is null || !_callableEntries.TryGetValue(callable.SignatureId, out var entry))
+            if (callable is null || !_callableRoutines.TryGetValue(callable.SignatureId, out var entry))
             {
                 throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript binary compiler could not resolve predicate '{predicate.PredicateName}'.", predicate.PredicateName);
             }
 
             EmitStageArgument(PrepareStageArgument(predicate.Value, context, state));
-            _builder.Call(destination, entry, GameEventScriptInstructionFlag.NormalizeResultAsPredicate);
+            _builder.Call(destination, entry.EntryLabel, GameEventScriptInstructionFlag.NormalizeResultAsPredicate);
         }
 
         private void EmitExtensionPredicateInto(ExtensionPredicateExpressionNode extensionPredicate, GesRegisterRef destination, LoweringContext context, ExpressionState state)
@@ -2400,8 +2404,8 @@ internal static class GesCompiler
 
         private GesBindRef ResolveRecordConstructor(TypeDefinitionNode type)
         {
-            if (_recordConstructors.TryGetValue(type.Name, out var bind)) return bind;
-            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript record constructor ':{type.Name}' was not emitted.", type.Name);
+            if (_recordConstructors.TryGetValue(type.Name, out var routine)) return routine.Bind!.Value;
+            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript record constructor ':{type.Name}' was not declared.", type.Name);
         }
 
         private GesBindRef ResolveExternalTypeConstructor(string typeName, IReadOnlyList<string> argumentNames)

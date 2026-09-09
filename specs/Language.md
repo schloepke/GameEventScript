@@ -69,7 +69,9 @@ Top-level declarations are:
 
 The module declaration is metadata and does not create a namespace. Definitions
 from every source in one compilation unit share compilation-unit scope and may
-refer to one another independent of source order. Functions and predicates share
+refer to one another independent of source order or alphabetical name order.
+This includes callable bodies constructing records and record field expressions
+calling other constructors or callables. Functions and predicates share
 one callable namespace. Records use a separate type namespace because their
 source references are prefixed with `:`. Multiple handlers for the same endpoint
 are allowed and retain their source registration order. When no non-empty module

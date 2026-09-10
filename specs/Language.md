@@ -1114,7 +1114,8 @@ let fractional be from 1.5 to 3.5 step 0.5
 
 Both bounds are inclusive. A zero step or a step pointing away from the end
 produces an empty range. Integer boundary handling is overflow-safe, and
-floating iterators emit exactly their precomputed finite range length; see
+floating iterators emit exactly their precomputed finite range length. Element
+calculation and membership are defined in
 [Determinism](Semantics/Determinism.md).
 
 ### Series

@@ -1754,3 +1754,749 @@ steps:
               type: ":Number.int64"
               value: "42"
 ```
+
+---
+
+## Test: r30-ascending
+
+This case checks that indexing, materialization and iteration produce identical floating-range elements.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r30-ascending
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 0
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let range be from 0 to 1 step 0.1
+  let values be range as :List
+  let iterated be :List[:select x in range => x]
+  let indexed be :List[:select i from 1 to range[:count] => range[i]]
+  emit Done(item: range[11], listed: values[11], iterated: iterated[11], sameList: values = iterated, sameIndexes: values = indexed, zero: range[0], negative: range[-1], pastEnd: range[range[:count] + 1])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: item
+            value: {"type": ":Number.int64", "value": "1"}
+          - name: listed
+            value: {"type": ":Number.int64", "value": "1"}
+          - name: iterated
+            value: {"type": ":Number.int64", "value": "1"}
+          - name: sameList
+            value: {"type": ":Boolean", "value": true}
+          - name: sameIndexes
+            value: {"type": ":Boolean", "value": true}
+          - name: zero
+            value: {"type": ":Nothing"}
+          - name: negative
+            value: {"type": ":Nothing"}
+          - name: pastEnd
+            value: {"type": ":Nothing"}
+```
+
+---
+
+## Test: r30-descending
+
+This case checks that indexing, materialization and iteration produce identical floating-range elements.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r30-descending
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 0
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let range be from 1 to 0 step -0.1
+  let values be range as :List
+  let iterated be :List[:select x in range => x]
+  let indexed be :List[:select i from 1 to range[:count] => range[i]]
+  emit Done(item: range[11], listed: values[11], iterated: iterated[11], sameList: values = iterated, sameIndexes: values = indexed, zero: range[0], negative: range[-1], pastEnd: range[range[:count] + 1])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: item
+            value: {"type": ":Number.int64", "value": "0"}
+          - name: listed
+            value: {"type": ":Number.int64", "value": "0"}
+          - name: iterated
+            value: {"type": ":Number.int64", "value": "0"}
+          - name: sameList
+            value: {"type": ":Boolean", "value": true}
+          - name: sameIndexes
+            value: {"type": ":Boolean", "value": true}
+          - name: zero
+            value: {"type": ":Nothing"}
+          - name: negative
+            value: {"type": ":Nothing"}
+          - name: pastEnd
+            value: {"type": ":Nothing"}
+```
+
+---
+
+## Test: r30-large-ascending
+
+This case checks that indexing, materialization and iteration produce identical floating-range elements.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r30-large-ascending
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 0
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let range be from 10000000000000000 to 10000000000000010 step 0.1
+  let values be range as :List
+  let iterated be :List[:select x in range => x]
+  let indexed be :List[:select i from 1 to range[:count] => range[i]]
+  emit Done(item: range[21], listed: values[21], iterated: iterated[21], sameList: values = iterated, sameIndexes: values = indexed, zero: range[0], negative: range[-1], pastEnd: range[range[:count] + 1])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: item
+            value: {"type": ":Number.int64", "value": "10000000000000002"}
+          - name: listed
+            value: {"type": ":Number.int64", "value": "10000000000000002"}
+          - name: iterated
+            value: {"type": ":Number.int64", "value": "10000000000000002"}
+          - name: sameList
+            value: {"type": ":Boolean", "value": true}
+          - name: sameIndexes
+            value: {"type": ":Boolean", "value": true}
+          - name: zero
+            value: {"type": ":Nothing"}
+          - name: negative
+            value: {"type": ":Nothing"}
+          - name: pastEnd
+            value: {"type": ":Nothing"}
+```
+
+---
+
+## Test: r30-large-descending
+
+This case checks that indexing, materialization and iteration produce identical floating-range elements.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r30-large-descending
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 0
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let range be from 10000000000000010 to 10000000000000000 step -0.1
+  let values be range as :List
+  let iterated be :List[:select x in range => x]
+  let indexed be :List[:select i from 1 to range[:count] => range[i]]
+  emit Done(item: range[21], listed: values[21], iterated: iterated[21], sameList: values = iterated, sameIndexes: values = indexed, zero: range[0], negative: range[-1], pastEnd: range[range[:count] + 1])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: item
+            value: {"type": ":Number.int64", "value": "10000000000000008"}
+          - name: listed
+            value: {"type": ":Number.int64", "value": "10000000000000008"}
+          - name: iterated
+            value: {"type": ":Number.int64", "value": "10000000000000008"}
+          - name: sameList
+            value: {"type": ":Boolean", "value": true}
+          - name: sameIndexes
+            value: {"type": ":Boolean", "value": true}
+          - name: zero
+            value: {"type": ":Nothing"}
+          - name: negative
+            value: {"type": ":Nothing"}
+          - name: pastEnd
+            value: {"type": ":Nothing"}
+```
+
+---
+
+## Test: r30-rounded-endpoint-ascending
+
+This case checks that a rounded final term is clamped to the inclusive endpoint consistently.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r30-rounded-endpoint-ascending
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 0
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let range be from -2 to -0.9 step 0.1
+  let values be range as :List
+  let iterated be :List[:select x in range => x]
+  emit Done(count: range[:count], last: range[12], listed: values[12], sameList: values = iterated, contained: range[12] in range)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: count
+            value: {"type": ":Number.int64", "value": "12"}
+          - name: last
+            value: {"type": ":Number.binary64", "value": "-0.9"}
+          - name: listed
+            value: {"type": ":Number.binary64", "value": "-0.9"}
+          - name: sameList
+            value: {"type": ":Boolean", "value": true}
+          - name: contained
+            value: {"type": ":Boolean", "value": true}
+```
+
+---
+
+## Test: r30-rounded-endpoint-descending
+
+This case checks that a rounded final term is clamped to the inclusive endpoint consistently.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r30-rounded-endpoint-descending
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 0
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let range be from 2 to 0.9 step -0.1
+  let values be range as :List
+  let iterated be :List[:select x in range => x]
+  emit Done(count: range[:count], last: range[12], listed: values[12], sameList: values = iterated, contained: range[12] in range)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: count
+            value: {"type": ":Number.int64", "value": "12"}
+          - name: last
+            value: {"type": ":Number.binary64", "value": "0.9"}
+          - name: listed
+            value: {"type": ":Number.binary64", "value": "0.9"}
+          - name: sameList
+            value: {"type": ":Boolean", "value": true}
+          - name: contained
+            value: {"type": ":Boolean", "value": true}
+```
+
+---
+
+## Test: r30-collection-paths
+
+This case checks that prefix, suffix, spatial casts and collection membership use the indexed sequence.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r30-collection-paths
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 0
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let range be from 10000000000000000 to 10000000000000010 step 0.75
+  let values be range as :List
+  let point be range as :Point
+  let vector be range as :Vector
+  let prefix be [range[1], range[2], range[3]]
+  let suffix be [range[range[:count] - 1], range[range[:count]]]
+  emit Done(startsWith: range starts with prefix, endsWith: range ends with suffix, listStarts: values starts with range, listEnds: values ends with range, pointZ: point.z = range[3], vectorZ: vector.z = range[3], allInRange: range[:contains all values], allInList: values[:contains all range])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: startsWith
+            value: {"type": ":Boolean", "value": true}
+          - name: endsWith
+            value: {"type": ":Boolean", "value": true}
+          - name: listStarts
+            value: {"type": ":Boolean", "value": true}
+          - name: listEnds
+            value: {"type": ":Boolean", "value": true}
+          - name: pointZ
+            value: {"type": ":Boolean", "value": true}
+          - name: vectorZ
+            value: {"type": ":Boolean", "value": true}
+          - name: allInRange
+            value: {"type": ":Boolean", "value": true}
+          - name: allInList
+            value: {"type": ":Boolean", "value": true}
+```
+
+---
+
+## Test: r31-own-elements-ascending
+
+This case checks that a floating range contains its indexed elements and rejects non-elements exactly.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r31-own-elements-ascending
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 0
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let range be from 0 to 1 step 0.1
+  let candidates be [range[4], range[8]]
+  emit Done(own: range[4] in range, all: range[:contains all candidates], any: range[:contains any [0.35, range[4]]], every: range[:all x where x in range], offGrid: 0.35 in range, outside: 2 in range, quantity: 1m in range, percentage: 100% in range)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: own
+            value: {"type": ":Boolean", "value": true}
+          - name: all
+            value: {"type": ":Boolean", "value": true}
+          - name: any
+            value: {"type": ":Boolean", "value": true}
+          - name: every
+            value: {"type": ":Boolean", "value": true}
+          - name: offGrid
+            value: {"type": ":Boolean", "value": false}
+          - name: outside
+            value: {"type": ":Boolean", "value": false}
+          - name: quantity
+            value: {"type": ":Boolean", "value": false}
+          - name: percentage
+            value: {"type": ":Boolean", "value": false}
+```
+
+---
+
+## Test: r31-own-elements-descending
+
+This case checks that a floating range contains its indexed elements and rejects non-elements exactly.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r31-own-elements-descending
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 0
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let range be from 1 to 0 step -0.1
+  let candidates be [range[4], range[8]]
+  emit Done(own: range[4] in range, all: range[:contains all candidates], any: range[:contains any [0.35, range[4]]], every: range[:all x where x in range], offGrid: 0.35 in range, outside: 2 in range, quantity: 1m in range, percentage: 100% in range)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: own
+            value: {"type": ":Boolean", "value": true}
+          - name: all
+            value: {"type": ":Boolean", "value": true}
+          - name: any
+            value: {"type": ":Boolean", "value": true}
+          - name: every
+            value: {"type": ":Boolean", "value": true}
+          - name: offGrid
+            value: {"type": ":Boolean", "value": false}
+          - name: outside
+            value: {"type": ":Boolean", "value": false}
+          - name: quantity
+            value: {"type": ":Boolean", "value": false}
+          - name: percentage
+            value: {"type": ":Boolean", "value": false}
+```
+
+---
+
+## Test: r31-neighbor-is-not-contained
+
+This case checks that membership does not admit the adjacent Binary64 approximation of an actual element.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r31-neighbor-is-not-contained
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 0
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let range be from 0 to 1 step 0.1
+  emit Done(item: range[4], actual: 0.30000000000000004 in range, neighbor: 0.3 in range)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: item
+            value: {"type": ":Number.binary64", "value": "0.30000000000000004"}
+          - name: actual
+            value: {"type": ":Boolean", "value": true}
+          - name: neighbor
+            value: {"type": ":Boolean", "value": false}
+```
+
+---
+
+## Test: r31-large-integer-identity
+
+This case checks that rounding a large Int64 must not manufacture range membership.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r31-large-integer-identity
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 0
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let range be from 10000000000000000 to 10000000000000010 step 0.1
+  emit Done(actual: range[21] in range, odd: 10000000000000003 in range, every: range[:all x where x in range])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: actual
+            value: {"type": ":Boolean", "value": true}
+          - name: odd
+            value: {"type": ":Boolean", "value": false}
+          - name: every
+            value: {"type": ":Boolean", "value": true}
+```
+
+---
+
+## Test: r31-empty-and-saturated-count
+
+This case checks that empty and saturated floating ranges use their exact finite index domain without materialization.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r31-empty-and-saturated-count
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 0
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let emptyRange be from 1 to 0 step 0.1
+  let zero be from 0 to 1 step 0
+  let large be from 0 to 100000000000000000000.0 step 0.1
+  let lastValue be large[large[:count]]
+  emit Done(emptyMatch: 1 in emptyRange, zero: 0 in zero, count: large[:count], lastPresent: lastValue is :Number, lastContained: lastValue in large, endpointAbsent: not (100000000000000000000.0 in large))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: emptyMatch
+            value: {"type": ":Boolean", "value": false}
+          - name: zero
+            value: {"type": ":Boolean", "value": false}
+          - name: count
+            value: {"type": ":Number.int64", "value": "9223372036854775807"}
+          - name: lastPresent
+            value: {"type": ":Boolean", "value": true}
+          - name: lastContained
+            value: {"type": ":Boolean", "value": true}
+          - name: endpointAbsent
+            value: {"type": ":Boolean", "value": true}
+```

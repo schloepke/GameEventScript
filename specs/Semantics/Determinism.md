@@ -246,6 +246,23 @@ prevents an infinite iterator when `current + step == current` at large
 magnitudes. Host runtime limits may reject a valid but excessive range before
 iteration.
 
+For a floating range, every element is computed from its zero-based index `i`:
+convert `i` to Binary64, multiply by `step`, then add `from`. Conversion,
+multiplication, and addition each round to nearest, ties to even. Multiplication
+and addition are separate operations; neither repeated addition nor a fused
+multiply-add defines the sequence. If rounding places the result beyond `to`
+in the step direction, clamp it to `to`. The precomputed count remains
+authoritative, so every in-range index has an element even at a rounded endpoint.
+Different indexes may produce the same value at large magnitudes.
+
+Index access, iteration, materialization, and collection operations on a given
+floating range use this same sequence, with ordinary numeric canonicalization.
+Membership is exact: a unitless Number is contained if and only if its value
+equals an element at one of the precomputed indexes. A nearby Binary64 value,
+a Quantity, a Percentage, and an Int64 value that only rounds to an element on
+conversion to Binary64 do not match. No tolerance or exactly integral division
+quotient defines membership. Empty ranges contain no values.
+
 Indexing remains one-based. Index zero, negative indexes, and indexes greater
 than the finite item count yield `nothing`. Empty iterator terminals return
 `nothing`, except boolean quantifiers: `any` is false and `all` is true for an

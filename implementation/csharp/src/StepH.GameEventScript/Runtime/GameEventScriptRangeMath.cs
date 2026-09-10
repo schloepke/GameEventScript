@@ -74,18 +74,24 @@ internal static class GameEventScriptRangeMath
 
     public static bool Contains(double from, double to, double step, double value)
     {
-        if (!double.IsFinite(value) ||
-            !double.IsFinite(from) ||
-            !double.IsFinite(to) ||
-            !double.IsFinite(step) ||
-            step == 0d)
+        if (!double.IsFinite(value)) return false;
+        var length = GetLength(from, to, step);
+        if (length == 0 || (step > 0d ? value < from || value > to : value > from || value < to)) return false;
+
+        // The generated sequence is monotone, but rounding can produce repeated terms.
+        // Searching its actual values avoids quotient rounding, tolerances and enumeration.
+        var low = 0L;
+        var high = length - 1;
+        while (low <= high)
         {
-            return false;
+            var index = low + (high - low) / 2;
+            var term = GetFloatTerm(from, to, step, index);
+            if (term == value) return true;
+            if (step > 0d ? term < value : term > value) low = index + 1;
+            else high = index - 1;
         }
 
-        return step > 0d
-            ? value >= from && value <= to && IsIntegerMultiple(value - from, step)
-            : value <= from && value >= to && IsIntegerMultiple(from - value, -step);
+        return false;
     }
 
     public static double? GetTerm(double from, double to, double step, long oneBasedIndex)
@@ -95,10 +101,16 @@ internal static class GameEventScriptRangeMath
             return null;
         }
 
-        var value = from + step * (oneBasedIndex - 1);
-        return step > 0d
-            ? value <= to ? value : null
-            : value >= to ? value : null;
+        return GetFloatTerm(from, to, step, oneBasedIndex - 1);
+    }
+
+    // The caller has already checked the index against the precomputed length.
+    // Keep multiplication and addition separate: neither repeated addition nor FMA defines a range term.
+    internal static double GetFloatTerm(double from, double to, double step, long zeroBasedIndex)
+    {
+        var offset = step * zeroBasedIndex;
+        var value = from + offset;
+        return step > 0d ? System.Math.Min(value, to) : System.Math.Max(value, to);
     }
 
     private static long CountInclusive(ulong zeroBasedDistance, ulong stepMagnitude)
@@ -122,14 +134,6 @@ internal static class GameEventScriptRangeMath
         }
 
         return (long)System.Math.Floor(zeroBasedDistanceInSteps) + 1L;
-    }
-
-    private static bool IsIntegerMultiple(double distance, double stepMagnitude)
-    {
-        var quotient = distance / stepMagnitude;
-        var nearest = System.Math.Round(quotient);
-        var tolerance = 1e-10d * System.Math.Max(1d, System.Math.Abs(quotient));
-        return System.Math.Abs(quotient - nearest) <= tolerance;
     }
 
     private static ulong StepMagnitude(long step)

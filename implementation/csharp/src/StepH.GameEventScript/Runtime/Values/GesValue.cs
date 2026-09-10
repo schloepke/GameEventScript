@@ -748,7 +748,7 @@ public struct GesValue : IEquatable<GesValue>
         else
         {
             ObjectValue = new GesValueRangeFloat(from, to, step);
-            IntegerValue = (long)Math.Floor(Math.Abs(to - from) / Math.Abs(step)) + 1;
+            IntegerValue = GameEventScriptRangeMath.GetLength(from, to, step);
         }
 
         Flags = IntegerValue > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;

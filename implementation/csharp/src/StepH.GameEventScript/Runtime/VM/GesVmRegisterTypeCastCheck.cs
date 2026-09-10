@@ -316,11 +316,9 @@ internal static class GesVmRegisterTypeCastCheck
                 }
 
                 var list = new GesValue[(int)xValue.IntegerValue];
-                var current = range.From;
                 for (var i = 0; i < list.Length; i++)
                 {
-                    list[i].SetFloat(current);
-                    current += range.Step;
+                    list[i].SetFloat(GameEventScriptRangeMath.GetFloatTerm(range.From, range.To, range.Step, i));
                 }
 
                 dst.SetList(list);
@@ -536,13 +534,12 @@ internal static class GesVmRegisterTypeCastCheck
             }
             case GameEventScriptBytecodeTypeKind.Range when xValue.ObjectValue is GesValueRangeFloat range:
             {
-                var current = range.From;
                 for (var i = 0; i < xValue.IntegerValue && i < 3; i++)
                 {
+                    var current = GameEventScriptRangeMath.GetFloatTerm(range.From, range.To, range.Step, i);
                     if (i == 0) x = current;
                     else if (i == 1) y = current;
                     else z = current;
-                    current += range.Step;
                 }
 
                 break;

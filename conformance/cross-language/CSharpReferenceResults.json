@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "C92512BFBA4D1610CBC0576BC4F85835BDEEF7C7B1A52EFF9DDC3BBC8BDB38A6",
+    "sha256": "0D5CC81557FB1FD59C47FCF2DE4A9C8539AB7E6DAAD351F0A23913044E47EC9B",
     "documentCount": 86,
-    "caseCount": 1387
+    "caseCount": 1399
   },
   "cases": [
     {
@@ -21203,6 +21203,222 @@
           "compiler",
           "host",
           "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.random-dice-ranges/r30-ascending",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.random-dice-ranges/r30-collection-paths",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.random-dice-ranges/r30-descending",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.random-dice-ranges/r30-large-ascending",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.random-dice-ranges/r30-large-descending",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.random-dice-ranges/r30-rounded-endpoint-ascending",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.random-dice-ranges/r30-rounded-endpoint-descending",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.random-dice-ranges/r31-empty-and-saturated-count",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.random-dice-ranges/r31-large-integer-identity",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.random-dice-ranges/r31-neighbor-is-not-contained",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.random-dice-ranges/r31-own-elements-ascending",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.random-dice-ranges/r31-own-elements-descending",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
           "publish-sink",
           "vm"
         ],

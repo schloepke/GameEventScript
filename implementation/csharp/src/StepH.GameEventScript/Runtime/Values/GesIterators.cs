@@ -48,7 +48,7 @@ internal class GesIntegerRangeIterator(long from, long to, long step) : IGesIter
 
 internal class GesFloatRangeIterator(double from, double to, double step) : IGesIterator, IDisposable
 {
-    private double _current = from;
+    private long _index;
     private long _remaining = GameEventScriptRangeMath.GetLength(from, to, step);
     private bool _disposed;
 
@@ -57,9 +57,8 @@ internal class GesFloatRangeIterator(double from, double to, double step) : IGes
         if (_disposed || _remaining <= 0) return default;
 
         var value = default(GesValue);
-        value.SetFloat(_current);
+        value.SetFloat(GameEventScriptRangeMath.GetFloatTerm(from, to, step, _index++));
         _remaining--;
-        if (_remaining > 0) _current += step;
         return new GesIteratorResult(in value);
     }
 

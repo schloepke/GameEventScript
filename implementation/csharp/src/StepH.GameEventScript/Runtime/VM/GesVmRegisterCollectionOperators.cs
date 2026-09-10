@@ -87,10 +87,8 @@ internal static class GesVmRegisterCollectionOperators
 
         var leftInteger = leftRange?.From ?? 0;
         var rightInteger = rightRange?.From ?? 0;
-        var leftFloat = leftFloatRange?.From ?? 0d;
-        var rightFloat = rightFloatRange?.From ?? 0d;
 
-        for (var i = 0; i < b.IntegerValue; i++)
+        for (var i = 0L; i < b.IntegerValue; i++)
         {
             var left = new GesValue();
             if (leftList is not null) left = leftList[i];
@@ -102,8 +100,7 @@ internal static class GesVmRegisterCollectionOperators
             }
             else if (leftFloatRange is not null)
             {
-                left.SetFloat(leftFloat);
-                leftFloat += leftFloatRange.Step;
+                left.SetFloat(GameEventScriptRangeMath.GetFloatTerm(leftFloatRange.From, leftFloatRange.To, leftFloatRange.Step, i));
             }
 
             var right = new GesValue();
@@ -116,8 +113,7 @@ internal static class GesVmRegisterCollectionOperators
             }
             else if (rightFloatRange is not null)
             {
-                right.SetFloat(rightFloat);
-                rightFloat += rightFloatRange.Step;
+                right.SetFloat(GameEventScriptRangeMath.GetFloatTerm(rightFloatRange.From, rightFloatRange.To, rightFloatRange.Step, i));
             }
 
             if (left.EqualsValue(right)) continue;
@@ -205,10 +201,8 @@ internal static class GesVmRegisterCollectionOperators
         var leftOffset = a.IntegerValue - b.IntegerValue;
         var leftInteger = leftRange is not null ? leftRange.From + leftRange.Step * leftOffset : 0;
         var rightInteger = rightRange?.From ?? 0;
-        var leftFloat = leftFloatRange is not null ? leftFloatRange.From + leftFloatRange.Step * leftOffset : 0d;
-        var rightFloat = rightFloatRange?.From ?? 0d;
 
-        for (var i = 0; i < b.IntegerValue; i++)
+        for (var i = 0L; i < b.IntegerValue; i++)
         {
             var leftIndex = leftOffset + i;
             var left = new GesValue();
@@ -221,8 +215,7 @@ internal static class GesVmRegisterCollectionOperators
             }
             else if (leftFloatRange is not null)
             {
-                left.SetFloat(leftFloat);
-                leftFloat += leftFloatRange.Step;
+                left.SetFloat(GameEventScriptRangeMath.GetFloatTerm(leftFloatRange.From, leftFloatRange.To, leftFloatRange.Step, leftIndex));
             }
 
             var right = new GesValue();
@@ -235,8 +228,7 @@ internal static class GesVmRegisterCollectionOperators
             }
             else if (rightFloatRange is not null)
             {
-                right.SetFloat(rightFloat);
-                rightFloat += rightFloatRange.Step;
+                right.SetFloat(GameEventScriptRangeMath.GetFloatTerm(rightFloatRange.From, rightFloatRange.To, rightFloatRange.Step, i));
             }
 
             if (left.EqualsValue(right)) continue;
@@ -347,28 +339,7 @@ internal static class GesVmRegisterCollectionOperators
                     : a.IntegerValue <= range.From && a.IntegerValue >= range.To && unchecked((ulong)range.From - (ulong)a.IntegerValue) % unchecked(0UL - (ulong)range.Step) == 0UL);
                 return;
             case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeFloat range:
-                if (!a.IsNumeric || range.Step == 0d)
-                {
-                    vmState.SetBoolean(dst, false);
-                    return;
-                }
-
-                var number = a.AsNumeric;
-                if (!double.IsFinite(number))
-                {
-                    vmState.SetBoolean(dst, false);
-                    return;
-                }
-
-                if (range.Step > 0d)
-                {
-                    var quotient = (number - range.From) / range.Step;
-                    vmState.SetBoolean(dst, number >= range.From && number <= range.To && quotient == Math.Truncate(quotient));
-                    return;
-                }
-
-                var descendingQuotient = (range.From - number) / -range.Step;
-                vmState.SetBoolean(dst, number <= range.From && number >= range.To && descendingQuotient == Math.Truncate(descendingQuotient));
+                vmState.SetBoolean(dst, ContainsFloatRange(in a, range));
                 return;
             case Nothing:
                 vmState.SetNothing(dst);
@@ -613,9 +584,9 @@ internal static class GesVmRegisterCollectionOperators
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
-                var value = range.From;
                 for (var i = 0L; i < length; i++)
                 {
+                    var value = GameEventScriptRangeMath.GetFloatTerm(range.From, range.To, range.Step, i);
                     if (value != 0d && double.IsFinite(value))
                     {
                         if (!requireAll)
@@ -629,8 +600,6 @@ internal static class GesVmRegisterCollectionOperators
                         vmState.SetBoolean(dst, false);
                         return;
                     }
-
-                    value += range.Step;
                 }
 
                 vmState.SetBoolean(dst, requireAll);
@@ -756,11 +725,10 @@ internal static class GesVmRegisterCollectionOperators
             case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeFloat range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
-                var value = range.From;
                 for (var i = 0L; i < length; i++)
                 {
+                    var value = GameEventScriptRangeMath.GetFloatTerm(range.From, range.To, range.Step, i);
                     candidate.SetFloat(value);
-                    value += range.Step;
                     if (vmState.ContainsHelper(candidate, b) == true)
                     {
                         if (!requireAll)
@@ -832,11 +800,10 @@ internal static class GesVmRegisterCollectionOperators
             case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeFloat range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
-                var value = range.From;
                 for (var i = 0L; i < length; i++)
                 {
+                    var value = GameEventScriptRangeMath.GetFloatTerm(range.From, range.To, range.Step, i);
                     candidate.SetFloat(value);
-                    value += range.Step;
                     candidates.Add(in candidate);
                 }
 
@@ -1374,6 +1341,15 @@ internal static class GesVmRegisterCollectionOperators
         }
     }
 
+    private static bool ContainsFloatRange(in GesValue value, GesValueRangeFloat range)
+    {
+        if (value.Kind is not (Integer or Float) || value.Unit != GameEventScriptBytecodeInstructionUnit.UnitNone) return false;
+        var number = value.AsNumeric;
+        // Converting a large Int64 to Binary64 must not make a different integer appear contained.
+        if (value.Kind == Integer && (!GameEventScriptNumber.CanRepresentAsInteger(number) || (long)number != value.IntegerValue)) return false;
+        return GameEventScriptRangeMath.Contains(range.From, range.To, range.Step, number);
+    }
+
     private static bool? ContainsHelper(this GesVmState vmState, in GesValue a, in GesValue b)
     {
         switch (b.Kind)
@@ -1433,17 +1409,7 @@ internal static class GesVmRegisterCollectionOperators
                     ? a.IntegerValue >= range.From && a.IntegerValue <= range.To && unchecked((ulong)a.IntegerValue - (ulong)range.From) % (ulong)range.Step == 0UL
                     : a.IntegerValue <= range.From && a.IntegerValue >= range.To && unchecked((ulong)range.From - (ulong)a.IntegerValue) % unchecked(0UL - (ulong)range.Step) == 0UL;
             case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeFloat range:
-                if (!a.IsNumeric || range.Step == 0d) return false;
-                var number = a.AsNumeric;
-                if (!double.IsFinite(number)) return false;
-                if (range.Step > 0d)
-                {
-                    var quotient = (number - range.From) / range.Step;
-                    return number >= range.From && number <= range.To && quotient == Math.Truncate(quotient);
-                }
-
-                var descendingQuotient = (range.From - number) / -range.Step;
-                return number <= range.From && number >= range.To && descendingQuotient == Math.Truncate(descendingQuotient);
+                return ContainsFloatRange(in a, range);
             case Nothing:
                 return null;
             default:

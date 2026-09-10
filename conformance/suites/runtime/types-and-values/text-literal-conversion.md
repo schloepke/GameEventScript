@@ -6182,7 +6182,7 @@ steps:
 
 ## Test: parse-depth-limit
 
-This case checks the following contract: The first excess nested container stops the handler. An otherwise unused parse must not be removed by optimization.
+This case checks the following contract: The first excess nested container stops the handler when the parse result is required for a message.
 
 ### Case description
 
@@ -6200,7 +6200,7 @@ comparison:
 ### Source code under test
 
 ```ges
-on Start(value) { emit Before; parse value; emit After }
+on Start(value) { emit Before; emit After(value: parse value) }
 ```
 
 ### Steps

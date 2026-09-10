@@ -83,6 +83,8 @@ internal sealed partial class GesBinaryBuilder
 
         internal int RegisterCount => _builder._registers.Count;
 
+        internal EffectAnalysis AnalyzeEffects() => new(_builder, _items);
+
         public GesRegisterRef AddRegister(string name) => _builder.AddCompilerRegister(name);
 
         public GesRegisterRef AddTemporaryRegister(string? name = null) => _builder.AddTemporaryRegister(name);
@@ -786,6 +788,7 @@ internal sealed partial class GesBinaryBuilder
 
         public bool Rewrite(RewriteContext context)
         {
+            EffectAnalysis? effects = null;
             var changed = false;
             var anyRemoved = true;
             while (anyRemoved)
@@ -801,7 +804,8 @@ internal sealed partial class GesBinaryBuilder
                         instruction.Destination.Kind != GesOperandKind.Register ||
                         !context.IsTemporary(instruction.Destination.RegisterRef) ||
                         readCounts[instruction.Destination.RegisterRef.Id] != 0 ||
-                        !CanRemoveDeadWrite(instruction.OpCode))
+                        !EffectAnalysis.CanDiscardResult(instruction.OpCode) ||
+                        HasProgramEffects(context, instruction, ref effects))
                     {
                         continue;
                     }
@@ -820,146 +824,10 @@ internal sealed partial class GesBinaryBuilder
             return changed;
         }
 
-        private static bool CanRemoveDeadWrite(GameEventScriptBytecodeOpCode opcode)
-        {
-            // Record conversions execute constructors, including computed fields and their observable effects.
-            return opcode switch
-            {
-                GameEventScriptBytecodeOpCode.Cast or
-                    GameEventScriptBytecodeOpCode.CastUnit or
-                    GameEventScriptBytecodeOpCode.CastNumeric or
-                    GameEventScriptBytecodeOpCode.CheckType or
-                    GameEventScriptBytecodeOpCode.CheckCustomType or
-                    GameEventScriptBytecodeOpCode.CheckUnit or
-                    GameEventScriptBytecodeOpCode.CheckNumeric or
-                    GameEventScriptBytecodeOpCode.CheckInteger or
-                    GameEventScriptBytecodeOpCode.CheckFractional or
-                    GameEventScriptBytecodeOpCode.Move or
-                    GameEventScriptBytecodeOpCode.MemberAccess or
-                    GameEventScriptBytecodeOpCode.IndexAccess or
-                    GameEventScriptBytecodeOpCode.PropertyAccess or
-                    GameEventScriptBytecodeOpCode.BindHandler or
-                    GameEventScriptBytecodeOpCode.LoadNothing or
-                    GameEventScriptBytecodeOpCode.LoadTrue or
-                    GameEventScriptBytecodeOpCode.LoadFalse or
-                    GameEventScriptBytecodeOpCode.LoadInteger or
-                    GameEventScriptBytecodeOpCode.LoadFloat or
-                    GameEventScriptBytecodeOpCode.LoadPercentage or
-                    GameEventScriptBytecodeOpCode.LoadText or
-                    GameEventScriptBytecodeOpCode.LoadTag or
-                    GameEventScriptBytecodeOpCode.LoadHandler or
-                    GameEventScriptBytecodeOpCode.LoadMessage or
-                    GameEventScriptBytecodeOpCode.CreateSeries or
-                    GameEventScriptBytecodeOpCode.CreateRange or
-                    GameEventScriptBytecodeOpCode.CreateRangeWithStep or
-                    GameEventScriptBytecodeOpCode.CreateRangeIterator or
-                    GameEventScriptBytecodeOpCode.CreateRangeIteratorWithStep or
-                    GameEventScriptBytecodeOpCode.CreateRangeIteratorShort or
-                    GameEventScriptBytecodeOpCode.HasValue or
-                    GameEventScriptBytecodeOpCode.IsEmpty or
-                    GameEventScriptBytecodeOpCode.Default or
-                    GameEventScriptBytecodeOpCode.Or or
-                    GameEventScriptBytecodeOpCode.And or
-                    GameEventScriptBytecodeOpCode.Xor or
-                    GameEventScriptBytecodeOpCode.Implies or
-                    GameEventScriptBytecodeOpCode.Not or
-                    GameEventScriptBytecodeOpCode.Equal or
-                    GameEventScriptBytecodeOpCode.NotEqual or
-                    GameEventScriptBytecodeOpCode.Less or
-                    GameEventScriptBytecodeOpCode.Greater or
-                    GameEventScriptBytecodeOpCode.LessOrEqual or
-                    GameEventScriptBytecodeOpCode.GreaterOrEqual or
-                    GameEventScriptBytecodeOpCode.Add or
-                    GameEventScriptBytecodeOpCode.Subtract or
-                    GameEventScriptBytecodeOpCode.Multiply or
-                    GameEventScriptBytecodeOpCode.Divide or
-                    GameEventScriptBytecodeOpCode.Power or
-                    GameEventScriptBytecodeOpCode.IntegerDivide or
-                    GameEventScriptBytecodeOpCode.Modulo or
-                    GameEventScriptBytecodeOpCode.Remainder or
-                    GameEventScriptBytecodeOpCode.Min or
-                    GameEventScriptBytecodeOpCode.Max or
-                    GameEventScriptBytecodeOpCode.Negate or
-                    GameEventScriptBytecodeOpCode.Abs or
-                    GameEventScriptBytecodeOpCode.LogN or
-                    GameEventScriptBytecodeOpCode.Clamp or
-                    GameEventScriptBytecodeOpCode.Term or
-                    GameEventScriptBytecodeOpCode.Exp or
-                    GameEventScriptBytecodeOpCode.Floor or
-                    GameEventScriptBytecodeOpCode.Ceil or
-                    GameEventScriptBytecodeOpCode.Truncate or
-                    GameEventScriptBytecodeOpCode.RoundHalfEven or
-                    GameEventScriptBytecodeOpCode.RoundHalfUp or
-                    GameEventScriptBytecodeOpCode.RoundHalfDown or
-                    GameEventScriptBytecodeOpCode.DegreeToRadians or
-                    GameEventScriptBytecodeOpCode.DegreeFromRadians or
-                    GameEventScriptBytecodeOpCode.WrapDegree or
-                    GameEventScriptBytecodeOpCode.Sin or
-                    GameEventScriptBytecodeOpCode.Cos or
-                    GameEventScriptBytecodeOpCode.Tan or
-                    GameEventScriptBytecodeOpCode.Asin or
-                    GameEventScriptBytecodeOpCode.Acos or
-                    GameEventScriptBytecodeOpCode.Atan or
-                    GameEventScriptBytecodeOpCode.Atan2 or
-                    GameEventScriptBytecodeOpCode.Hypot2D or
-                    GameEventScriptBytecodeOpCode.Hypot3D or
-                    GameEventScriptBytecodeOpCode.Distance or
-                    GameEventScriptBytecodeOpCode.Distance2D or
-                    GameEventScriptBytecodeOpCode.Distance3D or
-                    GameEventScriptBytecodeOpCode.DistanceSquared or
-                    GameEventScriptBytecodeOpCode.DistanceSquared2D or
-                    GameEventScriptBytecodeOpCode.DistanceSquared3D or
-                    GameEventScriptBytecodeOpCode.LengthSquared or
-                    GameEventScriptBytecodeOpCode.LengthSquared2D or
-                    GameEventScriptBytecodeOpCode.LengthSquared3D or
-                    GameEventScriptBytecodeOpCode.Normalize or
-                    GameEventScriptBytecodeOpCode.Normalize2D or
-                    GameEventScriptBytecodeOpCode.Normalize3D or
-                    GameEventScriptBytecodeOpCode.Dot or
-                    GameEventScriptBytecodeOpCode.Dot2D or
-                    GameEventScriptBytecodeOpCode.Dot3D or
-                    GameEventScriptBytecodeOpCode.Cross or
-                    GameEventScriptBytecodeOpCode.Cross2D or
-                    GameEventScriptBytecodeOpCode.Cross3D or
-                    GameEventScriptBytecodeOpCode.AngleBetween or
-                    GameEventScriptBytecodeOpCode.AngleBetween2D or
-                    GameEventScriptBytecodeOpCode.AngleBetween3D or
-                    GameEventScriptBytecodeOpCode.TakeFirst or
-                    GameEventScriptBytecodeOpCode.DropFirst or
-                    GameEventScriptBytecodeOpCode.TakeLast or
-                    GameEventScriptBytecodeOpCode.DropLast or
-                    GameEventScriptBytecodeOpCode.TakeHighest or
-                    GameEventScriptBytecodeOpCode.TakeLowest or
-                    GameEventScriptBytecodeOpCode.DropHighest or
-                    GameEventScriptBytecodeOpCode.DropLowest or
-                    GameEventScriptBytecodeOpCode.Count or
-                    GameEventScriptBytecodeOpCode.StartsWith or
-                    GameEventScriptBytecodeOpCode.EndsWith or
-                    GameEventScriptBytecodeOpCode.Contains or
-                    GameEventScriptBytecodeOpCode.ContainsAny or
-                    GameEventScriptBytecodeOpCode.ContainsAll or
-                    GameEventScriptBytecodeOpCode.HasAny or
-                    GameEventScriptBytecodeOpCode.HasAll or
-                    GameEventScriptBytecodeOpCode.ContainsValue or
-                    GameEventScriptBytecodeOpCode.Union or
-                    GameEventScriptBytecodeOpCode.Intersect or
-                    GameEventScriptBytecodeOpCode.Zip or
-                    GameEventScriptBytecodeOpCode.KeysOfMap or
-                    GameEventScriptBytecodeOpCode.ValuesOfMap or
-                    GameEventScriptBytecodeOpCode.EntriesOfMap or
-                    GameEventScriptBytecodeOpCode.First or
-                    GameEventScriptBytecodeOpCode.Last or
-                    GameEventScriptBytecodeOpCode.Single or
-                    GameEventScriptBytecodeOpCode.IteratorCreate or
-                    GameEventScriptBytecodeOpCode.Distinct or
-                    GameEventScriptBytecodeOpCode.SortAscending or
-                    GameEventScriptBytecodeOpCode.SortDescending or
-                    GameEventScriptBytecodeOpCode.Reverse or
-                    GameEventScriptBytecodeOpCode.HasPattern or
-                    GameEventScriptBytecodeOpCode.TakePattern => true,
-                _ => false
-            };
-        }
+        private static bool HasProgramEffects(RewriteContext context, InstructionPlan instruction, ref EffectAnalysis? effects)
+            => instruction.OpCode == GameEventScriptBytecodeOpCode.CastCustom
+                ? (effects ??= context.AnalyzeEffects()).HasEffects(instruction)
+                : EffectAnalysis.HasDirectEffects(instruction);
     }
 
     private sealed class BranchSimplificationPass : IGesBinaryOptimizationPass

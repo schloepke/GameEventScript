@@ -444,10 +444,20 @@ bindings created inside a braced loop body do not escape the iteration body.
 
 Any expression may be used as a statement. It is evaluated for its observable
 effects, such as an extension invocation, and its resulting value is discarded.
-A discarded record conversion still evaluates the constructor's field casts,
-clamps, and computed expressions. Their extension calls, random consumption,
-and runtime-limit observations are preserved even when no caller reads the
-constructed record.
+Unused computations may be removed when they have no program effects. Emit,
+Publish, and calls into host code are program effects; these must be preserved,
+including when reached indirectly through functions, record field casts,
+clamps, or computed fields. Host and extension calls without an explicit purity
+contract must be treated conservatively as potentially effectful.
+
+Random consumption, allocations, instruction counts, and runtime-budget checks
+are not program effects for this rule and do not prevent removal of an unused
+computation. Optimized and unoptimized programs need not consume the same random
+draws or reach the same runtime limits. Seeded repeatability applies to execution
+of the same validated Program as defined in
+[determinism semantics](Semantics/Determinism.md), not to different compiler
+optimizations. An implementation is not required to remove every unused
+computation that is eligible for removal.
 An expression statement does not implicitly emit or publish a message.
 
 ### Seeded Random Scope

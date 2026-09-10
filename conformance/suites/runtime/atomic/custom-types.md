@@ -798,15 +798,15 @@ steps:
 
 ---
 
-## Test: r23-discarded-record-cast-consumes-random
+## Test: r23-used-record-cast-consumes-random
 
-This case requires an unused Record conversion to retain the random draw made by a computed field.
+This case checks random consumption when the computed Record field is used in a message.
 
 ### Case description
 
 ```yaml
 gesBlock: case
-id: r23-discarded-record-cast-consumes-random
+id: r23-used-record-cast-consumes-random
 kind: scriptApi
 level: atomic
 compile:
@@ -824,8 +824,8 @@ on Start(value) {
   let a be value
   let b be value
   let c be value
-  data as :Sample
-  emit Done(next: random 1 to 6, a: a, b: b, c: c)
+  let converted be data as :Sample
+  emit Done(rolled: converted.rolled, next: random 1 to 6, a: a, b: b, c: c)
 }
 ```
 
@@ -850,6 +850,10 @@ steps:
     local:
       - name: Done
         args:
+          - name: "rolled"
+            value:
+              type: ":Number.int64"
+              value: "2"
           - name: "next"
             value:
               type: ":Number.int64"
@@ -873,15 +877,15 @@ steps:
 
 ---
 
-## Test: r23-discarded-record-cast-keeps-parse-limit
+## Test: r23-used-record-cast-keeps-parse-limit
 
-This case checks the following contract: A discarded Record conversion still evaluates its computed fields and stops the handler when literal parsing reaches its depth limit.
+This case checks that a Record conversion whose result is required stops the handler when literal parsing reaches its depth limit.
 
 ### Case description
 
 ```yaml
 gesBlock: case
-id: "r23-discarded-record-cast-keeps-parse-limit"
+id: "r23-used-record-cast-keeps-parse-limit"
 kind: scriptApi
 level: atomic
 compile:
@@ -902,8 +906,7 @@ on Start(value) {
   let b be value
   let c be value
   emit Before
-  data as :Parsed
-  emit After(a: a, b: b, c: c)
+  emit After(result: (data as :Parsed).result, a: a, b: b, c: c)
 }
 ```
 
@@ -931,4 +934,273 @@ steps:
     runtimeLimits:
       include:
         - name: "MaxLiteralDepth"
+```
+
+---
+
+## Test: discarded-record-retains-direct-effect
+
+This case checks that a discarded Record cast preserves its computed extension invocation.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: discarded-record-retains-direct-effect
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+record :Sample as { value: :Number, result: :Number computed by :test.notify(value) }
+on Start(value) {
+  emit Before
+  [value: value] as :Sample
+  emit After
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: value
+          value: { type: ":Number.int64", value: "42" }
+    local:
+      - name: Before
+      - name: Effect
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "42" }
+      - name: After
+```
+
+---
+
+## Test: discarded-record-retains-transitive-effect
+
+This case checks that an extension effect propagates through forward function calls to a discarded Record cast.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: discarded-record-retains-transitive-effect
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+record :Sample as { value: :Number, result: :Number computed by forward(value) }
+function forward(_ value) be finish(value)
+function finish(_ value) be :test.notify(value)
+on Start(value) {
+  emit Before
+  [value: value] as :Sample
+  emit After
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: value
+          value: { type: ":Number.int64", value: "42" }
+    local:
+      - name: Before
+      - name: Effect
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "42" }
+      - name: After
+```
+
+---
+
+## Test: discarded-record-retains-nested-constructor-effect
+
+This case checks that an effect propagates through a nested Record constructor.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: discarded-record-retains-nested-constructor-effect
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+record :Outer as { value: :Number, inner: :Inner computed by :Inner(value: value) }
+record :Inner as { value: :Number, result: :Number computed by :test.notify(value) }
+on Start(value) {
+  emit Before
+  [value: value] as :Outer
+  emit After
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: value
+          value: { type: ":Number.int64", value: "42" }
+    local:
+      - name: Before
+      - name: Effect
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "42" }
+      - name: After
+```
+
+---
+
+## Test: discarded-record-retains-nested-cast-effect
+
+This case checks that an effect propagates through a nested Record cast.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: discarded-record-retains-nested-cast-effect
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+record :Outer as { value: :Number, inner: :Inner computed by [value: value] as :Inner }
+record :Inner as { value: :Number, result: :Number computed by :test.notify(value) }
+on Start(value) {
+  emit Before
+  [value: value] as :Outer
+  emit After
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: value
+          value: { type: ":Number.int64", value: "42" }
+    local:
+      - name: Before
+      - name: Effect
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "42" }
+      - name: After
+```
+
+---
+
+## Test: discarded-pure-cast-retains-input-effect
+
+This case checks that an effect in the input expression survives removal of a pure conversion.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: discarded-pure-cast-retains-input-effect
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+record :Sample as { value: :Number }
+on Start(value) {
+  emit Before
+  (:test.notify(value)) as :Sample
+  emit After
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: value
+          value: { type: ":Number.int64", value: "42" }
+    local:
+      - name: Before
+      - name: Effect
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "42" }
+      - name: After
 ```

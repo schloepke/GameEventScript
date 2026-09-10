@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "A0ACD5BA48408EB1F8FF989CAB5B7F8EB756A4E3F52DC0B25F2B6943531ACBB0",
+    "sha256": "C92512BFBA4D1610CBC0576BC4F85835BDEEF7C7B1A52EFF9DDC3BBC8BDB38A6",
     "documentCount": 86,
-    "caseCount": 1382
+    "caseCount": 1387
   },
   "cases": [
     {
@@ -9475,7 +9475,7 @@
       "code": "conformance.passed"
     },
     {
-      "id": "runtime.atomic.custom-types/r23-discarded-record-cast-consumes-random",
+      "id": "runtime.atomic.custom-types/discarded-pure-cast-retains-input-effect",
       "kind": "scriptApi",
       "level": "atomic",
       "requires": {
@@ -9493,7 +9493,97 @@
       "code": "conformance.passed"
     },
     {
-      "id": "runtime.atomic.custom-types/r23-discarded-record-cast-keeps-parse-limit",
+      "id": "runtime.atomic.custom-types/discarded-record-retains-direct-effect",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.custom-types/discarded-record-retains-nested-cast-effect",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.custom-types/discarded-record-retains-nested-constructor-effect",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.custom-types/discarded-record-retains-transitive-effect",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.custom-types/r23-used-record-cast-consumes-random",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.custom-types/r23-used-record-cast-keeps-parse-limit",
       "kind": "scriptApi",
       "level": "atomic",
       "requires": {

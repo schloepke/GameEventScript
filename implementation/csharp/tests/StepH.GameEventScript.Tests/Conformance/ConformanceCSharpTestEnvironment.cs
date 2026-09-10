@@ -186,6 +186,12 @@ internal sealed class ConformanceTestExtensionRegistry : IGameEventScriptExtensi
 
     private static readonly IGameEventScriptExtensionFunction TestEcho = new DelegateExtensionFunction((call, args) => { if (args.Length == 1) call.SetValue(args[0]); else call.SetNothing(); });
 
+    private static readonly IGameEventScriptExtensionFunction TestNotify = new DelegateExtensionFunction((call, args) =>
+    {
+        call.Context.Emit("Effect", [new GameEventScriptMessageArgument("value", args[0])]);
+        call.SetValue(args[0]);
+    });
+
     private static readonly IGameEventScriptExtensionFunction TestTruth = new DelegateExtensionFunction((call, _) => call.SetBoolean(true));
     private static readonly IGameEventScriptExtensionFunction TestFail = new DelegateExtensionFunction((_, _) => throw new InvalidOperationException("Configured conformance extension failure."));
 
@@ -205,6 +211,7 @@ internal sealed class ConformanceTestExtensionRegistry : IGameEventScriptExtensi
         if (Matches(reference, "nav", "isNorth", 1, requireUnlabeled: false)) return NavIsNorth;
         if (Matches(reference, "test", "vectorSum", 1, requireUnlabeled: true)) return TestVectorSum;
         if (Matches(reference, "test", "echo", 1, requireUnlabeled: true)) return TestEcho;
+        if (Matches(reference, "test", "notify", 1, requireUnlabeled: true)) return TestNotify;
         if (Matches(reference, "test", "truth", 0, requireUnlabeled: false)) return TestTruth;
         if (Matches(reference, "test", "fail", 0, requireUnlabeled: false)) return TestFail;
         return null;

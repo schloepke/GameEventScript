@@ -34,6 +34,26 @@ public sealed class GameEventScriptPortableBoundaryTests
     }
 
     [TestMethod]
+    public void CoreAssemblyHasNoAmbientClockOrIdentifierDependencies()
+    {
+        using var stream = File.OpenRead(typeof(GameEventScriptProgram).Assembly.Location);
+        using var assembly = new PEReader(stream);
+        var metadata = assembly.GetMetadataReader();
+        var forbidden = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "System.DateTime", "System.DateTimeOffset", "System.Guid", "System.Random"
+        };
+        var dependencies = metadata.TypeReferences
+            .Select(handle => metadata.GetTypeReference(handle))
+            .Select(type => metadata.GetString(type.Namespace) + "." + metadata.GetString(type.Name))
+            .Where(forbidden.Contains)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.HasCount(0, dependencies, "Ambient clock and identifier sources belong outside Core; entropy is acquired only through the platform seam: " + string.Join(", ", dependencies));
+    }
+
+    [TestMethod]
     public void CorePublicInputsDoNotExposeUnorderedDictionaryAdapters()
     {
         var violations = typeof(GameEventScriptProgram).Assembly.GetExportedTypes()

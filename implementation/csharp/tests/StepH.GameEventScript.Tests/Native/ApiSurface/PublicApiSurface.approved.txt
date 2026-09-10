@@ -533,6 +533,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptHostBuilder
   method StepH.GameEventScript.Api.GameEventScriptHost Build()
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithExternalTypeRegistry(StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry registry)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithPublishSink(StepH.GameEventScript.Api.IGameEventScriptPublishSink publishSink)
+  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRandomEntropy(System.ReadOnlySpan<System.Byte> entropy)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRandomSeed(System.Int64 seed)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRandomSequence(System.Collections.Generic.IReadOnlyList<System.Double> values)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRandomSequence(System.Collections.Generic.IReadOnlyList<System.Double> values, System.Int64 fallbackSeed)
@@ -732,9 +733,11 @@ sealed class StepH.GameEventScript.Api.GameEventScriptRandomGenerator
   method System.Double NextFloat(System.Double firstBound, System.Double secondBound)
   method System.Int64 NextInclusiveInteger(System.Int64 minInclusive, System.Int64 maxInclusive)
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator Create()
+  method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromEntropy(System.ReadOnlySpan<System.Byte> entropy)
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromSeed(System.Int32 seed)
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromSeed(System.Int64 seed)
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromSequence(System.Double[] values)
+  method static System.Int64 SeedFromEntropy(System.ReadOnlySpan<System.Byte> entropy)
 struct StepH.GameEventScript.Api.GameEventScriptReadOnlyArray`1
   ctor GameEventScriptReadOnlyArray`1(System.Collections.Generic.IReadOnlyList<T> items)
   method System.Collections.Generic.IEnumerator<T> GetEnumerator()
@@ -1333,6 +1336,7 @@ enum StepH.GameEventScript.Conformance.ConformancePumpMode
   enum-field Enqueue = 2
   enum-field Frame = 3
 sealed class StepH.GameEventScript.Conformance.ConformanceRandomConfiguration
+  property System.Collections.Generic.IReadOnlyList<System.Byte> Entropy { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Sequence { get }
   property System.Int64? Seed { get }
 static class StepH.GameEventScript.Conformance.ConformanceReceivedMarkdownWriter

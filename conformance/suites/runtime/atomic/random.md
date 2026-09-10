@@ -656,3 +656,423 @@ steps:
                 - { type: ":Number.int64", value: "4245911017751749998" }
                 - { type: ":Number.int64", value: "-7832179929631733380" }
 ```
+
+
+---
+
+## Test: entropy zero-byte produces the specified stream
+
+This case checks the entropy vector `00` with specified seed `7960286522194355700`. Two independent hosts receive the same bytes and must produce the exact expected Int64 and Binary64 draws across two messages. Expected values are fixed known answers, not computed by the runner from its entropy implementation.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: entropy-zero-byte
+kind: scriptApi
+level: atomic
+hostCount: 2
+compile:
+  binaryRoundTrip: true
+random:
+  entropy: "00"
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let integers be :List[:select item from 1 to 4 => random from -9223372036854775808 to 9223372036854775807]
+  let fractions be :List[:select item from 1 to 4 => random from 0.0 to 1.0]
+  emit Done(integers: integers, fractions: fractions)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| first | Start | completion | |
+| second | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  first:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: integers
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.int64"
+                  value: "-1801742914047273126"
+                - type: ":Number.int64"
+                  value: "6906618146802271930"
+                - type: ":Number.int64"
+                  value: "8906945353371085094"
+                - type: ":Number.int64"
+                  value: "-3516509875896380310"
+          - name: fractions
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.binary64"
+                  value: "0.6223943266806276"
+                - type: ":Number.binary64"
+                  value: "0.26512990897891975"
+                - type: ":Number.binary64"
+                  value: "0.24935350628619746"
+                - type: ":Number.binary64"
+                  value: "0.15459849413800142"
+  second:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: integers
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.int64"
+                  value: "-8686397166268783544"
+                - type: ":Number.int64"
+                  value: "5241406879626227521"
+                - type: ":Number.int64"
+                  value: "-2582843479293753457"
+                - type: ":Number.int64"
+                  value: "-7605497857510631640"
+          - name: fractions
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.binary64"
+                  value: "0.703556533304155"
+                - type: ":Number.binary64"
+                  value: "0.2105796006076005"
+                - type: ":Number.binary64"
+                  value: "0.8293769217688932"
+                - type: ":Number.binary64"
+                  value: "0.48143022033185934"
+```
+
+
+---
+
+## Test: entropy eight-ordered-bytes produces the specified stream
+
+This case checks the entropy vector `0102030405060708` with specified seed `1257585870541503724`. Two independent hosts receive the same bytes and must produce the exact expected Int64 and Binary64 draws across two messages. Expected values are fixed known answers, not computed by the runner from its entropy implementation.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: entropy-eight-ordered-bytes
+kind: scriptApi
+level: atomic
+hostCount: 2
+compile:
+  binaryRoundTrip: true
+random:
+  entropy: "0102030405060708"
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let integers be :List[:select item from 1 to 4 => random from -9223372036854775808 to 9223372036854775807]
+  let fractions be :List[:select item from 1 to 4 => random from 0.0 to 1.0]
+  emit Done(integers: integers, fractions: fractions)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| first | Start | completion | |
+| second | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  first:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: integers
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.int64"
+                  value: "-7574494408109740143"
+                - type: ":Number.int64"
+                  value: "7702978289446259023"
+                - type: ":Number.int64"
+                  value: "-8697775356578377073"
+                - type: ":Number.int64"
+                  value: "5318479663885001588"
+          - name: fractions
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.binary64"
+                  value: "0.9344824465193561"
+                - type: ":Number.binary64"
+                  value: "0.08751081340657874"
+                - type: ":Number.binary64"
+                  value: "0.7124670705180005"
+                - type: ":Number.binary64"
+                  value: "0.7658160597423257"
+  second:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: integers
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.int64"
+                  value: "8338194038206138127"
+                - type: ":Number.int64"
+                  value: "-2709963078321457182"
+                - type: ":Number.int64"
+                  value: "-2915471211011131715"
+                - type: ":Number.int64"
+                  value: "8758672477004886073"
+          - name: fractions
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.binary64"
+                  value: "0.1631142814931038"
+                - type: ":Number.binary64"
+                  value: "0.9256033898358259"
+                - type: ":Number.binary64"
+                  value: "0.6814499593074986"
+                - type: ":Number.binary64"
+                  value: "0.3095940071575567"
+```
+
+
+---
+
+## Test: entropy ascii-bytes produces the specified stream
+
+This case checks the entropy vector `47616D654576656E74536372697074` with specified seed `2502825403663315715`. Two independent hosts receive the same bytes and must produce the exact expected Int64 and Binary64 draws across two messages. Expected values are fixed known answers, not computed by the runner from its entropy implementation.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: entropy-ascii-bytes
+kind: scriptApi
+level: atomic
+hostCount: 2
+compile:
+  binaryRoundTrip: true
+random:
+  entropy: "47616D654576656E74536372697074"
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let integers be :List[:select item from 1 to 4 => random from -9223372036854775808 to 9223372036854775807]
+  let fractions be :List[:select item from 1 to 4 => random from 0.0 to 1.0]
+  emit Done(integers: integers, fractions: fractions)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| first | Start | completion | |
+| second | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  first:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: integers
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.int64"
+                  value: "5661967672262427672"
+                - type: ":Number.int64"
+                  value: "8397587441353728323"
+                - type: ":Number.int64"
+                  value: "-6511896062694124207"
+                - type: ":Number.int64"
+                  value: "-6137984034057242569"
+          - name: fractions
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.binary64"
+                  value: "0.1429987804566636"
+                - type: ":Number.binary64"
+                  value: "0.7789488332206926"
+                - type: ":Number.binary64"
+                  value: "0.754718025528599"
+                - type: ":Number.binary64"
+                  value: "0.6813966483605702"
+  second:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: integers
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.int64"
+                  value: "1973910319732067812"
+                - type: ":Number.int64"
+                  value: "-3378188145231525588"
+                - type: ":Number.int64"
+                  value: "8029391897131675318"
+                - type: ":Number.int64"
+                  value: "3268670417125390371"
+          - name: fractions
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.binary64"
+                  value: "0.18079134806262132"
+                - type: ":Number.binary64"
+                  value: "0.11848819503364916"
+                - type: ":Number.binary64"
+                  value: "0.8563450483842715"
+                - type: ":Number.binary64"
+                  value: "0.9683315360179386"
+```
+
+
+---
+
+## Test: entropy high-bit-bytes produces the specified stream
+
+This case checks the entropy vector `FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF` with specified seed `-960758279163454167`. Two independent hosts receive the same bytes and must produce the exact expected Int64 and Binary64 draws across two messages. Expected values are fixed known answers, not computed by the runner from its entropy implementation.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: entropy-high-bit-bytes
+kind: scriptApi
+level: atomic
+hostCount: 2
+compile:
+  binaryRoundTrip: true
+random:
+  entropy: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let integers be :List[:select item from 1 to 4 => random from -9223372036854775808 to 9223372036854775807]
+  let fractions be :List[:select item from 1 to 4 => random from 0.0 to 1.0]
+  emit Done(integers: integers, fractions: fractions)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| first | Start | completion | |
+| second | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  first:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: integers
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.int64"
+                  value: "-5451881170504208589"
+                - type: ":Number.int64"
+                  value: "-8982560757595855800"
+                - type: ":Number.int64"
+                  value: "6175962179834172202"
+                - type: ":Number.int64"
+                  value: "5466366218387127367"
+          - name: fractions
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.binary64"
+                  value: "0.945998168359484"
+                - type: ":Number.binary64"
+                  value: "0.11452655563981051"
+                - type: ":Number.binary64"
+                  value: "0.7356091639628609"
+                - type: ":Number.binary64"
+                  value: "0.7189526713655172"
+  second:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: integers
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.int64"
+                  value: "-2513461824255004494"
+                - type: ":Number.int64"
+                  value: "-4245606879026237042"
+                - type: ":Number.int64"
+                  value: "-852221283529000168"
+                - type: ":Number.int64"
+                  value: "-510922514678258511"
+          - name: fractions
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.binary64"
+                  value: "0.6198394929706643"
+                - type: ":Number.binary64"
+                  value: "0.13814398629503621"
+                - type: ":Number.binary64"
+                  value: "0.51175595396124"
+                - type: ":Number.binary64"
+                  value: "0.7675657267355153"
+```

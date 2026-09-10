@@ -49,4 +49,12 @@ public sealed class GameEventScriptRandomGeneratorTests
         Assert.IsTrue(fallback >= 0 && fallback <= 1);
     }
 
+    [TestMethod]
+    public void EmptyEntropyUsesTheCSharpArgumentExceptionContract()
+    {
+        _ = Assert.ThrowsExactly<ArgumentException>(() => { _ = GameEventScriptRandomGenerator.SeedFromEntropy(ReadOnlySpan<byte>.Empty); });
+        _ = Assert.ThrowsExactly<ArgumentException>(() => { _ = GameEventScriptRandomGenerator.FromEntropy(ReadOnlySpan<byte>.Empty); });
+        _ = Assert.ThrowsExactly<ArgumentException>(() => { _ = GameEventScriptHost.CreateBuilder().WithRandomEntropy(ReadOnlySpan<byte>.Empty); });
+    }
+
 }

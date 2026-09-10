@@ -647,10 +647,11 @@ public sealed class ConformanceComparisonOptions
 /// </summary>
 public sealed class ConformanceRandomConfiguration
 {
-    internal ConformanceRandomConfiguration(long? seed, IReadOnlyList<string> sequence)
+    internal ConformanceRandomConfiguration(long? seed, IReadOnlyList<string> sequence, IReadOnlyList<byte> entropy)
     {
         Seed = seed;
         Sequence = ConformanceDocument.Copy(sequence);
+        Entropy = ConformanceDocument.Copy(entropy);
     }
 
     /// <summary>
@@ -661,6 +662,10 @@ public sealed class ConformanceRandomConfiguration
     /// Gets the sequence.
     /// </summary>
     public IReadOnlyList<string> Sequence { get; }
+    /// <summary>
+    /// Gets the ordered entropy bytes used for deterministic seed derivation, or an empty list when a seed or sequence is configured.
+    /// </summary>
+    public IReadOnlyList<byte> Entropy { get; }
 }
 
 /// <summary>

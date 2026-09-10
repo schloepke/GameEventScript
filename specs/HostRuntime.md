@@ -23,8 +23,9 @@ message queue, exact- and name-subscription indexes, private random stream,
 runtime limits, observer, optional outbound sink, linked program instances, and
 at most one reusable `GesVmState`. A host may contain only native handlers and
 does not create a VM until the first program is loaded. Host construction accepts
-a seed or an immutable sequence configuration, never a live mutable generator;
-building two hosts from the same configuration creates two independent streams.
+a seed, entropy bytes, or an immutable sequence configuration, never a live
+mutable generator; building two hosts from the same configuration creates two
+independent streams.
 
 `GameEventScriptInstance` is one host-specific link of one program. `Load` is
 additive and returns an instance. Linking resolves extension and external-type

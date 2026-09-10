@@ -317,9 +317,20 @@ Exact comparison is the default. ULP mode is allowed only where platform math
 or another documented operation requires it. Kind, unit, integer, text,
 boolean, tag, ordering, and structure remain exact in both modes.
 
-`random` contains exactly one of `seed` (signed Int64) or `sequence` (a
-non-empty sequence of canonical Binary64 strings). Tests that execute a random
-operation must supply deterministic random configuration. V1 test kinds do not support expectations based on nondeterministic behavior.
+`random` contains exactly one of `seed` (signed Int64), `sequence` (a
+non-empty sequence of canonical Binary64 strings), or `entropy` (a non-empty
+string of uppercase hexadecimal byte pairs without separators or a prefix).
+For example, `random: { entropy: "0001FF" }` supplies the three ordered bytes
+`00`, `01`, and `FF` to the host builder's entropy configuration. The runner
+must exercise that configuration path instead of replacing the bytes with a
+precomputed seed. Seed derivation follows
+[Entropy-to-seed mixing](../Semantics/Determinism.md#entropy-to-seed-mixing).
+Invalid entropy encodings and combined random configurations are rejected with
+`conformance.schema.invalidValue`.
+
+Tests that execute a random operation must supply deterministic random
+configuration. V1 test kinds do not support expectations based on
+nondeterministic behavior; fixed entropy input never acquires platform entropy.
 
 ### Sources and programs
 

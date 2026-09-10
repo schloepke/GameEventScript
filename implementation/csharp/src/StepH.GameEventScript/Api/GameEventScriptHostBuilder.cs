@@ -12,6 +12,7 @@ namespace StepH.GameEventScript.Api;
 public sealed class GameEventScriptHostBuilder
 {
     private long? _randomSeed;
+    private long? _randomEntropySeed;
     private double[]? _randomSequence;
     private long? _randomSequenceFallbackSeed;
     private IGameEventScriptRuntimeObserver? _observer;
@@ -26,6 +27,20 @@ public sealed class GameEventScriptHostBuilder
     public GameEventScriptHostBuilder WithRandomSeed(long seed)
     {
         _randomSeed = seed;
+        _randomEntropySeed = null;
+        _randomSequence = null;
+        _randomSequenceFallbackSeed = null;
+        return this;
+    }
+
+    /// <summary>Configures this host's deterministic seed by folding <paramref name="entropy"/> through the portable entropy-mixing function, and clears any prior seed or sequence.</summary>
+    /// <param name="entropy">A non-empty read-only span of entropy bytes. Supply at least eight bytes for a full-entropy seed.</param>
+    /// <returns>This builder.</returns>
+    /// <exception cref="ArgumentException"><paramref name="entropy"/> is empty.</exception>
+    public GameEventScriptHostBuilder WithRandomEntropy(ReadOnlySpan<byte> entropy)
+    {
+        _randomEntropySeed = GameEventScriptRandomGenerator.SeedFromEntropy(entropy);
+        _randomSeed = null;
         _randomSequence = null;
         _randomSequenceFallbackSeed = null;
         return this;
@@ -51,6 +66,7 @@ public sealed class GameEventScriptHostBuilder
         for (var index = 0; index < values.Count; index++) _randomSequence[index] = values[index];
         _randomSequenceFallbackSeed = fallbackSeed;
         _randomSeed = null;
+        _randomEntropySeed = null;
         return this;
     }
 
@@ -116,11 +132,14 @@ public sealed class GameEventScriptHostBuilder
     public GameEventScriptHost Build()
     {
         var maxRandomScopeDepth = _limits.MaxRandomScopeDepth;
-        var random = _randomSequence is { } sequence
-            ? GameEventScriptRandomGenerator.FromSequenceForHost(sequence, _randomSequenceFallbackSeed, maxRandomScopeDepth)
-            : _randomSeed is { } seed
-                ? GameEventScriptRandomGenerator.FromSeedForHost(seed, maxRandomScopeDepth)
-                : GameEventScriptRandomGenerator.CreateForHost(maxRandomScopeDepth);
+        GameEventScriptRandomGenerator random;
+        if (_randomSequence is { } sequence)
+            random = GameEventScriptRandomGenerator.FromSequenceForHost(sequence, _randomSequenceFallbackSeed, maxRandomScopeDepth);
+        else if ((_randomSeed ?? _randomEntropySeed) is { } seed)
+            random = GameEventScriptRandomGenerator.FromSeedForHost(seed, maxRandomScopeDepth);
+        else
+            random = GameEventScriptRandomGenerator.CreateForHost(maxRandomScopeDepth);
+
         return new GameEventScriptHost(random, _observer, _extensionRegistry, _externalTypeRegistry, _limits, _publishSink);
     }
 }

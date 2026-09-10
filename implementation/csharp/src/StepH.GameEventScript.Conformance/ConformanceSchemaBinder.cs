@@ -308,16 +308,38 @@ internal static class ConformanceSchemaBinder
     private static ConformanceRandomConfiguration? BindRandom(YamlNode? node)
     {
         if (node is null) return null;
-        Closed(node, "seed", "sequence");
+        Closed(node, "seed", "sequence", "entropy");
         var seedNode = Optional(node, "seed");
         var sequenceNode = Optional(node, "sequence");
-        if ((seedNode is null) == (sequenceNode is null)) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "random requires exactly one of seed or sequence.", node.Range);
-        if (seedNode is not null) return new ConformanceRandomConfiguration(ParseInt64(seedNode), Array.Empty<string>());
+        var entropyNode = Optional(node, "entropy");
+        if ((seedNode is null ? 0 : 1) + (sequenceNode is null ? 0 : 1) + (entropyNode is null ? 0 : 1) != 1)
+            throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "random requires exactly one of seed, sequence or entropy.", node.Range);
+        if (seedNode is not null) return new ConformanceRandomConfiguration(ParseInt64(seedNode), Array.Empty<string>(), Array.Empty<byte>());
+        if (entropyNode is not null) return new ConformanceRandomConfiguration(null, Array.Empty<string>(), ParseEntropy(entropyNode));
         var sequence = StringList(sequenceNode!, ids: false);
         if (sequence.Count == 0) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "random.sequence cannot be empty.", sequenceNode!.Range);
         foreach (var value in sequence) RequireCanonicalFiniteBinary64(value, sequenceNode!.Range);
-        return new ConformanceRandomConfiguration(null, sequence);
+        return new ConformanceRandomConfiguration(null, sequence, Array.Empty<byte>());
     }
+
+    private static byte[] ParseEntropy(YamlNode node)
+    {
+        var hex = String(node);
+        if (hex.Length == 0 || hex.Length % 2 != 0)
+            throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "random.entropy requires a non-empty string of uppercase hexadecimal byte pairs.", node.Range);
+        var bytes = new byte[hex.Length / 2];
+        for (var index = 0; index < bytes.Length; index++)
+        {
+            var high = EntropyHexDigit(hex[index * 2]);
+            var low = EntropyHexDigit(hex[index * 2 + 1]);
+            if (high < 0 || low < 0)
+                throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "random.entropy requires uppercase hexadecimal byte pairs without separators or a prefix.", node.Range);
+            bytes[index] = (byte)((high << 4) | low);
+        }
+        return bytes;
+    }
+
+    private static int EntropyHexDigit(char value) => value is >= '0' and <= '9' ? value - '0' : value is >= 'A' and <= 'F' ? value - 'A' + 10 : -1;
 
     private static ConformanceMessageApiCase? BindMessageApi(YamlNode? node)
     {

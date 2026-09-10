@@ -107,14 +107,45 @@ sample is less than one.
 cross-platform output contract. `FromSequence` is a test adapter: supplied
 values are copied, consumed in order, and clamped to requested non-collapsed
 bounds. After exhaustion it continues with its private generator. The public
-standalone factory seeds that fallback non-deterministically. Host configuration
-may provide an explicit fallback seed; Markdown conformance uses seed `0`, so an
-exhausted test sequence remains portable and reproducible.
+standalone factory and the seedless host default seed that fallback from the
+platform entropy source. Host configuration may provide an explicit fallback
+seed; Markdown conformance uses seed `0`, so an exhausted test sequence remains
+portable and reproducible.
+
+Acquiring default entropy is the single platform-specific operation in the
+otherwise portable core. Each language port implements it natively, it never
+participates in the deterministic contract, and the Conformance corpus never
+exercises it because every case pins an explicit seed, fixed entropy bytes,
+or a sequence with a deterministic fallback seed.
 
 A host never accepts or retains an externally owned mutable generator. Its
-builder accepts a seed or immutable sequence values and constructs a private
-generator for every built host. Two hosts built from one builder therefore have
-independent state even when their initial streams are identical.
+builder accepts a seed, entropy bytes, or immutable sequence values and
+constructs a private generator for every built host. Two hosts built from one
+builder therefore have independent state even when their initial streams are
+identical.
+
+### Entropy-to-seed mixing
+
+`SeedFromEntropy` folds a non-empty byte span into a signed 64-bit seed. The
+fold is deterministic and endian-neutral: identical input bytes yield an
+identical seed on every platform, so a captured entropy blob reproduces a run
+across ports. Empty input is rejected. `FromEntropy(bytes)` is exactly
+`FromSeed(SeedFromEntropy(bytes))`, and the same seed may configure several
+generators or hosts.
+
+Let `mix(x)` be one SplitMix64 step over an unsigned 64-bit `x`: first
+`z = x + 0x9E3779B97F4A7C15`, then `z = (z XOR (z >> 30)) * 0xBF58476D1CE4E5B9`,
+then `z = (z XOR (z >> 27)) * 0x94D049BB133111EB`, then `z = z XOR (z >> 31)`;
+every operation wraps modulo 2^64. Starting from `state = 0x9E3779B97F4A7C15`,
+for each entropy byte `b` in order set `state = mix(state XOR b)`. The signed
+reinterpretation of the final `state` is the seed.
+
+| Input bytes (hex) | `SeedFromEntropy` (unsigned 64-bit) |
+| --- | --- |
+| `00` | `0x6E789E6AA1B965F4` |
+| `0102030405060708` | `0x1173D7AFB02D3CEC` |
+| `47616D654576656E74536372697074` | `0x22BBD271B02CF303` |
+| `FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF` | `0xF2AAB36F77725D29` |
 
 ## Seeded random scopes
 

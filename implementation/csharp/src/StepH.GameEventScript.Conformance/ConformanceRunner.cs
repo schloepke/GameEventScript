@@ -1104,6 +1104,13 @@ public static class ConformanceRunner
 
     private static void ConfigureRandom(GameEventScriptHostBuilder builder, ConformanceRandomConfiguration? configuration)
     {
+        if (configuration is { Entropy.Count: > 0 })
+        {
+            var entropy = new byte[configuration.Entropy.Count];
+            for (var index = 0; index < entropy.Length; index++) entropy[index] = configuration.Entropy[index];
+            builder.WithRandomEntropy(entropy);
+            return;
+        }
         if (configuration?.Seed is { } seed)
         {
             builder.WithRandomSeed(seed);

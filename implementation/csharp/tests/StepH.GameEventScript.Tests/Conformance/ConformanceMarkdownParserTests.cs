@@ -151,6 +151,40 @@ steps:
     }
 
     [TestMethod]
+    public void NormalizesEntropyBytesIntoAnImmutableRandomConfiguration()
+    {
+        var configuration = ConformanceMarkdownParser.Parse(RandomConfigurationCase("{ entropy: \"0001FF80\" }")).Cases[0].Random!;
+
+        CollectionMutationProbe.ReplaceFirstIfWritable(configuration.Entropy, (byte)42);
+
+        Assert.IsNull(configuration.Seed);
+        Assert.HasCount(0, configuration.Sequence);
+        CollectionAssert.AreEqual(new byte[] { 0, 1, 255, 128 }, configuration.Entropy.ToArray());
+    }
+
+    [TestMethod]
+    [DataRow("{ entropy: \"\" }")]
+    [DataRow("{ entropy: \"0\" }")]
+    [DataRow("{ entropy: \"0x00\" }")]
+    [DataRow("{ entropy: \"ff\" }")]
+    [DataRow("{ entropy: \"GG\" }")]
+    [DataRow("{ entropy: \"00 FF\" }")]
+    [DataRow("{ entropy: \"00\", seed: 0 }")]
+    [DataRow("{ entropy: \"00\", sequence: [\"0.5\"] }")]
+    public void RejectsInvalidEntropyConfiguration(string configuration)
+    {
+        var exception = Assert.ThrowsExactly<ConformanceParseException>(() => ConformanceMarkdownParser.Parse(RandomConfigurationCase(configuration)));
+
+        Assert.AreEqual(ConformanceDiagnosticCodes.SchemaInvalidValue, exception.Diagnostics[0].Code);
+    }
+
+    private static string RandomConfigurationCase(string configuration)
+        => "---\nformatVersion: 1\nsuiteId: random.configuration\nkind: scriptApi\nlevel: atomic\n---\n" +
+            "## Test: Configuration\n```yaml\ngesBlock: case\nid: configuration\nrandom: " + configuration + "\n```\n" +
+            "```ges\non Start {}\n```\n### Steps\n| step | receive | pump | budget |\n| --- | --- | --- | --- |\n| run | Start | completion | |\n" +
+            "```yaml\ngesBlock: expect\nsteps:\n  run:\n    input:\n      args: []\n    local: []\n```\n";
+
+    [TestMethod]
     public void PreservesUtf8ByteRangesBomAndCrLogicalLines()
     {
         var markdown = "---\rformatVersion: 1\rsuiteId: unicode.test\rkind: bytecodeSnapshot\rlevel: atomic\r---\r" +

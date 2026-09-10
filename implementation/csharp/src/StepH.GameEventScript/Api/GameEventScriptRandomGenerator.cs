@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
+using System.Security.Cryptography;
 using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.Api;
@@ -88,7 +89,7 @@ public sealed class GameEventScriptRandomGenerator
     /// <returns>
     /// A new <c>GameEventScriptRandomGenerator</c> initialized with a default generator seed.
     /// </returns>
-    public static GameEventScriptRandomGenerator Create() => new(CreateDefaultSeed(), null, DefaultMaxScopeDepth);
+    public static GameEventScriptRandomGenerator Create() => new(GatherPlatformEntropy(), null, DefaultMaxScopeDepth);
 
     /// <summary>
     /// Creates and returns a new instance of <c>GameEventScriptRandomGenerator</c>
@@ -130,7 +131,46 @@ public sealed class GameEventScriptRandomGenerator
     /// sequence of random values.
     /// </returns>
     public static GameEventScriptRandomGenerator FromSequence(params double[] values)
-        => new(CreateDefaultSeed(), CopySequence(values), DefaultMaxScopeDepth);
+        => new(GatherPlatformEntropy(), CopySequence(values), DefaultMaxScopeDepth);
+
+    /// <summary>
+    /// Folds a non-empty span of entropy bytes into a deterministic seed with the
+    /// portable, endian-neutral mixing function and returns a generator seeded
+    /// from it. Identical input bytes produce an identical generator on every
+    /// platform, so a captured entropy blob reproduces a run across language
+    /// ports.
+    /// </summary>
+    /// <param name="entropy">
+    /// A non-empty span of entropy bytes. Supply at least eight bytes for a
+    /// full-entropy seed.
+    /// </param>
+    /// <returns>
+    /// A new deterministic <see cref="GameEventScriptRandomGenerator"/> seeded
+    /// from the mixed entropy.
+    /// </returns>
+    /// <exception cref="ArgumentException"><paramref name="entropy"/> is empty.</exception>
+    public static GameEventScriptRandomGenerator FromEntropy(ReadOnlySpan<byte> entropy)
+        => FromSeed(SeedFromEntropy(entropy));
+
+    /// <summary>
+    /// Folds a non-empty span of entropy bytes into a signed 64-bit seed with the
+    /// portable mixing function defined by the Determinism specification. The fold
+    /// is deterministic and endian-neutral, so identical input bytes yield an
+    /// identical seed on every platform. Reuse the returned seed with
+    /// <see cref="FromSeed(long)"/> or
+    /// <see cref="GameEventScriptHostBuilder.WithRandomSeed(long)"/> to configure
+    /// several generators or hosts from one entropy acquisition.
+    /// </summary>
+    /// <param name="entropy">A non-empty span of entropy bytes.</param>
+    /// <returns>The derived signed 64-bit seed.</returns>
+    /// <exception cref="ArgumentException"><paramref name="entropy"/> is empty.</exception>
+    public static long SeedFromEntropy(ReadOnlySpan<byte> entropy)
+    {
+        if (entropy.IsEmpty) throw new ArgumentException("Entropy must contain at least one byte.", nameof(entropy));
+        var state = 0x9E3779B97F4A7C15UL;
+        for (var index = 0; index < entropy.Length; index++) state = new SplitMix(state ^ entropy[index]).NextUInt64();
+        return unchecked((long)state);
+    }
 
     /// <summary>
     /// Saves the active random stream and starts a nested scope from an identical
@@ -235,13 +275,13 @@ public sealed class GameEventScriptRandomGenerator
     }
 
     internal static GameEventScriptRandomGenerator CreateForHost(int maxScopeDepth)
-        => new(CreateDefaultSeed(), null, ValidateMaxScopeDepth(maxScopeDepth));
+        => new(GatherPlatformEntropy(), null, ValidateMaxScopeDepth(maxScopeDepth));
 
     internal static GameEventScriptRandomGenerator FromSeedForHost(long seed, int maxScopeDepth)
         => new(seed, null, ValidateMaxScopeDepth(maxScopeDepth));
 
     internal static GameEventScriptRandomGenerator FromSequenceForHost(double[] values, long? fallbackSeed, int maxScopeDepth)
-        => new(fallbackSeed ?? CreateDefaultSeed(), CopySequence(values), ValidateMaxScopeDepth(maxScopeDepth));
+        => new(fallbackSeed ?? GatherPlatformEntropy(), CopySequence(values), ValidateMaxScopeDepth(maxScopeDepth));
 
     private GameEventScriptRandomGenerator(long seed, double[]? sequence, int maxScopeDepth)
     {
@@ -439,9 +479,18 @@ public sealed class GameEventScriptRandomGenerator
 
     private static ulong RotateLeft(ulong value, int offset) => (value << offset) | (value >> (64 - offset));
 
-    private static long CreateDefaultSeed()
+    /// <summary>
+    /// Acquires default entropy and folds it into a seed. This is the single
+    /// platform-specific operation in the otherwise portable core: each language
+    /// port implements it natively, it never participates in the deterministic
+    /// contract, and the Conformance corpus never exercises it because every case
+    /// pins an explicit seed, fixed entropy bytes, or a deterministic fallback seed.
+    /// </summary>
+    private static long GatherPlatformEntropy()
     {
-        var bytes = Guid.NewGuid().ToByteArray();
-        return BitConverter.ToInt64(bytes, 0) ^ DateTime.UtcNow.Ticks;
+        var buffer = new byte[16];
+        using var generator = RandomNumberGenerator.Create();
+        generator.GetBytes(buffer);
+        return SeedFromEntropy(buffer);
     }
 }

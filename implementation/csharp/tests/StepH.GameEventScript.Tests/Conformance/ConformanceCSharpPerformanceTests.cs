@@ -224,6 +224,11 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
 
     internal static void ConfigureRandom(GameEventScriptHostBuilder builder, ConformanceRandomConfiguration? configuration)
     {
+        if (configuration is { Entropy.Count: > 0 })
+        {
+            builder.WithRandomEntropy(configuration.Entropy.ToArray());
+            return;
+        }
         if (configuration?.Seed is { } seed)
         {
             builder.WithRandomSeed(seed);

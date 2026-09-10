@@ -407,7 +407,8 @@ reentrancy requirements of those callbacks.
 | Operation | Contract |
 | --- | --- |
 | `WithRuntimeLimits(limits)` | Replaces the required immutable limits configuration. A language with mutable option objects must snapshot all scalar values at Build. |
-| `WithRandomSeed(seed)` | Selects the complete signed-64 deterministic seed and clears a prior sequence configuration. |
+| `WithRandomSeed(seed)` | Selects the complete signed-64 deterministic seed and clears a prior entropy or sequence configuration. |
+| `WithRandomEntropy(entropy)` | Folds a non-empty entropy byte span into the deterministic seed with the portable mixing function and clears a prior direct seed or sequence configuration. |
 | `WithRandomSequence(values, fallbackSeed?)` | Copies a finite Binary64 start sequence, optionally selects a deterministic fallback seed, and clears a prior direct seed. Exhaustion continues with the private fallback generator. |
 | `WithRegistry(registry)` | Selects the extension registry. Absence is represented by an empty registry, not null. |
 | `WithExternalTypeRegistry(registry)` | Selects the runtime external-constructor registry. |
@@ -564,6 +565,14 @@ nondeterministic seed; `FromSeed(Int64)` uses the exact portable seed;
 with a private generator after exhaustion. The 32-bit seed overload is an exact widening
 convenience.
 
+`FromEntropy(bytes)` folds a non-empty byte span into a deterministic seed with
+the portable, endian-neutral mixing function, so identical bytes reproduce a run
+across ports; it equals `FromSeed(SeedFromEntropy(bytes))`. `SeedFromEntropy(bytes)`
+exposes that fold so one derived seed can configure several generators or hosts.
+Acquiring default entropy for `Create()` and the seedless host builder is
+platform-specific and outside the deterministic contract. The exact mixing
+function and known-answer vectors are in [Determinism](Semantics/Determinism.md).
+
 `NextInclusiveInteger(first, second)` samples uniformly over the inclusive
 signed-64 range after ordering the bounds. `NextFloat(first, second)` uses a
 `[0,1)` source and Binary64 scaling; final rounding may produce the upper bound.
@@ -713,6 +722,11 @@ kind, level, categories, tags, capability requirements, sources, steps, compile
 options, runtime/random/sink/external-registry settings, native handlers,
 deferred programs, host count, optional kind-specific input, expectations,
 assembler text, and exact source ranges needed for received output.
+
+`ConformanceRandomConfiguration.Entropy` exposes a copied, read-only list of
+ordered bytes for entropy-based host configuration. It is empty when `Seed`
+or `Sequence` is selected. The input encoding and mutual-exclusion rules are
+owned by [Conformance Markdown](Conformance/MarkdownFormat.md).
 
 All nested case model types are immutable data projections of the fields defined
 by [Conformance Markdown](Conformance/MarkdownFormat.md):

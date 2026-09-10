@@ -1600,8 +1600,8 @@ let hp be :Gauge(current: 25, maximum: 100)
 
 Field constraints:
 
-- Fields and their final map entries retain declaration order. Field names must
-  be unique.
+- Field names must be unique. The completed Record follows the map/record key
+  order defined in [determinism semantics](Semantics/Determinism.md#iteration-and-ranges).
 - A non-computed field is a constructor parameter. Omitted constructor arguments
   bind `nothing`; unknown labels, duplicate labels, or excess positional
   arguments are static errors.

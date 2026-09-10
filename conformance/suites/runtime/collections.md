@@ -1346,7 +1346,7 @@ steps:
         args:
           - name: "key"
             value:
-              type: ":Tag"
+              type: ":Text"
               value: "age"
           - name: "value"
             value:
@@ -1356,7 +1356,7 @@ steps:
         args:
           - name: "key"
             value:
-              type: ":Tag"
+              type: ":Text"
               value: "name"
           - name: "value"
             value:
@@ -1384,7 +1384,7 @@ steps:
         args:
           - name: "key"
             value:
-              type: ":Tag"
+              type: ":Text"
               value: "age"
           - name: "value"
             value:
@@ -1394,7 +1394,7 @@ steps:
         args:
           - name: "key"
             value:
-              type: ":Tag"
+              type: ":Text"
               value: "name"
           - name: "value"
             value:
@@ -1418,4 +1418,210 @@ steps:
             value:
               type: ":Number.int64"
               value: "2"
+```
+
+---
+
+## Test: tag and text map keys project as text
+
+This case verifies that Tag and Text key inputs identify the same map entry, that projections always expose Text keys, and that entry values retain their original types.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r28-tag-and-text-key-projections
+kind: scriptApi
+level: scenario
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let items be [[key: #ready, value: 10], [key: 'ready', value: 20], [key: 'Ready', value: #kept]]
+  let mapped be items[:map item by item.key => item.value]
+  emit Done(keys: mapped[:keys], entries: mapped[:entries], byTag: mapped[#ready], byText: mapped['ready'], byUppercase: mapped['Ready'])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: keys
+            value:
+              type: ":List"
+              items:
+                - type: ":Text"
+                  value: "Ready"
+                - type: ":Text"
+                  value: "ready"
+          - name: entries
+            value:
+              type: ":List"
+              items:
+                - type: ":Map"
+                  entries:
+                    - key: "key"
+                      value:
+                        type: ":Text"
+                        value: "Ready"
+                    - key: "value"
+                      value:
+                        type: ":Tag"
+                        value: "kept"
+                - type: ":Map"
+                  entries:
+                    - key: "key"
+                      value:
+                        type: ":Text"
+                        value: "ready"
+                    - key: "value"
+                      value:
+                        type: ":Number.int64"
+                        value: "20"
+          - name: byTag
+            value:
+              type: ":Number.int64"
+              value: "20"
+          - name: byText
+            value:
+              type: ":Number.int64"
+              value: "20"
+          - name: byUppercase
+            value:
+              type: ":Tag"
+              value: "kept"
+```
+
+---
+
+## Test: arbitrary grouped text keys survive projections and literal roundtrips
+
+This case verifies empty, numeric-looking, uppercase, spaced, quoted, tag-looking, and Unicode group keys. Both projections preserve Text and Unicode-scalar order, remain usable for lookup, and roundtrip through container literal text.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: r28-arbitrary-group-key-projections
+kind: scriptApi
+level: scenario
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let names be ['😀', 'Ready', '', 'a b', '1', 'a"b', '#ready', 'ready', 'é', '𐀀', '']
+  let grouped be names[:group by item => item]
+  let keys be grouped[:keys]
+  let entries be grouped[:entries]
+  emit Done(keys: keys, entryKeys: entries[:select entry => entry.key], lookupsMatch: entries[:all entry where grouped[entry.key] = entry.value], keysRoundtrip: (parse (keys as :Text)) = keys, entriesRoundtrip: (parse (entries as :Text)) = entries, mapRoundtrip: (parse (grouped as :Text)) = grouped)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: keys
+            value:
+              type: ":List"
+              items:
+                - type: ":Text"
+                  value: ""
+                - type: ":Text"
+                  value: "#ready"
+                - type: ":Text"
+                  value: "1"
+                - type: ":Text"
+                  value: "Ready"
+                - type: ":Text"
+                  value: "a b"
+                - type: ":Text"
+                  value: 'a"b'
+                - type: ":Text"
+                  value: "ready"
+                - type: ":Text"
+                  value: "é"
+                - type: ":Text"
+                  value: ""
+                - type: ":Text"
+                  value: "𐀀"
+                - type: ":Text"
+                  value: "😀"
+          - name: entryKeys
+            value:
+              type: ":List"
+              items:
+                - type: ":Text"
+                  value: ""
+                - type: ":Text"
+                  value: "#ready"
+                - type: ":Text"
+                  value: "1"
+                - type: ":Text"
+                  value: "Ready"
+                - type: ":Text"
+                  value: "a b"
+                - type: ":Text"
+                  value: 'a"b'
+                - type: ":Text"
+                  value: "ready"
+                - type: ":Text"
+                  value: "é"
+                - type: ":Text"
+                  value: ""
+                - type: ":Text"
+                  value: "𐀀"
+                - type: ":Text"
+                  value: "😀"
+          - name: lookupsMatch
+            value:
+              type: ":Boolean"
+              value: true
+          - name: keysRoundtrip
+            value:
+              type: ":Boolean"
+              value: true
+          - name: entriesRoundtrip
+            value:
+              type: ":Boolean"
+              value: true
+          - name: mapRoundtrip
+            value:
+              type: ":Boolean"
+              value: true
 ```

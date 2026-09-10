@@ -99,7 +99,7 @@ public sealed class GesValueMap
         var list = new GesValue[_keys.Length];
         for (var index = 0; index < _keys.Length; index++)
         {
-            list[index].SetTag(_keys[index]);
+            list[index].SetText(_keys[index]);
         }
         return list;
     }
@@ -121,7 +121,7 @@ public sealed class GesValueMap
         {
             var key = _keys[index];
             var entryValues = new GesValue[2];
-            entryValues[0].SetTag(key);
+            entryValues[0].SetText(key);
             entryValues[1] = _values[index];
             list[index].SetMap(new GesValueMap(EntryKeys, entryValues, 2));
         }

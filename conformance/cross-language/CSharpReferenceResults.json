@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "0D5CC81557FB1FD59C47FCF2DE4A9C8539AB7E6DAAD351F0A23913044E47EC9B",
+    "sha256": "32DF1290FD220B9F615BE96CB5C8133583CDDC14459E9CC60DBD9C8A6745B00D",
     "documentCount": 86,
-    "caseCount": 1399
+    "caseCount": 1401
   },
   "cases": [
     {
@@ -17174,6 +17174,42 @@
           "compiler",
           "host",
           "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.collections/r28-arbitrary-group-key-projections",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.collections/r28-tag-and-text-key-projections",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
           "publish-sink",
           "vm"
         ],

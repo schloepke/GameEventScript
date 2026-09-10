@@ -676,11 +676,14 @@ max of a and b and c
 `#active[:count]` is `6`.
 
 `x[:keys]`, `x[:values]`, and `x[:entries]` are defined only for maps and
-map-backed custom type values. `x[:keys]` returns a list of tag keys,
+map-backed custom type values. `x[:keys]` returns a list of `:Text` keys,
 `x[:values]` returns the corresponding values, and `x[:entries]` returns maps
-with `key` and `value` fields. All three projections use stable Unicode-scalar
-key order. If the operand is `nothing`, the result is `nothing`; if the operand is
-any other non-map value, the result is also `nothing`.
+with `key` and `value` fields, where `key` is always `:Text`. These projections
+preserve the complete key text, including empty strings and text that is not a
+valid tag, regardless of whether a key was originally supplied as text or a tag.
+All three projections use stable Unicode-scalar key order. If the operand is
+`nothing`, the result is `nothing`; if the operand is any other non-map value,
+the result is also `nothing`.
 
 Square and cube roots lower to powers with exponents `0.5` and `1/3`. `exp`
 is the natural exponential counterpart of `ln`.

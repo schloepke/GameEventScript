@@ -166,11 +166,11 @@ steps:
             value:
               type: ":List"
               items:
-                - type: ":Tag"
+                - type: ":Text"
                   value: "current"
-                - type: ":Tag"
+                - type: ":Text"
                   value: "maximum"
-                - type: ":Tag"
+                - type: ":Text"
                   value: "percentage"
           - name: "recordValues"
             value:
@@ -190,7 +190,7 @@ steps:
                   entries:
                     - key: "key"
                       value:
-                        type: ":Tag"
+                        type: ":Text"
                         value: "current"
                     - key: "value"
                       value:
@@ -200,7 +200,7 @@ steps:
                   entries:
                     - key: "key"
                       value:
-                        type: ":Tag"
+                        type: ":Text"
                         value: "maximum"
                     - key: "value"
                       value:
@@ -210,7 +210,7 @@ steps:
                   entries:
                     - key: "key"
                       value:
-                        type: ":Tag"
+                        type: ":Text"
                         value: "percentage"
                     - key: "value"
                       value:
@@ -365,15 +365,15 @@ steps:
             value:
               type: ":List"
               items:
-                - type: ":Tag"
+                - type: ":Text"
                   value: "base"
-                - type: ":Tag"
+                - type: ":Text"
                   value: "bonus"
-                - type: ":Tag"
+                - type: ":Text"
                   value: "cap"
-                - type: ":Tag"
+                - type: ":Text"
                   value: "label"
-                - type: ":Tag"
+                - type: ":Text"
                   value: "total"
           - name: "values"
             value:
@@ -397,7 +397,7 @@ steps:
                   entries:
                     - key: "key"
                       value:
-                        type: ":Tag"
+                        type: ":Text"
                         value: "base"
                     - key: "value"
                       value:
@@ -407,7 +407,7 @@ steps:
                   entries:
                     - key: "key"
                       value:
-                        type: ":Tag"
+                        type: ":Text"
                         value: "bonus"
                     - key: "value"
                       value:
@@ -417,7 +417,7 @@ steps:
                   entries:
                     - key: "key"
                       value:
-                        type: ":Tag"
+                        type: ":Text"
                         value: "cap"
                     - key: "value"
                       value:
@@ -427,7 +427,7 @@ steps:
                   entries:
                     - key: "key"
                       value:
-                        type: ":Tag"
+                        type: ":Text"
                         value: "label"
                     - key: "value"
                       value:
@@ -437,7 +437,7 @@ steps:
                   entries:
                     - key: "key"
                       value:
-                        type: ":Tag"
+                        type: ":Text"
                         value: "total"
                     - key: "value"
                       value:
@@ -604,15 +604,15 @@ steps:
             value:
               type: ":List"
               items:
-                - type: ":Tag"
+                - type: ":Text"
                   value: "bearing"
-                - type: ":Tag"
+                - type: ":Text"
                   value: "checksum"
-                - type: ":Tag"
+                - type: ":Text"
                   value: "direction"
-                - type: ":Tag"
+                - type: ":Text"
                   value: "range"
-                - type: ":Tag"
+                - type: ":Text"
                   value: "steps"
           - name: "aimValues"
             value:
@@ -642,7 +642,7 @@ steps:
                   entries:
                     - key: "key"
                       value:
-                        type: ":Tag"
+                        type: ":Text"
                         value: "bearing"
                     - key: "value"
                       value:
@@ -653,7 +653,7 @@ steps:
                   entries:
                     - key: "key"
                       value:
-                        type: ":Tag"
+                        type: ":Text"
                         value: "checksum"
                     - key: "value"
                       value:
@@ -663,7 +663,7 @@ steps:
                   entries:
                     - key: "key"
                       value:
-                        type: ":Tag"
+                        type: ":Text"
                         value: "direction"
                     - key: "value"
                       value:
@@ -676,7 +676,7 @@ steps:
                   entries:
                     - key: "key"
                       value:
-                        type: ":Tag"
+                        type: ":Text"
                         value: "range"
                     - key: "value"
                       value:
@@ -687,7 +687,7 @@ steps:
                   entries:
                     - key: "key"
                       value:
-                        type: ":Tag"
+                        type: ":Text"
                         value: "steps"
                     - key: "value"
                       value:

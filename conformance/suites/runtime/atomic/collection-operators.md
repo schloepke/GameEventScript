@@ -722,11 +722,11 @@ steps:
             value:
               type: ":List"
               items:
-                - type: ":Tag"
+                - type: ":Text"
                   value: "alpha"
-                - type: ":Tag"
+                - type: ":Text"
                   value: "hp"
-                - type: ":Tag"
+                - type: ":Text"
                   value: "name"
           - name: "diceValue"
             value:
@@ -948,7 +948,7 @@ steps:
                   entries:
                     - key: "key"
                       value:
-                        type: ":Tag"
+                        type: ":Text"
                         value: "alpha"
                     - key: "value"
                       value:
@@ -958,7 +958,7 @@ steps:
                   entries:
                     - key: "key"
                       value:
-                        type: ":Tag"
+                        type: ":Text"
                         value: "hp"
                     - key: "value"
                       value:
@@ -968,7 +968,7 @@ steps:
                   entries:
                     - key: "key"
                       value:
-                        type: ":Tag"
+                        type: ":Text"
                         value: "name"
                     - key: "value"
                       value:

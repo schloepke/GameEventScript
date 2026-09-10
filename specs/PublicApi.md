@@ -4,8 +4,8 @@
 # Portable public API specification
 
 This document defines the normative language-neutral public API shared by the
-Swift, Kotlin, C++, C#, and Unity implementations. It specifies concepts and
-observable behavior, not the spelling imposed by one language.
+Swift, Kotlin, Go, Rust, C++, C#, and Unity implementations. It specifies concepts
+and observable behavior, not the spelling imposed by one language.
 
 The C# implementation is the current reference implementation. A port may use
 idiomatic constructors, optionals, result types, collection views, naming, and
@@ -58,9 +58,9 @@ but conformance code and portable application code must not require them.
 
 Type and operation names below are conceptual PascalCase names. They correspond
 closely to the C# reference API only to make cross-checking practical. Swift,
-Kotlin, and C++ may use their normal casing and overload conventions. Removing a
-concept, changing its ownership, or changing its result is not an idiomatic
-mapping and is therefore not permitted.
+Kotlin, Go, Rust, and C++ may use their normal naming and callable conventions.
+Removing a concept, changing its ownership, or changing its result is not an
+idiomatic mapping and is therefore not permitted.
 
 `List<T>` means an ordered immutable view unless the operation is explicitly a
 builder input. `Bytes` means an ordered immutable byte sequence. `Optional<T>`
@@ -899,7 +899,7 @@ optional `StepH.GameEventScript.Conformance` package. The separate
 These adapters must delegate to the portable semantics. Unity consumes the C#
 DLL and may choose main-thread/manual pumping instead of the automatic runner.
 
-### Swift, Kotlin, and C++
+### Swift, Kotlin, Go, Rust, and C++
 
 Ports should prefer native immutable collection views, nullable/optional result
 types, and their standard error transport. They must retain:

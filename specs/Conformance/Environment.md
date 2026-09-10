@@ -53,7 +53,7 @@ The runtime constructor retains the four converted arguments and sets
 `checksum` to the Binary64 representation of the Int64 truncation of
 `bearing + range + steps`. Field lookup by any other name returns no value.
 The runtime value exposes only `IGameEventScriptExternalValue`; the portable
-case must not depend on a CLR/Kotlin/Swift/C++ backing object.
+case must not depend on a language-specific backing object.
 
 ## Declarative Host environment
 

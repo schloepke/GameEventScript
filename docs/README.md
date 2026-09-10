@@ -43,6 +43,6 @@ All specification documents in the table are normative.
 
 - Normative documents describe only the current contract.
 - A rule is defined once. Cross-cutting documents use explicit links to the owning document.
-- C#, Swift, Kotlin, C++, and Unity integrations may be idiomatic, but their observable behavior must satisfy the same language-neutral contracts.
+- C#, Swift, Kotlin, Go, Rust, C++, and Unity integrations may be idiomatic, but their observable behavior must satisfy the same language-neutral contracts.
 - Work plans, backlogs, test inventories, generated reports, and editor bundles remain outside the normative specification tree.
 - Public API names shown in a language mapping are not automatically language-neutral requirements unless the public API specification says so explicitly.

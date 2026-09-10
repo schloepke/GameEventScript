@@ -83,7 +83,7 @@ with one handler and frames with two handlers, and 1000/2000 iterations. Their
 zero bound exercises the existing warmed allocation contract. Native adapters
 provide the measurements; a correctness-only corpus pass does not qualify an
 allocation profile. The C# managed-thread evidence does not qualify other heaps
-or Kotlin/Swift runtimes.
+or other language runtimes.
 
 The ten `performance.text-conversion` cases pair N/2N dynamic Number/Percentage
 casts, numeric literal parsing, plain-Text fallback, and Percentage formatting
@@ -105,6 +105,6 @@ semantics also has a portable case:
   signature parameters, and argument-label views;
 - C# allocation measurements and platform/runtime benchmark profiles.
 
-These tests must not become required behavior for Swift, Kotlin or C++ ports.
+These tests must not become required behavior for other language ports.
 The test-project structure and retention rule are documented in the
 [C# test README](../../implementation/csharp/tests/StepH.GameEventScript.Tests/README.md).

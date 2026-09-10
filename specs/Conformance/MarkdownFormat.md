@@ -9,8 +9,8 @@ Event Script conformance suites. The key words **must**, **must not**,
 requirements.
 
 The format is intended to be implemented independently in C#, Swift, Kotlin,
-C++, and other ports. It is deliberately a small structural Markdown scanner
-plus a strict YAML subset. It is not CommonMark plus full YAML.
+Go, Rust, C++, and other ports. It is deliberately a small structural Markdown
+scanner plus a strict YAML subset. It is not CommonMark plus full YAML.
 
 Conformance Markdown is test data. It is not the product message/wire format.
 

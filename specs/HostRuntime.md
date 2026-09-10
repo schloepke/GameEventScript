@@ -4,7 +4,7 @@
 # Host runtime specification
 
 This document defines the portable runtime boundary shared by
-Swift, Kotlin, C++, C#, and Unity implementations. C# is the
+Swift, Kotlin, Go, Rust, C++, C#, and Unity implementations. C# is the
 reference implementation. Language-specific threading and reflection
 must stay outside the portable core.
 
@@ -323,7 +323,7 @@ directly when transferring ownership; pending callbacks may start before
 runner creation returns. Disposing the runner suppresses scheduled pumps that
 have not started, while preserving the host's pending work.
 
-Swift, Kotlin, C++, and Unity provide
+Swift, Kotlin, Go, Rust, C++, and Unity provide
 their own actor, executor, event-loop, or main-thread policy around the same
 synchronous core contract.
 

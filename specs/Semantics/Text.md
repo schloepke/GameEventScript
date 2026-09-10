@@ -4,9 +4,9 @@
 # Portable text and Unicode semantics
 
 This document is the normative cross-language contract for Game Event Script
-source text, names, text values, and source positions. Swift, Kotlin, C++, C#,
-and other implementations must expose the same behavior even when their native
-string types use different indexing units.
+source text, names, text values, and source positions. Swift, Kotlin, Go, Rust,
+C++, C#, and other implementations must expose the same behavior even when
+their native string types use different indexing units.
 
 ## Unicode model and source input
 

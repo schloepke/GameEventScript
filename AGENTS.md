@@ -27,8 +27,8 @@ dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH.GameEv
 - When the user explicitly asks for analysis only, do not modify files.
 - Before the first public 1.0 release, implement the current contract directly;
   add compatibility APIs only when the user explicitly requires them.
-- Prefer language-neutral contracts that map cleanly to Swift, Kotlin, C/C++,
-  C#, and Unity.
+- Prefer language-neutral contracts that map cleanly to Swift, Kotlin, Go, Rust,
+  C/C++, C#, and Unity.
 - Keep Reflection, Attributes, `System.Type`, delegate-based adapters,
   unordered public dictionary-input adapters, locks, threads, Tasks, and other
   CLR conveniences in `CSharpBridge`.

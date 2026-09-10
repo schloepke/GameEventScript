@@ -3,10 +3,10 @@
 
 # Cross-language conformance acceptance
 
-This document defines how C#, Swift, Kotlin, and C++ prove that they parsed and
-executed the same Conformance Markdown V1 corpus. Unity uses the accepted C#
-library; Unity integration tests may be reported separately but do not define a
-different language implementation.
+This document defines how C#, Swift, Kotlin, Go, Rust, and C++ prove that they
+parsed and executed the same Conformance Markdown V1 corpus. Unity uses the
+accepted C# library; Unity integration tests may be reported separately but do
+not define a different language implementation.
 
 The normative authoring and execution contracts remain
 [Markdown format](MarkdownFormat.md) and [Runner](Runner.md). This document defines

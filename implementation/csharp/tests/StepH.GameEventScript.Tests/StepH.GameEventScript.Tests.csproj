@@ -21,6 +21,7 @@
         <ProjectReference Include="../../src/StepH.GameEventScript.CSharpBridge/StepH.GameEventScript.CSharpBridge.csproj" />
         <ProjectReference Include="../../src/StepH.GameEventScript.Conformance/StepH.GameEventScript.Conformance.csproj" />
         <ProjectReference Include="../StepH.GameEventScript.Conformance.Worker/StepH.GameEventScript.Conformance.Worker.csproj" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="../../tools/StepH.GameEventScript.Tool/StepH.GameEventScript.Tool.csproj" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
     <ItemGroup>

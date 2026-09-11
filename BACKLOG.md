@@ -83,6 +83,13 @@ here.
   shared Conformance cases exist; keep language-specific extensions with their
   implementations until then.
 
+## Developer tooling
+
+- Implement `check` and `run` commands in the `ges` CLI,
+  followed by an interactive event console using the existing portable
+  compiler and Host APIs. Integrate tool packaging and installation checks into
+  the release workflow before publishing it.
+
 ## Unity and editor integration
 
 - Validate the staged C# DLL set in a real Unity project with the selected

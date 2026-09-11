@@ -10,6 +10,7 @@
 - C# adapters: `implementation/csharp/src/StepH.GameEventScript.CSharpBridge`.
 - Portable Conformance package:
   `implementation/csharp/src/StepH.GameEventScript.Conformance`.
+- C# CLI tool: `implementation/csharp/tools/StepH.GameEventScript.Tool`.
 - C# tests: `implementation/csharp/tests/StepH.GameEventScript.Tests`.
 - Shared executable corpus and fixtures: `conformance`.
 - Normative language-neutral specifications: `specs`.
@@ -203,7 +204,7 @@ current C# implementation, not cross-platform benchmark claims.
 Current clean-checkout baseline:
 
 ```text
-1659/1659 non-performance test executions passed
+1704/1704 non-performance test executions passed
 1/1 zero-allocation hot-path test passed
 36/36 performance/allocation executions passed
 ```

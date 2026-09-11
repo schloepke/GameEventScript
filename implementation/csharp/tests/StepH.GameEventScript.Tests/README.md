@@ -16,8 +16,16 @@ The test project has two semantic roots:
   as native implementation tests. Shared parser bootstrap inputs are
   integrity-protected by `conformance/fixtures/MarkdownV1/manifest.tsv`.
 - `Native` contains the remaining C#-specific tests, grouped by purpose:
-  `Api`, `ApiSurface`, `BinaryFormat`, `Compiler`, `Core`, `CSharpBridge`, and
-  `Runtime`.
+  `Api`, `ApiSurface`, `BinaryFormat`, `Compiler`, `Core`, `CSharpBridge`,
+  `Runtime`, and `Tool`.
+
+`Native/Tool` exercises the built CLI as a separate process, including file
+input/output, argument handling, exit codes, diagnostic rendering, and loading
+and executing its `.gesb` output. This includes combined source files, ordered
+wildcard expansion, verbosity-independent binary output, GESA file/stdout output,
+and decode diagnostics using existing invalid binary fixtures. The test project builds the tool automatically;
+these tests require no global installation. Temporary files stay below
+`artifacts/csharp/tests` and are removed after each test.
 
 Portable public behavior is added to Markdown first. A native test remains only
 for a language adapter, implementation detail, performance/allocation property,

@@ -17,6 +17,7 @@ Markdown conformance corpus; the C# API is one language-specific mapping.
 - [`specs`](specs) contains the normative language-neutral specifications.
 - [`conformance`](conformance) contains the shared executable corpus and fixtures.
 - [`implementation/csharp`](implementation/csharp) contains the current reference implementation and native tests.
+- [`ges` CLI](implementation/csharp/tools/StepH.GameEventScript.Tool/README.md) contains the separate .NET tool entry point and local installation instructions.
 - [`docs`](docs) contains guides and supporting documentation.
 - [`tools`](tools) contains editor support and repository tooling.
 - [`BACKLOG.md`](BACKLOG.md) contains deliberately deferred project work and is not a normative specification.
@@ -43,6 +44,11 @@ points:
 Normal build and test output remains below project-local `bin`/`obj` directories.
 Packages and generated reports are written only below the ignored `artifacts`
 directory.
+
+To build the C# solution and install or update the `ges` CLI for your user, run
+`./scripts/install-csharp-tool.sh`. See the
+[CLI guide](implementation/csharp/tools/StepH.GameEventScript.Tool/README.md)
+for installation into a separate directory.
 
 The [C# distribution guide](docs/guide/distribution/CSharp.md) documents package
 contents, the staged Unity DLL set, reproducibility, and the deliberately gated

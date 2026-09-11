@@ -34,6 +34,9 @@ jobs:
       - name: Verify C# formatting
         run: dotnet format GameEventScript.sln --no-restore --verify-no-changes
 
+      - name: Build CLI tool
+        run: dotnet build implementation/csharp/tools/StepH.GameEventScript.Tool/StepH.GameEventScript.Tool.csproj --configuration Release --no-restore
+
       - name: Run non-performance tests
         run: dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH.GameEventScript.Tests.csproj --configuration Release --no-restore --filter "TestCategory!=Performance"
 

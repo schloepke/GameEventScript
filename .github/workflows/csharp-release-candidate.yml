@@ -38,7 +38,7 @@ jobs:
       - name: Restore and test
         run: |
           dotnet restore GameEventScript.sln
-          dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH.GameEventScript.Tests.csproj --configuration Release --no-restore --filter "TestCategory!=Performance"
+          dotnet test implementation/csharp/tests/GameEventScript.Tests/GameEventScript.Tests.csproj --configuration Release --no-restore --filter "TestCategory!=Performance"
 
       - name: Prepare release candidate without publishing
         env:

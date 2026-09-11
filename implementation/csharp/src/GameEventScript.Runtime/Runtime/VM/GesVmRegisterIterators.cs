@@ -1,0 +1,43 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+using System;
+using GameEventScript.Runtime.Values;
+using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+
+namespace GameEventScript.Runtime.VM;
+
+internal static class GesVmRegisterIterators
+{
+    internal static void GesVmIteratorCreate(this GesVmState vmState, ushort destinationRegister, in GesValue x)
+    {
+        if (x.CreateIterator() is { } iterator) vmState.SetIterator(destinationRegister, iterator);
+        else vmState.SetNothing(destinationRegister);
+    }
+
+    internal static bool GesVmIteratorNext(this GesVmState vmState, ushort destinationRegister, in GesValue iterator, ushort noMoreAddress)
+    {
+        if (iterator is { Kind: Iterator, ObjectValue: IGesIterator it })
+        {
+            var next = it.Next();
+            if (next.HasValue)
+            {
+                vmState.SetValue(destinationRegister, in next.Value);
+                return true;
+            }
+        }
+
+        var result = default(GesValue);
+        vmState.SetValue(destinationRegister, in result);
+        vmState.JumpAddress(noMoreAddress);
+        return false;
+    }
+
+    internal static void GesVmIteratorClose(this GesVmState vmState, ushort iteratorRegister)
+    {
+        var iterator = vmState.Register(iteratorRegister);
+        if (iterator is not { Kind: Iterator, ObjectValue: IDisposable it }) return;
+        it.Dispose();
+        vmState.SetNothing(iteratorRegister);
+    }
+}

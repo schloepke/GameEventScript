@@ -4,16 +4,15 @@
 # C# distribution
 
 The C# reference implementation produces four independently consumable
-packages. Their current IDs are provisional until the public publisher identity
-and final package coordinates are chosen:
+packages under the `GameEventScript` product name:
 
-- `StepH.GameEventScript` contains the portable Runtime, Program codec and
+- `GameEventScript.Runtime` contains the portable Runtime, Program codec and
   validator, Host, shared values, and runtime literal parser.
-- `StepH.GameEventScript.Compiler` contains the source builder, compiler,
+- `GameEventScript.Compiler` contains the source builder, compiler,
   and compilation options/errors and depends only on Runtime.
-- `StepH.GameEventScript.CSharpBridge` contains optional C# delegate, reflection,
+- `GameEventScript.CSharpBridge` contains optional C# delegate, reflection,
   dictionary, and automatic-runner adapters and depends only on Runtime.
-- `StepH.GameEventScript.Conformance` contains the portable Markdown parser,
+- `GameEventScript.Conformance` contains the portable Markdown parser,
   runner, and report writers and depends on Runtime and Compiler.
 
 For precompiled `.gesb` execution, reference Runtime and optionally CSharpBridge.
@@ -27,6 +26,12 @@ All four libraries target `netstandard2.1`. Their NuGet packages contain the
 Apache-2.0 license, repository README, XML API documentation, deterministic
 assemblies, and separate portable-PDB symbol packages.
 
+Package and assembly names identify the module; the shared namespace root is
+`GameEventScript`. Public APIs use `GameEventScript.Api`, values use
+`GameEventScript.Runtime.Values`, and the optional libraries use
+`GameEventScript.CSharpBridge` and `GameEventScript.Conformance`.
+The public type names retain their existing `GameEventScript` or `Ges` prefixes.
+
 ## Local release dry run
 
 The repository pins the build SDK in `global.json`. The complete local dry run
@@ -38,8 +43,9 @@ uses the same entry point as CI:
 
 It builds canonical unsigned NuGet and symbol packages, validates their
 metadata and dependency graph, stages DLL sets, and runs external consumers
-through local NuGet restore and direct DLL references. Each route compiles a fixture and then loads and executes it in a
-separate application referencing only Runtime and CSharpBridge. That application
+through local NuGet restore and direct DLL references. Each route compiles a
+fixture and then loads and executes it in a separate application referencing
+only Runtime and CSharpBridge. That application
 also rejects Compiler or Conformance DLLs, dependency-manifest entries, and
 loaded assemblies. No command in the dry run publishes an artifact.
 
@@ -59,14 +65,14 @@ Generated files exist only under the ignored `artifacts/` tree:
 ```text
 artifacts/csharp/
   packages/
-    StepH.GameEventScript.<version>.nupkg
-    StepH.GameEventScript.<version>.snupkg
-    StepH.GameEventScript.Compiler.<version>.nupkg
-    StepH.GameEventScript.Compiler.<version>.snupkg
-    StepH.GameEventScript.CSharpBridge.<version>.nupkg
-    StepH.GameEventScript.CSharpBridge.<version>.snupkg
-    StepH.GameEventScript.Conformance.<version>.nupkg
-    StepH.GameEventScript.Conformance.<version>.snupkg
+    GameEventScript.Runtime.<version>.nupkg
+    GameEventScript.Runtime.<version>.snupkg
+    GameEventScript.Compiler.<version>.nupkg
+    GameEventScript.Compiler.<version>.snupkg
+    GameEventScript.CSharpBridge.<version>.nupkg
+    GameEventScript.CSharpBridge.<version>.snupkg
+    GameEventScript.Conformance.<version>.nupkg
+    GameEventScript.Conformance.<version>.snupkg
   dll/<version>/
     runtime/
     compiler/
@@ -81,7 +87,7 @@ Runtime, Compiler, and Conformance. All sets include matching XML and PDB files.
 ## Unity DLL use
 
 The initial Unity integration is the `dll/<version>/unity` set. It contains
-`StepH.GameEventScript` and `StepH.GameEventScript.CSharpBridge`; their DLLs are
+`GameEventScript.Runtime` and `GameEventScript.CSharpBridge`; their DLLs are
 the runtime inputs, while matching XML and portable PDB files improve editor and
 debugger behavior. A consuming Unity project must support `netstandard2.1` and
 must import both assemblies together when using the Bridge. Precompiled
@@ -114,6 +120,6 @@ publishing is additionally gated by all of the following:
   short-lived API key through GitHub OIDC.
 
 The repository variable is absent or false by default, so the publishing job
-cannot run. The final package IDs and publisher identity must be approved before
-that gate is enabled. Language-port and publication follow-up work is tracked in
-`BACKLOG.md`.
+cannot run. Availability of the chosen package IDs and publisher identity must
+be confirmed before that gate is enabled. Language-port and publication
+follow-up work is tracked in `BACKLOG.md`.

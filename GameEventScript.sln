@@ -10,27 +10,27 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "csharp", "csharp", "{06BB32
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{8134A286-E9FF-87CC-ECF8-244F31C8CB00}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StepH.GameEventScript", "implementation\csharp\src\StepH.GameEventScript\StepH.GameEventScript.csproj", "{2E43DDEB-85D7-40A2-BC6F-32BB12029CEC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.Runtime", "implementation\csharp\src\GameEventScript.Runtime\GameEventScript.Runtime.csproj", "{2E43DDEB-85D7-40A2-BC6F-32BB12029CEC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StepH.GameEventScript.CSharpBridge", "implementation\csharp\src\StepH.GameEventScript.CSharpBridge\StepH.GameEventScript.CSharpBridge.csproj", "{7C746E04-7258-4A2E-978E-9C65F1C74689}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.CSharpBridge", "implementation\csharp\src\GameEventScript.CSharpBridge\GameEventScript.CSharpBridge.csproj", "{7C746E04-7258-4A2E-978E-9C65F1C74689}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StepH.GameEventScript.Conformance", "implementation\csharp\src\StepH.GameEventScript.Conformance\StepH.GameEventScript.Conformance.csproj", "{95941FB4-E5D4-4AA7-B607-E324F7FA7B31}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.Conformance", "implementation\csharp\src\GameEventScript.Conformance\GameEventScript.Conformance.csproj", "{95941FB4-E5D4-4AA7-B607-E324F7FA7B31}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{F33FEF7E-C1E0-826D-2307-BC8AE74F3057}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StepH.GameEventScript.Tests", "implementation\csharp\tests\StepH.GameEventScript.Tests\StepH.GameEventScript.Tests.csproj", "{1EDB9439-2A86-4B42-8C8A-7EA0B7703148}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.Tests", "implementation\csharp\tests\GameEventScript.Tests\GameEventScript.Tests.csproj", "{1EDB9439-2A86-4B42-8C8A-7EA0B7703148}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{E57CA560-02C8-014B-F406-CB1A60B03E94}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StepH.GameEventScript.PackageTool", "implementation\csharp\tools\StepH.GameEventScript.PackageTool\StepH.GameEventScript.PackageTool.csproj", "{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.PackageTool", "implementation\csharp\tools\GameEventScript.PackageTool\GameEventScript.PackageTool.csproj", "{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StepH.GameEventScript.Conformance.Worker", "implementation\csharp\tests\StepH.GameEventScript.Conformance.Worker\StepH.GameEventScript.Conformance.Worker.csproj", "{1729A9EB-DE64-414E-886F-3B0B47115067}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.Conformance.Worker", "implementation\csharp\tests\GameEventScript.Conformance.Worker\GameEventScript.Conformance.Worker.csproj", "{1729A9EB-DE64-414E-886F-3B0B47115067}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StepH.GameEventScript.Tool", "implementation\csharp\tools\StepH.GameEventScript.Tool\StepH.GameEventScript.Tool.csproj", "{05DFCB99-E7A1-40C5-ACE2-A6F3E6924492}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.Tool", "implementation\csharp\tools\GameEventScript.Tool\GameEventScript.Tool.csproj", "{05DFCB99-E7A1-40C5-ACE2-A6F3E6924492}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StepH.GameEventScript.Compiler", "implementation\csharp\src\StepH.GameEventScript.Compiler\StepH.GameEventScript.Compiler.csproj", "{4AE4075C-E445-4A73-BDEB-9DFE3B2D4771}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.Compiler", "implementation\csharp\src\GameEventScript.Compiler\GameEventScript.Compiler.csproj", "{4AE4075C-E445-4A73-BDEB-9DFE3B2D4771}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StepH.GameEventScript.RuntimeConsumer", "implementation\csharp\tests\StepH.GameEventScript.RuntimeConsumer\StepH.GameEventScript.RuntimeConsumer.csproj", "{0D9AAC70-E702-4CDB-B01B-86EA798FD368}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.RuntimeConsumer", "implementation\csharp\tests\GameEventScript.RuntimeConsumer\GameEventScript.RuntimeConsumer.csproj", "{0D9AAC70-E702-4CDB-B01B-86EA798FD368}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

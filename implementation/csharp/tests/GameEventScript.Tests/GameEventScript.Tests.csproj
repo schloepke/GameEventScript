@@ -1,0 +1,35 @@
+﻿<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <RootNamespace>GameEventScript.Tests</RootNamespace>
+        <LangVersion>latest</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AssemblyName>GameEventScript.Tests</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="MSTest" Version="4.0.2"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../src/GameEventScript.Runtime/GameEventScript.Runtime.csproj" />
+        <ProjectReference Include="../../src/GameEventScript.Compiler/GameEventScript.Compiler.csproj" />
+        <ProjectReference Include="../../src/GameEventScript.CSharpBridge/GameEventScript.CSharpBridge.csproj" />
+        <ProjectReference Include="../../src/GameEventScript.Conformance/GameEventScript.Conformance.csproj" />
+        <ProjectReference Include="../GameEventScript.RuntimeConsumer/GameEventScript.RuntimeConsumer.csproj" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="../GameEventScript.Conformance.Worker/GameEventScript.Conformance.Worker.csproj" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="../../tools/GameEventScript.Tool/GameEventScript.Tool.csproj" ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting"/>
+        <AssemblyMetadata Include="BuildSdkVersion" Value="$(NETCoreSdkVersion)" />
+        <Compile Include="../GameEventScript.Conformance.Worker/WorkerProtocol.cs" Link="Conformance/WorkerProtocol.cs" />
+    </ItemGroup>
+
+</Project>

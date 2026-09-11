@@ -39,7 +39,7 @@ Conformance or language-specific adapters. All three portable modules remain
 synchronous and independent of filesystem, network, threads, and test frameworks.
 
 Conformance is delivered as the separate optional
-`StepH.GameEventScript.Conformance` package. Its public contract is independent
+`GameEventScript.Conformance` package. Its public contract is independent
 of the reference test framework and filesystem adapters.
 
 The following documents own detailed behavior and are incorporated by reference:
@@ -888,15 +888,21 @@ caller-supplied ordered documents and never reads discovery paths.
 
 ### C# and Unity
 
-`StepH.GameEventScript` supplies Runtime. The optional
-`StepH.GameEventScript.Compiler` package supplies `GameEventScriptBuilder`,
+`GameEventScript.Runtime` supplies Runtime. The optional
+`GameEventScript.Compiler` package supplies `GameEventScriptBuilder`,
 `GameEventScriptCompileOptions`, and `GameEventScriptCompileException` in the
-`StepH.GameEventScript.Api` namespace. Applications compile through
+`GameEventScript.Api` namespace. Applications compile through
 `GameEventScriptBuilder.Create()`, construct hosts through
 `GameEventScriptHost.CreateBuilder()`, and load precompiled Programs through
 the Reader.
 
-`StepH.GameEventScript.CSharpBridge` depends only on Runtime and must not pull in
+Package and assembly identities use `GameEventScript.Runtime`,
+`GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, and
+`GameEventScript.Conformance`. Their shared C# namespace root is
+`GameEventScript`; the module name does not add another namespace layer to
+the public `GameEventScript.Api` contracts. Public type names remain unchanged.
+
+`GameEventScript.CSharpBridge` depends only on Runtime and must not pull in
 Compiler or Conformance, directly or transitively. It supplies:
 
 - `GameEventScriptCSharpValue.GesMap(entries)` and

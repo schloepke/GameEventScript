@@ -7,9 +7,9 @@ set -eu
 repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 release_version=${1:-0.1.0}
 package_output=${2:-"$repository_root/artifacts/csharp/packages"}
-consumer_project="$repository_root/implementation/csharp/tests/StepH.GameEventScript.PackageConsumer/StepH.GameEventScript.PackageConsumer.csproj"
+consumer_project="$repository_root/implementation/csharp/tests/GameEventScript.PackageConsumer/GameEventScript.PackageConsumer.csproj"
 consumer_packages="$repository_root/artifacts/csharp/package-consumer/nuget"
-runtime_project="$repository_root/implementation/csharp/tests/StepH.GameEventScript.RuntimeConsumer/StepH.GameEventScript.RuntimeConsumer.csproj"
+runtime_project="$repository_root/implementation/csharp/tests/GameEventScript.RuntimeConsumer/GameEventScript.RuntimeConsumer.csproj"
 fixture="$repository_root/artifacts/csharp/package-consumer/program.gesb"
 
 rm -rf "$consumer_packages"

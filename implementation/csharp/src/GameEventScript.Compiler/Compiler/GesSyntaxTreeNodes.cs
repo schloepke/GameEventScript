@@ -1,0 +1,437 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+using System.Collections.Generic;
+using GameEventScript.Api;
+
+namespace GameEventScript.Compiler;
+
+// Abstract nodes for the syntax tree
+
+internal abstract record StatementNode : ScriptNode;
+
+internal abstract record ExpressionNode : ScriptNode;
+
+internal abstract record CollectionSelectorNode : ScriptNode;
+
+internal abstract record ObjectMatchValueNode : ScriptNode;
+
+internal abstract record DicePatternNode : ScriptNode;
+
+internal abstract record IterationSourceNode : ScriptNode;
+
+internal abstract record ScriptNode
+{
+    // Parser construction assigns metadata before attaching a fresh node to its
+    // parent. Subsequent compiler passes retain copy-on-rewrite semantics.
+    public GameEventScriptSourceLocation? SourceRange { get; set; }
+
+    // Parser-only source depth, including parentheses removed from the semantic tree.
+    public int SourceNesting { get; set; }
+}
+
+// Root node of the syntax tree
+
+internal sealed record ParsedScript(
+    string ModuleName,
+    string SourceName,
+    IReadOnlyList<ConstantDefinitionNode> ConstantDefinitions,
+    IReadOnlyList<TypeDefinitionNode> TypeDefinitions,
+    IReadOnlyList<PredicateDefinitionNode> PredicateDefinitions,
+    IReadOnlyList<FunctionDefinitionNode> FunctionDefinitions,
+    IReadOnlyList<EventHandlerNode> Handlers) : ScriptNode;
+
+// Type/Predicate/Function/Handler nodes
+
+internal sealed record ConstantDefinitionNode(string Name, ExpressionNode Value) : ScriptNode;
+
+internal sealed record ParameterNode(string? ExternalLabel, string LocalName, string? DeclaredType = null) : ScriptNode
+{
+    public string SignatureLabel => ExternalLabel ?? GameEventScriptMessageSignature.UnlabeledParameterName;
+}
+
+internal sealed record ArgumentNode(string? Label, ExpressionNode Expression) : ScriptNode
+{
+    public string Name => Label ?? GameEventScriptMessageSignature.UnlabeledParameterName;
+}
+
+internal sealed record ArgumentListNode(IReadOnlyList<ArgumentNode> Arguments) : ScriptNode
+{
+    public static readonly ArgumentListNode Empty = new([]);
+
+    public int Count => Arguments.Count;
+
+    public IReadOnlyList<ExpressionNode> Expressions { get; } = GesSyntaxTreeNodeLists.ToExpressions(Arguments);
+}
+
+internal static class GesSyntaxTreeNodeLists
+{
+    public static IReadOnlyList<string> ToParameterNames(IReadOnlyList<ParameterNode> parameters)
+    {
+        if (parameters.Count == 0)
+        {
+            return [];
+        }
+
+        var names = new string[parameters.Count];
+        for (var index = 0; index < names.Length; index++)
+        {
+            names[index] = parameters[index].LocalName;
+        }
+
+        return names;
+    }
+
+    public static IReadOnlyList<string> ToSignatureLabels(IReadOnlyList<ParameterNode> parameters)
+    {
+        if (parameters.Count == 0)
+        {
+            return [];
+        }
+
+        var labels = new string[parameters.Count];
+        for (var index = 0; index < labels.Length; index++)
+        {
+            labels[index] = parameters[index].SignatureLabel;
+        }
+
+        return labels;
+    }
+
+    public static IReadOnlyList<ExpressionNode> ToExpressions(IReadOnlyList<ArgumentNode> arguments)
+    {
+        if (arguments.Count == 0)
+        {
+            return [];
+        }
+
+        var expressions = new ExpressionNode[arguments.Count];
+        for (var index = 0; index < expressions.Length; index++)
+        {
+            expressions[index] = arguments[index].Expression;
+        }
+
+        return expressions;
+    }
+}
+
+internal enum EventHandlerDispatchKind
+{
+    ExactSignature,
+    MessageName
+}
+
+internal sealed record EventHandlerNode(
+    string Message,
+    EventHandlerDispatchKind DispatchKind,
+    IReadOnlyList<ParameterNode> ParameterList,
+    IReadOnlyList<StatementNode> Statements,
+    IReadOnlyList<string>? RequiredTags = null,
+    IReadOnlyList<string>? ExcludedTags = null) : ScriptNode
+{
+    public IReadOnlyList<string> Parameters { get; } = GesSyntaxTreeNodeLists.ToParameterNames(ParameterList);
+
+    public IReadOnlyList<string> SignatureLabels { get; } = GesSyntaxTreeNodeLists.ToSignatureLabels(ParameterList);
+
+    public IReadOnlyList<string> MatchingTags { get; } = RequiredTags ?? [];
+
+    public IReadOnlyList<string> WithoutTags { get; } = ExcludedTags ?? [];
+}
+
+internal sealed record TypeDefinitionNode(string Name, IReadOnlyList<TypeFieldDefinitionNode> Fields) : ScriptNode;
+internal sealed record TypeFieldDefinitionNode(string Name, string TypeName, ExpressionNode? MinimumExpression, ExpressionNode? MaximumExpression, ExpressionNode? ComputedExpression, string? ConstructorLabel) : ScriptNode
+{
+    public bool IsConstructorParameter => ConstructorLabel is not null;
+}
+internal sealed record PredicateDefinitionNode(string Name, IReadOnlyList<ParameterNode> ParameterList, ExpressionNode Expression) : ScriptNode
+{
+    public IReadOnlyList<string> Parameters { get; } = GesSyntaxTreeNodeLists.ToParameterNames(ParameterList);
+}
+
+internal sealed record FunctionDefinitionNode(string Name, IReadOnlyList<ParameterNode> ParameterList, ExpressionNode Expression) : ScriptNode
+{
+    public IReadOnlyList<string> Parameters { get; } = GesSyntaxTreeNodeLists.ToParameterNames(ParameterList);
+}
+
+// Statement nodes
+
+internal enum PublishStatementKind
+{
+    Emit,
+    Publish
+}
+
+internal sealed record PublishStatementNode(PublishStatementKind Kind, ExpressionNode MessageExpression, IReadOnlyList<ExpressionNode> TagExpressions) : StatementNode;
+internal sealed record LetStatementNode(string Identifier, ExpressionNode Expression) : StatementNode;
+internal sealed record StatementBodyNode(bool IsBlock, IReadOnlyList<StatementNode> Statements) : ScriptNode;
+internal sealed record IfStatementNode(ExpressionNode Condition, StatementBodyNode ThenBody, StatementBodyNode? ElseBody) : StatementNode;
+internal sealed record ForStatementNode(string Identifier, IterationSourceNode Source, StatementBodyNode Body) : StatementNode;
+internal sealed record SeededRandomStatementNode(ExpressionNode SeedExpression, StatementBodyNode Body) : StatementNode;
+internal sealed record ExpressionStatementNode(ExpressionNode Expression) : StatementNode;
+
+// Expression nodes
+
+internal enum GesUnaryOperator
+{
+    Parse,
+    Negate,
+    Not,
+    HasValue,
+    Empty,
+    Chance,
+    Keys,
+    Values,
+    Entries,
+    Abs,
+    NaturalLog,
+    Exp,
+    Floor,
+    Ceil,
+    Truncate,
+    RoundHalfEven,
+    RoundHalfUp,
+    RoundHalfDown,
+    DegreeToRadians,
+    DegreeFromRadians,
+    WrapDegree,
+    Sin,
+    Cos,
+    Tan,
+    Asin,
+    Acos,
+    Atan
+}
+
+internal enum GesIntrinsicFunction
+{
+    Atan2,
+    Hypot,
+    Distance,
+    DistanceSquared,
+    LengthSquared,
+    Normalize,
+    Dot,
+    Cross,
+    AngleBetween
+}
+
+internal enum GesBinaryOperator
+{
+    Or,
+    Xor,
+    And,
+    Implies,
+    Equal,
+    NotEqual,
+    Less,
+    Greater,
+    LessOrEqual,
+    GreaterOrEqual,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    IntegerDivide,
+    Modulo,
+    Remainder,
+    Power,
+    Default,
+    Contains,
+    ContainsValue,
+    StartsWith,
+    EndsWith,
+    Union,
+    Intersect,
+    Zip
+}
+
+internal static class GesOperatorText
+{
+    public static string ToSourceText(this GesUnaryOperator op)
+        => op switch
+        {
+            GesUnaryOperator.Parse => "parse",
+            GesUnaryOperator.Negate => "-",
+            GesUnaryOperator.Not => "!",
+            GesUnaryOperator.HasValue => "has value",
+            GesUnaryOperator.Empty => "empty",
+            GesUnaryOperator.Chance => "chance",
+            GesUnaryOperator.Keys => "keys",
+            GesUnaryOperator.Values => "values",
+            GesUnaryOperator.Entries => "entries",
+            GesUnaryOperator.Abs => "abs",
+            GesUnaryOperator.NaturalLog => "ln",
+            GesUnaryOperator.Exp => "exp",
+            GesUnaryOperator.Floor => "floor",
+            GesUnaryOperator.Ceil => "ceil",
+            GesUnaryOperator.Truncate => "truncate",
+            GesUnaryOperator.RoundHalfEven => "round half even",
+            GesUnaryOperator.RoundHalfUp => "round half up",
+            GesUnaryOperator.RoundHalfDown => "round half down",
+            GesUnaryOperator.DegreeToRadians => "rad",
+            GesUnaryOperator.DegreeFromRadians => "deg",
+            GesUnaryOperator.WrapDegree => "wrap degree",
+            GesUnaryOperator.Sin => "sin",
+            GesUnaryOperator.Cos => "cos",
+            GesUnaryOperator.Tan => "tan",
+            GesUnaryOperator.Asin => "asin",
+            GesUnaryOperator.Acos => "acos",
+            GesUnaryOperator.Atan => "atan",
+            _ => op.ToString()
+        };
+
+    public static string ToSourceText(this GesIntrinsicFunction function)
+        => function switch
+        {
+            GesIntrinsicFunction.Atan2 => "atan2",
+            GesIntrinsicFunction.Hypot => "hypot",
+            GesIntrinsicFunction.Distance => "distance",
+            GesIntrinsicFunction.DistanceSquared => "distance squared",
+            GesIntrinsicFunction.LengthSquared => "length squared",
+            GesIntrinsicFunction.Normalize => "normalize",
+            GesIntrinsicFunction.Dot => "dot",
+            GesIntrinsicFunction.Cross => "cross",
+            GesIntrinsicFunction.AngleBetween => "angle between",
+            _ => function.ToString()
+        };
+
+    public static string ToSourceText(this GesBinaryOperator op)
+        => op switch
+        {
+            GesBinaryOperator.Or => "or",
+            GesBinaryOperator.Xor => "xor",
+            GesBinaryOperator.And => "and",
+            GesBinaryOperator.Implies => "->",
+            GesBinaryOperator.Equal => "=",
+            GesBinaryOperator.NotEqual => "<>",
+            GesBinaryOperator.Less => "<",
+            GesBinaryOperator.Greater => ">",
+            GesBinaryOperator.LessOrEqual => "<=",
+            GesBinaryOperator.GreaterOrEqual => ">=",
+            GesBinaryOperator.Add => "+",
+            GesBinaryOperator.Subtract => "-",
+            GesBinaryOperator.Multiply => "*",
+            GesBinaryOperator.Divide => "/",
+            GesBinaryOperator.IntegerDivide => "div",
+            GesBinaryOperator.Modulo => "mod",
+            GesBinaryOperator.Remainder => "rem",
+            GesBinaryOperator.Power => "^",
+            GesBinaryOperator.Default => "default",
+            GesBinaryOperator.Contains => "in",
+            GesBinaryOperator.ContainsValue => "in values of",
+            GesBinaryOperator.StartsWith => "starts with",
+            GesBinaryOperator.EndsWith => "ends with",
+            GesBinaryOperator.Union => "|",
+            GesBinaryOperator.Intersect => "&",
+            GesBinaryOperator.Zip => "zip",
+            _ => op.ToString()
+        };
+}
+
+internal sealed record IdentifierExpressionNode(string Name) : ExpressionNode;
+internal sealed record TagLiteralExpressionNode(string Name) : ExpressionNode;
+internal sealed record ConstantReferenceExpressionNode(string Name) : ExpressionNode;
+internal sealed record HandlerLiteralExpressionNode(string Message, IReadOnlyList<ParameterNode> ParameterList) : ExpressionNode
+{
+    public IReadOnlyList<string> Parameters { get; } = GesSyntaxTreeNodeLists.ToParameterNames(ParameterList);
+
+    public IReadOnlyList<string> SignatureLabels { get; } = GesSyntaxTreeNodeLists.ToSignatureLabels(ParameterList);
+}
+
+internal sealed record MessageLiteralExpressionNode(string Message, ArgumentListNode ArgumentList) : ExpressionNode
+{
+    public IReadOnlyList<ArgumentNode> Arguments => ArgumentList.Arguments;
+}
+
+internal sealed record CallExpressionNode(string Name, ArgumentListNode ArgumentList) : ExpressionNode
+{
+    public IReadOnlyList<ExpressionNode> Arguments => ArgumentList.Expressions;
+}
+
+internal sealed record ExtensionCallExpressionNode(string ExtensionName, string FunctionName, ArgumentListNode ArgumentList) : ExpressionNode
+{
+    public IReadOnlyList<ArgumentNode> Arguments => ArgumentList.Arguments;
+}
+
+internal sealed record TypeConstructorExpressionNode(string TypeName, ArgumentListNode ArgumentList) : ExpressionNode
+{
+    public IReadOnlyList<ArgumentNode> Arguments => ArgumentList.Arguments;
+}
+
+internal sealed record BooleanLiteralExpressionNode(bool Value) : ExpressionNode;
+internal sealed record NothingLiteralExpressionNode : ExpressionNode;
+internal sealed record IntegerLiteralExpressionNode(long Value, bool HasDecimalPoint = false) : ExpressionNode;
+internal sealed record FloatLiteralExpressionNode(double Value) : ExpressionNode;
+internal sealed record PercentageLiteralExpressionNode(double RatioValue) : ExpressionNode;
+internal sealed record UnitIntegerLiteralExpressionNode(long Value, string UnitName, bool HasDecimalPoint = false) : ExpressionNode;
+internal sealed record UnitFloatLiteralExpressionNode(double Value, string UnitName) : ExpressionNode;
+internal sealed record TextLiteralExpressionNode(string Value) : ExpressionNode;
+internal sealed record ListLiteralExpressionNode(IReadOnlyList<ExpressionNode> Items) : ExpressionNode;
+internal sealed record MapLiteralExpressionNode(IReadOnlyList<MapEntryNode> Entries) : ExpressionNode;
+internal sealed record MapEntryNode(string Key, ExpressionNode Value) : ScriptNode;
+internal sealed record UnaryExpressionNode(GesUnaryOperator Operator, ExpressionNode Operand) : ExpressionNode;
+internal sealed record IntrinsicCallExpressionNode(GesIntrinsicFunction Function, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
+internal sealed record VariadicTaggedExpressionNode(string Operator, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
+internal sealed record ClampExpressionNode(ExpressionNode Value, ExpressionNode Minimum, ExpressionNode Maximum) : ExpressionNode;
+internal sealed record RangeExpressionNode(ExpressionNode FromExpression, ExpressionNode ToExpression, ExpressionNode? StepExpression) : ExpressionNode;
+internal sealed record RandomExpressionNode(ExpressionNode FromExpression, ExpressionNode ToExpression) : ExpressionNode;
+internal sealed record SeededRandomExpressionNode(ExpressionNode SeedExpression, ExpressionNode BodyExpression) : ExpressionNode;
+internal sealed record DiceExpressionNode(int DiceCount, int SideCount) : ExpressionNode;
+internal sealed record SeriesExpressionNode(GameEventScriptBytecodeSeriesKind SeriesKind) : ExpressionNode;
+internal sealed record GeneratedCollectionExpressionNode(string CollectionType, string Identifier, IterationSourceNode Source, ExpressionNode? Predicate, ExpressionNode Projection) : ExpressionNode;
+internal sealed record GuardedChoiceExpressionNode(IReadOnlyList<GuardedChoiceBranchNode> Branches, ExpressionNode OtherwiseExpression) : ExpressionNode;
+internal sealed record GuardedChoiceBranchNode(ExpressionNode ValueExpression, ExpressionNode ConditionExpression) : ScriptNode;
+internal sealed record BinaryExpressionNode(ExpressionNode Left, GesBinaryOperator Operator, ExpressionNode Right) : ExpressionNode;
+internal sealed record PredicateCallExpressionNode(ExpressionNode Value, string PredicateName) : ExpressionNode;
+internal sealed record ExtensionPredicateExpressionNode(ExpressionNode Value, string ExtensionName, string FunctionName) : ExpressionNode;
+internal sealed record TypeCheckExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;
+internal sealed record NothingCheckExpressionNode(ExpressionNode Value) : ExpressionNode;
+internal sealed record TypeCastExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;
+internal sealed record DiceCountPatternNode(int Count, ExpressionNode? Face) : DicePatternNode;
+internal sealed record MemberAccessExpressionNode(ExpressionNode Target, string Member) : ExpressionNode;
+internal sealed record CollectionAccessExpressionNode(ExpressionNode Target, CollectionSelectorNode Selector) : ExpressionNode;
+
+// Collection selector nodes
+
+internal sealed record ExpressionSelectorNode(ExpressionNode Expression) : CollectionSelectorNode;
+internal sealed record PatternSelectorNode(DicePatternNode Pattern) : CollectionSelectorNode;
+internal sealed record ObjectMatchSelectorNode(ObjectMatchPatternNode Pattern) : CollectionSelectorNode;
+internal sealed record TakePatternSelectorNode(DicePatternNode Pattern) : CollectionSelectorNode;
+internal sealed record SequenceSliceSelectorNode(string Operation, string Scope, int Count) : CollectionSelectorNode;
+internal sealed record SeriesTermSelectorNode(ExpressionNode IndexExpression) : CollectionSelectorNode;
+internal sealed record PredicateSelectorNode(string Operator, string Identifier, ExpressionNode Predicate) : CollectionSelectorNode;
+internal sealed record CountSelectorNode(string Identifier, ExpressionNode Predicate) : CollectionSelectorNode;
+internal sealed record ChooseSelectorNode(int Count, bool AtRandom, string? Identifier, ExpressionNode? Predicate, string? WeightIdentifier, ExpressionNode? WeightExpression) : CollectionSelectorNode;
+internal sealed record DrawSelectorNode(int Count) : CollectionSelectorNode;
+internal sealed record ShuffleSelectorNode : CollectionSelectorNode;
+internal sealed record ReverseSelectorNode : CollectionSelectorNode;
+internal sealed record EdgeSelectorNode(string Mode, string? Identifier, ExpressionNode? Predicate) : CollectionSelectorNode;
+internal sealed record FilterSelectorNode(string Identifier, ExpressionNode Predicate) : CollectionSelectorNode;
+internal sealed record SumSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
+internal sealed record AverageSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
+internal sealed record SelectSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
+internal sealed record MapSelectorNode(string Identifier, ExpressionNode KeyProjection, ExpressionNode? ValueProjection) : CollectionSelectorNode;
+internal sealed record MinSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
+internal sealed record MaxSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
+internal sealed record ContainsSelectorNode(string Mode, ExpressionNode ValueExpression) : CollectionSelectorNode;
+internal sealed record SortSelectorNode(string Direction) : CollectionSelectorNode;
+internal sealed record DistinctSelectorNode(string? Identifier, ExpressionNode? Projection) : CollectionSelectorNode;
+internal sealed record GroupBySelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
+internal sealed record OrderBySelectorNode(string Direction, string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
+
+// Dice Pattern nodes
+
+internal sealed record DiceFullHousePatternNode : DicePatternNode;
+internal sealed record DiceStraightPatternNode : DicePatternNode;
+
+// Object matcher nodes
+
+internal sealed record ObjectMatchPatternNode(IReadOnlyList<ObjectMatchEntryNode> Entries) : ScriptNode;
+internal sealed record ObjectMatchEntryNode(string Key, ObjectMatchValueNode Value) : ScriptNode;
+internal sealed record ObjectMatchExpressionValueNode(ExpressionNode Expression) : ObjectMatchValueNode;
+internal sealed record ObjectMatchNestedValueNode(ObjectMatchPatternNode Pattern) : ObjectMatchValueNode;
+
+// Iteration source nodes
+
+internal sealed record CollectionIterationSourceNode(ExpressionNode Expression) : IterationSourceNode;
+internal sealed record RangeIterationSourceNode(RangeExpressionNode RangeExpression) : IterationSourceNode;

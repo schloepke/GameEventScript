@@ -1,0 +1,36 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <AssemblyName>GameEventScript.PackageConsumer</AssemblyName>
+        <RootNamespace>GameEventScript.PackageConsumer</RootNamespace>
+        <LangVersion>12</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <IsPackable>false</IsPackable>
+        <GesPackageVersion Condition="'$(GesPackageVersion)' == ''">0.1.0</GesPackageVersion>
+        <GesPackageSource Condition="'$(GesPackageSource)' == ''">$(MSBuildProjectDirectory)/../../../../artifacts/csharp/packages</GesPackageSource>
+        <RestoreSources>$(GesPackageSource);https://api.nuget.org/v3/index.json</RestoreSources>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(GesUseUnityDlls)' == 'true'">
+        <DefineConstants>$(DefineConstants);UNITY_DLL_SMOKE</DefineConstants>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(GesUseUnityDlls)' != 'true'">
+        <PackageReference Include="GameEventScript.Runtime" Version="$(GesPackageVersion)" />
+        <PackageReference Include="GameEventScript.Compiler" Version="$(GesPackageVersion)" />
+        <PackageReference Include="GameEventScript.CSharpBridge" Version="$(GesPackageVersion)" />
+        <PackageReference Include="GameEventScript.Conformance" Version="$(GesPackageVersion)" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(GesUseUnityDlls)' == 'true'">
+        <Reference Include="GameEventScript.Runtime" HintPath="$(GesUnityDllDirectory)/GameEventScript.Runtime.dll" Private="true" />
+        <Reference Include="GameEventScript.CSharpBridge" HintPath="$(GesUnityDllDirectory)/GameEventScript.CSharpBridge.dll" Private="true" />
+        <Reference Include="GameEventScript.Compiler" HintPath="$(GesCompilerDllDirectory)/GameEventScript.Compiler.dll" Private="true" />
+    </ItemGroup>
+
+</Project>

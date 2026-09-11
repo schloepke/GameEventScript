@@ -1,0 +1,33 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <AssemblyName>GameEventScript.Tool</AssemblyName>
+        <RootNamespace>GameEventScript.Tool</RootNamespace>
+        <PackageId>GameEventScript.Tool</PackageId>
+        <Version>0.1.0</Version>
+        <Authors>Stephan Schlöpke</Authors>
+        <Copyright>Copyright 2026 Stephan Schlöpke</Copyright>
+        <Description>Command-line entry point for Game Event Script.</Description>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <RepositoryUrl>https://github.com/schloepke/GameEventScript</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackAsTool>true</PackAsTool>
+        <ToolCommandName>ges</ToolCommandName>
+        <PackageOutputPath>$(MSBuildProjectDirectory)/../../../../artifacts/csharp/tool/packages</PackageOutputPath>
+        <LangVersion>12</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="../../src/GameEventScript.Runtime/GameEventScript.Runtime.csproj" />
+        <ProjectReference Include="../../src/GameEventScript.Compiler/GameEventScript.Compiler.csproj" />
+        <ProjectReference Include="../../src/GameEventScript.CSharpBridge/GameEventScript.CSharpBridge.csproj" />
+        <None Include="../../../../LICENSE" Link="LICENSE" Pack="true" PackagePath="/" />
+        <None Update="README.md" Pack="true" PackagePath="/" />
+    </ItemGroup>
+</Project>

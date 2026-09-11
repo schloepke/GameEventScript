@@ -6,13 +6,13 @@
 ## Workspace
 
 - Repository root: the directory containing this file.
-- Portable C# Runtime: `implementation/csharp/src/StepH.GameEventScript`.
-- Portable C# Compiler: `implementation/csharp/src/StepH.GameEventScript.Compiler`.
-- C# adapters: `implementation/csharp/src/StepH.GameEventScript.CSharpBridge`.
+- Portable C# Runtime: `implementation/csharp/src/GameEventScript.Runtime`.
+- Portable C# Compiler: `implementation/csharp/src/GameEventScript.Compiler`.
+- C# adapters: `implementation/csharp/src/GameEventScript.CSharpBridge`.
 - Portable Conformance package:
-  `implementation/csharp/src/StepH.GameEventScript.Conformance`.
-- C# CLI tool: `implementation/csharp/tools/StepH.GameEventScript.Tool`.
-- C# tests: `implementation/csharp/tests/StepH.GameEventScript.Tests`.
+  `implementation/csharp/src/GameEventScript.Conformance`.
+- C# CLI tool: `implementation/csharp/tools/GameEventScript.Tool`.
+- C# tests: `implementation/csharp/tests/GameEventScript.Tests`.
 - Shared executable corpus and fixtures: `conformance`.
 - Normative language-neutral specifications: `specs`.
 - Documentation entry point: `docs/README.md`.
@@ -21,7 +21,7 @@
 Standard verification:
 
 ```bash
-dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH.GameEventScript.Tests.csproj --filter "TestCategory!=Performance"
+dotnet test implementation/csharp/tests/GameEventScript.Tests/GameEventScript.Tests.csproj --filter "TestCategory!=Performance"
 ```
 
 ## Working rules
@@ -195,7 +195,7 @@ implementations remain in `CSharpBridge`.
 
 The authoritative executable corpus lives under `conformance`. Markdown is the
 only authoring format. The portable parser and runner live in the separate
-`StepH.GameEventScript.Conformance` package and remain fileless, networkless,
+`GameEventScript.Conformance` package and remain fileless, networkless,
 synchronous, and test-framework-independent.
 
 Conformance distinguishes exact numeric storage with `:Number.int64` and

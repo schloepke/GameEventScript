@@ -7,4 +7,4 @@ set -eu
 repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$repository_root"
 
-dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH.GameEventScript.Tests.csproj --filter "TestCategory!=Performance"
+dotnet test implementation/csharp/tests/GameEventScript.Tests/GameEventScript.Tests.csproj --filter "TestCategory!=Performance"

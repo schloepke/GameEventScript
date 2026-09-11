@@ -107,4 +107,4 @@ semantics also has a portable case:
 
 These tests must not become required behavior for other language ports.
 The test-project structure and retention rule are documented in the
-[C# test README](../../implementation/csharp/tests/StepH.GameEventScript.Tests/README.md).
+[C# test README](../../implementation/csharp/tests/GameEventScript.Tests/README.md).

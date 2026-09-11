@@ -33,7 +33,7 @@ esac
 
 repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$repository_root"
-tool_project="implementation/csharp/tools/StepH.GameEventScript.Tool/StepH.GameEventScript.Tool.csproj"
+tool_project="implementation/csharp/tools/GameEventScript.Tool/GameEventScript.Tool.csproj"
 
 mkdir -p artifacts/csharp/tool
 build_directory=$(mktemp -d "$repository_root/artifacts/csharp/tool/install-build.XXXXXX")
@@ -54,9 +54,19 @@ local_version="$local_version.$(date -u +%Y%m%d%H%M%S).r${build_directory##*.}"
 dotnet pack "$tool_project" --configuration Release --no-restore \
     --output "$build_directory" -p:Version="$local_version" -p:PackageVersion="$local_version"
 
+# Verify the renamed package before removing an older package that owns `ges`.
+installed_tools=$(dotnet tool list "$@")
+legacy_tool_version=$(printf '%s\n' "$installed_tools" | awk 'tolower($1) == "steph.gameeventscript.tool" { print $2 }')
+if [ -n "$legacy_tool_version" ]; then
+    dotnet tool install GameEventScript.Tool --tool-path "$build_directory/migration-check" \
+        --version "$local_version" --source "$build_directory"
+    "$build_directory/migration-check/ges" --version >/dev/null
+    dotnet tool uninstall StepH.GameEventScript.Tool "$@"
+fi
+
 # Update also installs a missing tool. Allow replacing a stable or newer build
 # with this checkout's explicitly selected local development version.
-dotnet tool update StepH.GameEventScript.Tool "$@" \
+dotnet tool update GameEventScript.Tool "$@" \
     --version "$local_version" --source "$build_directory" --allow-downgrade
 
 echo "Installed ges $local_version ($*)."

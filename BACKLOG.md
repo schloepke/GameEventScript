@@ -14,15 +14,12 @@ here.
 
 ## Before the first public package release
 
-- Decide whether public product, type, namespace, assembly, documentation and
-  package names should use the neutral `Ges`/`GES` form so that the acronym can
-  represent Game Event Script or a later product position such as Guided Event
-  Script.
 - Register or select a GES-specific domain and transferable publisher namespace;
-  align NuGet, Maven, SwiftPM, GitHub and future organization ownership.
-- Finalize package IDs, publisher identity, repository visibility and release
-  signing before enabling `NUGET_PUBLISH_ENABLED` or any other public registry
-  publication.
+  `gameeventscript.org` is the current domain candidate. Align NuGet, Maven,
+  SwiftPM, GitHub and future organization ownership.
+- Confirm availability of the chosen `GameEventScript.*` C# package IDs and
+  finalize publisher identity, repository visibility and release signing before
+  enabling `NUGET_PUBLISH_ENABLED` or any other public registry publication.
 - Enable branch protection and require `C# CI / verify` when the repository is
   public or the GitHub account supports protection for private repositories.
 

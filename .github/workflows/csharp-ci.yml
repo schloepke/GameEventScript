@@ -35,13 +35,13 @@ jobs:
         run: dotnet format GameEventScript.sln --no-restore --verify-no-changes
 
       - name: Build CLI tool
-        run: dotnet build implementation/csharp/tools/StepH.GameEventScript.Tool/StepH.GameEventScript.Tool.csproj --configuration Release --no-restore
+        run: dotnet build implementation/csharp/tools/GameEventScript.Tool/GameEventScript.Tool.csproj --configuration Release --no-restore
 
       - name: Run non-performance tests
-        run: dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH.GameEventScript.Tests.csproj --configuration Release --no-restore --filter "TestCategory!=Performance"
+        run: dotnet test implementation/csharp/tests/GameEventScript.Tests/GameEventScript.Tests.csproj --configuration Release --no-restore --filter "TestCategory!=Performance"
 
       - name: Run zero-allocation hot-path gate
-        run: dotnet test implementation/csharp/tests/StepH.GameEventScript.Tests/StepH.GameEventScript.Tests.csproj --configuration Release --no-restore --filter "TestCategory=Allocation"
+        run: dotnet test implementation/csharp/tests/GameEventScript.Tests/GameEventScript.Tests.csproj --configuration Release --no-restore --filter "TestCategory=Allocation"
 
       - name: Build and consume release artifacts
         run: ./scripts/release-csharp-dry-run.sh 0.1.0-ci.${{ github.run_number }}

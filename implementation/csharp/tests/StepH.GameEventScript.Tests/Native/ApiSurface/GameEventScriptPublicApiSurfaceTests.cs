@@ -32,7 +32,7 @@ public sealed class GameEventScriptPublicApiSurfaceTests
     [TestMethod]
     public void CompilerTypesStayInternal()
     {
-        var leakedTypes = typeof(GameEventScriptProgram)
+        var leakedTypes = typeof(GameEventScriptBuilder)
             .Assembly
             .GetExportedTypes()
             .Where(type =>
@@ -47,25 +47,25 @@ public sealed class GameEventScriptPublicApiSurfaceTests
     [TestMethod]
     public void PublicTypesAndDependenciesFollowAssemblyBoundaries()
     {
-        var core = typeof(GameEventScriptProgram).Assembly;
+        var runtime = typeof(GameEventScriptProgram).Assembly;
+        var compiler = typeof(GameEventScriptBuilder).Assembly;
         var bridge = typeof(GameEventScriptCSharpHostRunner).Assembly;
         var conformance = typeof(ConformanceRunner).Assembly;
 
-        Assert.AreEqual("StepH.GameEventScript", core.GetName().Name);
+        Assert.AreEqual("StepH.GameEventScript", runtime.GetName().Name);
+        Assert.AreEqual("StepH.GameEventScript.Compiler", compiler.GetName().Name);
         Assert.AreEqual("StepH.GameEventScript.CSharpBridge", bridge.GetName().Name);
         Assert.AreEqual("StepH.GameEventScript.Conformance", conformance.GetName().Name);
-
-        Assert.HasCount(0, core.GetExportedTypes().Where(type => IsNamespace(type, "StepH.GameEventScript.CSharpBridge") || IsNamespace(type, "StepH.GameEventScript.Conformance")));
+        CollectionAssert.AreEquivalent(new[] { typeof(GameEventScriptBuilder), typeof(GameEventScriptCompileOptions), typeof(GameEventScriptCompileException) }, compiler.GetExportedTypes());
+        Assert.HasCount(0, runtime.GetTypes().Where(type => IsNamespace(type, "StepH.GameEventScript.Compiler")));
+        Assert.HasCount(0, runtime.GetExportedTypes().Where(type => IsNamespace(type, "StepH.GameEventScript.CSharpBridge") || IsNamespace(type, "StepH.GameEventScript.Conformance")));
         Assert.IsTrue(bridge.GetExportedTypes().All(type => IsNamespace(type, "StepH.GameEventScript.CSharpBridge")));
         Assert.IsTrue(conformance.GetExportedTypes().All(type => IsNamespace(type, "StepH.GameEventScript.Conformance")));
 
-        var coreReferences = core.GetReferencedAssemblies().Select(reference => reference.Name).ToHashSet(StringComparer.Ordinal);
-        Assert.DoesNotContain("StepH.GameEventScript.CSharpBridge", coreReferences);
-        Assert.DoesNotContain("StepH.GameEventScript.Conformance", coreReferences);
-        Assert.IsFalse(coreReferences.Any(reference => reference is not null && (reference.StartsWith("Beamable", StringComparison.Ordinal) || reference.StartsWith("Unity", StringComparison.Ordinal))));
-
-        CollectionAssert.Contains(bridge.GetReferencedAssemblies().Select(reference => reference.Name).ToArray(), "StepH.GameEventScript");
-        CollectionAssert.Contains(conformance.GetReferencedAssemblies().Select(reference => reference.Name).ToArray(), "StepH.GameEventScript");
+        AssertProductReferences(runtime);
+        AssertProductReferences(compiler, "StepH.GameEventScript");
+        AssertProductReferences(bridge, "StepH.GameEventScript");
+        AssertProductReferences(conformance, "StepH.GameEventScript", "StepH.GameEventScript.Compiler");
     }
 
     /// <summary>
@@ -266,6 +266,13 @@ public sealed class GameEventScriptPublicApiSurfaceTests
            (string.Equals(typeNamespace, namespacePrefix, StringComparison.Ordinal) ||
             typeNamespace.StartsWith(namespacePrefix + ".", StringComparison.Ordinal));
 
+    private static void AssertProductReferences(Assembly assembly, params string[] expected)
+    {
+        var references = assembly.GetReferencedAssemblies().Select(reference => reference.Name!).ToArray();
+        CollectionAssert.AreEquivalent(expected, references.Where(name => name.StartsWith("StepH.GameEventScript", StringComparison.Ordinal)).ToArray(), assembly.GetName().Name);
+        Assert.IsFalse(references.Any(name => name.StartsWith("Beamable", StringComparison.Ordinal) || name.StartsWith("Unity", StringComparison.Ordinal)));
+    }
+
     private static Assembly[] PublicAssemblies()
-        => [typeof(GameEventScriptProgram).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly, typeof(ConformanceRunner).Assembly];
+        => [typeof(GameEventScriptProgram).Assembly, typeof(GameEventScriptBuilder).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly, typeof(ConformanceRunner).Assembly];
 }

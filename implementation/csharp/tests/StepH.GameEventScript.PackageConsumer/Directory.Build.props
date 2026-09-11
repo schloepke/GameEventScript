@@ -1,0 +1,13 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+<Project>
+    <Import Project="../../../../Directory.Build.props" />
+    <PropertyGroup>
+        <DefaultItemExcludes>$(DefaultItemExcludes);bin/**;obj/**</DefaultItemExcludes>
+        <GesConsumerMode>packages</GesConsumerMode>
+        <GesConsumerMode Condition="'$(GesUseUnityDlls)' == 'true'">dlls</GesConsumerMode>
+        <BaseOutputPath>$(MSBuildThisFileDirectory)../../../../artifacts/csharp/package-consumer/$(GesConsumerMode)/bin/</BaseOutputPath>
+        <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)../../../../artifacts/csharp/package-consumer/$(GesConsumerMode)/obj/</BaseIntermediateOutputPath>
+    </PropertyGroup>
+</Project>

@@ -4,8 +4,8 @@
 # Game Event Script C# code style
 
 This is the development formatting contract for the handwritten C# sources in
-`implementation/csharp/src/StepH.GameEventScript` and
-`implementation/csharp/tests/StepH.GameEventScript.Tests`. It is not part of the
+`implementation/csharp/src`, `implementation/csharp/tools`, and
+`implementation/csharp/tests`. It is not part of the
 portable Game Event Script product specification.
 
 ## Automated foundation

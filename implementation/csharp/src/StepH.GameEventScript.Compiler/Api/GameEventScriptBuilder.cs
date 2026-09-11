@@ -12,7 +12,7 @@ using static StepH.GameEventScript.Compiler.GameEventScriptCallableKind;
 namespace StepH.GameEventScript.Api;
 
 /// <summary>
-/// Provides functionality to compile GameEventScript source files into bytecode.
+/// Compiles source text into immutable Programs using the optional StepH.GameEventScript.Compiler package.
 /// </summary>
 public sealed class GameEventScriptBuilder
 {

@@ -6,7 +6,8 @@
 ## Workspace
 
 - Repository root: the directory containing this file.
-- Portable C# Core: `implementation/csharp/src/StepH.GameEventScript`.
+- Portable C# Runtime: `implementation/csharp/src/StepH.GameEventScript`.
+- Portable C# Compiler: `implementation/csharp/src/StepH.GameEventScript.Compiler`.
 - C# adapters: `implementation/csharp/src/StepH.GameEventScript.CSharpBridge`.
 - Portable Conformance package:
   `implementation/csharp/src/StepH.GameEventScript.Conformance`.
@@ -97,6 +98,11 @@ The normative owners are `specs/ProgramModel.md`, `specs/Bytecode.md`,
 `specs/BinaryFormat.md`, and `specs/AssemblerFormat.md`.
 
 ## Language and compiler
+
+The separate Compiler package depends only on Runtime. Runtime and CSharpBridge
+must never depend on Compiler or Conformance. Shared value semantics, runtime
+literal parsing, Program data and codecs remain in Runtime. Source-file I/O
+belongs to the CLI or embedding; the portable compiler accepts source text.
 
 - Source types use PascalCase, for example `:Number`, `:Quantity(m)`, and
   `:Unit`. Extension namespaces and functions remain lowercase, for example
@@ -204,7 +210,7 @@ current C# implementation, not cross-platform benchmark claims.
 Current clean-checkout baseline:
 
 ```text
-1704/1704 non-performance test executions passed
+1709/1709 non-performance test executions passed
 1/1 zero-allocation hot-path test passed
 36/36 performance/allocation executions passed
 ```

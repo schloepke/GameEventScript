@@ -5,13 +5,13 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.1</TargetFramework>
-        <AssemblyName>StepH.GameEventScript</AssemblyName>
+        <AssemblyName>StepH.GameEventScript.Compiler</AssemblyName>
         <RootNamespace>StepH.GameEventScript</RootNamespace>
-        <PackageId>StepH.GameEventScript</PackageId>
+        <PackageId>StepH.GameEventScript.Compiler</PackageId>
         <Version>0.1.0</Version>
         <Authors>Stephan Schlöpke</Authors>
         <Copyright>Copyright 2026 Stephan Schlöpke</Copyright>
-        <Description>Portable, deterministic Game Event Script runtime, serial message host, and Program binary codec. No source compiler dependency.</Description>
+        <Description>Portable Game Event Script source compiler. Depends on the separately consumable runtime.</Description>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <RepositoryUrl>https://github.com/schloepke/GameEventScript</RepositoryUrl>
@@ -23,6 +23,10 @@
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
         <WarningsAsErrors>$(WarningsAsErrors);CS0419;CS1570;CS1572;CS1573;CS1574;CS1580;CS1581;CS1584;CS1587;CS1591;CS1658;CS1711;CS1712</WarningsAsErrors>
     </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../StepH.GameEventScript/StepH.GameEventScript.csproj" />
+    </ItemGroup>
 
     <ItemGroup>
         <None Include="../../../../LICENSE" Link="LICENSE" Pack="true" PackagePath="/" />

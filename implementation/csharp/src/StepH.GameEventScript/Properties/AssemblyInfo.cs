@@ -3,6 +3,7 @@
 
 using System.Runtime.CompilerServices;
 
+[assembly: InternalsVisibleTo("StepH.GameEventScript.Compiler")]
 [assembly: InternalsVisibleTo("StepH.GameEventScript.CSharpBridge")]
 [assembly: InternalsVisibleTo("StepH.GameEventScript.Conformance")]
 [assembly: InternalsVisibleTo("StepH.GameEventScript.Tests")]

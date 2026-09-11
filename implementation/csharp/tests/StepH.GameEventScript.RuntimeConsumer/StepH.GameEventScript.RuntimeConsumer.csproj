@@ -5,32 +5,25 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <TargetFramework>net8.0</TargetFramework>
-        <AssemblyName>StepH.GameEventScript.PackageConsumer</AssemblyName>
-        <RootNamespace>StepH.GameEventScript.PackageConsumer</RootNamespace>
+        <AssemblyName>StepH.GameEventScript.RuntimeConsumer</AssemblyName>
+        <RootNamespace>StepH.GameEventScript.RuntimeConsumer</RootNamespace>
         <LangVersion>12</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
         <GesPackageVersion Condition="'$(GesPackageVersion)' == ''">0.1.0</GesPackageVersion>
-        <GesPackageSource Condition="'$(GesPackageSource)' == ''">$(MSBuildProjectDirectory)/../../../../artifacts/csharp/packages</GesPackageSource>
-        <RestoreSources>$(GesPackageSource);https://api.nuget.org/v3/index.json</RestoreSources>
+        <RestoreSources Condition="'$(GesUsePackages)' == 'true'">$(GesPackageSource);https://api.nuget.org/v3/index.json</RestoreSources>
     </PropertyGroup>
-
-    <PropertyGroup Condition="'$(GesUseUnityDlls)' == 'true'">
-        <DefineConstants>$(DefineConstants);UNITY_DLL_SMOKE</DefineConstants>
-    </PropertyGroup>
-
-    <ItemGroup Condition="'$(GesUseUnityDlls)' != 'true'">
-        <PackageReference Include="StepH.GameEventScript" Version="$(GesPackageVersion)" />
-        <PackageReference Include="StepH.GameEventScript.Compiler" Version="$(GesPackageVersion)" />
-        <PackageReference Include="StepH.GameEventScript.CSharpBridge" Version="$(GesPackageVersion)" />
-        <PackageReference Include="StepH.GameEventScript.Conformance" Version="$(GesPackageVersion)" />
+    <ItemGroup Condition="'$(GesUsePackages)' != 'true' and '$(GesUseUnityDlls)' != 'true'">
+        <ProjectReference Include="../../src/StepH.GameEventScript/StepH.GameEventScript.csproj" />
+        <ProjectReference Include="../../src/StepH.GameEventScript.CSharpBridge/StepH.GameEventScript.CSharpBridge.csproj" />
     </ItemGroup>
-
+    <ItemGroup Condition="'$(GesUsePackages)' == 'true' and '$(GesUseUnityDlls)' != 'true'">
+        <PackageReference Include="StepH.GameEventScript" Version="$(GesPackageVersion)" />
+        <PackageReference Include="StepH.GameEventScript.CSharpBridge" Version="$(GesPackageVersion)" />
+    </ItemGroup>
     <ItemGroup Condition="'$(GesUseUnityDlls)' == 'true'">
         <Reference Include="StepH.GameEventScript" HintPath="$(GesUnityDllDirectory)/StepH.GameEventScript.dll" Private="true" />
         <Reference Include="StepH.GameEventScript.CSharpBridge" HintPath="$(GesUnityDllDirectory)/StepH.GameEventScript.CSharpBridge.dll" Private="true" />
-        <Reference Include="StepH.GameEventScript.Compiler" HintPath="$(GesCompilerDllDirectory)/StepH.GameEventScript.Compiler.dll" Private="true" />
     </ItemGroup>
-
 </Project>

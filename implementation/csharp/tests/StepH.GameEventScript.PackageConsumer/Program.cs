@@ -12,18 +12,19 @@ namespace StepH.GameEventScript.PackageConsumer;
 
 internal static class Program
 {
-    private static int Main()
+    private static int Main(string[] arguments)
     {
         var compiled = GameEventScriptBuilder.Create()
-            .AddScript("on Start(value) { emit Done(result: value + 1) }", "package-consumer.ges")
+            .AddScript("on Start(value) { emit Done(result: (parse value) + 1) }", "package-consumer.ges")
             .Compile();
         var encoded = GameEventScriptProgramWriter.ToArray(compiled);
+        if (arguments.Length == 1) File.WriteAllBytes(arguments[0], encoded);
         var loaded = GameEventScriptProgramReader.Read(encoded);
         var host = GameEventScriptHost.CreateBuilder().WithRandomSeed(1).Build();
         long? result = null;
         host.Subscribe("Done", ["result"], (message, _) => result = message.Arguments.GetAsInteger("result"));
         host.Load(loaded);
-        if (!host.Receive(GameEventScriptCSharpMessage.Create("Start", ("value", GesValue.GesInteger(41))))) return Fail("The host rejected the input message.");
+        if (!host.Receive(GameEventScriptCSharpMessage.Create("Start", ("value", GesValue.GesText("41"))))) return Fail("The host rejected the input message.");
         var execution = host.RunToCompletion();
         if (execution.State != GameEventScriptExecutionState.Completed || result != 42) return Fail("The packaged compiler/runtime/bridge pipeline did not produce 42.");
 

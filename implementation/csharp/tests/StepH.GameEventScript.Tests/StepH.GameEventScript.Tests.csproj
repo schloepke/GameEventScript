@@ -18,8 +18,10 @@
 
     <ItemGroup>
         <ProjectReference Include="../../src/StepH.GameEventScript/StepH.GameEventScript.csproj" />
+        <ProjectReference Include="../../src/StepH.GameEventScript.Compiler/StepH.GameEventScript.Compiler.csproj" />
         <ProjectReference Include="../../src/StepH.GameEventScript.CSharpBridge/StepH.GameEventScript.CSharpBridge.csproj" />
         <ProjectReference Include="../../src/StepH.GameEventScript.Conformance/StepH.GameEventScript.Conformance.csproj" />
+        <ProjectReference Include="../StepH.GameEventScript.RuntimeConsumer/StepH.GameEventScript.RuntimeConsumer.csproj" ReferenceOutputAssembly="false" />
         <ProjectReference Include="../StepH.GameEventScript.Conformance.Worker/StepH.GameEventScript.Conformance.Worker.csproj" ReferenceOutputAssembly="false" />
         <ProjectReference Include="../../tools/StepH.GameEventScript.Tool/StepH.GameEventScript.Tool.csproj" ReferenceOutputAssembly="false" />
     </ItemGroup>

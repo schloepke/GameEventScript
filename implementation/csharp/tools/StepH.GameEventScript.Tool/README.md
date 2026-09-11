@@ -176,7 +176,7 @@ dotnet tool install StepH.GameEventScript.Tool --version 0.1.0 --add-source ./ar
 
 On Windows the installed command is `ges.exe`. Build intermediates, binaries,
 and packages for this tool are written below `artifacts/csharp/tool`. This local
-tool package is separate from the three libraries produced by the existing
+tool package is separate from the four libraries produced by the existing
 library release and reproducibility scripts.
 
 For project-local use, install into a .NET tool manifest instead of supplying

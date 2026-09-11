@@ -164,9 +164,9 @@ public sealed class GameEventScriptDumpCommandTests
         return bytes;
     }
 
-    private ToolProcessResult Run(params string[] arguments) => ToolProcess.Execute(_directory, arguments);
+    private DotNetProcessResult Run(params string[] arguments) => ToolProcess.Execute(_directory, arguments);
 
-    private static void AssertSuccess(ToolProcessResult result)
+    private static void AssertSuccess(DotNetProcessResult result)
     {
         Assert.AreEqual(0, result.ExitCode, result.StandardError);
         Assert.AreEqual(string.Empty, result.StandardError);

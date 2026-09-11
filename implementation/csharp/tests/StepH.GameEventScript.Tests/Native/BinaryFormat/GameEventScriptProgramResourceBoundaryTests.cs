@@ -1,7 +1,6 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime.Values;
 
@@ -19,7 +18,7 @@ public sealed class GameEventScriptProgramResourceBoundaryTests
     {
         var source = "module resources\nfunction add(_ value) be value + 1\n" +
                      (nested ? "function twice(_ value) be add(add(value))\non Start(value) { emit Done(value: twice(value)) }" : "on Start(value) { emit Done(value: add(value)) }");
-        var valid = GameEventScriptManager.CreateScriptBuilder().AddScript(source).Compile(new GameEventScriptCompileOptions { DebugInfo = GameEventScriptDebugInfoOptions.None });
+        var valid = GameEventScriptBuilder.Create().AddScript(source).Compile(new GameEventScriptCompileOptions { DebugInfo = GameEventScriptDebugInfoOptions.None });
         var registers = underdeclareDepth ? valid.RequiredRegisterCount : checked((ushort)(valid.RequiredRegisterCount - 1));
         var depth = underdeclareDepth ? (ushort)0 : valid.RequiredCallStackDepth;
         var bindings = valid.Bindings.Entries.ToArray();

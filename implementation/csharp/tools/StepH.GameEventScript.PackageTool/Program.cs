@@ -12,14 +12,15 @@ namespace StepH.GameEventScript.PackageTool;
 
 internal static class Program
 {
-    private const string CorePackage = "StepH.GameEventScript";
+    private const string RuntimePackage = "StepH.GameEventScript";
     private static readonly DateTimeOffset CanonicalTimestamp = new(2000, 1, 1, 0, 0, 0, TimeSpan.Zero);
     private static readonly UTF8Encoding Utf8 = new(false, true);
     private static readonly PackageDefinition[] Packages =
     [
-        new(CorePackage, null),
-        new("StepH.GameEventScript.CSharpBridge", CorePackage),
-        new("StepH.GameEventScript.Conformance", CorePackage)
+        new(RuntimePackage, []),
+        new("StepH.GameEventScript.Compiler", [RuntimePackage]),
+        new("StepH.GameEventScript.CSharpBridge", [RuntimePackage]),
+        new("StepH.GameEventScript.Conformance", [RuntimePackage, "StepH.GameEventScript.Compiler"])
     ];
 
     private static int Main(string[] arguments)
@@ -142,7 +143,7 @@ internal static class Program
         var packagedAssemblies = normalEntries.Where(entry => entry.Name.StartsWith("lib/netstandard2.1/", StringComparison.Ordinal) && entry.Name.EndsWith(".dll", StringComparison.Ordinal)).ToArray();
         if (packagedAssemblies.Length != 1 || packagedAssemblies[0].Name != libraryPrefix + ".dll")
             throw new InvalidDataException($"Package '{package.Id}' must contain only its own runtime assembly.");
-        VerifyAssemblyReferences(package.Id, assembly);
+        VerifyAssemblyReferences(package, assembly);
 
         var pdb = RequiredEntry(symbolEntries, libraryPrefix + ".pdb").Content;
         if (pdb.Length < 4 || pdb[0] != (byte)'B' || pdb[1] != (byte)'S' || pdb[2] != (byte)'J' || pdb[3] != (byte)'B')
@@ -177,12 +178,14 @@ internal static class Program
             throw new InvalidDataException($"Unexpected repository metadata in manifest for '{package.Id}'.");
 
         var dependencies = metadata.Descendants().Where(element => element.Name.LocalName == "dependency").ToArray();
-        if (package.Dependency is null && dependencies.Length != 0) throw new InvalidDataException($"Core package '{package.Id}' must not have package dependencies.");
-        if (package.Dependency is not null && (dependencies.Length != 1 || dependencies[0].Attribute("id")?.Value != package.Dependency || !(dependencies[0].Attribute("version")?.Value ?? string.Empty).Contains(version, StringComparison.Ordinal)))
-            throw new InvalidDataException($"Package '{package.Id}' must depend only on '{package.Dependency}' version '{version}'.");
+        var dependencyIds = dependencies.Select(dependency => dependency.Attribute("id")?.Value).OrderBy(id => id, StringComparer.Ordinal);
+        if (!dependencyIds.SequenceEqual(package.Dependencies.OrderBy(id => id, StringComparer.Ordinal), StringComparer.Ordinal))
+            throw new InvalidDataException($"Package '{package.Id}' has an unexpected dependency set; expected: {string.Join(", ", package.Dependencies)}.");
+        if (dependencies.Any(dependency => dependency.Attribute("version")?.Value is not { } range || (range != version && range != $"[{version}, )")))
+            throw new InvalidDataException($"Package '{package.Id}' must use dependency version '{version}'.");
     }
 
-    private static void VerifyAssemblyReferences(string packageId, byte[] assembly)
+    private static void VerifyAssemblyReferences(PackageDefinition package, byte[] assembly)
     {
         using var stream = new MemoryStream(assembly, writable: false);
         using var peReader = new PEReader(stream);
@@ -191,8 +194,10 @@ internal static class Program
         {
             var reference = metadata.GetAssemblyReference(handle);
             var name = metadata.GetString(reference.Name);
+            if (name.StartsWith("StepH.GameEventScript", StringComparison.Ordinal) && !package.Dependencies.Contains(name, StringComparer.Ordinal))
+                throw new InvalidDataException($"Package assembly '{package.Id}' unexpectedly references '{name}'.");
             if (name.StartsWith("Beamable", StringComparison.Ordinal) || name.StartsWith("Unity", StringComparison.Ordinal))
-                throw new InvalidDataException($"Package assembly '{packageId}' unexpectedly references '{name}'.");
+                throw new InvalidDataException($"Package assembly '{package.Id}' unexpectedly references '{name}'.");
         }
     }
 
@@ -234,6 +239,6 @@ internal static class Program
         if (!expected.AsSpan().SequenceEqual(actual)) throw new InvalidDataException($"Packaged {name} differs from the repository file.");
     }
 
-    private sealed record PackageDefinition(string Id, string? Dependency);
+    private sealed record PackageDefinition(string Id, string[] Dependencies);
     private sealed record PackageEntry(string Name, byte[] Content, DateTimeOffset Timestamp);
 }

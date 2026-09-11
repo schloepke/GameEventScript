@@ -6,16 +6,23 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Conformance;
 
 namespace StepH_GameEventScript_Tests.Native.ApiSurface;
 
+/// <summary>Verifies platform-independent dependency and public-input boundaries for each portable library.</summary>
 [TestClass]
 public sealed class GameEventScriptPortableBoundaryTests
 {
+    /// <summary>Verifies that file-system operations remain outside portable libraries.</summary>
+    /// <param name="assemblyType">A public type identifying the library to inspect.</param>
     [TestMethod]
-    public void CoreAssemblyHasNoFileSystemDependencies()
+    [DataRow(typeof(GameEventScriptProgram))]
+    [DataRow(typeof(GameEventScriptBuilder))]
+    [DataRow(typeof(ConformanceRunner))]
+    public void PortableAssemblyHasNoFileSystemDependencies(Type assemblyType)
     {
-        using var stream = File.OpenRead(typeof(GameEventScriptProgram).Assembly.Location);
+        using var stream = File.OpenRead(assemblyType.Assembly.Location);
         using var assembly = new PEReader(stream);
         var metadata = assembly.GetMetadataReader();
         var forbidden = new HashSet<string>(StringComparer.Ordinal)
@@ -30,13 +37,18 @@ public sealed class GameEventScriptPortableBoundaryTests
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
 
-        Assert.HasCount(0, dependencies, "File-system adapters belong outside Core: " + string.Join(", ", dependencies));
+        Assert.HasCount(0, dependencies, "File-system adapters belong outside portable libraries: " + string.Join(", ", dependencies));
     }
 
+    /// <summary>Verifies that portable libraries acquire no ambient clock, random, or identifier sources.</summary>
+    /// <param name="assemblyType">A public type identifying the library to inspect.</param>
     [TestMethod]
-    public void CoreAssemblyHasNoAmbientClockOrIdentifierDependencies()
+    [DataRow(typeof(GameEventScriptProgram))]
+    [DataRow(typeof(GameEventScriptBuilder))]
+    [DataRow(typeof(ConformanceRunner))]
+    public void PortableAssemblyHasNoAmbientClockOrIdentifierDependencies(Type assemblyType)
     {
-        using var stream = File.OpenRead(typeof(GameEventScriptProgram).Assembly.Location);
+        using var stream = File.OpenRead(assemblyType.Assembly.Location);
         using var assembly = new PEReader(stream);
         var metadata = assembly.GetMetadataReader();
         var forbidden = new HashSet<string>(StringComparer.Ordinal)
@@ -50,13 +62,18 @@ public sealed class GameEventScriptPortableBoundaryTests
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
 
-        Assert.HasCount(0, dependencies, "Ambient clock and identifier sources belong outside Core; entropy is acquired only through the platform seam: " + string.Join(", ", dependencies));
+        Assert.HasCount(0, dependencies, "Ambient clock and identifier sources belong outside portable libraries; entropy is acquired only through the platform seam: " + string.Join(", ", dependencies));
     }
 
+    /// <summary>Verifies that unordered dictionary input adapters remain in CSharpBridge.</summary>
+    /// <param name="assemblyType">A public type identifying the library to inspect.</param>
     [TestMethod]
-    public void CorePublicInputsDoNotExposeUnorderedDictionaryAdapters()
+    [DataRow(typeof(GameEventScriptProgram))]
+    [DataRow(typeof(GameEventScriptBuilder))]
+    [DataRow(typeof(ConformanceRunner))]
+    public void PortablePublicInputsDoNotExposeUnorderedDictionaryAdapters(Type assemblyType)
     {
-        var violations = typeof(GameEventScriptProgram).Assembly.GetExportedTypes()
+        var violations = assemblyType.Assembly.GetExportedTypes()
             .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly).Cast<MethodBase>()
                 .Concat(type.GetConstructors(BindingFlags.Public | BindingFlags.Instance)))
             .SelectMany(method => method.GetParameters().Where(parameter => ContainsDictionary(parameter.ParameterType))

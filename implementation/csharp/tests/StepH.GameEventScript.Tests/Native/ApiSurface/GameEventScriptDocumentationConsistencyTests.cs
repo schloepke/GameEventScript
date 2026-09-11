@@ -32,7 +32,7 @@ public sealed class GameEventScriptDocumentationConsistencyTests
             .ToArray();
         var expectedFamilies = new[]
         {
-            "Builder, CompileOptions, CompileException, manager facade",
+            "Builder, CompileOptions, CompileException",
             "Program, all segment/entry/view types, instruction and ID types",
             "BinaryFormat constants, Reader, read options/limits/retention, Writer, Validator, format error, Dumper",
             "Message, MessageArgument(s), MessageSignature",
@@ -46,11 +46,11 @@ public sealed class GameEventScriptDocumentationConsistencyTests
             "Conformance parser, limits/diagnostics, Document/Case and normalized nested models",
             "Environment/options/limits, resolver/provider/sink, Runner, results/report/summary",
             "Result, Markdown, Received, and CrossLanguage writers plus CorpusIdentity",
-            "CSharpBridge filesystem, reflection, delegate, dictionary, and automatic-runner adapters"
+            "CSharpBridge reflection, delegate, dictionary, and automatic-runner adapters"
         };
         CollectionAssert.AreEqual(expectedFamilies, actualFamilies, "PublicApi.md ownership families changed without updating the consistency gate.");
 
-        var actualNamespaces = new[] { typeof(GameEventScriptProgram).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly, typeof(ConformanceRunner).Assembly }
+        var actualNamespaces = new[] { typeof(GameEventScriptProgram).Assembly, typeof(GameEventScriptBuilder).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly, typeof(ConformanceRunner).Assembly }
             .SelectMany(assembly => assembly.GetExportedTypes())
             .Select(type => type.Namespace ?? string.Empty)
             .Distinct(StringComparer.Ordinal)
@@ -58,7 +58,6 @@ public sealed class GameEventScriptDocumentationConsistencyTests
             .ToArray();
         var expectedNamespaces = new[]
         {
-            "StepH.GameEventScript",
             "StepH.GameEventScript.Api",
             "StepH.GameEventScript.CSharpBridge",
             "StepH.GameEventScript.Conformance",
@@ -162,7 +161,7 @@ public sealed class GameEventScriptDocumentationConsistencyTests
     [TestMethod]
     public void LexerWordVocabularyAppearsInNormativeGrammar()
     {
-        var projectDirectory = TestRepositoryPaths.LibraryProjectDirectory;
+        var projectDirectory = TestRepositoryPaths.CompilerProjectDirectory;
         var lexer = File.ReadAllText(Path.Combine(projectDirectory, "Compiler", "GesLexer.cs"));
         var language = File.ReadAllText(Path.Combine(TestRepositoryPaths.SpecificationsDirectory, "Language.md"));
         var grammarStart = language.IndexOf("```bnf", StringComparison.Ordinal);

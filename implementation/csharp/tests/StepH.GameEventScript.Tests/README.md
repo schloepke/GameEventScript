@@ -27,6 +27,13 @@ and decode diagnostics using existing invalid binary fixtures. The test project 
 these tests require no global installation. Temporary files stay below
 `artifacts/csharp/tests` and are removed after each test.
 
+`Native/ApiSurface` checks all four library boundaries. The separate
+`StepH.GameEventScript.RuntimeConsumer` application references only Runtime and
+CSharpBridge and executes compiler-produced `.gesb` fixtures with and without
+debug metadata, including runtime literal parsing. It rejects Compiler and
+Conformance in its output directory, dependency manifest, and loaded assemblies.
+The release smoke checks reuse it with NuGet packages and staged DLLs.
+
 Portable public behavior is added to Markdown first. A native test remains only
 for a language adapter, implementation detail, performance/allocation property,
 or bootstrap behavior that cannot use the corpus as its sole oracle. The

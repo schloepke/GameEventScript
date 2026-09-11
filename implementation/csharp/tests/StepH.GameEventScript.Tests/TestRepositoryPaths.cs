@@ -9,11 +9,13 @@ internal static class TestRepositoryPaths
 
     internal static string LibraryProjectDirectory { get; } = Path.Combine(Root, "implementation", "csharp", "src", "StepH.GameEventScript");
 
+    internal static string CompilerProjectDirectory { get; } = Path.Combine(Root, "implementation", "csharp", "src", "StepH.GameEventScript.Compiler");
+
     internal static string CSharpBridgeProjectDirectory { get; } = Path.Combine(Root, "implementation", "csharp", "src", "StepH.GameEventScript.CSharpBridge");
 
     internal static string ConformanceProjectDirectory { get; } = Path.Combine(Root, "implementation", "csharp", "src", "StepH.GameEventScript.Conformance");
 
-    internal static IReadOnlyList<string> ProductProjectDirectories { get; } = [LibraryProjectDirectory, CSharpBridgeProjectDirectory, ConformanceProjectDirectory];
+    internal static IReadOnlyList<string> ProductProjectDirectories { get; } = [LibraryProjectDirectory, CompilerProjectDirectory, CSharpBridgeProjectDirectory, ConformanceProjectDirectory];
 
     internal static string TestProjectDirectory { get; } = Path.Combine(Root, "implementation", "csharp", "tests", "StepH.GameEventScript.Tests");
 

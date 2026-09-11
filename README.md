@@ -22,9 +22,12 @@ Markdown conformance corpus; the C# API is one language-specific mapping.
 - [`tools`](tools) contains editor support and repository tooling.
 - [`BACKLOG.md`](BACKLOG.md) contains deliberately deferred project work and is not a normative specification.
 
-The C# implementation is split into the portable `StepH.GameEventScript` Core,
-the optional `StepH.GameEventScript.CSharpBridge` adapters, and the independently
-movable `StepH.GameEventScript.Conformance` parser and runner.
+The C# implementation provides the portable `StepH.GameEventScript` Runtime,
+the optional `StepH.GameEventScript.Compiler`, C#-specific
+`StepH.GameEventScript.CSharpBridge` adapters, and the separate
+`StepH.GameEventScript.Conformance` parser and runner. Compiler and CSharpBridge
+each depend only on Runtime; Conformance depends on Runtime and Compiler.
+Products executing precompiled `.gesb` files need no Compiler package.
 
 ## C# reference implementation
 

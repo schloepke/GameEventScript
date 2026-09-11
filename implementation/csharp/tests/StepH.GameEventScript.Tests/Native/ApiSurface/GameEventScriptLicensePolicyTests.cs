@@ -31,8 +31,9 @@ public sealed class GameEventScriptLicensePolicyTests
     {
         var projects = new[]
         {
-            (TestRepositoryPaths.LibraryProjectDirectory, "StepH.GameEventScript", "Portable, deterministic Game Event Script compiler, binary format, serial message host, and runtime."),
-            (TestRepositoryPaths.CSharpBridgeProjectDirectory, "StepH.GameEventScript.CSharpBridge", "C# adapters for Game Event Script filesystem access, reflection, delegates, dictionaries, and automatic host execution."),
+            (TestRepositoryPaths.LibraryProjectDirectory, "StepH.GameEventScript", "Portable, deterministic Game Event Script runtime, serial message host, and Program binary codec. No source compiler dependency."),
+            (TestRepositoryPaths.CompilerProjectDirectory, "StepH.GameEventScript.Compiler", "Portable Game Event Script source compiler. Depends on the separately consumable runtime."),
+            (TestRepositoryPaths.CSharpBridgeProjectDirectory, "StepH.GameEventScript.CSharpBridge", "C# adapters for Game Event Script reflection, delegates, dictionaries, and automatic host execution."),
             (TestRepositoryPaths.ConformanceProjectDirectory, "StepH.GameEventScript.Conformance", "Portable Markdown parser, runner, and report writers for the Game Event Script conformance corpus.")
         };
 

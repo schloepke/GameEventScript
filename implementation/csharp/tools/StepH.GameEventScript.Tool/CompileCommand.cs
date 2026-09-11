@@ -4,12 +4,13 @@
 using System.Diagnostics;
 using System.Text;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.CSharpBridge;
 
 namespace StepH.GameEventScript.Tool;
 
 internal static class CompileCommand
 {
+    private static readonly UTF8Encoding StrictUtf8 = new(false, true);
+
     private const string HelpText = """
 Usage:
   ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--no-debug] [-v | -q]
@@ -98,7 +99,7 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
             foreach (var sourcePath in sourcePaths)
             {
                 activeSourcePath = sourcePath;
-                builder.AddFile(sourcePath);
+                builder.AddScript(StrictUtf8.GetString(File.ReadAllBytes(sourcePath)), sourcePath);
             }
             var program = builder.Compile();
             var bytes = GameEventScriptProgramWriter.ToArray(program);

@@ -3,7 +3,6 @@
 
 using System.Security.Cryptography;
 using System.Text;
-using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 
 namespace StepH_GameEventScript_Tests.Native.BinaryFormat;
@@ -14,7 +13,7 @@ public sealed class GameEventScriptProgramFormatTests
     [TestMethod]
     public void CompilerGeneratesAllDebugSectionsByDefault()
     {
-        var program = GameEventScriptManager.CreateScriptBuilder()
+        var program = GameEventScriptBuilder.Create()
             .AddScript("module defaultdebug\n\non Start { emit Done(value: 1) }", "default-debug.ges")
             .Compile();
 
@@ -45,14 +44,14 @@ public sealed class GameEventScriptProgramFormatTests
     public void CanonicalGoldenBinariesRemainByteStable()
     {
         var emptyHash = Sha256(GameEventScriptProgramWriter.ToArray(
-            GameEventScriptManager.CreateScriptBuilder().Compile(new GameEventScriptCompileOptions
+            GameEventScriptBuilder.Create().Compile(new GameEventScriptCompileOptions
             {
                 DebugInfo = GameEventScriptDebugInfoOptions.None
             })));
         var runtimeHash = Sha256(GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.None)));
         var debugHash = Sha256(GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.All)));
 
-        var multipleSources = GameEventScriptManager.CreateScriptBuilder()
+        var multipleSources = GameEventScriptBuilder.Create()
             .AddScript("module first\nfunction plusOne(value) be value + 1", "first.ges")
             .AddScript("module first\non Start(value) { emit Done(value: plusOne(value: value)) }", "second.ges")
             .WithDebugInfo()
@@ -102,7 +101,7 @@ public sealed class GameEventScriptProgramFormatTests
     [TestMethod]
     public void DuplicateBindingIdsProduceStableError()
     {
-        var program = GameEventScriptManager.CreateScriptBuilder()
+        var program = GameEventScriptBuilder.Create()
             .AddScript("module duplicateids\non First { }\non Second { }")
             .Compile();
         var bytes = GameEventScriptProgramWriter.ToArray(program);
@@ -118,7 +117,7 @@ public sealed class GameEventScriptProgramFormatTests
     [TestMethod]
     public void ProgramValidatorEnforcesPortableCallableIdentity()
     {
-        var program = GameEventScriptManager.CreateScriptBuilder()
+        var program = GameEventScriptBuilder.Create()
             .AddScript("function resolve(unit, enemy) be unit + enemy\nfunction resolve(unit, collision) be unit * collision\non Start { emit Done(a: resolve(unit: 2, enemy: 3), b: resolve(unit: 2, collision: 3)) }")
             .Compile();
         var entries = program.Bindings.Entries.ToArray();
@@ -188,7 +187,7 @@ public sealed class GameEventScriptProgramFormatTests
     public void UnicodeSourcesUseUtf8ByteOffsetsAndRoundTrip()
     {
         const string source = "module unicode\n\non Start(name) {\n  let text be \"🙂 é \" + name\n  emit Done(text: text)\n}\n";
-        var program = GameEventScriptManager.CreateScriptBuilder().AddScript(source, "ä/logic.ges").WithDebugInfo().Compile();
+        var program = GameEventScriptBuilder.Create().AddScript(source, "ä/logic.ges").WithDebugInfo().Compile();
         var bytes = GameEventScriptProgramWriter.ToArray(program);
         var sourceMapSection = FindSection(bytes, (ushort)GameEventScriptSectionType.SourceMap);
         Assert.AreEqual((uint)1, ReadU32(bytes, sourceMapSection + 12));
@@ -267,7 +266,7 @@ public sealed class GameEventScriptProgramFormatTests
     }
 
     private static GameEventScriptProgram Compile(GameEventScriptDebugInfoOptions options)
-        => GameEventScriptManager.CreateScriptBuilder()
+        => GameEventScriptBuilder.Create()
             .AddScript("module binaryone\n\non Start(value) {\n  let result be value + 1\n  emit Done(value: result)\n}\n", "main.ges")
             .WithProgramVersion(42)
             .WithDebugInfo(options)

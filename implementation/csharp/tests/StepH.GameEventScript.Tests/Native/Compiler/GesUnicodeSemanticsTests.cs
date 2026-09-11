@@ -1,7 +1,6 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Compiler;
 
@@ -37,7 +36,7 @@ public sealed class GesUnicodeSemanticsTests
     public void BuilderRejectsInvalidUnicodeScalarSequences()
     {
         var exception = Assert.ThrowsExactly<ArgumentException>(() =>
-            GameEventScriptManager.CreateScriptBuilder().AddScript("on Start { let value be '\uD800' }").Compile());
+            GameEventScriptBuilder.Create().AddScript("on Start { let value be '\uD800' }").Compile());
 
         StringAssert.Contains(exception.Message, "valid Unicode scalar values");
     }
@@ -46,7 +45,7 @@ public sealed class GesUnicodeSemanticsTests
     public void SourceArchiveStoresLogicalSourceWithoutBom()
     {
         const string logicalSource = "module bom\r\non Start { emit Done(value: '😀') }\r";
-        var program = GameEventScriptManager.CreateScriptBuilder()
+        var program = GameEventScriptBuilder.Create()
             .AddScript("\uFEFF" + logicalSource, "bom.ges")
             .WithDebugInfo(GameEventScriptDebugInfoOptions.SourceMap | GameEventScriptDebugInfoOptions.SourceArchive)
             .Compile();

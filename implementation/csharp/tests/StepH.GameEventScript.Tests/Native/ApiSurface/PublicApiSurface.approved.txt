@@ -907,8 +907,6 @@ interface StepH.GameEventScript.Api.IGameEventScriptRuntimeObserver
   method System.Void MessagePublished(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptPublishResult result)
   method System.Void RuntimeError(StepH.GameEventScript.Api.GameEventScriptDiagnostic diagnostic)
   method System.Void RuntimeLimitReached(System.String limitName, System.String detail, System.Int32 limit)
-static class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpBuilderExtensions
-  method static StepH.GameEventScript.Api.GameEventScriptBuilder AddFile(StepH.GameEventScript.Api.GameEventScriptBuilder builder, System.String path)
 static class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpContextExtensions
   method static StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(StepH.GameEventScript.Api.GameEventScriptContext context, StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> arguments)
   method static StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(StepH.GameEventScript.Api.GameEventScriptContext context, System.String message, System.ValueTuple<System.String, StepH.GameEventScript.Runtime.Values.GesValue>[] arguments)
@@ -1535,10 +1533,6 @@ interface StepH.GameEventScript.Conformance.IConformanceResourceResolver
   method StepH.GameEventScript.Conformance.ConformanceResourceResult Resolve(System.String resourceId, System.Int32 maximumByteCount)
 interface StepH.GameEventScript.Conformance.IConformanceResultSink
   method System.Void CaseCompleted(StepH.GameEventScript.Conformance.ConformanceCaseResult result)
-static class StepH.GameEventScript.GameEventScriptManager
-  method static StepH.GameEventScript.Api.GameEventScriptBuilder CreateScriptBuilder()
-  method static StepH.GameEventScript.Api.GameEventScriptHostBuilder CreateHostBuilder()
-  method static StepH.GameEventScript.Api.GameEventScriptProgram Compile(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
 struct StepH.GameEventScript.Runtime.Values.GesValue
   method StepH.GameEventScript.Runtime.Values.GesValueMap AsMap()
   method StepH.GameEventScript.Runtime.Values.GesValueSlice AsList()

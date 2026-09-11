@@ -19,11 +19,12 @@ mkdir -p "$package_output"
 cd "$repository_root"
 dotnet restore GameEventScript.sln -p:NuGetAudit=false
 
-for package_id in StepH.GameEventScript StepH.GameEventScript.CSharpBridge StepH.GameEventScript.Conformance; do
+for package_id in StepH.GameEventScript StepH.GameEventScript.Compiler StepH.GameEventScript.CSharpBridge StepH.GameEventScript.Conformance; do
     rm -f "$package_output/$package_id.$release_version.nupkg" "$package_output/$package_id.$release_version.snupkg"
 done
 
 dotnet pack implementation/csharp/src/StepH.GameEventScript/StepH.GameEventScript.csproj --configuration Release --no-restore --output "$package_output" -p:Version="$release_version" -p:PackageVersion="$release_version"
+dotnet pack implementation/csharp/src/StepH.GameEventScript.Compiler/StepH.GameEventScript.Compiler.csproj --configuration Release --no-restore --output "$package_output" -p:Version="$release_version" -p:PackageVersion="$release_version"
 dotnet pack implementation/csharp/src/StepH.GameEventScript.CSharpBridge/StepH.GameEventScript.CSharpBridge.csproj --configuration Release --no-restore --output "$package_output" -p:Version="$release_version" -p:PackageVersion="$release_version"
 dotnet pack implementation/csharp/src/StepH.GameEventScript.Conformance/StepH.GameEventScript.Conformance.csproj --configuration Release --no-restore --output "$package_output" -p:Version="$release_version" -p:PackageVersion="$release_version"
 

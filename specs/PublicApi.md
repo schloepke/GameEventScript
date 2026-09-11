@@ -15,18 +15,29 @@ regression tool for the C# binding and is not the portable API definition.
 
 ## Scope and dependency direction
 
-The portable surface consists of two conceptual modules:
+The portable surface consists of three modules:
 
 ```text
-GameEventScript Core
-  values, messages, compiler, program, binary codec, host, runtime boundaries
+GameEventScript Runtime
+  values, messages, program, binary codec, validation, host, VM, literal parsing
+
+GameEventScript Compiler
+  source builder, lexer, parser, validation, optimizer, bytecode generation
+  -> depends only on GameEventScript Runtime
 
 GameEventScript Conformance
   Markdown parser, normalized test model, runner, results, reports, received output
-  -> depends on GameEventScript Core
+  -> depends on GameEventScript Runtime and Compiler
 ```
 
-Core, compiler, host, VM, and program code must not depend on Conformance.
+Runtime must load and execute precompiled Programs without a source compiler.
+Shared value semantics, text/number conversions, runtime literal parsing, Program
+validation, and declarative external-type definitions remain in Runtime. There
+is no additional shared Core module. Compiler uses these Runtime contracts;
+Runtime never references Compiler or Conformance. Compiler never references
+Conformance or language-specific adapters. All three portable modules remain
+synchronous and independent of filesystem, network, threads, and test frameworks.
+
 Conformance is delivered as the separate optional
 `StepH.GameEventScript.Conformance` package. Its public contract is independent
 of the reference test framework and filesystem adapters.
@@ -49,8 +60,9 @@ The following documents own detailed behavior and are incorporated by reference:
 
 C# reflection attributes, delegates, locks, threads, tasks, `System.Type`, and
 dictionary conveniences belong to `CSharpBridge`. They are public C# adapters,
-not portable Core concepts. Other ports may provide equivalent conveniences,
-but conformance code and portable application code must not require them.
+not portable Runtime or Compiler concepts. Other ports may provide equivalent
+conveniences, but conformance code and portable application code must not
+require them.
 
 ## Normative conventions
 
@@ -159,9 +171,9 @@ these limits.
 non-empty diagnostic list. A port may return a result union instead. Diagnostics
 remain the portable failure value.
 
-`GameEventScriptManager.CreateScriptBuilder`, `CreateHostBuilder`, and
-`Compile(text, options)` are C# facade conveniences over the operations in this
-document. They introduce no additional state or semantics.
+The C# compiler entry point is
+`GameEventScriptBuilder.Create().AddScript(text, sourceName).Compile(options)`.
+Host construction independently uses `GameEventScriptHost.CreateBuilder()`.
 
 ## Program and bytecode data API
 
@@ -876,15 +888,17 @@ caller-supplied ordered documents and never reads discovery paths.
 
 ### C# and Unity
 
-The portable API is exposed by the `StepH.GameEventScript` Core package and the
-optional `StepH.GameEventScript.Conformance` package. The separate
-`StepH.GameEventScript.CSharpBridge` package supplies:
+`StepH.GameEventScript` supplies Runtime. The optional
+`StepH.GameEventScript.Compiler` package supplies `GameEventScriptBuilder`,
+`GameEventScriptCompileOptions`, and `GameEventScriptCompileException` in the
+`StepH.GameEventScript.Api` namespace. Applications compile through
+`GameEventScriptBuilder.Create()`, construct hosts through
+`GameEventScriptHost.CreateBuilder()`, and load precompiled Programs through
+the Reader.
 
-- `GameEventScriptCSharpBuilderExtensions.AddFile(builder, path)`, also callable
-  as `builder.AddFile(path)`, synchronously reads strict UTF-8 and delegates to
-  `AddScript(text, path)`. The supplied path becomes the source identity; a
-  leading BOM follows the portable source rules. Reading and decoding finish
-  before the builder changes, and no file handle is retained;
+`StepH.GameEventScript.CSharpBridge` depends only on Runtime and must not pull in
+Compiler or Conformance, directly or transitively. It supplies:
+
 - `GameEventScriptCSharpValue.GesMap(entries)` and
   `GameEventScriptCSharpValue.GesRecord(typeName, fields)` snapshot dictionary
   entries and delegate to the portable ordered value factories. Null or empty
@@ -895,6 +909,9 @@ optional `StepH.GameEventScript.Conformance` package. The separate
 - reflection/attribute extension and external-type registries;
 - an optional lock-based automatic Host runner with the ownership-transfer and
   scheduling rules in [HostRuntime](HostRuntime.md#c-automatic-runner).
+
+Source-file reading belongs to the CLI or embedding. The compiler accepts
+`AddScript(text, sourceName)`; CSharpBridge has no compiler-builder extensions.
 
 These adapters must delegate to the portable semantics. Unity consumes the C#
 DLL and may choose main-thread/manual pumping instead of the automatic runner.
@@ -929,7 +946,7 @@ duplicated as a second source of truth here.
 
 | Public family | Owning section |
 | --- | --- |
-| Builder, CompileOptions, CompileException, manager facade | Compiler API |
+| Builder, CompileOptions, CompileException | Compiler API |
 | Program, all segment/entry/view types, instruction and ID types | Program and bytecode data API |
 | BinaryFormat constants, Reader, read options/limits/retention, Writer, Validator, format error, Dumper | Program codec, validation, and dump API |
 | Message, MessageArgument(s), MessageSignature | Message and value API |
@@ -943,7 +960,7 @@ duplicated as a second source of truth here.
 | Conformance parser, limits/diagnostics, Document/Case and normalized nested models | Conformance parser API |
 | Environment/options/limits, resolver/provider/sink, Runner, results/report/summary | Conformance runner API |
 | Result, Markdown, Received, and CrossLanguage writers plus CorpusIdentity | Conformance writer API |
-| CSharpBridge filesystem, reflection, delegate, dictionary, and automatic-runner adapters | Language-binding requirements; non-portable |
+| CSharpBridge reflection, delegate, dictionary, and automatic-runner adapters | Language-binding requirements; non-portable |
 
 The portable public API is limited to the families above. VM execution state,
 compiler trees, filesystem services, network clients, task schedulers, and

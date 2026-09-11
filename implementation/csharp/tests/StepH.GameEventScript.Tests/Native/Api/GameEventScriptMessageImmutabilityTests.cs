@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Collections;
-using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.CSharpBridge;
 using StepH.GameEventScript.Runtime.Values;
@@ -108,7 +107,7 @@ public sealed class GameEventScriptMessageImmutabilityTests
     [DataRow("let handler be Shape(original)\n let message be handler(original: 7)\n emit message with #green")]
     public void ScriptMessageViewsCannotChangeCurrentOrSubsequentDeliveries(string body)
     {
-        var program = GameEventScriptManager.CreateScriptBuilder().AddScript("module immutablemessages\non Start { " + body + "\n }").Compile();
+        var program = GameEventScriptBuilder.Create().AddScript("module immutablemessages\non Start { " + body + "\n }").Compile();
         var host = GameEventScriptHost.CreateBuilder().Build();
         var delivered = new List<GameEventScriptMessage>();
         host.Subscribe(GameEventScriptMessageSignature.Create("Shape", ["original"]), (message, _) =>

@@ -25,6 +25,7 @@
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="../../src/StepH.GameEventScript/StepH.GameEventScript.csproj" />
+        <ProjectReference Include="../../src/StepH.GameEventScript.Compiler/StepH.GameEventScript.Compiler.csproj" />
         <ProjectReference Include="../../src/StepH.GameEventScript.CSharpBridge/StepH.GameEventScript.CSharpBridge.csproj" />
         <None Include="../../../../LICENSE" Link="LICENSE" Pack="true" PackagePath="/" />
         <None Update="README.md" Pack="true" PackagePath="/" />

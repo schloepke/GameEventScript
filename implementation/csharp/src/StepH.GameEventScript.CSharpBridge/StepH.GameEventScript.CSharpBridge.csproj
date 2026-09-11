@@ -11,7 +11,7 @@
         <Version>0.1.0</Version>
         <Authors>Stephan Schlöpke</Authors>
         <Copyright>Copyright 2026 Stephan Schlöpke</Copyright>
-        <Description>C# adapters for Game Event Script filesystem access, reflection, delegates, dictionaries, and automatic host execution.</Description>
+        <Description>C# adapters for Game Event Script reflection, delegates, dictionaries, and automatic host execution.</Description>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <RepositoryUrl>https://github.com/schloepke/GameEventScript</RepositoryUrl>

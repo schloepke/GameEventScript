@@ -426,6 +426,69 @@ steps:
 
 ---
 
+## Test: declared native faults retain handler context and allow later dispatch
+
+This native-only case verifies that a deliberate fault carries the active handler signature, stops that handler before emitting, and leaves sibling handlers and subsequent messages executable.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: native-declared-fault-context
+kind: scriptApi
+level: scenario
+nativeHandlers:
+  - message: Start
+    faultCode: test.nativeFault
+    emit:
+      - name: MustNotRun
+        args: []
+  - message: Start
+    emit:
+      - name: Continued
+        args: []
+  - message: Check
+    emit:
+      - name: Done
+        args: []
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| fail | Start | completion | |
+| check | Check | completion | |
+| again | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  fail:
+    local:
+      - name: Continued
+    diagnostics:
+      - phase: runtime
+        code: test.nativeFault
+        programName: null
+        handlerName: "Start()"
+  check:
+    local:
+      - name: Done
+  again:
+    local:
+      - name: Continued
+    diagnostics:
+      - phase: runtime
+        code: test.nativeFault
+        programName: null
+        handlerName: "Start()"
+```
+
+---
+
 ## Test: external subscribers emit follow up messages through same run
 
 This runtime case exercises “external subscribers emit follow up messages through same run” and verifies the declared messages, values, and execution result.
@@ -668,4 +731,76 @@ steps:
               type: ":Number.int64"
               value: "3"
     paused: true
+```
+
+---
+
+## Test: native faults preserve supplied context independently
+
+This native-only case supplies each context field separately and then both together. The Host fills only missing context, preserves caller-supplied names, and remains usable for a subsequent message.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: native-supplied-fault-context
+kind: scriptApi
+level: scenario
+nativeHandlers:
+  - message: ProgramOnly
+    faultCode: test.nativeFault
+    faultContext:
+      programName: reported.program
+      handlerName: null
+  - message: HandlerOnly
+    faultCode: test.nativeFault
+    faultContext:
+      programName: null
+      handlerName: "Reported()"
+  - message: Both
+    faultCode: test.nativeFault
+    faultContext:
+      programName: reported.program
+      handlerName: "Reported()"
+  - message: Check
+    emit:
+      - name: Done
+        args: []
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| program | ProgramOnly | completion | |
+| handler | HandlerOnly | completion | |
+| both | Both | completion | |
+| check | Check | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  program:
+    diagnostics:
+      - phase: runtime
+        code: test.nativeFault
+        programName: reported.program
+        handlerName: "ProgramOnly()"
+  handler:
+    diagnostics:
+      - phase: runtime
+        code: test.nativeFault
+        programName: null
+        handlerName: "Reported()"
+  both:
+    diagnostics:
+      - phase: runtime
+        code: test.nativeFault
+        programName: reported.program
+        handlerName: "Reported()"
+  check:
+    local:
+      - name: Done
 ```

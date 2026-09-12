@@ -717,6 +717,9 @@ public sealed class ConformanceNativeHandler
         int priority,
         bool initiallySubscribed,
         bool throws,
+        string? faultCode,
+        string? faultProgramName,
+        string? faultHandlerName,
         IReadOnlyList<ConformanceNativeAction> actions,
         IReadOnlyList<ConformanceNativeEmit> emits)
     {
@@ -727,6 +730,9 @@ public sealed class ConformanceNativeHandler
         Priority = priority;
         InitiallySubscribed = initiallySubscribed;
         Throws = throws;
+        FaultCode = faultCode;
+        FaultProgramName = faultProgramName;
+        FaultHandlerName = faultHandlerName;
         Actions = ConformanceDocument.Copy(actions);
         Emits = ConformanceDocument.Copy(emits);
     }
@@ -759,6 +765,18 @@ public sealed class ConformanceNativeHandler
     /// Gets the throws.
     /// </summary>
     public bool Throws { get; }
+    /// <summary>
+    /// Gets the caller-chosen diagnostic code for a deliberate native-handler failure, or null when absent.
+    /// </summary>
+    public string? FaultCode { get; }
+    /// <summary>
+    /// Gets the Program name supplied by the deliberate fault before Host context enrichment, or null when absent.
+    /// </summary>
+    public string? FaultProgramName { get; }
+    /// <summary>
+    /// Gets the handler name supplied by the deliberate fault before Host context enrichment, or null when absent.
+    /// </summary>
+    public string? FaultHandlerName { get; }
     /// <summary>
     /// Gets the actions.
     /// </summary>
@@ -1074,7 +1092,20 @@ public sealed class ConformanceRuntimeLimitExpectation
 /// </summary>
 public sealed class ConformanceExpectedDiagnostic
 {
-    internal ConformanceExpectedDiagnostic(string phase, string code, string? symbol, string? symbolKind, string? sourceName, uint? line, uint? column, uint? endLine, uint? endColumn, string? programName, string? handlerName)
+    internal ConformanceExpectedDiagnostic(
+        string phase,
+        string code,
+        string? symbol,
+        string? symbolKind,
+        string? sourceName,
+        uint? line,
+        uint? column,
+        uint? endLine,
+        uint? endColumn,
+        string? programName,
+        string? handlerName,
+        bool programNameSpecified,
+        bool handlerNameSpecified)
     {
         Phase = phase;
         Code = code;
@@ -1087,6 +1118,8 @@ public sealed class ConformanceExpectedDiagnostic
         EndColumn = endColumn;
         ProgramName = programName;
         HandlerName = handlerName;
+        ProgramNameSpecified = programNameSpecified;
+        HandlerNameSpecified = handlerNameSpecified;
     }
 
     /// <summary>
@@ -1133,6 +1166,14 @@ public sealed class ConformanceExpectedDiagnostic
     /// Gets the handler name.
     /// </summary>
     public string? HandlerName { get; }
+    /// <summary>
+    /// Gets whether ProgramName is an exact constraint, including an explicit null for absent context.
+    /// </summary>
+    public bool ProgramNameSpecified { get; }
+    /// <summary>
+    /// Gets whether HandlerName is an exact constraint, including an explicit null for absent context.
+    /// </summary>
+    public bool HandlerNameSpecified { get; }
 }
 
 /// <summary>

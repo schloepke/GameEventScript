@@ -421,6 +421,21 @@ ordered sequence, `priority` to zero, `initiallySubscribed` to true, `throw` to
 false, and `actions`/`emit` to empty. An emit entry requires `name` and exactly
 one of `forwardArguments: true` or an ordered `args` sequence.
 
+An optional `faultCode` string selects a deliberate native-handler runtime fault
+with that caller-chosen diagnostic code, for example `faultCode: test.nativeFault`.
+It is absent by default, must not be empty or whitespace-only, must not start
+with `runtime.`, and cannot accompany `throw: true`. Both failure modes abort
+before actions or emits: `throw: true` raises an unanticipated platform exception,
+while `faultCode` reports a deliberate diagnostic using the platform's failure
+transport (`GameEventScriptExtensionFaultException` in C#). The Host supplies
+the active handler context as defined in [Diagnostics](../Diagnostics.md).
+
+With `faultCode`, an optional `faultContext` mapping accepts only `programName`
+and `handlerName`, each a string or null. An omitted or null field is absent in
+the diagnostic supplied by the native fixture; the Host then fills available
+context. Supplied strings must be preserved. `faultContext` without `faultCode`
+is invalid. This is portable diagnostic input, not an exception-class selector.
+
 Each action mapping contains exactly one of `loadProgram`, `detachProgram`,
 `subscribeHandler`, or `unsubscribeHandler`, plus an optional boolean
 `expectResult` or diagnostic `expectError`. Its operation value is an existing program
@@ -687,6 +702,8 @@ error:
 ```
 
 `phase` and `code` are required. Other fields are optional exact constraints.
+For `programName` and `handlerName`, an explicit YAML null requires that the
+observed context field be absent; omitting the key leaves that field unconstrained.
 Human-readable messages and technical details cannot be expectations. The
 diagnostic contract is [Diagnostics](../Diagnostics.md).
 

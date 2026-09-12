@@ -166,7 +166,7 @@ internal class GesVmState
     internal void CreateGroupBuilder(ushort index) => RegisterValues[index + RegisterFrameStart].SetGroupBuilder(new GesVmGroupBuilder(this));
     internal void CreateOrderBuilder(ushort index) => RegisterValues[index + RegisterFrameStart].SetOrderBuilder(new GesVmOrderBuilder());
 
-    internal bool RaiseError(string code, string message, string? technicalDetails = null)
+    internal bool RaiseError(string code, string message, string? technicalDetails = null, string? symbol = null)
     {
         State = Error;
         ErrorMessage = message;
@@ -174,6 +174,7 @@ internal class GesVmState
             GameEventScriptDiagnosticPhase.Runtime,
             code,
             message,
+            Symbol: symbol,
             ProgramName: ActiveProgram?.Program.ModuleName,
             HandlerName: ActiveHandlerName,
             TechnicalDetails: technicalDetails);
@@ -183,7 +184,12 @@ internal class GesVmState
     {
         State = Error;
         ErrorMessage = diagnostic.Message;
-        ErrorDiagnostic = technicalDetails is null ? diagnostic : diagnostic with { TechnicalDetails = technicalDetails };
+        ErrorDiagnostic = diagnostic with
+        {
+            ProgramName = diagnostic.ProgramName ?? ActiveProgram?.Program.ModuleName,
+            HandlerName = diagnostic.HandlerName ?? ActiveHandlerName,
+            TechnicalDetails = technicalDetails ?? diagnostic.TechnicalDetails
+        };
         return false;
     }
     internal void Reset()

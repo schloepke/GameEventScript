@@ -707,6 +707,14 @@ public static class ConformanceRunner
         public void Handle(GameEventScriptMessage message, GameEventScriptContext context)
         {
             if (_definition.Throws) throw new InvalidOperationException("Configured conformance native handler failure.");
+            if (_definition.FaultCode is not null)
+            {
+                const string messageText = "Configured conformance native handler declared fault.";
+                if (_definition.FaultProgramName is null && _definition.FaultHandlerName is null)
+                    throw new GameEventScriptExtensionFaultException(_definition.FaultCode, messageText);
+                throw new ContextualNativeFault(new GameEventScriptDiagnostic(GameEventScriptDiagnosticPhase.Runtime, _definition.FaultCode, messageText,
+                    ProgramName: _definition.FaultProgramName, HandlerName: _definition.FaultHandlerName));
+            }
             _state.ApplyActions(_definition.Actions, _state.ActionPath + "/nativeHandlers/" + _definition.Id + "/actions");
             for (var emitIndex = 0; emitIndex < _definition.Emits.Count; emitIndex++)
             {
@@ -726,6 +734,8 @@ public static class ConformanceRunner
             }
         }
     }
+
+    private sealed class ContextualNativeFault(GameEventScriptDiagnostic diagnostic) : GameEventScriptFatalRuntimeException(diagnostic);
 
     private sealed class HostScenarioState
     {
@@ -1068,14 +1078,18 @@ public static class ConformanceRunner
     private static bool DiagnosticMatches(ConformanceExpectedDiagnostic expected, GameEventScriptDiagnostic actual)
         => string.Equals(expected.Phase, Phase(actual.Phase), StringComparison.Ordinal) && string.Equals(expected.Code, actual.Code, StringComparison.Ordinal)
            && OptionalEquals(expected.Symbol, actual.Symbol) && OptionalEquals(expected.SymbolKind, SymbolKind(actual.SymbolKind))
-           && OptionalEquals(expected.ProgramName, actual.ProgramName) && OptionalEquals(expected.HandlerName, actual.HandlerName)
+           && DiagnosticContextMatches(expected, actual.ProgramName, actual.HandlerName)
            && LocationMatches(expected, actual.SourceLocation);
 
     private static bool DiagnosticMatches(ConformanceExpectedDiagnostic expected, ConformanceResultDiagnostic actual)
         => string.Equals(expected.Phase, actual.Phase, StringComparison.Ordinal) && string.Equals(expected.Code, actual.Code, StringComparison.Ordinal)
            && OptionalEquals(expected.Symbol, actual.Symbol) && OptionalEquals(expected.SymbolKind, actual.SymbolKind)
-           && OptionalEquals(expected.SourceName, actual.SourceName) && OptionalEquals(expected.ProgramName, actual.ProgramName) && OptionalEquals(expected.HandlerName, actual.HandlerName)
+           && OptionalEquals(expected.SourceName, actual.SourceName) && DiagnosticContextMatches(expected, actual.ProgramName, actual.HandlerName)
            && OptionalEquals(expected.Line, actual.Line) && OptionalEquals(expected.Column, actual.Column) && OptionalEquals(expected.EndLine, actual.EndLine) && OptionalEquals(expected.EndColumn, actual.EndColumn);
+
+    private static bool DiagnosticContextMatches(ConformanceExpectedDiagnostic expected, string? programName, string? handlerName)
+        => (!expected.ProgramNameSpecified || string.Equals(expected.ProgramName, programName, StringComparison.Ordinal))
+           && (!expected.HandlerNameSpecified || string.Equals(expected.HandlerName, handlerName, StringComparison.Ordinal));
 
     private static bool LocationMatches(ConformanceExpectedDiagnostic expected, GameEventScriptSourceLocation? actual)
         => actual is null

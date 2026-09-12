@@ -630,6 +630,8 @@ the last setter call is the effective result. Omitting a result produces Nothing
 The callback must not retain the call, arguments, Context, or borrowed values.
 Setters are invalid outside an active invocation. Implementations should reuse
 the adapter and must not allocate it per hot-path invocation after warmup.
+Invoke may throw `ExtensionFaultException` or an unanticipated exception; see
+"Diagnostics and failure transport" for the resulting contract.
 
 ## External-type API
 
@@ -699,6 +701,32 @@ normally flow through Observer and ExecutionResult rather than escaping callback
 the fatal-runtime base is for trusted native integration and does not define a
 script-visible exception mechanism.
 
+`ExtensionFaultException` extends the fatal-runtime base. An extension function,
+external-type constructor, or `ExternalValue.GetField` implementation
+constructs and throws it to deliberately report a defined failure with a
+caller-chosen code, message, and optional symbol; the code must not use the
+reserved `runtime.` prefix owned by `DiagnosticCodes`. The C# constructor rejects
+null codes or messages, and empty or whitespace-only codes. An optional inner cause
+may be supplied; it is never part of the diagnostic's normative phase, code, or
+message, only of its non-normative technical details. Any other exception from
+the same three boundaries is unanticipated and is reported instead with the
+matching `runtime.extensionCallFailed`, `runtime.externalConstructorFailed`, or
+`runtime.externalFieldAccessFailed` code. Both outcomes end only the current
+handler with a diagnosable runtime error; the host remains reusable, and neither
+outcome evaluates to Nothing.
+
+Native handlers may also use this failure transport; their unexpected exceptions
+use `runtime.nativeHandlerFailure`, as defined in [Diagnostics](Diagnostics.md).
+
+C# Reflection adapters forward the original exception thrown by an attributed
+constructor, factory method, or property getter. Wrappers introduced by the
+Bridge's own Reflection invocation must not change whether the callback reports
+a deliberate or unexpected fault. This guarantee does not unwrap exceptions
+originating inside application code: if a callback uses its own Reflection call
+and lets a `TargetInvocationException` escape, that wrapper is the unexpected
+exception reported at the callback boundary, even if its inner cause is an
+`ExtensionFaultException`. The cause remains available in technical details.
+
 ## Conformance parser API
 
 ### Parser operation
@@ -759,6 +787,17 @@ by [Conformance Markdown](Conformance/MarkdownFormat.md):
   `HandlerResourceExpectation`, `MessageDefinitionExpectation`,
   `MessageApiExpectation`, `ValueApiExpectation`, `ExternalTypeApiExpectation`,
   `PerformanceExpectation`, `PerformanceProfile`, and `PerformanceMetric`.
+
+`ConformanceNativeHandler.FaultCode` exposes the optional caller-chosen diagnostic
+code for a deliberate native-handler failure, or null when absent.
+`FaultProgramName` and `FaultHandlerName` expose the fixture's supplied context
+before Host enrichment. Input constraints and execution order are owned by the
+Markdown format.
+
+`ConformanceExpectedDiagnostic.ProgramNameSpecified` and `HandlerNameSpecified`
+distinguish an omitted context constraint from an explicit null expectation.
+When a flag is true, the corresponding nullable value must match exactly;
+otherwise that context field is unconstrained.
 
 `ConformanceMessageApiCase.CompareConformanceMessage` and
 `ConformanceMessageApiExpectation.ConformanceEquals` expose the optional paired

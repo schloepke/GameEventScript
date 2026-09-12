@@ -246,6 +246,27 @@ public static class GameEventScriptDiagnosticCodes
     /// Defines the runtime publish sink failure value.
     /// </summary>
     public const string RuntimePublishSinkFailure = "runtime.publishSinkFailure";
+    /// <summary>
+    /// An extension function threw an exception other than a deliberately reported
+    /// <see cref="GameEventScriptExtensionFaultException"/>.
+    /// </summary>
+    public const string RuntimeExtensionCallFailed = "runtime.extensionCallFailed";
+    /// <summary>
+    /// An external-type constructor threw an exception other than a deliberately
+    /// reported <see cref="GameEventScriptExtensionFaultException"/>.
+    /// </summary>
+    public const string RuntimeExternalConstructorFailed = "runtime.externalConstructorFailed";
+    /// <summary>
+    /// An <see cref="IGameEventScriptExternalValue"/> field access threw an exception
+    /// other than a deliberately reported <see cref="GameEventScriptExtensionFaultException"/>.
+    /// </summary>
+    public const string RuntimeExternalFieldAccessFailed = "runtime.externalFieldAccessFailed";
+
+    /// <summary>
+    /// The reserved code prefix for internally raised runtime diagnostics. Codes
+    /// passed to <see cref="GameEventScriptExtensionFaultException"/> must not use it.
+    /// </summary>
+    internal const string RuntimeCodePrefix = "runtime.";
 
     /// <summary>
     /// Performs the decode operation.
@@ -257,6 +278,23 @@ public static class GameEventScriptDiagnosticCodes
         var name = code.ToString();
         return "decode." + char.ToLowerInvariant(name[0]) + name[1..];
     }
+}
+
+/// <summary>
+/// Formats a caught exception into non-normative diagnostic text for
+/// <see cref="GameEventScriptDiagnostic.TechnicalDetails"/>. The result is never a
+/// portable comparison value; only the diagnostic phase, code, and structured
+/// fields are normative.
+/// </summary>
+internal static class GameEventScriptRuntimeExceptionText
+{
+    /// <summary>
+    /// Describes an unexpected exception, including its type, message, and stack
+    /// trace, for logging and development diagnosis.
+    /// </summary>
+    /// <param name="exception">The caught exception.</param>
+    /// <returns>Non-normative, platform-specific exception text.</returns>
+    internal static string Describe(Exception exception) => exception.ToString();
 }
 
 /// <summary>
@@ -413,6 +451,84 @@ public abstract class GameEventScriptFatalRuntimeException : Exception
 
     private static GameEventScriptDiagnostic RequireDiagnostic(GameEventScriptDiagnostic? diagnostic)
         => diagnostic ?? throw new ArgumentNullException(nameof(diagnostic));
+}
+
+/// <summary>
+/// A deliberate, portable runtime fault that an extension function, native handler, external-type
+/// constructor, or <see cref="IGameEventScriptExternalValue"/> implementation throws
+/// to report a defined failure. It ends the current handler with a diagnosable
+/// runtime error instead of silently evaluating to <c>nothing</c>; the host remains
+/// reusable for subsequently enqueued messages, as for any other runtime error.
+/// </summary>
+/// <remarks>
+/// This is distinct from an unanticipated exception raised by a bug in the same
+/// callback: that case is reported as <see cref="GameEventScriptDiagnosticCodes.RuntimeExtensionCallFailed"/>,
+/// <see cref="GameEventScriptDiagnosticCodes.RuntimeExternalConstructorFailed"/>,
+/// <see cref="GameEventScriptDiagnosticCodes.RuntimeExternalFieldAccessFailed"/>, or
+/// <see cref="GameEventScriptDiagnosticCodes.RuntimeNativeHandlerFailure"/> and
+/// never requires this type.
+/// </remarks>
+public sealed class GameEventScriptExtensionFaultException : GameEventScriptFatalRuntimeException
+{
+    /// <summary>
+    /// Initializes a new instance of Game Event Script Extension Fault Exception.
+    /// </summary>
+    /// <param name="code">
+    /// A stable code in the caller's own namespace, for example <c>"myExtension.outOfStock"</c>.
+    /// It must not be empty or consist only of whitespace.
+    /// It must not start with the reserved <c>"runtime."</c> prefix used by internally
+    /// raised runtime diagnostics.
+    /// </param>
+    /// <param name="message">A human-readable explanation. It may change and must never decide portable conformance.</param>
+    /// <param name="symbol">An optional symbol identifying the failing construct.</param>
+    /// <param name="innerException">
+    /// An optional original cause. It is never part of the diagnostic's normative
+    /// fields; when present, it is rendered into <see cref="GameEventScriptDiagnostic.TechnicalDetails"/>
+    /// only, which is non-normative logging text.
+    /// </param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="code"/> or <paramref name="message"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="code"/> is empty, consists only of whitespace, or starts with the reserved <c>runtime.</c> prefix.</exception>
+    public GameEventScriptExtensionFaultException(string code, string message, string? symbol = null, Exception? innerException = null)
+        : base(BuildDiagnostic(code, message, symbol, innerException), innerException)
+    {
+    }
+
+    private static GameEventScriptDiagnostic BuildDiagnostic(string code, string message, string? symbol, Exception? innerException)
+    {
+        if (code is null) throw new ArgumentNullException(nameof(code));
+        if (message is null) throw new ArgumentNullException(nameof(message));
+        if (string.IsNullOrWhiteSpace(code)) throw new ArgumentException("Extension fault codes must not be empty or whitespace.", nameof(code));
+        if (code.StartsWith(GameEventScriptDiagnosticCodes.RuntimeCodePrefix, StringComparison.Ordinal))
+            throw new ArgumentException($"Extension fault codes must not use the reserved '{GameEventScriptDiagnosticCodes.RuntimeCodePrefix}' prefix.", nameof(code));
+        return new GameEventScriptDiagnostic(
+            GameEventScriptDiagnosticPhase.Runtime,
+            code,
+            message,
+            Symbol: symbol,
+            TechnicalDetails: innerException is null ? null : GameEventScriptRuntimeExceptionText.Describe(innerException));
+    }
+}
+
+/// <summary>
+/// Wraps an unanticipated exception caught at the extension, external-type
+/// constructor, or external-value boundary with the failing construct's identity.
+/// It is a <see cref="GameEventScriptFatalRuntimeException"/> so every existing
+/// boundary that already special-cases that base type handles it without change.
+/// </summary>
+internal sealed class GameEventScriptCallbackFailureException : GameEventScriptFatalRuntimeException
+{
+    internal GameEventScriptCallbackFailureException(string code, string message, string? symbol, Exception innerException)
+        : base(BuildDiagnostic(code, message, symbol, innerException), innerException)
+    {
+    }
+
+    private static GameEventScriptDiagnostic BuildDiagnostic(string code, string message, string? symbol, Exception innerException)
+        => new(
+            GameEventScriptDiagnosticPhase.Runtime,
+            code,
+            message,
+            Symbol: symbol,
+            TechnicalDetails: GameEventScriptRuntimeExceptionText.Describe(innerException));
 }
 
 /// <summary>

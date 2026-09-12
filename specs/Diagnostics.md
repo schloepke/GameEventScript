@@ -74,13 +74,34 @@ Runtime uses these stable codes:
   `runtime.invalidExternalTypeBinding`, `runtime.invalidMessageShape`, and
   `runtime.invalidSeriesKind`;
 - `runtime.unhandledFailure`, `runtime.nativeHandlerFailure`, and
-  `runtime.publishSinkFailure`.
+  `runtime.publishSinkFailure`;
+- `runtime.extensionCallFailed`, `runtime.externalConstructorFailed`, and
+  `runtime.externalFieldAccessFailed`.
 
 `runtime.randomStackUnderflow` reports an attempted pop across an active runtime
 boundary, while `runtime.randomScopeImbalance` reports scopes left open by a
 successfully returning native or extension callback. Exceeding
 `MaxRandomScopeDepth` is a runtime-limit event rather than a diagnostic. New
 codes may be added; an existing code must not be repurposed.
+
+If an extension callback fails, random-scope cleanup still restores its parent
+stream, but must not replace the callback's original failure diagnostic with a
+scope-cleanup diagnostic.
+
+An extension function, external-type constructor, or external-value field
+accessor may throw `GameEventScriptExtensionFaultException` to deliberately
+report a defined failure with its own caller-chosen code, message, and optional
+symbol; that code must not use the reserved `runtime.` prefix and is therefore
+never one of the codes enumerated above. Any other exception from the same
+boundary is unanticipated and is reported with the matching
+`runtime.extensionCallFailed`, `runtime.externalConstructorFailed`, or
+`runtime.externalFieldAccessFailed` code instead. Both outcomes end only the
+current handler; the host remains reusable for subsequently enqueued messages,
+as for any other runtime error. Neither ever evaluates to `nothing`.
+
+Native handlers may likewise deliberately report a caller-chosen fault with
+`GameEventScriptExtensionFaultException`. Unanticipated native-handler exceptions
+use `runtime.nativeHandlerFailure`.
 
 ## Transport and execution
 
@@ -95,6 +116,15 @@ order. The observer receives every runtime diagnostic. The execution result has
 state `RuntimeError` and carries the first handler diagnostic observed during
 that pump call. Successful, paused, and runtime-limit results carry no
 diagnostic.
+
+For handler diagnostics, the Host and VM fill missing `programName` and
+`handlerName` from the active Program and handler before reporting the error,
+including failures during VM preparation and native callbacks. Native handlers
+have a dispatch signature but no owning Program, so they supply `handlerName`
+without inventing a `programName`.
+Context already supplied by the diagnostic is preserved independently for each
+field. The original diagnostic remains immutable; unavailable context stays
+absent.
 
 A publish-sink exception remains a rejected outbound attempt: local dispatch is
 unchanged, the observer receives `runtime.publishSinkFailure`, and the sink

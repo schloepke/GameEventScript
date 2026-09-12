@@ -436,3 +436,242 @@ steps:
       exclude:
         - any: true
 ```
+
+---
+
+## Test: an unexpected extension failure reports a stable runtime error
+
+This case exercises an extension function that throws an exception other than a
+deliberately reported fault. The handler ends with a diagnosable runtime error;
+no local message is emitted.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: extension-call-unexpected-failure
+kind: scriptApi
+level: atomic
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4096
+```
+
+### Source code under test
+
+```ges
+module callbackfailures
+
+on Start {
+  let outcome be :test.fail()
+  emit Done(outcome: outcome)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    diagnostics:
+      - phase: runtime
+        programName: "callbackfailures"
+        handlerName: "Start()"
+        code: runtime.extensionCallFailed
+```
+
+---
+
+## Test: a declared extension fault reports its own stable code
+
+This case exercises an extension function that deliberately reports a defined
+failure. The handler ends with a diagnosable runtime error carrying the
+extension's own code; no local message is emitted.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: extension-call-declared-fault
+kind: scriptApi
+level: atomic
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4096
+```
+
+### Source code under test
+
+```ges
+module callbackfailures
+
+on Start {
+  let outcome be :test.declaredFault()
+  emit Done(outcome: outcome)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    diagnostics:
+      - phase: runtime
+        programName: "callbackfailures"
+        handlerName: "Start()"
+        code: test.declaredFault
+```
+
+---
+
+## Test: an unexpected extension failure survives random-scope cleanup
+
+This scenario's failing extension leaves a seeded random scope open. Cleanup must preserve
+its original diagnostic, stop that handler before its emit, and allow the next
+handler to run. A later message must draw from the untouched host stream.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: extension-call-unexpected-failure-random-cleanup
+kind: scriptApi
+level: scenario
+random:
+  sequence: ["42"]
+```
+
+### Source code under test
+
+```ges
+module callbackfailures
+
+on Start {
+  let outcome be :test.failWithRandomScope()
+  emit MustNotRun(outcome: outcome)
+}
+
+on Start {
+  emit Continued
+}
+
+on Check {
+  emit Done(value: random from 1 to 100)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+| check | Check | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: "Continued"
+    diagnostics:
+      - phase: runtime
+        programName: "callbackfailures"
+        handlerName: "Start()"
+        code: runtime.extensionCallFailed
+        symbol: "test.failWithRandomScope"
+  check:
+    local:
+      - name: "Done"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "42"
+```
+
+---
+
+## Test: a declared extension failure survives random-scope cleanup
+
+This scenario's failing extension leaves a seeded random scope open. Cleanup must preserve
+its original diagnostic, stop that handler before its emit, and allow the next
+handler to run. A later message must draw from the untouched host stream.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: extension-call-declared-failure-random-cleanup
+kind: scriptApi
+level: scenario
+random:
+  sequence: ["42"]
+```
+
+### Source code under test
+
+```ges
+module callbackfailures
+
+on Start {
+  let outcome be :test.declaredFaultWithRandomScope()
+  emit MustNotRun(outcome: outcome)
+}
+
+on Start {
+  emit Continued
+}
+
+on Check {
+  emit Done(value: random from 1 to 100)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+| check | Check | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: "Continued"
+    diagnostics:
+      - phase: runtime
+        programName: "callbackfailures"
+        handlerName: "Start()"
+        code: test.declaredFault
+  check:
+    local:
+      - name: "Done"
+        args:
+          - name: "value"
+            value:
+              type: ":Number.int64"
+              value: "42"
+```

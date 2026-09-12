@@ -49,6 +49,12 @@ use the `Action<GameEventScriptMessage, GameEventScriptContext>` convenience
 overloads in `CSharpBridge`; other ports provide their own language-idiomatic
 adapters without changing the Core contract.
 
+An extension function may throw `GameEventScriptExtensionFaultException` to
+deliberately report a defined failure, or throw any other exception
+unanticipated by the runtime; [Diagnostics](Diagnostics.md) owns the resulting
+stable codes and the shared "current handler only, host stays reusable, never
+`nothing`" contract shared with native handlers and the external-type boundary.
+
 `GameEventScriptContext` is created once per host and passed to native handlers
 and extensions. It exposes the host random stream, limits, `Emit`, and `Publish`.
 Its random generator supports nested `Push()`, `Push(Int64)`, and `Pop()` scopes.
@@ -148,6 +154,10 @@ constructor must report exactly the definition requested by the import. Runtime
 values cross the portable boundary as `IGameEventScriptExternalValue`, exposing
 their declarative definition and field values without exposing a platform host
 object.
+
+A constructor or a field accessor may likewise throw
+`GameEventScriptExtensionFaultException` or an unanticipated exception; see
+[Diagnostics](Diagnostics.md) for the resulting codes and contract.
 
 The C# bridge may implement both inputs with one convenience object. Its
 reflection metadata, attributes, CLR instances, field delegates, conversion,

@@ -195,7 +195,7 @@ internal static class ConformanceSchemaBinder
         for (var handlerIndex = 0; handlerIndex < node.Items.Count; handlerIndex++)
         {
             var item = node.Items[handlerIndex];
-            Closed(item, "id", "message", "parameters", "messageName", "priority", "initiallySubscribed", "throw", "actions", "emit");
+            Closed(item, "id", "message", "parameters", "messageName", "priority", "initiallySubscribed", "throw", "faultCode", "faultContext", "actions", "emit");
             var id = OptionalString(item, "id") ?? "native-" + (handlerIndex + 1).ToString("D4", CultureInfo.InvariantCulture);
             RequireId(id, Optional(item, "id")?.Range ?? item.Range);
             if (!ids.Add(id)) throw Schema(ConformanceDiagnosticCodes.SchemaDuplicateId, "Duplicate native handler ID '" + id + "'.", Optional(item, "id")?.Range ?? item.Range);
@@ -206,6 +206,17 @@ internal static class ConformanceSchemaBinder
             var priority = OptionalInt32(item, "priority") ?? 0;
             var initiallySubscribed = OptionalBoolean(item, "initiallySubscribed") ?? true;
             var throws = OptionalBoolean(item, "throw") ?? false;
+            var faultCode = OptionalString(item, "faultCode");
+            if (faultCode is not null && (throws || string.IsNullOrWhiteSpace(faultCode) || faultCode.StartsWith("runtime.", StringComparison.Ordinal)))
+                throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "faultCode requires a nonblank caller code outside runtime. and cannot accompany throw: true.", Optional(item, "faultCode")!.Range);
+            var faultContext = Optional(item, "faultContext");
+            if (faultContext is not null)
+            {
+                if (faultCode is null) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "faultContext requires faultCode.", faultContext.Range);
+                Closed(faultContext, "programName", "handlerName");
+            }
+            var faultProgramName = faultContext is null ? null : OptionalNullableString(faultContext, "programName");
+            var faultHandlerName = faultContext is null ? null : OptionalNullableString(faultContext, "handlerName");
             var actions = BindNativeActions(Optional(item, "actions"));
             var emits = new List<ConformanceNativeEmit>();
             var emitNode = Optional(item, "emit");
@@ -221,7 +232,7 @@ internal static class ConformanceSchemaBinder
                     emits.Add(new ConformanceNativeEmit(RequiredString(emit, "name"), forward == true, argsNode is null ? Array.Empty<ConformanceArgument>() : BindArguments(argsNode)));
                 }
             }
-            result.Add(new ConformanceNativeHandler(id, message, parameters, messageNameOnly, priority, initiallySubscribed, throws, actions, emits));
+            result.Add(new ConformanceNativeHandler(id, message, parameters, messageNameOnly, priority, initiallySubscribed, throws, faultCode, faultProgramName, faultHandlerName, actions, emits));
         }
         return result;
     }
@@ -699,7 +710,7 @@ internal static class ConformanceSchemaBinder
         return new ConformanceExpectedDiagnostic(
             RequiredString(node, "phase"), RequiredString(node, "code"), OptionalString(node, "symbol"), OptionalString(node, "symbolKind"),
             OptionalString(node, "sourceName"), OptionalUInt32(node, "line"), OptionalUInt32(node, "column"), OptionalUInt32(node, "endLine"),
-            OptionalUInt32(node, "endColumn"), OptionalString(node, "programName"), OptionalString(node, "handlerName"));
+            OptionalUInt32(node, "endColumn"), OptionalNullableString(node, "programName"), OptionalNullableString(node, "handlerName"), Optional(node, "programName") is not null, Optional(node, "handlerName") is not null);
     }
 
     private static ConformanceMessageApiExpectation BindMessageApiExpectation(YamlNode node)
@@ -1144,6 +1155,7 @@ internal static class ConformanceSchemaBinder
     private static YamlNode Required(YamlNode node, string name) => Optional(node, name) ?? throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, $"Missing required field '{name}'.", node.Range);
     private static string RequiredString(YamlNode node, string name) => String(Required(node, name));
     private static string? OptionalString(YamlNode node, string name) => Optional(node, name) is { } value ? String(value) : null;
+    private static string? OptionalNullableString(YamlNode node, string name) => Optional(node, name) is { Kind: not YamlNodeKind.Null } value ? String(value) : null;
     private static bool? OptionalBoolean(YamlNode node, string name) => Optional(node, name) is { } value ? Boolean(value) : null;
     private static bool RequiredBoolean(YamlNode node, string name) => Boolean(Required(node, name));
     private static int? OptionalInt32(YamlNode node, string name) => Optional(node, name) is { } value ? ParseInt32(value) : null;

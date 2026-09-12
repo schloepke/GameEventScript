@@ -11,10 +11,10 @@ internal static class GameEventScriptConformanceExternalTypes
     private static readonly GameEventScriptExternalTypeDefinition AimDefinition = CreateAimDefinition();
 
     internal static readonly IGameEventScriptExternalTypeCatalog Catalog =
-        new GameEventScriptExternalTypeCatalog([AimDefinition]);
+        new GameEventScriptExternalTypeCatalog([AimDefinition, GameEventScriptConformanceCallbackProbe.Definition]);
 
     internal static readonly IGameEventScriptExternalTypeRegistry Registry =
-        new AimRuntimeRegistry();
+        new TestRuntimeRegistry();
 
     private static GameEventScriptExternalTypeDefinition CreateAimDefinition()
     {
@@ -40,14 +40,16 @@ internal static class GameEventScriptConformanceExternalTypes
             ]);
     }
 
-    private sealed class AimRuntimeRegistry : IGameEventScriptExternalTypeRegistry
+    private sealed class TestRuntimeRegistry : IGameEventScriptExternalTypeRegistry
     {
         private readonly AimConstructor _constructor = new(AimDefinition.Constructors[0]);
 
         public IGameEventScriptExternalTypeConstructor? Resolve(GameEventScriptExternalTypeConstructorReference reference)
             => string.Equals(reference.SignatureId, _constructor.Definition.SignatureId, StringComparison.Ordinal)
                 ? _constructor
-                : null;
+                : string.Equals(reference.SignatureId, GameEventScriptConformanceCallbackProbe.Constructor.Definition.SignatureId, StringComparison.Ordinal)
+                    ? GameEventScriptConformanceCallbackProbe.Constructor
+                    : null;
     }
 
     private sealed class AimConstructor(GameEventScriptExternalTypeConstructorDefinition definition)

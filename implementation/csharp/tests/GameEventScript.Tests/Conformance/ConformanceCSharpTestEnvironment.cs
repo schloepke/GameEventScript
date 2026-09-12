@@ -194,6 +194,20 @@ internal sealed class ConformanceTestExtensionRegistry : IGameEventScriptExtensi
 
     private static readonly IGameEventScriptExtensionFunction TestTruth = new DelegateExtensionFunction((call, _) => call.SetBoolean(true));
     private static readonly IGameEventScriptExtensionFunction TestFail = new DelegateExtensionFunction((_, _) => throw new InvalidOperationException("Configured conformance extension failure."));
+    private static readonly IGameEventScriptExtensionFunction TestDeclaredFault = new DelegateExtensionFunction((_, _) =>
+        throw new GameEventScriptExtensionFaultException("test.declaredFault", "Configured conformance extension declared fault."));
+    private static readonly IGameEventScriptExtensionFunction TestFailWithRandomScope = new DelegateExtensionFunction((call, _) =>
+    {
+        call.Random.Push(7L);
+        call.Random.NextInclusiveInteger(1, 100);
+        throw new InvalidOperationException("Configured conformance extension failure with an open random scope.");
+    });
+    private static readonly IGameEventScriptExtensionFunction TestDeclaredFaultWithRandomScope = new DelegateExtensionFunction((call, _) =>
+    {
+        call.Random.Push(7L);
+        call.Random.NextInclusiveInteger(1, 100);
+        throw new GameEventScriptExtensionFaultException("test.declaredFault", "Configured conformance extension declared fault with an open random scope.");
+    });
 
     private ConformanceTestExtensionRegistry()
     {
@@ -214,6 +228,9 @@ internal sealed class ConformanceTestExtensionRegistry : IGameEventScriptExtensi
         if (Matches(reference, "test", "notify", 1, requireUnlabeled: true)) return TestNotify;
         if (Matches(reference, "test", "truth", 0, requireUnlabeled: false)) return TestTruth;
         if (Matches(reference, "test", "fail", 0, requireUnlabeled: false)) return TestFail;
+        if (Matches(reference, "test", "declaredFault", 0, requireUnlabeled: false)) return TestDeclaredFault;
+        if (Matches(reference, "test", "failWithRandomScope", 0, requireUnlabeled: false)) return TestFailWithRandomScope;
+        if (Matches(reference, "test", "declaredFaultWithRandomScope", 0, requireUnlabeled: false)) return TestDeclaredFaultWithRandomScope;
         return null;
     }
 

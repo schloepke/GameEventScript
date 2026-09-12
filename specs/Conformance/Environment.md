@@ -23,12 +23,20 @@ The fixed V1 extension registry contains:
 | `:test.echo _` | exactly one value | the same value and value kind without conversion; otherwise `nothing` |
 | `:test.notify _` | exactly one value | emits `Effect(value: _)` locally and returns the same value without conversion |
 | `:test.truth()` | no values | `true` |
-| `:test.fail()` | no values | throws a native failure for short-circuit and diagnostic tests |
+| `:test.fail()` | no values | throws an unanticipated native failure for short-circuit and diagnostic tests |
+| `:test.declaredFault()` | no values | deliberately reports a defined runtime fault with stable code `test.declaredFault` |
+| `:test.failWithRandomScope()` | no values | opens a random scope with seed `7`, draws one inclusive integer from `1` to `100`, then throws an unanticipated native failure without closing the scope |
+| `:test.declaredFaultWithRandomScope()` | no values | opens the same scope and draws as `test.failWithRandomScope`, then deliberately reports `test.declaredFault` without closing the scope |
 
 Names, labels and arity are exact. Unknown references do not link. Integer
 inputs accepted through numeric access follow the ordinary runtime numeric
 conversion contract. `test.fail` exists only to prove that an expression was or
-was not evaluated; its platform exception text is nonnormative.
+was not evaluated, or that an unanticipated extension exception is reported with
+the stable `runtime.extensionCallFailed` code; its platform exception text is
+nonnormative. `test.declaredFault` proves that a deliberately reported extension
+fault keeps its own stable code and phase instead of that generic code.
+The variants with an open random scope verify that boundary cleanup preserves
+the original diagnostic and restores the parent random stream.
 
 ## External type `aim`
 
@@ -54,6 +62,38 @@ The runtime constructor retains the four converted arguments and sets
 `bearing + range + steps`. Field lookup by any other name returns no value.
 The runtime value exposes only `IGameEventScriptExternalValue`; the portable
 case must not depend on a language-specific backing object.
+
+## External type `CallbackProbe`
+
+The fixed V1 external-type catalog also declares
+`CallbackProbe(failure: Text, context: Text)` with fields `failure: Text`,
+`context: Text`, and `value: Float<UnitNone>` in that order. The first two fields
+retain the constructor inputs. The fixture provides controlled callback failures
+for the portable diagnostic contract.
+
+| `failure` | Behavior |
+| --- | --- |
+| `constructorUnexpected` | Construction raises an unanticipated platform failure. |
+| `constructorDeclared` | Construction reports the deliberate diagnostic below with symbol `CallbackProbe`. |
+| `fieldUnexpected` | Construction succeeds; reading `value` raises an unanticipated platform failure. |
+| `fieldDeclared` | Construction succeeds; reading `value` reports the deliberate diagnostic below with symbol `CallbackProbe.value`. |
+
+Deliberate diagnostics have phase `runtime` and code `test.callbackFault`.
+`context` controls the context supplied by the fixture before Host/VM enrichment:
+
+| `context` | `programName` | `handlerName` |
+| --- | --- | --- |
+| `none` | absent | absent |
+| `program` | `reported.program` | absent |
+| `handler` | absent | `Reported()` |
+| `both` | `reported.program` | `Reported()` |
+
+Unexpected failures supply no diagnostic context of their own. Unknown `failure`
+or `context` values make construction return `nothing`; unknown field names return
+no value. Exception types and technical details are platform-specific and must
+not decide these cases. Each port implements its own failure transport; C# uses
+`GameEventScriptExtensionFaultException` or the trusted fatal-runtime base when
+supplying explicit context. No Reflection or host-bound CLR object is required.
 
 ## Declarative Host environment
 

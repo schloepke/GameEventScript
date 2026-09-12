@@ -297,7 +297,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
                 throw new ArgumentException($"External GameEventScript field '{property.Name}' on '{clrType.FullName}' must be a readable non-indexer property.");
             }
 
-            fields.Add(CreateFieldBinding(attribute, instance => property.GetValue(instance)));
+            fields.Add(CreateFieldBinding(attribute, instance => property.GetValue(instance, BindingFlags.DoNotWrapExceptions, null, null, null)));
         }
 
         foreach (var field in clrType.GetFields(BindingFlags.Instance | BindingFlags.Public))
@@ -340,7 +340,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
                 continue;
             }
 
-            constructors.Add(BuildConstructorBinding(typeName, fieldNames, constructor, values => constructor.Invoke(values), registry));
+            constructors.Add(BuildConstructorBinding(typeName, fieldNames, constructor, values => constructor.Invoke(BindingFlags.DoNotWrapExceptions, null, values, null), registry));
         }
 
         foreach (var method in clrType.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
@@ -360,7 +360,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
                 throw new ArgumentException($"External GameEventScript constructor '{clrType.FullName}.{method.Name}' must return '{clrType.FullName}'.");
             }
 
-            constructors.Add(BuildConstructorBinding(typeName, fieldNames, method, values => method.Invoke(null, values), registry));
+            constructors.Add(BuildConstructorBinding(typeName, fieldNames, method, values => method.Invoke(null, BindingFlags.DoNotWrapExceptions, null, values, null), registry));
         }
 
         var duplicates = constructors

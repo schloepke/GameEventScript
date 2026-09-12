@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "B68940A2671152275B768007C709F69979B4A1CF2E962442C31F38BDAE8EB026",
-    "documentCount": 86,
-    "caseCount": 1405
+    "sha256": "52CAB0414221024AF96D4B1F0E19A4B4B1DCC467F005D7DC783AA1AA77001C55",
+    "documentCount": 87,
+    "caseCount": 1415
   },
   "cases": [
     {
@@ -17597,6 +17597,74 @@
       "code": "conformance.passed"
     },
     {
+      "id": "runtime.extensions-sequences/extension-call-declared-failure-random-cleanup",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.extensions-sequences/extension-call-declared-fault",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.extensions-sequences/extension-call-unexpected-failure",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.extensions-sequences/extension-call-unexpected-failure-random-cleanup",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "runtime.extensions-sequences/r25-extension-parse-precedence",
       "kind": "scriptApi",
       "level": "atomic",
@@ -17642,6 +17710,82 @@
           "host",
           "observer",
           "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.external-callback-failures/constructor-declared-context",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "external-types",
+          "host",
+          "native-handlers",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.external-callback-failures/constructor-unexpected",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "external-types",
+          "host",
+          "native-handlers",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.external-callback-failures/field-declared-context",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "external-types",
+          "host",
+          "native-handlers",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.external-callback-failures/field-unexpected",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "external-types",
+          "host",
+          "native-handlers",
+          "observer",
           "publish-sink",
           "vm"
         ],
@@ -17803,6 +17947,36 @@
           "observer",
           "publish-sink",
           "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-dispatch/native-declared-fault-context",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "host",
+          "native-handlers",
+          "observer"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-dispatch/native-supplied-fault-context",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "host",
+          "native-handlers",
+          "observer"
         ],
         "optional": []
       },

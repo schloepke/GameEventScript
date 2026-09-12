@@ -716,14 +716,17 @@ internal static class GameEventScriptVirtualMachine
         }
         catch (GameEventScriptFatalRuntimeException exception)
         {
-            vmState.RaiseError(exception.Diagnostic, exception.GetType().Name);
+            // A GameEventScriptExtensionFaultException or GameEventScriptCallbackFailureException
+            // already carries its own TechnicalDetails; only fall back to the CLR type
+            // name for internal fatal signals that never set it.
+            vmState.RaiseError(exception.Diagnostic, exception.Diagnostic.TechnicalDetails ?? exception.GetType().Name);
         }
         catch (Exception exception)
         {
             vmState.RaiseError(
                 GameEventScriptDiagnosticCodes.RuntimeUnhandledFailure,
                 "Unhandled VM execution failure.",
-                exception.GetType().Name + ": " + exception.Message);
+                GameEventScriptRuntimeExceptionText.Describe(exception));
         }
 
         context.RuntimeBudget.CompleteExecutionSlice(opcodesExecuted, reservedSteps, vmState.State == Processing, executionLimitDetail);

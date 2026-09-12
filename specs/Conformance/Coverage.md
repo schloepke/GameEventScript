@@ -12,6 +12,8 @@ here. Add or update this matrix in the same change as new portable behavior.
 
 | Behavior | Stable portable case IDs |
 | --- | --- |
+| External constructor and field failures preserve stable diagnostics, abort only the current handler, and keep the Host reusable | `runtime.external-callback-failures/constructor-unexpected`, `constructor-declared-context`, `field-unexpected`, `field-declared-context` |
+| Diagnostic context is filled only when absent and caller-supplied fields are preserved independently | `runtime.external-callback-failures/constructor-declared-context`, `field-declared-context`, `runtime.host-dispatch/native-declared-fault-context`, `native-supplied-fault-context` |
 | Shared exact decimal decoding for compiler literals, constants, Number/Percentage casts, exponent/separator grammar, units, ties, underflow and overflow | `runtime.text-literal-conversion/numeric-text-grammar`, `invalid-number-text-and-fallback`, `exact-decimal-boundaries`, `compiler-literal-01` through `compiler-literal-07`, `percentage-literal-overflow` |
 | Uniform Percentage ratios and exact numeric/Text/parse roundtrips without a fixed decimal spelling | `runtime.text-literal-conversion/uniform-percentage-ratios`, `percentage-exact-roundtrips`, `number-quantity-text-roundtrips`, `nested-data-roundtrips` |
 | Complete literal recognition, unchanged original-Text fallback, quoted and nested Text, prefix precedence and independent truth casts | `runtime.text-literal-conversion/literal-recognition-and-exact-fallback`, `parse-non-text`, `root-and-nested-text-formatting`, `prefix-precedence`, `text-truth-view-stays-independent` |

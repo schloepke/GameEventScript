@@ -20,8 +20,6 @@ here.
 - Confirm availability of the chosen `GameEventScript.*` C# package IDs and
   finalize publisher identity, repository visibility and release signing before
   enabling `NUGET_PUBLISH_ENABLED` or any other public registry publication.
-- Enable branch protection and require `C# CI / verify` when the repository is
-  public or the GitHub account supports protection for private repositories.
 
 ## Bytecode and portable format
 

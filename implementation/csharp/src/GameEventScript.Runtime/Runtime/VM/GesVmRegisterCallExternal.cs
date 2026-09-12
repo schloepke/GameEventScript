@@ -46,7 +46,25 @@ internal static class GesVmRegisterCallExternal
         var randomBoundary = context.BeginRandomBoundary();
         try
         {
-            function.Invoke(call);
+            try
+            {
+                function.Invoke(call);
+            }
+            catch (GameEventScriptFatalRuntimeException)
+            {
+                // A deliberate GameEventScriptExtensionFaultException, or another
+                // internal fatal signal, is reported as-is by the caller.
+                throw;
+            }
+            catch (Exception exception)
+            {
+                var name = state.FetchStringByPointer(bind.Name);
+                state.SetNothing(destinationRegister);
+                state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeExtensionCallFailed,
+                    $"Extension '{name}' failed unexpectedly.", GameEventScriptRuntimeExceptionText.Describe(exception), symbol: name);
+                return;
+            }
+
             if (!call.HasResult)
             {
                 state.SetNothing(destinationRegister);
@@ -61,10 +79,14 @@ internal static class GesVmRegisterCallExternal
         finally
         {
             var randomFault = context.EndRandomBoundary(randomBoundary);
-            if (randomFault == GameEventScriptRandomGenerator.ScopeBoundaryFault.BoundaryUnderflow)
-                state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeRandomStackUnderflow, "Random scope pop crossed the active extension boundary.");
-            else if (randomFault == GameEventScriptRandomGenerator.ScopeBoundaryFault.Unbalanced)
-                state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeRandomScopeImbalance, "Random scopes were not balanced when the extension returned.");
+            // Always restore the random scope, but retain a callback failure already reported above.
+            if (state.State != GesVmState.StateValue.Error)
+            {
+                if (randomFault == GameEventScriptRandomGenerator.ScopeBoundaryFault.BoundaryUnderflow)
+                    state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeRandomStackUnderflow, "Random scope pop crossed the active extension boundary.");
+                else if (randomFault == GameEventScriptRandomGenerator.ScopeBoundaryFault.Unbalanced)
+                    state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeRandomScopeImbalance, "Random scopes were not balanced when the extension returned.");
+            }
             call.EndCall();
         }
     }

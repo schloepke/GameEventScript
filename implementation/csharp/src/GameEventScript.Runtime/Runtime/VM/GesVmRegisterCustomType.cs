@@ -172,7 +172,25 @@ internal static class GesVmRegisterCustomType
         call.BeginCall(vmState, destinationRegister, new GesValueArguments(arguments), constructor.Definition.TypeName);
         try
         {
-            constructor.Invoke(call);
+            try
+            {
+                constructor.Invoke(call);
+            }
+            catch (GameEventScriptFatalRuntimeException)
+            {
+                // A deliberate GameEventScriptExtensionFaultException, or another
+                // internal fatal signal, is reported as-is by the caller.
+                throw;
+            }
+            catch (System.Exception exception)
+            {
+                vmState.SetNothing(destinationRegister);
+                vmState.RaiseError(GameEventScriptDiagnosticCodes.RuntimeExternalConstructorFailed,
+                    $"External type '{constructor.Definition.TypeName}' constructor failed unexpectedly.",
+                    GameEventScriptRuntimeExceptionText.Describe(exception), symbol: constructor.Definition.TypeName);
+                return;
+            }
+
             if (!call.HasResult)
             {
                 vmState.SetNothing(destinationRegister);

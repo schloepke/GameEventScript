@@ -411,6 +411,9 @@ static class GameEventScript.Api.GameEventScriptDiagnosticCodes
   field static System.String ParseSourceNestingExceeded
   field static System.String ParseSyntax
   field static System.String RuntimeCallStackOverflow
+  field static System.String RuntimeExtensionCallFailed
+  field static System.String RuntimeExternalConstructorFailed
+  field static System.String RuntimeExternalFieldAccessFailed
   field static System.String RuntimeIllegalOpcode
   field static System.String RuntimeInstructionPointerOutOfRange
   field static System.String RuntimeInvalidExtensionBinding
@@ -467,6 +470,8 @@ enum GameEventScript.Api.GameEventScriptExecutionState
   enum-field Completed = 1
   enum-field RuntimeLimitReached = 2
   enum-field RuntimeError = 3
+sealed class GameEventScript.Api.GameEventScriptExtensionFaultException
+  ctor GameEventScriptExtensionFaultException(System.String code, System.String message, System.String symbol, System.Exception innerException)
 sealed class GameEventScript.Api.GameEventScriptExtensionReference
   ctor GameEventScriptExtensionReference(System.String extensionName, System.String functionName, System.Collections.Generic.IEnumerable<System.String> argumentLabels)
   property System.Collections.Generic.IReadOnlyList<System.String> ArgumentLabels { get }
@@ -1140,6 +1145,8 @@ sealed class GameEventScript.Conformance.ConformanceExpectation
   property GameEventScript.Conformance.ConformancePerformanceExpectation Performance { get }
   property GameEventScript.Conformance.ConformanceValueApiExpectation ValueApi { get }
 sealed class GameEventScript.Conformance.ConformanceExpectedDiagnostic
+  property System.Boolean HandlerNameSpecified { get }
+  property System.Boolean ProgramNameSpecified { get }
   property System.String Code { get }
   property System.String HandlerName { get }
   property System.String Phase { get }
@@ -1242,6 +1249,9 @@ sealed class GameEventScript.Conformance.ConformanceNativeHandler
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Conformance.ConformanceNativeEmit> Emits { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
   property System.Int32 Priority { get }
+  property System.String FaultCode { get }
+  property System.String FaultHandlerName { get }
+  property System.String FaultProgramName { get }
   property System.String Id { get }
   property System.String Message { get }
 sealed class GameEventScript.Conformance.ConformanceObservationExpectation

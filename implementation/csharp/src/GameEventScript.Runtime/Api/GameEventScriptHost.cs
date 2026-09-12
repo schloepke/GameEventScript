@@ -328,7 +328,7 @@ public sealed class GameEventScriptHost
                     RecordRuntimeError(CreateRuntimeDiagnostic(
                         GameEventScriptDiagnosticCodes.RuntimeNativeHandlerFailure,
                         "Native message handler failed.",
-                        exception.GetType().Name + ": " + exception.Message));
+                        GameEventScriptRuntimeExceptionText.Describe(exception)));
                 }
                 CompleteActiveHandler();
                 if (_context.RuntimeBudget.IsExhausted)
@@ -406,7 +406,7 @@ public sealed class GameEventScriptHost
                 _observer?.RuntimeError(CreateRuntimeDiagnostic(
                     GameEventScriptDiagnosticCodes.RuntimePublishSinkFailure,
                     "Publish sink failed.",
-                    exception.GetType().Name + ": " + exception.Message));
+                    GameEventScriptRuntimeExceptionText.Describe(exception)));
             }
         }
 
@@ -436,6 +436,10 @@ public sealed class GameEventScriptHost
 
     private void RecordRuntimeError(GameEventScriptDiagnostic diagnostic)
     {
+        var programName = diagnostic.ProgramName ?? _activeHandler?.Instance?.Program.ModuleName;
+        var handlerName = diagnostic.HandlerName ?? _activeHandler?.DispatchSignatureId;
+        if (programName != diagnostic.ProgramName || handlerName != diagnostic.HandlerName)
+            diagnostic = diagnostic with { ProgramName = programName, HandlerName = handlerName };
         _stepRuntimeDiagnostic ??= diagnostic;
         _observer?.RuntimeError(diagnostic);
     }

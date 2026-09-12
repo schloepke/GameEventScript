@@ -33,7 +33,25 @@ internal sealed class GesExternalValue
         var count = 0;
         foreach (var field in Definition.Fields)
         {
-            var sourceValue = Value.GetField(field.Name);
+            GesValue? sourceValue;
+            try
+            {
+                sourceValue = Value.GetField(field.Name);
+            }
+            catch (GameEventScriptFatalRuntimeException)
+            {
+                // A deliberate GameEventScriptExtensionFaultException, or another
+                // internal fatal signal, is reported as-is by the caller.
+                throw;
+            }
+            catch (System.Exception exception)
+            {
+                throw new GameEventScriptCallbackFailureException(
+                    GameEventScriptDiagnosticCodes.RuntimeExternalFieldAccessFailed,
+                    $"External value '{Definition.Name}' field '{field.Name}' failed unexpectedly.",
+                    symbol: Definition.Name + "." + field.Name, exception);
+            }
+
             if (!sourceValue.HasValue)
             {
                 continue;

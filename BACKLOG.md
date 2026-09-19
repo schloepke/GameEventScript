@@ -44,11 +44,12 @@ here.
 ## Language and state
 
 - Specify data-literal representations and `parse` reconstruction for the
-  remaining value kinds: Vector/Point, Dice/Range, Message/Handler, Series,
-  records, and external values. Independent numeric/Boolean/Text/Tag values
-  and recursive Lists/Maps are implemented. Handler signatures and built-in
-  Series kind/offset are data and can receive representations without capturing
-  executable host state; reconstruction of bound values needs a separate contract.
+  remaining value kinds: Range, Message/Handler, Series,
+  records, and external values. Independent numeric/Boolean/Text/Tag values,
+  Vector/Point data forms, Dice result literals, and recursive Lists/Maps are
+  implemented. Handler signatures and built-in Series kind/offset are data and
+  can receive representations without capturing executable host state;
+  reconstruction of bound values needs a separate contract.
 - Add a general immutable collection `fold`/`reduce` operation if concrete use
   cases exceed the existing specialized aggregations (`sum`, `average`, `min`,
   `max`, and `count`). Prefer a bounded collection operation over recursion or
@@ -80,10 +81,8 @@ here.
 
 ## Developer tooling
 
-- Implement `check` and `run` commands in the `ges` CLI,
-  followed by an interactive event console using the existing portable
-  compiler and Host APIs. Integrate tool packaging and installation checks into
-  the release workflow before publishing it.
+- Integrate CLI tool packaging and installation checks into the release workflow
+  before publishing it.
 
 ## Unity and editor integration
 

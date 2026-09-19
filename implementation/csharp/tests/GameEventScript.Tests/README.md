@@ -19,11 +19,31 @@ The test project has two semantic roots:
   `Api`, `ApiSurface`, `BinaryFormat`, `Compiler`, `Core`, `CSharpBridge`,
   `Runtime`, and `Tool`.
 
+`Native/Tool` also tests the terminal key adapter directly with simulated input:
+Ghostty/xterm and CSI-u modified Enter, fragmented/truncated sequences, Unicode
+paste, and preservation of other keys and their modifiers. These are CLI adapter
+tests, not portable language Conformance cases.
+
 `Native/Tool` exercises the built CLI as a separate process, including file
 input/output, argument handling, exit codes, diagnostic rendering, and loading
 and executing its `.gesb` output. This includes combined source files, ordered
 wildcard expansion, verbosity-independent binary output, GESA file/stdout output,
-and decode diagnostics using existing invalid binary fixtures. The test project builds the tool automatically;
+and decode diagnostics using existing invalid binary fixtures. `check` tests
+verify full compilation without execution or file writes. `run` tests verify
+source/binary inputs, ordered composition of multiple binaries, Main arguments,
+separate scenarios, native ConsoleOut/ConsoleErr/ErrorCode handlers, script exit
+codes, opt-in color, and redirected interactive input. Interactive tests include
+empty sessions, additive source/binary loading, recovery from rejected loads,
+and initialization limits. Argument tests cover `--arg`, `--args`, and `--` with
+Text-only semantics, option boundaries, and negative values. Inspection tests
+cover `:list`, `:handler`, `:dump`, and `:source`, including combined sources, multiple
+binaries, native subscriptions, tag filters, anonymous/duplicate modules,
+failed loads, and exclusion of temporary inputs. Source inspection covers archived
+documents without their original files, missing archives, and GES/GESA coloring
+with exact text preservation and `NO_COLOR`. Seed options, runtime-limit
+termination, diagnostics, and exit codes are also covered. These are
+CLI process adapters around the existing portable behavior, whose oracle remains
+the shared Markdown corpus. The test project builds the tool automatically;
 these tests require no global installation. Temporary files stay below
 `artifacts/csharp/tests` and are removed after each test.
 

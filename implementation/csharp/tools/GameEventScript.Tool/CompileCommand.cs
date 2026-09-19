@@ -11,6 +11,21 @@ internal static class CompileCommand
 {
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
+    private const string CheckHelpText = """
+Usage:
+  ges check <source.ges> [more.ges ...] [-v | -q]
+
+Options:
+  -v, --verbose       Include bindings, dependencies, bytecode size, and resource requirements.
+  -q, --quiet         Suppress success output. Errors are still reported.
+  -h, --help          Show this help.
+  --                  Treat remaining arguments as file names.
+
+Sources are compiled and validated together without writing a binary or executing
+handlers. Source order, UTF-8 decoding, and file-name patterns match 'ges compile'.
+Checking does not resolve host extensions or external types against a runtime registry.
+""";
+
     private const string HelpText = """
 Usage:
   ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--no-debug] [-v | -q]
@@ -30,11 +45,11 @@ Output directories are created as needed. Existing output is replaced after
 successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
 """;
 
-    internal static int Run(string[] arguments)
+    internal static int Run(string[] arguments, bool checkOnly = false)
     {
         if (arguments is ["--help"] or ["-h"])
         {
-            Console.WriteLine(HelpText);
+            Console.WriteLine(checkOnly ? CheckHelpText : HelpText);
             return 0;
         }
 
@@ -51,13 +66,13 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
             {
                 parseOptions = false;
             }
-            else if (parseOptions && argument is "-o" or "--output")
+            else if (!checkOnly && parseOptions && argument is "-o" or "--output")
             {
                 if (outputPath is not null || index + 1 == arguments.Length || arguments[index + 1].StartsWith('-'))
                     return UsageError("Specify one output path after -o or --output. Prefix a path starting with '-' with './'.");
                 outputPath = arguments[++index];
             }
-            else if (parseOptions && argument == "--no-debug")
+            else if (!checkOnly && parseOptions && argument == "--no-debug")
             {
                 debugInfo = GameEventScriptDebugInfoOptions.None;
             }
@@ -71,7 +86,7 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
             }
             else if (parseOptions && argument.StartsWith('-'))
             {
-                return UsageError($"Unknown compile option '{argument}'.");
+                return UsageError($"Unknown {(checkOnly ? "check" : "compile")} option '{argument}'.");
             }
             else
             {
@@ -89,11 +104,14 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
         {
             var stopwatch = Stopwatch.StartNew();
             var sourcePaths = CompileSources.Expand(sourceArguments);
-            if (sourcePaths.Count > 1 && outputPath is null) return UsageError("Specify -o or --output when compiling multiple source files.");
-            outputPath = Path.GetFullPath(outputPath ?? Path.ChangeExtension(sourcePaths[0], ".gesb"));
-            var outputPathComparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-            foreach (var sourcePath in sourcePaths)
-                if (string.Equals(Path.GetFullPath(sourcePath), outputPath, outputPathComparison)) return UsageError("Source and output must be different files.");
+            if (!checkOnly)
+            {
+                if (sourcePaths.Count > 1 && outputPath is null) return UsageError("Specify -o or --output when compiling multiple source files.");
+                outputPath = Path.GetFullPath(outputPath ?? Path.ChangeExtension(sourcePaths[0], ".gesb"));
+                var outputPathComparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+                foreach (var sourcePath in sourcePaths)
+                    if (string.Equals(Path.GetFullPath(sourcePath), outputPath, outputPathComparison)) return UsageError("Source and output must be different files.");
+            }
 
             var builder = GameEventScriptBuilder.Create().WithDebugInfo(debugInfo);
             foreach (var sourcePath in sourcePaths)
@@ -102,10 +120,16 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
                 builder.AddScript(StrictUtf8.GetString(File.ReadAllBytes(sourcePath)), sourcePath);
             }
             var program = builder.Compile();
+            if (checkOnly)
+            {
+                stopwatch.Stop();
+                if (!quiet) CompileReport.WriteCheck(Console.Out, program, sourcePaths, stopwatch.Elapsed, verbose);
+                return 0;
+            }
             var bytes = GameEventScriptProgramWriter.ToArray(program);
-            ToolFileOutput.Write(outputPath, bytes);
+            ToolFileOutput.Write(outputPath!, bytes);
             stopwatch.Stop();
-            if (!quiet) CompileReport.Write(Console.Out, program, sourcePaths, outputPath, bytes.Length, stopwatch.Elapsed, verbose);
+            if (!quiet) CompileReport.Write(Console.Out, program, sourcePaths, outputPath!, bytes.Length, stopwatch.Elapsed, verbose);
             return 0;
         }
         catch (GameEventScriptCompileException exception)
@@ -133,12 +157,11 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
         {
             return UsageError(exception.Message);
         }
-    }
-
-    private static int UsageError(string message)
-    {
-        Console.Error.WriteLine($"error cli.usage: {message} Run 'ges compile --help' for usage.");
-        return 2;
+        int UsageError(string message)
+        {
+            Console.Error.WriteLine($"error cli.usage: {message} Run 'ges {(checkOnly ? "check" : "compile")} --help' for usage.");
+            return 2;
+        }
     }
 
 }

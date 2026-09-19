@@ -775,11 +775,11 @@ steps:
           - name: "vector"
             value:
               type: ":Text"
-              value: "10.3vector[x: 1, y: 2, z: 3]"
+              value: "10.3:Vector(x: 1, y: 2, z: 3)"
           - name: "point"
             value:
               type: ":Text"
-              value: "10.3point[x: 1, y: 2, z: 3]"
+              value: "10.3:Point(x: 1, y: 2, z: 3)"
 ```
 
 ---
@@ -890,11 +890,11 @@ steps:
           - name: "vector"
             value:
               type: ":Text"
-              value: "hellovector[x: 1, y: 2, z: 3]"
+              value: "hello:Vector(x: 1, y: 2, z: 3)"
           - name: "point"
             value:
               type: ":Text"
-              value: "hellopoint[x: 1, y: 2, z: 3]"
+              value: "hello:Point(x: 1, y: 2, z: 3)"
 ```
 
 ---
@@ -1307,11 +1307,11 @@ steps:
           - name: "textNumber"
             value:
               type: ":Text"
-              value: "vector[x: 1, y: 2, z: 3]10.3"
+              value: ":Vector(x: 1, y: 2, z: 3)10.3"
           - name: "textInvalid"
             value:
               type: ":Text"
-              value: "vector[x: 1, y: 2, z: 3]hello"
+              value: ":Vector(x: 1, y: 2, z: 3)hello"
           - name: "tagPi"
             value:
               type: ":Nothing"
@@ -1415,11 +1415,11 @@ steps:
           - name: "textNumber"
             value:
               type: ":Text"
-              value: "point[x: 1, y: 2, z: 3]10.3"
+              value: ":Point(x: 1, y: 2, z: 3)10.3"
           - name: "textInvalid"
             value:
               type: ":Text"
-              value: "point[x: 1, y: 2, z: 3]hello"
+              value: ":Point(x: 1, y: 2, z: 3)hello"
           - name: "tagPi"
             value:
               type: ":Nothing"

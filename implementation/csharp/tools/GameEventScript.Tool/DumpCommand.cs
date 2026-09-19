@@ -22,6 +22,7 @@ The binary is validated before producing GESA text. Embedded debug information
 is used when available; source files and host bindings are not required.
 Output directories are created as needed. An existing output file is replaced
 only after successful decoding and dump generation.
+Terminal output uses four-column tab stops; files and redirected output retain tabs.
 """;
 
     internal static int Run(string[] arguments)
@@ -82,6 +83,7 @@ only after successful decoding and dump generation.
 
             var program = GameEventScriptProgramReader.Read(File.ReadAllBytes(inputPath));
             var text = program.Dump(includeInstructionAddresses: addresses);
+            if (outputPath is null && !Console.IsOutputRedirected) text = ToolTextDisplay.ExpandTabs(text);
             var bytes = new UTF8Encoding(false, true).GetBytes(text);
             if (outputPath is null)
             {

@@ -1051,8 +1051,8 @@ public struct GesValue : IEquatable<GesValue>
         GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? "true" : "false",
         Text => TextValue,
         Tag => "#" + TextValue,
-        Vector when ObjectValue is GesValueVectorPoint vector => FormatTriplet("vector", vector, Unit),
-        Point when ObjectValue is GesValueVectorPoint point => FormatTriplet("point", point, Unit),
+        Vector when ObjectValue is GesValueVectorPoint vector => FormatTriplet(":Vector", vector, Unit),
+        Point when ObjectValue is GesValueVectorPoint point => FormatTriplet(":Point", point, Unit),
         Dice when ObjectValue is int[] dice => FormatDice(dice),
         List when ObjectValue is GesValue[] list => FormatList(list),
         Map when ObjectValue is GesValueMap map => FormatMap(map),
@@ -1068,12 +1068,12 @@ public struct GesValue : IEquatable<GesValue>
     private static string FormatNumber(long value, GameEventScriptBytecodeInstructionUnit unit) => TextNumberCast.Format(value, unit);
     private static string FormatNumber(double value, GameEventScriptBytecodeInstructionUnit unit) => TextNumberCast.Format(value, unit);
     private static string FormatTriplet(string typeName, GesValueVectorPoint triplet, GameEventScriptBytecodeInstructionUnit unit)
-        => $"{typeName}[x: {FormatNumber(triplet.X, unit)}, y: {FormatNumber(triplet.Y, unit)}, z: {FormatNumber(triplet.Z, unit)}]";
+        => $"{typeName}(x: {FormatNumber(triplet.X, unit)}, y: {FormatNumber(triplet.Y, unit)}, z: {FormatNumber(triplet.Z, unit)})";
     private static string FormatDice(int[] dice)
     {
-        if (dice.Length == 0) return "dice[]";
+        if (dice.Length == 0) return ":Dice[]";
 
-        var builder = new StringBuilder("dice[");
+        var builder = new StringBuilder(":Dice[");
         for (var i = 0; i < dice.Length; i++)
         {
             if (i > 0) builder.Append(", ");

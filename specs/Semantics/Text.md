@@ -134,6 +134,22 @@ of source quoting.
 | Map with field `name` containing Text `Ada` | `[name: "Ada"]` |
 | empty List | `[]` |
 | empty Map | `[:]` |
+| Dice containing rolls `6`, `3`, `1` | `:Dice[6, 3, 1]` |
+| empty Dice | `:Dice[]` |
+| Vector with components `10`, `20`, `0` | `:Vector(x: 10, y: 20, z: 0)` |
+| Point with components `1m`, `2m`, `0m` | `:Point(x: 1m, y: 2m, z: 0m)` |
+
+Dice output lists the stored results in descending dice order, retaining
+duplicates, with comma and space separators. Each roll uses decimal integer
+digits. It describes results rather than a random draw or a number of sides.
+
+Vector and Point output uses the case-sensitive type name and parentheses,
+with all three labeled components in `x`, `y`, `z` order, including zero
+components. Labels are followed by colon and space; components are separated
+by comma and space. Each component uses the roundtrippable numeric output
+defined in [Number semantics](Numbers.md#numeric-text-output-and-roundtrip),
+including its unit suffix when present. The examples above do not require a
+particular permitted numeric spelling. Signed infinities are preserved.
 
 List and Map output recursively formats its values. Text values inside either
 container are written as double-quoted source text literals, with each contained
@@ -180,14 +196,58 @@ are returned as Text and are not recursively parsed a second time.
 
 Recognized data literals are `nothing`, lowercase `true`/`false`, Number,
 Percentage, scalar Quantity, quoted Text, `#` Tag names following the source
-name grammar, and recursively nested Lists/Maps. A Map recognizes bare `LowerName`
+name grammar, Dice result literals, Vector/Point data forms, and recursively
+nested Lists/Maps. A Map recognizes bare `LowerName`
 keys or quoted Text keys. Quoted keys follow the same single- or double-quoted
 Text rules as values, including doubled delimiters. Map key syntax inside Text
 therefore represents arbitrary keys even when they cannot be written as source
 field names. A Map permits key-only entries as `true` and resolves duplicate
 keys by decoded Text identity with the last value before sorting. Empty List and Map use `[]` and `[:]`. Trailing
-commas are invalid. Other value representations, constructors, and literal
+commas are invalid. Other value representations, general constructor expressions, and literal
 forms are not recognized. A non-Text operand produces `nothing`.
+
+Vector and Point recognition uses case-sensitive `:Vector(...)` and
+`:Point(...)` with the runtime whitespace rules below. These data forms have
+zero through three numeric components, either positional in `x`, `y`, `z`
+order or labeled with an ordered subset of `x:`, `y:`, `z:`. Labels cannot be
+mixed with positional components, repeated, reordered, or replaced with other
+names. Omitted components are zero; an empty form constructs the unitless zero
+value. Supplied components must share one unit (or all be unitless); omitted
+zero components inherit that unit. Even an explicitly supplied zero must have
+the same unit as the other supplied components.
+
+Components use [numeric text](Numbers.md#text-and-number-conversion), including
+signs, exponents, underscores, supported quantity suffixes, and signed
+infinities. Percentage components contribute their unitless ratios. Components
+are stored as binary64 using the existing spatial value representation; zero
+is canonicalized to positive zero. `NaN`, `nothing`, non-numeric values, mixed
+units, trailing commas, and malformed forms fail recognition of the complete
+input. Commas separate components, never digit groups. Variables, constants,
+arithmetic, nested constructors, and calls are not evaluated. The source
+compiler's general component constructors retain their existing behavior.
+
+Within the parse resource bounds, `parse (value as :Text)` reconstructs the
+same Vector/Point kind, exact binary64 components, and unit, including spatial
+values nested inside Lists and Maps. Its nesting and explicit components
+participate in the shared
+[literal parsing limits](../HostRuntime.md#literal-parsing-limits).
+
+Dice recognition uses the `:Dice[...]` data-literal form owned by
+[Language](../Language.md#randomness-dice-and-series), with the runtime whitespace
+rules below. The type spelling is case-sensitive. Entries use unsigned, unitless
+[numeric text](Numbers.md#text-and-number-conversion), including exponent
+notation, and must decode to positive Int32 integers; results are
+sorted in descending order and duplicates are retained. Commas separate rolls,
+never digit groups. Parsing does not draw random values. Invalid rolls or syntax
+fail recognition of the complete input, including an enclosing List or Map.
+Constructor expressions such as `:Dice([1, 2])` and the lowercase spelling
+`dice[2, 1]` are not recognized.
+
+Within the parse resource bounds, `parse (value as :Text)` reconstructs the same
+Dice value and kind for positive Int32 rolls. The guarantee also applies to Dice
+values nested inside Lists and Maps.
+Dice nesting and entries participate in the shared
+[literal parsing limits](../HostRuntime.md#literal-parsing-limits).
 
 ASCII space/tab and `LF`, `CRLF`, or `CR` may surround a literal and separate
 container elements. They are preserved inside quoted Text. Other whitespace,
@@ -195,7 +255,8 @@ comments, and BOM markers are not trivia for this operation. Comma grouping is
 accepted by explicit numeric casts only: `parse "1,003"` preserves that Text,
 while `parse "[1,003]"` yields the List `[1, 3]`.
 
-Independent scalar literals and recursively nested Lists/Maps are data.
+Independent scalar literals, Vector/Point data forms, stored Dice results, and
+recursively nested Lists/Maps are data.
 Literal recognition does not evaluate variables, expressions, calls, selectors,
 or random operations. Numeric decoding uses
 [Number semantics](Numbers.md#text-and-number-conversion), including its exact
@@ -217,6 +278,11 @@ The following examples show the actual input Text contents:
 | `"say ""hi"""` | Text `say "hi"` |
 | `nothing` | `nothing` |
 | `[1, "1"]` | List containing Number `1` and Text `1` |
+| `:Dice[1, 3, 6, 3]` | Dice containing rolls `6`, `3`, `3`, `1` |
+| `[rolls: :Dice[]]` | Map containing empty Dice |
+| `:Vector(10, 20)` | Vector with components `10`, `20`, `0` |
+| `:Point(x: 1m, z: 3m)` | Point with components `1m`, `0m`, `3m` |
+| `:Point(1m, 0)` | unchanged Text because the supplied units differ |
 | `[1, broken]` | unchanged Text `[1, broken]` |
 | `"Hello` | unchanged Text including the opening double quote |
 | `1 extra` | unchanged Text `1 extra` |

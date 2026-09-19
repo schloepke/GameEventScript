@@ -233,7 +233,7 @@ public sealed class GameEventScriptCheckRunCommandTests
     {
         var help = Run(command, "--help");
         Assert.AreEqual(0, help.ExitCode, help.StandardError);
-        StringAssert.Contains(help.StandardOutput, "ges " + command);
+        StringAssert.Contains(help.StandardOutput, "dotnet ges " + command);
         Write("-game.ges", "on Main(args) { emit ConsoleOut(value: 42) }\n");
         var result = command == "run" ? Run(command, "./-game.ges") : Run(command, "--", "-game.ges");
         Assert.AreEqual(0, result.ExitCode, result.StandardError);

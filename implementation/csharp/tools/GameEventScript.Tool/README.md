@@ -9,20 +9,21 @@ portable Runtime, Compiler, and C# bridge. Terminal and filesystem integration
 belong to this application or the C# adapters; the libraries do not depend on
 the tool.
 
-The entry point supports `ges compile`, `ges check`, `ges run`, `ges dump`,
-`ges --help`, `ges -h`, and `ges --version`. `run --interactive` opens an event
-console. No arguments display help. The provisional tool package is not published.
+The entry point supports `dotnet ges compile`, `dotnet ges check`,
+`dotnet ges run`, `dotnet ges dump`, `dotnet ges --help`, `dotnet ges -h`, and
+`dotnet ges --version`. `run --interactive` opens an event console. No arguments
+display help. The provisional tool package is not published.
 
 ## Compile scripts
 
 ```sh
-ges compile game.ges
-ges compile game.ges -o artifacts/game.gesb
-ges compile game.ges --output artifacts/game.gesb --no-debug
-ges compile handlers.ges definitions.ges -o artifacts/game.gesb
-ges compile "scripts/*.ges" -o artifacts/game.gesb --verbose
-ges compile game.ges --quiet
-ges compile --help
+dotnet ges compile game.ges
+dotnet ges compile game.ges -o artifacts/game.gesb
+dotnet ges compile game.ges --output artifacts/game.gesb --no-debug
+dotnet ges compile handlers.ges definitions.ges -o artifacts/game.gesb
+dotnet ges compile "scripts/*.ges" -o artifacts/game.gesb --verbose
+dotnet ges compile game.ges --quiet
+dotnet ges compile --help
 ```
 
 The command compiles one or more UTF-8 source files together using the existing
@@ -91,11 +92,11 @@ argument errors use `cli.usage`.
 ## Check sources
 
 ```sh
-ges check game.ges
-ges check handlers.ges definitions.ges
-ges check "scripts/*.ges" --verbose
-ges check game.ges --quiet
-ges check --help
+dotnet ges check game.ges
+dotnet ges check handlers.ges definitions.ges
+dotnet ges check "scripts/*.ges" --verbose
+dotnet ges check game.ges --quiet
+dotnet ges check --help
 ```
 
 `check` runs the same complete compiler pipeline as `compile`, including semantic
@@ -117,21 +118,21 @@ perform linking and execution in the CLI's host.
 ## Run a program
 
 ```sh
-ges run game.ges
-ges run handlers.ges definitions.ges
-ges run game.ges --arg hello --arg world --seed 42
-ges run --color game.ges --args 12 Hello 34
-ges run game.ges --args 12 Hello 34 --color
-ges run --color game.ges -- 12 Hello 34
-ges run script1.gesb script2.gesb
-ges run "programs/*.gesb" --arg hello
-ges run game.ges --scenario scenario.ges --seed 42
-ges run script1.gesb script2.gesb --scenario scenario.ges
-ges run --interactive --color
-ges run game.ges --interactive --color
-ges run script1.gesb script2.gesb --interactive --verbose
-ges run game.ges --max-messages 1000 --max-steps 200000
-ges run --help
+dotnet ges run game.ges
+dotnet ges run handlers.ges definitions.ges
+dotnet ges run game.ges --arg hello --arg world --seed 42
+dotnet ges run --color game.ges --args 12 Hello 34
+dotnet ges run game.ges --args 12 Hello 34 --color
+dotnet ges run --color game.ges -- 12 Hello 34
+dotnet ges run script1.gesb script2.gesb
+dotnet ges run "programs/*.gesb" --arg hello
+dotnet ges run game.ges --scenario scenario.ges --seed 42
+dotnet ges run script1.gesb script2.gesb --scenario scenario.ges
+dotnet ges run --interactive --color
+dotnet ges run game.ges --interactive --color
+dotnet ges run script1.gesb script2.gesb --interactive --verbose
+dotnet ges run game.ges --max-messages 1000 --max-steps 200000
+dotnet ges run --help
 ```
 
 `run` compiles one or more source files together in memory, or reads and validates
@@ -204,7 +205,7 @@ on Main(args) {
 ```
 
 ```sh
-ges run game.ges --arg hello --arg world > results.txt
+dotnet ges run game.ges --arg hello --arg world > results.txt
 ```
 
 The file receives the ConsoleOut lines; ConsoleErr remains on stderr. Both console
@@ -297,7 +298,7 @@ on initialization {
 Run them with:
 
 ```sh
-ges run game.ges --scenario scenario.ges --seed 42
+dotnet ges run game.ges --scenario scenario.ges --seed 42
 ```
 
 Stdout contains:
@@ -329,13 +330,13 @@ separate native `Host.Receive` calls. No automatic Main message is sent in this 
 ### Interactive event console
 
 ```sh
-ges run --interactive --color
-ges run game.ges --interactive --color
-ges run script1.gesb script2.gesb --interactive --seed 42
+dotnet ges run --interactive --color
+dotnet ges run game.ges --interactive --color
+dotnet ges run script1.gesb script2.gesb --interactive --seed 42
 ```
 
 Initial program files are optional in interactive mode. A session started with
-`ges run --interactive` can load them later with `:load`.
+`dotnet ges run --interactive` can load them later with `:load`.
 
 After initialization drains, the CLI reads one line of ordinary GES handler-body
 statements at a time. For example:
@@ -425,7 +426,7 @@ predicates, outbound message bindings, and detached temporary console inputs.
 
 These commands inspect the loaded session without executing handlers, pumping
 messages, or consuming random values. `:dump` uses the same GESA dumper as
-`ges dump` on the Program already in memory; it does not reload the file or need
+`dotnet ges dump` on the Program already in memory; it does not reload the file or need
 the original sources. Embedded source/debug information is included when present.
 
 `:source` reads only the loaded Program's source archive, in archive order. It shows
@@ -503,11 +504,11 @@ normal host behavior may still execute sibling handlers before returning.
 ## Dump a binary
 
 ```sh
-ges dump artifacts/game.gesb
-ges dump artifacts/game.gesb --addresses
-ges dump artifacts/game.gesb -o artifacts/game.gesa
-ges dump artifacts/game.gesb > artifacts/game.gesa
-ges dump --help
+dotnet ges dump artifacts/game.gesb
+dotnet ges dump artifacts/game.gesb --addresses
+dotnet ges dump artifacts/game.gesb -o artifacts/game.gesa
+dotnet ges dump artifacts/game.gesb > artifacts/game.gesa
+dotnet ges dump --help
 ```
 
 The command reads and fully validates one `.gesb` file with the existing Reader,
@@ -555,7 +556,7 @@ On macOS or Linux, run this from the repository root:
 
 ```sh
 ./scripts/install-csharp-tool.sh
-ges --help
+dotnet ges --help
 ```
 
 Run the same script again after pulling or editing the source to update the
@@ -573,35 +574,63 @@ freshly built package directory; temporary packages are removed afterwards.
 An existing `StepH.GameEventScript.Tool` installation in the selected scope is
 replaced by `GameEventScript.Tool`. The script first builds and packs the new
 tool, then verifies it in a temporary installation before removing the old
-package. The command remains `ges`. Subsequent invocations update the new
-package normally.
+package. Subsequent invocations update the new package normally.
+
+The package installs the command `dotnet-ges`, which the .NET CLI resolves as
+`dotnet ges`. Updating an existing `GameEventScript.Tool` installation replaces
+its old `ges` command automatically; no manual uninstall is needed. The package
+ID stays `GameEventScript.Tool`. Direct invocation as `dotnet-ges` also works.
 
 The script can also be invoked by its absolute path from any working directory.
 To install or update in a separate directory instead of globally:
 
 ```sh
 ./scripts/install-csharp-tool.sh --tool-path ./artifacts/csharp/tool/install
-./artifacts/csharp/tool/install/ges --version
+./artifacts/csharp/tool/install/dotnet-ges --version
 ```
 
 Relative installation paths are resolved against the caller's working directory.
-For global use, ensure that `$HOME/.dotnet/tools` is on `PATH`.
+For global use, ensure that `$HOME/.dotnet/tools` is on `PATH`. With
+`--tool-path`, add that directory to `PATH` to use `dotnet ges`, or invoke
+`dotnet-ges` by its path as shown above.
+
+## Uninstall from the repository
+
+Remove the global C# `dotnet ges` installation for the current user:
+
+```sh
+./scripts/uninstall-csharp-tool.sh
+```
+
+For an installation made with `--tool-path`, select the same directory:
+
+```sh
+./scripts/uninstall-csharp-tool.sh --tool-path ./artifacts/csharp/tool/install
+```
+
+Relative paths are resolved against the caller's working directory, exactly as
+with the installer. The script removes `GameEventScript.Tool` and any remaining
+legacy `StepH.GameEventScript.Tool` from the selected scope. Other tools and the
+installation directory remain intact. An absent GES installation is a successful
+no-op; lookup or uninstall errors still fail. No build, package creation, or
+network download is required.
 
 ## Pack and install manually
 
 ```sh
 dotnet pack implementation/csharp/tools/GameEventScript.Tool --configuration Release
 dotnet tool install GameEventScript.Tool --version 0.1.0 --add-source ./artifacts/csharp/tool/packages --tool-path ./artifacts/csharp/tool/install
-./artifacts/csharp/tool/install/ges --help
+./artifacts/csharp/tool/install/dotnet-ges --help
 ```
 
-On Windows the installed command is `ges.exe`. Build intermediates, binaries,
+On Windows the installed command is `dotnet-ges.exe`. Build intermediates, binaries,
 and packages for this tool are written below `artifacts/csharp/tool`. This local
 tool package is separate from the four libraries produced by the existing
 library release and reproducibility scripts.
 
 For project-local use, install into a .NET tool manifest instead of supplying
 `--tool-path`. The invocation is then `dotnet ges --help` or
-`dotnet tool run ges --help`. A global installation uses `ges --help` directly.
+`dotnet tool run dotnet-ges --help`. Global installations also support
+`dotnet ges --help` when the tool directory is on `PATH`.
 
 The tool is licensed under Apache-2.0; the package includes the full license.

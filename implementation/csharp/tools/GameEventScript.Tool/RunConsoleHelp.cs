@@ -53,7 +53,7 @@ Paths are relative to the process working directory. The entire remainder of the
 line is one path; surrounding single/double quotes are optional. Backslashes are
 literal; double a surrounding quote to include that quote in a quoted path.
 Wildcards, shell expansion, and multiple paths are not supported by :load.
-Compile related sources together with 'ges compile' and load the resulting binary.
+Compile related sources together with 'dotnet ges compile' and load the resulting binary.
 
 Loading is additive: loading the same file again creates another active instance.
 It does not replace the previous instance or share its functions/constants.

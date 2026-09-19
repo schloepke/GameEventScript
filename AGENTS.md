@@ -251,6 +251,9 @@ Handler value storage is inline; VM entry borrows arguments by index rather
 than allocating an argument array. Mutable callback arguments are borrowed only
 for the synchronous invocation.
 
+`./scripts/build-swift.sh` builds all SwiftPM packages independently in Release
+without .NET; `--configuration debug` selects Debug. `./scripts/format-swift.sh`
+checks the existing formatter configuration; `--fix` applies formatting.
 Run `./scripts/test-swift.sh` and `python3 scripts/verify-swift-api.py`.
 The test script uses .NET 10 to export C#-compiled binary inputs below
 `artifacts/swift/runtime-fixtures`, then verifies Swift in Release against the
@@ -287,8 +290,11 @@ ignored `artifacts`. Public Swift API changes update `specs/PublicApi.md` and
 
 ## CLI
 
-The `ges` tool provides `compile`, `check`, `run`, and `dump`. `check` uses the
-complete compiler pipeline without writing a binary or executing handlers.
+The C# `dotnet ges` tool provides `compile`, `check`, `run`, and `dump`. Its
+NuGet package remains `GameEventScript.Tool`; the installed command is
+`dotnet-ges`, resolved by `dotnet ges` when the tool directory is on `PATH`.
+`check` uses the complete compiler pipeline without writing a binary or executing
+handlers.
 `run` accepts jointly compiled sources or multiple `.gesb` files loaded in input
 order. All Programs are loaded into one host before execution. By default it
 drains initialization and then sends one `Main(args)` message, with a List of Text

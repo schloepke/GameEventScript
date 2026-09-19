@@ -13,4 +13,4 @@ Guides optimize for understanding and may omit edge cases. Exact behavior is def
   symbol, and DLL artifacts, the Unity DLL path, and the guarded release
   workflow.
 - [CLI tool](../../implementation/csharp/tools/GameEventScript.Tool/README.md)
-  describes the current `ges` entry point and local .NET tool installation.
+  describes the current `dotnet ges` entry point and local .NET tool installation.

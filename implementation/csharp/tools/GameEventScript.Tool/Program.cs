@@ -11,20 +11,20 @@ internal static class Program
 Game Event Script CLI
 
 Usage:
-  ges [--help | --version]
-  ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--no-debug] [-v | -q]
-  ges check <source.ges> [more.ges ...] [-v | -q]
-  ges run <source.ges> [more.ges ...] [--scenario <scenario.ges>] [--seed <integer>]
-  ges run <program.gesb> [more.gesb ...] [--args <text> ...] [--seed <integer>]
-  ges run <program files ...> [--color] -- <text> ...
-  ges run --interactive [--color] [program files ...]
-  ges dump <program.gesb> [-o <output.gesa>] [--addresses]
+  dotnet ges [--help | --version]
+  dotnet ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--no-debug] [-v | -q]
+  dotnet ges check <source.ges> [more.ges ...] [-v | -q]
+  dotnet ges run <source.ges> [more.ges ...] [--scenario <scenario.ges>] [--seed <integer>]
+  dotnet ges run <program.gesb> [more.gesb ...] [--args <text> ...] [--seed <integer>]
+  dotnet ges run <program files ...> [--color] -- <text> ...
+  dotnet ges run --interactive [--color] [program files ...]
+  dotnet ges dump <program.gesb> [-o <output.gesa>] [--addresses]
 
 Commands:
-  compile     Compile UTF-8 source files together to .gesb. Use 'ges compile --help' for options.
-  check       Validate source files without writing a binary. Use 'ges check --help' for options.
-  run         Run Main(args), an event scenario, or the event console. Use 'ges run --help' for options.
-  dump        Dump a .gesb file as GESA text. Use 'ges dump --help' for options.
+  compile     Compile UTF-8 source files together to .gesb. Use 'dotnet ges compile --help' for options.
+  check       Validate source files without writing a binary. Use 'dotnet ges check --help' for options.
+  run         Run Main(args), an event scenario, or the event console. Use 'dotnet ges run --help' for options.
+  dump        Dump a .gesb file as GESA text. Use 'dotnet ges dump --help' for options.
 
 Options:
   -h, --help  Show this help.
@@ -47,11 +47,11 @@ Options:
         if (arguments is ["--version"])
         {
             var version = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion;
-            Console.WriteLine("ges " + version);
+            Console.WriteLine("dotnet ges " + version);
             return 0;
         }
 
-        Console.Error.WriteLine("Unknown command or arguments. Run 'ges --help' for usage.");
+        Console.Error.WriteLine("Unknown command or arguments. Run 'dotnet ges --help' for usage.");
         return 2;
     }
 }

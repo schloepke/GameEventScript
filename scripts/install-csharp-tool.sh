@@ -6,7 +6,7 @@ set -eu
 
 usage() {
     echo "Usage: $0 [--tool-path DIRECTORY]"
-    echo "Build the C# solution, then install or update ges for the current user."
+    echo "Build the C# solution, then install or update dotnet ges for the current user."
     echo "Use --tool-path to install into a directory instead of globally."
 }
 
@@ -60,7 +60,7 @@ legacy_tool_version=$(printf '%s\n' "$installed_tools" | awk 'tolower($1) == "st
 if [ -n "$legacy_tool_version" ]; then
     dotnet tool install GameEventScript.Tool --tool-path "$build_directory/migration-check" \
         --version "$local_version" --source "$build_directory"
-    "$build_directory/migration-check/ges" --version >/dev/null
+    "$build_directory/migration-check/dotnet-ges" --version >/dev/null
     dotnet tool uninstall StepH.GameEventScript.Tool "$@"
 fi
 
@@ -69,4 +69,4 @@ fi
 dotnet tool update GameEventScript.Tool "$@" \
     --version "$local_version" --source "$build_directory" --allow-downgrade
 
-echo "Installed ges $local_version ($*)."
+echo "Installed dotnet ges $local_version ($*)."

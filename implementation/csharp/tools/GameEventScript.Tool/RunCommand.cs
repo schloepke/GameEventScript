@@ -14,9 +14,9 @@ internal static class RunCommand
 Run Game Event Script programs
 
 Usage:
-  ges run [options] <source.ges> [more.ges ...] [-- <text> ...]
-  ges run [options] <program.gesb> [more.gesb ...] [-- <text> ...]
-  ges run --interactive [--color] [program files ...]
+  dotnet ges run [options] <source.ges> [more.ges ...] [-- <text> ...]
+  dotnet ges run [options] <program.gesb> [more.gesb ...] [-- <text> ...]
+  dotnet ges run --interactive [--color] [program files ...]
 
 Execution mode:
   (default)              Finish initialization, then send Main(args) once.
@@ -39,11 +39,11 @@ Output and execution:
   -h, --help            Show this help.
 
 Examples:
-  ges run --color example.ges --args 12 'Hello' 34
-  ges run first.gesb second.gesb -- 12 Hello --color
-  ges run example.ges --arg hello --arg world
-  ges run --interactive --color
-  ges run game.ges --scenario scenario.ges --seed 42
+  dotnet ges run --color example.ges --args 12 'Hello' 34
+  dotnet ges run first.gesb second.gesb -- 12 Hello --color
+  dotnet ges run example.ges --arg hello --arg world
+  dotnet ges run --interactive --color
+  dotnet ges run game.ges --scenario scenario.ges --seed 42
 
 Event console:
   :help                 Show commands, examples, and session behavior.
@@ -268,7 +268,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
 
     private static int UsageError(string message)
     {
-        Console.Error.WriteLine($"error cli.usage: {message} Run 'ges run --help' for usage.");
+        Console.Error.WriteLine($"error cli.usage: {message} Run 'dotnet ges run --help' for usage.");
         return 2;
     }
 }

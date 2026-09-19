@@ -8,6 +8,8 @@
 .vscode/
 *.suo
 *.user
+xcuserdata/
+*.xcuserstate
 
 # Generated build, test, report, and package artifacts
 artifacts/

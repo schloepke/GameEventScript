@@ -17,7 +17,7 @@
         <RepositoryUrl>https://github.com/schloepke/GameEventScript</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackAsTool>true</PackAsTool>
-        <ToolCommandName>ges</ToolCommandName>
+        <ToolCommandName>dotnet-ges</ToolCommandName>
         <PackageOutputPath>$(MSBuildProjectDirectory)/../../../../artifacts/csharp/tool/packages</PackageOutputPath>
         <LangVersion>12</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>

@@ -104,7 +104,13 @@ public enum ConformanceReportWriter {
                     .array(
                         result.mismatches.map { mismatch in
                             var entry: [(String, ConformanceData)] = [
-                                ("path", .string(mismatch.path)), ("code", .string(result.performance == nil ? "conformance.assertion.mismatch" : "conformance.performance.regression")),
+                                ("path", .string(mismatch.path)),
+                                (
+                                    "code",
+                                    .string(
+                                        result.performance == nil
+                                            ? "conformance.assertion.mismatch" : "conformance.performance.regression")
+                                ),
                             ]
                             if let value = mismatch.expected { entry.append(("expected", .string(value))) }
                             if let value = mismatch.actual { entry.append(("actual", .string(value))) }

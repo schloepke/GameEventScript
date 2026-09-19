@@ -10,7 +10,7 @@ internal static class DumpCommand
 {
     private const string HelpText = """
 Usage:
-  ges dump <program.gesb> [-o <output.gesa>] [--addresses]
+  dotnet ges dump <program.gesb> [-o <output.gesa>] [--addresses]
 
 Options:
   -o, --output <path>  Write to a UTF-8 file instead of stdout.
@@ -120,7 +120,7 @@ Terminal output uses four-column tab stops; files and redirected output retain t
 
     private static int UsageError(string message)
     {
-        Console.Error.WriteLine($"error cli.usage: {message} Run 'ges dump --help' for usage.");
+        Console.Error.WriteLine($"error cli.usage: {message} Run 'dotnet ges dump --help' for usage.");
         return 2;
     }
 }

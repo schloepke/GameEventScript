@@ -13,7 +13,7 @@ internal static class CompileCommand
 
     private const string CheckHelpText = """
 Usage:
-  ges check <source.ges> [more.ges ...] [-v | -q]
+  dotnet ges check <source.ges> [more.ges ...] [-v | -q]
 
 Options:
   -v, --verbose       Include bindings, dependencies, bytecode size, and resource requirements.
@@ -22,13 +22,13 @@ Options:
   --                  Treat remaining arguments as file names.
 
 Sources are compiled and validated together without writing a binary or executing
-handlers. Source order, UTF-8 decoding, and file-name patterns match 'ges compile'.
+handlers. Source order, UTF-8 decoding, and file-name patterns match 'dotnet ges compile'.
 Checking does not resolve host extensions or external types against a runtime registry.
 """;
 
     private const string HelpText = """
 Usage:
-  ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--no-debug] [-v | -q]
+  dotnet ges compile <source.ges> [more.ges ...] [-o <output.gesb>] [--no-debug] [-v | -q]
 
 Options:
   -o, --output <path>  Output file. Required for multiple sources; otherwise defaults to source.gesb.
@@ -159,7 +159,7 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
         }
         int UsageError(string message)
         {
-            Console.Error.WriteLine($"error cli.usage: {message} Run 'ges {(checkOnly ? "check" : "compile")} --help' for usage.");
+            Console.Error.WriteLine($"error cli.usage: {message} Run 'dotnet ges {(checkOnly ? "check" : "compile")} --help' for usage.");
             return 2;
         }
     }

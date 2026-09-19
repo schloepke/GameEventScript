@@ -18,6 +18,68 @@ either Compiler or Conformance. The native Swift `ges` CLI is still deferred;
 
 ## Build and verify
 
+### Xcode workspace
+
+[`GameEventScript.xcworkspace`](GameEventScript.xcworkspace) opens Runtime,
+Compiler and Conformance together. The workspace references the local SwiftPM
+packages directly; their `Package.swift` manifests remain the build configuration.
+There are no duplicate `.xcodeproj` targets or source lists to maintain.
+
+Open it from the repository root:
+
+```bash
+./scripts/open-swift-xcode.sh
+```
+
+The launcher configures this workspace's local Xcode preferences so Derived Data
+and build products stay below `artifacts/swift/xcode`, then opens Xcode. It preserves
+other preferences and does not change global Xcode settings. These user settings
+are ignored by Git; the workspace and shared test scheme are tracked. After the
+first setup, the workspace can also be opened directly in Finder.
+
+Select **My Mac** and one of the `GameEventScriptRuntime`,
+`GameEventScriptCompiler` or `GameEventScriptConformance` schemes to build with
+**Cmd+B**. The shared `GameEventScriptConformance` scheme runs the existing native
+and corpus tests with **Cmd+U** in Debug. Before the first full test run, execute
+`./scripts/test-swift.sh` once to prepare the C#-compiled interoperability fixtures
+in `artifacts/swift/runtime-fixtures`; refresh them after corpus changes.
+The `ges-conformance` executable is also available as a scheme; its command-line
+arguments are documented below. Performance measurements continue to use the
+separate Release script and calibrated profile.
+
+For a headless Xcode test run:
+
+```bash
+./scripts/open-swift-xcode.sh --configure-only
+xcodebuild -workspace implementation/swift/GameEventScript.xcworkspace \
+  -scheme GameEventScriptConformance -destination 'platform=macOS' \
+  -derivedDataPath artifacts/swift/xcode -parallel-testing-enabled NO test
+```
+
+### SwiftPM verification
+
+All entry points are in the repository's `scripts` directory and can also be
+invoked by absolute path from another working directory:
+
+| Command | Purpose |
+| --- | --- |
+| `./scripts/build-swift.sh` | Build every SwiftPM package independently in Release; no .NET dependency |
+| `./scripts/build-swift.sh --configuration debug` | Build the same packages in Debug |
+| `./scripts/format-swift.sh` | Check manifests, Sources and Tests using the existing `.swift-format` configuration |
+| `./scripts/format-swift.sh --fix` | Apply formatting to those files |
+| `./scripts/test-swift.sh` | Export C# interoperability fixtures, run native tests and strict shared Conformance |
+| `./scripts/test-swift-performance.sh` | Verify the calibrated Release performance profile |
+| `python3 scripts/verify-swift-api.py` | Verify approved public API snapshots |
+| `python3 scripts/verify-swift-bytecode.py` | Verify the shared opcode/operand registry |
+| `./scripts/open-swift-xcode.sh` | Configure local build paths and open the Xcode workspace |
+
+Build outputs use `artifacts/swift/runtime`, `compiler` and `conformance`;
+the Conformance directory is shared with the existing test scripts. Build and
+format scripts discover local packages from their manifests, so added packages
+participate without duplicating source lists. Formatting excludes generated
+artifacts and Xcode's user state. SwiftPM publication and the Swift CLI are not
+implemented yet; there are no package-release or Swift-tool installation scripts.
+
 Use Swift 6.0 or newer. The complete verification script additionally uses .NET 10
 for independent cross-language binary inputs:
 

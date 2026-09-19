@@ -63,9 +63,12 @@ here.
 
 ## Language ports and distribution
 
-- Implement Swift as the first additional language port and Kotlin as the next
-  port, using `.gesb` fixtures and the shared Markdown Conformance corpus for
-  differential acceptance against C#.
+- Continue the Swift Runtime after its value/message API and Markdown-runner
+  foundation: port Program validation and `.gesb` codecs, host lifecycle and
+  private random state, the VM, extensions/external types, and runtime literal
+  parsing. Verify each capability against the shared corpus before advertising
+  support. Then add the separate Compiler package and complete strict-port
+  acceptance. Kotlin follows Swift, using the same fixtures and corpus.
 - Implement Go and Rust as additional planned language ports, preserving the
   same portable Core, `.gesb` format, and shared Markdown Conformance contracts.
 - Add an independent CI job with build, unit tests, strict shared Conformance,

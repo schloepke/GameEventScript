@@ -961,7 +961,27 @@ Source-file reading belongs to the CLI or embedding. The compiler accepts
 These adapters must delegate to the portable semantics. Unity consumes the C#
 DLL and may choose main-thread/manual pumping instead of the automatic runner.
 
-### Swift, Kotlin, Go, Rust, and C++
+### Swift
+
+The Swift mapping separates the `GameEventScriptRuntime` and
+`GameEventScriptConformance` SwiftPM packages. Conformance depends on Runtime;
+Runtime has no dependency on a compiler, test framework, or Conformance.
+
+The currently exported Runtime foundation uses `GesValue`, `GesUnit`, immutable
+range descriptors, `GameEventScriptMessage`, `GameEventScriptMessageArgument`,
+and `GameEventScriptMessageSignature`. Collections use native value semantics
+with copy-on-write storage. Invalid public message construction uses Swift's
+structured `throws` transport; signature message creation returns an optional
+for a mismatched argument count. Strict value equality and hashing preserve
+the reference API's kind, unit, and Unicode-scalar identity rules.
+
+`ConformanceMarkdownParser` accepts bytes, `ConformanceRunner` executes
+validated cases in memory, and `ConformanceReportWriter` returns report text.
+The executable adapter owns filesystem access. The exported Swift declarations
+are recorded in `implementation/swift/api`; implementation coverage is recorded
+separately in the cross-language CapabilityMatrix.
+
+### Portable language mappings
 
 Ports should prefer native immutable collection views, nullable/optional result
 types, and their standard error transport. They must retain:

@@ -13,6 +13,8 @@
   `implementation/csharp/src/GameEventScript.Conformance`.
 - C# CLI tool: `implementation/csharp/tools/GameEventScript.Tool`.
 - C# tests: `implementation/csharp/tests/GameEventScript.Tests`.
+- Swift Runtime package: `implementation/swift/GameEventScriptRuntime`.
+- Swift Conformance package and adapter: `implementation/swift/GameEventScriptConformance`.
 - Shared executable corpus and fixtures: `conformance`.
 - Normative language-neutral specifications: `specs`.
 - Documentation entry point: `docs/README.md`.
@@ -229,6 +231,32 @@ dotnet test implementation/csharp/tests/GameEventScript.Tests/GameEventScript.Te
 
 Elapsed-time benchmarks are a separate, profile-matched performance gate and
 are not included in these counts.
+
+## Swift port
+
+The initial Swift packages implement the Runtime value/message API and the
+Conformance Markdown parser, API runner, and report writers. They do not yet
+execute scripts or load `.gesb`. Keep Runtime independent of Conformance and
+the future Compiler package; do not add an extra Core package or empty package
+placeholders. File I/O belongs to the `ges-conformance` executable or tests.
+
+Swift collections use immutable value semantics and copy-on-write storage.
+Text and map-key equality/order use Unicode scalars, not Swift String's
+canonical equivalence. Keep Int64 and Binary64 storage separate, including
+transport expectations that must not pass through normalizing factories.
+
+Run `./scripts/test-swift.sh` and `python3 scripts/verify-swift-api.py`.
+Build/symbol graphs/reports belong under `artifacts/swift*`. The shared corpus
+is consumed in place; never translate it into Swift-only fixtures. Public
+Swift API changes update `specs/PublicApi.md` and `implementation/swift/api`.
+
+Verified initial Swift coverage (Release, 2026-09-19): 89 documents / 1,460
+cases parsed with matching C# corpus identity and requirements; 69 message API
+and 15 value API cases passed; all four shared Markdown bootstrap fixtures
+passed. The remaining 1,376 cases report missing Core capability errors.
+The development verification permits only those explicit incompleteness
+errors; strict runner execution still exits nonzero. Never advertise missing
+Host, VM, Compiler, binary, extension, observer, or performance capabilities.
 
 ## CLI
 

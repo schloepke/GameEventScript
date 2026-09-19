@@ -17,6 +17,7 @@ Markdown conformance corpus; the C# API is one language-specific mapping.
 - [`specs`](specs) contains the normative language-neutral specifications.
 - [`conformance`](conformance) contains the shared executable corpus and fixtures.
 - [`implementation/csharp`](implementation/csharp) contains the current reference implementation and native tests.
+- [`implementation/swift`](implementation/swift/README.md) contains the Swift Runtime and Conformance packages under development.
 - [`ges` CLI](implementation/csharp/tools/GameEventScript.Tool/README.md) contains the separate .NET tool entry point and local installation instructions.
 - [`docs`](docs) contains guides and supporting documentation.
 - [`tools`](tools) contains editor support and repository tooling.

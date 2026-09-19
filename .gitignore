@@ -16,3 +16,5 @@ obj/
 TestResults/
 *.nupkg
 *.snupkg
+.build/
+.swiftpm/

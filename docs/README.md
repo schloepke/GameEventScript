@@ -39,6 +39,9 @@ All specification documents in the table are normative.
 
 [Guide](guide/README.md) contains tutorials, explanations, and examples intended for learning. A guide may simplify presentation but must link to the owning specification for exact behavior.
 
+The [Swift implementation guide](../implementation/swift/README.md) describes
+the package boundaries, current port coverage, and local verification commands.
+
 ## Documentation rules
 
 - Normative documents describe only the current contract.

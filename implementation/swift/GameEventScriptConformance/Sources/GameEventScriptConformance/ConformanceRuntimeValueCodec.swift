@@ -209,7 +209,9 @@ enum ConformanceRuntimeValueCodec {
             guard let message = actual.messageValue else { return false }
             return try messagesEqual(expected.required("message"), message, comparison: comparison)
         default:
-            guard actual.kind == (type == ":Map" ? .map : .record), let entries = actual.mapEntries else {
+            guard type == ":Map" ? actual.kind == .map : actual.kind == .record || actual.kind == .external,
+                let entries = try actual.materializedMap()?.entries
+            else {
                 return false
             }
             if type != ":Map" && !scalarEqual(String(type.dropFirst()), actual.customTypeName ?? "") { return false }

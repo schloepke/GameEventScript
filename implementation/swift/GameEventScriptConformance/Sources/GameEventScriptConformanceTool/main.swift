@@ -16,6 +16,7 @@ func run() throws -> Int32 {
             """
             Usage: ges-conformance --corpus <suites-directory> --output <directory>
                                    [--fixtures <MarkdownV1-directory>] [--allow-incomplete]
+                                   [--runtime-programs <export-directory> --binary-fixtures <fixtures-directory>]
 
             Reads the shared Markdown corpus and emits full JSON, Markdown, and compact results.
             Missing Core capabilities remain errors. --allow-incomplete permits only those
@@ -26,6 +27,8 @@ func run() throws -> Int32 {
     var corpus: String?
     var output: String?
     var fixtures: String?
+    var runtimePrograms: String?
+    var binaryFixtures: String?
     var allowIncomplete = false
     while !arguments.isEmpty {
         let option = arguments.removeFirst()
@@ -39,6 +42,8 @@ func run() throws -> Int32 {
         case "--corpus": corpus = value
         case "--output": output = value
         case "--fixtures": fixtures = value
+        case "--runtime-programs": runtimePrograms = value
+        case "--binary-fixtures": binaryFixtures = value
         default: throw ToolError.invalidArguments("Unknown option \(option)")
         }
     }
@@ -71,11 +76,24 @@ func run() throws -> Int32 {
     if report.count("error") > 0 {
         print("This is an incomplete port. Missing Core capabilities are recorded as errors in every report.")
     }
+    var runtimePassed = true
+    if let runtimePrograms {
+        guard let binaryFixtures else {
+            throw ToolError.invalidArguments("--runtime-programs requires --binary-fixtures")
+        }
+        let compactObject = try JSONSerialization.jsonObject(with: Data(compact.utf8)) as! [String: Any]
+        runtimePassed = try verifyRuntime(
+            documents, directory: URL(fileURLWithPath: runtimePrograms),
+            binaryFixtures: URL(fileURLWithPath: binaryFixtures), destination: destination,
+            corpus: compactObject["corpus"]!)
+    } else if binaryFixtures != nil {
+        throw ToolError.invalidArguments("--binary-fixtures requires --runtime-programs")
+    }
     let failing = report.cases.filter {
         $0.status == "failed"
             || ($0.status == "error" && !(allowIncomplete && $0.code == "conformance.runner.missingCoreCapability"))
     }
-    return failing.isEmpty ? 0 : 1
+    return failing.isEmpty && runtimePassed ? 0 : 1
 }
 
 func verifyFixtures(_ directory: URL) throws {

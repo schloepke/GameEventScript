@@ -23,7 +23,7 @@ public struct ConformanceCaseResult: Sendable {
 /// Explicit capabilities for the implemented Swift API foundation.
 public struct ConformanceEnvironment: Sendable {
     public let capabilities: [String]
-    public init(capabilities: [String] = ["message-api", "value-api"]) {
+    public init(capabilities: [String] = ["message-api", "value-api", "external-types"]) {
         self.capabilities = Array(Set(capabilities)).sorted()
     }
 }
@@ -65,7 +65,7 @@ public enum ConformanceRunner {
     public static func runCase(_ testCase: ConformanceCase, environment: ConformanceEnvironment = .init())
         -> ConformanceCaseResult
     {
-        if environment.capabilities.contains(where: { !["message-api", "value-api"].contains($0) }) {
+        if environment.capabilities.contains(where: { !["message-api", "value-api", "external-types"].contains($0) }) {
             return result(
                 testCase, "error", "conformance.runner.invalidEnvironment",
                 technical: "An unimplemented capability was advertised")
@@ -83,6 +83,7 @@ public enum ConformanceRunner {
             switch testCase.kind {
             case "messageApi": mismatches = try messageAPI(testCase)
             case "valueApi": mismatches = try valueAPI(testCase)
+            case "externalTypeApi": mismatches = try externalTypeAPI(testCase)
             default:
                 return result(
                     testCase, "error", "conformance.runner.invalidModel",
@@ -122,6 +123,27 @@ public enum ConformanceRunner {
         _ mismatches: inout [ConformanceMismatch]
     ) {
         check(expected, key, actual ? "true" : "false", path, &mismatches)
+    }
+
+    private static func externalTypeAPI(_ testCase: ConformanceCase) throws -> [ConformanceMismatch] {
+        let definition = try testCase.metadata.required("externalTypeApi")
+        let expected = try testCase.expectation.required("externalType")
+        var differences: [ConformanceMismatch] = []
+        do {
+            let types = try definition.values("typeNames").map {
+                try GameEventScriptExternalTypeDefinition(name: $0.stringValue!, fields: [], constructors: [])
+            }
+            let catalog = try GameEventScriptExternalTypeCatalog(types)
+            check(expected, "typeCount", String(catalog.types.count), "/externalType", &differences)
+            check(expected, "error", nil, "/externalType", &differences)
+        } catch is GameEventScriptAPIError {
+            if expected["error"] == nil {
+                differences.append(.init(path: "/externalType/error", expected: nil, actual: "duplicateTypeName"))
+            } else {
+                check(expected, "error", "duplicateTypeName", "/externalType", &differences)
+            }
+        }
+        return differences
     }
 
     private static func valueAPI(_ testCase: ConformanceCase) throws -> [ConformanceMismatch] {

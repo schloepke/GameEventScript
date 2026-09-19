@@ -234,29 +234,41 @@ are not included in these counts.
 
 ## Swift port
 
-The initial Swift packages implement the Runtime value/message API and the
-Conformance Markdown parser, API runner, and report writers. They do not yet
-execute scripts or load `.gesb`. Keep Runtime independent of Conformance and
-the future Compiler package; do not add an extra Core package or empty package
-placeholders. File I/O belongs to the `ges-conformance` executable or tests.
+The separate Swift Runtime package implements Program validation, `.gesb` V1
+Reader/Writer, GESA dumping, serial host lifecycle, the register VM, private
+random streams/scopes, extensions/external types, and runtime literal parsing.
+Runtime remains independent of Conformance and the future Compiler package.
+There is no extra Core package. File I/O belongs to the executable adapter/tests.
 
 Swift collections use immutable value semantics and copy-on-write storage.
 Text and map-key equality/order use Unicode scalars, not Swift String's
-canonical equivalence. Keep Int64 and Binary64 storage separate, including
-transport expectations that must not pass through normalizing factories.
+canonical equivalence. Keep Int64 and Binary64 storage separate. Message and
+Handler value storage is inline; VM entry borrows arguments by index rather
+than allocating an argument array. Mutable callback arguments are borrowed only
+for the synchronous invocation.
 
 Run `./scripts/test-swift.sh` and `python3 scripts/verify-swift-api.py`.
-Build/symbol graphs/reports belong under `artifacts/swift*`. The shared corpus
-is consumed in place; never translate it into Swift-only fixtures. Public
-Swift API changes update `specs/PublicApi.md` and `implementation/swift/api`.
+The test script uses .NET 10 to export C#-compiled binary inputs below
+`artifacts/swift/runtime-fixtures`, then verifies Swift in Release against the
+original Markdown expectations. The manifest binds each input to its binary
+and complete source-document SHA-256. No expected result is exported from C#.
+`verify-swift-bytecode.py` checks the explicit enum and operand registry against
+C#; ordinary package builds do not generate source.
 
-Verified initial Swift coverage (Release, 2026-09-19): 89 documents / 1,460
-cases parsed with matching C# corpus identity and requirements; 69 message API
-and 15 value API cases passed; all four shared Markdown bootstrap fixtures
-passed. The remaining 1,376 cases report missing Core capability errors.
-The development verification permits only those explicit incompleteness
-errors; strict runner execution still exits nonzero. Never advertise missing
-Host, VM, Compiler, binary, extension, observer, or performance capabilities.
+Verified Swift Runtime coverage (Release, 2026-09-19): 89 documents / 1,460
+cases parsed with matching C# corpus identity; 69 message API, 15 value API,
+and one external-type API case passed. Runtime-only verification passed all
+1,227 cases: 1,137 script scenarios, four link failures, 47 binary cases, eight
+GESA snapshots, and behavior assertions from 31 performance scenarios.
+No Swift performance/allocation profile is claimed by those behavior checks.
+The eight native bootstrap tests also passed.
+
+The Swift Compiler is not implemented. Strict full-port reporting therefore
+continues to report missing Core capabilities and exits nonzero. Runtime-only
+reports (`RuntimeResults.json`/`.md`) are separate evidence, never substituted
+for full-port acceptance. Build products, symbol graphs, generated binary
+inputs, and reports belong under ignored `artifacts`. Public Swift API changes
+update `specs/PublicApi.md` and `implementation/swift/api`.
 
 ## CLI
 

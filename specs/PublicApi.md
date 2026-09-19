@@ -967,19 +967,47 @@ The Swift mapping separates the `GameEventScriptRuntime` and
 `GameEventScriptConformance` SwiftPM packages. Conformance depends on Runtime;
 Runtime has no dependency on a compiler, test framework, or Conformance.
 
-The currently exported Runtime foundation uses `GesValue`, `GesUnit`, immutable
-range descriptors, `GameEventScriptMessage`, `GameEventScriptMessageArgument`,
-and `GameEventScriptMessageSignature`. Collections use native value semantics
-with copy-on-write storage. Invalid public message construction uses Swift's
-structured `throws` transport; signature message creation returns an optional
-for a mismatched argument count. Strict value equality and hashing preserve
-the reference API's kind, unit, and Unicode-scalar identity rules.
+Runtime exposes `GesValue`, `GesUnit`, immutable range descriptors, messages,
+signatures, Program data and codecs, `GameEventScriptHost`, Context, lifecycle
+handles, random generators, diagnostics, and the extension/external-type
+protocols. `GameEventScriptHost(...)` accepts one complete configuration instead
+of a separate HostBuilder. `load`, `subscribe`, `receive`, `executeFrame`, and
+`runToCompletion` retain the host contracts above. The mutable VM is host-private.
 
-`ConformanceMarkdownParser` accepts bytes, `ConformanceRunner` executes
-validated cases in memory, and `ConformanceReportWriter` returns report text.
-The executable adapter owns filesystem access. The exported Swift declarations
-are recorded in `implementation/swift/api`; implementation coverage is recorded
-separately in the cross-language CapabilityMatrix.
+Program segments use `let` properties and native Array values with copy-on-write
+storage; callers cannot mutate a Program through a returned array. Int64,
+UInt64, UInt16, and Double retain their specified transport widths. Instructions
+expose numeric words and payload bits, independently of Swift enum memory layout.
+`GameEventScriptProgramReader.read`, `GameEventScriptProgramWriter.bytes`,
+`encodedSize`, `write(_:into:)`, `GameEventScriptProgramValidator.validate`, and
+`GameEventScriptProgramDumper.dump` are synchronous and accept/return memory.
+Reader options retain the three portable retention modes and bounded read limits.
+
+Invalid public construction uses structured `throws` errors. Signature message
+creation returns an optional for mismatched arity. Decode failures use
+`GameEventScriptProgramFormatError`; linking uses `GameEventScriptDynamicLinkError`;
+execution results carry `GameEventScriptDiagnostic`. Explicit callback faults use
+`GameEventScriptExtensionFault`; unexpected errors receive the owning runtime
+boundary's stable classification. Call objects and borrowed argument views must
+not outlive their synchronous callback.
+
+Strict value equality and hashing preserve kind, unit, and Unicode-scalar
+identity. `materializedMap()` reads immutable Map/Record contents or lazily
+materializes declared external fields, propagating field failures. It does not
+perform a source-language cast. The random generator has seed, sequence, and
+entropy initializers; each Host constructs its own generator.
+
+`ConformanceMarkdownParser` accepts bytes, `ConformanceRunner` executes supported
+API cases in memory, and `ConformanceReportWriter` returns report text.
+`ConformanceRuntimeRunner.runCase` additionally checks runtime scenarios from
+independently supplied `ConformanceRuntimeProgram` groups.
+`ConformanceProgramRunner` checks GESA snapshots and bounded binary fixtures.
+These Runtime-only entry points do not attribute the input compiler to Swift;
+performance scenarios verify behavior only and do not claim measurement profiles.
+The executable adapter owns filesystem access and keeps Runtime verification
+reports separate from strict full-port Conformance reports. Public declarations
+are recorded in `implementation/swift/api`; verified implementation coverage is
+recorded separately in the cross-language CapabilityMatrix.
 
 ### Portable language mappings
 

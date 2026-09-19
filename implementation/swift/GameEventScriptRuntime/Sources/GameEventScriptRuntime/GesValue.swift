@@ -18,7 +18,7 @@ public enum GesUnit: String, Hashable {
 /// Exact storage discriminants; integer and binary64 range payloads remain distinct.
 public enum GesValueKind: Hashable {
     case nothing, boolean, integer, float, percentage, text, tag, vector, point
-    case dice, list, map, record, integerRange, floatRange, message, handler, series
+    case dice, list, map, record, integerRange, floatRange, message, handler, series, external
 }
 
 /// An immutable vector or point's binary64 coordinates.
@@ -85,9 +85,10 @@ public struct GesValue: Hashable, CustomStringConvertible {
         case record(ScalarText, GesValueMap)
         case integerRange(GesIntegerRange)
         case floatRange(GesFloatRange)
-        indirect case message(GameEventScriptMessage)
-        indirect case handler(GameEventScriptMessageSignature)
+        case message(GameEventScriptMessage)
+        case handler(GameEventScriptMessageSignature)
         case series(GesSeriesValue)
+        case external(GesExternalStorage)
     }
 
     private let storage: Storage
@@ -154,6 +155,25 @@ public struct GesValue: Hashable, CustomStringConvertible {
     public static func handler(_ value: GameEventScriptMessageSignature) -> Self { Self(.handler(value)) }
     public static func series(_ value: GesSeriesValue) -> Self { Self(.series(value)) }
 
+    public static func external(_ value: any GameEventScriptExternalValue) -> Self {
+        Self(.external(GesExternalStorage(value: value)))
+    }
+    public var externalValue: (any GameEventScriptExternalValue)? {
+        if case .external(let storage) = storage { storage.value } else { nil }
+    }
+    func externalField(_ name: String) throws -> GesValue? {
+        if case .external(let storage) = storage { return try storage.field(name) }
+        return nil
+    }
+    /// Returns map data, materializing declared external fields when necessary.
+    /// External field failures propagate to the caller.
+    public func materializedMap() throws -> GesValueMap? { try asMap ?? externalMap() }
+
+    func externalMap() throws -> GesValueMap? {
+        if case .external(let storage) = storage { return try storage.map() }
+        return nil
+    }
+
     public var kind: GesValueKind {
         switch storage {
         case .nothing: .nothing
@@ -174,6 +194,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         case .message: .message
         case .handler: .handler
         case .series: .series
+        case .external: .external
         }
     }
 
@@ -239,6 +260,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         case .map(let map), .record(_, let map): count = Int64(map.length)
         case .integerRange(let range): count = range.count
         case .floatRange(let range): count = range.count
+        case .external(let external): count = Int64(external.definition.fields.count)
         default: count = 0
         }
         return Int(min(count, Int64(Int32.max)))
@@ -277,7 +299,13 @@ public struct GesValue: Hashable, CustomStringConvertible {
     public var asList: [GesValue] { listValue ?? [] }
     public var asDice: [Int32] { diceRolls ?? [] }
     public var mapEntries: [GesMapEntry]? { asMap?.entries }
-    public var customTypeName: String? { if case .record(let name, _) = storage { name.value } else { nil } }
+    public var customTypeName: String? {
+        switch storage {
+        case .record(let name, _): name.value
+        case .external(let external): external.definition.name
+        default: nil
+        }
+    }
     public var integerRangeValue: GesIntegerRange? { if case .integerRange(let value) = storage { value } else { nil } }
     public var floatRangeValue: GesFloatRange? { if case .floatRange(let value) = storage { value } else { nil } }
     public var messageValue: GameEventScriptMessage? { if case .message(let value) = storage { value } else { nil } }
@@ -316,6 +344,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         case .message(let value): return value.description
         case .handler(let value): return "handler " + value.signatureId
         case .series(let value): return "series[\(value.signatureID) offset \(value.offset)]"
+        case .external: return "Custom"
         }
     }
 

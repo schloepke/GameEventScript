@@ -63,12 +63,11 @@ here.
 
 ## Language ports and distribution
 
-- Add the separate Swift Compiler package and complete strict-port acceptance.
-  Runtime, Program codecs/dumps, host lifecycle, VM, extensions/external types,
-  and runtime literal parsing now execute the shared Runtime corpus using C#
-  compiler inputs. Keep that Runtime evidence distinct from Swift compilation
-  and add a calibrated Swift allocation/performance profile. Kotlin follows
-  Swift, using the same fixtures and corpus.
+- Add a calibrated Swift allocation/performance profile. Native Swift Compiler
+  and Runtime now pass strict shared Conformance, with performance behavior
+  checked separately from measurement. Kotlin follows Swift using the same corpus.
+- Add a native Swift `ges` CLI using the separate Compiler and Runtime packages,
+  following the established compile/check/run/dump and interactive contracts.
 - Implement Go and Rust as additional planned language ports, preserving the
   same portable Core, `.gesb` format, and shared Markdown Conformance contracts.
 - Add an independent CI job with build, unit tests, strict shared Conformance,

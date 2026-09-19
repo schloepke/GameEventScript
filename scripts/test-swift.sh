@@ -19,5 +19,4 @@ swift run --package-path "$ges_package" --scratch-path "$ges_scratch" --build-sy
     --fixtures "$ges_root/conformance/fixtures/MarkdownV1" \
     --output "$ges_root/artifacts/swift/conformance-results" \
     --runtime-programs "$ges_root/artifacts/swift/runtime-fixtures" \
-    --binary-fixtures "$ges_root/conformance/fixtures" \
-    --allow-incomplete
+    --binary-fixtures "$ges_root/conformance/fixtures"

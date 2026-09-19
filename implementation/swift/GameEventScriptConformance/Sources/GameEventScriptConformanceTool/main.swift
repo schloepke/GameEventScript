@@ -16,9 +16,12 @@ func run() throws -> Int32 {
             """
             Usage: ges-conformance --corpus <suites-directory> --output <directory>
                                    [--fixtures <MarkdownV1-directory>] [--allow-incomplete]
-                                   [--runtime-programs <export-directory> --binary-fixtures <fixtures-directory>]
+                                   [--binary-fixtures <fixtures-directory>]
+                                   [--runtime-programs <CSharp-export-directory>]
 
-            Reads the shared Markdown corpus and emits full JSON, Markdown, and compact results.
+            Compiles and runs the shared Markdown corpus natively in Swift, emitting full JSON,
+            Markdown, and compact results. --binary-fixtures supplies declared binary resources.
+            --runtime-programs additionally verifies C#-compiled Programs in the Swift Runtime.
             Missing Core capabilities remain errors. --allow-incomplete permits only those
             expected development errors in the process exit status; assertions still fail.
             """)
@@ -61,7 +64,10 @@ func run() throws -> Int32 {
             throw ToolError.invalidArguments("\(path.path): \(error)")
         }
     }
-    let report = ConformanceRunner.runCorpus(documents)
+    let resolver = try binaryFixtures.map {
+        try FileResources(directory: URL(fileURLWithPath: $0), documents: documents)
+    }
+    let report = ConformanceRunner.runCorpus(documents, environment: .init(resourceResolver: resolver))
     let compact = try ConformanceReportWriter.crossLanguage(documents, report: report)
     let destination = URL(fileURLWithPath: output)
     try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
@@ -73,9 +79,6 @@ func run() throws -> Int32 {
     print(
         "Swift: \(report.count("passed")) passed, \(report.count("failed")) failed, \(report.count("error")) errors, \(report.count("skipped")) skipped; \(documents.count) documents."
     )
-    if report.count("error") > 0 {
-        print("This is an incomplete port. Missing Core capabilities are recorded as errors in every report.")
-    }
     var runtimePassed = true
     if let runtimePrograms {
         guard let binaryFixtures else {
@@ -86,14 +89,44 @@ func run() throws -> Int32 {
             documents, directory: URL(fileURLWithPath: runtimePrograms),
             binaryFixtures: URL(fileURLWithPath: binaryFixtures), destination: destination,
             corpus: compactObject["corpus"]!)
-    } else if binaryFixtures != nil {
-        throw ToolError.invalidArguments("--binary-fixtures requires --runtime-programs")
     }
     let failing = report.cases.filter {
         $0.status == "failed"
             || ($0.status == "error" && !(allowIncomplete && $0.code == "conformance.runner.missingCoreCapability"))
     }
     return failing.isEmpty && runtimePassed ? 0 : 1
+}
+
+/// Only the executable adapter translates declared resource IDs to bounded file reads.
+struct FileResources: ConformanceResourceResolver {
+    let paths: [String: URL]
+
+    init(directory: URL, documents: [ConformanceDocument]) throws {
+        let root = directory.standardizedFileURL.resolvingSymlinksInPath()
+        var paths: [String: URL] = [:]
+        for test in documents.flatMap(\.cases) {
+            guard let fixture = test.metadata["binaryFixture"],
+                let id = fixture["resourceId"]?.stringValue,
+                let relative = fixture["relativePath"]?.stringValue
+            else { continue }
+            let path = root.appendingPathComponent(relative).standardizedFileURL.resolvingSymlinksInPath()
+            guard path.path.hasPrefix(root.path + "/"), paths[id] == nil || paths[id] == path else {
+                throw ToolError.invalidFixture("Invalid or conflicting resource path for \(id)")
+            }
+            paths[id] = path
+        }
+        self.paths = paths
+    }
+
+    func resolve(resourceID: String, maximumBytes: Int) -> ConformanceResourceResult {
+        guard let path = paths[resourceID], FileManager.default.fileExists(atPath: path.path) else { return .notFound }
+        do {
+            let file = try FileHandle(forReadingFrom: path)
+            defer { try? file.close() }
+            let data = try file.read(upToCount: maximumBytes == Int.max ? Int.max : maximumBytes + 1) ?? Data()
+            return data.count > maximumBytes ? .limitExceeded : .found(Array(data))
+        } catch { return .error(String(describing: error)) }
+    }
 }
 
 func verifyFixtures(_ directory: URL) throws {

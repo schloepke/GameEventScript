@@ -136,7 +136,7 @@ public enum ConformanceReportWriter {
         result += "Capabilities: " + report.capabilities.joined(separator: ", ") + ".\n\n"
         result +=
             "\(report.count("passed")) passed, \(report.count("failed")) failed, \(report.count("error")) errors, \(report.count("skipped")) skipped.\n\n"
-        result += "Missing Core capabilities are errors. This report does not claim a complete Runtime port.\n\n"
+        result += "Missing Core capabilities are errors. Unavailable optional capabilities are reported as skipped.\n\n"
         result += "| Case | Status | Code | Missing capabilities |\n| --- | --- | --- | --- |\n"
         for entry in report.cases {
             result +=

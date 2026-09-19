@@ -7,6 +7,8 @@ import XCTest
 @testable import GameEventScriptConformance
 
 final class ConformanceCorpusTests: XCTestCase {
+    private let apiEnvironment = ConformanceEnvironment(capabilities: ["message-api", "value-api", "external-types"])
+
     private var repository: URL {
         var url = URL(fileURLWithPath: #filePath)
         for _ in 0..<6 { url.deleteLastPathComponent() }
@@ -31,7 +33,7 @@ final class ConformanceCorpusTests: XCTestCase {
         let documents = try documents()
         XCTAssertEqual(documents.count, 89)
         XCTAssertEqual(documents.flatMap(\.cases).count, 1460)
-        let report = ConformanceRunner.runCorpus(documents)
+        let report = ConformanceRunner.runCorpus(documents, environment: apiEnvironment)
         let compact = try ConformanceReportWriter.crossLanguage(documents, report: report)
         let actual = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(compact.utf8)) as? [String: Any])
         let reference = try XCTUnwrap(
@@ -97,11 +99,12 @@ final class ConformanceCorpusTests: XCTestCase {
             ConformanceSha256.hex(Array("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq".utf8)),
             "248D6A61D20638B8E5C026930C3E6039A33CE45964FF2167F6ECEDD419DB06C1")
         let documents = try documents()
-        let report = ConformanceRunner.runCorpus(documents)
+        let report = ConformanceRunner.runCorpus(documents, environment: apiEnvironment)
         let reverse = Array(documents.reversed())
         XCTAssertEqual(
             try ConformanceReportWriter.crossLanguage(documents, report: report),
-            try ConformanceReportWriter.crossLanguage(reverse, report: ConformanceRunner.runCorpus(reverse)))
+            try ConformanceReportWriter.crossLanguage(
+                reverse, report: ConformanceRunner.runCorpus(reverse, environment: apiEnvironment)))
         XCTAssertThrowsError(try ConformanceReportWriter.identify(documents + [documents[0]]))
     }
 
@@ -116,7 +119,7 @@ final class ConformanceCorpusTests: XCTestCase {
         let unavailable = ConformanceRunner.runDocument(valid, environment: .init(capabilities: []))
         XCTAssertEqual(unavailable.cases.first?.code, "conformance.runner.missingCoreCapability")
         let forged = ConformanceRunner.runDocument(
-            valid, environment: .init(capabilities: ["compiler", "message-api"]))
+            valid, environment: .init(capabilities: ["performance", "message-api"]))
         XCTAssertEqual(forged.cases.first?.code, "conformance.runner.invalidEnvironment")
     }
 

@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 struct GesLiteralParser {
+    static func sourceText(_ text: String) -> String? {
+        var parser = Self(bytes: Array(text.utf8))
+        let value = parser.quoted()
+        return parser.position == parser.bytes.count ? value : nil
+    }
     private let bytes: [UInt8]
     private var position = 0, items = 0
     private var limit: String?

@@ -10,11 +10,14 @@ let package = Package(
         .library(name: "GameEventScriptConformance", targets: ["GameEventScriptConformance"]),
         .executable(name: "ges-conformance", targets: ["GameEventScriptConformanceTool"]),
     ],
-    dependencies: [.package(path: "../GameEventScriptRuntime")],
+    dependencies: [.package(path: "../GameEventScriptRuntime"), .package(path: "../GameEventScriptCompiler")],
     targets: [
         .target(
             name: "GameEventScriptConformance",
-            dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")]),
+            dependencies: [
+                .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
+                .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"),
+            ]),
         .executableTarget(name: "GameEventScriptConformanceTool", dependencies: ["GameEventScriptConformance"]),
         .testTarget(name: "GameEventScriptConformanceTests", dependencies: ["GameEventScriptConformance"]),
     ]

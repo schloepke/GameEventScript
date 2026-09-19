@@ -14,6 +14,7 @@
 - C# CLI tool: `implementation/csharp/tools/GameEventScript.Tool`.
 - C# tests: `implementation/csharp/tests/GameEventScript.Tests`.
 - Swift Runtime package: `implementation/swift/GameEventScriptRuntime`.
+- Swift Compiler package: `implementation/swift/GameEventScriptCompiler`.
 - Swift Conformance package and adapter: `implementation/swift/GameEventScriptConformance`.
 - Shared executable corpus and fixtures: `conformance`.
 - Normative language-neutral specifications: `specs`.
@@ -237,7 +238,10 @@ are not included in these counts.
 The separate Swift Runtime package implements Program validation, `.gesb` V1
 Reader/Writer, GESA dumping, serial host lifecycle, the register VM, private
 random streams/scopes, extensions/external types, and runtime literal parsing.
-Runtime remains independent of Conformance and the future Compiler package.
+Runtime remains independent of Conformance and Compiler. The separate
+`implementation/swift/GameEventScriptCompiler` package depends only on Runtime
+and implements source parsing, validation, lowering, optimization, register
+allocation and Program generation. Conformance depends on both packages.
 There is no extra Core package. File I/O belongs to the executable adapter/tests.
 
 Swift collections use immutable value semantics and copy-on-write storage.
@@ -255,20 +259,20 @@ and complete source-document SHA-256. No expected result is exported from C#.
 `verify-swift-bytecode.py` checks the explicit enum and operand registry against
 C#; ordinary package builds do not generate source.
 
-Verified Swift Runtime coverage (Release, 2026-09-19): 89 documents / 1,460
-cases parsed with matching C# corpus identity; 69 message API, 15 value API,
-and one external-type API case passed. Runtime-only verification passed all
-1,227 cases: 1,137 script scenarios, four link failures, 47 binary cases, eight
-GESA snapshots, and behavior assertions from 31 performance scenarios.
-No Swift performance/allocation profile is claimed by those behavior checks.
-The eight native bootstrap tests also passed.
+Verified Swift coverage (Release, 2026-09-19): all 1,460 behavior checks from
+89 shared Markdown documents pass with native Swift compilation. The strict
+report passes 1,429 cases and skips 31 optional performance cases; Swift has no
+calibrated performance/allocation profile. Independent Runtime verification
+passes 1,227 cases using C#-compiled Programs. Eleven native adapter/bootstrap
+tests pass. `scripts/test-swift.sh` requires strict native acceptance and keeps
+Runtime interoperability reports separate.
 
-The Swift Compiler is not implemented. Strict full-port reporting therefore
-continues to report missing Core capabilities and exits nonzero. Runtime-only
-reports (`RuntimeResults.json`/`.md`) are separate evidence, never substituted
-for full-port acceptance. Build products, symbol graphs, generated binary
-inputs, and reports belong under ignored `artifacts`. Public Swift API changes
-update `specs/PublicApi.md` and `implementation/swift/api`.
+`ConformanceEnvironment` advertises all Core capabilities and GESA snapshots.
+Its optional resource resolver accepts IDs and byte bounds; only the executable
+adapter maps fixture paths to files. Native compilation itself needs no .NET.
+Build products, symbol graphs, generated binary inputs and reports belong under
+ignored `artifacts`. Public Swift API changes update `specs/PublicApi.md` and
+`implementation/swift/api`. The native Swift `ges` CLI remains deferred.
 
 ## CLI
 

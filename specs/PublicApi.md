@@ -963,9 +963,22 @@ DLL and may choose main-thread/manual pumping instead of the automatic runner.
 
 ### Swift
 
-The Swift mapping separates the `GameEventScriptRuntime` and
-`GameEventScriptConformance` SwiftPM packages. Conformance depends on Runtime;
-Runtime has no dependency on a compiler, test framework, or Conformance.
+The Swift mapping separates the `GameEventScriptRuntime`,
+`GameEventScriptCompiler`, and `GameEventScriptConformance` SwiftPM packages.
+Compiler depends only on Runtime; Conformance depends on both. Runtime has no
+dependency on Compiler, a test framework, or Conformance.
+
+`GameEventScriptBuilder.addScript(_:sourceName:)` accepts source text and assigns
+an independent source ID to each addition, even when diagnostic names repeat.
+The builder supports `withDebugInfo`, `withProgramVersion`, and a declarative
+`withExternalTypeCatalog`. `compile(options:)` returns a reusable immutable
+Program; repeated compilation does not mutate earlier results. A supplied
+`GameEventScriptCompileOptions` overrides the builder's options for that call.
+`GameEventScriptDebugInfoOptions` independently selects symbols, source maps,
+and source archives; `.all` is the default and `.none` omits all three. Unknown
+option bits are invalid public arguments. Source diagnostics are thrown as
+`GameEventScriptCompileError` with ordered `GameEventScriptDiagnostic` values.
+Compiler internals and the compiler-only Runtime SPI are not public embedding APIs.
 
 Runtime exposes `GesValue`, `GesUnit`, immutable range descriptors, messages,
 signatures, Program data and codecs, `GameEventScriptHost`, Context, lifecycle
@@ -997,8 +1010,16 @@ materializes declared external fields, propagating field failures. It does not
 perform a source-language cast. The random generator has seed, sequence, and
 entropy initializers; each Host constructs its own generator.
 
-`ConformanceMarkdownParser` accepts bytes, `ConformanceRunner` executes supported
-API cases in memory, and `ConformanceReportWriter` returns report text.
+`ConformanceMarkdownParser` accepts bytes, `ConformanceRunner` compiles and
+executes supported cases natively in memory, and `ConformanceReportWriter`
+returns report text. The default `ConformanceEnvironment` advertises all Core
+capabilities and `bytecode-snapshot`; optional `performance` is unavailable.
+`ConformanceResourceResolver.resolve(resourceID:maximumBytes:)` supplies binary
+fixtures as copied bytes or structured `notFound`, `limitExceeded`, or `error`
+results. The environment's positive `maximumResourceBytes` defaults to 64 MiB.
+The runner independently checks the bound and declared SHA-256; failures use
+the resource error codes defined by the Conformance runner contract. Path
+interpretation belongs to the embedding, never the portable resolver interface.
 `ConformanceRuntimeRunner.runCase` additionally checks runtime scenarios from
 independently supplied `ConformanceRuntimeProgram` groups.
 `ConformanceProgramRunner` checks GESA snapshots and bounded binary fixtures.

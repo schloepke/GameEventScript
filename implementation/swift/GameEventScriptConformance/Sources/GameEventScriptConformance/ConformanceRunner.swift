@@ -20,11 +20,36 @@ public struct ConformanceCaseResult: Sendable {
     public let technicalDetails: String?
 }
 
-/// Explicit capabilities for the implemented Swift API foundation.
+/// A bounded resource lookup outcome supplied by the embedding.
+public enum ConformanceResourceResult: Sendable {
+    case found([UInt8])
+    case notFound
+    case limitExceeded
+    case error(String)
+}
+
+/// Resolves portable IDs without exposing paths or file access to the runner.
+public protocol ConformanceResourceResolver: Sendable {
+    func resolve(resourceID: String, maximumBytes: Int) -> ConformanceResourceResult
+}
+
+/// Native Swift execution capabilities and optional bounded binary resources.
 public struct ConformanceEnvironment: Sendable {
+    public static let supportedCapabilities = [
+        "compiler", "program-binary", "host", "vm", "message-api", "value-api", "external-types",
+        "native-handlers", "publish-sink", "observer", "bytecode-snapshot",
+    ]
     public let capabilities: [String]
-    public init(capabilities: [String] = ["message-api", "value-api", "external-types"]) {
+    public let resourceResolver: (any ConformanceResourceResolver)?
+    public let maximumResourceBytes: Int
+    public init(
+        capabilities: [String] = Self.supportedCapabilities,
+        resourceResolver: (any ConformanceResourceResolver)? = nil,
+        maximumResourceBytes: Int = 64 * 1024 * 1024
+    ) {
         self.capabilities = Array(Set(capabilities)).sorted()
+        self.resourceResolver = resourceResolver
+        self.maximumResourceBytes = maximumResourceBytes
     }
 }
 
@@ -65,10 +90,12 @@ public enum ConformanceRunner {
     public static func runCase(_ testCase: ConformanceCase, environment: ConformanceEnvironment = .init())
         -> ConformanceCaseResult
     {
-        if environment.capabilities.contains(where: { !["message-api", "value-api", "external-types"].contains($0) }) {
+        if environment.maximumResourceBytes <= 0
+            || environment.capabilities.contains(where: { !ConformanceEnvironment.supportedCapabilities.contains($0) })
+        {
             return result(
                 testCase, "error", "conformance.runner.invalidEnvironment",
-                technical: "An unimplemented capability was advertised")
+                technical: "An unimplemented capability or invalid resource limit was supplied")
         }
         let missing = testCase.requiredCore.filter { !environment.capabilities.contains($0) }.sorted()
         if !missing.isEmpty {
@@ -78,6 +105,27 @@ public enum ConformanceRunner {
         if !optional.isEmpty {
             return result(testCase, "skipped", "conformance.runner.missingOptionalCapability", missing: optional)
         }
+        if testCase.kind == "programBinary" {
+            guard let resolver = environment.resourceResolver,
+                let id = testCase.metadata["binaryFixture"]?["resourceId"]?.stringValue
+            else {
+                return result(testCase, "error", "conformance.resource.unavailable")
+            }
+            switch resolver.resolve(resourceID: id, maximumBytes: environment.maximumResourceBytes) {
+            case .found(let bytes):
+                guard bytes.count <= environment.maximumResourceBytes else {
+                    return result(testCase, "error", "conformance.resource.limitExceeded")
+                }
+                guard ConformanceSha256.hex(bytes) == testCase.metadata["binaryFixture"]?["sha256"]?.stringValue else {
+                    return result(testCase, "error", "conformance.resource.integrityMismatch")
+                }
+                return ConformanceCompilerRunner.runCase(testCase, binaryFixture: bytes)
+            case .limitExceeded: return result(testCase, "error", "conformance.resource.limitExceeded")
+            case .notFound: return result(testCase, "error", "conformance.resource.unavailable")
+            case .error(let detail):
+                return result(testCase, "error", "conformance.resource.unavailable", technical: detail)
+            }
+        }
         do {
             let mismatches: [ConformanceMismatch]
             switch testCase.kind {
@@ -85,9 +133,7 @@ public enum ConformanceRunner {
             case "valueApi": mismatches = try valueAPI(testCase)
             case "externalTypeApi": mismatches = try externalTypeAPI(testCase)
             default:
-                return result(
-                    testCase, "error", "conformance.runner.invalidModel",
-                    technical: "Case kind has no required execution capability")
+                return ConformanceCompilerRunner.runCase(testCase)
             }
             return result(
                 testCase, mismatches.isEmpty ? "passed" : "failed",

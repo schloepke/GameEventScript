@@ -20,7 +20,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parent.parent
-PACKAGES = ("GameEventScriptRuntime", "GameEventScriptConformance")
+PACKAGES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptConformance")
 SNAPSHOTS = ROOT / "implementation" / "swift" / "api"
 ARTIFACTS = ROOT / "artifacts" / "swift-api"
 RELATIONSHIPS = {
@@ -163,7 +163,7 @@ def main():
         print(str(error), file=sys.stderr)
         return 2
 
-    # Extract both packages successfully before changing any approved snapshot.
+    # Extract all packages successfully before changing any approved snapshot.
     if arguments.update:
         SNAPSHOTS.mkdir(parents=True, exist_ok=True)
         for package, content in generated:

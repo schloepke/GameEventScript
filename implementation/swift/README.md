@@ -45,13 +45,16 @@ Verified on 2026-09-19 with Swift 6.4 on macOS arm64, Release:
 - **1,460/1,460 behavior checks** from the original 89 Markdown documents pass
   with native Swift compilation, including 131 expected compilation failures,
   15 bytecode constraints, two metadata cases, and all eight GESA snapshots.
-- The strict report passes **1,429 cases**, with **31 optional performance cases
-  skipped** because Swift does not yet provide a calibrated measurement profile.
-  Their behavior is checked separately; no Swift allocation/timing claim is made.
+- The ordinary hardware-independent report passes **1,429 cases** and skips
+  **31 optional performance measurements**. With the calibrated profile enabled,
+  the strict report passes **all 1,460 cases**, including actual measurements.
+- The Swift 6.4/macOS 26/Apple M3 Max profile measures cumulative allocations and
+  elapsed time. All sixteen warmed dispatch variants have **zero allocations**.
+  See [Performance.md](Performance.md) for scope, references and reproduction.
 - All 47 shared binary cases pass, including canonical runtime-segment comparisons
   against Swift compiler output, malformed inputs, rewrites and fixture execution.
 - Independent Runtime verification passes **1,227/1,227** cases with C# inputs.
-- Eleven native adapter/bootstrap tests pass, including the Markdown bootstrap
+- Twelve native adapter/bootstrap tests pass, including the Markdown bootstrap
   fixtures, compiler ownership/options and resource-limit failure paths.
 
 The [CapabilityMatrix](../../conformance/cross-language/CapabilityMatrix.md)

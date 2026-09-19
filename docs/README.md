@@ -41,6 +41,13 @@ All specification documents in the table are normative.
 
 The [Swift implementation guide](../implementation/swift/README.md) describes
 the package boundaries, current port coverage, and local verification commands.
+The [Swift performance guide](../implementation/swift/Performance.md) documents
+the measured profile, instrumentation scope and baseline review workflow.
+The generated [performance baseline matrix](../artifacts/conformance/PerformanceMatrix.md)
+lists every performance case with C# and Swift time/allocation references side by
+side. Create or refresh both tables with
+`ruby --disable-gems scripts/write-performance-matrix.rb`; the report stays under
+`artifacts`, and the shared Markdown remains the source of truth.
 
 ## Documentation rules
 

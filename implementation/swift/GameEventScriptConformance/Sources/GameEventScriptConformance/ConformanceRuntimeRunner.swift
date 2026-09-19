@@ -70,6 +70,12 @@ final class RuntimeScenario {
         self.test = test
         self.programs = programs
         collector = RuntimeCollector(sink: test.metadata["publishSink"]?.stringValue ?? "accept")
+        host = try Self.makeHost(test, observer: collector, publishSink: collector.sink == "absent" ? nil : collector)
+    }
+    static func makeHost(
+        _ test: ConformanceCase, observer: (any GameEventScriptRuntimeObserver)?,
+        publishSink: (any GameEventScriptPublishSink)?
+    ) throws -> GameEventScriptHost {
         var limits = GameEventScriptRuntimeLimits()
         let setters: [String: WritableKeyPath<GameEventScriptRuntimeLimits, Int>] = [
             "maxProcessedEventsPerRun": \.maxProcessedEventsPerRun,
@@ -102,12 +108,12 @@ final class RuntimeScenario {
         let sequence = try (random?["sequence"]?.arrayValue ?? []).map {
             try ConformanceRuntimeValueCodec.number($0.numberValue ?? $0.stringValue!)
         }
-        host = try GameEventScriptHost(
-            seed: seed, sequence: sequence, limits: limits, observer: collector,
+        return try GameEventScriptHost(
+            seed: seed, sequence: sequence, limits: limits, observer: observer,
             extensions: RuntimeFixtures(),
             externalTypes: test.metadata["externalTypeRegistry"]?.stringValue == "absent"
                 ? nil : RuntimeFixtures(mismatch: test.metadata["externalTypeRegistry"]?.stringValue == "mismatch"),
-            publishSink: collector.sink == "absent" ? nil : collector)
+            publishSink: publishSink)
     }
     func configure() throws {
         let deferred = test.metadata.values("deferredPrograms").compactMap(\.stringValue)

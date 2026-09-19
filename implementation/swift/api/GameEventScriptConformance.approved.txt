@@ -15,11 +15,15 @@ relationship {"kind":"conformsTo","source":"GameEventScriptConformance.Conforman
 relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformanceEntry :: struct ConformanceEntry","target":"Swift.Equatable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformanceEntry :: struct ConformanceEntry","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformanceEnvironment :: struct ConformanceEnvironment","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformanceMeasuredMetric :: struct ConformanceMeasuredMetric","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformanceMismatch :: struct ConformanceMismatch","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformanceParseError :: struct ConformanceParseError","target":"Swift.CustomStringConvertible"}
 relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformanceParseError :: struct ConformanceParseError","target":"Swift.Error"}
 relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformanceParseError :: struct ConformanceParseError","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformanceParserLimits :: struct ConformanceParserLimits","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformancePerformanceMetricResult :: struct ConformancePerformanceMetricResult","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformancePerformanceProvider :: protocol ConformancePerformanceProvider : Sendable","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformancePerformanceResult :: struct ConformancePerformanceResult","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformanceReportError :: enum ConformanceReportError","target":"Swift.Equatable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformanceReportError :: enum ConformanceReportError","target":"Swift.Error"}
 relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformanceReportError :: enum ConformanceReportError","target":"Swift.Hashable"}
@@ -31,6 +35,7 @@ relationship {"kind":"conformsTo","source":"GameEventScriptConformance.Conforman
 relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformanceSourceRange :: struct ConformanceSourceRange","target":"Swift.Equatable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformanceSourceRange :: struct ConformanceSourceRange","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptConformance.ConformanceStep :: struct ConformanceStep","target":"Swift.Sendable"}
+relationship {"kind":"requirementOf","source":"GameEventScriptConformance.ConformancePerformanceProvider.measure(_:profile:) :: func measure(_ test: ConformanceCase, profile: String) throws -> [ConformanceMeasuredMetric]","target":"GameEventScriptConformance.ConformancePerformanceProvider :: protocol ConformancePerformanceProvider : Sendable"}
 relationship {"kind":"requirementOf","source":"GameEventScriptConformance.ConformanceResourceResolver.resolve(resourceID:maximumBytes:) :: func resolve(resourceID: String, maximumBytes: Int) -> ConformanceResourceResult","target":"GameEventScriptConformance.ConformanceResourceResolver :: protocol ConformanceResourceResolver : Sendable"}
 symbol {"access":"public","declaration":"case array([ConformanceData])","kind":"swift.enum.case","path":"GameEventScriptConformance.ConformanceData.array(_:)"}
 symbol {"access":"public","declaration":"case bool(Bool)","kind":"swift.enum.case","path":"GameEventScriptConformance.ConformanceData.bool(_:)"}
@@ -53,14 +58,17 @@ symbol {"access":"public","declaration":"enum ConformanceRunner","kind":"swift.e
 symbol {"access":"public","declaration":"enum ConformanceRuntimeRunner","kind":"swift.enum","path":"GameEventScriptConformance.ConformanceRuntimeRunner"}
 symbol {"access":"public","declaration":"enum ConformanceSha256","kind":"swift.enum","path":"GameEventScriptConformance.ConformanceSha256"}
 symbol {"access":"public","declaration":"func count(_ status: String) -> Int","kind":"swift.method","path":"GameEventScriptConformance.ConformanceRunReport.count(_:)"}
+symbol {"access":"public","declaration":"func measure(_ test: ConformanceCase, profile: String) throws -> [ConformanceMeasuredMetric]","kind":"swift.method","path":"GameEventScriptConformance.ConformancePerformanceProvider.measure(_:profile:)"}
 symbol {"access":"public","declaration":"func resolve(resourceID: String, maximumBytes: Int) -> ConformanceResourceResult","kind":"swift.method","path":"GameEventScriptConformance.ConformanceResourceResolver.resolve(resourceID:maximumBytes:)"}
 symbol {"access":"public","declaration":"indirect enum ConformanceData","kind":"swift.enum","path":"GameEventScriptConformance.ConformanceData"}
 symbol {"access":"public","declaration":"init()","kind":"swift.init","path":"GameEventScriptConformance.ConformanceParserLimits.init()"}
 symbol {"access":"public","declaration":"init(byteOffset: Int = 0, byteLength: Int = 0, line: Int = 1, column: Int = 1, endLine: Int = 1, endColumn: Int = 1)","kind":"swift.init","path":"GameEventScriptConformance.ConformanceSourceRange.init(byteOffset:byteLength:line:column:endLine:endColumn:)"}
-symbol {"access":"public","declaration":"init(capabilities: [String] = Self.supportedCapabilities, resourceResolver: (any ConformanceResourceResolver)? = nil, maximumResourceBytes: Int = 64 * 1024 * 1024)","kind":"swift.init","path":"GameEventScriptConformance.ConformanceEnvironment.init(capabilities:resourceResolver:maximumResourceBytes:)"}
+symbol {"access":"public","declaration":"init(capabilities: [String] = Self.supportedCapabilities, resourceResolver: (any ConformanceResourceResolver)? = nil, maximumResourceBytes: Int = 64 * 1024 * 1024, performanceProfile: String? = nil, performanceProvider: (any ConformancePerformanceProvider)? = nil)","kind":"swift.init","path":"GameEventScriptConformance.ConformanceEnvironment.init(capabilities:resourceResolver:maximumResourceBytes:performanceProfile:performanceProvider:)"}
 symbol {"access":"public","declaration":"init(id: String, program: GameEventScriptProgram)","kind":"swift.init","path":"GameEventScriptConformance.ConformanceRuntimeProgram.init(id:program:)"}
+symbol {"access":"public","declaration":"init(id: String, value: Double, unit: String)","kind":"swift.init","path":"GameEventScriptConformance.ConformanceMeasuredMetric.init(id:value:unit:)"}
 symbol {"access":"public","declaration":"init(key: String, value: ConformanceData)","kind":"swift.init","path":"GameEventScriptConformance.ConformanceEntry.init(key:value:)"}
 symbol {"access":"public","declaration":"let actual: String?","kind":"swift.property","path":"GameEventScriptConformance.ConformanceMismatch.actual"}
+symbol {"access":"public","declaration":"let allowed: Double","kind":"swift.property","path":"GameEventScriptConformance.ConformancePerformanceMetricResult.allowed"}
 symbol {"access":"public","declaration":"let assembler: String?","kind":"swift.property","path":"GameEventScriptConformance.ConformanceCase.assembler"}
 symbol {"access":"public","declaration":"let assemblerBlockRange: ConformanceSourceRange?","kind":"swift.property","path":"GameEventScriptConformance.ConformanceCase.assemblerBlockRange"}
 symbol {"access":"public","declaration":"let assemblerPayloadRange: ConformanceSourceRange?","kind":"swift.property","path":"GameEventScriptConformance.ConformanceCase.assemblerPayloadRange"}
@@ -89,6 +97,8 @@ symbol {"access":"public","declaration":"let frontmatter: ConformanceData","kind
 symbol {"access":"public","declaration":"let frontmatterRange: ConformanceSourceRange","kind":"swift.property","path":"GameEventScriptConformance.ConformanceDocument.frontmatterRange"}
 symbol {"access":"public","declaration":"let fullID: String","kind":"swift.property","path":"GameEventScriptConformance.ConformanceCase.fullID"}
 symbol {"access":"public","declaration":"let id: String","kind":"swift.property","path":"GameEventScriptConformance.ConformanceCase.id"}
+symbol {"access":"public","declaration":"let id: String","kind":"swift.property","path":"GameEventScriptConformance.ConformanceMeasuredMetric.id"}
+symbol {"access":"public","declaration":"let id: String","kind":"swift.property","path":"GameEventScriptConformance.ConformancePerformanceMetricResult.id"}
 symbol {"access":"public","declaration":"let id: String","kind":"swift.property","path":"GameEventScriptConformance.ConformanceRuntimeProgram.id"}
 symbol {"access":"public","declaration":"let id: String","kind":"swift.property","path":"GameEventScriptConformance.ConformanceStep.id"}
 symbol {"access":"public","declaration":"let key: String","kind":"swift.property","path":"GameEventScriptConformance.ConformanceEntry.key"}
@@ -97,19 +107,27 @@ symbol {"access":"public","declaration":"let level: String","kind":"swift.proper
 symbol {"access":"public","declaration":"let line: Int","kind":"swift.property","path":"GameEventScriptConformance.ConformanceSourceRange.line"}
 symbol {"access":"public","declaration":"let markdownFormatVersion: Int","kind":"swift.property","path":"GameEventScriptConformance.ConformanceCorpusIdentity.markdownFormatVersion"}
 symbol {"access":"public","declaration":"let maximumResourceBytes: Int","kind":"swift.property","path":"GameEventScriptConformance.ConformanceEnvironment.maximumResourceBytes"}
+symbol {"access":"public","declaration":"let measured: Double","kind":"swift.property","path":"GameEventScriptConformance.ConformancePerformanceMetricResult.measured"}
 symbol {"access":"public","declaration":"let message: String","kind":"swift.property","path":"GameEventScriptConformance.ConformanceDiagnostic.message"}
 symbol {"access":"public","declaration":"let metadata: ConformanceData","kind":"swift.property","path":"GameEventScriptConformance.ConformanceCase.metadata"}
+symbol {"access":"public","declaration":"let metrics: [ConformancePerformanceMetricResult]","kind":"swift.property","path":"GameEventScriptConformance.ConformancePerformanceResult.metrics"}
 symbol {"access":"public","declaration":"let mismatches: [ConformanceMismatch]","kind":"swift.property","path":"GameEventScriptConformance.ConformanceCaseResult.mismatches"}
 symbol {"access":"public","declaration":"let missingCapabilities: [String]","kind":"swift.property","path":"GameEventScriptConformance.ConformanceCaseResult.missingCapabilities"}
 symbol {"access":"public","declaration":"let name: String","kind":"swift.property","path":"GameEventScriptConformance.ConformanceSourceInput.name"}
 symbol {"access":"public","declaration":"let path: String","kind":"swift.property","path":"GameEventScriptConformance.ConformanceMismatch.path"}
 symbol {"access":"public","declaration":"let payloadRange: ConformanceSourceRange","kind":"swift.property","path":"GameEventScriptConformance.ConformanceSourceInput.payloadRange"}
+symbol {"access":"public","declaration":"let performance: ConformancePerformanceResult?","kind":"swift.property","path":"GameEventScriptConformance.ConformanceCaseResult.performance"}
+symbol {"access":"public","declaration":"let performanceProfile: String?","kind":"swift.property","path":"GameEventScriptConformance.ConformanceEnvironment.performanceProfile"}
+symbol {"access":"public","declaration":"let performanceProfile: String?","kind":"swift.property","path":"GameEventScriptConformance.ConformanceRunReport.performanceProfile"}
+symbol {"access":"public","declaration":"let performanceProvider: (any ConformancePerformanceProvider)?","kind":"swift.property","path":"GameEventScriptConformance.ConformanceEnvironment.performanceProvider"}
+symbol {"access":"public","declaration":"let profile: String","kind":"swift.property","path":"GameEventScriptConformance.ConformancePerformanceResult.profile"}
 symbol {"access":"public","declaration":"let program: GameEventScriptProgram","kind":"swift.property","path":"GameEventScriptConformance.ConformanceRuntimeProgram.program"}
 symbol {"access":"public","declaration":"let programID: String","kind":"swift.property","path":"GameEventScriptConformance.ConformanceSourceInput.programID"}
 symbol {"access":"public","declaration":"let pump: String","kind":"swift.property","path":"GameEventScriptConformance.ConformanceStep.pump"}
 symbol {"access":"public","declaration":"let range: ConformanceSourceRange","kind":"swift.property","path":"GameEventScriptConformance.ConformanceDiagnostic.range"}
 symbol {"access":"public","declaration":"let range: ConformanceSourceRange","kind":"swift.property","path":"GameEventScriptConformance.ConformanceStep.range"}
 symbol {"access":"public","declaration":"let receive: ConformanceData?","kind":"swift.property","path":"GameEventScriptConformance.ConformanceStep.receive"}
+symbol {"access":"public","declaration":"let reference: Double","kind":"swift.property","path":"GameEventScriptConformance.ConformancePerformanceMetricResult.reference"}
 symbol {"access":"public","declaration":"let requiredCore: [String]","kind":"swift.property","path":"GameEventScriptConformance.ConformanceCase.requiredCore"}
 symbol {"access":"public","declaration":"let requiredOptional: [String]","kind":"swift.property","path":"GameEventScriptConformance.ConformanceCase.requiredOptional"}
 symbol {"access":"public","declaration":"let resourceResolver: (any ConformanceResourceResolver)?","kind":"swift.property","path":"GameEventScriptConformance.ConformanceEnvironment.resourceResolver"}
@@ -127,7 +145,11 @@ symbol {"access":"public","declaration":"let testRange: ConformanceSourceRange",
 symbol {"access":"public","declaration":"let text: String","kind":"swift.property","path":"GameEventScriptConformance.ConformanceSourceInput.text"}
 symbol {"access":"public","declaration":"let title: String","kind":"swift.property","path":"GameEventScriptConformance.ConformanceCase.title"}
 symbol {"access":"public","declaration":"let title: String","kind":"swift.property","path":"GameEventScriptConformance.ConformanceDocument.title"}
+symbol {"access":"public","declaration":"let unit: String","kind":"swift.property","path":"GameEventScriptConformance.ConformanceMeasuredMetric.unit"}
+symbol {"access":"public","declaration":"let unit: String","kind":"swift.property","path":"GameEventScriptConformance.ConformancePerformanceMetricResult.unit"}
 symbol {"access":"public","declaration":"let value: ConformanceData","kind":"swift.property","path":"GameEventScriptConformance.ConformanceEntry.value"}
+symbol {"access":"public","declaration":"let value: Double","kind":"swift.property","path":"GameEventScriptConformance.ConformanceMeasuredMetric.value"}
+symbol {"access":"public","declaration":"protocol ConformancePerformanceProvider : Sendable","kind":"swift.protocol","path":"GameEventScriptConformance.ConformancePerformanceProvider"}
 symbol {"access":"public","declaration":"protocol ConformanceResourceResolver : Sendable","kind":"swift.protocol","path":"GameEventScriptConformance.ConformanceResourceResolver"}
 symbol {"access":"public","declaration":"static func == (lhs: ConformanceData, rhs: ConformanceData) -> Bool","kind":"swift.func.op","path":"GameEventScriptConformance.ConformanceData.==(_:_:)"}
 symbol {"access":"public","declaration":"static func == (lhs: ConformanceEntry, rhs: ConformanceEntry) -> Bool","kind":"swift.func.op","path":"GameEventScriptConformance.ConformanceEntry.==(_:_:)"}
@@ -153,9 +175,12 @@ symbol {"access":"public","declaration":"struct ConformanceDiagnostic","kind":"s
 symbol {"access":"public","declaration":"struct ConformanceDocument","kind":"swift.struct","path":"GameEventScriptConformance.ConformanceDocument"}
 symbol {"access":"public","declaration":"struct ConformanceEntry","kind":"swift.struct","path":"GameEventScriptConformance.ConformanceEntry"}
 symbol {"access":"public","declaration":"struct ConformanceEnvironment","kind":"swift.struct","path":"GameEventScriptConformance.ConformanceEnvironment"}
+symbol {"access":"public","declaration":"struct ConformanceMeasuredMetric","kind":"swift.struct","path":"GameEventScriptConformance.ConformanceMeasuredMetric"}
 symbol {"access":"public","declaration":"struct ConformanceMismatch","kind":"swift.struct","path":"GameEventScriptConformance.ConformanceMismatch"}
 symbol {"access":"public","declaration":"struct ConformanceParseError","kind":"swift.struct","path":"GameEventScriptConformance.ConformanceParseError"}
 symbol {"access":"public","declaration":"struct ConformanceParserLimits","kind":"swift.struct","path":"GameEventScriptConformance.ConformanceParserLimits"}
+symbol {"access":"public","declaration":"struct ConformancePerformanceMetricResult","kind":"swift.struct","path":"GameEventScriptConformance.ConformancePerformanceMetricResult"}
+symbol {"access":"public","declaration":"struct ConformancePerformanceResult","kind":"swift.struct","path":"GameEventScriptConformance.ConformancePerformanceResult"}
 symbol {"access":"public","declaration":"struct ConformanceRunReport","kind":"swift.struct","path":"GameEventScriptConformance.ConformanceRunReport"}
 symbol {"access":"public","declaration":"struct ConformanceRuntimeProgram","kind":"swift.struct","path":"GameEventScriptConformance.ConformanceRuntimeProgram"}
 symbol {"access":"public","declaration":"struct ConformanceSourceInput","kind":"swift.struct","path":"GameEventScriptConformance.ConformanceSourceInput"}
@@ -179,5 +204,6 @@ symbol {"access":"public","declaration":"var maxYamlDepth: Int","kind":"swift.pr
 symbol {"access":"public","declaration":"var maxYamlNodes: Int","kind":"swift.property","path":"GameEventScriptConformance.ConformanceParserLimits.maxYamlNodes"}
 symbol {"access":"public","declaration":"var numberValue: String? { get }","kind":"swift.property","path":"GameEventScriptConformance.ConformanceData.numberValue"}
 symbol {"access":"public","declaration":"var objectValue: [ConformanceEntry]? { get }","kind":"swift.property","path":"GameEventScriptConformance.ConformanceData.objectValue"}
+symbol {"access":"public","declaration":"var passed: Bool { get }","kind":"swift.property","path":"GameEventScriptConformance.ConformancePerformanceMetricResult.passed"}
 symbol {"access":"public","declaration":"var status: String { get }","kind":"swift.property","path":"GameEventScriptConformance.ConformanceRunReport.status"}
 symbol {"access":"public","declaration":"var stringValue: String? { get }","kind":"swift.property","path":"GameEventScriptConformance.ConformanceData.stringValue"}

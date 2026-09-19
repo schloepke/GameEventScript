@@ -108,6 +108,44 @@ performance:
           reference: 0
           maximum: 0
           unit: "B"
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 96710
+          maximum: 101546
+          unit: B
+        compile.elapsed:
+          reference: 0.122209
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 12690
+          maximum: 13325
+          unit: B
+        program-load.elapsed:
+          reference: 0.013417
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 107000
+          maximum: 112350
+          unit: B
+        run.allocations:
+          reference: 3000
+          maximum: 3150
+          unit: count
+        run.elapsed:
+          reference: 1.402125
+          toleranceAbsolute: 0.35053125
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 107
+          maximum: 113
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.001402125
+          toleranceAbsolute: 0.00035053125
+          unit: ms/iteration
 ```
 
 ---
@@ -200,6 +238,44 @@ performance:
           reference: 0
           maximum: 0
           unit: "B"
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 96710
+          maximum: 101546
+          unit: B
+        compile.elapsed:
+          reference: 0.12875
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 12690
+          maximum: 13325
+          unit: B
+        program-load.elapsed:
+          reference: 0.014458
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 214000
+          maximum: 224700
+          unit: B
+        run.allocations:
+          reference: 6000
+          maximum: 6300
+          unit: count
+        run.elapsed:
+          reference: 2.772834
+          toleranceAbsolute: 0.6932085
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 107
+          maximum: 113
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.001386417
+          toleranceAbsolute: 0.00034660425
+          unit: ms/iteration
 ```
 
 ---
@@ -292,6 +368,44 @@ performance:
           reference: 0
           maximum: 0
           unit: "B"
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 97041
+          maximum: 101894
+          unit: B
+        compile.elapsed:
+          reference: 0.123084
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 12658
+          maximum: 13291
+          unit: B
+        program-load.elapsed:
+          reference: 0.012292
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 81000
+          maximum: 85050
+          unit: B
+        run.allocations:
+          reference: 2000
+          maximum: 2100
+          unit: count
+        run.elapsed:
+          reference: 1.296042
+          toleranceAbsolute: 0.3240105
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 81
+          maximum: 86
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.001296042
+          toleranceAbsolute: 0.0003240105
+          unit: ms/iteration
 ```
 
 ---
@@ -384,6 +498,44 @@ performance:
           reference: 0
           maximum: 0
           unit: "B"
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 97041
+          maximum: 101894
+          unit: B
+        compile.elapsed:
+          reference: 0.123791
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 12658
+          maximum: 13291
+          unit: B
+        program-load.elapsed:
+          reference: 0.01325
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 162000
+          maximum: 170100
+          unit: B
+        run.allocations:
+          reference: 4000
+          maximum: 4200
+          unit: count
+        run.elapsed:
+          reference: 2.721709
+          toleranceAbsolute: 0.68042725
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 81
+          maximum: 86
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.0013608545
+          toleranceAbsolute: 0.000340213625
+          unit: ms/iteration
 ```
 
 ---
@@ -476,6 +628,44 @@ performance:
           reference: 0
           maximum: 0
           unit: "B"
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 96475
+          maximum: 101299
+          unit: B
+        compile.elapsed:
+          reference: 0.126083
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 12690
+          maximum: 13325
+          unit: B
+        program-load.elapsed:
+          reference: 0.01275
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 105000
+          maximum: 110250
+          unit: B
+        run.allocations:
+          reference: 3000
+          maximum: 3150
+          unit: count
+        run.elapsed:
+          reference: 1.410125
+          toleranceAbsolute: 0.35253125
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 105
+          maximum: 111
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.001410125
+          toleranceAbsolute: 0.00035253125
+          unit: ms/iteration
 ```
 
 ---
@@ -568,6 +758,44 @@ performance:
           reference: 0
           maximum: 0
           unit: "B"
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 96475
+          maximum: 101299
+          unit: B
+        compile.elapsed:
+          reference: 0.138584
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 12690
+          maximum: 13325
+          unit: B
+        program-load.elapsed:
+          reference: 0.014
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 210000
+          maximum: 220500
+          unit: B
+        run.allocations:
+          reference: 6000
+          maximum: 6300
+          unit: count
+        run.elapsed:
+          reference: 2.721875
+          toleranceAbsolute: 0.68046875
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 105
+          maximum: 111
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.0013609375
+          toleranceAbsolute: 0.000340234375
+          unit: ms/iteration
 ```
 
 ---
@@ -660,6 +888,44 @@ performance:
           reference: 0
           maximum: 0
           unit: "B"
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 100219
+          maximum: 105230
+          unit: B
+        compile.elapsed:
+          reference: 0.14925
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 12690
+          maximum: 13325
+          unit: B
+        program-load.elapsed:
+          reference: 0.015334
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 103000
+          maximum: 108150
+          unit: B
+        run.allocations:
+          reference: 3000
+          maximum: 3150
+          unit: count
+        run.elapsed:
+          reference: 1.365875
+          toleranceAbsolute: 0.34146875
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 103
+          maximum: 109
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.001365875
+          toleranceAbsolute: 0.00034146875
+          unit: ms/iteration
 ```
 
 ---
@@ -752,6 +1018,44 @@ performance:
           reference: 0
           maximum: 0
           unit: "B"
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 100219
+          maximum: 105230
+          unit: B
+        compile.elapsed:
+          reference: 0.143083
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 12690
+          maximum: 13325
+          unit: B
+        program-load.elapsed:
+          reference: 0.015333
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 206000
+          maximum: 216300
+          unit: B
+        run.allocations:
+          reference: 6000
+          maximum: 6300
+          unit: count
+        run.elapsed:
+          reference: 2.923042
+          toleranceAbsolute: 0.7307605
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 103
+          maximum: 109
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.001461521
+          toleranceAbsolute: 0.00036538025
+          unit: ms/iteration
 ```
 
 ---
@@ -844,6 +1148,44 @@ performance:
           reference: 176000
           maximum: 192000
           unit: "B"
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 105350
+          maximum: 110618
+          unit: B
+        compile.elapsed:
+          reference: 0.144
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 12706
+          maximum: 13342
+          unit: B
+        program-load.elapsed:
+          reference: 0.012708
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 535000
+          maximum: 561750
+          unit: B
+        run.allocations:
+          reference: 11000
+          maximum: 11550
+          unit: count
+        run.elapsed:
+          reference: 2.594791
+          toleranceAbsolute: 0.64869775
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 535
+          maximum: 562
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.002594791
+          toleranceAbsolute: 0.00064869775
+          unit: ms/iteration
 ```
 
 ---
@@ -936,4 +1278,42 @@ performance:
           reference: 352000
           maximum: 384000
           unit: "B"
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 105350
+          maximum: 110618
+          unit: B
+        compile.elapsed:
+          reference: 0.136666
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 12706
+          maximum: 13342
+          unit: B
+        program-load.elapsed:
+          reference: 0.013125
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 1070000
+          maximum: 1123500
+          unit: B
+        run.allocations:
+          reference: 22000
+          maximum: 23100
+          unit: count
+        run.elapsed:
+          reference: 5.064125
+          toleranceAbsolute: 1.26603125
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 535
+          maximum: 562
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.0025320625
+          toleranceAbsolute: 0.000633015625
+          unit: ms/iteration
 ```

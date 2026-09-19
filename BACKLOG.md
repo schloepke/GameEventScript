@@ -63,9 +63,12 @@ here.
 
 ## Language ports and distribution
 
-- Add a calibrated Swift allocation/performance profile. Native Swift Compiler
-  and Runtime now pass strict shared Conformance, with performance behavior
-  checked separately from measurement. Kotlin follows Swift using the same corpus.
+- Implement the Kotlin port using the shared corpus and binary fixtures.
+- Add further Swift performance profiles when supported CI hardware/toolchains
+  are available. The initial Swift 6.4/macOS 26/Apple M3 Max profile is measured;
+  keep timing regression runs separate from ordinary portable Conformance CI.
+- Reduce Swift text-conversion temporary allocations when profiling justifies it;
+  preserve the independently measured zero-allocation dispatch contract.
 - Add a native Swift `ges` CLI using the separate Compiler and Runtime packages,
   following the established compile/check/run/dump and interactive contracts.
 - Implement Go and Rust as additional planned language ports, preserving the
@@ -104,7 +107,7 @@ here.
 ## Performance and optimizer follow-ups
 
 - Treat the current performance and allocation tests as regression gates against
-  the established C# baseline. In a more mature multi-runtime state, design a
+  the established C# and Swift profiles. In a more mature multi-runtime state, design a
   real benchmark system with representative multi-program workloads, separated
   compile/load/message/VM measurements, native harnesses per language and a
   documented build-host/toolchain calibration index instead of comparing raw

@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+import GameEventScriptRuntime
+
 /// Invalid corpus or result identities cannot be exported as an acceptance artifact.
 public enum ConformanceReportError: Error {
     case invalidCorpus
@@ -102,14 +104,14 @@ public enum ConformanceReportWriter {
                     .array(
                         result.mismatches.map { mismatch in
                             var entry: [(String, ConformanceData)] = [
-                                ("path", .string(mismatch.path)), ("code", .string("conformance.assertion.mismatch")),
+                                ("path", .string(mismatch.path)), ("code", .string(result.performance == nil ? "conformance.assertion.mismatch" : "conformance.performance.regression")),
                             ]
                             if let value = mismatch.expected { entry.append(("expected", .string(value))) }
                             if let value = mismatch.actual { entry.append(("actual", .string(value))) }
                             return object(entry)
                         })
                 ), ("diagnostics", .array([])), ("runtimeLimits", .array([])), ("actualAssembler", .null),
-                ("performance", .null),
+                ("performance", result.performance.map(performanceData) ?? .null),
             ]
             if let details = result.technicalDetails { fields.append(("technicalDetails", .string(details))) }
             return object(fields)
@@ -120,7 +122,8 @@ public enum ConformanceReportWriter {
                 ("runner", object([("id", .string("ges-swift-conformance")), ("version", .string("0.1.0"))])),
                 ("implementation", object([("id", .string("swift")), ("version", .string("0.1.0"))])),
                 ("capabilities", strings(report.capabilities)),
-                ("performanceProfile", .null), ("status", .string(report.status)),
+                ("performanceProfile", report.performanceProfile.map(ConformanceData.string) ?? .null),
+                ("status", .string(report.status)),
                 (
                     "summary",
                     object(
@@ -142,7 +145,39 @@ public enum ConformanceReportWriter {
             result +=
                 "| \(entry.testCase.fullID) | \(entry.status) | \(entry.code) | \(entry.missingCapabilities.joined(separator: ", ")) |\n"
         }
+        let measured = report.cases.filter { $0.performance != nil }
+        if !measured.isEmpty {
+            result +=
+                "\nProfile: " + (report.performanceProfile ?? "")
+                + "\n\n| Case | Metric | Measured | Reference | Allowed | Unit |\n| --- | --- | ---: | ---: | ---: | --- |\n"
+            for entry in measured {
+                for metric in entry.performance!.metrics {
+                    result +=
+                        "| \(entry.testCase.fullID) | \(metric.id) | \(GesValue.float(metric.measured).asText) | \(GesValue.float(metric.reference).asText) | \(GesValue.float(metric.allowed).asText) | \(metric.unit) |\n"
+                }
+            }
+        }
         return result
+    }
+    static func performanceData(_ value: ConformancePerformanceResult) -> ConformanceData {
+        object([
+            ("profile", .string(value.profile)),
+            (
+                "metrics",
+                object(
+                    value.metrics.map { metric in
+                        (
+                            metric.id,
+                            object([
+                                ("measured", .string(GesValue.float(metric.measured).asText)),
+                                ("reference", .string(GesValue.float(metric.reference).asText)),
+                                ("allowed", .string(GesValue.float(metric.allowed).asText)),
+                                ("unit", .string(metric.unit)), ("passed", .bool(metric.passed)),
+                            ])
+                        )
+                    })
+            ),
+        ])
     }
 
     static func strings(_ values: [String]) -> ConformanceData { .array(values.map(ConformanceData.string)) }

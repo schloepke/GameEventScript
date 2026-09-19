@@ -261,13 +261,24 @@ C#; ordinary package builds do not generate source.
 
 Verified Swift coverage (Release, 2026-09-19): all 1,460 behavior checks from
 89 shared Markdown documents pass with native Swift compilation. The strict
-report passes 1,429 cases and skips 31 optional performance cases; Swift has no
-calibrated performance/allocation profile. Independent Runtime verification
-passes 1,227 cases using C#-compiled Programs. Eleven native adapter/bootstrap
+hardware-independent report passes 1,429 cases and skips 31 optional performance
+measurements. Enabling the measured profile passes all 1,460 cases. Independent
+Runtime verification passes 1,227 cases using C#-compiled Programs. Twelve native adapter/bootstrap
 tests pass. `scripts/test-swift.sh` requires strict native acceptance and keeps
 Runtime interoperability reports separate.
 
+`scripts/test-swift-performance.sh` verifies the measured
+`swift-6.4-release-macos26-arm64-m3max` profile. Five samples per workload use
+median elapsed time and maximum cumulative requested libmalloc bytes on the
+calling thread. Sixteen warmed dispatch cases measure zero bytes and allocation
+counts. The native C instrumentation is an executable-only target; portable
+libraries remain independent of measurement instrumentation. Controls qualify the counter before
+measurement. Hardware/toolchain mismatches and failed controls are errors.
+Baseline calibration and received Markdown preparation never overwrite corpus
+references automatically; see `implementation/swift/Performance.md`.
+
 `ConformanceEnvironment` advertises all Core capabilities and GESA snapshots.
+Performance is opt-in and requires a profile plus measurement provider.
 Its optional resource resolver accepts IDs and byte bounds; only the executable
 adapter maps fixture paths to files. Native compilation itself needs no .NET.
 Build products, symbol graphs, generated binary inputs and reports belong under

@@ -18,6 +18,19 @@ public struct ConformanceCaseResult: Sendable {
     public let missingCapabilities: [String]
     public let mismatches: [ConformanceMismatch]
     public let technicalDetails: String?
+    public let performance: ConformancePerformanceResult?
+    init(
+        testCase: ConformanceCase, status: String, code: String, missingCapabilities: [String],
+        mismatches: [ConformanceMismatch], technicalDetails: String?, performance: ConformancePerformanceResult? = nil
+    ) {
+        self.testCase = testCase
+        self.status = status
+        self.code = code
+        self.missingCapabilities = missingCapabilities
+        self.mismatches = mismatches
+        self.technicalDetails = technicalDetails
+        self.performance = performance
+    }
 }
 
 /// A bounded resource lookup outcome supplied by the embedding.
@@ -35,6 +48,7 @@ public protocol ConformanceResourceResolver: Sendable {
 
 /// Native Swift execution capabilities and optional bounded binary resources.
 public struct ConformanceEnvironment: Sendable {
+    /// Capabilities available without a platform measurement provider.
     public static let supportedCapabilities = [
         "compiler", "program-binary", "host", "vm", "message-api", "value-api", "external-types",
         "native-handlers", "publish-sink", "observer", "bytecode-snapshot",
@@ -42,14 +56,19 @@ public struct ConformanceEnvironment: Sendable {
     public let capabilities: [String]
     public let resourceResolver: (any ConformanceResourceResolver)?
     public let maximumResourceBytes: Int
+    public let performanceProfile: String?
+    public let performanceProvider: (any ConformancePerformanceProvider)?
     public init(
         capabilities: [String] = Self.supportedCapabilities,
         resourceResolver: (any ConformanceResourceResolver)? = nil,
-        maximumResourceBytes: Int = 64 * 1024 * 1024
+        maximumResourceBytes: Int = 64 * 1024 * 1024,
+        performanceProfile: String? = nil, performanceProvider: (any ConformancePerformanceProvider)? = nil
     ) {
         self.capabilities = Array(Set(capabilities)).sorted()
         self.resourceResolver = resourceResolver
         self.maximumResourceBytes = maximumResourceBytes
+        self.performanceProfile = performanceProfile
+        self.performanceProvider = performanceProvider
     }
 }
 
@@ -57,6 +76,12 @@ public struct ConformanceEnvironment: Sendable {
 public struct ConformanceRunReport: Sendable {
     public let capabilities: [String]
     public let cases: [ConformanceCaseResult]
+    public let performanceProfile: String?
+    init(capabilities: [String], cases: [ConformanceCaseResult], performanceProfile: String? = nil) {
+        self.capabilities = capabilities
+        self.cases = cases
+        self.performanceProfile = performanceProfile
+    }
     public var status: String {
         if cases.contains(where: { $0.status == "error" }) { return "error" }
         if cases.contains(where: { $0.status == "failed" }) { return "failed" }
@@ -78,7 +103,8 @@ public enum ConformanceRunner {
                 ? result(testCase, "error", "conformance.runner.invalidModel", technical: "Duplicate corpus identity")
                 : runCase(testCase, environment: environment)
         }
-        return ConformanceRunReport(capabilities: environment.capabilities, cases: results)
+        return ConformanceRunReport(
+            capabilities: environment.capabilities, cases: results, performanceProfile: environment.performanceProfile)
     }
 
     public static func runDocument(_ document: ConformanceDocument, environment: ConformanceEnvironment = .init())
@@ -90,8 +116,12 @@ public enum ConformanceRunner {
     public static func runCase(_ testCase: ConformanceCase, environment: ConformanceEnvironment = .init())
         -> ConformanceCaseResult
     {
-        if environment.maximumResourceBytes <= 0
-            || environment.capabilities.contains(where: { !ConformanceEnvironment.supportedCapabilities.contains($0) })
+        if (environment.capabilities.contains("performance")
+            && (environment.performanceProvider == nil || environment.performanceProfile?.isEmpty != false))
+            || environment.maximumResourceBytes <= 0
+            || environment.capabilities.contains(where: {
+                !(ConformanceEnvironment.supportedCapabilities + ["performance"]).contains($0)
+            })
         {
             return result(
                 testCase, "error", "conformance.runner.invalidEnvironment",
@@ -105,6 +135,7 @@ public enum ConformanceRunner {
         if !optional.isEmpty {
             return result(testCase, "skipped", "conformance.runner.missingOptionalCapability", missing: optional)
         }
+        if testCase.kind == "performance" { return performance(testCase, environment) }
         if testCase.kind == "programBinary" {
             guard let resolver = environment.resourceResolver,
                 let id = testCase.metadata["binaryFixture"]?["resourceId"]?.stringValue

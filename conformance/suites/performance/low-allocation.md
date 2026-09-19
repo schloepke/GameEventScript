@@ -85,6 +85,44 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 27020
+          maximum: 28371
+          unit: B
+        compile.elapsed:
+          reference: 0.039791
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 10718
+          maximum: 11254
+          unit: B
+        program-load.elapsed:
+          reference: 0.007584
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 0
+          maximum: 0
+          unit: B
+        run.allocations:
+          reference: 0
+          maximum: 0
+          unit: count
+        run.elapsed:
+          reference: 0.709792
+          toleranceAbsolute: 0.177448
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 0
+          maximum: 0
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.000709792
+          toleranceAbsolute: 0.000177448
+          unit: ms/iteration
 ```
 
 ---
@@ -152,6 +190,44 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 27020
+          maximum: 28371
+          unit: B
+        compile.elapsed:
+          reference: 0.044959
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 10718
+          maximum: 11254
+          unit: B
+        program-load.elapsed:
+          reference: 0.007625
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 0
+          maximum: 0
+          unit: B
+        run.allocations:
+          reference: 0
+          maximum: 0
+          unit: count
+        run.elapsed:
+          reference: 1.487875
+          toleranceAbsolute: 0.37196875
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 0
+          maximum: 0
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.0007439375
+          toleranceAbsolute: 0.000185984375
+          unit: ms/iteration
 ```
 
 ---
@@ -219,6 +295,44 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 27020
+          maximum: 28371
+          unit: B
+        compile.elapsed:
+          reference: 0.044583
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 10718
+          maximum: 11254
+          unit: B
+        program-load.elapsed:
+          reference: 0.008666
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 0
+          maximum: 0
+          unit: B
+        run.allocations:
+          reference: 0
+          maximum: 0
+          unit: count
+        run.elapsed:
+          reference: 0.778917
+          toleranceAbsolute: 0.19472925
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 0
+          maximum: 0
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.000778917
+          toleranceAbsolute: 0.00019472925
+          unit: ms/iteration
 ```
 
 ---
@@ -286,6 +400,44 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 27020
+          maximum: 28371
+          unit: B
+        compile.elapsed:
+          reference: 0.044292
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 10718
+          maximum: 11254
+          unit: B
+        program-load.elapsed:
+          reference: 0.008334
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 0
+          maximum: 0
+          unit: B
+        run.allocations:
+          reference: 0
+          maximum: 0
+          unit: count
+        run.elapsed:
+          reference: 1.481417
+          toleranceAbsolute: 0.37035425
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 0
+          maximum: 0
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.0007407085
+          toleranceAbsolute: 0.000185177125
+          unit: ms/iteration
 ```
 
 ---
@@ -353,6 +505,44 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 33336
+          maximum: 35003
+          unit: B
+        compile.elapsed:
+          reference: 0.055208
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 11296
+          maximum: 11861
+          unit: B
+        program-load.elapsed:
+          reference: 0.008917
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 0
+          maximum: 0
+          unit: B
+        run.allocations:
+          reference: 0
+          maximum: 0
+          unit: count
+        run.elapsed:
+          reference: 0.867042
+          toleranceAbsolute: 0.2167605
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 0
+          maximum: 0
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.000867042
+          toleranceAbsolute: 0.0002167605
+          unit: ms/iteration
 ```
 
 ---
@@ -420,6 +610,44 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 33336
+          maximum: 35003
+          unit: B
+        compile.elapsed:
+          reference: 0.065833
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 11296
+          maximum: 11861
+          unit: B
+        program-load.elapsed:
+          reference: 0.008875
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 0
+          maximum: 0
+          unit: B
+        run.allocations:
+          reference: 0
+          maximum: 0
+          unit: count
+        run.elapsed:
+          reference: 1.717417
+          toleranceAbsolute: 0.42935425
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 0
+          maximum: 0
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.0008587085
+          toleranceAbsolute: 0.000214677125
+          unit: ms/iteration
 ```
 
 ---
@@ -487,6 +715,44 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 33336
+          maximum: 35003
+          unit: B
+        compile.elapsed:
+          reference: 0.058208
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 11296
+          maximum: 11861
+          unit: B
+        program-load.elapsed:
+          reference: 0.01025
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 0
+          maximum: 0
+          unit: B
+        run.allocations:
+          reference: 0
+          maximum: 0
+          unit: count
+        run.elapsed:
+          reference: 0.910042
+          toleranceAbsolute: 0.2275105
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 0
+          maximum: 0
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.000910042
+          toleranceAbsolute: 0.0002275105
+          unit: ms/iteration
 ```
 
 ---
@@ -554,6 +820,44 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 33336
+          maximum: 35003
+          unit: B
+        compile.elapsed:
+          reference: 0.059083
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 11296
+          maximum: 11861
+          unit: B
+        program-load.elapsed:
+          reference: 0.010167
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 0
+          maximum: 0
+          unit: B
+        run.allocations:
+          reference: 0
+          maximum: 0
+          unit: count
+        run.elapsed:
+          reference: 1.837292
+          toleranceAbsolute: 0.459323
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 0
+          maximum: 0
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.000918646
+          toleranceAbsolute: 0.0002296615
+          unit: ms/iteration
 ```
 
 ---
@@ -628,6 +932,44 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 37979
+          maximum: 39878
+          unit: B
+        compile.elapsed:
+          reference: 0.052375
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 11750
+          maximum: 12338
+          unit: B
+        program-load.elapsed:
+          reference: 0.008375
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 0
+          maximum: 0
+          unit: B
+        run.allocations:
+          reference: 0
+          maximum: 0
+          unit: count
+        run.elapsed:
+          reference: 1.409167
+          toleranceAbsolute: 0.35229175
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 0
+          maximum: 0
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.001409167
+          toleranceAbsolute: 0.00035229175
+          unit: ms/iteration
 ```
 
 ---
@@ -702,6 +1044,44 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 37979
+          maximum: 39878
+          unit: B
+        compile.elapsed:
+          reference: 0.058875
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 11750
+          maximum: 12338
+          unit: B
+        program-load.elapsed:
+          reference: 0.010458
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 0
+          maximum: 0
+          unit: B
+        run.allocations:
+          reference: 0
+          maximum: 0
+          unit: count
+        run.elapsed:
+          reference: 2.852458
+          toleranceAbsolute: 0.7131145
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 0
+          maximum: 0
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.001426229
+          toleranceAbsolute: 0.00035655725
+          unit: ms/iteration
 ```
 
 ---
@@ -776,6 +1156,44 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 37979
+          maximum: 39878
+          unit: B
+        compile.elapsed:
+          reference: 0.054417
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 11750
+          maximum: 12338
+          unit: B
+        program-load.elapsed:
+          reference: 0.010333
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 0
+          maximum: 0
+          unit: B
+        run.allocations:
+          reference: 0
+          maximum: 0
+          unit: count
+        run.elapsed:
+          reference: 1.511458
+          toleranceAbsolute: 0.3778645
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 0
+          maximum: 0
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.001511458
+          toleranceAbsolute: 0.0003778645
+          unit: ms/iteration
 ```
 
 ---
@@ -850,6 +1268,44 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 37979
+          maximum: 39878
+          unit: B
+        compile.elapsed:
+          reference: 0.05625
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 11750
+          maximum: 12338
+          unit: B
+        program-load.elapsed:
+          reference: 0.0105
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 0
+          maximum: 0
+          unit: B
+        run.allocations:
+          reference: 0
+          maximum: 0
+          unit: count
+        run.elapsed:
+          reference: 2.919833
+          toleranceAbsolute: 0.72995825
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 0
+          maximum: 0
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.0014599165
+          toleranceAbsolute: 0.000364979125
+          unit: ms/iteration
 ```
 
 ---
@@ -924,6 +1380,44 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 50259
+          maximum: 52772
+          unit: B
+        compile.elapsed:
+          reference: 0.086625
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 12906
+          maximum: 13552
+          unit: B
+        program-load.elapsed:
+          reference: 0.012334
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 0
+          maximum: 0
+          unit: B
+        run.allocations:
+          reference: 0
+          maximum: 0
+          unit: count
+        run.elapsed:
+          reference: 1.873042
+          toleranceAbsolute: 0.4682605
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 0
+          maximum: 0
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.001873042
+          toleranceAbsolute: 0.0004682605
+          unit: ms/iteration
 ```
 
 ---
@@ -998,6 +1492,44 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 50259
+          maximum: 52772
+          unit: B
+        compile.elapsed:
+          reference: 0.09375
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 12906
+          maximum: 13552
+          unit: B
+        program-load.elapsed:
+          reference: 0.013292
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 0
+          maximum: 0
+          unit: B
+        run.allocations:
+          reference: 0
+          maximum: 0
+          unit: count
+        run.elapsed:
+          reference: 3.869875
+          toleranceAbsolute: 0.96746875
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 0
+          maximum: 0
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.0019349375
+          toleranceAbsolute: 0.000483734375
+          unit: ms/iteration
 ```
 
 ---
@@ -1072,6 +1604,44 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 50259
+          maximum: 52772
+          unit: B
+        compile.elapsed:
+          reference: 0.093125
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 12906
+          maximum: 13552
+          unit: B
+        program-load.elapsed:
+          reference: 0.013042
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 0
+          maximum: 0
+          unit: B
+        run.allocations:
+          reference: 0
+          maximum: 0
+          unit: count
+        run.elapsed:
+          reference: 1.893708
+          toleranceAbsolute: 0.473427
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 0
+          maximum: 0
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.001893708
+          toleranceAbsolute: 0.000473427
+          unit: ms/iteration
 ```
 
 ---
@@ -1146,4 +1716,42 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
+    swift-6.4-release-macos26-arm64-m3max:
+      metrics:
+        compile.allocated:
+          reference: 50259
+          maximum: 52772
+          unit: B
+        compile.elapsed:
+          reference: 0.089541
+          toleranceAbsolute: 0.05
+          unit: ms
+        program-load.allocated:
+          reference: 12906
+          maximum: 13552
+          unit: B
+        program-load.elapsed:
+          reference: 0.013625
+          toleranceAbsolute: 0.05
+          unit: ms
+        run.allocated:
+          reference: 0
+          maximum: 0
+          unit: B
+        run.allocations:
+          reference: 0
+          maximum: 0
+          unit: count
+        run.elapsed:
+          reference: 3.928708
+          toleranceAbsolute: 0.982177
+          unit: ms
+        run.per-invoke-allocated:
+          reference: 0
+          maximum: 0
+          unit: B/iteration
+        run.per-invoke-elapsed:
+          reference: 0.001964354
+          toleranceAbsolute: 0.0004910885
+          unit: ms/iteration
 ```

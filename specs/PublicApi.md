@@ -1013,7 +1013,15 @@ entropy initializers; each Host constructs its own generator.
 `ConformanceMarkdownParser` accepts bytes, `ConformanceRunner` compiles and
 executes supported cases natively in memory, and `ConformanceReportWriter`
 returns report text. The default `ConformanceEnvironment` advertises all Core
-capabilities and `bytecode-snapshot`; optional `performance` is unavailable.
+capabilities and `bytecode-snapshot`. Measurement is opt-in: an environment
+advertising `performance` must supply `performanceProfile` and a
+`ConformancePerformanceProvider`. The provider returns `ConformanceMeasuredMetric`
+values with explicit IDs, finite nonnegative Binary64 measurements and units.
+The runner executes correctness first and validates the exact profile metric
+set, units and bounds. Results expose `ConformancePerformanceResult` with each
+metric's measured, reference and allowed values; reports retain the profile ID.
+Unavailable profiles, missing/duplicate metrics and invalid readings are errors;
+values above the owning profile's bounds are performance regression failures.
 `ConformanceResourceResolver.resolve(resourceID:maximumBytes:)` supplies binary
 fixtures as copied bytes or structured `notFound`, `limitExceeded`, or `error`
 results. The environment's positive `maximumResourceBytes` defaults to 64 MiB.

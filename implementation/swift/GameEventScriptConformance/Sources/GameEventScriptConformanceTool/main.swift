@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import Foundation
-import GameEventScriptConformance
+@_spi(Performance) import GameEventScriptConformance
 
 enum ToolError: Error {
     case invalidArguments(String)
@@ -18,10 +18,13 @@ func run() throws -> Int32 {
                                    [--fixtures <MarkdownV1-directory>] [--allow-incomplete]
                                    [--binary-fixtures <fixtures-directory>]
                                    [--runtime-programs <CSharp-export-directory>]
+                                   [--performance | --calibrate-performance]
 
             Compiles and runs the shared Markdown corpus natively in Swift, emitting full JSON,
             Markdown, and compact results. --binary-fixtures supplies declared binary resources.
             --runtime-programs additionally verifies C#-compiled Programs in the Swift Runtime.
+            --performance measures the hardware-matched Swift profile and checks its Markdown bounds.
+            --calibrate-performance records samples without changing or approving any baseline.
             Missing Core capabilities remain errors. --allow-incomplete permits only those
             expected development errors in the process exit status; assertions still fail.
             """)
@@ -33,8 +36,18 @@ func run() throws -> Int32 {
     var runtimePrograms: String?
     var binaryFixtures: String?
     var allowIncomplete = false
+    var measurePerformance = false
+    var calibratePerformance = false
     while !arguments.isEmpty {
         let option = arguments.removeFirst()
+        if option == "--performance" {
+            measurePerformance = true
+            continue
+        }
+        if option == "--calibrate-performance" {
+            calibratePerformance = true
+            continue
+        }
         if option == "--allow-incomplete" {
             allowIncomplete = true
             continue
@@ -67,10 +80,41 @@ func run() throws -> Int32 {
     let resolver = try binaryFixtures.map {
         try FileResources(directory: URL(fileURLWithPath: $0), documents: documents)
     }
-    let report = ConformanceRunner.runCorpus(documents, environment: .init(resourceResolver: resolver))
-    let compact = try ConformanceReportWriter.crossLanguage(documents, report: report)
+    let provider = measurePerformance || calibratePerformance ? try SwiftPerformanceProvider() : nil
     let destination = URL(fileURLWithPath: output)
     try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+    if calibratePerformance {
+        guard !measurePerformance, let provider else {
+            throw ToolError.invalidArguments("Choose calibration or regression verification")
+        }
+        var count = 0
+        for document in documents {
+            for test in document.cases where test.kind == "performance" {
+                let correctness = ConformanceRunner.runCase(
+                    test, environment: .init(capabilities: ConformanceEnvironment.supportedCapabilities))
+                // The backend's behavior execution is also required when no baseline exists yet.
+                let workload = try ConformancePerformanceWorkload(test)
+                let result = ConformanceRuntimeRunner.runCase(
+                    test, programs: [.init(id: test.sources[0].programID, program: try workload.compile())])
+                guard correctness.status == "skipped", result.status == "passed" else {
+                    throw ToolError.invalidFixture("Performance correctness failed: " + test.fullID)
+                }
+                _ = try provider.measure(test, profile: SwiftPerformanceProvider.profile)
+                print("Measured " + test.fullID)
+                count += 1
+            }
+        }
+        try provider.writeEvidence(destination, documents: documents)
+        print("Calibration recorded \(count) workloads. This is measurement evidence, not a regression pass.")
+        return 0
+    }
+    let environment = ConformanceEnvironment(
+        capabilities: ConformanceEnvironment.supportedCapabilities + (measurePerformance ? ["performance"] : []),
+        resourceResolver: resolver,
+        performanceProfile: provider.map { _ in SwiftPerformanceProvider.profile }, performanceProvider: provider)
+    let report = ConformanceRunner.runCorpus(documents, environment: environment)
+    try provider?.writeEvidence(destination, documents: documents)
+    let compact = try ConformanceReportWriter.crossLanguage(documents, report: report)
     for (name, text) in [
         ("ConformanceResults.json", ConformanceReportWriter.full(report)),
         ("ConformanceResults.md", ConformanceReportWriter.markdown(report)),

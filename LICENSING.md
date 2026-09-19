@@ -25,7 +25,7 @@ separate notice only when legally appropriate.
 
 ## Short file headers
 
-Handwritten C# and Swift use:
+Handwritten C, C headers, C# and Swift use:
 
 ```csharp
 // Copyright 2026 Stephan Schlöpke
@@ -46,7 +46,7 @@ per distribution instead of being duplicated in every file.
 SwiftPM manifests place the required `swift-tools-version` directive first,
 followed by the two license-comment lines. Python uses equivalent `#` comments.
 
-The header applies to handwritten production and test C#/Swift, Python tooling, product documentation,
+The header applies to handwritten production and test C/C#/Swift, Python tooling, product documentation,
 specifications, guides, README files, C# project files, the scoped EditorConfig,
 the root Git ignore file, MSBuild configuration, GitHub Actions workflows,
 solution and shell entry-point files, and XML-based TextMate bundle files.

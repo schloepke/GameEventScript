@@ -1,0 +1,22 @@
+module ges.cli.example
+
+function double(_ x as :Number) be x + x
+
+on Main(args) {
+	if args is :List {
+		emit ConsoleErr("We have a list of strings in the args parameter")
+		// we are going to convert all strings in args and parse them
+		let parsedArgs be args[:select x => parse x]
+		for arg in parsedArgs {
+			if arg is :Number and arg is not :Dice {
+				emit ConsoleOut("Number argument: f(", arg, ") = ", double(arg))
+			} else if arg is :Tag {
+				emit ConsoleOut("Tag: ", arg)
+			} else {
+				emit ConsoleOut("Argument: ", arg)
+			}
+		}
+	} else {
+		emit ConsoleErr("We got args which is not a list: ", args)
+	}
+}

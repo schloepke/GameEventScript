@@ -2076,6 +2076,11 @@ internal sealed class GesParser
             return ParseTypeConstructorExpression();
         }
 
+        if (Current.Kind == TypeName && string.Equals(Current.Text, ":Dice", StringComparison.Ordinal) && IsNextSignificantToken(LeftBracket))
+        {
+            return ParseDiceLiteralExpression();
+        }
+
         if (MatchWord("from"))
         {
             return ParseRangeExpressionCore();
@@ -2307,6 +2312,32 @@ internal sealed class GesParser
         SkipNewLines();
         Expect(RightBracket);
         return WithRange(new ListLiteralExpressionNode(items), startToken);
+    }
+
+    private TypeConstructorExpressionNode ParseDiceLiteralExpression()
+    {
+        var startToken = Advance();
+        SkipNewLines();
+        var bracketToken = Expect(LeftBracket);
+        var items = new List<ExpressionNode>();
+        SkipNewLines();
+        if (!Is(RightBracket))
+        {
+            while (true)
+            {
+                var token = Expect(GesTokenKind.Float);
+                if (token.GetIntegerValue() is not { } value || value is <= 0 or > int.MaxValue)
+                    throw new GameEventScriptParseException("Dice literals require positive Int32 numeric literals.", token);
+                items.Add(WithRange(new IntegerLiteralExpressionNode(value), token));
+                SkipNewLines();
+                if (!Match(Comma)) break;
+                SkipNewLines();
+            }
+        }
+        Expect(RightBracket);
+        var values = WithRange(new ListLiteralExpressionNode(items), bracketToken);
+        // Reuse deterministic list-to-Dice conversion; CreateDice is a random roll.
+        return WithRange(new TypeConstructorExpressionNode("dice", new ArgumentListNode([new ArgumentNode(null, values)])), startToken);
     }
 
     private ExpressionNode ParseCollectionFactoryExpression(string collectionType)

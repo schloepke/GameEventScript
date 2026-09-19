@@ -1350,7 +1350,7 @@ steps:
           - name: "toText"
             value:
               type: ":Text"
-              value: "vector[x: 1, y: 2, z: 3]"
+              value: ":Vector(x: 1, y: 2, z: 3)"
           - name: "toTag"
             value:
               type: ":Nothing"
@@ -1494,7 +1494,7 @@ steps:
           - name: "toText"
             value:
               type: ":Text"
-              value: "point[x: 4, y: 5, z: 6]"
+              value: ":Point(x: 4, y: 5, z: 6)"
           - name: "toTag"
             value:
               type: ":Nothing"
@@ -1923,7 +1923,7 @@ steps:
           - name: "toText"
             value:
               type: ":Text"
-              value: "dice[3, 2, 1]"
+              value: ":Dice[3, 2, 1]"
           - name: "toTag"
             value:
               type: ":Nothing"

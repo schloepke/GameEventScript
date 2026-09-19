@@ -1104,6 +1104,12 @@ Vectors describe deltas and may be scaled by scalar numeric values. Points
 describe positions and may only be translated by vectors or subtracted from
 points; points are not scalar-multiplied or scalar-divided.
 
+`as :Text` writes `:Vector(x: ..., y: ..., z: ...)` or
+`:Point(x: ..., y: ..., z: ...)`, including each component's unit when present.
+`parse` recognizes the numeric data forms, including positional components
+such as `:Vector(10, 20, 0)`. Exact text reconstruction and recognition rules
+are owned by [Text semantics](Semantics/Text.md#literal-recognition-from-text).
+
 ### Range
 
 Ranges are finite numeric ranges. Bounds and step values can be integer or
@@ -1525,6 +1531,27 @@ units, absent values, non-numeric values, and invalid non-finite bounds produce
 let dieRoll be random from 1 to 6
 let chance be chance 25%
 ```
+
+Stored dice results have a deterministic data-literal form:
+
+```ges
+let results be :Dice[1, 3, 6, 3]
+let noResults be :Dice[]
+```
+
+`:Dice[...]` accepts comma-separated, unitless numeric literals with values from
+1 through 2,147,483,647. Decimal and underscore spellings follow the
+ordinary numeric-literal grammar and must decode to an integer, for example
+`:Dice[1.0, 2, 1_000]`. Signs, expressions, identifiers, constants, nested values,
+and trailing commas are not part of this literal form. Invalid source literals
+fail with `parse.syntax`. Source whitespace and comments follow the normal
+source rules. The result preserves duplicates and uses the existing descending
+dice order. Literal construction consumes no random values. Selectors and
+indexing apply normally after the closing bracket.
+
+`:Dice(values)` and `values as :Dice` remain conversions of an existing value;
+they are the forms for computed lists of rolls. Text output and recognition of
+stored results are defined in [Text semantics](Semantics/Text.md).
 
 Dice rolls use `roll dice NdM`, where both `N` and `M` are positive integer
 literals. They draw `N` independent integers from `1` through `M` inclusive and

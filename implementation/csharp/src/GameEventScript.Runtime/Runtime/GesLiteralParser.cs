@@ -55,6 +55,18 @@ internal struct GesLiteralParser
             var text = TextLiteralReader.Read(_text, ref _position);
             return text is null ? null : GesValue.GesText(text);
         }
+        if (_text[_position] == ':')
+        {
+            if (_text.AsSpan(_position).StartsWith(":Vector".AsSpan(), StringComparison.Ordinal)) return ReadSpatial(depth, point: false);
+            if (_text.AsSpan(_position).StartsWith(":Point".AsSpan(), StringComparison.Ordinal)) return ReadSpatial(depth, point: true);
+        }
+        var dice = _text[_position] == ':' && _text.AsSpan(_position).StartsWith(":Dice".AsSpan(), StringComparison.Ordinal);
+        if (dice)
+        {
+            _position += 5;
+            SkipWhitespace();
+            if (_position == _text.Length || _text[_position] != '[') return null;
+        }
         if (_text[_position] == '[')
         {
             if (depth >= MaximumDepth)
@@ -62,7 +74,7 @@ internal struct GesLiteralParser
                 _limit = "MaxLiteralDepth";
                 return null;
             }
-            return ReadCollection(depth + 1);
+            return dice ? ReadDice() : ReadCollection(depth + 1);
         }
 
         var start = _position;
@@ -80,15 +92,123 @@ internal struct GesLiteralParser
         return TextNumberCast.Read(_text, start, _position - start, percentage: token[token.Length - 1] == '%', allowGrouping: false);
     }
 
+    private GesValue? ReadSpatial(int depth, bool point)
+    {
+        _position += point ? 6 : 7;
+        SkipWhitespace();
+        if (!Consume('(')) return null;
+        if (depth >= MaximumDepth)
+        {
+            _limit = "MaxLiteralDepth";
+            return null;
+        }
+        var x = 0d;
+        var y = 0d;
+        var z = 0d;
+        GameEventScriptBytecodeInstructionUnit? unit = null;
+        bool? labeled = null;
+        var previousIndex = -1;
+        SkipWhitespace();
+        if (!Consume(')'))
+        {
+            while (_position < _text.Length)
+            {
+                if (_items >= MaximumItems)
+                {
+                    _limit = "MaxLiteralItems";
+                    return null;
+                }
+                _items++;
+                var hasLabel = _text[_position] is 'x' or 'y' or 'z';
+                if (labeled.HasValue && labeled != hasLabel) return null;
+                labeled = hasLabel;
+                var index = previousIndex + 1;
+                if (hasLabel)
+                {
+                    index = _text[_position++] - 'x';
+                    SkipWhitespace();
+                    if (!Consume(':')) return null;
+                    SkipWhitespace();
+                }
+                if (index > 2 || index <= previousIndex) return null;
+                previousIndex = index;
+                var start = _position;
+                while (_position < _text.Length && !IsWhitespace(_text[_position]) && _text[_position] is not (',' or ')')) _position++;
+                if (_position == start) return null;
+                var value = TextNumberCast.Read(_text, start, _position - start, percentage: _text[_position - 1] == '%', allowGrouping: false);
+                if (value is not { } component || component.Kind is not (GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage))
+                    return null;
+                if (unit.HasValue && unit != component.Unit) return null;
+                unit = component.Unit;
+                var number = component.AsNumeric;
+                if (double.IsNaN(number)) return null;
+                switch (index)
+                {
+                    case 0: x = number; break;
+                    case 1: y = number; break;
+                    case 2: z = number; break;
+                }
+                SkipWhitespace();
+                if (Consume(')')) return CreateSpatial(point, x, y, z, unit.Value);
+                if (!Consume(',')) return null;
+                SkipWhitespace();
+                if (_position == _text.Length || _text[_position] == ')') return null;
+            }
+            return null;
+        }
+        return CreateSpatial(point, x, y, z, GameEventScriptBytecodeInstructionUnit.UnitNone);
+    }
+
+    private static GesValue CreateSpatial(bool point, double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit)
+        => point ? GesValue.GesPoint(x, y, z, unit) : GesValue.GesVector(x, y, z, unit);
+
+    private GesValue? ReadDice()
+    {
+        _position++;
+        SkipWhitespace();
+        if (Consume(']')) return CreateDice(Array.Empty<int>());
+        var rolls = new List<int>();
+        while (_position < _text.Length)
+        {
+            if (_items >= MaximumItems)
+            {
+                _limit = "MaxLiteralItems";
+                return null;
+            }
+            _items++;
+            if (_text[_position] is < '0' or > '9') return null;
+            var value = ReadValue(0);
+            if (value is not { } roll || roll.Kind != GameEventScriptBytecodeTypeKind.Integer || roll.Unit != GameEventScriptBytecodeInstructionUnit.UnitNone || roll.IntegerValue is <= 0 or > int.MaxValue)
+                return null;
+            rolls.Add((int)roll.IntegerValue);
+            SkipWhitespace();
+            if (Consume(']')) return CreateDice(rolls.ToArray());
+            if (!Consume(',')) return null;
+            SkipWhitespace();
+            if (_position == _text.Length || _text[_position] == ']') return null;
+        }
+        return null;
+    }
+
+    private static GesValue CreateDice(int[] rolls)
+    {
+        var result = new GesValue();
+        result.SetDice(rolls);
+        return result;
+    }
+
     private GesValue? ReadCollection(int depth)
     {
         _position++;
         SkipWhitespace();
         if (Consume(']')) return EmptyList();
+        var contentStart = _position;
         if (Consume(':'))
         {
             SkipWhitespace();
-            return Consume(']') ? CreateMap(new Dictionary<string, GesValue>(StringComparer.Ordinal)) : null;
+            if (Consume(']')) return CreateMap(new Dictionary<string, GesValue>(StringComparer.Ordinal));
+            // A leading typed literal, such as [:Dice[]], is a List item.
+            _position = contentStart;
         }
 
         var saved = _position;

@@ -395,6 +395,25 @@
 				</dict>
 				<dict>
 					<key>match</key>
+					<string>(:Dice)([ \t\r\n]*)(\[)</string>
+					<key>name</key>
+					<string>meta.literal.dice.gameeventscript</string>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>support.type.primitive.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>punctuation.bracket.gameeventscript</string>
+						</dict>
+					</dict>
+				</dict>
+				<dict>
+					<key>match</key>
 					<string>:(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice)(?=$|[^A-Za-z0-9_])</string>
 					<key>name</key>
 					<string>support.type.primitive.gameeventscript</string>

@@ -24,10 +24,15 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
     <ItemGroup>
+        <InternalsVisibleTo Include="GameEventScript.Tests" />
+        <PackageReference Include="PrettyPrompt" Version="4.1.1" />
+        <EmbeddedResource Include="../../../../tools/editors/TextMate/GameEventScript.tmbundle/Syntaxes/GameEventScript.tmLanguage.json" LogicalName="GameEventScript.Grammar.json" />
+        <EmbeddedResource Include="../../../../tools/editors/TextMate/GameEventScriptAssembler.tmbundle/Syntaxes/GameEventScriptAssembler.tmLanguage.json" LogicalName="GameEventScript.AssemblerGrammar.json" />
         <ProjectReference Include="../../src/GameEventScript.Runtime/GameEventScript.Runtime.csproj" />
         <ProjectReference Include="../../src/GameEventScript.Compiler/GameEventScript.Compiler.csproj" />
         <ProjectReference Include="../../src/GameEventScript.CSharpBridge/GameEventScript.CSharpBridge.csproj" />
         <None Include="../../../../LICENSE" Link="LICENSE" Pack="true" PackagePath="/" />
         <None Update="README.md" Pack="true" PackagePath="/" />
+        <None Update="THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="/" />
     </ItemGroup>
 </Project>

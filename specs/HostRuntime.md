@@ -265,8 +265,12 @@ handlers during the pump.
 
 Each `parse` invocation has fixed portable bounds, applied only while executing
 `ParseLiteral`: at most 1,048,576 input Unicode scalars (`MaxLiteralInputScalars`),
-64 nested List/Map containers (`MaxLiteralDepth`), and 65,536 total List items
-and Map entries across the whole input (`MaxLiteralItems`). Duplicate Map keys
+64 nested List/Map/Dice/Vector/Point containers (`MaxLiteralDepth`), and 65,536
+total List items, Map entries, Dice rolls, and explicitly supplied Vector/Point
+components across the whole input (`MaxLiteralItems`). A Dice, Vector, or Point
+literal consumes one container level, including an empty form; its syntax does
+not imply an additional List. Omitted spatial components do not consume items.
+Duplicate Map keys
 still count as entries. Scalar roots do not consume an item or nesting slot.
 Exactly each bound is allowed; the next scalar, nested container, or item
 exceeds it. Input length is checked before recognition. Nesting and item bounds

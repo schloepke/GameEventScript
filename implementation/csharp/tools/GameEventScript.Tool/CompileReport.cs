@@ -25,8 +25,21 @@ internal static class CompileReport
         if (program.SourceArchive is not null) debugSections.Add("source archive");
         writer.WriteLine($"Debug info: {(debugSections.Count == 0 ? "none" : string.Join(", ", debugSections))}");
         writer.WriteLine(FormattableString.Invariant($"Duration: {elapsed.TotalMilliseconds:F1} ms"));
-        if (!verbose) return;
+        if (verbose) WriteDetails(writer, program);
+    }
 
+    internal static void WriteCheck(TextWriter writer, GameEventScriptProgram program, IReadOnlyList<string> sources, TimeSpan elapsed, bool verbose)
+    {
+        writer.WriteLine("Checked successfully.");
+        writer.WriteLine($"Sources ({sources.Count}):");
+        foreach (var source in sources) writer.WriteLine($"  {source}");
+        writer.WriteLine($"Module: {program.ModuleName}");
+        writer.WriteLine(FormattableString.Invariant($"Duration: {elapsed.TotalMilliseconds:F1} ms"));
+        if (verbose) WriteDetails(writer, program);
+    }
+
+    private static void WriteDetails(TextWriter writer, GameEventScriptProgram program)
+    {
         writer.WriteLine();
         writer.WriteLine($"Binary format: .gesb V{program.FormatVersion}");
         // V1 serializes each instruction as exactly 16 bytes, independent of CLR layout.

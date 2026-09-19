@@ -122,6 +122,12 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   independently reuse a name.
 - Script state is immutable. Mutable host-bound Tables are not part of the
   current language.
+- `:Dice[...]` is a deterministic literal of positive Int32 numeric rolls;
+  `parse` recognizes the same data form and `as :Text` writes it in descending
+  dice order. `:Dice(values)` remains a cast, and `roll dice NdM` draws random.
+- Vector/Point text uses `:Vector(x: ..., y: ..., z: ...)` and `:Point(...)`.
+  `parse` recognizes numeric positional or ordered labeled components with
+  matching units and preserves kind, binary64 components, and unit on roundtrip.
 
 The complete language contract is `specs/Language.md`; text and number details
 are owned by `specs/Semantics/Text.md` and `specs/Semantics/Numbers.md`.
@@ -207,13 +213,73 @@ zero-allocation hot path, release artifact consumption, and byte-identical
 package reproduction. Performance references are regression gates for the
 current C# implementation, not cross-platform benchmark claims.
 
-Current clean-checkout baseline:
+Verified baseline (Release, 2026-09-19):
 
 ```text
-1709/1709 non-performance test executions passed
-1/1 zero-allocation hot-path test passed
-36/36 performance/allocation executions passed
+1956/1956 non-performance test executions passed
+31/31 allocation test executions passed, including the independent zero-allocation hot path
+1460 shared Markdown Conformance cases in 89 documents
 ```
+
+The combined verification command for the first two counts is:
+
+```bash
+dotnet test implementation/csharp/tests/GameEventScript.Tests/GameEventScript.Tests.csproj --configuration Release --filter "TestCategory!=Performance|TestCategory=Allocation"
+```
+
+Elapsed-time benchmarks are a separate, profile-matched performance gate and
+are not included in these counts.
+
+## CLI
+
+The `ges` tool provides `compile`, `check`, `run`, and `dump`. `check` uses the
+complete compiler pipeline without writing a binary or executing handlers.
+`run` accepts jointly compiled sources or multiple `.gesb` files loaded in input
+order. All Programs are loaded into one host before execution. By default it
+drains initialization and then sends one `Main(args)` message, with a List of Text
+values from `--arg`, `--args`, or the remainder after `--`. No implicit parsing
+is applied. `--args` stops at the next option; `--` stops option parsing entirely.
+`--scenario` replaces Main with a separately compiled GES scenario; `--interactive` replaces it with an explicit event console.
+Those modes are mutually exclusive. Missing Main must not implicitly start a REPL.
+
+The CLI registers native `ConsoleOut(...)`, `ConsoleErr(...)`, and `ErrorCode(code)`
+handlers. ConsoleOut and ConsoleErr write ordered argument values to stdout and
+stderr, respectively, concatenated without separators and followed by a newline.
+ErrorCode sets a final script exit code from 0 to 255;
+`nothing` resets it to 0. Last delivery wins; setting a code does not stop execution.
+CLI/runtime errors and limits override the script code with failure code 1.
+Diagnostics, status, and optional verbose event traces use stderr. No outbound
+publish sink or custom extension/type registry is configured.
+
+`--color` opts into ANSI output and interactive input highlighting; `NO_COLOR`
+disables it. Interactive verbose event traces are yellow when color is enabled.
+Live editing requires terminal input/output streams; redirected input
+uses the plain line reader. Terminal editing and its dependencies belong only to
+the CLI. Highlighting reuses the embedded GES and GESA TextMate grammars. The editor uses Ctrl+N
+for a newline and Enter to submit; Shift/Alt+Enter depend on terminal modifier reporting.
+The CLI decodes Ghostty's extended xterm and CSI-u Shift/Alt+Enter sequences before
+the editor reads them; unrecognized or incomplete input remains unchanged at that boundary.
+Interactive input uses the existing compiler with a temporary initialization handler; each input is pumped
+and its Program detached. Local bindings do not persist between inputs.
+`:help` documents console commands; `:help load` details additive loading. `:load <file>` adds one source or binary
+Program and runs its initialization without calling Main. Failed read/compile/
+decode/link operations preserve the existing session; runtime errors or limits
+end it. An interactive session may start without initial program files.
+`:list` lists persistent loaded Programs with stable CLI-local @IDs. `:handler`
+lists registered script and native handlers, excluding completed initialization
+and detached temporary inputs. `:dump <module|@ID>` uses the loaded Program's GESA
+dump; `:source <module|@ID>` shows only embedded source documents, with a successful
+notice if no source archive is present. Both support syntax colors via `--color`.
+The editor and terminal source/dump displays use four-column tab stops. Tab
+expansion is presentation-only; redirected output and saved GESA retain tabs.
+Duplicate/anonymous modules can be selected by @ID. These inspection commands
+write to stderr without executing handlers or re-reading files. Their inventory
+belongs to the CLI and records only successful persistent loads/subscriptions.
+
+Keep command parsing, file I/O, console observation, and process integration in
+the tool. CLI adapter tests belong in `Native/Tool`; portable language and host
+semantics remain covered by shared Markdown. The command contract and examples
+are documented in `implementation/csharp/tools/GameEventScript.Tool/README.md`.
 
 ## Documentation and backlog
 

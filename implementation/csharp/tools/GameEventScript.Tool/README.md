@@ -4,8 +4,8 @@
 # Game Event Script CLI
 
 `GameEventScript.Tool` is a separate .NET console application packaged as
-a .NET tool with command name `ges`. It targets .NET 8 and references the
-portable Runtime, Compiler, and C# bridge. Terminal and filesystem integration
+a .NET tool with command name `dotnet-ges`, invoked as `dotnet ges`. It targets
+.NET 8 and references the portable Runtime, Compiler, and C# bridge. Terminal and filesystem integration
 belong to this application or the C# adapters; the libraries do not depend on
 the tool.
 

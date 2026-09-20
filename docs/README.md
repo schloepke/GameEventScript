@@ -39,6 +39,14 @@ All specification documents in the table are normative.
 
 [Guide](guide/README.md) contains tutorials, explanations, and examples intended for learning. A guide may simplify presentation but must link to the owning specification for exact behavior.
 
+The [C# implementation guide](../implementation/csharp/README.md) describes the
+library boundaries, solution and toolchain, build/test commands, CLI lifecycle
+and Compiler/Runtime embedding. The
+[C# CLI guide](../implementation/csharp/tools/GameEventScript.Tool/README.md)
+documents `dotnet ges` and the interactive event console; the
+[C# distribution guide](guide/distribution/CSharp.md) covers local packages,
+DLL sets and release verification.
+
 The [Swift implementation guide](../implementation/swift/README.md) describes
 the package boundaries, current port coverage, and local verification commands.
 It also documents the [Xcode workspace](../implementation/swift/README.md#xcode-workspace)

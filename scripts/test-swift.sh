@@ -8,6 +8,8 @@ ges_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ges_package="$ges_root/implementation/swift/GameEventScriptConformance"
 ges_scratch="$ges_root/artifacts/swift/conformance"
 
+swift test --package-path "$ges_root/implementation/swift/GameEventScriptSwiftBridge" \
+    --scratch-path "$ges_root/artifacts/swift/swiftbridge" --build-system native --configuration release
 "$ges_root/scripts/test-swift-tool.sh"
 python3 "$ges_root/scripts/verify-swift-bytecode.py"
 dotnet run --project "$ges_root/implementation/csharp/tools/GameEventScript.RuntimeFixtureExporter" \

@@ -1038,6 +1038,59 @@ reports separate from strict full-port Conformance reports. Public declarations
 are recorded in `implementation/swift/api`; verified implementation coverage is
 recorded separately in the cross-language CapabilityMatrix.
 
+#### Native Swift adapters
+
+The optional `GameEventScriptSwiftBridge` package depends only on Runtime.
+Compiler and Runtime must not acquire a Bridge dependency. Its native tests may
+use a separate compiler consumer, but the Bridge product has no Compiler or
+Conformance dependency. These adapters do not add portable Core capabilities.
+
+Closure-based native handlers, publish sinks and extension functions delegate
+to the Runtime protocols. They preserve ordered signatures, tags, lifecycle,
+synchronous argument borrowing and the existing callback error classifications.
+Extension registries reject duplicate signatures and optionally resolve missing
+signatures through an explicit fallback registry. Dictionary message binding
+requires a known signature with exclusively named parameters and exactly one
+value for each normalized label. Ordered tuple inputs support positional labels.
+
+`GameEventScriptSwiftValueConvertible` defines explicit native conversion.
+Built-in conformances cover Boolean, Text, signed and unsigned fixed-width Swift
+integers, Float/Double, Optional, Array, String-keyed Dictionary and GesValue.
+Native decoding checks kind and units, rejects fractional or out-of-range integer
+conversion and floating-point precision loss. These conversions do not invoke
+source-language casts. Native integer encoding and decoding are bounded by both
+Int64 and the requested Swift integer type. Floating-point encoding uses the portable value factory's
+NaN, infinity, zero and integral-storage normalization. Nothing represents nil;
+GesValue conversion is identity. Collection conversions recurse and preserve
+canonical GES ordering. Dictionary decoding rejects distinct scalar keys that
+Swift String equality would merge; encoding preserves only keys present in the
+input dictionary. Native failures use `GameEventScriptSwiftConversionError`.
+
+`GameEventScriptSwiftType<Root>` exposes only its declared KeyPath/getter fields
+and constructor closures. Constructor parameter labels refer to declared fields
+and inherit their type definitions. Call arguments follow the constructor's
+declared parameter order. A type-erased binding supplies a validated compiler
+catalog and a separate executable constructor registry. Programs contain only
+the declarative transport data. Wrapped class roots preserve native identity;
+struct roots follow Swift value semantics. Unwrapping requires the exact binding
+descriptor that created the external value. Runtime field coercion and map
+materialization retain the external-value contract above.
+
+`GameEventScriptSwiftHostRunner` is an optional synchronized embedding adapter.
+It takes exclusive ownership through Swift 6 sending parameters and serializes
+Host access and lifecycle operations with one recursive lock. Transferred Host,
+callback and external-value state must not be accessed outside that ownership
+domain. Accepted receives and successful loads pump synchronously on the caller's
+thread. Immutable Programs remain reusable across runners without exclusive
+ownership transfer. Recursive receives only enqueue. Explicit recursive pumping fails.
+Preexisting work can be drained explicitly. The runner creates no background
+tasks and does not automatically retry a pump stopped by a fault or limit.
+`lastResult` is a synchronized snapshot of the most recent completed pump.
+Runner-owned handles use stable registration IDs, retain their runner and detach
+idempotently under its lock. Closing rejects further work, detaches owned
+registrations and releases the Host; an already executing pump may finish.
+Blocking on another caller while inside a callback is outside this contract.
+
 ### Portable language mappings
 
 Ports should prefer native immutable collection views, nullable/optional result

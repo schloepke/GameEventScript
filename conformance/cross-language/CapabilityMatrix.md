@@ -60,7 +60,8 @@ Apple M3 Max/macOS 26.6.2/Swift 6.4 in Release. All sixteen warmed dispatch case
 measure zero cumulative requested bytes and zero allocation events. Text and
 payload budgets are profile-specific; C# numbers are not transferred to Swift.
 The [performance guide](../../implementation/swift/Performance.md) defines scope
-and calibration. All three portable library packages' APIs are checked against approved snapshots.
+and calibration. The three portable library packages and the optional SwiftBridge
+have separate approved public API snapshots.
 
 The generated [performance baseline matrix](../../artifacts/conformance/PerformanceMatrix.md)
 shows C# and Swift references per case in separate time and allocation tables,
@@ -87,3 +88,9 @@ argument/file/terminal adapters are verified separately by
 `scripts/test-swift-tool.sh`; they do not introduce additional Core capabilities
 or change the shared corpus counts above. C# and Swift CLI binaries can execute
 each other's `.gesb` output.
+
+The optional [SwiftBridge](../../implementation/swift/GameEventScriptSwiftBridge/README.md)
+adds native Swift adapters on top of the existing Runtime protocols. Its native
+tests and Compiler/Runtime integration tests run through `scripts/test-swift-bridge.sh`
+and the full Swift CI script. These adapter checks do not add Core capabilities
+or alter the shared corpus counts.

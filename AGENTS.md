@@ -15,6 +15,7 @@
 - C# tests: `implementation/csharp/tests/GameEventScript.Tests`.
 - Swift Runtime package: `implementation/swift/GameEventScriptRuntime`.
 - Swift Compiler package: `implementation/swift/GameEventScriptCompiler`.
+- Swift native adapters: `implementation/swift/GameEventScriptSwiftBridge`.
 - Swift CLI package and `ges` executable: `implementation/swift/GameEventScriptTool`.
 - Swift Conformance package and adapter: `implementation/swift/GameEventScriptConformance`.
 - Shared executable corpus and fixtures: `conformance`.
@@ -297,6 +298,23 @@ them with `scripts/sync-swift-cli-grammars.py` and verify with `--check`.
 `install-swift-tool.sh` builds and installs/updates `ges` in `$HOME/.local/bin`
 or a selected `--tool-path`; the matching uninstall script removes only its
 owned binary. The C# `dotnet ges` and Swift `ges` commands can coexist.
+
+`GameEventScriptSwiftBridge` is an optional Runtime-only package for closure
+handlers/publish sinks/extensions, strict native value conversions and explicit
+KeyPath/getter/constructor bindings. Do not add a Compiler or Conformance
+dependency to it. Compiler integration tests live in Conformance's native test
+target; native Bridge tests live in the Bridge package. Run
+`scripts/test-swift-bridge.sh` without .NET, or the full `scripts/test-swift.sh`.
+The API gate and Xcode workspace include the Bridge.
+
+Native conversion must reject numeric truncation, unit/kind loss and Swift
+Dictionary collisions between scalar-distinct GES keys. Ordered message pairs
+preserve signature labels; dictionary input requires an existing named signature.
+External descriptor instances own executable bindings; Programs retain only
+declarative data. The optional Swift Host runner takes exclusive ownership via
+`sending`, uses a recursive lock and pumps synchronously on the calling thread.
+It introduces no background task. Runner lifecycle handles use its gate; raw Host
+or callback state must not be accessed outside the transferred ownership domain.
 
 ## CLI
 

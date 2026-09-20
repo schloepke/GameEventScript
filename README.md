@@ -17,7 +17,7 @@ Markdown conformance corpus; the C# API is one language-specific mapping.
 - [`specs`](specs) contains the normative language-neutral specifications.
 - [`conformance`](conformance) contains the shared executable corpus and fixtures.
 - [`implementation/csharp`](implementation/csharp/README.md) contains the reference Runtime, Compiler, C# adapters, Conformance and CLI, with build and embedding instructions.
-- [`implementation/swift`](implementation/swift/README.md) contains the Swift Runtime, Compiler, Conformance and CLI packages and their Xcode workspace.
+- [`implementation/swift`](implementation/swift/README.md) contains the Swift Runtime, Compiler, SwiftBridge, Conformance and CLI packages and their Xcode workspace.
 - [`dotnet ges` CLI](implementation/csharp/tools/GameEventScript.Tool/README.md) contains the separate .NET tool entry point and local installation instructions.
 - [`ges` CLI](implementation/swift/GameEventScriptTool/README.md) contains the native Swift command and installation instructions.
 - [`docs`](docs) contains guides and supporting documentation.
@@ -70,6 +70,7 @@ The Swift entry points also live in `scripts`:
 ./scripts/build-swift.sh
 ./scripts/test-swift.sh
 ./scripts/test-swift-tool.sh
+./scripts/test-swift-bridge.sh
 ./scripts/test-swift-performance.sh
 ./scripts/format-swift.sh
 python3 scripts/verify-swift-api.py

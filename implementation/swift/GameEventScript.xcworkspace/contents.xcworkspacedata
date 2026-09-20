@@ -6,6 +6,8 @@
    </FileRef>
    <FileRef location="group:GameEventScriptCompiler">
    </FileRef>
+   <FileRef location="group:GameEventScriptSwiftBridge">
+   </FileRef>
    <FileRef location="group:GameEventScriptConformance">
    </FileRef>
    <FileRef location="group:GameEventScriptTool">

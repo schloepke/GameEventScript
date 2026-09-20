@@ -53,6 +53,9 @@ It also documents the [Xcode workspace](../implementation/swift/README.md#xcode-
 for building and testing all Swift packages together.
 The [Swift CLI guide](../implementation/swift/GameEventScriptTool/README.md)
 describes `ges`, installation/update, the event console and native CLI verification.
+The [SwiftBridge guide](../implementation/swift/GameEventScriptSwiftBridge/README.md)
+describes native closures, value conversions, typed external bindings and the
+optional synchronized Host runner. It depends only on Runtime.
 The [Swift performance guide](../implementation/swift/Performance.md) documents
 the measured profile, instrumentation scope and baseline review workflow.
 The generated [performance baseline matrix](../artifacts/conformance/PerformanceMatrix.md)

@@ -10,7 +10,10 @@ let package = Package(
         .library(name: "GameEventScriptConformance", targets: ["GameEventScriptConformance"]),
         .executable(name: "ges-conformance", targets: ["GameEventScriptConformanceTool"]),
     ],
-    dependencies: [.package(path: "../GameEventScriptRuntime"), .package(path: "../GameEventScriptCompiler")],
+    dependencies: [
+        .package(path: "../GameEventScriptRuntime"), .package(path: "../GameEventScriptCompiler"),
+        .package(path: "../GameEventScriptSwiftBridge"),
+    ],
     targets: [
         .target(
             name: "GameEventScriptConformance",
@@ -22,6 +25,11 @@ let package = Package(
         .executableTarget(
             name: "GameEventScriptConformanceTool",
             dependencies: ["GameEventScriptConformance", "ConformanceInstrumentation"]),
-        .testTarget(name: "GameEventScriptConformanceTests", dependencies: ["GameEventScriptConformance"]),
+        .testTarget(
+            name: "GameEventScriptConformanceTests",
+            dependencies: [
+                "GameEventScriptConformance",
+                .product(name: "GameEventScriptSwiftBridge", package: "GameEventScriptSwiftBridge"),
+            ]),
     ]
 )

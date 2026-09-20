@@ -20,7 +20,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parent.parent
-PACKAGES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptConformance")
+PACKAGES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptConformance", "GameEventScriptSwiftBridge")
 SNAPSHOTS = ROOT / "implementation" / "swift" / "api"
 ARTIFACTS = ROOT / "artifacts" / "swift-api"
 RELATIONSHIPS = {

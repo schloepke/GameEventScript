@@ -7,14 +7,16 @@
 | --- | --- | --- |
 | `GameEventScriptRuntime` | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types | Swift standard library and platform math library |
 | `GameEventScriptCompiler` | Source lexer/parser, validation, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime |
+| [`GameEventScriptSwiftBridge`](GameEventScriptSwiftBridge/README.md) | Native closure adapters, typed value conversion, KeyPath/external-type bindings and an optional synchronized Host runner | Runtime; Foundation for the runner |
 | `GameEventScriptConformance` | Shared Markdown parser, native compilation/execution, bounded fixture verification, result reports | Runtime and Compiler |
 | `GameEventScriptTool` / `ges` executable | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, Foundation and POSIX |
 
-All library APIs are synchronous, fileless, and independent of a test framework.
+Runtime, Compiler and Conformance APIs are synchronous, fileless, and independent of a test framework.
 There are no external package dependencies. The `ges-conformance` executable
 owns file discovery, input loading, process exit status, and report writing.
 Compiler depends only on Runtime; an embedding using Runtime does not acquire
-either Compiler or Conformance. The [native Swift `ges` CLI](GameEventScriptTool/README.md)
+either Compiler or Conformance. SwiftBridge is an optional Runtime-only adapter
+dependency for native integration. The [native Swift `ges` CLI](GameEventScriptTool/README.md)
 is the user-facing tool; `ges-conformance` is the corpus verification tool.
 
 ## Build and verify
@@ -22,7 +24,7 @@ is the user-facing tool; `ges-conformance` is the corpus verification tool.
 ### Xcode workspace
 
 [`GameEventScript.xcworkspace`](GameEventScript.xcworkspace) opens Runtime,
-Compiler, Conformance and the CLI together. The workspace references the local
+Compiler, SwiftBridge, Conformance and the CLI together. The workspace references the local
 SwiftPM packages directly; their `Package.swift` manifests remain the build configuration.
 There are no duplicate `.xcodeproj` targets or source lists to maintain.
 
@@ -39,10 +41,12 @@ are ignored by Git; the workspace and shared test scheme are tracked. After the
 first setup, the workspace can also be opened directly in Finder.
 
 Select **My Mac** and one of the `GameEventScriptRuntime`,
-`GameEventScriptCompiler`, `GameEventScriptConformance` or `GameEventScriptTool`
+`GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptConformance` or `GameEventScriptTool`
 schemes to build with **Cmd+B**. `GameEventScriptTool` runs the native CLI tests with **Cmd+U**;
 The `ges` executable scheme runs the CLI. The shared `GameEventScriptConformance`
-scheme runs the existing native and corpus tests with **Cmd+U** in Debug. Before the first full test run, execute
+scheme runs the native Bridge and corpus tests with **Cmd+U** in Debug. The
+`GameEventScriptSwiftBridge` scheme runs its native tests independently.
+Before the first full test run, execute
 `./scripts/test-swift.sh` once to prepare the C#-compiled interoperability fixtures
 in `artifacts/swift/runtime-fixtures`; refresh them after corpus changes.
 The `ges-conformance` executable is also available as a scheme; its command-line
@@ -70,6 +74,7 @@ invoked by absolute path from another working directory:
 | `./scripts/format-swift.sh` | Check manifests, Sources and Tests using the existing `.swift-format` configuration |
 | `./scripts/format-swift.sh --fix` | Apply formatting to those files |
 | `./scripts/test-swift-tool.sh` | Verify CLI adapters, real process I/O and terminal editing without .NET |
+| `./scripts/test-swift-bridge.sh` | Verify native Swift adapters and Compiler/Runtime binding integration without .NET |
 | `./scripts/install-swift-tool.sh` | Build all packages and install/update the native `ges` CLI |
 | `./scripts/uninstall-swift-tool.sh` | Remove the owned Swift CLI installation |
 | `./scripts/test-swift.sh` | Export C# interoperability fixtures, run native tests and strict shared Conformance |
@@ -78,7 +83,7 @@ invoked by absolute path from another working directory:
 | `python3 scripts/verify-swift-bytecode.py` | Verify the shared opcode/operand registry |
 | `./scripts/open-swift-xcode.sh` | Configure local build paths and open the Xcode workspace |
 
-Build outputs use `artifacts/swift/runtime`, `compiler`, `conformance` and `tool`;
+Build outputs use `artifacts/swift/runtime`, `compiler`, `swiftbridge`, `conformance` and `tool`;
 the Conformance directory is shared with the existing test scripts. Build and
 format scripts discover local packages from their manifests, so added packages
 participate without duplicating source lists. Formatting excludes generated
@@ -101,7 +106,7 @@ them against the same Markdown expectations in the Swift Runtime. Those manifest
 include both binary SHA-256 and complete Markdown-document SHA-256; no expected
 results are exported from C#. Neither Compiler nor Runtime depends on .NET.
 
-The API gate compares all three packages' declared exported symbols with
+The API gate compares all four library packages' declared exported symbols with
 `api/*.approved.txt`. Update snapshots explicitly after reviewing API changes:
 
 ```bash
@@ -229,3 +234,12 @@ Callbacks and argument borrows are synchronous and must not be retained.
 
 Remote SwiftPM registry publication remains deferred. Packages can currently be
 consumed independently by local path from the monorepo checkout.
+
+## Native Swift integration
+
+The optional [SwiftBridge guide](GameEventScriptSwiftBridge/README.md) provides
+examples for closure subscriptions, ordered message arguments, strict native
+value conversion, extension registries, KeyPath-based external types and the
+synchronized Host runner. Its package depends only on Runtime; compiler catalogs
+use Runtime's declarative interfaces. Existing portable protocols remain usable
+without any Bridge dependency.

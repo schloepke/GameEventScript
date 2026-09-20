@@ -112,3 +112,9 @@ bytes per invocation**; Percentage formatting measured **535 bytes**. These
 nonzero costs come from current temporary byte arrays, filtered digits and text
 formatting. They remain visible as Swift-specific regression budgets and are not
 claimed as zero-allocation text conversion.
+
+Performance measurements use the production Release build made by
+`scripts/test-swift-performance.sh`. Run that script after `swift test`, rather
+than measuring its existing executable: a Release test build uses
+`-enable-testing`, which exposes internal storage and changes Swift's optimization
+of runtime access checks. Its timing is not comparable to this production profile.

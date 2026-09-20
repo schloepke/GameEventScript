@@ -415,6 +415,7 @@ static class GameEventScript.Api.GameEventScriptDiagnosticCodes
   field static System.String RuntimeExternalConstructorFailed
   field static System.String RuntimeExternalFieldAccessFailed
   field static System.String RuntimeIllegalOpcode
+  field static System.String RuntimeInitializationLimitReached
   field static System.String RuntimeInstructionPointerOutOfRange
   field static System.String RuntimeInvalidExtensionBinding
   field static System.String RuntimeInvalidExternalTypeBinding
@@ -525,6 +526,7 @@ sealed class GameEventScript.Api.GameEventScriptHost
   method GameEventScript.Api.GameEventScriptExecutionResult ExecuteFrame(System.Int32 opcodeBudget)
   method GameEventScript.Api.GameEventScriptExecutionResult RunToCompletion()
   method GameEventScript.Api.GameEventScriptInstance Load(GameEventScript.Api.GameEventScriptProgram program, System.Int32 priority)
+  method GameEventScript.Api.GameEventScriptStartResult Start()
   method GameEventScript.Api.GameEventScriptSubscription Subscribe(GameEventScript.Api.GameEventScriptMessageSignature signature, GameEventScript.Api.IGameEventScriptNativeMessageHandler handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
   method GameEventScript.Api.GameEventScriptSubscription Subscribe(GameEventScript.Api.GameEventScriptMessageSignature signature, GameEventScript.Api.IGameEventScriptNativeMessageHandler handler, System.Int32 priority)
   method GameEventScript.Api.GameEventScriptSubscription Subscribe(System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, GameEventScript.Api.IGameEventScriptNativeMessageHandler handler, System.Int32 priority)
@@ -532,6 +534,7 @@ sealed class GameEventScript.Api.GameEventScriptHost
   method System.Boolean Receive(GameEventScript.Api.GameEventScriptMessage message)
   method static GameEventScript.Api.GameEventScriptHostBuilder CreateBuilder()
   property System.Boolean IsIdle { get }
+  property System.Boolean IsReady { get }
   property System.Int32 PendingMessageCount { get }
 sealed class GameEventScript.Api.GameEventScriptHostBuilder
   ctor GameEventScriptHostBuilder()
@@ -548,6 +551,7 @@ sealed class GameEventScript.Api.GameEventScriptHostBuilder
 sealed class GameEventScript.Api.GameEventScriptInstance
   method System.Boolean Detach()
   property GameEventScript.Api.GameEventScriptProgram Program { get }
+  property GameEventScript.Api.GameEventScriptStartResult? StartResult { get }
   property System.Boolean IsAttached { get }
 enum GameEventScript.Api.GameEventScriptInstructionFlag
   enum-field None = 0
@@ -726,11 +730,12 @@ static class GameEventScript.Api.GameEventScriptProgramWriter
   method static System.Int32 GetEncodedSize(GameEventScript.Api.GameEventScriptProgram program)
   method static System.Int32 Write(GameEventScript.Api.GameEventScriptProgram program, System.Span<System.Byte> destination)
 struct GameEventScript.Api.GameEventScriptPublishResult
-  ctor GameEventScriptPublishResult(System.Boolean localAccepted, System.Boolean outboundAttempted, System.Boolean outboundAccepted)
+  ctor GameEventScriptPublishResult(System.Boolean localAccepted, System.Boolean outboundAttempted, System.Boolean outboundAccepted, System.Boolean outboundDeferred)
   property System.Boolean AnyAccepted { get }
   property System.Boolean LocalAccepted { get }
   property System.Boolean OutboundAccepted { get }
   property System.Boolean OutboundAttempted { get }
+  property System.Boolean OutboundDeferred { get }
 sealed class GameEventScript.Api.GameEventScriptRandomGenerator
   method System.Boolean Pop()
   method System.Boolean Push()
@@ -830,6 +835,18 @@ sealed class GameEventScript.Api.GameEventScriptSourceMapSource
   property System.String SourceName { get }
   property System.UInt32 SourceByteLength { get }
   property System.UInt32 SourceId { get }
+struct GameEventScript.Api.GameEventScriptStartResult
+  ctor GameEventScriptStartResult(GameEventScript.Api.GameEventScriptStartState state, GameEventScript.Api.GameEventScriptDiagnostic diagnostic, System.Int32 executedOpcodes, System.Int32 processedMessages, System.Int32 emittedMessages, System.Int32 publishedMessages)
+  property GameEventScript.Api.GameEventScriptDiagnostic Diagnostic { get }
+  property GameEventScript.Api.GameEventScriptStartState State { get }
+  property System.Int32 EmittedMessages { get }
+  property System.Int32 ExecutedOpcodes { get }
+  property System.Int32 ProcessedMessages { get }
+  property System.Int32 PublishedMessages { get }
+enum GameEventScript.Api.GameEventScriptStartState
+  enum-field Ready = 0
+  enum-field RuntimeError = 1
+  enum-field RuntimeLimitReached = 2
 struct GameEventScript.Api.GameEventScriptStringConstantSegment
   ctor GameEventScriptStringConstantSegment(System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GameEventScriptStringConstantSegment.SliceEntry> slices, System.Collections.Generic.IReadOnlyList<System.Byte> data)
   method System.Int32 ResolveSize(System.UInt16 index)
@@ -941,13 +958,19 @@ static class GameEventScript.CSharpBridge.GameEventScriptCSharpHostExtensions
   method static GameEventScript.Api.GameEventScriptSubscription SubscribeMessageName(GameEventScript.Api.GameEventScriptHost host, System.String messageName, System.Action<GameEventScript.Api.GameEventScriptMessage, GameEventScript.Api.GameEventScriptContext> handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
   method static GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner RunAutomatically(GameEventScript.Api.GameEventScriptHost host)
 sealed class GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner
+  method GameEventScript.Api.GameEventScriptExecutionResult RunToCompletion()
   method GameEventScript.Api.GameEventScriptInstance Load(GameEventScript.Api.GameEventScriptProgram program, System.Int32 priority)
+  method GameEventScript.Api.GameEventScriptStartResult Start()
+  method GameEventScript.Api.GameEventScriptStartResult? GetStartResult(GameEventScript.Api.GameEventScriptInstance instance)
   method GameEventScript.Api.GameEventScriptSubscription Subscribe(System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, System.Action<GameEventScript.Api.GameEventScriptMessage, GameEventScript.Api.GameEventScriptContext> handler, System.Int32 priority)
   method System.Boolean Detach(GameEventScript.Api.GameEventScriptInstance instance)
   method System.Boolean Receive(GameEventScript.Api.GameEventScriptMessage message)
   method System.Boolean Unsubscribe(GameEventScript.Api.GameEventScriptSubscription subscription)
   method System.Void Dispose()
   method static GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner Create(GameEventScript.Api.GameEventScriptHost host)
+  property GameEventScript.Api.GameEventScriptExecutionResult? LastResult { get }
+  property System.Boolean IsIdle { get }
+  property System.Boolean IsReady { get }
 static class GameEventScript.CSharpBridge.GameEventScriptCSharpMessage
   method static GameEventScript.Api.GameEventScriptMessage Create(GameEventScript.Api.GameEventScriptMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, GameEventScript.Runtime.Values.GesValue> arguments, System.Collections.Generic.IEnumerable<System.String> tags)
   method static GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IEnumerable<System.String> tags, System.ValueTuple<System.String, GameEventScript.Runtime.Values.GesValue>[] arguments)
@@ -1081,6 +1104,7 @@ enum GameEventScript.Conformance.ConformanceCaseStatus
   enum-field Error = 3
 sealed class GameEventScript.Conformance.ConformanceChannelExpectation
   property GameEventScript.Conformance.ConformanceObservationExpectation Observations { get }
+  property System.Boolean Drain { get }
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Conformance.ConformanceMessage> Local { get }
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Conformance.ConformanceMessage> Outbound { get }
 sealed class GameEventScript.Conformance.ConformanceComparisonOptions
@@ -1256,6 +1280,8 @@ sealed class GameEventScript.Conformance.ConformanceNativeHandler
   property System.String Message { get }
 sealed class GameEventScript.Conformance.ConformanceObservationExpectation
   property System.Boolean TraceSpecified { get }
+  property System.Boolean? HostReady { get }
+  property System.Collections.Generic.IReadOnlyDictionary<System.String, System.String> ProgramStarts { get }
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Conformance.ConformanceExpectedDiagnostic> Diagnostics { get }
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Conformance.ConformanceObserverEventExpectation> Trace { get }
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Conformance.ConformanceRuntimeLimitExpectation> ExcludedRuntimeLimits { get }

@@ -43,7 +43,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
         let compiled = try GameEventScriptBuilder().withExternalTypeCatalog(types).addScript(source).compile()
         let bytes = try GameEventScriptProgramWriter.bytes(compiled)
         let program = try GameEventScriptProgramReader.read(bytes)
-        let host = try GameEventScriptHost(seed: 1, extensions: extensions, externalTypes: types)
+        let host = try GameEventScriptHost(seed: 1, extensions: extensions, externalTypes: types).startForTest()
         var result: GameEventScriptMessage?
         _ = try host.subscribe(.init(name: "Done", parameters: ["name", "score"])) { message, _ in result = message }
         _ = try host.load(program)
@@ -77,7 +77,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
             ] {
                 let program = try GameEventScriptBuilder().withExternalTypeCatalog(types)
                     .addScript("on Start() { emit Done(\(expression)) }").compile()
-                let host = try GameEventScriptHost(seed: 1, extensions: extensions, externalTypes: types)
+                let host = try GameEventScriptHost(seed: 1, extensions: extensions, externalTypes: types).startForTest()
                 _ = try host.load(program)
                 host.receive(try .init(name: "Start"))
                 let result = try host.runToCompletion()
@@ -88,17 +88,19 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
         }
     }
 
-    func testRunnerLoadPumpsInitializationAndDetachesProgram() throws {
+    func testRunnerSchedulesInitializationAndDetachesProgram() throws {
         let program = try GameEventScriptBuilder().addScript(
             "on initialization { emit Ready() }\non Start() { emit Done() }"
         ).compile()
-        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 1))
+        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 1).startForTest())
         defer { runner.close() }
         let instance = try runner.load(program)
+        while !runner.isIdle { _ = try runner.runToCompletion() }
         XCTAssertEqual(runner.lastResult?.state, .completed)
         XCTAssertEqual(runner.lastResult?.emittedMessages, 1)
         XCTAssertTrue(instance.isAttached)
         try runner.receive(.init(name: "Start"))
+        while !runner.isIdle { _ = try runner.runToCompletion() }
         XCTAssertEqual(runner.lastResult?.emittedMessages, 1)
         XCTAssertTrue(instance.detach())
         XCTAssertFalse(instance.isAttached)
@@ -108,14 +110,16 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
 
     func testImmutableProgramRemainsReusableAcrossRunners() throws {
         let program = try GameEventScriptBuilder().addScript("on initialization { emit Ready() }").compile()
-        let first = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 1))
-        let second = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 2))
+        let first = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 1).startForTest())
+        let second = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 2).startForTest())
         defer {
             first.close()
             second.close()
         }
         let firstInstance = try first.load(program)
         let secondInstance = try second.load(program)
+        while !first.isIdle { _ = try first.runToCompletion() }
+        while !second.isIdle { _ = try second.runToCompletion() }
         XCTAssertEqual(first.lastResult?.emittedMessages, 1)
         XCTAssertEqual(second.lastResult?.emittedMessages, 1)
         XCTAssertTrue(firstInstance.detach())

@@ -98,7 +98,7 @@ public sealed class GameEventScriptCallbackFailureTests
         var original = new GameEventScriptDiagnostic(GameEventScriptDiagnosticPhase.Runtime, "faulty.native", "Reported failure.", Symbol: "origin", ProgramName: programName, HandlerName: handlerName, TechnicalDetails: "Original details.");
         var unchanged = original with { };
         var diagnostics = new List<GameEventScriptDiagnostic>();
-        var host = GameEventScriptHost.CreateBuilder().WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(runtimeError: diagnostics.Add)).Build();
+        var host = GameEventScriptHost.CreateBuilder().WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(runtimeError: diagnostics.Add)).Build().StartForTest();
         host.Subscribe("Start", [], (_, _) => throw new ReportedRuntimeException(original));
         Assert.IsTrue(host.Receive(Create("Start")));
 
@@ -114,7 +114,7 @@ public sealed class GameEventScriptCallbackFailureTests
     public void VmBeginFailureReportsHostContextAndResetsTheVm()
     {
         var diagnostics = new List<GameEventScriptDiagnostic>();
-        var host = GameEventScriptHost.CreateBuilder().WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(runtimeError: diagnostics.Add)).Build();
+        var host = GameEventScriptHost.CreateBuilder().WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(runtimeError: diagnostics.Add)).Build().StartForTest();
         host.Load(GameEventScriptBuilder.Create().AddScript("module callbacks\non Start {}").Compile());
         host.RunToCompletion();
         // Force the internal Begin guard before the VM has its own handler context.
@@ -189,7 +189,7 @@ public sealed class GameEventScriptCallbackFailureTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithExternalTypeRegistry(new SingleConstructorRegistry(constructor))
             .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(runtimeError: capturedDiagnostics.Add))
-            .Build();
+            .Build().StartForTest();
         host.Load(bytecode);
         // The failing statement halts the handler before `emit Done(...)` runs, so
         // no subscription is needed; only the resulting diagnostic is observed.

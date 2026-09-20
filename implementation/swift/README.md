@@ -113,21 +113,21 @@ The API gate compares all four library packages' declared exported symbols with
 python3 scripts/verify-swift-api.py --update
 ```
 
-Verified on 2026-09-19 with Swift 6.4 on macOS arm64, Release:
+Verified on 2026-09-20 with Swift 6.4 on macOS arm64, Release:
 
-- **1,460/1,460 behavior checks** from the original 89 Markdown documents pass
+- **1,471/1,471 behavior checks** from the original 90 Markdown documents pass
   with native Swift compilation, including 131 expected compilation failures,
   15 bytecode constraints, two metadata cases, and all eight GESA snapshots.
-- The ordinary hardware-independent report passes **1,429 cases** and skips
+- The ordinary hardware-independent report passes **1,440 cases** and skips
   **31 optional performance measurements**. With the calibrated profile enabled,
-  the strict report passes **all 1,460 cases**, including actual measurements.
+  the strict report passes **all 1,471 cases**, including actual measurements.
 - The Swift 6.4/macOS 26/Apple M3 Max profile measures cumulative allocations and
   elapsed time. All sixteen warmed dispatch variants have **zero allocations**.
   See [Performance.md](Performance.md) for scope, references and reproduction.
 - All 47 shared binary cases pass, including canonical runtime-segment comparisons
   against Swift compiler output, malformed inputs, rewrites and fixture execution.
-- Independent Runtime verification passes **1,227/1,227** cases with C# inputs.
-- Twelve native adapter/bootstrap tests pass, including the Markdown bootstrap
+- Independent Runtime verification passes **1,238/1,238** cases with C# inputs.
+- Seventeen Conformance/adapter/bootstrap tests pass, including the Markdown bootstrap
   fixtures, compiler ownership/options and resource-limit failure paths.
 
 The [CapabilityMatrix](../../conformance/cross-language/CapabilityMatrix.md)
@@ -160,7 +160,7 @@ names; it performs no file I/O:
 import GameEventScriptCompiler
 import GameEventScriptRuntime
 
-let program = try GameEventScriptBuilder()
+let program = try GameEventScriptBuilder.create()
     .addScript("""
         module example
         function double(_ value as :Number) be value + value
@@ -204,27 +204,31 @@ final class Output: GameEventScriptNativeMessageHandler {
     }
 }
 
-func execute(_ bytes: [UInt8]) throws -> GameEventScriptExecutionResult {
+func execute(_ bytes: [UInt8]) throws -> (start: GameEventScriptStartResult, execution: GameEventScriptExecutionResult?) {
     let program = try GameEventScriptProgramReader.read(bytes)
-    let host = try GameEventScriptHost(seed: 123)
+    let host = try GameEventScriptHost.createBuilder().withRandomSeed(123).build()
     let output = try GameEventScriptMessageSignature(name: "Done", parameters: ["value"])
     _ = try host.subscribe(output, handler: Output())
     let instance = try host.load(program)
-    let initialization = try host.runToCompletion()
-    guard initialization.state == .completed else { return initialization }
+    defer { instance.detach() }
+    let startup = try host.start()
+    guard host.isReady else { return (startup, nil) }
     host.receive(try GameEventScriptMessage(name: "Start", arguments: [
         GameEventScriptMessageArgument(name: "value", value: .integer(42))
     ]))
     let result = try host.runToCompletion()
-    instance.detach()
-    return result
+    return (startup, result)
 }
 ```
 
 `executeFrame(opcodeBudget:)` allows bounded stepping and resumption. The host
 retains subscriptions and loaded Programs until explicitly detached; discarding
 a handle does not unsubscribe it. Enqueue-time snapshots and dispatch ordering
-match the shared Host contract. Configuration is supplied to the Host initializer.
+match the shared Host contract. Configure through `createBuilder()`, then build, load all Programs and call
+`start()`. Start runs only the initial group; its emitted messages wait for normal
+pumping. A later Load with initialization has a pending instance `startResult` until its queued init
+finishes. A failed late init removes that instance, its outputs and captured
+deliveries without resetting host readiness. See [Host runtime](../../specs/HostRuntime.md) for the full contract.
 
 Programs and collections use immutable Swift value semantics and copy-on-write
 storage. Unicode-scalar identity, exact Int64 ranges, Binary64 values, units, and

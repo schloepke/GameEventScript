@@ -596,8 +596,7 @@ trace:
     diagnostic: { phase: runtime, code: runtime.publishSinkFailure }
 ```
 
-Emit requires the complete `accepted` flag. Publish requires all four fields of
-`GameEventScriptPublishResult`; `outboundAccepted` implies
+Emit requires the complete `accepted` flag. Publish trace assertions require the four final-delivery fields shown above; `outboundAccepted` implies
 `outboundAttempted`, and `anyAccepted` must equal `localAccepted OR
 outboundAccepted`. Dispatch events require the exact dispatched message and
 signature ID. Runtime-limit and diagnostic constraints use the same shapes as
@@ -605,11 +604,24 @@ their standalone expectation lists. Message/value comparison uses the case's
 ordinary Binary64 comparison mode.
 
 An optional top-level `initialization` expectation has `local`, `outbound`,
-`runtimeLimits`, `diagnostics`, and optional exact `trace` with the same
-meanings. It describes the
-single run-to-completion pump performed after all programs and native handlers
-are installed and before the first step. An absent `initialization` mapping is
-equivalent to all four empty expectations.
+`runtimeLimits`, `diagnostics`, and optional exact `trace` with the same meanings.
+It describes startup after all initial programs and native handlers are installed
+and before the first step. Absent channel, runtime-limit and diagnostic expectations
+are empty; absent trace and lifecycle fields make no corresponding assertion.
+
+### Host startup observations
+
+For runtime cases, `initialization.pump` is `completion` by default: the runner
+calls Start and, on success, drains ordinary messages. `pump: start` compares
+immediately after Start without draining. A failed Start is never pumped; later
+step inputs are rejected and no script code is executed.
+
+Initialization and step expectations may contain `hostReady: true|false` and
+`programStarts`, a mapping from loaded program IDs to `pending`, `ready`,
+`runtimeError` or `runtimeLimitReached`. Missing handles fail the assertion.
+These assertions inspect the portable Host/Instance API. Init emit observations
+remain attempted emits, including discarded attempts; assert downstream handler
+output to prove delivery. Deferred publications are observed upon commitment.
 
 ## Portable message and value shape
 

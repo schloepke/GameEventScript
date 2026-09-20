@@ -1,6 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+import Dispatch
 import Foundation
 import GameEventScriptRuntime
 
@@ -13,11 +14,12 @@ public struct GameEventScriptSwiftRegistration: Sendable {
         self.owner = owner
     }
     public var isAttached: Bool { owner.isAttached(registrationID) }
+    public var startResult: GameEventScriptStartResult? { owner.startResult(registrationID) }
     @discardableResult public func detach() -> Bool { owner.detach(registrationID) }
 }
 
-/// Owns a transferred Host and serializes all access. Accepted receives and loads pump synchronously
-/// on the calling thread; recursive receives only enqueue for the current pump. No background task is created.
+/// Owns a transferred Host and serializes all access. Ready hosts pump on a shared serial dispatcher.
+/// Start is explicit for a host still in its initial loading phase; recursive receives only enqueue.
 /// Callbacks, external objects and the Host must not be accessed outside the runner after transfer.
 public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
     private let gate = NSRecursiveLock()
@@ -26,17 +28,37 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
     private var subscriptions: [Int64: GameEventScriptSubscription] = [:]
     private var pumping = false
     private var result: GameEventScriptExecutionResult?
+    private var scheduled = false
+    private static let dispatcher = DispatchQueue(label: "GameEventScript shared dispatch pump")
 
-    /// Transfers exclusive ownership. Call runToCompletion to drain any work queued before transfer.
-    public init(_ host: sending GameEventScriptHost) { self.host = host }
+    /// Transfers exclusive ownership. An already ready host schedules pending work; a loading host waits for start.
+    public init(_ host: sending GameEventScriptHost) {
+        self.host = host
+        gate.lock()
+        if host.isReady && !host.isIdle { schedule() }
+        gate.unlock()
+    }
     public var lastResult: GameEventScriptExecutionResult? { locked { result } }
     public var isIdle: Bool { locked { host?.isIdle ?? true } }
+    public var isReady: Bool { locked { host?.isReady ?? false } }
+
+    public func start() throws -> GameEventScriptStartResult {
+        try locked {
+            let host = try activeHost()
+            let result = try host.start()
+            if host.isReady && !host.isIdle { schedule() }
+            return result
+        }
+    }
+    fileprivate func startResult(_ id: Int64) -> GameEventScriptStartResult? {
+        locked { instances[id]?.startResult }
+    }
 
     @discardableResult public func receive(_ message: sending GameEventScriptMessage) throws -> Bool {
         try locked {
             let host = try activeHost()
             let accepted = host.receive(message)
-            if accepted { try pump(host) }
+            if accepted { schedule() }
             return accepted
         }
     }
@@ -48,7 +70,7 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
             let host = try activeHost()
             let instance = try host.load(program, priority: priority)
             instances[instance.registrationID] = instance
-            try pump(host)
+            if host.isReady && !host.isIdle { schedule() }
             return .init(instance.registrationID, owner: self)
         }
     }
@@ -92,6 +114,22 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
         locked {
             if let instance = instances.removeValue(forKey: id) { return instance.detach() }
             return subscriptions.removeValue(forKey: id)?.unsubscribe() ?? false
+        }
+    }
+    private func schedule() {
+        guard !scheduled else { return }
+        scheduled = true
+        Self.dispatcher.async { self.automaticPump() }
+    }
+    private func automaticPump() {
+        locked {
+            defer {
+                scheduled = false
+                if let host, host.isReady && !host.isIdle { schedule() }
+            }
+            guard let host, host.isReady, !host.isIdle else { return }
+            // A valid ready host cannot fail the pump API preconditions under this gate.
+            do { try pump(host) } catch { return }
         }
     }
     private func pump(_ host: GameEventScriptHost) throws {

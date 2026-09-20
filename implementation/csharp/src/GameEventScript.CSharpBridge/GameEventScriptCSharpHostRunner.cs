@@ -27,6 +27,7 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
     private readonly object _gate = new();
     private bool _scheduled;
     private bool _disposed;
+    private GameEventScriptExecutionResult? _lastResult;
 
     private GameEventScriptCSharpHostRunner(GameEventScriptHost host, GameEventScriptCSharpDispatcher dispatcher)
     {
@@ -36,7 +37,8 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
 
     /// <summary>
     /// Wraps a host with serialized access and automatic pumping on the shared C# dispatcher.
-    /// Schedules any already queued messages, initialization, or paused script execution.
+    /// Schedules queued messages, later initialization, or paused execution when the host is ready.
+    /// A loading host waits for an explicit call to Start.
     /// </summary>
     /// <param name="host">The host whose access becomes owned by the returned runner.</param>
     /// <returns>A runner using <see cref="GameEventScriptCSharpDispatcher.Shared"/>.</returns>
@@ -46,9 +48,56 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
         var runner = new GameEventScriptCSharpHostRunner(host, GameEventScriptCSharpDispatcher.Shared);
         lock (runner._gate)
         {
-            if (!runner._host.IsIdle) runner.Schedule();
+            if (runner._host.IsReady && !runner._host.IsIdle) runner.Schedule();
         }
         return runner;
+    }
+
+    /// <summary>Gets whether the owned host completed its shared initial start.</summary>
+    public bool IsReady { get { lock (_gate) return _host.IsReady; } }
+
+    /// <summary>Gets whether the owned host has no active or queued work.</summary>
+    public bool IsIdle { get { lock (_gate) return _host.IsIdle; } }
+
+    /// <summary>Gets the latest completed pump result, if any.</summary>
+    public GameEventScriptExecutionResult? LastResult { get { lock (_gate) return _lastResult; } }
+
+    /// <summary>Starts the initial program group synchronously, then schedules ordinary queued work on success.</summary>
+    /// <returns>The initial group startup result.</returns>
+    public GameEventScriptStartResult Start()
+    {
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            var result = _host.Start();
+            if (_host.IsReady && !_host.IsIdle) Schedule();
+            return result;
+        }
+    }
+
+    /// <summary>Reads an instance's completed initialization result under the runner gate.</summary>
+    /// <param name="instance">The instance returned by Load.</param>
+    /// <returns>The initialization result, or null while pending.</returns>
+    public GameEventScriptStartResult? GetStartResult(GameEventScriptInstance instance)
+    {
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            return instance.StartResult;
+        }
+    }
+
+    /// <summary>Synchronously drains the ready host under the serialization gate.</summary>
+    /// <returns>The execution result.</returns>
+    public GameEventScriptExecutionResult RunToCompletion()
+    {
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            var result = _host.RunToCompletion();
+            _lastResult = result;
+            return result;
+        }
     }
 
     /// <summary>
@@ -79,7 +128,7 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
         {
             ThrowIfDisposed();
             var instance = _host.Load(program, priority);
-            if (!_host.IsIdle) Schedule();
+            if (_host.IsReady && !_host.IsIdle) Schedule();
             return instance;
         }
     }
@@ -154,11 +203,11 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
         lock (_gate)
         {
             if (_disposed) { _scheduled = false; return; }
-            try { _host.RunToCompletion(); }
+            try { if (_host.IsReady && !_host.IsIdle) _lastResult = _host.RunToCompletion(); }
             finally
             {
                 _scheduled = false;
-                if (!_host.IsIdle) Schedule();
+                if (_host.IsReady && !_host.IsIdle) Schedule();
             }
         }
     }

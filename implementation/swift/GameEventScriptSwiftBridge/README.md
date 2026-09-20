@@ -25,12 +25,13 @@ Compiler product; a precompiled application needs only Runtime and Bridge.
 import GameEventScriptRuntime
 import GameEventScriptSwiftBridge
 
-let host = try GameEventScriptHost(seed: 123)
+let host = try GameEventScriptHost.createBuilder().withRandomSeed(123).build()
 let done = try GameEventScriptMessageSignature(name: "Done", parameters: ["value"])
 let subscription = try host.subscribe(done) { message, context in
     let value = try Int.fromGesValue(message.arguments[0])
     print(value)
 }
+guard try host.start().state == .ready else { fatalError("Host startup failed") }
 host.receive(try GameEventScriptMessage(name: "Done", swiftArguments: [("value", 42)]))
 let result = try host.runToCompletion()
 subscription.unsubscribe()
@@ -157,11 +158,13 @@ descriptor with the same name.
 ## Optional synchronized runner
 
 ```swift
-let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 123))
+let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.createBuilder().withRandomSeed(123).build())
 let registration = try runner.subscribe(.init(name: "Done", parameters: ["value"])) { message, _ in
     print(message.arguments[0])
 }
+guard try runner.start().state == .ready else { fatalError("Host startup failed") }
 try runner.receive(.init(name: "Done", swiftArguments: [("value", 42)]))
+_ = try runner.runToCompletion() // Optional synchronous wait before inspecting output.
 let result = runner.lastResult
 registration.detach()
 runner.close()
@@ -177,18 +180,17 @@ idempotently.
 Programs are immutable transport data: `load` retains them without transferring
 exclusive ownership, so the same Program can be reused across independent runners.
 
-Each accepted `receive` and successful `load` pumps synchronously on its caller's
-thread. A callback's recursive receive only enqueues; it does not recursively
-dispatch. Explicit recursive pumping is rejected. There is no background task
-or fixed thread affinity, so UI work must use the embedding's own scheduling.
+A loading host waits for explicit `start()`. After successful Start, accepted
+receives and later loads schedule work on a shared serial background dispatcher.
+An already ready transferred host schedules its pending work automatically.
+A callback's recursive receive only enqueues; recursive pumping is rejected.
 Do not wait inside a callback for another thread to access this runner.
 
-`runToCompletion()` drains work already queued before ownership transfer.
-`lastResult` is the synchronized snapshot of the most recent pump, including
-diagnostics and limits; another caller can replace it after an operation returns.
-Faults and limits do not trigger an automatic retry loop. Subsequent explicit
-operations may resume remaining work according to the Host contract. For bounded
-game-loop stepping, use Runtime's `executeFrame` directly instead of this runner.
+`runToCompletion()` drains a ready host synchronously under the same gate.
+`lastResult` is the latest pump outcome; `isReady` reports the initial Start barrier.
+Program registrations expose their optional `startResult`, including after init
+failure. Automatic pumping continues while the ready host has work. For bounded
+game-loop stepping, use Runtime's `executeFrame` directly.
 `close()` rejects further receive/load/subscribe/pump calls, detaches owned
 registrations and releases the Host; a pump already executing may finish.
 Avoid strong callback captures that create ownership cycles, or close explicitly.

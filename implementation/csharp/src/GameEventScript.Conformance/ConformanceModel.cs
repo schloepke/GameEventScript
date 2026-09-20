@@ -941,14 +941,23 @@ public sealed class ConformanceObservationExpectation
         IReadOnlyList<ConformanceRuntimeLimitExpectation> excluded,
         IReadOnlyList<ConformanceExpectedDiagnostic> diagnostics,
         bool traceSpecified,
-        IReadOnlyList<ConformanceObserverEventExpectation> trace)
+        IReadOnlyList<ConformanceObserverEventExpectation> trace,
+        bool? hostReady = null,
+        IReadOnlyDictionary<string, string>? programStarts = null)
     {
         IncludedRuntimeLimits = ConformanceDocument.Copy(included);
         ExcludedRuntimeLimits = ConformanceDocument.Copy(excluded);
         Diagnostics = ConformanceDocument.Copy(diagnostics);
         TraceSpecified = traceSpecified;
         Trace = ConformanceDocument.Copy(trace);
+        HostReady = hostReady;
+        ProgramStarts = new ConformanceReadOnlyDictionary<string>(programStarts ?? new Dictionary<string, string>());
     }
+
+    /// <summary>Gets the expected host readiness, or null when not asserted.</summary>
+    public bool? HostReady { get; }
+    /// <summary>Gets expected per-program initialization outcomes: pending, ready, runtimeError, or runtimeLimitReached.</summary>
+    public IReadOnlyDictionary<string, string> ProgramStarts { get; }
 
     /// <summary>
     /// Gets the included runtime limits.
@@ -1470,17 +1479,20 @@ public sealed class ConformanceBinaryExpectation
 /// </summary>
 public sealed class ConformanceChannelExpectation
 {
-    internal ConformanceChannelExpectation(IReadOnlyList<ConformanceMessage> local, IReadOnlyList<ConformanceMessage> outbound, ConformanceObservationExpectation observations)
+    internal ConformanceChannelExpectation(IReadOnlyList<ConformanceMessage> local, IReadOnlyList<ConformanceMessage> outbound, ConformanceObservationExpectation observations, bool drain = true)
     {
         Local = ConformanceDocument.Copy(local);
         Outbound = ConformanceDocument.Copy(outbound);
         Observations = observations;
+        Drain = drain;
     }
 
     /// <summary>
     /// Gets the local.
     /// </summary>
     public IReadOnlyList<ConformanceMessage> Local { get; }
+    /// <summary>Gets whether initialization expectations include draining ordinary queued messages after Start.</summary>
+    public bool Drain { get; }
     /// <summary>
     /// Gets the outbound.
     /// </summary>

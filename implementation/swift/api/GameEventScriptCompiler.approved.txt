@@ -25,6 +25,7 @@ symbol {"access":"public","declaration":"init(diagnostics: [GameEventScriptDiagn
 symbol {"access":"public","declaration":"init(rawValue: UInt8)","kind":"swift.init","path":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions.init(rawValue:)"}
 symbol {"access":"public","declaration":"let diagnostics: [GameEventScriptDiagnostic]","kind":"swift.property","path":"GameEventScriptCompiler.GameEventScriptCompileError.diagnostics"}
 symbol {"access":"public","declaration":"let rawValue: UInt8","kind":"swift.property","path":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions.rawValue"}
+symbol {"access":"public","declaration":"static func create() -> GameEventScriptBuilder","kind":"swift.type.method","path":"GameEventScriptCompiler.GameEventScriptBuilder.create()"}
 symbol {"access":"public","declaration":"static let all: GameEventScriptDebugInfoOptions","kind":"swift.type.property","path":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions.all"}
 symbol {"access":"public","declaration":"static let none: GameEventScriptDebugInfoOptions","kind":"swift.type.property","path":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions.none"}
 symbol {"access":"public","declaration":"static let sourceArchive: GameEventScriptDebugInfoOptions","kind":"swift.type.property","path":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions.sourceArchive"}

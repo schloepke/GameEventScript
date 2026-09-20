@@ -41,7 +41,7 @@ public sealed class GameEventScriptProgramResourceBoundaryTests
         AssertResourceError(() => GameEventScriptProgramWriter.Write(invalid, destination));
         CollectionAssert.AreEqual(before, destination);
 
-        var host = GameEventScriptHost.CreateBuilder().Build();
+        var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         var handler = new CountingHandler();
         host.Subscribe("Start", new[] { "value" }, handler);
         Assert.IsTrue(host.IsIdle);

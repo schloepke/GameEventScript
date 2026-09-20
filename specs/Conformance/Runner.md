@@ -130,8 +130,10 @@ not an implementation exception escaping the runner.
 - Programs listed in `deferredPrograms` are compiled during setup but are not
   loaded until their fixed native `loadProgram` action executes. Native
   lifecycle actions operate only on validated IDs and are idempotent.
-- The runner performs one initialization run-to-completion pump after setup and
-  before the first step, even when no initialization output is expected.
+- After setup, the runner calls Host.Start. Successful startup is followed by an
+  ordinary run-to-completion pump unless `initialization.pump: start` is selected.
+  Failed startup is never pumped. Later step receives are rejected on that host.
+  Lifecycle observations can assert host readiness and individual StartResults.
 - A runtime step first applies its optional ordered `stepActions`, then calls
   `Receive`, records its acceptance, and uses the table's pump mode.
   `completion` makes one run-to-completion call. `frames` repeatedly calls

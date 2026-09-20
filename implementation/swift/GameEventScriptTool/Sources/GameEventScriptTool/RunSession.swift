@@ -17,6 +17,14 @@ final class RunSession {
         inventory = RunInventory(host: host, io: io)
     }
     func pump() throws -> Bool {
+        if !host.isReady {
+            let start = try host.start()
+            messages += start.processedMessages
+            opcodes += start.executedOpcodes
+            emits += start.emittedMessages
+            publishes += start.publishedMessages
+            guard start.state == .ready else { return false }
+        }
         let result = try host.runToCompletion()
         messages += result.processedMessages
         opcodes += result.executedOpcodes

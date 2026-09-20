@@ -20,7 +20,7 @@ public interface IGameEventScriptPublishSink
 /// <summary>
 /// Describes the independent local and outbound outcomes of one publish operation without allocating.
 /// </summary>
-public readonly struct GameEventScriptPublishResult(bool localAccepted, bool outboundAttempted, bool outboundAccepted)
+public readonly struct GameEventScriptPublishResult(bool localAccepted, bool outboundAttempted, bool outboundAccepted, bool outboundDeferred = false)
 {
     /// <summary>
     /// Gets whether the host's local message queue accepted the publication.
@@ -35,7 +35,10 @@ public readonly struct GameEventScriptPublishResult(bool localAccepted, bool out
     /// </summary>
     public bool OutboundAccepted { get; } = outboundAccepted;
     /// <summary>
-    /// Gets whether either the local host or the outbound sink accepted the publication.
+    /// Gets whether local delivery, outbound delivery, or deferred outbound delivery accepted the publication.
+    /// Acceptance during initialization is provisional until that initialization succeeds.
     /// </summary>
-    public bool AnyAccepted => LocalAccepted || OutboundAccepted;
+    public bool AnyAccepted => LocalAccepted || OutboundAccepted || OutboundDeferred;
+    /// <summary>Gets whether outbound publication is waiting for successful initialization. No sink has been called yet.</summary>
+    public bool OutboundDeferred { get; } = outboundDeferred;
 }

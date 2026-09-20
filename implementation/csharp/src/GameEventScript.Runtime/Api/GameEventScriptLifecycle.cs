@@ -29,6 +29,8 @@ public sealed class GameEventScriptInstance
     /// Gets whether this instance still contributes handlers to future message snapshots.
     /// </summary>
     public bool IsAttached => _host.IsInstanceAttached(_registrationId);
+    /// <summary>Gets the initialization outcome, or null until initialization completes. The result remains available after detachment.</summary>
+    public GameEventScriptStartResult? StartResult { get; internal set; }
     internal long RegistrationId => _registrationId;
     internal GesLinkedProgram LinkedProgram { get; }
     internal GameEventScriptInstance? NextRegistration { get; set; }

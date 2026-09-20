@@ -56,7 +56,7 @@ here. Add or update this matrix in the same change as new portable behavior.
 | Load/Detach/Subscribe/Unsubscribe during dispatch | `runtime.host-lifecycle/detach-unsubscribe-snapshot`, `runtime.host-lifecycle/load-subscribe-after-dispatch` |
 | Idempotent Subscription/Instance handle results | `runtime.host-lifecycle/subscription-handle-state`, `runtime.host-lifecycle/instance-handle-state` |
 | Enqueue-time subscription snapshot | `runtime.host-lifecycle/detach-unsubscribe-snapshot` |
-| Initialization once per instance and load/queue ordering | `runtime.host-dispatch/case-0008`, `runtime.host-lifecycle/load-subscribe-after-dispatch`, `runtime.host-lifecycle/initialization-queue-order` |
+| Initialization once per instance, initial Start barrier, failure cancellation and load/queue ordering | `runtime.host-startup/*`, `runtime.host-dispatch/case-0008`, `runtime.host-lifecycle/load-subscribe-after-dispatch`, `runtime.host-lifecycle/initialization-queue-order` |
 | Loading while a handler is paused preserves VM state | `runtime.host-lifecycle/load-while-paused` |
 | Native message-name matching | `runtime.host-lifecycle/native-message-name-subscription` |
 | Native handlers are atomic under frame budgets | `runtime.host-lifecycle/native-handler-frame-atomicity` |

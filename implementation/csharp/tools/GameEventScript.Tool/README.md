@@ -151,8 +151,9 @@ their compiled Program; binary composition does not merge compilation scopes.
 
 ### Main and console endpoints
 
-By default, the CLI first pumps initialization and all its resulting messages to
-completion, then sends exactly one untagged `Main(args)` message. All matching
+By default, the CLI calls Host.Start for the complete initial group, then drains
+its queued ordinary messages and sends exactly one untagged `Main(args)` message.
+An initial failure prevents Main and discards that group's queued outputs. All matching
 handlers in all loaded Programs receive that same logical message, in the host's
 normal dispatch order. A helper Program need not declare Main. At least one
 handler must match: an exact `Main(args)` handler or a message-name Main handler,
@@ -485,9 +486,10 @@ All Programs, the scenario, and interactive inputs share this host's random gene
 
 Runtime limits remain active. `--max-messages` sets `MaxProcessedEventsPerRun`
 (default 64) per pump, including initialization and native console messages.
-Initialization, Main, and each interactive input are separate pumps; their
-message-processing limits reset independently. A scenario and all input
-initializations run in one pump. `--max-steps` sets
+The initial Start phase, its subsequent ordinary-message drain, Main, and each
+interactive input are separate pumps; their message-processing limits reset
+independently. A scenario joins the initial Start group after the input Programs.
+The run summary includes work from both Start and ordinary pumping. `--max-steps` sets
 `MaxExecutionSteps` per handler (default 100,000). Both options require positive
 Int32 values; all other limits retain their Runtime defaults. Reaching a limit
 reports `cli.runtimeLimit` with the limit name and value and exits with code `1`.

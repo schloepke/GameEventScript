@@ -36,6 +36,7 @@ public final class GameEventScriptBuilder {
     var options = GameEventScriptCompileOptions()
     var catalog: (any GameEventScriptExternalTypeCatalogProtocol)?
     public init() {}
+    public static func create() -> GameEventScriptBuilder { .init() }
     @discardableResult
     public func addScript(_ text: String, sourceName: String? = nil) -> Self {
         let prepared = text.unicodeScalars.first?.value == 0xfeff ? String(text.unicodeScalars.dropFirst()) : text

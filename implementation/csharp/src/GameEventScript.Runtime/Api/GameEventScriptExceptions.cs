@@ -44,6 +44,8 @@ public enum GameEventScriptDiagnosticPhase
 /// </summary>
 public static class GameEventScriptDiagnosticCodes
 {
+    /// <summary>Initialization failed because a configured runtime safety limit was exhausted.</summary>
+    public const string RuntimeInitializationLimitReached = "runtime.initializationLimitReached";
     /// <summary>
     /// Defines the parse syntax value.
     /// </summary>

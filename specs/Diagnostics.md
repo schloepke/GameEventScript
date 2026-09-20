@@ -140,3 +140,8 @@ Portable Markdown/YAML error expectations match `phase` plus `code` and may addi
 match symbol/source/program/handler fields. `messageContains` is forbidden.
 Runtime steps use `expectedRuntimeDiagnostics` in observer order. Human-readable
 messages and technical details are deliberately excluded from pass/fail rules.
+
+Initialization safety-limit failures expose `runtime.initializationLimitReached`
+in StartResult, with the instance context when available. Limit name and bound
+remain structured runtime-limit observations. Ordinary init faults preserve their
+original runtime phase/code. The owning lifecycle rules are in HostRuntime.

@@ -38,7 +38,7 @@ public sealed class GameEventScriptExternalTypeCallbackFailureTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithExternalTypeRegistry(registry)
             .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(messageEmitted: emitted.Add, runtimeError: diagnostics.Add))
-            .Build();
+            .Build().StartForTest();
         host.Load(program);
         Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Start")));
 
@@ -85,7 +85,7 @@ public sealed class GameEventScriptExternalTypeCallbackFailureTests
         var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(NestedReflectionConstructor));
         var program = GameEventScriptBuilder.Create().WithExternalTypeCatalog(registry)
             .AddScript("module callbacks\non Start { let sample be :NestedReflectionConstructor(); emit MustNotRun(value: sample) }").Compile();
-        var host = GameEventScriptHost.CreateBuilder().WithExternalTypeRegistry(registry).Build();
+        var host = GameEventScriptHost.CreateBuilder().WithExternalTypeRegistry(registry).Build().StartForTest();
         host.Load(program);
         Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Start")));
 

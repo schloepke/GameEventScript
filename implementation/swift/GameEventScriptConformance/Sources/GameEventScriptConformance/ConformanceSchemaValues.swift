@@ -230,6 +230,13 @@ extension ConformanceSchema {
         }
     }
     static func validateObservations(_ node: Node) throws {
+        try boolFields(node, ["hostReady"])
+        if let starts = node["programStarts"] {
+            for property in try object(starts) {
+                try requireID(property.key, starts.range)
+                try choice(property.value, ["pending", "ready", "runtimeError", "runtimeLimitReached"])
+            }
+        }
         if let limits = node["runtimeLimits"] {
             try closed(limits, ["include", "exclude"])
             for field in ["include", "exclude"] {
@@ -243,7 +250,12 @@ extension ConformanceSchema {
         }
     }
     static func validateStepExpectation(_ node: Node) throws {
-        try closed(node, ["input", "accepted", "local", "outbound", "paused", "runtimeLimits", "diagnostics", "trace"])
+        try closed(
+            node,
+            [
+                "input", "accepted", "local", "outbound", "paused", "runtimeLimits", "diagnostics", "trace",
+                "hostReady", "programStarts",
+            ])
         try boolFields(node, ["accepted", "paused"])
         try validateObservations(node)
         if let input = node["input"] {
@@ -282,7 +294,10 @@ extension ConformanceSchema {
             }
         }
         if let initialization = node["initialization"] {
-            try closed(initialization, ["local", "outbound", "runtimeLimits", "diagnostics", "trace"])
+            try closed(
+                initialization,
+                ["local", "outbound", "runtimeLimits", "diagnostics", "trace", "hostReady", "programStarts", "pump"])
+            if let pump = initialization["pump"] { try choice(pump, ["start", "completion"]) }
             try validateObservations(initialization)
         }
         if let steps = node["steps"] { for entry in try object(steps) { try validateStepExpectation(entry.value) } }

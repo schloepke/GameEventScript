@@ -37,7 +37,7 @@ public sealed class GameEventScriptDocumentationConsistencyTests
             "BinaryFormat constants, Reader, read options/limits/retention, Writer, Validator, format error, Dumper",
             "Message, MessageArgument(s), MessageSignature",
             "Value, ValueSlice, ValueArguments, ValueMap, integer/float range",
-            "HostBuilder, RuntimeLimits, Host, Instance, Subscription",
+            "HostBuilder, RuntimeLimits, Host, StartResult/State, Instance, Subscription",
             "Context, NativeMessageHandler, PublishSink/Result, Observer, ExecutionResult/State",
             "RandomGenerator",
             "ExtensionReference, ExtensionRegistry/Function, ExtensionCall",

@@ -212,7 +212,7 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
             .WithPublishSink(new TestPublishSink(_ => outbound++));
         if (testCase.Performance!.ObserveRuntime) builder.WithRuntimeObserver(new ConformanceCSharpAllocationProvider.CountingObserver());
         ConfigureRandom(builder, testCase.Random);
-        return builder.Build();
+        return builder.Build().StartForTest();
     }
 
     private static GameEventScriptHost CreateLoadHost(ConformanceCase testCase)
@@ -220,7 +220,7 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
             .WithRegistry(ConformanceTestExtensionRegistry.Instance)
             .WithExternalTypeRegistry(GameEventScriptConformanceExternalTypes.Registry)
             .WithRuntimeLimits(CreateRuntimeLimits(testCase.RuntimeLimits))
-            .Build();
+            .Build().StartForTest();
 
     internal static void ConfigureRandom(GameEventScriptHostBuilder builder, ConformanceRandomConfiguration? configuration)
     {

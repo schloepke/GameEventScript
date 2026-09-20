@@ -78,8 +78,9 @@ Multiple source files require an explicit output path. Outputs are replaced only
 after successful compilation or decoding; output directories are created as needed.
 
 `run` accepts source files or independently loaded `.gesb` files, including files
-produced by the C# compiler. It loads every initial Program before draining
-initialization and sending `Main(args)`. All arguments from `--arg`, `--args` and
+produced by the C# compiler. It loads every initial Program, calls `start()` for the complete group, then drains
+its queued messages before sending `Main(args)`. A failed initial Start discards
+queued startup outputs and prevents Main. All arguments from `--arg`, `--args` and
 `--` are Text values in one List. `--args` ends at the next option; everything
 following `--` is an argument. Missing Main is an error, not an implicit REPL.
 `--scenario` replaces Main with a separately compiled scenario. `--interactive`

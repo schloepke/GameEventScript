@@ -64,7 +64,7 @@ internal sealed class ConformanceCSharpAllocationProvider : IConformancePerforma
             .WithRuntimeLimits(ConformanceCSharpPerformanceProvider.CreateRuntimeLimits(testCase.RuntimeLimits));
         if (observer is not null) builder.WithRuntimeObserver(observer);
         ConformanceCSharpPerformanceProvider.ConfigureRandom(builder, testCase.Random);
-        var host = builder.Build();
+        var host = builder.Build().StartForTest();
         host.Load(program);
         if (host.RunToCompletion().State != GameEventScriptExecutionState.Completed)
             throw new InvalidOperationException("Allocation workload initialization failed.");

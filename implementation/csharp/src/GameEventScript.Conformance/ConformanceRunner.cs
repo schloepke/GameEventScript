@@ -191,9 +191,11 @@ public static class ConformanceRunner
         var state = new HostScenarioState(builder.Build(), programs, testCase.NativeHandlers, testCase.DeferredPrograms, mismatches, collector.AllDiagnostics, pathPrefix);
         state.Configure();
 
-        state.Host.RunToCompletion();
+        state.Host.Start();
+        if (state.Host.IsReady && testCase.Expectation.Initialization.Drain) state.Host.RunToCompletion();
         CompareChannel(pathPrefix + "/initialization", testCase.Expectation.Initialization.Local, collector.Local, testCase.Comparison, mismatches);
         CompareChannel(pathPrefix + "/initialization/outbound", testCase.Expectation.Initialization.Outbound, collector.Outbound, testCase.Comparison, mismatches);
+        state.CompareLifecycle(testCase.Expectation.Initialization.Observations, pathPrefix + "/initialization");
         CompareObservations(pathPrefix + "/initialization", testCase.Expectation.Initialization.Observations, collector, testCase.Comparison, mismatches);
 
         for (var stepIndex = 0; stepIndex < testCase.Steps.Count; stepIndex++)
@@ -204,12 +206,12 @@ public static class ConformanceRunner
             state.ApplyActions(step.Actions, state.ActionPath + "/actions");
             var accepted = state.Host.Receive(ConformanceRuntimeValueCodec.DecodeMessage(step.Expectation.Input));
             var paused = false;
-            if (step.Pump == ConformancePumpMode.Completion)
+            if (state.Host.IsReady && step.Pump == ConformancePumpMode.Completion)
             {
                 var execution = state.Host.RunToCompletion();
                 paused = execution.State == GameEventScriptExecutionState.Paused;
             }
-            else if (step.Pump == ConformancePumpMode.Frames)
+            else if (state.Host.IsReady && step.Pump == ConformancePumpMode.Frames)
             {
                 var frames = 0;
                 GameEventScriptExecutionResult execution;
@@ -221,7 +223,7 @@ public static class ConformanceRunner
                 }
                 while (execution.State == GameEventScriptExecutionState.Paused);
             }
-            else if (step.Pump == ConformancePumpMode.Frame)
+            else if (state.Host.IsReady && step.Pump == ConformancePumpMode.Frame)
             {
                 var execution = state.Host.ExecuteFrame(checked((int)step.Budget!.Value));
                 paused = execution.State == GameEventScriptExecutionState.Paused;
@@ -232,6 +234,7 @@ public static class ConformanceRunner
             if (step.Expectation.Paused is { } expectedPaused && expectedPaused != paused) AddMismatch(mismatches, path + "/paused", expectedPaused ? "true" : "false", paused ? "true" : "false");
             CompareChannel(path + "/local", step.Expectation.Local, collector.Local, testCase.Comparison, mismatches);
             CompareChannel(path + "/outbound", step.Expectation.Outbound, collector.Outbound, testCase.Comparison, mismatches);
+            state.CompareLifecycle(step.Expectation.Observations, path);
             CompareObservations(path, step.Expectation.Observations, collector, testCase.Comparison, mismatches);
         }
         return collector;
@@ -797,6 +800,25 @@ public static class ConformanceRunner
                     AddMismatch(_mismatches, actionPath + "/error", expectedError.Phase + ":" + expectedError.Code, "success");
                 if (action.ExpectedResult is { } expectedResult && result != expectedResult)
                     AddMismatch(_mismatches, actionPath + "/result", expectedResult ? "true" : "false", result ? "true" : "false");
+            }
+        }
+
+        internal void CompareLifecycle(ConformanceObservationExpectation expected, string path)
+        {
+            if (expected.HostReady is { } ready && ready != Host.IsReady)
+                AddMismatch(_mismatches, path + "/hostReady", ready ? "true" : "false", Host.IsReady ? "true" : "false");
+            foreach (var pair in expected.ProgramStarts)
+            {
+                var actual = "missing";
+                if (_instances.TryGetValue(pair.Key, out var instance))
+                    actual = instance.StartResult?.State switch
+                    {
+                        GameEventScriptStartState.Ready => "ready",
+                        GameEventScriptStartState.RuntimeError => "runtimeError",
+                        GameEventScriptStartState.RuntimeLimitReached => "runtimeLimitReached",
+                        _ => "pending"
+                    };
+                if (actual != pair.Value) AddMismatch(_mismatches, path + "/programStarts/" + pair.Key, pair.Value, actual);
             }
         }
 

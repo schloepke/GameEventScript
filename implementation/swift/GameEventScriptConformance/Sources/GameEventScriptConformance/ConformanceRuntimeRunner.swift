@@ -123,7 +123,10 @@ final class RuntimeScenario {
     }
     func run() throws {
         try configure()
-        _ = try host.runToCompletion()
+        _ = try host.start()
+        if host.isReady && test.expectation["initialization"]?["pump"]?.stringValue != "start" {
+            _ = try host.runToCompletion()
+        }
         try compare(test.expectation["initialization"] ?? .object([]), path: "/initialization")
         for step in test.steps {
             collector.clear()
@@ -133,7 +136,7 @@ final class RuntimeScenario {
             let input = (expected["input"] ?? .object([])).replacing("name", with: step.receive ?? .string(""))
             let accepted = host.receive(try ConformanceRuntimeValueCodec.message(input))
             var paused = false
-            switch step.pump {
+            switch host.isReady ? step.pump : "enqueue" {
             case "completion": paused = try host.runToCompletion().state == .paused
             case "frame": paused = try host.executeFrame(opcodeBudget: step.budget!).state == .paused
             case "frames":
@@ -208,6 +211,27 @@ final class RuntimeScenario {
             + String(index + 1)
     }
     func compare(_ expected: ConformanceData, path: String) throws {
+        if let ready = expected["hostReady"]?.boolValue { check(path + "/hostReady", ready, host.isReady) }
+        if case .object(let starts) = expected["programStarts"] {
+            for entry in starts {
+                let id = entry.key
+                let expectedState = entry.value
+                let actual: String
+                if let instance = instances[id] {
+                    switch instance.startResult?.state {
+                    case .ready: actual = "ready"
+                    case .runtimeError: actual = "runtimeError"
+                    case .runtimeLimitReached: actual = "runtimeLimitReached"
+                    case nil: actual = "pending"
+                    }
+                } else {
+                    actual = "missing"
+                }
+                if actual != expectedState.stringValue {
+                    mismatch(path + "/programStarts/" + id, expectedState.stringValue ?? "", actual)
+                }
+            }
+        }
         try channel(expected.values("local"), collector.local, path: path + "/local")
         try channel(expected.values("outbound"), collector.outbound, path: path + "/outbound")
         let diagnostics = expected.values("diagnostics")

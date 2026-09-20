@@ -512,7 +512,7 @@ internal static class ConformanceSchemaBinder
         if (node is null)
             return new ConformanceStepExpectation(
                 new ConformanceMessage(receive, Array.Empty<string>(), Array.Empty<ConformanceArgument>()), true, Array.Empty<ConformanceMessage>(), Array.Empty<ConformanceMessage>(), null, EmptyObservations());
-        Closed(node, "input", "accepted", "local", "outbound", "paused", "runtimeLimits", "diagnostics", "trace");
+        Closed(node, "input", "accepted", "local", "outbound", "paused", "runtimeLimits", "diagnostics", "trace", "hostReady", "programStarts");
         var inputNode = Optional(node, "input");
         var tags = new List<string>();
         IReadOnlyList<ConformanceArgument> args = Array.Empty<ConformanceArgument>();
@@ -604,8 +604,10 @@ internal static class ConformanceSchemaBinder
 
     private static ConformanceChannelExpectation BindChannel(YamlNode node)
     {
-        Closed(node, "local", "outbound", "runtimeLimits", "diagnostics", "trace");
-        return new ConformanceChannelExpectation(BindMessages(Optional(node, "local")), BindMessages(Optional(node, "outbound")), BindObservations(node));
+        Closed(node, "local", "outbound", "runtimeLimits", "diagnostics", "trace", "hostReady", "programStarts", "pump");
+        var pump = OptionalString(node, "pump") ?? "completion";
+        if (pump is not ("start" or "completion")) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "Initialization pump must be start or completion.", node.Range);
+        return new ConformanceChannelExpectation(BindMessages(Optional(node, "local")), BindMessages(Optional(node, "outbound")), BindObservations(node), pump == "completion");
     }
 
     private static ConformanceObservationExpectation BindObservations(YamlNode node)
@@ -627,7 +629,20 @@ internal static class ConformanceSchemaBinder
             foreach (var item in diagnosticNode.Items) diagnostics.Add(BindDiagnostic(item));
         }
         var traceNode = Optional(node, "trace");
-        return new ConformanceObservationExpectation(included, excluded, diagnostics, traceNode is not null, BindTrace(traceNode));
+        var starts = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (Optional(node, "programStarts") is { } programs)
+        {
+            RequireKind(programs, YamlNodeKind.Mapping, "programStarts must map program IDs to initialization outcomes.");
+            foreach (var property in programs.Properties)
+            {
+                RequireId(property.Name, property.NameRange);
+                var value = String(property.Value);
+                if (value is not ("pending" or "ready" or "runtimeError" or "runtimeLimitReached"))
+                    throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "Invalid initialization outcome.", property.Value.Range);
+                starts.Add(property.Name, value);
+            }
+        }
+        return new ConformanceObservationExpectation(included, excluded, diagnostics, traceNode is not null, BindTrace(traceNode), OptionalBoolean(node, "hostReady"), starts);
     }
 
     private static IReadOnlyList<ConformanceObserverEventExpectation> BindTrace(YamlNode? node)

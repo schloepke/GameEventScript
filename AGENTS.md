@@ -142,9 +142,16 @@ are owned by `specs/Semantics/Text.md` and `specs/Semantics/Numbers.md`.
 `GameEventScriptHost` is the autonomous serial execution unit. It may contain
 only native handlers or any number of additively loaded Programs.
 
-- `Load(program, priority)` links host-specific imports, registers handlers,
-  queues one initialization event for the instance, and returns an idempotently
-  detachable `GameEventScriptInstance`.
+- Build creates a loading host. Register all initial Programs and native handlers,
+  then call Start. Start runs initializations in Load order without ordinary
+  message dispatch; the host becomes IsReady only if the complete group succeeds.
+- Load on a ready host queues per-instance initialization in the normal FIFO.
+  Instance.StartResult is absent while pending and retained after completion/failure.
+  Failed init removes registrations, cancels captured deliveries to that instance,
+  and discards its staged outputs. Other recipients and the ready host continue.
+- Init emits retain enqueue order and wait for success; outbound publication waits for initial-group
+  or later-instance success. PublishResult.OutboundDeferred reports staging.
+  Ordinary Detach keeps its captured-snapshot semantics. See specs/HostRuntime.md.
 - Native `Subscribe` returns an idempotently detachable
   `GameEventScriptSubscription`.
 - Instance and subscription handles use stable host-local registration IDs and
@@ -218,12 +225,12 @@ zero-allocation hot path, release artifact consumption, and byte-identical
 package reproduction. Performance references are regression gates for the
 current C# implementation, not cross-platform benchmark claims.
 
-Verified baseline (Release, 2026-09-19):
+Verified baseline (Release, 2026-09-20):
 
 ```text
-1956/1956 non-performance test executions passed
+1969/1969 non-performance test executions passed
 31/31 allocation test executions passed, including the independent zero-allocation hot path
-1460 shared Markdown Conformance cases in 89 documents
+1471 shared Markdown Conformance cases in 90 documents
 ```
 
 The combined verification command for the first two counts is:
@@ -246,7 +253,8 @@ and implements source parsing, validation, lowering, optimization, register
 allocation and Program generation. Conformance depends on both packages.
 There is no extra Core package. File I/O belongs to the executable adapter/tests.
 
-Swift collections use immutable value semantics and copy-on-write storage.
+Swift Host and Compiler expose createBuilder()/create() factories matching the
+C# builder workflow. Swift collections use immutable value semantics and copy-on-write storage.
 Text and map-key equality/order use Unicode scalars, not Swift String's
 canonical equivalence. Keep Int64 and Binary64 storage separate. Message and
 Handler value storage is inline; VM entry borrows arguments by index rather
@@ -264,12 +272,12 @@ and complete source-document SHA-256. No expected result is exported from C#.
 `verify-swift-bytecode.py` checks the explicit enum and operand registry against
 C#; ordinary package builds do not generate source.
 
-Verified Swift coverage (Release, 2026-09-19): all 1,460 behavior checks from
-89 shared Markdown documents pass with native Swift compilation. The strict
-hardware-independent report passes 1,429 cases and skips 31 optional performance
-measurements. Enabling the measured profile passes all 1,460 cases. Independent
-Runtime verification passes 1,227 cases using C#-compiled Programs. Twelve native adapter/bootstrap
-tests pass. `scripts/test-swift.sh` requires strict native acceptance and keeps
+Verified Swift coverage (Release, 2026-09-20): all 1,471 behavior checks from
+90 shared Markdown documents pass with native Swift compilation. The strict
+hardware-independent report passes 1,440 cases and skips 31 optional performance
+measurements. Enabling the measured profile passes all 1,471 cases. Independent
+Runtime verification passes 1,238 cases using C#-compiled Programs. Seventeen Conformance/adapter/bootstrap tests, seventeen SwiftBridge tests, and
+twenty CLI tests pass. `scripts/test-swift.sh` requires strict native acceptance and keeps
 Runtime interoperability reports separate.
 
 `scripts/test-swift-performance.sh` verifies the measured
@@ -312,8 +320,9 @@ Dictionary collisions between scalar-distinct GES keys. Ordered message pairs
 preserve signature labels; dictionary input requires an existing named signature.
 External descriptor instances own executable bindings; Programs retain only
 declarative data. The optional Swift Host runner takes exclusive ownership via
-`sending`, uses a recursive lock and pumps synchronously on the calling thread.
-It introduces no background task. Runner lifecycle handles use its gate; raw Host
+`sending` and uses a recursive lock. Both bridges wait for explicit Start on a
+loading host, then schedule ordinary work on a shared background dispatcher.
+Wrapping an already ready host schedules its pending work immediately. Runner lifecycle handles use its gate; raw Host
 or callback state must not be accessed outside the transferred ownership domain.
 
 ## CLI

@@ -426,7 +426,7 @@ reentrancy requirements of those callbacks.
 | `WithExternalTypeRegistry(registry)` | Selects the runtime external-constructor registry. |
 | `WithPublishSink(sink)` | Selects the single outbound sink. Not calling it means no sink. |
 | `WithRuntimeObserver(observer)` | Selects the single observer. Not calling it means no observer. |
-| `Build()` | Validates configuration and returns a new idle, native-capable Host with no loaded Program or subscription. |
+| `Build()` | Validates configuration and returns a new loading, native-capable Host with no loaded Program or subscription. |
 
 ### RuntimeLimits
 
@@ -468,12 +468,14 @@ rules are in [Host runtime](HostRuntime.md).
 | Operation | Contract |
 | --- | --- |
 | `CreateBuilder()` | Returns a new HostBuilder. |
-| `Load(program, priority = 0)` | Validates, checks resource limits, links imports, registers all script handlers additively, enqueues one initialization snapshot, and returns an Instance. It is all-or-nothing. |
+| `Load(program, priority = 0)` | Validates, links and atomically registers one instance with an initialization snapshot when present. During initial loading it joins the Start group; on a ready host it joins the ordinary FIFO. |
+| `Start()` | Synchronously initializes the initial group without processing ordinary messages and returns StartResult. Repeated calls return the original result. |
+| `IsReady` | True after successful initial Start; later instance failures and queued messages do not reset it. |
 | `Subscribe(signature, handler, requiredTags?, excludedTags?, priority = 0)` | Adds one exact-signature native subscription and returns a Subscription. Inputs are copied/retained as immutable registration data. |
 | `SubscribeMessageName(name, handler, requiredTags?, excludedTags?, priority = 0)` | Adds a native subscription matching every signature of that normalized message name. |
-| `Receive(message)` | Captures current matching subscriptions and attempts to enqueue the logical message locally. Returns whether accepted. It never pumps and never publishes outbound. |
-| `ExecuteFrame(opcodeBudget)` | Synchronously pumps on the caller until the scheduler budget pauses script execution, the Host becomes idle, or a runtime limit/error ends the call. Budget must be positive. |
-| `RunToCompletion()` | Synchronously pumps until idle or a runtime limit/error terminates this pump call. It creates no worker thread. |
+| `Receive(message)` | Captures current matching subscriptions and attempts to enqueue the logical message locally. Returns whether accepted. Before Start succeeds it returns false. It never pumps and never publishes outbound. |
+| `ExecuteFrame(opcodeBudget)` | Synchronously pumps on the caller until the scheduler budget pauses script execution, the Host becomes idle, or a runtime limit/error ends the call. Budget must be positive and the host must be ready. |
+| `RunToCompletion()` | Synchronously pumps until idle or a runtime limit/error terminates this pump call. The host must be ready. It creates no worker thread. |
 | `IsIdle` | True only when no active message/handler and no queued logical message exists. |
 | `PendingMessageCount` | Number of queued logical messages according to HostRuntime; it never counts handler invocations. |
 
@@ -482,7 +484,7 @@ captured handlers before the next logical message. Load/Subscribe/Detach/
 Unsubscribe changes affect snapshots captured afterward only.
 `Load` rejects insufficient initialization-queue capacity with
 `link.initializationQueueFull`. The full atomicity and retry contract is defined
-in [Host runtime](HostRuntime.md#program-load-atomicity).
+in [Host runtime](HostRuntime.md#loading-and-startup).
 
 `Instance` is a Host-owned lifecycle handle for one linked Program. `Program`
 is the original immutable object. `Detach()` returns true exactly once when it
@@ -495,6 +497,19 @@ message and never attaches to another Host.
 `IsSubscribed` reports that transition. Both handle types retain host identity
 and a stable non-reused host-local registration ID, not a closure.
 
+`StartResult` is an immutable value containing `State` (Ready, RuntimeError or
+RuntimeLimitReached) and optional structured `Diagnostic`. Ready does not imply
+an empty message queue. `Instance.StartResult` is absent while initialization is
+pending and retains its completed outcome after detachment or init failure.
+Init failure cancels captured recipients as specified by HostRuntime; ordinary
+Detach retains its existing captured-delivery semantics.
+
+StartResult includes ExecutedOpcodes, ProcessedMessages, EmittedMessages, and
+PublishedMessages for initialization work, using the same counter meanings as
+ExecutionResult. A host result covers its initial group; an instance result covers
+that instance. Repeated Start returns the original counters.
+
+
 ## Context, messaging, and execution results
 
 ### Context
@@ -506,13 +521,17 @@ registry, `IsIdle`, and `PendingMessageCount` as borrowed Host views.
 `Emit(message)` attempts local enqueue and returns acceptance. Convenience
 overloads construct a message from name and ordered arguments. `Publish(message)`
 first attempts the identical local enqueue, then invokes the configured outbound
-sink once unless a random fault gate forbids delivery. It returns PublishResult.
+sink once unless a random fault gate forbids delivery or initialization defers it. It returns PublishResult.
 
 Context has no independent queue, VM, or scheduler. It must not be used
 concurrently or retained for asynchronous calls after its callback. Emit and
 Publish do not recursively dispatch the new message.
 
 ### PublishSink and PublishResult
+
+`PublishResult.OutboundDeferred` distinguishes initialization publication waiting
+for commitment from a sink call already attempted. Its complete ordering and
+failure semantics are owned by HostRuntime.
 
 `PublishSink.Publish(message) -> bool` is a synchronous, preferably nonblocking
 handoff. `true` means accepted by the next layer, not remotely delivered.
@@ -522,7 +541,8 @@ handoff. `true` means accepted by the next layer, not remotely delivered.
 - `LocalAccepted`: local queue accepted the message;
 - `OutboundAttempted`: a configured sink was invoked;
 - `OutboundAccepted`: that invocation returned true;
-- `AnyAccepted`: derived `LocalAccepted || OutboundAccepted`.
+- `OutboundDeferred`: outbound delivery is waiting for successful initialization;
+- `AnyAccepted`: derived `LocalAccepted || OutboundAccepted || OutboundDeferred`.
 
 No sink produces attempted=false/accepted=false. Sink rejection is not an error.
 A sink exception becomes a runtime diagnostic and outbound rejection; it never
@@ -983,9 +1003,12 @@ Compiler internals and the compiler-only Runtime SPI are not public embedding AP
 Runtime exposes `GesValue`, `GesUnit`, immutable range descriptors, messages,
 signatures, Program data and codecs, `GameEventScriptHost`, Context, lifecycle
 handles, random generators, diagnostics, and the extension/external-type
-protocols. `GameEventScriptHost(...)` accepts one complete configuration instead
-of a separate HostBuilder. `load`, `subscribe`, `receive`, `executeFrame`, and
-`runToCompletion` retain the host contracts above. The mutable VM is host-private.
+protocols. `GameEventScriptHost.createBuilder()` provides the same mutable
+configuration workflow as C#, including seed, entropy, sequence, limits, observer,
+sink and registries. Every `build()` creates an independent Host. The direct
+initializer remains available. `GameEventScriptBuilder.create()` creates a
+compiler builder. `load`, `start`, `isReady`, `subscribe`, `receive`, `executeFrame`,
+and `runToCompletion` retain the host contracts above. The mutable VM is host-private.
 
 Program segments use `let` properties and native Array values with copy-on-write
 storage; callers cannot mutate a Program through a returned array. Int64,
@@ -1080,12 +1103,16 @@ materialization retain the external-value contract above.
 It takes exclusive ownership through Swift 6 sending parameters and serializes
 Host access and lifecycle operations with one recursive lock. Transferred Host,
 callback and external-value state must not be accessed outside that ownership
-domain. Accepted receives and successful loads pump synchronously on the caller's
-thread. Immutable Programs remain reusable across runners without exclusive
-ownership transfer. Recursive receives only enqueue. Explicit recursive pumping fails.
-Preexisting work can be drained explicitly. The runner creates no background
-tasks and does not automatically retry a pump stopped by a fault or limit.
+domain. Its explicit `start()` runs the initial group synchronously. Accepted
+receives and later loads schedule work on a shared serial background dispatcher,
+as in the C# bridge. An already ready transferred Host schedules preexisting work;
+a loading Host waits for Start. Immutable Programs remain reusable without exclusive
+ownership transfer. Recursive receives only enqueue; recursive pumping fails.
+`runToCompletion()` can drain a ready Host synchronously under the same gate.
+Automatic pumps continue scheduling while ready queued work remains.
 `lastResult` is a synchronized snapshot of the most recent completed pump.
+`isReady` reports the startup barrier; a registration's `startResult` reports its
+instance initialization. C# exposes the same outcome through runner.GetStartResult(instance).
 Runner-owned handles use stable registration IDs, retain their runner and detach
 idempotently under its lock. Closing rejects further work, detaches owned
 registrations and releases the Host; an already executing pump may finish.
@@ -1126,7 +1153,7 @@ duplicated as a second source of truth here.
 | BinaryFormat constants, Reader, read options/limits/retention, Writer, Validator, format error, Dumper | Program codec, validation, and dump API |
 | Message, MessageArgument(s), MessageSignature | Message and value API |
 | Value, ValueSlice, ValueArguments, ValueMap, integer/float range | Message and value API |
-| HostBuilder, RuntimeLimits, Host, Instance, Subscription | Host construction and lifecycle API |
+| HostBuilder, RuntimeLimits, Host, StartResult/State, Instance, Subscription | Host construction and lifecycle API |
 | Context, NativeMessageHandler, PublishSink/Result, Observer, ExecutionResult/State | Context, messaging, and execution results |
 | RandomGenerator | Random generator API |
 | ExtensionReference, ExtensionRegistry/Function, ExtensionCall | Extension API |

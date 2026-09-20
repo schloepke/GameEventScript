@@ -104,6 +104,34 @@ public struct GameEventScriptRuntimeLimits: Sendable {
     public var maxDiceSides = 1_000_000
     public init() {}
 }
+public enum GameEventScriptStartState: Sendable { case ready, runtimeError, runtimeLimitReached }
+public struct GameEventScriptStartResult: Sendable {
+    public let state: GameEventScriptStartState
+    private let diagnosticStorage: GesStartDiagnostic?
+    public var diagnostic: GameEventScriptDiagnostic? { diagnosticStorage?.value }
+    public let executedOpcodes: Int
+    public let processedMessages: Int
+    public let emittedMessages: Int
+    public let publishedMessages: Int
+    public init(
+        state: GameEventScriptStartState, diagnostic: GameEventScriptDiagnostic? = nil,
+        executedOpcodes: Int = 0, processedMessages: Int = 0, emittedMessages: Int = 0, publishedMessages: Int = 0
+    ) {
+        self.state = state
+        diagnosticStorage = diagnostic.map(GesStartDiagnostic.init)
+        self.executedOpcodes = executedOpcodes
+        self.processedMessages = processedMessages
+        self.emittedMessages = emittedMessages
+        self.publishedMessages = publishedMessages
+    }
+}
+
+// Successful startup stores no diagnostic payload; allocate the large diagnostic only on failure.
+final class GesStartDiagnostic: Sendable {
+    let value: GameEventScriptDiagnostic
+    init(_ value: GameEventScriptDiagnostic) { self.value = value }
+}
+
 public enum GameEventScriptExecutionState: Sendable { case paused, completed, runtimeLimitReached, runtimeError }
 public struct GameEventScriptExecutionResult: Sendable {
     public let state: GameEventScriptExecutionState
@@ -117,7 +145,14 @@ public struct GameEventScriptPublishResult: Sendable {
     public let localAccepted: Bool
     public let outboundAttempted: Bool
     public let outboundAccepted: Bool
-    public var anyAccepted: Bool { localAccepted || outboundAccepted }
+    public let outboundDeferred: Bool
+    public init(localAccepted: Bool, outboundAttempted: Bool, outboundAccepted: Bool, outboundDeferred: Bool = false) {
+        self.localAccepted = localAccepted
+        self.outboundAttempted = outboundAttempted
+        self.outboundAccepted = outboundAccepted
+        self.outboundDeferred = outboundDeferred
+    }
+    public var anyAccepted: Bool { localAccepted || outboundAccepted || outboundDeferred }
 }
 public protocol GameEventScriptNativeMessageHandler {
     func handle(_ message: GameEventScriptMessage, context: GameEventScriptContext) throws

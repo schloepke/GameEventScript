@@ -176,7 +176,7 @@ using System;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 
-static GameEventScriptExecutionResult Execute(byte[] bytes)
+static (GameEventScriptStartResult Start, GameEventScriptExecutionResult? Execution) Execute(byte[] bytes)
 {
     var program = GameEventScriptProgramReader.Read(bytes);
     var host = GameEventScriptHost.CreateBuilder().WithRandomSeed(123).Build();
@@ -185,14 +185,13 @@ static GameEventScriptExecutionResult Execute(byte[] bytes)
     var instance = host.Load(program);
     try
     {
-        var initialization = host.RunToCompletion();
-        if (initialization.State != GameEventScriptExecutionState.Completed)
-            return initialization;
+        var startup = host.Start();
+        if (!host.IsReady) return (startup, null);
 
         host.Receive(GameEventScriptMessage.Create("Start", [
             new GameEventScriptMessageArgument("value", GesValue.GesInteger(42))
         ]));
-        return host.RunToCompletion();
+        return (startup, host.RunToCompletion());
     }
     finally
     {
@@ -211,7 +210,12 @@ sealed class Output : IGameEventScriptNativeMessageHandler
 }
 ```
 
-Call `Execute(bytes)` and inspect the returned execution state and diagnostics.
+Call `Execute(bytes)` and inspect the startup and execution results. The initial
+flow is Build, Load all Programs, register native handlers, then Start. Start
+initializes the group without draining its emitted messages. A later Load with initialization returns
+an instance with a pending StartResult; ordinary pumping completes that init.
+An init failure removes that instance and its pending deliveries while the host
+remains ready. [Host runtime](../../specs/HostRuntime.md) defines the full startup and output rules.
 `ExecuteFrame(opcodeBudget)` supports bounded stepping and resumption. Retain
 the Host and instance between frames when embedding it in a game loop. Dropping
 an instance or subscription handle does not detach it; use `Detach()` or

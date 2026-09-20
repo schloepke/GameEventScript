@@ -56,7 +56,7 @@ public sealed class GameEventScriptCompileCommandTests
         Assert.IsFalse(result.StandardOutput.Contains("Required registers:", StringComparison.Ordinal));
 
         long? received = null;
-        var host = GameEventScriptHost.CreateBuilder().WithRandomSeed(1).Build();
+        var host = GameEventScriptHost.CreateBuilder().WithRandomSeed(1).Build().StartForTest();
         host.Subscribe("Done", ["result", "text"], (message, _) => received = message.Arguments.GetAsInteger("result"));
         host.Load(program);
         Assert.IsTrue(host.Receive(GameEventScriptCSharpMessage.Create("Start", ("value", GesValue.GesInteger(41)))));
@@ -264,7 +264,7 @@ public sealed class GameEventScriptCompileCommandTests
         StringAssert.Contains(result.StandardOutput, "Sources (2):");
         StringAssert.Contains(result.StandardOutput, "Handlers: 2");
         var received = new List<string>();
-        var host = GameEventScriptHost.CreateBuilder().WithRandomSeed(1).Build();
+        var host = GameEventScriptHost.CreateBuilder().WithRandomSeed(1).Build().StartForTest();
         host.Subscribe("First", ["result"], (message, _) => received.Add("first:" + message.Arguments.GetAsInteger("result")));
         host.Subscribe("Second", ["result"], (message, _) => received.Add("second:" + message.Arguments.GetAsInteger("result")));
         host.Load(program);

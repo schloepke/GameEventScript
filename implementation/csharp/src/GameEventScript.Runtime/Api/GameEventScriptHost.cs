@@ -13,7 +13,7 @@ namespace GameEventScript.Api;
 /// Serial message host for native handlers and optional GameEventScript programs.
 /// The portable core performs no synchronization and creates no worker threads.
 /// </summary>
-public sealed class GameEventScriptHost
+public sealed partial class GameEventScriptHost
 {
     private const int NormalPriority = 0;
     private const int DefaultRegisterLimit = 512;
@@ -69,11 +69,11 @@ public sealed class GameEventScriptHost
     /// <summary>
     /// Gets the number of logical messages waiting behind the currently active message.
     /// </summary>
-    public int PendingMessageCount => _queue.Count;
+    public int PendingMessageCount => _queue.Count + _startupQueue.Count;
     /// <summary>
     /// Gets a value indicating whether no message is active or queued.
     /// </summary>
-    public bool IsIdle => !_hasActiveMessage && _queue.Count == 0;
+    public bool IsIdle => !_hasActiveMessage && _queue.Count == 0 && _startupQueue.Count == 0;
     internal GesVmState? VmState => _vmState;
 
     /// <summary>
@@ -87,11 +87,14 @@ public sealed class GameEventScriptHost
     /// registration or VM preparation. A full queue rejects loading with the link diagnostic
     /// <c>link.initializationQueueFull</c>; the unchanged host can retry after pending messages are processed.
     /// </remarks>
+    /// <exception cref="InvalidOperationException">The initial start failed, or loading was called reentrantly from startup or script execution.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="program"/> is <see langword="null"/>.</exception>
     /// <exception cref="GameEventScriptProgramFormatException">Thrown when the program is structurally or semantically invalid.</exception>
     /// <exception cref="GameEventScriptDynamicLinkException">Thrown when runtime bindings are unavailable, the program exceeds host limits, or its initialization cannot fit in the queue.</exception>
     public GameEventScriptInstance Load(GameEventScriptProgram program, int priority = NormalPriority)
     {
+        if (_starting || _executingScript || _startResult is { State: not GameEventScriptStartState.Ready })
+            throw new InvalidOperationException("Loading is not allowed during initialization, script execution, or after a failed start.");
         _ = program ?? throw new ArgumentNullException(nameof(program));
         GameEventScriptProgramValidator.Validate(program);
         var maxRegisterCount = Math.Min(
@@ -147,9 +150,12 @@ public sealed class GameEventScriptHost
         {
             var message = GameEventScriptSystemEndpoints.CreateInitializationMessage();
             // No host callbacks occur between the capacity check and this initialization enqueue.
-            _queue.Enqueue(new PendingMessage(message, Sort(initialization.ToArray()), []));
+            var pending = new PendingMessage(message, Sort(initialization.ToArray()), [], instance);
+            if (IsReady) _queue.Enqueue(pending);
+            else _startupQueue.Enqueue(pending);
         }
 
+        else if (IsReady) instance.StartResult = new(GameEventScriptStartState.Ready);
         return instance;
     }
 
@@ -249,7 +255,7 @@ public sealed class GameEventScriptHost
     public bool Receive(GameEventScriptMessage message)
     {
         _ = message ?? throw new ArgumentNullException(nameof(message));
-        if (message.Name.Length == 0 || GameEventScriptSystemEndpoints.IsInitializationName(message.Name)) return false;
+        if (!IsReady || message.Name.Length == 0 || GameEventScriptSystemEndpoints.IsInitializationName(message.Name)) return false;
         return EnqueueMessage(message);
     }
 
@@ -259,10 +265,20 @@ public sealed class GameEventScriptHost
     /// <param name="opcodeBudget">The positive scheduler budget for this call. Native handlers remain atomic and do not consume opcode units.</param>
     /// <returns>A value-type summary of work performed and the resulting host state.</returns>
     /// <remarks>The caller must serialize access to a host. A handler may enqueue and change future subscriptions, but must not recursively pump this host.</remarks>
+    /// <exception cref="InvalidOperationException">The host is not ready or is already executing a callback.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="opcodeBudget"/> is not positive.</exception>
     public GameEventScriptExecutionResult ExecuteFrame(int opcodeBudget)
     {
         if (opcodeBudget <= 0) throw new ArgumentOutOfRangeException(nameof(opcodeBudget), "Opcode budget must be greater than zero.");
+        if (!IsReady) throw new InvalidOperationException("Start the host successfully before processing messages.");
+        if (_pumping) throw new InvalidOperationException("A host cannot be pumped recursively.");
+        _pumping = true;
+        try { return ExecuteFrameCore(opcodeBudget); }
+        finally { _pumping = false; }
+    }
+
+    private GameEventScriptExecutionResult ExecuteFrameCore(int opcodeBudget)
+    {
         BeginStep();
         var remaining = opcodeBudget;
         var runtimeLimitReached = false;
@@ -273,13 +289,18 @@ public sealed class GameEventScriptHost
 
             if (_scriptHandlerActive)
             {
-                var executed = GameEventScriptVirtualMachine.RunSlice(_vmState!, _context, remaining);
+                int executed;
+                _executingScript = true;
+                try { executed = GameEventScriptVirtualMachine.RunSlice(_vmState!, _context, remaining); }
+                finally { _executingScript = false; }
                 _stepExecutedOpcodes += executed;
+                if (_initializationInstance is not null) _initializationOpcodes += executed;
                 remaining -= executed;
                 if (_context.RuntimeBudget.IsExhausted)
                 {
                     _vmState!.Reset();
                     CompleteActiveHandler();
+                    FailInitialization(GameEventScriptStartState.RuntimeLimitReached);
                     runtimeLimitReached = true;
                     break;
                 }
@@ -292,21 +313,35 @@ public sealed class GameEventScriptHost
                         "The VM entered an error state without a diagnostic."));
                     _vmState.Reset();
                     CompleteActiveHandler();
+                    FailInitialization(GameEventScriptStartState.RuntimeError);
+                    if (_starting) break;
                     continue;
                 }
 
                 _vmState.Reset();
                 CompleteActiveHandler();
+                if (_initializationInstance is not null && _context.RuntimeBudget.IsExhausted)
+                {
+                    FailInitialization(GameEventScriptStartState.RuntimeLimitReached);
+                    runtimeLimitReached = true;
+                    break;
+                }
+                if (_initializationInstance is not null && _initializationDiagnostic is not null)
+                {
+                    FailInitialization(GameEventScriptStartState.RuntimeError);
+                    if (_starting) break;
+                }
                 continue;
             }
 
             var next = _activeMessage.NextMatching();
             if (next is null)
             {
+                CompleteInitialization();
                 _hasActiveMessage = false;
                 _stepProcessedMessages++;
                 if (_limits.MaxProcessedEventsPerRun > 0 &&
-                    _stepProcessedMessages >= _limits.MaxProcessedEventsPerRun && _queue.Count > 0)
+                    _stepProcessedMessages >= _limits.MaxProcessedEventsPerRun && (_starting ? _startupQueue.Count : _queue.Count) > 0)
                 {
                     _context.RecordRuntimeLimitReached(
                         nameof(GameEventScriptRuntimeLimits.MaxProcessedEventsPerRun),
@@ -341,6 +376,7 @@ public sealed class GameEventScriptHost
 
             try
             {
+                _executingScript = true;
                 GameEventScriptVirtualMachine.Begin(_vmState!, next.Instance!.LinkedProgram, _activeMessage.Message,
                     next.MatchArguments, next.EntryAddress, next.DispatchSignatureId, _context);
             }
@@ -349,8 +385,11 @@ public sealed class GameEventScriptHost
                 RecordRuntimeError(exception.Diagnostic);
                 _vmState!.Reset();
                 CompleteActiveHandler();
+                FailInitialization(GameEventScriptStartState.RuntimeError);
+                if (_starting) break;
                 continue;
             }
+            finally { _executingScript = false; }
             _scriptHandlerActive = true;
         }
 
@@ -362,6 +401,7 @@ public sealed class GameEventScriptHost
     /// </summary>
     /// <returns>A value-type aggregate of all internally executed frames.</returns>
     /// <remarks>The caller must serialize access to a host. No thread or task is created.</remarks>
+    /// <exception cref="InvalidOperationException">The host is not ready or is already executing a callback.</exception>
     public GameEventScriptExecutionResult RunToCompletion()
     {
         var totalOpcodes = 0;
@@ -385,16 +425,31 @@ public sealed class GameEventScriptHost
 
     internal bool EmitFromContext(GameEventScriptMessage message)
     {
-        var accepted = !_random.HasActiveScopeFault && EnqueueMessage(message);
+        var accepted = !_random.HasActiveScopeFault && EnqueueMessage(message, _initializationInstance is not null);
         _stepEmittedMessages++;
+        if (_initializationInstance is not null) _initializationEmits++;
         _observer?.MessageEmitted(message, accepted);
         return accepted;
     }
 
     internal GameEventScriptPublishResult PublishFromContext(GameEventScriptMessage message)
     {
+        if (_initializationInstance is not null) _initializationPublishes++;
         var randomScopeFault = _random.HasActiveScopeFault;
-        var localAccepted = !randomScopeFault && EnqueueMessage(message);
+        var localAccepted = !randomScopeFault && EnqueueMessage(message, _initializationInstance is not null);
+        if (_initializationInstance is not null)
+        {
+            if (randomScopeFault)
+            {
+                _stepPublishedMessages++;
+                _observer?.MessagePublished(message, default);
+                return default;
+            }
+            _initializationPublications ??= new();
+            _initializationPublications.Add(new(message, localAccepted, _initializationInstance));
+            _stepPublishedMessages++;
+            return new(localAccepted, false, false, !randomScopeFault && _publishSink is not null);
+        }
         var attempted = !randomScopeFault && _publishSink is not null;
         var outboundAccepted = false;
         if (attempted)
@@ -441,6 +496,7 @@ public sealed class GameEventScriptHost
         if (programName != diagnostic.ProgramName || handlerName != diagnostic.HandlerName)
             diagnostic = diagnostic with { ProgramName = programName, HandlerName = handlerName };
         _stepRuntimeDiagnostic ??= diagnostic;
+        if (_initializationInstance is not null) _initializationDiagnostic ??= diagnostic;
         _observer?.RuntimeError(diagnostic);
     }
 
@@ -455,7 +511,10 @@ public sealed class GameEventScriptHost
 
     private bool StartNextMessage()
     {
-        if (!_queue.Dequeue(out _activeMessage)) return false;
+        if (!(_starting ? _startupQueue : _queue).Dequeue(out _activeMessage)) return false;
+        _initializationInstance = _activeMessage.Initialization;
+        _initializationOpcodes = _initializationEmits = _initializationPublishes = 0;
+        _initializationDiagnostic = null;
         _hasActiveMessage = true;
         return true;
     }
@@ -471,7 +530,7 @@ public sealed class GameEventScriptHost
     {
         var handler = _activeHandler;
         var randomFault = _context.EndRandomBoundary(_activeRandomBoundary);
-        if (_stepRuntimeDiagnostic is null && !_context.RuntimeBudget.IsExhausted)
+        if ((_initializationInstance is not null ? _initializationDiagnostic is null : _stepRuntimeDiagnostic is null) && !_context.RuntimeBudget.IsExhausted)
         {
             if (randomFault == GameEventScriptRandomGenerator.ScopeBoundaryFault.BoundaryUnderflow)
             {
@@ -493,7 +552,7 @@ public sealed class GameEventScriptHost
         if (handler is not null) _observer?.DispatchCompleted(_activeMessage.Message, handler.DispatchSignatureId);
     }
 
-    private bool EnqueueMessage(GameEventScriptMessage message)
+    private bool EnqueueMessage(GameEventScriptMessage message, bool initializationOutput = false)
     {
         if (string.IsNullOrWhiteSpace(message.Name)) return false;
         var exact = Get(_exact, message.SignatureId);
@@ -506,17 +565,20 @@ public sealed class GameEventScriptHost
             if (!HasMatch(message, exact, names)) return false;
         }
 
-        return EnqueuePlan(new PendingMessage(message, exact, names));
+        return EnqueuePlan(new PendingMessage(message, exact, names, initializationOutput: initializationOutput ? _initializationInstance : null), initializationOutput);
     }
 
-    private bool IsMessageQueueFull => _limits.MaxQueuedMessagesPerRun > 0 && _queue.Count >= _limits.MaxQueuedMessagesPerRun;
+    private bool IsMessageQueueFull => _limits.MaxQueuedMessagesPerRun > 0 && PendingMessageCount >= _limits.MaxQueuedMessagesPerRun;
 
-    private bool EnqueuePlan(PendingMessage message)
+    private bool EnqueuePlan(PendingMessage message, bool initializationOutput)
     {
         if (IsMessageQueueFull)
         {
-            _context.RecordRuntimeLimitReached(nameof(GameEventScriptRuntimeLimits.MaxQueuedMessagesPerRun),
-                $"Message queue limit reached. Dropped '{message.Message.Name}'.", _limits.MaxQueuedMessagesPerRun);
+            if (initializationOutput)
+                _context.RuntimeBudget.Exhaust(nameof(GameEventScriptRuntimeLimits.MaxQueuedMessagesPerRun), "Initialization message queue limit reached.", _limits.MaxQueuedMessagesPerRun);
+            else
+                _context.RecordRuntimeLimitReached(nameof(GameEventScriptRuntimeLimits.MaxQueuedMessagesPerRun),
+                    $"Message queue limit reached. Dropped '{message.Message.Name}'.", _limits.MaxQueuedMessagesPerRun);
             return false;
         }
 
@@ -750,9 +812,11 @@ public sealed class GameEventScriptHost
         private int _exactIndex;
         private int _nameIndex;
 
-        internal PendingMessage(GameEventScriptMessage message, SubscriptionEntry[] exact, SubscriptionEntry[] names)
+        internal PendingMessage(GameEventScriptMessage message, SubscriptionEntry[] exact, SubscriptionEntry[] names, GameEventScriptInstance? initialization = null, GameEventScriptInstance? initializationOutput = null)
         {
             Message = message;
+            Initialization = initialization;
+            InitializationOutput = initializationOutput;
             _exact = exact;
             _names = names;
             _exactIndex = 0;
@@ -760,6 +824,17 @@ public sealed class GameEventScriptHost
         }
 
         internal GameEventScriptMessage Message { get; }
+        internal GameEventScriptInstance? Initialization { get; }
+        private GameEventScriptInstance? InitializationOutput { get; }
+        internal bool HasRecipients()
+        {
+            if (InitializationOutput?.StartResult is { State: not GameEventScriptStartState.Ready }) return false;
+            foreach (var entry in _exact) if (CanReceive(entry)) return true;
+            foreach (var entry in _names) if (CanReceive(entry)) return true;
+            return false;
+        }
+        private bool CanReceive(SubscriptionEntry entry)
+            => entry.Instance?.StartResult is not { State: not GameEventScriptStartState.Ready } && entry.Matches(Message);
 
         internal SubscriptionEntry? NextMatching()
         {
@@ -770,7 +845,7 @@ public sealed class GameEventScriptHost
                 else if (_nameIndex >= _names.Length) next = _exact[_exactIndex++];
                 else if (Compare(_exact[_exactIndex], _names[_nameIndex]) <= 0) next = _exact[_exactIndex++];
                 else next = _names[_nameIndex++];
-                if (next.Matches(Message)) return next;
+                if (CanReceive(next)) return next;
             }
 
             return null;
@@ -802,6 +877,17 @@ public sealed class GameEventScriptHost
             _head = (_head + 1) % _items.Length;
             Count--;
             return true;
+        }
+
+        internal void Clear()
+        {
+            while (Dequeue(out _)) { }
+        }
+        internal void RemoveFailedRecipients()
+        {
+            var count = Count;
+            for (var index = 0; index < count; index++)
+                if (Dequeue(out var item) && item.HasRecipients()) Enqueue(item);
         }
 
         private void Grow()

@@ -81,7 +81,7 @@ import GameEventScriptRuntime
             workload.test, observer: workload.observeRuntime ? observer : nil,
             publishSink: workload.test.metadata["publishSink"]?.stringValue == "absent" ? nil : observer)
         _ = try host.load(program)
-        guard try host.runToCompletion().state == .completed else {
+        guard try host.start().state == .ready, try host.runToCompletion().state == .completed else {
             throw ConformanceExecutionError.invalidInput("Performance initialization failed")
         }
     }

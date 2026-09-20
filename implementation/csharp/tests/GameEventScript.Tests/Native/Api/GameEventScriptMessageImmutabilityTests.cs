@@ -14,7 +14,7 @@ public sealed class GameEventScriptMessageImmutabilityTests
     [TestMethod]
     public void PublicTagsCannotChangeAnAlreadyQueuedDelivery()
     {
-        var host = GameEventScriptHost.CreateBuilder().Build();
+        var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         var delivered = new List<GameEventScriptMessage>();
         host.Subscribe(GameEventScriptMessageSignature.Create("Tagged", []), (message, _) => delivered.Add(message), ["green"]);
         var input = GameEventScriptMessage.Create("Tagged", [], ["green"]);
@@ -108,7 +108,7 @@ public sealed class GameEventScriptMessageImmutabilityTests
     public void ScriptMessageViewsCannotChangeCurrentOrSubsequentDeliveries(string body)
     {
         var program = GameEventScriptBuilder.Create().AddScript("module immutablemessages\non Start { " + body + "\n }").Compile();
-        var host = GameEventScriptHost.CreateBuilder().Build();
+        var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         var delivered = new List<GameEventScriptMessage>();
         host.Subscribe(GameEventScriptMessageSignature.Create("Shape", ["original"]), (message, _) =>
         {

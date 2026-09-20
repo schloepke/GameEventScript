@@ -16,6 +16,15 @@ internal sealed class RunSession(GameEventScriptHost host, RunObserver observer)
 
     internal bool Pump()
     {
+        if (!host.IsReady)
+        {
+            var start = host.Start();
+            _processedMessages += start.ProcessedMessages;
+            _opcodes += start.ExecutedOpcodes;
+            _emits += start.EmittedMessages;
+            _publishes += start.PublishedMessages;
+            if (start.State != GameEventScriptStartState.Ready) return false;
+        }
         var result = host.RunToCompletion();
         _processedMessages += result.ProcessedMessages;
         _opcodes += result.ExecutedOpcodes;

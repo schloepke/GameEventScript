@@ -15,7 +15,7 @@ public sealed class GameEventScriptHostSteppingTests
     public void HostReusesOneContext()
     {
         var contexts = new List<GameEventScriptContext>();
-        var host = GameEventScriptHost.CreateBuilder().Build();
+        var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         host.Subscribe("Start", [], (_, context) => contexts.Add(context));
 
         Assert.IsTrue(host.Receive(Create("Start")));
@@ -30,7 +30,7 @@ public sealed class GameEventScriptHostSteppingTests
     [TestMethod]
     public void LoadedProgramsShareOneFullyResetHostVmState()
     {
-        var host = GameEventScriptHost.CreateBuilder().Build();
+        var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         host.Load(Compile("on First { emit Done }"));
         var vmState = host.VmState;
         host.Load(Compile("on Second { emit Done }"));
@@ -52,8 +52,8 @@ public sealed class GameEventScriptHostSteppingTests
     public void HostsBuiltFromTheSameConfigurationOwnIndependentRandomStreams()
     {
         var builder = GameEventScriptHost.CreateBuilder().WithRandomSeed(42L);
-        var firstHost = builder.Build();
-        var secondHost = builder.Build();
+        var firstHost = builder.Build().StartForTest();
+        var secondHost = builder.Build().StartForTest();
         var firstValues = new List<long>();
         var secondValues = new List<long>();
         firstHost.Subscribe("Take", [], (_, context) => firstValues.Add(context.Random.NextInclusiveInteger(long.MinValue, long.MaxValue)));
@@ -82,7 +82,7 @@ public sealed class GameEventScriptHostSteppingTests
             .WithRandomSeed(0L)
             .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxRandomScopeDepth = 1 })
             .WithRuntimeObserver(observer)
-            .Build();
+            .Build().StartForTest();
         host.Subscribe("Start", [], (message, context) =>
         {
             _ = message;
@@ -124,7 +124,7 @@ public sealed class GameEventScriptHostSteppingTests
             .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxRandomScopeDepth = 1 })
             .WithRuntimeObserver(observer)
             .WithRegistry(RandomScopeExtensionRegistry.Instance)
-            .Build();
+            .Build().StartForTest();
         host.Load(Compile("on Start { let value be :randomTest.overpush; emit Done(value: value) }"));
         long? followingValue = null;
         host.Subscribe("Rejected", [], (_, _) => Assert.Fail("A faulted extension must not enqueue messages."));
@@ -154,7 +154,7 @@ public sealed class GameEventScriptHostSteppingTests
             .WithRandomSeed(0L)
             .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(runtimeError: diagnostics.Add))
             .WithRegistry(RandomScopeExtensionRegistry.Instance)
-            .Build();
+            .Build().StartForTest();
         host.Load(Compile("on Start { let value be :randomTest.leak; emit Done(value: value) }"));
         long? followingValue = null;
         host.Subscribe("Done", ["value"], (_, _) => Assert.Fail("The VM must halt when an extension leaks a random scope."));
@@ -175,7 +175,7 @@ public sealed class GameEventScriptHostSteppingTests
     public void RandomHandlerScopeCanResumeAcrossSerializedThreadHandoffs()
     {
         var values = new List<long>();
-        var host = GameEventScriptHost.CreateBuilder().WithRandomSeed(0L).Build();
+        var host = GameEventScriptHost.CreateBuilder().WithRandomSeed(0L).Build().StartForTest();
         host.Load(Compile("on Start { random with 7 { emit Done(value: random from 1 to 100) } }"));
         host.Subscribe("Done", ["value"], (message, _) => values.Add(message.Arguments.GetAsInteger("value")));
         host.Subscribe("Check", [], (_, context) => values.Add(context.Random.NextInclusiveInteger(long.MinValue, long.MaxValue)));
@@ -199,7 +199,7 @@ public sealed class GameEventScriptHostSteppingTests
     public void CSharpAutoRunnerSerializesReceiveAndPumps()
     {
         var completed = new ManualResetEventSlim(false);
-        var host = GameEventScriptHost.CreateBuilder().Build();
+        var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         using var runner = host.RunAutomatically();
         runner.Subscribe("Start", [], (_, _) => completed.Set());
         Assert.IsTrue(runner.Receive(Create("Start")));
@@ -213,7 +213,7 @@ public sealed class GameEventScriptHostSteppingTests
         using var completed = new CountdownEvent(messageCount);
         var active = 0;
         var maximumActive = 0;
-        var host = GameEventScriptHost.CreateBuilder().Build();
+        var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         using var runner = host.RunAutomatically();
         runner.Subscribe("Start", [], (_, _) =>
         {
@@ -241,7 +241,7 @@ public sealed class GameEventScriptHostSteppingTests
             {
                 if (message.Name == "ScriptDone") scriptCompleted.Set();
             });
-        var host = GameEventScriptHost.CreateBuilder().WithRuntimeObserver(observer).Build();
+        var host = GameEventScriptHost.CreateBuilder().WithRuntimeObserver(observer).Build().StartForTest();
         using var runner = host.RunAutomatically();
 
         var first = runner.Subscribe("Native", [], (_, _) =>
@@ -277,7 +277,7 @@ public sealed class GameEventScriptHostSteppingTests
     public void WarmQueueDispatchFrameResultAndVmResumeDoNotAllocate()
     {
         const int iterations = 1_000;
-        var host = GameEventScriptHost.CreateBuilder().Build();
+        var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         host.Load(Compile("""
                           on Tick {
                             let value be 1 + 2 + 3

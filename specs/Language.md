@@ -276,9 +276,10 @@ a map keyed by argument label and therefore follows map key ordering and
 last-entry-wins behavior; repeated `_` positions are not individually addressable
 through that map.
 
-`initialization` is a parameterless system endpoint. Each `Load(program)` queues
-it exactly once for the returned program instance. It is placed after messages
-already waiting at load time and before messages received later:
+`initialization` is a parameterless special handler invoked once per loaded
+instance. The host's initial Start phase and later FIFO initialization, including
+failure and output commitment, are defined in [HostRuntime](HostRuntime.md#loading-and-startup).
+It is not an externally addressable message:
 
 ```ges
 on initialization {

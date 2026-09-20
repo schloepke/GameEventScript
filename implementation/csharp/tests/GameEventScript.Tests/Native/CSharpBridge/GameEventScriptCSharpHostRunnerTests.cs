@@ -16,7 +16,7 @@ public sealed class GameEventScriptCSharpHostRunnerTests
     public void AutomaticRunnerPumpsWorkQueuedBeforeItWasCreated(bool queuedInitialization)
     {
         var delivered = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder().Build();
+        var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         host.Subscribe("Ready", [], (message, _) => delivered.Add(message));
         if (queuedInitialization) host.Load(GameEventScriptBuilder.Create().AddScript("on initialization { emit Ready() }").Compile());
         else Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Ready")));
@@ -39,7 +39,7 @@ public sealed class GameEventScriptCSharpHostRunnerTests
     public void AutomaticRunnerResumesAnAlreadyPausedScriptHandler()
     {
         var delivered = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder().Build();
+        var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         host.Subscribe("Ready", [], (message, _) => delivered.Add(message));
         host.Load(GameEventScriptBuilder.Create().AddScript("on Start { emit Ready() }").Compile());
         Assert.AreEqual(GameEventScriptExecutionState.Completed, host.RunToCompletion().State);
@@ -62,7 +62,7 @@ public sealed class GameEventScriptCSharpHostRunnerTests
     public void DisposingBeforeTheInitialPumpPreservesPendingHostWork()
     {
         var delivered = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder().Build();
+        var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         host.Subscribe("Ready", [], (message, _) => delivered.Add(message));
         Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Ready")));
 

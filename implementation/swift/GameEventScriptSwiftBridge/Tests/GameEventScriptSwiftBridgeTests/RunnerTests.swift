@@ -23,8 +23,22 @@ final class RunnerTests: XCTestCase {
         }
     }
 
-    func testConcurrentReceivesSerializeCompletePumps() throws {
-        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 1))
+    func testRunnerWaitsForExplicitStart() throws {
+        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.createBuilder().build())
+        defer { runner.close() }
+        let trace = Trace()
+        _ = try runner.subscribe(.init(name: "Tick")) { _, _ in trace.append(1) }
+        XCTAssertFalse(runner.isReady)
+        XCTAssertFalse(try runner.receive(.init(name: "Tick")))
+        XCTAssertTrue(trace.values.isEmpty)
+        XCTAssertEqual(try runner.start().state, .ready)
+        XCTAssertTrue(try runner.receive(.init(name: "Tick")))
+        while !runner.isIdle { _ = try runner.runToCompletion() }
+        XCTAssertEqual(trace.values, [1])
+    }
+
+    func testConcurrentReceivesSerializeMessageDispatch() throws {
+        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 1).startForTest())
         let trace = Trace()
         let start = try GameEventScriptMessageSignature(name: "Start", parameters: ["value"])
         let done = try GameEventScriptMessageSignature(name: "Done", parameters: ["value"])
@@ -39,9 +53,10 @@ final class RunnerTests: XCTestCase {
                 XCTFail("\(error)")
             }
         }
+        while !runner.isIdle { _ = try runner.runToCompletion() }
         let values = trace.values
         XCTAssertEqual(values.count, 200)
-        for index in stride(from: 0, to: values.count, by: 2) { XCTAssertEqual(values[index], values[index + 1]) }
+        for value in 0..<100 { XCTAssertEqual(values.filter { $0 == value }.count, 2) }
         XCTAssertEqual(Set(values), Set(0..<100))
         XCTAssertTrue(runner.isIdle)
         XCTAssertEqual(runner.lastResult?.state, .completed)
@@ -57,7 +72,7 @@ final class RunnerTests: XCTestCase {
     }
 
     func testRecursiveReceivesEnqueueWithoutRecursiveDispatch() throws {
-        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 1))
+        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 1).startForTest())
         defer { runner.close() }
         let trace = Trace()
         _ = try runner.subscribe(.init(name: "Start", parameters: ["value"])) { message, _ in
@@ -70,22 +85,22 @@ final class RunnerTests: XCTestCase {
             }
         }
         try runner.receive(.init(name: "Start", swiftArguments: [("value", 0)]))
+        while !runner.isIdle { _ = try runner.runToCompletion() }
         XCTAssertEqual(trace.values, [0, 2, 1])
         XCTAssertEqual(runner.lastResult?.processedMessages, 2)
     }
 
     func testTransferCanDrainPreexistingWorkAndReportsFaults() throws {
         let trace = Trace()
-        let host = try GameEventScriptHost(seed: 1)
+        let host = try GameEventScriptHost(seed: 1).startForTest()
         _ = try host.subscribeMessageName("Start") { _, _ in
             trace.append(1)
             throw try GameEventScriptExtensionFault(code: "app.runner", message: "Failed")
         }
         host.receive(try .init(name: "Start"))
         let runner = GameEventScriptSwiftHostRunner(host)
-        XCTAssertNil(runner.lastResult)
-        XCTAssertFalse(runner.isIdle)
-        XCTAssertEqual(try runner.runToCompletion().diagnostic?.code, "app.runner")
+        while !runner.isIdle { _ = try runner.runToCompletion() }
+        XCTAssertEqual(runner.lastResult?.diagnostic?.code, "app.runner")
         XCTAssertEqual(trace.values, [1])
         XCTAssertEqual(runner.lastResult?.state, .runtimeError)
         runner.close()

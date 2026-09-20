@@ -240,7 +240,7 @@ public sealed class GameEventScriptPublicApiSurfaceTests
                     : string.Empty;
                 return "  method " + (method.IsStatic ? "static " : string.Empty) + FormatType(method.ReturnType) + " " + method.Name + genericArguments + "(" + FormatParameters(method.GetParameters()) + ")";
             case PropertyInfo property:
-                var access = (property.CanRead ? "get" : string.Empty) + (property.CanWrite ? " set" : string.Empty);
+                var access = (property.GetMethod?.IsPublic == true ? "get" : string.Empty) + (property.SetMethod?.IsPublic == true ? " set" : string.Empty);
                 return "  property " + FormatType(property.PropertyType) + " " + property.Name + " { " + access.Trim() + " }";
             case FieldInfo field:
                 return "  field " + (field.IsStatic ? "static " : string.Empty) + FormatType(field.FieldType) + " " + field.Name;

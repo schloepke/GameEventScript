@@ -9,7 +9,7 @@ final class CallbackTests: XCTestCase {
     enum Failure: Error { case unexpected }
 
     func testClosureSubscriptionsPreservePriorityTagsAndCapturedDelivery() throws {
-        let host = try GameEventScriptHost(seed: 1)
+        let host = try GameEventScriptHost(seed: 1).startForTest()
         let signature = try GameEventScriptMessageSignature(name: "Start", parameters: ["value"])
         var received: [String] = []
         let low = try host.subscribe(signature) { message, _ in received.append("low:\(message.arguments[0])") }
@@ -29,7 +29,7 @@ final class CallbackTests: XCTestCase {
 
     func testClosureFailuresRetainRuntimeClassification() throws {
         for explicit in [false, true] {
-            let host = try GameEventScriptHost(seed: 1)
+            let host = try GameEventScriptHost(seed: 1).startForTest()
             _ = try host.subscribeMessageName("Start") { _, _ in
                 if explicit { throw try GameEventScriptExtensionFault(code: "app.failed", message: "Failed") }
                 throw Failure.unexpected
@@ -65,7 +65,7 @@ final class CallbackTests: XCTestCase {
             outbound.append($0)
             return true
         }
-        let host = try GameEventScriptHost(seed: 1, publishSink: sink)
+        let host = try GameEventScriptHost(seed: 1, publishSink: sink).startForTest()
         _ = try host.subscribeMessageName("Done") { message, _ in local.append(message) }
         _ = try host.subscribeMessageName("Start") { _, context in
             try context.emit("Done", swiftArguments: [("value", 1)])

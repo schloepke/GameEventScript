@@ -21,7 +21,7 @@ public sealed class GameEventScriptDiagnosticContractTests
             .Compile();
         var host = GameEventScriptHost.CreateBuilder()
             .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxCallDepth = 0 })
-            .Build();
+            .Build().StartForTest();
         var link = Assert.ThrowsExactly<GameEventScriptDynamicLinkException>(() => host.Load(program));
         Assert.AreEqual(GameEventScriptDiagnosticPhase.Link, link.Diagnostic.Phase);
         Assert.AreEqual(GameEventScriptDiagnosticCodes.LinkRequiredCallStackDepthExceeded, link.Diagnostic.Code);

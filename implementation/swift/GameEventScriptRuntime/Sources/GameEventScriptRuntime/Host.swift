@@ -19,6 +19,16 @@ public final class GameEventScriptHost {
     private var active: GesPendingMessage?
     private var activeHandler: GesSubscriptionEntry?
     private var scriptActive = false
+    private var startupQueue = GesMessageQueue(capacity: 0)
+    private var startupResult: GameEventScriptStartResult?
+    private var initializationFailure: GameEventScriptStartResult?
+    private var initializationOpcodes = 0, initializationEmits = 0, initializationPublishes = 0
+    private var starting = false
+    private var executingScript = false
+    private var initializationInstance: GameEventScriptInstance?
+    private var initializationDiagnostic: GesStartDiagnostic?
+    private var initializationPublications: [GesDeferredPublication] = []
+    private var startupPublications: [GesDeferredPublication] = []
     private var vm: GesVmState?
     private var nextID: Int64 = 0
     private var nextOrder: Int64 = 0
@@ -46,11 +56,17 @@ public final class GameEventScriptHost {
             seed: seed ?? GameEventScriptRandomGenerator.entropySeed(), sequence: sequence,
             maxScopeDepth: limits.maxRandomScopeDepth)
     }
-    public var pendingMessageCount: Int { queue.count }
-    public var isIdle: Bool { active == nil && queue.count == 0 }
+    public static func createBuilder() -> GameEventScriptHostBuilder { .init() }
+    public private(set) var isReady = false
+    public var pendingMessageCount: Int { queue.count + startupQueue.count }
+    public var isIdle: Bool { active == nil && queue.count == 0 && startupQueue.count == 0 }
 
     /// Validates and links before atomically publishing registrations and initialization.
     public func load(_ program: GameEventScriptProgram, priority: Int = 0) throws -> GameEventScriptInstance {
+        guard !starting, !executingScript, startupResult == nil || isReady else {
+            throw GameEventScriptAPIError.invalidOperation(
+                "Loading is not allowed during initialization, script execution, or after a failed start")
+        }
         try GameEventScriptProgramValidator.validate(program)
         let registers = min(65535, limits.maxRegisterValues > 0 ? limits.maxRegisterValues : 512)
         let depth = min(65535, max(0, limits.maxCallDepth))
@@ -80,10 +96,12 @@ public final class GameEventScriptHost {
         }
         instances[instance.registrationID] = instance
         if !initialization.isEmpty {
-            queue.enqueue(
-                .init(
-                    message: try GameEventScriptMessage(name: "initialization"),
-                    exact: initialization.sorted(by: GesSubscriptionEntry.precedes), names: []))
+            let pending = GesPendingMessage(
+                message: try GameEventScriptMessage(name: "initialization"),
+                exact: initialization.sorted(by: GesSubscriptionEntry.precedes), names: [], initialization: instance)
+            if isReady { queue.enqueue(pending) } else { startupQueue.enqueue(pending) }
+        } else if isReady {
+            instance.startResult = .init(state: .ready)
         }
         return instance
     }
@@ -121,14 +139,20 @@ public final class GameEventScriptHost {
         return GameEventScriptSubscription(host: self, id: id)
     }
     @discardableResult public func receive(_ message: GameEventScriptMessage) -> Bool {
-        if message.name.isEmpty || message.name == "initialization" { return false }
+        if !isReady || message.name.isEmpty || message.name == "initialization" { return false }
         return enqueue(message)
     }
     public func executeFrame(opcodeBudget: Int) throws -> GameEventScriptExecutionResult {
         guard opcodeBudget > 0 else { throw GameEventScriptAPIError.invalidArgument("Opcode budget must be positive") }
+        guard isReady else {
+            throw GameEventScriptAPIError.invalidOperation("Start the host before processing messages")
+        }
         guard !pumping else { throw GameEventScriptAPIError.invalidOperation("A host cannot be pumped recursively") }
         pumping = true
         defer { pumping = false }
+        return try executeFrameCore(opcodeBudget: opcodeBudget)
+    }
+    private func executeFrameCore(opcodeBudget: Int) throws -> GameEventScriptExecutionResult {
         opcodes = 0
         processed = 0
         emitted = 0
@@ -138,16 +162,25 @@ public final class GameEventScriptHost {
         var limitReached = false
         while remaining > 0 {
             if active == nil {
-                active = queue.dequeue()
+                active = starting ? startupQueue.dequeue() : queue.dequeue()
                 if active == nil { break }
+                initializationInstance = active?.initialization
+                initializationOpcodes = 0
+                initializationEmits = 0
+                initializationPublishes = 0
+                initializationDiagnostic = nil
             }
             if scriptActive {
+                executingScript = true
                 let executed = GameEventScriptVirtualMachine.runSlice(vm!, context: context, budget: remaining)
+                executingScript = false
                 opcodes += executed
+                if initializationInstance != nil { initializationOpcodes += executed }
                 remaining -= executed
                 if context.budget.isExhausted {
                     vm!.reset()
                     completeHandler()
+                    failInitialization(.runtimeLimitReached)
                     limitReached = true
                     break
                 }
@@ -155,13 +188,23 @@ public final class GameEventScriptHost {
                 if let error = vm!.error { record(error) }
                 vm!.reset()
                 completeHandler()
+                if initializationInstance != nil && context.budget.isExhausted {
+                    failInitialization(.runtimeLimitReached)
+                    limitReached = true
+                    break
+                }
+                if initializationDiagnostic != nil {
+                    failInitialization(.runtimeError)
+                    if starting { break }
+                }
                 continue
             }
             guard let next = active!.nextMatching() else {
+                completeInitialization()
                 active = nil
                 processed += 1
                 if limits.maxProcessedEventsPerRun > 0 && processed >= limits.maxProcessedEventsPerRun
-                    && queue.count > 0
+                    && (starting ? startupQueue.count : queue.count) > 0
                 {
                     context.reportLimit("MaxProcessedEventsPerRun", limits.maxProcessedEventsPerRun)
                     limitReached = true
@@ -184,6 +227,8 @@ public final class GameEventScriptHost {
                     break
                 }
             } else {
+                executingScript = true
+                defer { executingScript = false }
                 do {
                     try GameEventScriptVirtualMachine.begin(
                         vm!, linked: next.instance!.linked, message: active!.message,
@@ -193,10 +238,14 @@ public final class GameEventScriptHost {
                     record(fault.diagnostic)
                     vm!.reset()
                     completeHandler()
+                    failInitialization(.runtimeError)
+                    if starting { break }
                 } catch {
                     record(runtimeDiagnostic("runtime.preparationFailed", error: error))
                     vm!.reset()
                     completeHandler()
+                    failInitialization(.runtimeError)
+                    if starting { break }
                 }
             }
         }
@@ -227,14 +276,31 @@ public final class GameEventScriptHost {
         }
     }
     func emit(_ message: GameEventScriptMessage) -> Bool {
-        let accepted = !random.hasActiveScopeFault && enqueue(message)
+        let accepted =
+            !random.hasActiveScopeFault && enqueue(message, initializationOutput: initializationInstance != nil)
         emitted += 1
+        if initializationInstance != nil { initializationEmits += 1 }
         observer?.messageEmitted(message, accepted: accepted)
         return accepted
     }
     func publish(_ message: GameEventScriptMessage) -> GameEventScriptPublishResult {
+        if initializationInstance != nil { initializationPublishes += 1 }
         let fault = random.hasActiveScopeFault
-        let accepted = !fault && enqueue(message)
+        let accepted = !fault && enqueue(message, initializationOutput: initializationInstance != nil)
+        if let instance = initializationInstance {
+            if fault {
+                published += 1
+                let result = GameEventScriptPublishResult(
+                    localAccepted: false, outboundAttempted: false, outboundAccepted: false)
+                observer?.messagePublished(message, result: result)
+                return result
+            }
+            initializationPublications.append(.init(message: message, localAccepted: accepted, instance: instance))
+            published += 1
+            return .init(
+                localAccepted: accepted, outboundAttempted: false, outboundAccepted: false,
+                outboundDeferred: !fault && sink != nil)
+        }
         let attempted = !fault && sink != nil
         var outbound = false
         if attempted {
@@ -253,6 +319,9 @@ public final class GameEventScriptHost {
         if value.programName == nil { value.programName = activeHandler?.instance?.program.moduleName }
         if value.handlerName == nil { value.handlerName = activeHandler?.dispatchSignature }
         if diagnostic == nil { diagnostic = value }
+        if initializationInstance != nil && initializationDiagnostic == nil {
+            initializationDiagnostic = GesStartDiagnostic(value)
+        }
         observer?.runtimeError(value)
     }
     private func runtimeDiagnostic(_ code: String, error: (any Error)? = nil) -> GameEventScriptDiagnostic {
@@ -262,7 +331,9 @@ public final class GameEventScriptHost {
     }
     private func completeHandler() {
         let fault = context.endBoundary(randomBoundary)
-        if diagnostic == nil && !context.budget.isExhausted {
+        if (initializationInstance != nil ? initializationDiagnostic == nil : diagnostic == nil)
+            && !context.budget.isExhausted
+        {
             if fault == .boundaryUnderflow { record(runtimeDiagnostic("runtime.randomStackUnderflow")) }
             if fault == .unbalanced { record(runtimeDiagnostic("runtime.randomScopeImbalance")) }
         }
@@ -271,8 +342,10 @@ public final class GameEventScriptHost {
         activeHandler = nil
         if let handler { observer?.dispatchCompleted(active!.message, signatureID: handler.dispatchSignature) }
     }
-    private var queueFull: Bool { limits.maxQueuedMessagesPerRun > 0 && queue.count >= limits.maxQueuedMessagesPerRun }
-    private func enqueue(_ message: GameEventScriptMessage) -> Bool {
+    private var queueFull: Bool {
+        limits.maxQueuedMessagesPerRun > 0 && pendingMessageCount >= limits.maxQueuedMessagesPerRun
+    }
+    private func enqueue(_ message: GameEventScriptMessage, initializationOutput: Bool = false) -> Bool {
         var exact = self.exact[message.signatureId] ?? []
         var names = byName[message.name] ?? []
         if !exact.contains(where: { $0.matches(message) }) && !names.contains(where: { $0.matches(message) }) {
@@ -284,12 +357,19 @@ public final class GameEventScriptHost {
             }
         }
         if queueFull {
-            observer?.runtimeLimitReached(
-                "MaxQueuedMessagesPerRun", detail: "Message queue limit reached. Dropped '" + message.name + "'.",
-                limit: limits.maxQueuedMessagesPerRun)
+            if initializationOutput {
+                context.budget.exhaust("MaxQueuedMessagesPerRun", limits.maxQueuedMessagesPerRun)
+            } else {
+                observer?.runtimeLimitReached(
+                    "MaxQueuedMessagesPerRun", detail: "Message queue limit reached. Dropped '" + message.name + "'.",
+                    limit: limits.maxQueuedMessagesPerRun)
+            }
             return false
         }
-        queue.enqueue(.init(message: message, exact: exact, names: names))
+        queue.enqueue(
+            GesPendingMessage(
+                message: message, exact: exact, names: names,
+                initializationOutputID: initializationOutput ? (initializationInstance?.registrationID ?? 0) : 0))
         return true
     }
     private func registrationID() throws -> Int64 {
@@ -352,6 +432,10 @@ public final class GameEventScriptInstance {
     let linked: GesLinkedProgram
     public var program: GameEventScriptProgram { linked.program }
     public var isAttached: Bool { host?.isAttached(registrationID) ?? false }
+    public internal(set) var startResult: GameEventScriptStartResult? {
+        didSet { initializationFailed = startResult != nil && startResult?.state != .ready }
+    }
+    fileprivate private(set) var initializationFailed = false
     init(host: GameEventScriptHost, id: Int64, linked: GesLinkedProgram) {
         self.host = host
         registrationID = id
@@ -408,7 +492,13 @@ private final class GesSubscriptionEntry {
 private struct GesPendingMessage {
     let message: GameEventScriptMessage
     let exact: [GesSubscriptionEntry], names: [GesSubscriptionEntry]
+    var initialization: GameEventScriptInstance? = nil
+    var initializationOutputID: Int64 = 0
     var exactIndex = 0, nameIndex = 0
+    func canReceive(_ entry: GesSubscriptionEntry) -> Bool {
+        !(entry.instance?.initializationFailed ?? false) && entry.matches(message)
+    }
+    var hasRecipients: Bool { exact.contains(where: canReceive) || names.contains(where: canReceive) }
     mutating func nextMatching() -> GesSubscriptionEntry? {
         while exactIndex < exact.count || nameIndex < names.count {
             let next: GesSubscriptionEntry
@@ -422,24 +512,32 @@ private struct GesPendingMessage {
                 next = names[nameIndex]
                 nameIndex += 1
             }
-            if next.matches(message) { return next }
+            if canReceive(next) { return next }
         }
         return nil
     }
 }
 private struct GesMessageQueue {
-    private var items = [GesPendingMessage?](repeating: nil, count: 16)
+    private var items: [GesPendingMessage?]
+    init(capacity: Int = 16) { items = .init(repeating: nil, count: capacity) }
     private var head = 0
     private(set) var count = 0
     mutating func enqueue(_ value: GesPendingMessage) {
         if count == items.count {
-            var expanded = [GesPendingMessage?](repeating: nil, count: items.count * 2)
+            var expanded = [GesPendingMessage?](repeating: nil, count: max(1, items.count * 2))
             for index in 0..<count { expanded[index] = items[(head + index) % items.count] }
             items = expanded
             head = 0
         }
         items[(head + count) % items.count] = value
         count += 1
+    }
+    mutating func clear() { while dequeue() != nil {} }
+    mutating func removeFailedRecipients(discardingOutputsFrom id: Int64) {
+        let length = count
+        for _ in 0..<length {
+            if let item = dequeue(), item.initializationOutputID != id, item.hasRecipients { enqueue(item) }
+        }
     }
     mutating func dequeue() -> GesPendingMessage? {
         if count == 0 { return nil }
@@ -448,5 +546,120 @@ private struct GesMessageQueue {
         head = (head + 1) % items.count
         count -= 1
         return item
+    }
+}
+
+private struct GesDeferredPublication {
+    let message: GameEventScriptMessage
+    let localAccepted: Bool
+    let instance: GameEventScriptInstance
+}
+
+extension GameEventScriptHost {
+    /// Initializes the initial load group without dispatching its emitted messages. Repeated calls return the original outcome.
+    public func start() throws -> GameEventScriptStartResult {
+        guard !pumping, !starting else {
+            throw GameEventScriptAPIError.invalidOperation("A host cannot be started recursively")
+        }
+        if let result = startupResult { return result }
+        var totalOpcodes = 0
+        var totalProcessed = 0
+        var totalEmitted = 0
+        var totalPublished = 0
+        starting = true
+        pumping = true
+        defer {
+            starting = false
+            pumping = false
+        }
+        while startupQueue.count > 0 || active != nil {
+            let execution = try executeFrameCore(opcodeBudget: Int(Int32.max))
+            totalOpcodes += execution.executedOpcodes
+            totalProcessed += execution.processedMessages
+            totalEmitted += execution.emittedMessages
+            totalPublished += execution.publishedMessages
+            if execution.state == .runtimeError || execution.state == .runtimeLimitReached {
+                let result = GameEventScriptStartResult(
+                    state: execution.state == .runtimeError ? .runtimeError : .runtimeLimitReached,
+                    diagnostic: execution.diagnostic ?? initializationFailure?.diagnostic
+                        ?? initializationLimitDiagnostic(nil),
+                    executedOpcodes: totalOpcodes, processedMessages: totalProcessed, emittedMessages: totalEmitted,
+                    publishedMessages: totalPublished)
+                startupResult = result
+                for instance in Array(instances.values) {
+                    let prior = instance.startResult
+                    instance.startResult = .init(
+                        state: result.state, diagnostic: result.diagnostic,
+                        executedOpcodes: prior?.executedOpcodes ?? 0, processedMessages: prior?.processedMessages ?? 0,
+                        emittedMessages: prior?.emittedMessages ?? 0, publishedMessages: prior?.publishedMessages ?? 0)
+                    _ = instance.detach()
+                }
+                queue.clear()
+                startupQueue.clear()
+                startupPublications.removeAll(keepingCapacity: true)
+                return result
+            }
+        }
+        let result = GameEventScriptStartResult(
+            state: .ready, executedOpcodes: totalOpcodes,
+            processedMessages: totalProcessed, emittedMessages: totalEmitted, publishedMessages: totalPublished)
+        for instance in instances.values where instance.startResult == nil {
+            instance.startResult = .init(state: .ready)
+        }
+        startupResult = result
+        isReady = true
+        let publications = startupPublications
+        startupPublications.removeAll(keepingCapacity: true)
+        flushPublications(publications)
+        return result
+    }
+    private func completeInitialization() {
+        guard let instance = initializationInstance else { return }
+        instance.startResult = .init(
+            state: .ready, executedOpcodes: initializationOpcodes, processedMessages: 1,
+            emittedMessages: initializationEmits, publishedMessages: initializationPublishes)
+        initializationInstance = nil
+        initializationDiagnostic = nil
+        let publications = initializationPublications
+        initializationPublications.removeAll(keepingCapacity: true)
+        if starting { startupPublications.append(contentsOf: publications) } else { flushPublications(publications) }
+    }
+    private func failInitialization(_ state: GameEventScriptStartState) {
+        guard let instance = initializationInstance else { return }
+        instance.startResult = .init(
+            state: state, diagnostic: initializationDiagnostic?.value ?? initializationLimitDiagnostic(instance),
+            executedOpcodes: initializationOpcodes, emittedMessages: initializationEmits,
+            publishedMessages: initializationPublishes)
+        initializationFailure = instance.startResult
+        _ = instance.detach()
+        initializationPublications.removeAll(keepingCapacity: true)
+        initializationInstance = nil
+        initializationDiagnostic = nil
+        active = nil
+        queue.removeFailedRecipients(discardingOutputsFrom: instance.registrationID)
+    }
+    private func initializationLimitDiagnostic(_ instance: GameEventScriptInstance?) -> GameEventScriptDiagnostic {
+        .init(
+            phase: .runtime, code: "runtime.initializationLimitReached", programName: instance?.program.moduleName,
+            handlerName: "initialization()")
+    }
+    private func flushPublications(_ publications: [GesDeferredPublication]) {
+        for publication in publications {
+            let attempted = sink != nil
+            var accepted = false
+            if attempted {
+                do { accepted = try sink!.publish(publication.message) } catch {
+                    observer?.runtimeError(
+                        .init(
+                            phase: .runtime, code: "runtime.publishSinkFailure",
+                            programName: publication.instance.program.moduleName, handlerName: "initialization()",
+                            technicalDetails: String(describing: error)))
+                }
+            }
+            observer?.messagePublished(
+                publication.message,
+                result: .init(
+                    localAccepted: publication.localAccepted, outboundAttempted: attempted, outboundAccepted: accepted))
+        }
     }
 }

@@ -8,6 +8,8 @@
    </FileRef>
    <FileRef location="group:GameEventScriptConformance">
    </FileRef>
+   <FileRef location="group:GameEventScriptTool">
+   </FileRef>
    <FileRef location="group:README.md">
    </FileRef>
 </Workspace>

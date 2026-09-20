@@ -14,3 +14,6 @@ Guides optimize for understanding and may omit edge cases. Exact behavior is def
   workflow.
 - [CLI tool](../../implementation/csharp/tools/GameEventScript.Tool/README.md)
   describes the current `dotnet ges` entry point and local .NET tool installation.
+
+The [Swift CLI guide](../../implementation/swift/GameEventScriptTool/README.md)
+describes the native `ges` command, installation and terminal console.

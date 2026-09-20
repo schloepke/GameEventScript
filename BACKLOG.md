@@ -69,8 +69,6 @@ here.
   keep timing regression runs separate from ordinary portable Conformance CI.
 - Reduce Swift text-conversion temporary allocations when profiling justifies it;
   preserve the independently measured zero-allocation dispatch contract.
-- Add a native Swift `ges` CLI using the separate Compiler and Runtime packages,
-  following the established compile/check/run/dump and interactive contracts.
 - Implement Go and Rust as additional planned language ports, preserving the
   same portable Core, `.gesb` format, and shared Markdown Conformance contracts.
 - Add an independent CI job with build, unit tests, strict shared Conformance,

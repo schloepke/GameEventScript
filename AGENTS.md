@@ -15,6 +15,7 @@
 - C# tests: `implementation/csharp/tests/GameEventScript.Tests`.
 - Swift Runtime package: `implementation/swift/GameEventScriptRuntime`.
 - Swift Compiler package: `implementation/swift/GameEventScriptCompiler`.
+- Swift CLI package and `ges` executable: `implementation/swift/GameEventScriptTool`.
 - Swift Conformance package and adapter: `implementation/swift/GameEventScriptConformance`.
 - Shared executable corpus and fixtures: `conformance`.
 - Normative language-neutral specifications: `specs`.
@@ -286,12 +287,21 @@ Its optional resource resolver accepts IDs and byte bounds; only the executable
 adapter maps fixture paths to files. Native compilation itself needs no .NET.
 Build products, symbol graphs, generated binary inputs and reports belong under
 ignored `artifacts`. Public Swift API changes update `specs/PublicApi.md` and
-`implementation/swift/api`. The native Swift `ges` CLI remains deferred.
+`implementation/swift/api`. The separate `GameEventScriptTool` package implements
+the native Swift `ges` CLI; it depends on Runtime and Compiler, never Conformance.
+Foundation, filesystem/console I/O and POSIX terminal editing remain in that
+executable package. `scripts/test-swift-tool.sh` verifies CLI adapters and real
+process/PTY behavior without .NET; the full Swift test script includes it.
+The GES/GESA grammars are embedded from the canonical TextMate files; refresh
+them with `scripts/sync-swift-cli-grammars.py` and verify with `--check`.
+`install-swift-tool.sh` builds and installs/updates `ges` in `$HOME/.local/bin`
+or a selected `--tool-path`; the matching uninstall script removes only its
+owned binary. The C# `dotnet ges` and Swift `ges` commands can coexist.
 
 ## CLI
 
-The C# `dotnet ges` tool provides `compile`, `check`, `run`, and `dump`. Its
-NuGet package remains `GameEventScript.Tool`; the installed command is
+The C# `dotnet ges` and Swift `ges` tools provide `compile`, `check`, `run`, and
+`dump`. The C# NuGet package remains `GameEventScript.Tool`; the installed command is
 `dotnet-ges`, resolved by `dotnet ges` when the tool directory is on `PATH`.
 `check` uses the complete compiler pipeline without writing a binary or executing
 handlers.
@@ -338,9 +348,12 @@ write to stderr without executing handlers or re-reading files. Their inventory
 belongs to the CLI and records only successful persistent loads/subscriptions.
 
 Keep command parsing, file I/O, console observation, and process integration in
-the tool. CLI adapter tests belong in `Native/Tool`; portable language and host
-semantics remain covered by shared Markdown. The command contract and examples
-are documented in `implementation/csharp/tools/GameEventScript.Tool/README.md`.
+the tool. C# CLI adapter tests belong in `Native/Tool`; Swift adapters are tested in
+`GameEventScriptTool/Tests` and `scripts/test-swift-tool.py`. Portable language
+and host semantics remain covered by shared Markdown. The command contract and examples
+are documented in `implementation/csharp/tools/GameEventScript.Tool/README.md`;
+Swift installation and verification are documented in
+`implementation/swift/GameEventScriptTool/README.md`.
 
 ## Documentation and backlog
 

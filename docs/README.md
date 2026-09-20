@@ -43,6 +43,8 @@ The [Swift implementation guide](../implementation/swift/README.md) describes
 the package boundaries, current port coverage, and local verification commands.
 It also documents the [Xcode workspace](../implementation/swift/README.md#xcode-workspace)
 for building and testing all Swift packages together.
+The [Swift CLI guide](../implementation/swift/GameEventScriptTool/README.md)
+describes `ges`, installation/update, the event console and native CLI verification.
 The [Swift performance guide](../implementation/swift/Performance.md) documents
 the measured profile, instrumentation scope and baseline review workflow.
 The generated [performance baseline matrix](../artifacts/conformance/PerformanceMatrix.md)

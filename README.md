@@ -17,8 +17,9 @@ Markdown conformance corpus; the C# API is one language-specific mapping.
 - [`specs`](specs) contains the normative language-neutral specifications.
 - [`conformance`](conformance) contains the shared executable corpus and fixtures.
 - [`implementation/csharp`](implementation/csharp) contains the current reference implementation and native tests.
-- [`implementation/swift`](implementation/swift/README.md) contains the Swift Runtime, Compiler and Conformance packages and their Xcode workspace.
+- [`implementation/swift`](implementation/swift/README.md) contains the Swift Runtime, Compiler, Conformance and CLI packages and their Xcode workspace.
 - [`dotnet ges` CLI](implementation/csharp/tools/GameEventScript.Tool/README.md) contains the separate .NET tool entry point and local installation instructions.
+- [`ges` CLI](implementation/swift/GameEventScriptTool/README.md) contains the native Swift command and installation instructions.
 - [`docs`](docs) contains guides and supporting documentation.
 - [`tools`](tools) contains editor support and repository tooling.
 - [`BACKLOG.md`](BACKLOG.md) contains deliberately deferred project work and is not a normative specification.
@@ -68,6 +69,7 @@ The Swift entry points also live in `scripts`:
 ```bash
 ./scripts/build-swift.sh
 ./scripts/test-swift.sh
+./scripts/test-swift-tool.sh
 ./scripts/test-swift-performance.sh
 ./scripts/format-swift.sh
 python3 scripts/verify-swift-api.py
@@ -82,8 +84,11 @@ The full test script additionally needs .NET 10 to produce interoperability
 fixtures. Performance checks require the calibrated hardware/toolchain profile.
 See the [Swift guide](implementation/swift/README.md) for details.
 
-SwiftPM registry publication and the Swift `ges` CLI remain deferred, so there
-are no Swift equivalents of NuGet packing or CLI installation scripts yet.
+Install or update the native Swift `ges` command with
+`./scripts/install-swift-tool.sh`; remove it with `./scripts/uninstall-swift-tool.sh`.
+Both accept `--tool-path DIRECTORY` and otherwise use `$HOME/.local/bin`.
+See the [Swift CLI guide](implementation/swift/GameEventScriptTool/README.md).
+SwiftPM registry publication remains deferred.
 
 ## License
 

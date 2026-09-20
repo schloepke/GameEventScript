@@ -60,7 +60,7 @@ Apple M3 Max/macOS 26.6.2/Swift 6.4 in Release. All sixteen warmed dispatch case
 measure zero cumulative requested bytes and zero allocation events. Text and
 payload budgets are profile-specific; C# numbers are not transferred to Swift.
 The [performance guide](../../implementation/swift/Performance.md) defines scope
-and calibration. All three packages' APIs are checked against approved snapshots.
+and calibration. All three portable library packages' APIs are checked against approved snapshots.
 
 The generated [performance baseline matrix](../../artifacts/conformance/PerformanceMatrix.md)
 shows C# and Swift references per case in separate time and allocation tables,
@@ -80,3 +80,10 @@ these reports as its `swift-conformance` artifact. The profile-matched
 and [measurement provenance](../../artifacts/swift/measured-conformance/SwiftPerformance.measurement.json)
 are produced separately with `--performance`. The verification script runs
 the strict runner without `--allow-incomplete` and requires it to succeed.
+
+The [native Swift CLI](../../implementation/swift/GameEventScriptTool/README.md)
+provides `ges compile/check/run/dump` and the interactive event console. CLI
+argument/file/terminal adapters are verified separately by
+`scripts/test-swift-tool.sh`; they do not introduce additional Core capabilities
+or change the shared corpus counts above. C# and Swift CLI binaries can execute
+each other's `.gesb` output.

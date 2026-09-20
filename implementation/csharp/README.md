@@ -9,11 +9,11 @@ separate libraries; the CLI is a separate application.
 
 | Project / package | Responsibility | Dependencies |
 | --- | --- | --- |
-| [`GameEventScript.Runtime`](src/GameEventScript.Runtime) | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types | .NET Standard library |
-| [`GameEventScript.Compiler`](src/GameEventScript.Compiler) | Source lexer/parser, validation, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime |
-| [`GameEventScript.CSharpBridge`](src/GameEventScript.CSharpBridge) | Delegate adapters, Reflection/attribute bindings, CLR value conversion and optional automatic host pumping | Runtime |
-| [`GameEventScript.Conformance`](src/GameEventScript.Conformance/README.md) | Shared Markdown parser, compiler/runtime orchestration, fixture verification and result reports | Runtime and Compiler |
-| [`GameEventScript.Tool`](tools/GameEventScript.Tool/README.md) / `dotnet ges` | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, CSharpBridge and PrettyPrompt |
+| [`GameEventScript.Runtime`](GameEventScript.Runtime) | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types | .NET Standard library |
+| [`GameEventScript.Compiler`](GameEventScript.Compiler) | Source lexer/parser, validation, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime |
+| [`GameEventScript.CSharpBridge`](GameEventScript.CSharpBridge) | Delegate adapters, Reflection/attribute bindings, CLR value conversion and optional automatic host pumping | Runtime |
+| [`GameEventScript.Conformance`](GameEventScript.Conformance/README.md) | Shared Markdown parser, compiler/runtime orchestration, fixture verification and result reports | Runtime and Compiler |
+| [`GameEventScript.Tool`](GameEventScript.Tool/README.md) / `dotnet ges` | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, CSharpBridge and PrettyPrompt |
 
 All four libraries target **.NET Standard 2.1** and use **C# 12**. Runtime,
 Compiler and Conformance are synchronous, fileless and independent of a test
@@ -26,6 +26,30 @@ The public entry points use `GameEventScript.Api`; values use
 `GameEventScript.Runtime.Values`. The compiler's builder also lives in
 `GameEventScript.Api`, even though its assembly is separate. C# adapters and
 Conformance use `GameEventScript.CSharpBridge` and `GameEventScript.Conformance`.
+
+## Module layout
+
+Each module owns its production project in `src` and its native test project in
+`tests`. The repository solution groups them by module, so a Runtime or Compiler
+change and its implementation tests are visible together. Build or test one
+module directly by passing its `.csproj` to `dotnet build` or `dotnet test`.
+
+```text
+implementation/csharp/
+  GameEventScript.Runtime/       src/ + tests/
+  GameEventScript.Compiler/      src/ + tests/
+  GameEventScript.CSharpBridge/  src/ + tests/
+  GameEventScript.Tool/          src/ + tests/
+  GameEventScript.Conformance/   src/ + tests/ + fixtures/ + worker/ + fixture-exporter/
+  verification/                 Repository.Tests, consumers, package tool, test support
+```
+
+Conformance remains a separate module above Runtime and Compiler. The shared
+Markdown corpus and portable fixtures stay in repository-level `conformance/`.
+`verification/Tests.props` supplies common MSTest settings and linked helpers;
+it contains no test cases. The six test projects each discover their own tests
+exactly once. Some native Runtime and Bridge tests use Compiler to build inputs;
+these are test-only dependencies and do not change the product boundaries.
 
 ## Build and verify
 
@@ -68,12 +92,13 @@ and native tests.
 For Release verification including the independent allocation gates:
 
 ```bash
-dotnet test implementation/csharp/tests/GameEventScript.Tests/GameEventScript.Tests.csproj \
+dotnet test GameEventScript.sln \
   --configuration Release --filter "TestCategory!=Performance|TestCategory=Allocation"
 ```
 
 Portable behavior is authored in the shared [Markdown corpus](../../conformance).
-The test project adapts the fileless Conformance parser and runner to MSTest.
+The Conformance module’s test project adapts the fileless parser and runner to MSTest.
+Each product module owns a separate native test project.
 Native tests cover C# adapters, implementation details, public API boundaries,
 CLI/process integration and measurements that require the CLR.
 
@@ -82,7 +107,7 @@ performance fields echo reference values and are **not measurements**. Actual
 managed allocation checks run in Release under the
 `csharp-dotnet-release-managed` profile, including an independent zero-allocation
 VM hot-path gate. Elapsed-time benchmarks additionally require their calibrated
-hardware/toolchain profile. See the [test guide](tests/GameEventScript.Tests/README.md)
+hardware/toolchain profile. See the [test guide](verification/README.md)
 for filters, measurement scope and reference updates.
 
 A complete corpus run writes `ConformanceResults.json`, `ConformanceReport.md`
@@ -119,7 +144,7 @@ custom directory, use the same `--tool-path` when uninstalling.
 By default, `run` drains initialization and sends `Main(args)` with a List of
 Text values. `--interactive` selects the event console instead. Full command
 syntax, scenarios, console handlers, multiline input and inspection commands
-are documented in the [CLI guide](tools/GameEventScript.Tool/README.md).
+are documented in the [CLI guide](GameEventScript.Tool/README.md).
 
 ## Compile source text
 
@@ -128,7 +153,7 @@ path with the checkout's location:
 
 ```xml
 <ItemGroup>
-  <ProjectReference Include="/path/to/GameEventScript/implementation/csharp/src/GameEventScript.Compiler/GameEventScript.Compiler.csproj" />
+  <ProjectReference Include="/path/to/GameEventScript/implementation/csharp/GameEventScript.Compiler/src/GameEventScript.Compiler.csproj" />
 </ItemGroup>
 ```
 
@@ -164,7 +189,7 @@ A product that receives precompiled Programs needs only the Runtime reference:
 
 ```xml
 <ItemGroup>
-  <ProjectReference Include="/path/to/GameEventScript/implementation/csharp/src/GameEventScript.Runtime/GameEventScript.Runtime.csproj" />
+  <ProjectReference Include="/path/to/GameEventScript/implementation/csharp/GameEventScript.Runtime/src/GameEventScript.Runtime.csproj" />
 </ItemGroup>
 ```
 

@@ -12,7 +12,7 @@ swift test --package-path "$ges_root/implementation/swift/GameEventScriptSwiftBr
     --scratch-path "$ges_root/artifacts/swift/swiftbridge" --build-system native --disable-build-manifest-caching --configuration release
 "$ges_root/scripts/test-swift-tool.sh"
 python3 "$ges_root/scripts/verify-swift-bytecode.py"
-dotnet run --project "$ges_root/implementation/csharp/tools/GameEventScript.RuntimeFixtureExporter" \
+dotnet run --project "$ges_root/implementation/csharp/GameEventScript.Conformance/fixture-exporter" \
     --configuration Release --artifacts-path "$ges_root/artifacts/swift/csharp-exporter" -- \
     "$ges_root/conformance/suites" "$ges_root/artifacts/swift/runtime-fixtures"
 

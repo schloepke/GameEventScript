@@ -1,0 +1,19 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+<Project>
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <RootNamespace>GameEventScript.Tests</RootNamespace>
+        <LangVersion>latest</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="MSTest" Version="4.0.2" />
+        <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+        <AssemblyMetadata Include="BuildSdkVersion" Value="$(NETCoreSdkVersion)" />
+        <Compile Include="$(MSBuildThisFileDirectory)TestSupport/*.cs" Link="TestSupport/%(Filename)%(Extension)" />
+    </ItemGroup>
+</Project>

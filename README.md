@@ -18,7 +18,7 @@ Markdown conformance corpus; the C# API is one language-specific mapping.
 - [`conformance`](conformance) contains the shared executable corpus and fixtures.
 - [`implementation/csharp`](implementation/csharp/README.md) contains the reference Runtime, Compiler, C# adapters, Conformance and CLI, with build and embedding instructions.
 - [`implementation/swift`](implementation/swift/README.md) contains the Swift Runtime, Compiler, SwiftBridge, Conformance and CLI packages and their Xcode workspace.
-- [`dotnet ges` CLI](implementation/csharp/tools/GameEventScript.Tool/README.md) contains the separate .NET tool entry point and local installation instructions.
+- [`dotnet ges` CLI](implementation/csharp/GameEventScript.Tool/README.md) contains the separate .NET tool entry point and local installation instructions.
 - [`ges` CLI](implementation/swift/GameEventScriptTool/README.md) contains the native Swift command and installation instructions.
 - [`docs`](docs) contains guides and supporting documentation.
 - [`tools`](tools) contains editor support and repository tooling.
@@ -52,7 +52,7 @@ directory.
 
 To build the C# solution and install or update the `dotnet ges` CLI for your user, run
 `./scripts/install-csharp-tool.sh`. See the
-[CLI guide](implementation/csharp/tools/GameEventScript.Tool/README.md)
+[CLI guide](implementation/csharp/GameEventScript.Tool/README.md)
 for installation into a separate directory.
 Use `./scripts/uninstall-csharp-tool.sh` to remove the global C# tool, or pass
 `--tool-path DIRECTORY` to remove an installation from that directory. Repeated

@@ -33,7 +33,7 @@ esac
 
 repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$repository_root"
-tool_project="implementation/csharp/tools/GameEventScript.Tool/GameEventScript.Tool.csproj"
+tool_project="implementation/csharp/GameEventScript.Tool/src/GameEventScript.Tool.csproj"
 
 mkdir -p artifacts/csharp/tool
 build_directory=$(mktemp -d "$repository_root/artifacts/csharp/tool/install-build.XXXXXX")

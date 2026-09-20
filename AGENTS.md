@@ -6,13 +6,14 @@
 ## Workspace
 
 - Repository root: the directory containing this file.
-- Portable C# Runtime: `implementation/csharp/src/GameEventScript.Runtime`.
-- Portable C# Compiler: `implementation/csharp/src/GameEventScript.Compiler`.
-- C# adapters: `implementation/csharp/src/GameEventScript.CSharpBridge`.
+- Portable C# Runtime: `implementation/csharp/GameEventScript.Runtime/src`.
+- Portable C# Compiler: `implementation/csharp/GameEventScript.Compiler/src`.
+- C# adapters: `implementation/csharp/GameEventScript.CSharpBridge/src`.
 - Portable Conformance package:
-  `implementation/csharp/src/GameEventScript.Conformance`.
-- C# CLI tool: `implementation/csharp/tools/GameEventScript.Tool`.
-- C# tests: `implementation/csharp/tests/GameEventScript.Tests`.
+  `implementation/csharp/GameEventScript.Conformance/src`.
+- C# CLI tool: `implementation/csharp/GameEventScript.Tool/src`.
+- C# native tests: each module’s `tests` directory; shared test support and
+  repository/distribution gates: `implementation/csharp/verification`.
 - Swift Runtime package: `implementation/swift/GameEventScriptRuntime`.
 - Swift Compiler package: `implementation/swift/GameEventScriptCompiler`.
 - Swift native adapters: `implementation/swift/GameEventScriptSwiftBridge`.
@@ -26,7 +27,7 @@
 Standard verification:
 
 ```bash
-dotnet test implementation/csharp/tests/GameEventScript.Tests/GameEventScript.Tests.csproj --filter "TestCategory!=Performance"
+dotnet test GameEventScript.sln --filter "TestCategory!=Performance"
 ```
 
 ## Working rules
@@ -230,7 +231,7 @@ zero-allocation hot path, release artifact consumption, and byte-identical
 package reproduction. Performance references are regression gates for the
 current C# implementation, not cross-platform benchmark claims.
 
-Verified baseline (Release, 2026-09-20):
+Verified baseline (Release, 2026-09-21):
 
 ```text
 2006/2006 non-performance test executions passed
@@ -241,7 +242,7 @@ Verified baseline (Release, 2026-09-20):
 The combined verification command for the first two counts is:
 
 ```bash
-dotnet test implementation/csharp/tests/GameEventScript.Tests/GameEventScript.Tests.csproj --configuration Release --filter "TestCategory!=Performance|TestCategory=Allocation"
+dotnet test GameEventScript.sln --configuration Release --filter "TestCategory!=Performance|TestCategory=Allocation"
 ```
 
 Elapsed-time benchmarks are a separate, profile-matched performance gate and
@@ -399,10 +400,10 @@ code. Preparation failures preserve the old session; runtime failures end it.
 `:help reload` documents the lifecycle commands; `--quiet` hides their success reports.
 
 Keep command parsing, file I/O, console observation, and process integration in
-the tool. C# CLI adapter tests belong in `Native/Tool`; Swift adapters are tested in
+the tool. C# CLI adapter tests belong in `implementation/csharp/GameEventScript.Tool/tests`; Swift adapters are tested in
 `GameEventScriptTool/Tests` and `scripts/test-swift-tool.py`. Portable language
 and host semantics remain covered by shared Markdown. The command contract and examples
-are documented in `implementation/csharp/tools/GameEventScript.Tool/README.md`;
+are documented in `implementation/csharp/GameEventScript.Tool/README.md`;
 Swift installation and verification are documented in
 `implementation/swift/GameEventScriptTool/README.md`.
 

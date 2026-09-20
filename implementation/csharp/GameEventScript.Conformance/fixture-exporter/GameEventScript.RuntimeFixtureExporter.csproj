@@ -1,0 +1,16 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="../../GameEventScript.Compiler/src/GameEventScript.Compiler.csproj" />
+        <ProjectReference Include="../src/GameEventScript.Conformance.csproj" />
+        <Compile Include="../fixtures/GameEventScriptConformanceExternalTypes.cs" Link="Fixtures/ExternalTypes.cs" />
+        <Compile Include="../fixtures/GameEventScriptConformanceCallbackProbe.cs" Link="Fixtures/CallbackProbe.cs" />
+    </ItemGroup>
+</Project>

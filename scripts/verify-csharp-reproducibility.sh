@@ -19,10 +19,10 @@ trap cleanup EXIT HUP INT TERM
 mkdir -p "$first" "$second"
 
 clean_product_outputs() {
-    dotnet clean "$repository_root/implementation/csharp/src/GameEventScript.CSharpBridge/GameEventScript.CSharpBridge.csproj" --configuration Release >/dev/null
-    dotnet clean "$repository_root/implementation/csharp/src/GameEventScript.Conformance/GameEventScript.Conformance.csproj" --configuration Release >/dev/null
-    dotnet clean "$repository_root/implementation/csharp/src/GameEventScript.Compiler/GameEventScript.Compiler.csproj" --configuration Release >/dev/null
-    dotnet clean "$repository_root/implementation/csharp/src/GameEventScript.Runtime/GameEventScript.Runtime.csproj" --configuration Release >/dev/null
+    dotnet clean "$repository_root/implementation/csharp/GameEventScript.CSharpBridge/src/GameEventScript.CSharpBridge.csproj" --configuration Release >/dev/null
+    dotnet clean "$repository_root/implementation/csharp/GameEventScript.Conformance/src/GameEventScript.Conformance.csproj" --configuration Release >/dev/null
+    dotnet clean "$repository_root/implementation/csharp/GameEventScript.Compiler/src/GameEventScript.Compiler.csproj" --configuration Release >/dev/null
+    dotnet clean "$repository_root/implementation/csharp/GameEventScript.Runtime/src/GameEventScript.Runtime.csproj" --configuration Release >/dev/null
 }
 
 clean_product_outputs

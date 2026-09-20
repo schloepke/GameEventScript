@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CS = ROOT / "implementation/csharp/src/GameEventScript.Runtime/Api"
+CS = ROOT / "implementation/csharp/GameEventScript.Runtime/src/Api"
 SWIFT = ROOT / "implementation/swift/GameEventScriptRuntime/Sources/GameEventScriptRuntime"
 
 

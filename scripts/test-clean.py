@@ -21,7 +21,7 @@ class CleanTests(unittest.TestCase):
         self.root = Path(self.workspace.name) / "repository"
         self.root.mkdir()
         self.write("AGENTS.md")
-        self.write("implementation/csharp/src/Runtime/Runtime.cs")
+        self.write("implementation/csharp/GameEventScript.Runtime/src/Runtime.cs")
         self.write("implementation/swift/Runtime/Sources/Runtime.swift")
         self.output = []
 
@@ -37,13 +37,13 @@ class CleanTests(unittest.TestCase):
     def test_removes_only_build_outputs_and_is_idempotent(self):
         outputs = [
             "artifacts/release/package.nupkg", "bin/local.dll", "obj/project.assets.json",
-            "TestResults/results.trx", "implementation/csharp/src/Runtime/bin/Release/a.dll",
-            "implementation/csharp/tests/Tests/obj/cache", "implementation/csharp/tests/Tests/TestResults/log",
+            "TestResults/results.trx", "implementation/csharp/GameEventScript.Runtime/src/bin/Release/a.dll",
+            "implementation/csharp/GameEventScript.Runtime/tests/obj/cache", "implementation/csharp/GameEventScript.Runtime/tests/TestResults/log",
             "implementation/swift/Runtime/.build/release/library", ".build/cache",
         ]
         kept = [
             "conformance/fixtures/canonical.gesb", "implementation/swift/Runtime/.swiftpm/configuration",
-            "docs/example.ges", ".git/config", "implementation/csharp/src/Runtime/Runtime.cs",
+            "docs/example.ges", ".git/config", "implementation/csharp/GameEventScript.Runtime/src/Runtime.cs",
         ]
         for path in outputs + kept:
             self.write(path)

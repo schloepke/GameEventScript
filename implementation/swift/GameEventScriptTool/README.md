@@ -54,7 +54,7 @@ swift run --package-path implementation/swift/GameEventScriptTool \
 
 ## Commands
 
-The [CLI command contract](../../csharp/tools/GameEventScript.Tool/README.md)
+The [CLI command contract](../../csharp/GameEventScript.Tool/README.md)
 applies to both implementations. Substitute `ges` for `dotnet ges` in its
 examples. Diagnostic wording and compiler instruction counts can differ;
 stable diagnostic codes, exit statuses and script behavior have the same meaning.
@@ -110,7 +110,7 @@ load order and active IDs. It runs initialization again without calling Main,
 restarts a configured seed and resets the script exit code. Preparation failures
 preserve the old session; runtime failures end it. IDs are never reused. Use
 `:unloadAll` followed by `:reload` for an empty fresh host. The full contract is in
-the [shared CLI documentation](../../csharp/tools/GameEventScript.Tool/README.md#unloading-and-reloading-programs).
+the [shared CLI documentation](../../csharp/GameEventScript.Tool/README.md#unloading-and-reloading-programs).
 
 With `--color` and terminal input/output/error streams, the editor offers:
 

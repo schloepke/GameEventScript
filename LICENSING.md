@@ -80,7 +80,7 @@ external packages rather than copied into this source distribution. Therefore a
 `NOTICE` file is intentionally not created. The CLI tool bundles external terminal
 dependencies in its binary distribution; their source links, license texts, and
 notices are included in its packaged
-[THIRD-PARTY-NOTICES.md](implementation/csharp/tools/GameEventScript.Tool/THIRD-PARTY-NOTICES.md).
+[THIRD-PARTY-NOTICES.md](implementation/csharp/GameEventScript.Tool/THIRD-PARTY-NOTICES.md).
 
 When third-party material is added, its existing copyright and license notices
 must remain unchanged. Its redistribution terms must be reviewed, the material

@@ -433,7 +433,7 @@ public sealed class GameEventScriptExternalTypeFieldDefinition
     public GameEventScriptBytecodeTypeKind? Kind { get; }
 
     /// <summary>
-    /// Gets the unit.
+    /// Gets the declared unit. UnitNone leaves Vector and Point units unconstrained.
     /// </summary>
     public GameEventScriptBytecodeInstructionUnit Unit { get; }
 }
@@ -504,7 +504,7 @@ public sealed class GameEventScriptExternalTypeParameterDefinition
     public GameEventScriptBytecodeTypeKind? Kind { get; }
 
     /// <summary>
-    /// Gets the unit.
+    /// Gets the declared unit. UnitNone leaves Vector and Point units unconstrained.
     /// </summary>
     public GameEventScriptBytecodeInstructionUnit Unit { get; }
 }

@@ -9,9 +9,18 @@ namespace GameEventScript.Tests.Conformance;
 internal static class GameEventScriptConformanceExternalTypes
 {
     private static readonly GameEventScriptExternalTypeDefinition AimDefinition = CreateAimDefinition();
+    private static readonly GameEventScriptExternalTypeDefinition SpatialDefinition = new(
+        "SpatialProbe",
+        [
+            new GameEventScriptExternalTypeFieldDefinition("vector", GameEventScriptBytecodeTypeKind.Vector),
+            new GameEventScriptExternalTypeFieldDefinition("point", GameEventScriptBytecodeTypeKind.Point),
+            new GameEventScriptExternalTypeFieldDefinition("storedVector", "Vector"),
+            new GameEventScriptExternalTypeFieldDefinition("storedPoint", "Point")
+        ],
+        [new GameEventScriptExternalTypeConstructorDefinition("SpatialProbe", [new GameEventScriptExternalTypeParameterDefinition("vector", "Vector"), new GameEventScriptExternalTypeParameterDefinition("point", "Point")])]);
 
     internal static readonly IGameEventScriptExternalTypeCatalog Catalog =
-        new GameEventScriptExternalTypeCatalog([AimDefinition, GameEventScriptConformanceCallbackProbe.Definition]);
+        new GameEventScriptExternalTypeCatalog([AimDefinition, GameEventScriptConformanceCallbackProbe.Definition, SpatialDefinition]);
 
     internal static readonly IGameEventScriptExternalTypeRegistry Registry =
         new TestRuntimeRegistry();
@@ -43,13 +52,39 @@ internal static class GameEventScriptConformanceExternalTypes
     private sealed class TestRuntimeRegistry : IGameEventScriptExternalTypeRegistry
     {
         private readonly AimConstructor _constructor = new(AimDefinition.Constructors[0]);
+        private readonly SpatialConstructor _spatialConstructor = new();
 
         public IGameEventScriptExternalTypeConstructor? Resolve(GameEventScriptExternalTypeConstructorReference reference)
             => string.Equals(reference.SignatureId, _constructor.Definition.SignatureId, StringComparison.Ordinal)
                 ? _constructor
                 : string.Equals(reference.SignatureId, GameEventScriptConformanceCallbackProbe.Constructor.Definition.SignatureId, StringComparison.Ordinal)
                     ? GameEventScriptConformanceCallbackProbe.Constructor
-                    : null;
+                    : string.Equals(reference.SignatureId, _spatialConstructor.Definition.SignatureId, StringComparison.Ordinal)
+                        ? _spatialConstructor
+                        : null;
+    }
+
+    private sealed class SpatialConstructor : IGameEventScriptExternalTypeConstructor
+    {
+        public GameEventScriptExternalTypeConstructorDefinition Definition { get; } = SpatialDefinition.Constructors[0];
+
+        public void Invoke(GesExternalTypeConstructorCall call)
+            => call.SetExternalValue(new SpatialValue(call.Arguments[0], call.Arguments[1]));
+    }
+
+    private sealed class SpatialValue(GesValue vector, GesValue point) : IGameEventScriptExternalValue
+    {
+        public GameEventScriptExternalTypeDefinition Definition { get; } = SpatialDefinition;
+
+        public GesValue? GetField(string fieldName)
+            => fieldName switch
+            {
+                "vector" => vector,
+                "point" => point,
+                "storedVector" => GesValue.GesVector(1, 2, 3, GameEventScriptBytecodeInstructionUnit.UnitMeter),
+                "storedPoint" => GesValue.GesPoint(4, 5, 6, GameEventScriptBytecodeInstructionUnit.UnitSecond),
+                _ => null
+            };
     }
 
     private sealed class AimConstructor(GameEventScriptExternalTypeConstructorDefinition definition)

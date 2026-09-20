@@ -664,6 +664,12 @@ a normalized name and exactly one portable type description: builtin kind plus
 unit, or custom type name. `ExternalTypeConstructorDefinition` contains type name,
 ordered unique parameters, and derived SignatureId.
 
+A Vector or Point declaration without a unit constraint preserves the supplied
+spatial value's unit. An explicit non-none unit overrides that unit without
+rescaling components. This applies equally to constructor arguments, direct
+field reads, and fields materialized by conversion to Map. A missing spatial
+unit constraint must never silently strip an existing unit.
+
 Construction copies sequences and rejects null entries, duplicate fields,
 duplicate constructor signatures, duplicate parameter labels, constructors for
 another type, and constructor parameters that are not declared fields.

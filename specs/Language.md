@@ -137,6 +137,10 @@ an explicit ordinary call selects a predicate by its full signature. Every call
 receives a fresh frame. The synchronous call graph must be acyclic: direct and
 indirect recursion are not part of the
 language.
+Call-graph validation and resource analysis must support acyclic chains within
+the portable Program limits without depending on the embedding's native stack
+size. Runtime call-depth limits apply when loading and executing a Program,
+not as an additional source-compilation limit.
 
 ## Lexical Rules
 
@@ -190,6 +194,9 @@ let b be "say ""hello"""
 ```
 
 Text literals may contain logical newlines. Backslash has no escape meaning.
+Decoded text is always a value token: quoted keywords, operators, delimiters,
+and separators never satisfy grammar-token expectations. For example,
+`let x "be" 5` is a syntax error, while `let x be "be"` is valid.
 Tokens and keywords are case-sensitive. `of` is a reserved keyword token; it is
 valid only in the grammar phrases that use it, including `min of`, `max of`,
 extension argument lists, `in values of`, and dice patterns. It does not start a
@@ -395,6 +402,11 @@ identifiers, and selector identifiers. Parameters occupy the routine's outer
 scope. The `if` and `else` blocks are sibling child scopes, so both may declare
 the same name when that name does not exist in their common parent. There is no
 assignment statement and a binding never changes after initialization.
+The same visibility rules apply inside function and predicate bodies, record
+field expressions, message tags, and random-seed expressions. A selector or
+generated-collection binding is visible to its nested predicate/projection
+expressions, but not to its source collection. Separate selector expressions
+are sibling scopes, including a `choose` predicate and its weight expression.
 
 ### `if`
 
@@ -761,6 +773,9 @@ other constants are not constant initializers. Constant declarations from all
 sources in one program share one namespace; duplicate and unresolved names are
 static errors. Constants generate no runtime bindings, registers, or bytecode of
 their own.
+
+In particular, unary minus cannot prefix a text, tag, boolean, or `nothing`
+constant initializer; this is a syntax error rather than a runtime conversion.
 
 Mathematical constants are built-in keywords, not declared `$` names or tags:
 
@@ -1497,7 +1512,10 @@ left map. `map & listOfKeys` keeps only listed keys. `dice & integer` and
 `integer & dice` are not defined; write `dice & :Dice([integer])` when a
 single-roll dice intersection is intended.
 
-Collection subtraction uses `-`. `list - scalar` removes one matching item, and
+Collection subtraction uses `-`. `list - scalar` removes the first matching
+item, including when the scalar is `nothing`; an absent match leaves the list
+unchanged. For example, `[1, nothing, 2, nothing] - nothing` is `[1, 2, nothing]`.
+This collection rule takes precedence over scalar `nothing` propagation.
 `list - list` and `list - dice` remove matching items with multiset semantics
 and produce a list. `dice - integer` removes one roll and returns dice,
 `dice - dice` performs multiset subtraction and returns dice, and `dice - list`

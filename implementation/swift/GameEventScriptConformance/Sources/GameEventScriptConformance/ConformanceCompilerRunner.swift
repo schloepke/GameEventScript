@@ -22,8 +22,7 @@ enum ConformanceCompilerRunner {
         }
         options.programVersion = UInt64(test.metadata["binaryFixture"]?["programVersion"]?.numberValue ?? "0") ?? 0
         return try ids.map { id in
-            let builder = GameEventScriptBuilder().withExternalTypeCatalog(
-                try GameEventScriptExternalTypeCatalog([RuntimeFixtures.aim(), RuntimeFixtures.probe()]))
+            let builder = GameEventScriptBuilder().withExternalTypeCatalog(RuntimeFixtures.catalog)
             for source in test.sources where source.programID == id {
                 builder.addScript(source.text, sourceName: source.name)
             }

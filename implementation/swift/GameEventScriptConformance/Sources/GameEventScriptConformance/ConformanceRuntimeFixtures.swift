@@ -5,6 +5,11 @@ import GameEventScriptRuntime
 
 /// The fixed, language-neutral fixture catalog specified by Conformance/Environment.md.
 struct RuntimeFixtures: GameEventScriptExtensionRegistry, GameEventScriptExternalTypeRegistry {
+    // This fixed catalog contains only deeply immutable descriptor values, no callbacks or host state.
+    // Reuse it like the C# fixture catalog instead of rebuilding test infrastructure for each compilation.
+    nonisolated(unsafe) static let catalog = try! GameEventScriptExternalTypeCatalog([
+        aim(), probe(), spatialProbe(),
+    ])
     var mismatch = false
     func resolve(_ reference: GameEventScriptExtensionReference) -> (any GameEventScriptExtensionFunction)? {
         let name = reference.extensionName + "." + reference.functionName
@@ -30,7 +35,7 @@ struct RuntimeFixtures: GameEventScriptExtensionRegistry, GameEventScriptExterna
             return FixtureConstructor(
                 definition: try .init(typeName: "Mismatch", parameters: [.init(name: "value", kind: .float)]))
         }
-        for definition in try [Self.aim(), Self.probe()] {
+        for definition in Self.catalog.types {
             for constructor in definition.constructors where constructor.signatureID == reference.signatureID {
                 return FixtureConstructor(definition: constructor)
             }
@@ -62,6 +67,21 @@ struct RuntimeFixtures: GameEventScriptExtensionRegistry, GameEventScriptExterna
                 .init(
                     typeName: "CallbackProbe",
                     parameters: [.init(name: "failure", kind: .text), .init(name: "context", kind: .text)])
+            ])
+    }
+    static func spatialProbe() throws -> GameEventScriptExternalTypeDefinition {
+        try .init(
+            name: "SpatialProbe",
+            fields: [
+                .init(name: "vector", kind: .vector), .init(name: "point", kind: .point),
+                .init(name: "storedVector", typeName: "Vector"), .init(name: "storedPoint", typeName: "Point"),
+            ],
+            constructors: [
+                .init(
+                    typeName: "SpatialProbe",
+                    parameters: [
+                        .init(name: "vector", typeName: "Vector"), .init(name: "point", typeName: "Point"),
+                    ])
             ])
     }
     static func fault(symbol: String, context: String) throws -> GameEventScriptExtensionFault {
@@ -123,6 +143,14 @@ private struct FixtureConstructor: GameEventScriptExternalTypeConstructor {
             try call.setExternalValue(
                 FixtureValue(
                     definition: RuntimeFixtures.aim(), fields: [args[0], args[1], args[2], args[3], .float(checksum)]))
+        } else if definition.typeName == "SpatialProbe" {
+            try call.setExternalValue(
+                FixtureValue(
+                    definition: RuntimeFixtures.spatialProbe(),
+                    fields: [
+                        call.arguments[0], call.arguments[1],
+                        .vector(x: 1, y: 2, z: 3, unit: .meter), .point(x: 4, y: 5, z: 6, unit: .second),
+                    ]))
         } else if definition.typeName == "CallbackProbe" {
             let failure = call.arguments[0].asText
             let context = call.arguments[1].asText

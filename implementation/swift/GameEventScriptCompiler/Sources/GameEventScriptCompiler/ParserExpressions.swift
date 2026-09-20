@@ -6,7 +6,7 @@
 extension GesParser {
     func prefix() throws -> GesExpression {
         let start = current
-        if ["-", "!", "not", "parse", "empty"].contains(current.text) {
+        if ["-", "!", "not", "parse", "empty"].contains(current.syntaxText) {
             let op = advance().text
             let value = try expression(15)
             return try combined(.unary(op == "not" ? "!" : op, value), node(.literal(.nothing), start), value)
@@ -15,7 +15,7 @@ extension GesParser {
             "abs", "ln", "exp", "sqrt", "cbrt", "chance", "floor", "ceil", "truncate", "rad", "deg", "sin", "cos",
             "tan", "asin", "acos", "atan", "wrap", "round",
         ]
-        if unary.contains(current.text) {
+        if unary.contains(current.syntaxText) {
             var op = advance().text
             newlines()
             if op == "wrap" {
@@ -25,7 +25,7 @@ extension GesParser {
             if op == "round" {
                 try expect("half")
                 newlines()
-                let mode = advance().text
+                let mode = advance().syntaxText
                 guard ["even", "up", "down"].contains(mode) else { throw failure("Expected rounding mode.", previous) }
                 op = "roundHalf" + mode.prefix(1).uppercased() + mode.dropFirst()
             }
@@ -36,7 +36,7 @@ extension GesParser {
             }
             return node(.unary(op, value), start)
         }
-        if ["atan2", "hypot", "distance", "length", "normalize", "dot", "cross", "angle"].contains(current.text) {
+        if ["atan2", "hypot", "distance", "length", "normalize", "dot", "cross", "angle"].contains(current.syntaxText) {
             var op = advance().text
             newlines()
             if op == "distance" && match("squared") { op = "distanceSquared" }
@@ -62,7 +62,7 @@ extension GesParser {
             let high = try expression(9)
             return node(.intrinsic("clamp", [value, low, high]), start)
         }
-        if ["min", "max"].contains(current.text) && peek().text == "of" {
+        if ["min", "max"].contains(current.syntaxText) && peek().syntaxText == "of" {
             let op = advance().text
             newlines()
             try expect("of")
@@ -70,11 +70,11 @@ extension GesParser {
             while match("and") { args.append(try expression(9)) }
             return node(.intrinsic(op, args), start)
         }
-        if current.kind == "selector" && peek().text == "." {
+        if current.kind == "selector" && peek().syntaxText == "." {
             let (ns, function) = try extensionSymbol()
             newlines()
             var args: [GesArgument] = []
-            if current.text == "(" {
+            if current.syntaxText == "(" {
                 args = try arguments()
             } else if match("of") {
                 args = [.init(label: "_", value: try expression(9))]
@@ -82,11 +82,11 @@ extension GesParser {
             } else if argumentLabel() {
                 repeat { args.append(try argument()) } while argumentLabel()
             } else if ["number", "text", "tag", "constant", "type"].contains(current.kind)
-                || current.kind == "word" && !Self.reserved.contains(current.text)
+                || current.kind == "word" && !Self.reserved.contains(current.syntaxText)
                 || [
                     "-", "!", "[", "true", "false", "nothing", "parse", "random", "roll", "abs", "ln", "exp", "sqrt",
                     "cbrt",
-                ].contains(current.text)
+                ].contains(current.syntaxText)
             {
                 args = [.init(label: "_", value: try expression(15))]
             }
@@ -126,7 +126,7 @@ extension GesParser {
         if match("false") { return node(.literal(.boolean(false)), start) }
         if match("nothing") { return node(.literal(.nothing), start) }
         if let value = ["pi": Double.pi, "e": 2.718281828459045, "tau": Double.pi * 2, "infinity": Double.infinity][
-            current.text]
+            current.syntaxText]
         {
             advance()
             return node(.literal(.float(value)), start)
@@ -158,7 +158,7 @@ extension GesParser {
         }
         if match("series") {
             newlines()
-            let kind = advance().text
+            let kind = advance().syntaxText
             guard ["fibonacci", "factorial"].contains(kind) else { throw failure("Expected series kind.", previous) }
             return node(.series(kind), start)
         }
@@ -186,7 +186,7 @@ extension GesParser {
             if type == "dice" && match("[") {
                 newlines()
                 var items: [GesExpression] = []
-                if current.text != "]" {
+                if current.syntaxText != "]" {
                     repeat {
                         newlines()
                         let t = current
@@ -210,7 +210,7 @@ extension GesParser {
                 } else {
                     try expect("in")
                     newlines()
-                    if current.text == "from" { throw failure("Expected collection.") }
+                    if current.syntaxText == "from" { throw failure("Expected collection.") }
                     sequence = try expression()
                 }
                 newlines()
@@ -225,10 +225,10 @@ extension GesParser {
             }
             return node(.constructor(type, try arguments()), start)
         }
-        if current.kind == "word" && !Self.reserved.contains(current.text) || current.kind == "message" {
+        if current.kind == "word" && !Self.reserved.contains(current.syntaxText) || current.kind == "message" {
             let upper = current.kind == "message"
             let name = advance().text
-            if peek(0).text == "(" {
+            if peek(0).syntaxText == "(" {
                 newlines()
                 if upper && !isMessageArguments() { return node(.handler(name, try parameters(false)), start) }
                 let args = try arguments()
@@ -261,9 +261,9 @@ extension GesParser {
         while i < tokens.count && tokens[i].kind == "newline" { i += 1 }
         i += 1
         while i < tokens.count && tokens[i].kind == "newline" { i += 1 }
-        return i < tokens.count && tokens[i].text == ":"
+        return i < tokens.count && tokens[i].syntaxText == ":"
     }
-    func argumentLabel() -> Bool { current.kind == "word" && peek().text == ":" }
+    func argumentLabel() -> Bool { current.kind == "word" && peek().syntaxText == ":" }
     func argument() throws -> GesArgument {
         let label: String
         if argumentLabel() {
@@ -309,7 +309,8 @@ extension GesParser {
                 try expect(":")
                 newlines()
                 let value =
-                    current.text == "," || current.text == "]" ? node(.literal(.boolean(true)), t) : try expression()
+                    current.syntaxText == "," || current.syntaxText == "]"
+                    ? node(.literal(.boolean(true)), t) : try expression()
                 pairs.append((key, value))
                 newlines()
             } while match(",")
@@ -348,7 +349,7 @@ extension GesParser {
             try expect("where")
             s.expressions = [try expression()]
         case "count", "sum", "average":
-            if current.text == "]" { break }
+            if current.syntaxText == "]" { break }
             s.name = try identifier()
             try expect(op == "count" ? "where" : "=>")
             s.expressions = [try expression()]
@@ -359,12 +360,12 @@ extension GesParser {
             if op == "highest" { s.operation = "max" }
             if op == "lowest" { s.operation = "min" }
         case "first", "last", "single":
-            if current.text == "]" { break }
+            if current.syntaxText == "]" { break }
             s.name = try identifier()
             try expect("where")
             s.expressions = [try expression()]
         case "map", "group", "order", "distinct":
-            if op == "distinct" && current.text == "]" { break }
+            if op == "distinct" && current.syntaxText == "]" { break }
             if op == "map" {
                 s.name = try identifier()
                 try expect("by")
@@ -378,11 +379,12 @@ extension GesParser {
             if op == "order" { s.mode = try direction() }
         case "sort": s.mode = try direction()
         case "contains":
-            if ["all", "any"].contains(current.text) { s.mode = advance().text }
+            if ["all", "any"].contains(current.syntaxText) { s.mode = advance().text }
             s.expressions = [try expression()]
         case "term": s.expressions = [try expression()]
         case "draw": s.count = try positiveInteger()
         case "choose":
+            s.name = ""
             s.count = try positiveInteger()
             newlines()
             if match("at") {
@@ -390,7 +392,7 @@ extension GesParser {
                 s.mode = "random"
             }
             newlines()
-            if peek().text == "where" {
+            if peek().syntaxText == "where" {
                 s.name = try identifier()
                 try expect("where")
                 s.expressions = [try expression()]
@@ -404,7 +406,7 @@ extension GesParser {
                 s.expressions.append(try expression())
             }
         case "take", "drop":
-            if ["first", "last", "highest", "lowest"].contains(current.text) {
+            if ["first", "last", "highest", "lowest"].contains(current.syntaxText) {
                 s.mode = advance().text
                 s.count = try positiveInteger()
             } else if op == "take" {
@@ -435,7 +437,9 @@ extension GesParser {
     }
     func direction() throws -> String {
         newlines()
-        guard ["ascending", "descending"].contains(current.text) else { throw failure("Expected sort direction.") }
+        guard ["ascending", "descending"].contains(current.syntaxText) else {
+            throw failure("Expected sort direction.")
+        }
         return advance().text
     }
     func pattern(operation: String) throws -> GesSelector {
@@ -450,7 +454,7 @@ extension GesParser {
             return s
         }
         let t = advance()
-        guard let count = ["pair": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7][t.text] else {
+        guard let count = ["pair": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7][t.syntaxText] else {
             throw failure("Expected dice pattern.", t)
         }
         s.count = count

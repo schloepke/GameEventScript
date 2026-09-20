@@ -701,6 +701,8 @@ internal static class GesAstOptimizer
 
         if (left.IsNothing || right.IsNothing)
         {
+            // List subtraction treats Nothing as an element to remove, not scalar propagation.
+            if (binary.Operator == GesBinaryOperator.Subtract && left.Kind == GameEventScriptBytecodeTypeKind.List) return null;
             return GesValue.GesNothing();
         }
 

@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "D4762596B923C0B2E21AFC9586FC977FB594BCD642EB06BD62B7057E0A76E75A",
-    "documentCount": 90,
-    "caseCount": 1471
+    "sha256": "09E5E5C5F4FA9793F75793098657AF4B010895DF6D64210AE63CFE0A5D39B9EA",
+    "documentCount": 94,
+    "caseCount": 1495
   },
   "cases": [
     {
@@ -2394,6 +2394,19 @@
       "code": "conformance.passed"
     },
     {
+      "id": "compile.deep-call-graph/ten-thousand-calls",
+      "kind": "compileMetadata",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "compile.external-type-linking/mismatched-runtime-constructor",
       "kind": "loadError",
       "level": "atomic",
@@ -2418,6 +2431,265 @@
           "compiler",
           "external-types",
           "host",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/function-parameter-shadow",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/generated-local-shadow",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/keyword-text-values",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/message-tag-shadow",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/negative-boolean-constant",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/negative-nothing-constant",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/negative-numeric-constants",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/negative-tag-constant",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/negative-text-constant",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/nested-generator-shadow",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/nested-selector-shadow",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/nested-weight-shadow",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/quoted-be",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/quoted-emit",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/quoted-infix",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/quoted-parameter-open",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/random-seed-shadow",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/record-field-shadow",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/sibling-selector-scopes",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
           "vm"
         ],
         "optional": []
@@ -7569,6 +7841,40 @@
       "code": "conformance.passed"
     },
     {
+      "id": "runtime.atomic.collection-nothing/dynamic",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.collection-nothing/literal",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "runtime.atomic.collection-operators/case-0001",
       "kind": "scriptApi",
       "level": "atomic",
@@ -10389,6 +10695,42 @@
       "requires": {
         "core": [
           "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.external-spatial-units/fields",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "external-types",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.external-spatial-units/map",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "external-types",
           "host",
           "observer",
           "publish-sink",

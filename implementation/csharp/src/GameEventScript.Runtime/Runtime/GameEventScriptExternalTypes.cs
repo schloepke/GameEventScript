@@ -18,7 +18,7 @@ internal static class GameEventScriptExternalTypeValueConverter
     private static GesValue CoerceToDeclaredType(in GesValue value, GameEventScriptBytecodeTypeKind? kind, GameEventScriptBytecodeInstructionUnit? unit, string typeName)
     {
         if (kind == GameEventScriptBytecodeTypeKind.Vector &&
-            unit is not null &&
+            unit is not null && unit != GameEventScriptBytecodeInstructionUnit.UnitNone &&
             value.ObjectValue is GesValueVectorPoint vector)
         {
             var result = new GesValue();
@@ -27,7 +27,7 @@ internal static class GameEventScriptExternalTypeValueConverter
         }
 
         if (kind == GameEventScriptBytecodeTypeKind.Point &&
-            unit is not null &&
+            unit is not null && unit != GameEventScriptBytecodeInstructionUnit.UnitNone &&
             value.ObjectValue is GesValueVectorPoint point)
         {
             var result = new GesValue();

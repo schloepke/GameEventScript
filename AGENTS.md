@@ -228,9 +228,9 @@ current C# implementation, not cross-platform benchmark claims.
 Verified baseline (Release, 2026-09-20):
 
 ```text
-1969/1969 non-performance test executions passed
+1993/1993 non-performance test executions passed
 31/31 allocation test executions passed, including the independent zero-allocation hot path
-1471 shared Markdown Conformance cases in 90 documents
+1495 shared Markdown Conformance cases in 94 documents
 ```
 
 The combined verification command for the first two counts is:
@@ -272,11 +272,11 @@ and complete source-document SHA-256. No expected result is exported from C#.
 `verify-swift-bytecode.py` checks the explicit enum and operand registry against
 C#; ordinary package builds do not generate source.
 
-Verified Swift coverage (Release, 2026-09-20): all 1,471 behavior checks from
-90 shared Markdown documents pass with native Swift compilation. The strict
-hardware-independent report passes 1,440 cases and skips 31 optional performance
-measurements. Enabling the measured profile passes all 1,471 cases. Independent
-Runtime verification passes 1,238 cases using C#-compiled Programs. Seventeen Conformance/adapter/bootstrap tests, seventeen SwiftBridge tests, and
+Verified Swift coverage (Release, 2026-09-20): all 1,495 behavior checks from
+94 shared Markdown documents pass with native Swift compilation. The strict
+hardware-independent report passes 1,464 cases and skips 31 optional performance
+measurements. Enabling the measured profile passes all 1,495 cases. Independent
+Runtime verification passes 1,245 cases using C#-compiled Programs. Seventeen Conformance/adapter/bootstrap tests, seventeen SwiftBridge tests, and
 twenty CLI tests pass. `scripts/test-swift.sh` requires strict native acceptance and keeps
 Runtime interoperability reports separate.
 

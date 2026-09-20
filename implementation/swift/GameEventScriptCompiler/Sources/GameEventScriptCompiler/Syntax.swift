@@ -9,6 +9,8 @@ struct GesSource {
     let id: UInt32
 }
 struct GesToken {
+    // Decoded Text content never participates in keyword or punctuation matching.
+    var syntaxText: String { kind == "text" ? "" : text }
     let kind: String
     let text: String
     let line: Int

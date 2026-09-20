@@ -95,6 +95,17 @@ not decide these cases. Each port implements its own failure transport; C# uses
 `GameEventScriptExtensionFaultException` or the trusted fatal-runtime base when
 supplying explicit context. No Reflection or host-bound CLR object is required.
 
+## External type `SpatialProbe`
+
+The fixed catalog declares `SpatialProbe(vector: Vector, point: Point)` with
+four fields, in order: `vector: Vector`, `point: Point`, `storedVector: Vector`,
+and `storedPoint: Point`. None of these declarations or constructor parameters
+specifies a unit constraint. The constructor retains the converted arguments
+as `vector` and `point`. Independently of those arguments, `storedVector` returns
+`:Vector(1m, 2m, 3m)` and `storedPoint` returns `:Point(4s, 5s, 6s)`.
+Unknown field names return no value. Direct field access and Map materialization
+must preserve the units as required by the external-type API contract.
+
 ## Declarative Host environment
 
 Native handlers, publish sinks and Host lifecycle actions use the closed forms

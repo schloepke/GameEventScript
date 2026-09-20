@@ -71,7 +71,7 @@ extension GesCompiler {
                 {
                     throw error("validate.invalidPredicate", expression.location, symbol: d.name, kind: .predicate)
                 }
-                if let expression = d.expression { try validateExpression(expression) }
+                if let expression = d.expression { try validateExpression(expression, visible: names, types: types) }
             }
             for record in module.records {
                 var names: Set<String> = []
@@ -84,8 +84,11 @@ extension GesCompiler {
                             "validate.invalidIdentifierCase", field.location, symbol: field.name, kind: .variable)
                     }
                     try validateType(field.type, field.location)
+                }
+                let types = Dictionary(uniqueKeysWithValues: record.fields.map { ($0.name, $0.type) })
+                for field in record.fields {
                     for e in [field.minimum, field.maximum, field.computed].compactMap({ $0 }) {
-                        try validateExpression(e)
+                        try validateExpression(e, visible: names, types: types)
                     }
                 }
             }
@@ -123,7 +126,7 @@ extension GesCompiler {
             case .expression(let e): try validateExpression(e, visible: names.union(ancestors), types: types)
             case .publish(_, let e, let tags):
                 try validateExpression(e, visible: names.union(ancestors), types: types)
-                for tag in tags { try validateExpression(tag) }
+                for tag in tags { try validateExpression(tag, visible: names.union(ancestors), types: types) }
             case .condition(let e, let yes, let no):
                 try validateExpression(e, visible: names.union(ancestors), types: types)
                 try validateStatements(yes, [], ancestors.union(names), types)
@@ -136,7 +139,7 @@ extension GesCompiler {
                 try validateStatements(body, [name], ancestors.union(names), types)
             case .seeded(let seed, let body):
                 try validateSeed(seed, types)
-                try validateExpression(seed)
+                try validateExpression(seed, visible: names.union(ancestors), types: types)
                 try validateStatements(body, [], ancestors.union(names), types)
             }
         }
@@ -154,6 +157,13 @@ extension GesCompiler {
                 }
             }
             children += args.map(\.value)
+        }
+        func boundExpressions(_ expressions: [GesExpression], name: String) throws {
+            if visible.contains(name) {
+                throw error("validate.shadowedVariable", e.location, symbol: name, kind: .variable)
+            }
+            let scope = name.isEmpty ? visible : visible.union([name])
+            for expression in expressions { try validateExpression(expression, visible: scope, types: types) }
         }
         switch e.kind {
         case .literal, .name, .constant, .dice, .series: break
@@ -199,22 +209,26 @@ extension GesCompiler {
         case .list(let items), .intrinsic(_, let items): children = items
         case .map(let entries): children = entries.map(\.1)
         case .selector(let a, let s):
-            for name in [s.name, s.weightName]
-            where !name.isEmpty && !s.expressions.isEmpty
+            try validateExpression(a, visible: visible, types: types)
+            if s.operation == "choose" {
+                for (index, expression) in s.expressions.enumerated() {
+                    try boundExpressions([expression], name: index == 0 ? s.name : s.weightName)
+                }
+            } else if !s.expressions.isEmpty
                 && [
                     "any", "all", "filter", "count", "sum", "average", "select", "min", "max", "first", "last",
-                    "single", "map", "group", "order", "distinct", "choose",
+                    "single", "map", "group", "order", "distinct",
                 ].contains(s.operation)
             {
-                if visible.contains(name) {
-                    throw error("validate.shadowedVariable", e.location, symbol: name, kind: .variable)
-                }
+                try boundExpressions(s.expressions, name: s.name)
+            } else {
+                children = s.expressions
             }
-            children = [a] + s.expressions
         case .range(let a, let b, let c): children = [a, b] + (c.map { [$0] } ?? [])
         case .choice(let branches, let fallback): children = branches.flatMap { [$0.0, $0.1] } + [fallback]
-        case .generated(_, _, let source, _, let predicate, let projection):
-            children = [source, projection] + (predicate.map { [$0] } ?? [])
+        case .generated(_, let name, let source, _, let predicate, let projection):
+            try validateExpression(source, visible: visible, types: types)
+            try boundExpressions((predicate.map { [$0] } ?? []) + [projection], name: name)
         }
         for child in children { try validateExpression(child, visible: visible, types: types) }
     }

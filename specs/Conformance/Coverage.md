@@ -12,6 +12,11 @@ here. Add or update this matrix in the same change as new portable behavior.
 
 | Behavior | Stable portable case IDs |
 | --- | --- |
+| Stack-safe compiler resource analysis for deep acyclic calls within portable limits | `compile.deep-call-graph/ten-thousand-calls` |
+| Quoted text cannot substitute for grammar tokens; numeric constant signs reject nonnumeric literals | `compile.lexical-boundaries/quoted-be`, `quoted-parameter-open`, `quoted-infix`, `quoted-emit`, `negative-text-constant`, `negative-tag-constant`, `negative-boolean-constant`, `negative-nothing-constant`; positive controls: `negative-numeric-constants`, `keyword-text-values` |
+| Expression bindings retain ancestor visibility in functions, generators, nested selectors, fields, tags, seeds, and weights; siblings may reuse names | `compile.lexical-boundaries/function-parameter-shadow`, `generated-local-shadow`, `nested-selector-shadow`, `nested-generator-shadow`, `record-field-shadow`, `message-tag-shadow`, `random-seed-shadow`, `nested-weight-shadow`, `sibling-selector-scopes` |
+| List subtraction removes one matching Nothing element, with ordinary scalar propagation unchanged | `runtime.atomic.collection-nothing/literal`, `dynamic` |
+| Unconstrained external Vector/Point declarations preserve constructor and getter units | `runtime.atomic.external-spatial-units/fields`, `map` |
 | External constructor and field failures preserve stable diagnostics, abort only the current handler, and keep the Host reusable | `runtime.external-callback-failures/constructor-unexpected`, `constructor-declared-context`, `field-unexpected`, `field-declared-context` |
 | Diagnostic context is filled only when absent and caller-supplied fields are preserved independently | `runtime.external-callback-failures/constructor-declared-context`, `field-declared-context`, `runtime.host-dispatch/native-declared-fault-context`, `native-supplied-fault-context` |
 | Shared exact decimal decoding for compiler literals, constants, Number/Percentage casts, exponent/separator grammar, units, ties, underflow and overflow | `runtime.text-literal-conversion/numeric-text-grammar`, `invalid-number-text-and-fallback`, `exact-decimal-boundaries`, `compiler-literal-01` through `compiler-literal-07`, `percentage-literal-overflow` |

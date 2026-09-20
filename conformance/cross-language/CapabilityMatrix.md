@@ -31,23 +31,23 @@ omission and skip exactly the affected cases with the stable runner code. The
 checked-in C# reference is the initial all-capabilities reference.
 
 Swift was verified on 2026-09-20 (Release, Swift 6.4, macOS arm64) against
-90 documents and 1,471 cases with corpus SHA-256
-`D4762596B923C0B2E21AFC9586FC977FB594BCD642EB06BD62B7057E0A76E75A`.
-The hardware-independent native report passes **1,440 cases**, with **zero errors
+94 documents and 1,495 cases with corpus SHA-256
+`09E5E5C5F4FA9793F75793098657AF4B010895DF6D64210AE63CFE0A5D39B9EA`.
+The hardware-independent native report passes **1,464 cases**, with **zero errors
 or failures** and **31 optional performance measurements skipped**. A full native
-run with the calibrated Swift profile passes **all 1,471 cases**, including the
+run with the calibrated Swift profile passes **all 1,495 cases**, including the
 31 measured workloads. All Core capabilities and the
 optional GESA snapshots pass. The test adapter also executes those 31 scenarios'
-behavior through native compilation, giving **1,471/1,471 behavior checks**.
-Compiler coverage includes 131 expected compilation failures, 15 bytecode
-constraint cases, two metadata cases, eight GESA snapshots and canonical runtime
+behavior through native compilation, giving **1,495/1,495 behavior checks**.
+Compiler coverage includes 147 expected compilation failures, 15 bytecode
+constraint cases, three metadata cases, eight GESA snapshots and canonical runtime
 segment comparisons against shared binary fixtures.
 
-Separate Runtime verification passes **1,238/1,238** cases:
+Separate Runtime verification passes **1,245/1,245** cases:
 
 | Scope | Passed | Input / oracle |
 | --- | ---: | --- |
-| Script scenarios | 1,148 | C#-compiled `.gesb`; original Markdown runtime assertions |
+| Script scenarios | 1,155 | C#-compiled `.gesb`; original Markdown runtime assertions |
 | Expected link errors | 4 | C#-compiled `.gesb`; original Markdown diagnostics |
 | Binary codecs, validation, and fixture execution | 47 | Shared canonical/invalid binaries and Markdown |
 | GESA dumps | 8 | C#-compiled Programs; shared GESA snapshots |

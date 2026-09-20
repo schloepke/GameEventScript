@@ -80,24 +80,10 @@ internal sealed partial class GesBinaryBuilder
             }
         }
 
-        var visitStates = new byte[_routines.Count];
-        var path = new List<int>();
-        for (var routineId = 0; routineId < _routines.Count; routineId++)
-        {
-            RejectCyclicCalls(routineId, calls, visitStates, path);
-        }
-
-        var calculated = new bool[_routines.Count];
         var routineRequirements = new RoutineResourceRequirement[_routines.Count];
-        for (var routineId = 0; routineId < _routines.Count; routineId++)
+        foreach (var routineId in OrderRoutineDependencies(calls))
         {
-            CalculateRoutineRequirement(
-                routineId,
-                calls,
-                maximumStageCounts,
-                registerAllocation,
-                calculated,
-                routineRequirements);
+            routineRequirements[routineId] = CalculateRoutineRequirement(routineId, calls, maximumStageCounts, registerAllocation, routineRequirements);
         }
 
         var bindRequirements = new RoutineResourceRequirement[_binds.Count];
@@ -164,40 +150,51 @@ internal sealed partial class GesBinaryBuilder
         calls.Add(calleeRoutineId);
     }
 
-    private void RejectCyclicCalls(int routineId, IReadOnlyList<List<int>> calls, byte[] visitStates, List<int> path)
+    private List<int> OrderRoutineDependencies(IReadOnlyList<List<int>> calls)
     {
-        if (visitStates[routineId] == 2) return;
-        if (visitStates[routineId] == 1)
+        var visitStates = new byte[_routines.Count];
+        var ordered = new List<int>(_routines.Count);
+        var pending = new List<(int RoutineId, int NextCall)>();
+        for (var root = 0; root < _routines.Count; root++)
         {
-            var cycleStart = 0;
-            while (cycleStart < path.Count && path[cycleStart] != routineId) cycleStart++;
-            var names = new string[path.Count - cycleStart + 1];
-            for (var index = cycleStart; index < path.Count; index++)
+            if (visitStates[root] != 0) continue;
+            visitStates[root] = 1;
+            pending.Add((root, 0));
+            while (pending.Count > 0)
             {
-                names[index - cycleStart] = _routines[path[index]].Name;
+                var (routineId, nextCall) = pending[^1];
+                if (nextCall == calls[routineId].Count)
+                {
+                    pending.RemoveAt(pending.Count - 1);
+                    visitStates[routineId] = 2;
+                    ordered.Add(routineId);
+                    continue;
+                }
+
+                pending[^1] = (routineId, nextCall + 1);
+                var callee = calls[routineId][nextCall];
+                if (visitStates[callee] == 2) continue;
+                if (visitStates[callee] == 1)
+                {
+                    var cycleStart = 0;
+                    while (pending[cycleStart].RoutineId != callee) cycleStart++;
+                    var names = new string[pending.Count - cycleStart + 1];
+                    for (var index = cycleStart; index < pending.Count; index++) names[index - cycleStart] = _routines[pending[index].RoutineId].Name;
+                    names[^1] = _routines[callee].Name;
+                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileCyclicCallGraph,
+                        "Recursive calls are not allowed. Cyclic call path: " + string.Join(" -> ", names) + ".");
+                }
+
+                visitStates[callee] = 1;
+                pending.Add((callee, 0));
             }
-
-            names[^1] = _routines[routineId].Name;
-            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileCyclicCallGraph,
-                "Recursive calls are not allowed. Cyclic call path: " + string.Join(" -> ", names) + ".");
         }
 
-        visitStates[routineId] = 1;
-        path.Add(routineId);
-        var routineCalls = calls[routineId];
-        for (var index = 0; index < routineCalls.Count; index++)
-        {
-            RejectCyclicCalls(routineCalls[index], calls, visitStates, path);
-        }
-
-        path.RemoveAt(path.Count - 1);
-        visitStates[routineId] = 2;
+        return ordered;
     }
 
-    private RoutineResourceRequirement CalculateRoutineRequirement(int routineId, IReadOnlyList<List<int>> calls, int[] maximumStageCounts, RegisterAllocationResult registerAllocation, bool[] calculated, RoutineResourceRequirement[] requirements)
+    private RoutineResourceRequirement CalculateRoutineRequirement(int routineId, IReadOnlyList<List<int>> calls, int[] maximumStageCounts, RegisterAllocationResult registerAllocation, RoutineResourceRequirement[] requirements)
     {
-        if (calculated[routineId]) return requirements[routineId];
-
         var routine = _routines[routineId];
         var frameRegisterCount = routine.ArgumentRegisters.Count + registerAllocation.RoutineLocalCounts[routineId];
         var requiredRegisterCount = frameRegisterCount + maximumStageCounts[routineId];
@@ -205,13 +202,7 @@ internal sealed partial class GesBinaryBuilder
         var routineCalls = calls[routineId];
         for (var index = 0; index < routineCalls.Count; index++)
         {
-            var callee = CalculateRoutineRequirement(
-                routineCalls[index],
-                calls,
-                maximumStageCounts,
-                registerAllocation,
-                calculated,
-                requirements);
+            var callee = requirements[routineCalls[index]];
             requiredRegisterCount = Math.Max(requiredRegisterCount, frameRegisterCount + callee.RequiredRegisterCount);
             requiredCallStackDepth = Math.Max(requiredCallStackDepth, 1 + callee.RequiredCallStackDepth);
         }
@@ -219,8 +210,6 @@ internal sealed partial class GesBinaryBuilder
         var result = new RoutineResourceRequirement(
             ToResourceUShort(requiredRegisterCount, $"register requirement of routine '{routine.Name}'"),
             ToResourceUShort(requiredCallStackDepth, $"call-stack requirement of routine '{routine.Name}'"));
-        requirements[routineId] = result;
-        calculated[routineId] = true;
         return result;
     }
 

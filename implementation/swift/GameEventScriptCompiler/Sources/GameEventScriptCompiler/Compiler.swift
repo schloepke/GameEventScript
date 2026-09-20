@@ -251,22 +251,37 @@ final class GesCompiler {
                 phase: .compile)
         }
         var resources: [String: (Int, Int)] = [:]
-        var visiting: Set<String> = []
+        let routinesByName = Dictionary(uniqueKeysWithValues: routines.map { ($0.key, $0) })
         func requirements(_ name: String) throws -> (Int, Int) {
             if let result = resources[name] { return result }
-            guard visiting.insert(name).inserted, let r = routines.first(where: { $0.key == name }) else {
-                throw error("compile.cyclicCallGraph", routines[0].location, symbol: name, phase: .compile)
+            var visiting: Set<String> = []
+            var pending = [(name, false)]
+            while let (key, expanded) = pending.popLast() {
+                if resources[key] != nil { continue }
+                guard let r = routinesByName[key] else {
+                    throw error("compile.unresolvedSymbol", routines[0].location, symbol: key, phase: .compile)
+                }
+                if expanded {
+                    var regs = r.registers + r.maxStage
+                    var depth = 0
+                    for target in r.dependencies {
+                        let (childRegs, childDepth) = resources[target]!
+                        regs = max(regs, r.registers + childRegs)
+                        depth = max(depth, childDepth + 1)
+                    }
+                    visiting.remove(key)
+                    resources[key] = (regs, depth)
+                } else {
+                    guard visiting.insert(key).inserted else {
+                        throw error("compile.cyclicCallGraph", r.location, symbol: key, phase: .compile)
+                    }
+                    pending.append((key, true))
+                    for target in r.dependencies.sorted().reversed() where resources[target] == nil {
+                        pending.append((target, false))
+                    }
+                }
             }
-            var regs = r.registers + r.maxStage
-            var depth = 0
-            for target in r.dependencies {
-                let (childRegs, childDepth) = try requirements(target)
-                regs = max(regs, r.registers + childRegs)
-                depth = max(depth, childDepth + 1)
-            }
-            visiting.remove(name)
-            resources[name] = (regs, depth)
-            return (regs, depth)
+            return resources[name]!
         }
         var code: [Instruction] = []
         var spans: [GameEventScriptSourceMapEntry] = []

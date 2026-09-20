@@ -228,8 +228,10 @@ extension GesExternalNames {
     static func coerce(_ value: GesValue, kind: GameEventScriptBytecodeTypeKind?, unit: GesUnit) -> GesValue {
         switch kind {
         case .float: return .float(value.asNumber, unit: unit)
-        case .vector where value.spatialValue != nil: return .vector(x: value.x, y: value.y, z: value.z, unit: unit)
-        case .point where value.spatialValue != nil: return .point(x: value.x, y: value.y, z: value.z, unit: unit)
+        case .vector where value.spatialValue != nil:
+            return .vector(x: value.x, y: value.y, z: value.z, unit: unit == .none ? value.unit : unit)
+        case .point where value.spatialValue != nil:
+            return .point(x: value.x, y: value.y, z: value.z, unit: unit == .none ? value.unit : unit)
         case .tag:
             if value.kind == .boolean { return try! .tag(value.asBoolean ? "true" : "false") }
             var name = value.toText

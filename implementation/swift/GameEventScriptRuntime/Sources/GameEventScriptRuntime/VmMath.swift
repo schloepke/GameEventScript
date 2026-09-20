@@ -129,7 +129,7 @@ enum GesMath {
         }
     }
     static func add(_ a: GesValue, _ b: GesValue, subtract: Bool = false) -> GesValue {
-        if a.isNothing || b.isNothing { return .nothing }
+        if a.isNothing || (b.isNothing && !(subtract && a.kind == .list)) { return .nothing }
         if !subtract && (a.kind == .text || b.kind == .text) { return .text(a.toText + b.toText) }
         if subtract && a.kind == .list && b.kind == .map { return .nothing }
         if a.kind == .list || (b.kind == .list && !(subtract && a.kind == .map)) {

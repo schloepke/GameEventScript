@@ -33,18 +33,18 @@ final class GesParser {
         return tokens[i]
     }
     func match(_ text: String) -> Bool {
-        if current.kind != "text" && current.text == text {
+        if current.syntaxText == text {
             advance()
             return true
         }
         return false
     }
     @discardableResult func expect(_ text: String) throws -> GesToken {
-        if current.text != text { throw failure("Expected '\(text)'.") }
+        if current.syntaxText != text { throw failure("Expected '\(text)'.") }
         return advance()
     }
     func newlines() { while current.kind == "newline" { advance() } }
-    func separators() { while current.kind == "newline" || current.text == ";" { advance() } }
+    func separators() { while current.kind == "newline" || current.syntaxText == ";" { advance() } }
     func location(_ start: GesToken, _ end: GesToken? = nil) -> GameEventScriptSourceLocation {
         let last = end ?? start
         return .init(
@@ -57,7 +57,7 @@ final class GesParser {
         compileError(.parse, code, message, location(token ?? current))
     }
     func identifier() throws -> String {
-        guard current.kind == "word", !Self.reserved.contains(current.text) else {
+        guard current.kind == "word", !Self.reserved.contains(current.syntaxText) else {
             throw failure("Expected an identifier.")
         }
         return advance().text
@@ -73,12 +73,14 @@ final class GesParser {
             "Message", "Handler", "Map", "Dice",
         ]
         if builtins.contains(name) { name = name.lowercased() }
-        if name == "Quantity", current.text == "(", peek().kind == "word" || peek().text == "degree",
-            peek(2).text == ")"
+        if name == "Quantity", current.syntaxText == "(", peek().kind == "word" || peek().syntaxText == "degree",
+            peek(2).syntaxText == ")"
         {
             advance()
             newlines()
-            guard current.kind == "word" || current.text == "degree" else { throw failure("Expected a unit name.") }
+            guard current.kind == "word" || current.syntaxText == "degree" else {
+                throw failure("Expected a unit name.")
+            }
             let unit = advance().text
             newlines()
             try expect(")")
@@ -138,7 +140,9 @@ final class GesParser {
                 switch value.kind {
                 case .literal: break
                 case .unary("-", let operand):
-                    if case .literal = operand.kind {} else { throw failure("Expected scalar literal.", begin) }
+                    guard case .literal(let number) = operand.kind,
+                        [.integer, .float, .percentage].contains(number.kind)
+                    else { throw failure("Expected numeric literal after '-'.", begin) }
                 default: throw failure("Expected scalar literal.", begin)
                 }
                 constants.append((name, value))
@@ -149,7 +153,7 @@ final class GesParser {
                 try expect("{")
                 separators()
                 var fields: [GesField] = []
-                while current.text != "}" {
+                while current.syntaxText != "}" {
                     let fieldStart = current
                     let unlabeled = match("_")
                     let field = try identifier()
@@ -183,7 +187,7 @@ final class GesParser {
                 }
                 try expect("}")
                 records.append(.init(name: name, fields: fields, location: location(begin, previous)))
-            } else if current.text == "function" || current.text == "predicate" {
+            } else if current.syntaxText == "function" || current.syntaxText == "predicate" {
                 let kind = advance().text
                 let name = try identifier()
                 let params = try parameters()
@@ -197,7 +201,8 @@ final class GesParser {
             } else {
                 try expect("on")
                 newlines()
-                guard current.kind == "message" || ["initialization", "undeliverable"].contains(current.text) else {
+                guard current.kind == "message" || ["initialization", "undeliverable"].contains(current.syntaxText)
+                else {
                     throw failure("Expected message name.")
                 }
                 let name = advance().text
@@ -209,14 +214,14 @@ final class GesParser {
                     let local = try identifier()
                     kind = "messageNameHandler"
                     params = [.init(label: "message", name: local, type: "message", location: location(p))]
-                } else if current.text == "(" {
+                } else if current.syntaxText == "(" {
                     params = try parameters()
                 }
                 var required: [String] = []
                 var excluded: [String] = []
                 while true {
                     newlines()
-                    guard current.text == "matching" || current.text == "without" else { break }
+                    guard current.syntaxText == "matching" || current.syntaxText == "without" else { break }
                     let include = advance().text == "matching"
                     repeat {
                         newlines()
@@ -238,7 +243,7 @@ final class GesParser {
                         kind: kind, name: name, parameters: params, expression: nil, statements: body,
                         required: required, excluded: excluded, location: location(begin, previous)))
             }
-            if current.kind != "eof" && current.kind != "newline" && current.text != ";" {
+            if current.kind != "eof" && current.kind != "newline" && current.syntaxText != ";" {
                 throw failure("Expected a declaration separator.")
             }
             separators()
@@ -250,9 +255,9 @@ final class GesParser {
     func statements() throws -> [GesStatement] {
         separators()
         var result: [GesStatement] = []
-        while current.text != "}" && current.kind != "eof" {
+        while current.syntaxText != "}" && current.kind != "eof" {
             result.append(try statement())
-            if current.text != "}" && current.kind != "newline" && current.text != ";" {
+            if current.syntaxText != "}" && current.kind != "newline" && current.syntaxText != ";" {
                 throw failure("Expected a statement separator.")
             }
             separators()
@@ -276,13 +281,13 @@ final class GesParser {
     func statement() throws -> GesStatement {
         let start = current
         let kind: GesStatement.Kind
-        if current.text == "emit" || current.text == "publish" {
+        if current.syntaxText == "emit" || current.syntaxText == "publish" {
             let publish = advance().text == "publish"
             newlines()
             let message: GesExpression
             if current.kind == "message" {
                 let name = advance().text
-                let args = current.text == "(" ? try arguments() : []
+                let args = current.syntaxText == "(" ? try arguments() : []
                 message = node(.message(name, args), start)
             } else {
                 message = try expression()
@@ -298,7 +303,7 @@ final class GesParser {
             let condition = try expression()
             let then = try body()
             var otherwise: [GesStatement] = []
-            if peek(0).text == "else" {
+            if peek(0).syntaxText == "else" {
                 newlines()
                 try expect("else")
                 otherwise = try body()
@@ -314,11 +319,11 @@ final class GesParser {
             } else {
                 try expect("in")
                 newlines()
-                if current.text == "from" { throw failure("Direct range requires 'from'.") }
+                if current.syntaxText == "from" { throw failure("Direct range requires 'from'.") }
                 sequence = try expression()
             }
             kind = .loop(name, sequence, range, try body())
-        } else if current.text == "random" && peek().text == "with" {
+        } else if current.syntaxText == "random" && peek().syntaxText == "with" {
             advance()
             newlines()
             try expect("with")
@@ -365,15 +370,15 @@ final class GesParser {
             }
             if minimum <= 14, case .literal(let value) = left.kind,
                 value.isNumeric && !value.hasUnit && previous.end == current.start,
-                current.kind == "word" && !Self.reserved.contains(current.text)
+                current.kind == "word" && !Self.reserved.contains(current.syntaxText)
                     || minimum <= 14 && previous.end == current.start
-                        && ["pi", "e", "tau", "infinity"].contains(current.text)
+                        && ["pi", "e", "tau", "infinity"].contains(current.syntaxText)
             {
                 let right = try expression(15)
                 left = try combined(.binary("*", left, right), left, right)
                 continue
             }
-            guard let precedence = Self.precedence[current.text], precedence >= minimum else { break }
+            guard let precedence = Self.precedence[current.syntaxText], precedence >= minimum else { break }
             let op = advance().text
             newlines()
             if op == "as" {
@@ -395,7 +400,7 @@ final class GesParser {
                 actual += "With"
                 newlines()
             }
-            if op == "in" && current.text == "values" && peek().text == "of" {
+            if op == "in" && current.syntaxText == "values" && peek().syntaxText == "of" {
                 advance()
                 newlines()
                 try expect("of")
@@ -408,7 +413,7 @@ final class GesParser {
             var branches = [(left, try expression(1))]
             while match(",") {
                 newlines()
-                if current.text == "otherwise" { break }
+                if current.syntaxText == "otherwise" { break }
                 _ = match("or")
                 newlines()
                 let value = try expression(1)
@@ -428,28 +433,28 @@ final class GesParser {
         var value: GesExpression
         if current.kind == "type" {
             value = try combined(.check(input, typeName()), input)
-        } else if ["numeric", "integer", "fractional", "nothing"].contains(current.text) {
+        } else if ["numeric", "integer", "fractional", "nothing"].contains(current.syntaxText) {
             let type = advance().text
             value = try combined(.check(input, type), input)
         } else if match("empty") {
             value = try combined(.unary("empty", input), input)
-        } else if current.kind == "selector" && peek().text == "." {
+        } else if current.kind == "selector" && peek().syntaxText == "." {
             let (ns, function) = try extensionSymbol()
             value = try combined(
                 .unary(
                     "predicate", .init(.extensionCall(ns, function, [.init(label: "_", value: input)]), input.location)),
                 input)
         } else if match("at") {
-            let mode = advance().text
+            let mode = advance().syntaxText
             guard mode == "least" || mode == "most" else { throw failure("Expected least or most.", previous) }
             let right = try expression(13)
             value = try combined(.binary(mode == "least" ? ">=" : "<=", input, right), input, right)
-        } else if current.text == "less" || current.text == "more" {
-            let mode = advance().text
+        } else if current.syntaxText == "less" || current.syntaxText == "more" {
+            let mode = advance().syntaxText
             try expect("than")
             let right = try expression(13)
             value = try combined(.binary(mode == "less" ? "<" : ">", input, right), input, right)
-        } else if current.kind == "word" && !Self.reserved.contains(current.text) {
+        } else if current.kind == "word" && !Self.reserved.contains(current.syntaxText) {
             value = try combined(.predicate(input, advance().text), input)
         } else {
             let right = try expression(13)

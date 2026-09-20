@@ -45,6 +45,7 @@ checkout correctly when invoked by absolute path from another directory:
 
 | Command | Purpose |
 | --- | --- |
+| `./scripts/clean.sh [--dry-run] [--artifacts-only]` | Remove repository build outputs; preview with `--dry-run` ([scope](../../README.md#clean-build-outputs)) |
 | `./scripts/build-csharp.sh` | Build the complete solution in Release |
 | `./scripts/test-csharp.sh` | Run shared Conformance and native non-performance tests in the default Debug configuration |
 | `./scripts/format-csharp.sh` | Verify solution formatting without modifying files |

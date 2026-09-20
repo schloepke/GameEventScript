@@ -95,13 +95,22 @@ Compilation/check reports and ordinary dumps go to stdout.
 
 ## Event console
 
-Use `:help`, `:help load` and `:help dump` for details. The console supports
+Use `:help`, `:help load`, `:help reload` and `:help dump` for details. The console supports
 `:load <file>`, `:list`, `:handler`, `:dump <module|@ID>`, `:source <module|@ID>`
-and `:quit`. Successful loads retain their handlers and receive stable session
+as well as `:unload <module|@ID>`, `:unloadAll`, `:reload` and `:quit`. Successful loads retain their handlers and receive stable session
 IDs. Each ordinary input executes in a temporary initialization handler and is
 then detached; local variables/functions do not persist. Use `:load` for
 persistent handler declarations. Recoverable compile/link/load errors leave the
 session usable but set its final exit status to 1. Runtime failures end it.
+
+`:unload` detaches one Program; `:unloadAll` detaches every Program. Native console
+handlers, random state and script exit code remain. `:reload` re-reads active
+Programs from their original files on a fresh host, preserving source groups,
+load order and active IDs. It runs initialization again without calling Main,
+restarts a configured seed and resets the script exit code. Preparation failures
+preserve the old session; runtime failures end it. IDs are never reused. Use
+`:unloadAll` followed by `:reload` for an empty fresh host. The full contract is in
+the [shared CLI documentation](../../csharp/tools/GameEventScript.Tool/README.md#unloading-and-reloading-programs).
 
 With `--color` and terminal input/output/error streams, the editor offers:
 

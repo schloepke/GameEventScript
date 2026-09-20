@@ -32,7 +32,7 @@ Main arguments (always Text, in command-line order):
 Output and execution:
   --color               Enable ANSI colors and live input highlighting (unless NO_COLOR is set).
   -v, --verbose         Trace emit, publish, and dispatch on stderr; yellow in colored interactive mode.
-  -q, --quiet           Hide completion/load reports; console output and errors remain visible.
+  -q, --quiet           Hide completion/load/unload/reload reports; console output and errors remain visible.
   --seed <integer>      Signed 64-bit random seed. Omit for a fresh host seed.
   --max-messages <n>    Maximum processed messages per pump/input (default: 64).
   --max-steps <n>       Maximum execution steps per handler (default: 100000).
@@ -49,6 +49,9 @@ Event console:
   :help                 Show commands, examples, and session behavior.
   :help load            Explain loading a program into the current session.
   :load "extra.gesb"     Add one source or binary file and run its initialization.
+  :unload <module|@ID>  Detach one loaded program.
+  :unloadAll            Detach all programs; keep native console handlers.
+  :reload               Re-read active programs on a fresh host. Use :help reload for details.
   :list                 List loaded programs/modules and their @IDs.
   :handler              List registered script and native handlers.
   :dump <module|@ID>     Show a loaded program as GESA. Use :help dump for details.
@@ -182,13 +185,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
             IReadOnlyList<string> scenarioPaths = scenarios.Count == 0 ? [] : CompileSources.Expand(scenarios);
             var scenario = scenarioPaths.Count == 0 ? null : RunProgramFiles.Compile(scenarioPaths, ref activePath);
             color = color && !PrettyPrompt.PromptConfiguration.HasUserOptedOutFromColor;
-            var observer = new RunObserver(verbose, color, interactive);
-            var builder = GameEventScriptHost.CreateBuilder().WithRuntimeObserver(observer)
-                .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxProcessedEventsPerRun = maxMessages, MaxExecutionSteps = maxSteps });
-            if (seed is { } configuredSeed) builder.WithRandomSeed(configuredSeed);
-            var host = builder.Build();
-            var session = new RunSession(host, observer);
-            observer.SubscribeConsoleHandlers(session.Inventory);
+            var session = new RunSession(seed, new GameEventScriptRuntimeLimits { MaxProcessedEventsPerRun = maxMessages, MaxExecutionSteps = maxSteps }, verbose, color, interactive);
             for (var index = 0; index < programs.Count; index++) session.Inventory.Load(programs[index], binaryCount > 0 ? [paths[index]] : paths);
             if (scenario is not null) session.Inventory.Load(scenario, scenarioPaths);
             var runMain = scenario is null && !interactive;
@@ -201,7 +198,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
             if (runMain)
             {
                 var message = GameEventScriptMessage.Create("Main", [new GameEventScriptMessageArgument("args", GesValue.GesList(mainArguments.ToArray()))]);
-                if (!host.Receive(message))
+                if (!session.Host.Receive(message))
                 {
                     Console.Error.WriteLine("error cli.mainRejected: The host rejected Main(args).");
                     return 1;
@@ -211,10 +208,10 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
             else if (interactive)
             {
                 activePath = "<stdin>";
-                if (!RunConsole.Run(host, session, color, quiet)) return 1;
+                if (!RunConsole.Run(session, color, quiet)) return 1;
             }
             if (!quiet) session.WriteSummary();
-            return observer.ScriptExitCode;
+            return session.Observer.ScriptExitCode;
         }
         catch (GameEventScriptCompileException exception)
         {

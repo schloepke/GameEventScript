@@ -23,6 +23,8 @@ case "$#" in
 esac
 
 ges_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Replan local package sources on every invocation. Native SwiftPM can otherwise
+# miss added/renamed files in sibling dependencies; compiled objects remain cached.
 ges_count=0
 for ges_manifest in "$ges_root"/implementation/swift/*/Package.swift; do
     [[ -f "$ges_manifest" ]] || continue
@@ -32,7 +34,7 @@ for ges_manifest in "$ges_root"/implementation/swift/*/Package.swift; do
     echo "Building $ges_name ($ges_configuration)"
     swift build --package-path "$ges_package" \
         --scratch-path "$ges_root/artifacts/swift/$ges_component" \
-        --build-system native --configuration "$ges_configuration"
+        --build-system native --disable-build-manifest-caching --configuration "$ges_configuration"
     ges_count=$((ges_count + 1))
 done
 if [[ "$ges_count" -eq 0 ]]; then

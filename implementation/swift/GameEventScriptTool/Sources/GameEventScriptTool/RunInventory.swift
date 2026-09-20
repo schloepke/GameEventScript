@@ -14,15 +14,32 @@ final class RunInventory {
     let io: ToolIO
     private var entries: [Entry] = []
     private var native: [(String, GameEventScriptSubscription)] = []
+    private(set) var nextID: Int
     var active: [Entry] { entries.filter { $0.instance.isAttached } }
-    init(host: GameEventScriptHost, io: ToolIO) {
+    init(host: GameEventScriptHost, io: ToolIO, nextID: Int = 1) {
         self.host = host
         self.io = io
+        self.nextID = nextID
     }
-    @discardableResult func load(_ program: GameEventScriptProgram, paths: [String]) throws -> GameEventScriptInstance {
+    @discardableResult func load(_ program: GameEventScriptProgram, paths: [String], id: Int? = nil) throws
+        -> GameEventScriptInstance
+    {
         let instance = try host.load(program)
-        entries.append(Entry(id: entries.count + 1, instance: instance, paths: paths))
+        let assignedID = id ?? nextID
+        entries.append(Entry(id: assignedID, instance: instance, paths: paths))
+        nextID = max(nextID, assignedID + 1)
         return instance
+    }
+    func unload(_ selector: String) throws {
+        let entry = try select(selector, command: ":unload")
+        entry.instance.detach()
+        entries.removeAll { $0.id == entry.id }
+    }
+    @discardableResult func unloadAll() -> Int {
+        let count = active.count
+        for entry in entries { entry.instance.detach() }
+        entries.removeAll()
+        return count
     }
     func subscribe(_ name: String, handler: any GameEventScriptNativeMessageHandler) throws {
         native.append((name, try host.subscribeMessageName(name, handler: handler)))

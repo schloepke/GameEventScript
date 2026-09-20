@@ -98,3 +98,24 @@ Game Event Script is licensed under the
 
 The repository-wide header and attribution policy is documented in
 [Licensing](LICENSING.md).
+
+## Clean build outputs
+
+```sh
+./scripts/clean.sh --dry-run          # Preview directories and file-data sizes.
+./scripts/clean.sh                   # Delete all known repository build outputs.
+./scripts/clean.sh --artifacts-only   # Delete only artifacts (also accepts --dry-run).
+```
+
+The script requires Python 3 and works from any directory. It removes `artifacts`,
+root-level `bin`/`obj`/`TestResults`/`.build`, C# `bin`/`obj`/`TestResults` directories,
+and SwiftPM `.build` directories. This includes generated packages, reports,
+benchmark runs, local tool installations and Xcode outputs stored under `artifacts`.
+Build and test scripts recreate their outputs on the next run.
+
+Tracked content makes cleanup fail before any deletion. Symbolic output-directory
+links are skipped, and links inside deleted outputs are never followed. Sources,
+Conformance fixtures/references, Git data, `.swiftpm`/IDE configuration, global
+package caches and tools installed outside this repository remain intact. Stop
+running builds and tests before cleaning. Verify cleanup safety with
+`python3 scripts/test-clean.py`; these tests use disposable directories.

@@ -24,11 +24,16 @@ let package = Package(
         .target(name: "ConformanceInstrumentation"),
         .executableTarget(
             name: "GameEventScriptConformanceTool",
-            dependencies: ["GameEventScriptConformance", "ConformanceInstrumentation"]),
+            dependencies: [
+                "GameEventScriptConformance", "ConformanceInstrumentation",
+                .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
+            ]),
         .testTarget(
             name: "GameEventScriptConformanceTests",
             dependencies: [
                 "GameEventScriptConformance",
+                .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
+                .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"),
                 .product(name: "GameEventScriptSwiftBridge", package: "GameEventScriptSwiftBridge"),
             ]),
     ]

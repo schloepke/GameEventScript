@@ -58,6 +58,11 @@ Licensing follows `LICENSING.md`. Use exactly `Copyright 2026 Stephan Schlöpke`
 and `SPDX-License-Identifier: Apache-2.0`, retain third-party notices, and honor
 the documented generated, strict-format, and binary exclusions.
 
+`scripts/clean.sh --dry-run` previews repository build-output cleanup;
+`--artifacts-only` limits it to `artifacts`. It retains tracked files, skips
+symlinked output directories and never traverses symlinks. Safety tests use
+`python3 scripts/test-clean.py` with disposable workspaces.
+
 Generated DLLs, NuGet packages, symbols, reports, and release candidates belong
 only below the ignored `artifacts` directory. The release dry run must never
 publish.
@@ -228,7 +233,7 @@ current C# implementation, not cross-platform benchmark claims.
 Verified baseline (Release, 2026-09-20):
 
 ```text
-1993/1993 non-performance test executions passed
+2006/2006 non-performance test executions passed
 31/31 allocation test executions passed, including the independent zero-allocation hot path
 1495 shared Markdown Conformance cases in 94 documents
 ```
@@ -253,6 +258,12 @@ and implements source parsing, validation, lowering, optimization, register
 allocation and Program generation. Conformance depends on both packages.
 There is no extra Core package. File I/O belongs to the executable adapter/tests.
 
+Every Swift target, including executable and test targets, declares a direct
+target/product dependency for each repository module it imports. Transitive
+availability alone is insufficient for reliable native incremental builds.
+`python3 scripts/verify-swift-dependencies.py` checks imports against SwiftPM's
+target/source descriptions; Swift CI runs this gate.
+
 Swift Host and Compiler expose createBuilder()/create() factories matching the
 C# builder workflow. Swift collections use immutable value semantics and copy-on-write storage.
 Text and map-key equality/order use Unicode scalars, not Swift String's
@@ -264,6 +275,11 @@ for the synchronous invocation.
 `./scripts/build-swift.sh` builds all SwiftPM packages independently in Release
 without .NET; `--configuration debug` selects Debug. `./scripts/format-swift.sh`
 checks the existing formatter configuration; `--fix` applies formatting.
+Native SwiftPM build/test commands use `--disable-build-manifest-caching` to
+rediscover added, renamed and removed sources in local dependency packages.
+This regenerates build planning, not compiled objects. Keep the same option in
+new native SwiftPM entry points. `python3 scripts/test-swift-incremental.py`
+verifies source discovery and unchanged-build object reuse through the build script.
 Run `./scripts/test-swift.sh` and `python3 scripts/verify-swift-api.py`.
 The test script uses .NET 10 to export C#-compiled binary inputs below
 `artifacts/swift/runtime-fixtures`, then verifies Swift in Release against the
@@ -277,7 +293,7 @@ Verified Swift coverage (Release, 2026-09-20): all 1,495 behavior checks from
 hardware-independent report passes 1,464 cases and skips 31 optional performance
 measurements. Enabling the measured profile passes all 1,495 cases. Independent
 Runtime verification passes 1,245 cases using C#-compiled Programs. Seventeen Conformance/adapter/bootstrap tests, seventeen SwiftBridge tests, and
-twenty CLI tests pass. `scripts/test-swift.sh` requires strict native acceptance and keeps
+twenty-eight CLI tests pass. `scripts/test-swift.sh` requires strict native acceptance and keeps
 Runtime interoperability reports separate.
 
 `scripts/test-swift-performance.sh` verifies the measured
@@ -373,6 +389,14 @@ expansion is presentation-only; redirected output and saved GESA retain tabs.
 Duplicate/anonymous modules can be selected by @ID. These inspection commands
 write to stderr without executing handlers or re-reading files. Their inventory
 belongs to the CLI and records only successful persistent loads/subscriptions.
+
+`:unload <module|@ID>` detaches one Program; `:unloadAll` detaches all Programs.
+Native console handlers, random state and script exit code remain. `:reload`
+re-reads active Programs in their original source groups/load order on a fresh
+host, preserving active IDs and never reusing detached IDs. It initializes the
+complete group without calling Main, restarts a fixed seed and resets script exit
+code. Preparation failures preserve the old session; runtime failures end it.
+`:help reload` documents the lifecycle commands; `--quiet` hides their success reports.
 
 Keep command parsing, file I/O, console observation, and process integration in
 the tool. C# CLI adapter tests belong in `Native/Tool`; Swift adapters are tested in

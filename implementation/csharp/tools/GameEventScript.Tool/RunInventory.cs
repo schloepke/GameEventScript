@@ -8,16 +8,35 @@ using static GameEventScript.Api.GameEventScriptBindingSegment;
 
 namespace GameEventScript.Tool;
 
-internal sealed class RunInventory(GameEventScriptHost host)
+internal sealed class RunInventory(GameEventScriptHost host, int nextId = 1)
 {
     private readonly List<LoadedProgram> _programs = [];
     private readonly List<NativeHandler> _nativeHandlers = [];
 
-    internal GameEventScriptInstance Load(GameEventScriptProgram program, IReadOnlyList<string> paths)
+    internal int NextId { get; private set; } = nextId;
+
+    internal GameEventScriptInstance Load(GameEventScriptProgram program, IReadOnlyList<string> paths, int? id = null)
     {
         var instance = host.Load(program);
-        _programs.Add(new LoadedProgram(_programs.Count + 1, instance, [.. paths]));
+        var assignedId = id ?? NextId;
+        _programs.Add(new LoadedProgram(assignedId, instance, [.. paths]));
+        NextId = Math.Max(NextId, assignedId + 1);
         return instance;
+    }
+
+    internal void Unload(string selector)
+    {
+        var entry = SelectProgram(selector, ":unload");
+        entry.Instance.Detach();
+        _programs.Remove(entry);
+    }
+
+    internal int UnloadAll()
+    {
+        var count = ActivePrograms().Length;
+        foreach (var entry in _programs) entry.Instance.Detach();
+        _programs.Clear();
+        return count;
     }
 
     internal GameEventScriptSubscription SubscribeMessageName(string name, IGameEventScriptNativeMessageHandler handler)
@@ -119,7 +138,7 @@ internal sealed class RunInventory(GameEventScriptHost host)
         return matches[0];
     }
 
-    private LoadedProgram[] ActivePrograms() => _programs.Where(entry => entry.Instance.IsAttached).ToArray();
+    internal LoadedProgram[] ActivePrograms() => _programs.Where(entry => entry.Instance.IsAttached).ToArray();
 
     private static IEnumerable<GameEventScriptBinaryBindEntry> Handlers(LoadedProgram entry)
         => entry.Instance.Program.Bindings.Entries.Where(binding => binding.Kind is GameEventScriptBinaryBindKind.MessageHandler or GameEventScriptBinaryBindKind.MessageNameHandler
@@ -128,6 +147,6 @@ internal sealed class RunInventory(GameEventScriptHost host)
     private static string Tags(string prefix, GameEventScriptReadOnlyArray<ushort> tags, GameEventScriptStringConstantSegment strings)
         => tags.Count == 0 ? string.Empty : prefix + string.Join(", ", tags.Select(index => "#" + strings.Resolve(index)));
 
-    private sealed record LoadedProgram(int Id, GameEventScriptInstance Instance, string[] Paths);
+    internal sealed record LoadedProgram(int Id, GameEventScriptInstance Instance, string[] Paths);
     private sealed record NativeHandler(string Name, GameEventScriptSubscription Subscription);
 }

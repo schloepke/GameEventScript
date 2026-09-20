@@ -8,7 +8,7 @@ namespace GameEventScript.Tool;
 
 internal static class RunConsole
 {
-    internal static bool Run(GameEventScriptHost host, RunSession session, bool color, bool quiet)
+    internal static bool Run(RunSession session, bool color, bool quiet)
     {
         var terminal = !Console.IsInputRedirected;
         if (terminal) Console.Error.WriteLine("GES event console. Type :help for commands and examples, :load <file> to add a program, or :quit to exit.");
@@ -45,7 +45,7 @@ internal static class RunConsole
                 session.Inventory.WriteHandlers();
                 continue;
             }
-            if (command is not (":load" or ":dump" or ":source") && command.StartsWith(':') && command.AsSpan(1).IndexOfAnyExceptInRange('a', 'z') < 0)
+            if (command is not (":load" or ":dump" or ":source" or ":unload" or ":unloadAll" or ":reload") && command.StartsWith(':') && command.AsSpan(1).IndexOfAnyExceptInRange('a', 'z') < 0)
             {
                 Console.Error.WriteLine($"error cli.consoleCommand: Unknown command or arguments '{trimmed}'. Use :help.");
                 success = false;
@@ -56,6 +56,27 @@ internal static class RunConsole
             string? activePath = null;
             try
             {
+                if (command == ":unload")
+                {
+                    session.Inventory.Unload(commandArgument);
+                    if (!quiet) Console.Error.WriteLine($"Unloaded {commandArgument}.");
+                    continue;
+                }
+                if (command is ":unloadAll" or ":reload")
+                {
+                    if (commandArgument.Length != 0) throw new ArgumentException($"{command} accepts no arguments.");
+                    if (command == ":unloadAll")
+                    {
+                        var count = session.Inventory.UnloadAll();
+                        if (!quiet) Console.Error.WriteLine($"Unloaded {count} programs. Native console handlers remain active.");
+                    }
+                    else
+                    {
+                        if (!session.Reload(ref activePath)) return false;
+                        if (!quiet) Console.Error.WriteLine("Reloaded all active programs on a fresh host; initialization completed.");
+                    }
+                    continue;
+                }
                 if (command == ":dump")
                 {
                     session.Inventory.WriteDump(commandArgument, color);
@@ -84,7 +105,7 @@ internal static class RunConsole
                     success = false;
                     continue;
                 }
-                instance = host.Load(program);
+                instance = session.Host.Load(program);
                 if (!session.Pump()) return false;
             }
             catch (GameEventScriptCompileException exception)

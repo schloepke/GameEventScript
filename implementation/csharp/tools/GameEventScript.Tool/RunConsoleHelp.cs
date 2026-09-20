@@ -37,6 +37,29 @@ An invalid command or missing/ambiguous module is recoverable but makes the fina
 session exit code 1, like other rejected console commands.
 """;
 
+    internal const string Lifecycle = """
+Manage loaded programs
+
+  :unload <module|@ID>  Detach one program, selected as with :dump.
+  :unloadAll           Detach every program; keep native console handlers.
+  :reload              Re-read active programs and initialize them on a fresh host.
+
+Unloaded programs disappear from :list and :handler. Their IDs are never reused.
+An ambiguous module name requires an @ID. Unloading preserves the host's random
+state and script exit code. Use :unloadAll followed by :reload for an empty fresh host.
+
+:reload reads the original files again, keeping load order, jointly compiled source
+groups, and active @IDs. All programs are loaded before initialization is pumped.
+Main is not called. Unloaded programs are not restored. The host uses the original
+limits and seed options; a fixed --seed restarts its sequence. ErrorCode resets to
+zero unless initialization sets it again. Native console handlers are registered once.
+
+Read/compile/decode/link failures preserve the entire existing session. Runtime
+errors or limits during initialization end the session. Rejected commands make the
+final session exit code 1 even after a successful reload. :reload and :unloadAll
+accept no arguments. --quiet hides successful load/unload/reload status reports.
+""";
+
     internal const string Load = """
 :load <file.ges|file.gesb>
 
@@ -70,6 +93,9 @@ Commands:
   :help load            Show load behavior and path examples.
   :help dump            Show program/handler inspection and source/dump details.
   :load <file>          Add one .ges or .gesb program; run its initialization.
+  :unload <module|@ID>  Detach one loaded program.
+  :unloadAll            Detach all programs; keep native console handlers.
+  :reload               Re-read active programs on a fresh host. Use :help reload for details.
   :list                 List loaded programs/modules and their @IDs.
   :handler              List registered script and native handlers.
   :dump <module|@ID>    Show a loaded program as GESA, e.g. :dump game or :dump @1.
@@ -108,7 +134,7 @@ Editing:
   In Warp, configure Option as Meta to use Option+Enter. If a terminal sends
   ordinary Enter for a modified key, use Ctrl+N instead.
   --verbose shows emit/publish/dispatch traces; interactive color traces are yellow.
-  --quiet hides completion/load reports. Help, prompts, and diagnostics use stderr.
+  --quiet hides completion/load/unload/reload reports. Help, prompts, and diagnostics use stderr.
 """;
 
     internal static bool Write(string topic)
@@ -117,6 +143,7 @@ Editing:
         {
             "" => Overview,
             "load" or ":load" => Load,
+            "unload" or ":unload" or "unloadAll" or ":unloadAll" or "reload" or ":reload" => Lifecycle,
             "list" or ":list" or "handler" or ":handler" or "dump" or ":dump" or "source" or ":source" => Inspection,
             _ => null
         };

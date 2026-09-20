@@ -14,6 +14,11 @@ let package = Package(
             dependencies: [
                 .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")
             ]),
-        .testTarget(name: "GameEventScriptSwiftBridgeTests", dependencies: ["GameEventScriptSwiftBridge"]),
+        .testTarget(
+            name: "GameEventScriptSwiftBridgeTests",
+            dependencies: [
+                "GameEventScriptSwiftBridge",
+                .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
+            ]),
     ]
 )

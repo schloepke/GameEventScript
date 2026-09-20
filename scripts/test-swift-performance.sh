@@ -13,5 +13,5 @@ esac
 ges_output="${2:-$ges_root/artifacts/swift/$ges_default}"
 ges_package="$ges_root/implementation/swift/GameEventScriptConformance"
 ges_scratch="$ges_root/artifacts/swift/conformance"
-swift build --package-path "$ges_package" --scratch-path "$ges_scratch" --build-system native --configuration release
+swift build --package-path "$ges_package" --scratch-path "$ges_scratch" --build-system native --disable-build-manifest-caching --configuration release
 "$ges_scratch/release/ges-conformance" --corpus "$ges_root/conformance/suites/performance" --output "$ges_output" "$ges_flag"

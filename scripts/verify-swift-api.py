@@ -52,7 +52,7 @@ def dump_graphs(swift, package):
         graph.unlink()
     options = [
         "--package-path", str(ROOT / "implementation" / "swift" / package),
-        "--scratch-path", str(scratch), "--build-system", "native",
+        "--scratch-path", str(scratch), "--build-system", "native", "--disable-build-manifest-caching",
     ]
     # SwiftPM's graph dumper also visits synthesized test-runner modules. Build
     # them first so a fresh scratch directory works; none are included below.

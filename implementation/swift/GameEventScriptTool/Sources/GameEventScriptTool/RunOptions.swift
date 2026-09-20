@@ -142,10 +142,7 @@ extension Tool {
         let scenarios = try ToolFiles.expand(options.scenarios)
         let scenario = scenarios.isEmpty ? nil : try ToolFiles.compile(scenarios)
         options.color = options.color && !io.noColor
-        let observer = RunObserver(io: io, options: options)
-        let host = try GameEventScriptHost(seed: options.seed, limits: options.limits, observer: observer)
-        let session = RunSession(host: host, observer: observer, io: io)
-        try observer.subscribe(session.inventory)
+        let session = try RunSession(options: options, io: io)
         for (index, program) in programs.enumerated() {
             try session.inventory.load(program, paths: binaries > 0 ? [paths[index]] : paths)
         }
@@ -161,7 +158,7 @@ extension Tool {
         if main {
             let message = try GameEventScriptMessage(
                 name: "Main", arguments: [.init(name: "args", value: .list(options.arguments))])
-            guard host.receive(message) else {
+            guard session.host.receive(message) else {
                 io.line("error cli.mainRejected: The host rejected Main(args).", toError: true)
                 return 1
             }
@@ -170,7 +167,7 @@ extension Tool {
             guard try runConsole(session, options: options) else { return 1 }
         }
         if !options.quiet { session.summary() }
-        return observer.exitCode
+        return session.observer.exitCode
     }
     static func hasMain(_ program: GameEventScriptProgram) -> Bool {
         program.bindings.contains {

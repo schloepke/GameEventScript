@@ -18,6 +18,12 @@ let package = Package(
                 .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"),
                 "TerminalSupport",
             ]),
-        .testTarget(name: "GameEventScriptToolTests", dependencies: ["GameEventScriptTool"]),
+        .testTarget(
+            name: "GameEventScriptToolTests",
+            dependencies: [
+                "GameEventScriptTool", "TerminalSupport",
+                .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
+                .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"),
+            ]),
     ]
 )

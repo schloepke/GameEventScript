@@ -69,6 +69,7 @@ invoked by absolute path from another working directory:
 
 | Command | Purpose |
 | --- | --- |
+| `./scripts/clean.sh [--dry-run] [--artifacts-only]` | Remove repository build outputs; preview with `--dry-run` ([scope](../../README.md#clean-build-outputs)) |
 | `./scripts/build-swift.sh` | Build every SwiftPM package independently in Release; no .NET dependency |
 | `./scripts/build-swift.sh --configuration debug` | Build the same packages in Debug |
 | `./scripts/format-swift.sh` | Check manifests, Sources and Tests using the existing `.swift-format` configuration |
@@ -80,6 +81,8 @@ invoked by absolute path from another working directory:
 | `./scripts/test-swift.sh` | Export C# interoperability fixtures, run native tests and strict shared Conformance |
 | `./scripts/test-swift-performance.sh` | Verify the calibrated Release performance profile |
 | `python3 scripts/verify-swift-api.py` | Verify approved public API snapshots |
+| `python3 scripts/test-swift-incremental.py` | Verify added/renamed/removed dependency sources and unchanged-build object reuse |
+| `python3 scripts/verify-swift-dependencies.py` | Verify direct target dependencies for imports, including native tests |
 | `python3 scripts/verify-swift-bytecode.py` | Verify the shared opcode/operand registry |
 | `./scripts/open-swift-xcode.sh` | Configure local build paths and open the Xcode workspace |
 
@@ -90,6 +93,14 @@ participate without duplicating source lists. Formatting excludes generated
 artifacts and Xcode's user state. SwiftPM publication remains deferred. The CLI
 installer defaults to `$HOME/.local/bin` and supports `--tool-path DIRECTORY`;
 see the [CLI guide](GameEventScriptTool/README.md) for installation and updates.
+
+Build/test scripts regenerate the native SwiftPM build plan with
+`--disable-build-manifest-caching`. This ensures new, renamed or removed files in
+local dependency packages are discovered, including a new Runtime file while
+building Compiler. Compiled objects and module caches remain incremental; no
+Clean is performed during installation. Use the same option for manual native
+SwiftPM builds after source-structure changes. The incremental CI test exercises
+these changes in disposable packages and verifies object reuse on an unchanged build.
 
 Use Swift 6.0 or newer. The complete verification script additionally uses .NET 10
 for independent cross-language binary inputs:
@@ -137,7 +148,7 @@ Run the strict native suite without .NET:
 
 ```bash
 swift run --package-path implementation/swift/GameEventScriptConformance \
-  --scratch-path artifacts/swift/conformance --build-system native -c release \
+  --scratch-path artifacts/swift/conformance --build-system native --disable-build-manifest-caching -c release \
   ges-conformance --corpus conformance/suites \
   --fixtures conformance/fixtures/MarkdownV1 \
   --binary-fixtures conformance/fixtures \

@@ -5,16 +5,38 @@ import Foundation
 import GameEventScriptRuntime
 
 final class RunSession {
-    let host: GameEventScriptHost
-    let observer: RunObserver
-    let inventory: RunInventory
+    private(set) var host: GameEventScriptHost
+    private(set) var observer: RunObserver
+    private(set) var inventory: RunInventory
     let io: ToolIO
+    let options: RunOptions
     var messages = 0, opcodes = 0, emits = 0, publishes = 0
-    init(host: GameEventScriptHost, observer: RunObserver, io: ToolIO) {
-        self.host = host
-        self.observer = observer
+    init(options: RunOptions, io: ToolIO, nextID: Int = 1) throws {
+        self.options = options
         self.io = io
-        inventory = RunInventory(host: host, io: io)
+        observer = RunObserver(io: io, options: options)
+        host = try GameEventScriptHost(seed: options.seed, limits: options.limits, observer: observer)
+        inventory = RunInventory(host: host, io: io, nextID: nextID)
+        try observer.subscribe(inventory)
+    }
+    func reload(activePath: inout String) throws -> Bool {
+        let replacement = try RunSession(options: options, io: io, nextID: inventory.nextID)
+        // Link the complete group before initialization; preparation failures leave this session intact.
+        for entry in inventory.active {
+            activePath = entry.paths[0]
+            let program = try entry.paths.count == 1 ? ToolFiles.read(entry.paths[0]) : ToolFiles.compile(entry.paths)
+            try replacement.inventory.load(program, paths: entry.paths, id: entry.id)
+        }
+        guard try replacement.pump() else { return false }
+        inventory.unloadAll()
+        host = replacement.host
+        observer = replacement.observer
+        inventory = replacement.inventory
+        messages += replacement.messages
+        opcodes += replacement.opcodes
+        emits += replacement.emits
+        publishes += replacement.publishes
+        return true
     }
     func pump() throws -> Bool {
         if !host.isReady {

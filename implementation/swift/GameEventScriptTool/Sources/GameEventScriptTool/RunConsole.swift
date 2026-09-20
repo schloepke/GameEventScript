@@ -39,7 +39,8 @@ extension Tool {
                 session.inventory.registeredHandlers()
                 continue
             }
-            if ![":load", ":dump", ":source"].contains(command), command.hasPrefix(":"),
+            if ![":load", ":dump", ":source", ":unload", ":unloadAll", ":reload"].contains(command),
+                command.hasPrefix(":"),
                 command.dropFirst().allSatisfy({ $0 >= "a" && $0 <= "z" })
             {
                 io.line(
@@ -51,6 +52,28 @@ extension Tool {
             var path = "<interactive:\(lineNumber)>"
             do {
                 defer { instance?.detach() }
+                if command == ":unload" {
+                    try session.inventory.unload(argument)
+                    if !options.quiet { io.line("Unloaded \(argument).", toError: true) }
+                    continue
+                }
+                if command == ":unloadAll" || command == ":reload" {
+                    guard argument.isEmpty else { throw ToolError.usage("\(command) accepts no arguments.") }
+                    if command == ":unloadAll" {
+                        let count = session.inventory.unloadAll()
+                        if !options.quiet {
+                            io.line("Unloaded \(count) programs. Native console handlers remain active.", toError: true)
+                        }
+                    } else {
+                        guard try session.reload(activePath: &path) else { return false }
+                        if !options.quiet {
+                            io.line(
+                                "Reloaded all active programs on a fresh host; initialization completed.", toError: true
+                            )
+                        }
+                    }
+                    continue
+                }
                 if command == ":dump" {
                     try session.inventory.dump(argument, color: options.color)
                     continue
@@ -93,6 +116,7 @@ extension Tool {
         switch topic {
         case "": text = ToolHelp.console
         case "load", ":load": text = ToolHelp.load
+        case "unload", ":unload", "unloadAll", ":unloadAll", "reload", ":reload": text = ToolHelp.lifecycle
         case "list", ":list", "handler", ":handler", "dump", ":dump", "source", ":source": text = ToolHelp.inspection
         default:
             io.line(

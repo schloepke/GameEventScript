@@ -28,12 +28,21 @@ final class ToolTests: XCTestCase {
         let output: String
         let error: String
     }
-    func run(_ arguments: [String], input: [String] = [], noColor: Bool = false) -> Result {
+    func run(
+        _ arguments: [String], input: [String] = [], noColor: Bool = false,
+        beforeInput: ((String) throws -> Void)? = nil
+    ) -> Result {
         var stdout = ""
         var stderr = ""
         var lines = input
         let io = ToolIO(
-            output: { stdout += $0 }, error: { stderr += $0 }, input: { lines.isEmpty ? nil : lines.removeFirst() },
+            output: { stdout += $0 }, error: { stderr += $0 },
+            input: {
+                guard !lines.isEmpty else { return nil }
+                let line = lines.removeFirst()
+                try beforeInput?(line)
+                return line
+            },
             inputTerminal: false, outputTerminal: false, errorTerminal: false, noColor: noColor)
         return Result(code: Tool(io: io).run(arguments), output: stdout, error: stderr)
     }

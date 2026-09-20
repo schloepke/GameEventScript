@@ -371,6 +371,10 @@ Interactive commands are:
 | `:help` | Show commands, message examples, Text conversion, editing keys, and session behavior |
 | `:help load` | Show loading details and path examples |
 | `:help list`, `:help handler`, `:help dump`, `:help source` | Show inspection behavior and program selection details |
+| `:help unload`, `:help unloadAll`, `:help reload` | Show removal and fresh-host reload behavior |
+| `:unload <module\|@ID>` | Detach one persistent Program |
+| `:unloadAll` | Detach all Programs, keeping native console handlers |
+| `:reload` | Re-read active Programs and initialize them together on a fresh host |
 | `:load <file>` | Add one `.ges` or `.gesb` Program and immediately pump its initialization |
 | `:list` | List persistent program instances with their `@ID`, module, version, files, and registered script-handler count |
 | `:handler` | List registered script and native handlers, their argument signatures, and required/excluded tags |
@@ -379,9 +383,9 @@ Interactive commands are:
 | `:source <module\|@ID>` | Show only embedded source documents, each with a filename heading |
 | `:quit` | End the session; EOF also exits |
 
-Help, prompts, and load reports go to stderr. Prompts and the introductory message
+Help, prompts, and load/unload/reload reports go to stderr. Prompts and the introductory message
 appear only when stdin is a terminal; redirected UTF-8 input is accepted without
-prompts, including an optional initial BOM. `--quiet` suppresses load reports and
+prompts, including an optional initial BOM. `--quiet` suppresses load/unload/reload reports and
 the final summary, while explicitly requested help remains visible.
 
 Inspection output also goes to stderr and remains visible with `--quiet`.
@@ -469,6 +473,44 @@ session's final exit code `1`. A runtime error, output failure, or runtime limit
 including during loaded initialization, ends the session immediately after the
 pump returns; pending work is not resumed. No automatic replacement or unload is
 performed by `:load`.
+
+### Unloading and reloading Programs
+
+```text
+ges> :unload game.combat
+ges> :unload @2
+ges> :reload
+ges> :unloadAll
+```
+
+`:unload <module|@ID>` detaches one Program and removes its inventory entry.
+Selection follows the same exact-module and `@ID` rules as `:dump`; a duplicate
+module name requires an ID. Its handlers no longer receive messages. `:unloadAll`
+detaches every persistent Program. Both leave ConsoleOut, ConsoleErr, and ErrorCode
+available, and preserve the host's random state and script exit code. Removed IDs
+are never reused within the session, including after `:unloadAll` or `:reload`.
+Neither command deletes files.
+
+`:reload` creates a fresh host and re-reads the original files of all **currently
+active** Programs in load order. Jointly compiled source files remain one group;
+separate binaries and additive loads remain separate instances. Each active `@ID`
+is preserved. The command does not rescan wildcard patterns, reload detached
+Programs, or call Main. All replacement Programs are linked before initialization
+starts, so initialization emits can reach the entire group. Initialization and its
+emitted messages are then pumped before the next console input.
+
+The replacement host uses the original limits and seed options. A fixed `--seed`
+restarts its sequence; without one, the new host obtains a fresh seed. The script
+exit code resets to zero, unless initialization sets it again. Console subscriptions
+are registered once on the new host. Use `:unloadAll` followed by `:reload` to start
+with an empty fresh host. Both commands accept no arguments.
+
+Read, compile, decode, or link failures during preparation leave the **entire**
+previous session active; no replacement initialization runs before preparation
+succeeds. Runtime errors, output failures, or limits during replacement execution
+end the session, as for `:load`. Rejected console inputs still make the final exit
+status `1`, even after a later successful reload. The final run summary accumulates
+execution counters across successful reloads.
 
 ### Output, limits, and host configuration
 

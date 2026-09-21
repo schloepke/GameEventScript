@@ -3,6 +3,9 @@
 
 # Game Event Script
 
+[![NuGet](https://img.shields.io/nuget/v/GameEventScript.Runtime)](https://www.nuget.org/packages/GameEventScript.Runtime)
+[![GitHub release](https://img.shields.io/github/v/release/schloepke/GameEventScript)](https://github.com/schloepke/GameEventScript/releases/latest)
+
 Game Event Script is a portable, deterministic scripting language and serial
 message host for game logic. C# and Swift implement the shared
 language-neutral contracts, with C# as the reference implementation. Additional
@@ -14,9 +17,13 @@ Markdown conformance corpus; the C# API is one language-specific mapping.
 
 ## Install and use
 
-The examples below target the **`0.1.0-rc1`** prerelease. Public package
-installation requires that version to have been published to NuGet and tagged
-in this repository for SwiftPM. For use from a checkout, see the
+The badges above show the latest non-prerelease NuGet package and GitHub release
+once published. See [release notes](https://github.com/schloepke/GameEventScript/releases)
+for changes and migration guidance. All libraries share the GES release version;
+language and API contracts may change during 0.x development.
+
+SwiftPM consumes version tags from this repository; a tag alone does not create
+a GitHub release or publish NuGet packages. For use from a checkout, see the
 [C#](implementation/csharp/README.md) and [Swift](implementation/swift/README.md)
 implementation guides.
 
@@ -38,10 +45,14 @@ install all three packages to run the example below:
 ```bash
 dotnet new console -n GesExample
 cd GesExample
-dotnet add package GameEventScript.Runtime --version 0.1.0-rc1
-dotnet add package GameEventScript.Compiler --version 0.1.0-rc1
-dotnet add package GameEventScript.CSharpBridge --version 0.1.0-rc1
+dotnet add package GameEventScript.Runtime
+dotnet add package GameEventScript.Compiler
+dotnet add package GameEventScript.CSharpBridge
 ```
+
+Without `--version`, these commands select the latest available non-prerelease
+packages. To reproduce a specific release, add `--version <release-version>` to
+each command and use the same version for all three libraries.
 
 Replace `Program.cs` with:
 
@@ -79,12 +90,16 @@ failures have structured diagnostics; see the [C# embedding guide](implementatio
 
 In Xcode, choose **File → Add Package Dependencies**, enter
 `https://github.com/schloepke/GameEventScript.git`, and select **Exact Version**
-`0.1.0-rc1`. Add the Runtime, Compiler and SwiftBridge products to your app target
+with the version you want from the
+[published releases](https://github.com/schloepke/GameEventScript/releases).
+Add the Runtime, Compiler and SwiftBridge products to your app target
 for the example below. The public package requires Swift 6.0 or newer; macOS is
 the currently CI-verified platform.
 
 For a SwiftPM executable, use this `Package.swift` and put the example in
-`Sources/GesExample/main.swift`:
+`Sources/GesExample/main.swift`. Replace `<release-version>` with the chosen
+published version number, without an optional leading `v` from the Git tag.
+SwiftPM requires a concrete version here; the badge does not substitute it:
 
 ```swift
 // swift-tools-version: 6.0
@@ -93,7 +108,7 @@ import PackageDescription
 let package = Package(
     name: "GesExample",
     dependencies: [
-        .package(url: "https://github.com/schloepke/GameEventScript.git", exact: "0.1.0-rc1")
+        .package(url: "https://github.com/schloepke/GameEventScript.git", exact: "<release-version>")
     ],
     targets: [
         .executableTarget(name: "GesExample", dependencies: [
@@ -178,9 +193,12 @@ points:
 ./scripts/test-csharp-performance.sh
 ./scripts/format-csharp.sh
 ./scripts/pack-csharp.sh
-./scripts/release-csharp-dry-run.sh 0.1.0-rc1
-./scripts/verify-csharp-reproducibility.sh 0.1.0-rc1
+./scripts/release-csharp-dry-run.sh <release-version>
+./scripts/verify-csharp-reproducibility.sh <release-version>
 ```
+
+Replace `<release-version>` with the version being prepared; these verification
+commands do not publish a release.
 
 Normal build and test output remains below project-local `bin`/`obj` directories.
 Packages and generated reports are written only below the ignored `artifacts`

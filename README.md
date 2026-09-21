@@ -16,8 +16,10 @@ Markdown conformance corpus; the C# API is one language-specific mapping.
 
 - [`specs`](specs) contains the normative language-neutral specifications.
 - [`conformance`](conformance) contains the shared executable corpus and fixtures.
-- [`implementation/csharp`](implementation/csharp) contains the current reference implementation and native tests.
-- [`ges` CLI](implementation/csharp/tools/GameEventScript.Tool/README.md) contains the separate .NET tool entry point and local installation instructions.
+- [`implementation/csharp`](implementation/csharp/README.md) contains the reference Runtime, Compiler, C# adapters, Conformance and CLI, with build and embedding instructions.
+- [`implementation/swift`](implementation/swift/README.md) contains the Swift Runtime, Compiler, SwiftBridge, Conformance and CLI packages and their Xcode workspace.
+- [`dotnet ges` CLI](implementation/csharp/GameEventScript.Tool/README.md) contains the separate .NET tool entry point and local installation instructions.
+- [`ges` CLI](implementation/swift/GameEventScriptTool/README.md) contains the native Swift command and installation instructions.
 - [`docs`](docs) contains guides and supporting documentation.
 - [`tools`](tools) contains editor support and repository tooling.
 - [`BACKLOG.md`](BACKLOG.md) contains deliberately deferred project work and is not a normative specification.
@@ -48,14 +50,46 @@ Normal build and test output remains below project-local `bin`/`obj` directories
 Packages and generated reports are written only below the ignored `artifacts`
 directory.
 
-To build the C# solution and install or update the `ges` CLI for your user, run
+To build the C# solution and install or update the `dotnet ges` CLI for your user, run
 `./scripts/install-csharp-tool.sh`. See the
-[CLI guide](implementation/csharp/tools/GameEventScript.Tool/README.md)
+[CLI guide](implementation/csharp/GameEventScript.Tool/README.md)
 for installation into a separate directory.
+Use `./scripts/uninstall-csharp-tool.sh` to remove the global C# tool, or pass
+`--tool-path DIRECTORY` to remove an installation from that directory. Repeated
+uninstallation succeeds when the tool is already absent.
 
 The [C# distribution guide](docs/guide/distribution/CSharp.md) documents package
 contents, the staged Unity DLL set, reproducibility, and the deliberately gated
 NuGet release workflow.
+
+## Swift implementation
+
+The Swift entry points also live in `scripts`:
+
+```bash
+./scripts/build-swift.sh
+./scripts/test-swift.sh
+./scripts/test-swift-tool.sh
+./scripts/test-swift-bridge.sh
+./scripts/test-swift-performance.sh
+./scripts/format-swift.sh
+python3 scripts/verify-swift-api.py
+python3 scripts/verify-swift-bytecode.py
+./scripts/open-swift-xcode.sh
+```
+
+`build-swift.sh` builds each package independently in Release using only Swift;
+`--configuration debug` selects Debug. Outputs stay under `artifacts/swift`.
+`format-swift.sh` checks formatting without modifying files; `--fix` applies it.
+The full test script additionally needs .NET 10 to produce interoperability
+fixtures. Performance checks require the calibrated hardware/toolchain profile.
+See the [Swift guide](implementation/swift/README.md) for details.
+
+Install or update the native Swift `ges` command with
+`./scripts/install-swift-tool.sh`; remove it with `./scripts/uninstall-swift-tool.sh`.
+Both accept `--tool-path DIRECTORY` and otherwise use `$HOME/.local/bin`.
+See the [Swift CLI guide](implementation/swift/GameEventScriptTool/README.md).
+SwiftPM registry publication remains deferred.
 
 ## License
 
@@ -64,3 +98,24 @@ Game Event Script is licensed under the
 
 The repository-wide header and attribution policy is documented in
 [Licensing](LICENSING.md).
+
+## Clean build outputs
+
+```sh
+./scripts/clean.sh --dry-run          # Preview directories and file-data sizes.
+./scripts/clean.sh                   # Delete all known repository build outputs.
+./scripts/clean.sh --artifacts-only   # Delete only artifacts (also accepts --dry-run).
+```
+
+The script requires Python 3 and works from any directory. It removes `artifacts`,
+root-level `bin`/`obj`/`TestResults`/`.build`, C# `bin`/`obj`/`TestResults` directories,
+and SwiftPM `.build` directories. This includes generated packages, reports,
+benchmark runs, local tool installations and Xcode outputs stored under `artifacts`.
+Build and test scripts recreate their outputs on the next run.
+
+Tracked content makes cleanup fail before any deletion. Symbolic output-directory
+links are skipped, and links inside deleted outputs are never followed. Sources,
+Conformance fixtures/references, Git data, `.swiftpm`/IDE configuration, global
+package caches and tools installed outside this repository remain intact. Stop
+running builds and tests before cleaning. Verify cleanup safety with
+`python3 scripts/test-clean.py`; these tests use disposable directories.

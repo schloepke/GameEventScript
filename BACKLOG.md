@@ -63,9 +63,12 @@ here.
 
 ## Language ports and distribution
 
-- Implement Swift as the first additional language port and Kotlin as the next
-  port, using `.gesb` fixtures and the shared Markdown Conformance corpus for
-  differential acceptance against C#.
+- Implement the Kotlin port using the shared corpus and binary fixtures.
+- Add further Swift performance profiles when supported CI hardware/toolchains
+  are available. The initial Swift 6.4/macOS 26/Apple M3 Max profile is measured;
+  keep timing regression runs separate from ordinary portable Conformance CI.
+- Reduce Swift text-conversion temporary allocations when profiling justifies it;
+  preserve the independently measured zero-allocation dispatch contract.
 - Implement Go and Rust as additional planned language ports, preserving the
   same portable Core, `.gesb` format, and shared Markdown Conformance contracts.
 - Add an independent CI job with build, unit tests, strict shared Conformance,
@@ -80,6 +83,11 @@ here.
   implementations until then.
 
 ## Developer tooling
+
+- Design a single implementation-independent Conformance orchestrator with thin
+  language adapters, so corpus parsing, assertions and reporting do not need to
+  be ported for each runtime. Keep native allocation and platform integration
+  checks in their implementation-specific harnesses.
 
 - Integrate CLI tool packaging and installation checks into the release workflow
   before publishing it.
@@ -102,7 +110,7 @@ here.
 ## Performance and optimizer follow-ups
 
 - Treat the current performance and allocation tests as regression gates against
-  the established C# baseline. In a more mature multi-runtime state, design a
+  the established C# and Swift profiles. In a more mature multi-runtime state, design a
   real benchmark system with representative multi-program workloads, separated
   compile/load/message/VM measurements, native harnesses per language and a
   documented build-host/toolchain calibration index instead of comparing raw

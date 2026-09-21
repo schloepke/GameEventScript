@@ -1,0 +1,14 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="../../verification/Tests.props" />
+    <ItemGroup>
+        <ProjectReference Include="../../GameEventScript.Runtime/src/GameEventScript.Runtime.csproj" />
+        <ProjectReference Include="../../GameEventScript.Compiler/src/GameEventScript.Compiler.csproj" />
+        <ProjectReference Include="../src/GameEventScript.Conformance.csproj" />
+        <ProjectReference Include="../worker/GameEventScript.Conformance.Worker.csproj" ReferenceOutputAssembly="false" />
+        <Compile Include="../worker/WorkerProtocol.cs" Link="TestSupport/WorkerProtocol.cs" />
+        <Compile Include="../fixtures/*.cs" Link="Fixtures/%(Filename)%(Extension)" />
+    </ItemGroup>
+</Project>

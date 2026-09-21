@@ -130,8 +130,10 @@ not an implementation exception escaping the runner.
 - Programs listed in `deferredPrograms` are compiled during setup but are not
   loaded until their fixed native `loadProgram` action executes. Native
   lifecycle actions operate only on validated IDs and are idempotent.
-- The runner performs one initialization run-to-completion pump after setup and
-  before the first step, even when no initialization output is expected.
+- After setup, the runner calls Host.Start. Successful startup is followed by an
+  ordinary run-to-completion pump unless `initialization.pump: start` is selected.
+  Failed startup is never pumped. Later step receives are rejected on that host.
+  Lifecycle observations can assert host readiness and individual StartResults.
 - A runtime step first applies its optional ordered `stepActions`, then calls
   `Receive`, records its acceptance, and uses the table's pump mode.
   `completion` makes one run-to-completion call. `frames` repeatedly calls
@@ -248,7 +250,9 @@ in [Markdown format](MarkdownFormat.md) and compared without platform exception 
 
 For a valid Program the runner compares manifest/build identity and all present
 metadata expectations, invokes the canonical writer, and compares requested
-byte equality and rewrite SHA-256. If Steps are present, it loads that parsed
+byte equality and rewrite SHA-256. An optional `gesa` block additionally checks
+the parsed Program's canonical dump using the exact comparison defined for
+bytecode snapshots. If Steps are present, it loads that parsed
 Program into a fresh Host and executes the ordinary initialization and step
 pipeline. Embedded source remains provenance and is never opened or compiled.
 The runner never interprets `relativePath`; packaging adapters map resource IDs

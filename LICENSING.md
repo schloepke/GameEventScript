@@ -25,7 +25,7 @@ separate notice only when legally appropriate.
 
 ## Short file headers
 
-Handwritten C# uses:
+Handwritten C, C headers, C# and Swift use:
 
 ```csharp
 // Copyright 2026 Stephan Schlöpke
@@ -43,7 +43,10 @@ XML-based project and editor files use the same two XML comment lines.
 Line-oriented configuration uses `#` comments. The full license is included once
 per distribution instead of being duplicated in every file.
 
-The header applies to handwritten production and test C#, product documentation,
+SwiftPM manifests place the required `swift-tools-version` directive first,
+followed by the two license-comment lines. Python uses equivalent `#` comments.
+
+The header applies to handwritten production and test C/C#/Swift, Python tooling, product documentation,
 specifications, guides, README files, C# project files, the scoped EditorConfig,
 the root Git ignore file, MSBuild configuration, GitHub Actions workflows,
 solution and shell entry-point files, and XML-based TextMate bundle files.
@@ -77,7 +80,7 @@ external packages rather than copied into this source distribution. Therefore a
 `NOTICE` file is intentionally not created. The CLI tool bundles external terminal
 dependencies in its binary distribution; their source links, license texts, and
 notices are included in its packaged
-[THIRD-PARTY-NOTICES.md](implementation/csharp/tools/GameEventScript.Tool/THIRD-PARTY-NOTICES.md).
+[THIRD-PARTY-NOTICES.md](implementation/csharp/GameEventScript.Tool/THIRD-PARTY-NOTICES.md).
 
 When third-party material is added, its existing copyright and license notices
 must remain unchanged. Its redistribution terms must be reviewed, the material

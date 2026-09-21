@@ -6,13 +6,19 @@
 ## Workspace
 
 - Repository root: the directory containing this file.
-- Portable C# Runtime: `implementation/csharp/src/GameEventScript.Runtime`.
-- Portable C# Compiler: `implementation/csharp/src/GameEventScript.Compiler`.
-- C# adapters: `implementation/csharp/src/GameEventScript.CSharpBridge`.
+- Portable C# Runtime: `implementation/csharp/GameEventScript.Runtime/src`.
+- Portable C# Compiler: `implementation/csharp/GameEventScript.Compiler/src`.
+- C# adapters: `implementation/csharp/GameEventScript.CSharpBridge/src`.
 - Portable Conformance package:
-  `implementation/csharp/src/GameEventScript.Conformance`.
-- C# CLI tool: `implementation/csharp/tools/GameEventScript.Tool`.
-- C# tests: `implementation/csharp/tests/GameEventScript.Tests`.
+  `implementation/csharp/GameEventScript.Conformance/src`.
+- C# CLI tool: `implementation/csharp/GameEventScript.Tool/src`.
+- C# native tests: each module’s `tests` directory; shared test support and
+  repository/distribution gates: `implementation/csharp/verification`.
+- Swift Runtime package: `implementation/swift/GameEventScriptRuntime`.
+- Swift Compiler package: `implementation/swift/GameEventScriptCompiler`.
+- Swift native adapters: `implementation/swift/GameEventScriptSwiftBridge`.
+- Swift CLI package and `ges` executable: `implementation/swift/GameEventScriptTool`.
+- Swift Conformance package and adapter: `implementation/swift/GameEventScriptConformance`.
 - Shared executable corpus and fixtures: `conformance`.
 - Normative language-neutral specifications: `specs`.
 - Documentation entry point: `docs/README.md`.
@@ -21,7 +27,7 @@
 Standard verification:
 
 ```bash
-dotnet test implementation/csharp/tests/GameEventScript.Tests/GameEventScript.Tests.csproj --filter "TestCategory!=Performance"
+dotnet test GameEventScript.sln --filter "TestCategory!=Performance"
 ```
 
 ## Working rules
@@ -49,9 +55,20 @@ Every public C# type and member requires valid XML documentation. Missing or
 malformed XML documentation is a build error and must not be hidden with
 `#pragma`.
 
+Every authored public Swift declaration requires meaningful `///` documentation,
+including enum cases, protocol requirements and bridge extensions. Document
+lifetimes, failure behavior and conversion guarantees where relevant. The Swift
+symbol-graph API gate rejects missing/empty comments and comments merely inherited
+from another module; compiler-synthesized members are exempt.
+
 Licensing follows `LICENSING.md`. Use exactly `Copyright 2026 Stephan Schlöpke`
 and `SPDX-License-Identifier: Apache-2.0`, retain third-party notices, and honor
 the documented generated, strict-format, and binary exclusions.
+
+`scripts/clean.sh --dry-run` previews repository build-output cleanup;
+`--artifacts-only` limits it to `artifacts`. It retains tracked files, skips
+symlinked output directories and never traverses symlinks. Safety tests use
+`python3 scripts/test-clean.py` with disposable workspaces.
 
 Generated DLLs, NuGet packages, symbols, reports, and release candidates belong
 only below the ignored `artifacts` directory. The release dry run must never
@@ -137,9 +154,16 @@ are owned by `specs/Semantics/Text.md` and `specs/Semantics/Numbers.md`.
 `GameEventScriptHost` is the autonomous serial execution unit. It may contain
 only native handlers or any number of additively loaded Programs.
 
-- `Load(program, priority)` links host-specific imports, registers handlers,
-  queues one initialization event for the instance, and returns an idempotently
-  detachable `GameEventScriptInstance`.
+- Build creates a loading host. Register all initial Programs and native handlers,
+  then call Start. Start runs initializations in Load order without ordinary
+  message dispatch; the host becomes IsReady only if the complete group succeeds.
+- Load on a ready host queues per-instance initialization in the normal FIFO.
+  Instance.StartResult is absent while pending and retained after completion/failure.
+  Failed init removes registrations, cancels captured deliveries to that instance,
+  and discards its staged outputs. Other recipients and the ready host continue.
+- Init emits retain enqueue order and wait for success; outbound publication waits for initial-group
+  or later-instance success. PublishResult.OutboundDeferred reports staging.
+  Ordinary Detach keeps its captured-snapshot semantics. See specs/HostRuntime.md.
 - Native `Subscribe` returns an idempotently detachable
   `GameEventScriptSubscription`.
 - Instance and subscription handles use stable host-local registration IDs and
@@ -213,27 +237,141 @@ zero-allocation hot path, release artifact consumption, and byte-identical
 package reproduction. Performance references are regression gates for the
 current C# implementation, not cross-platform benchmark claims.
 
-Verified baseline (Release, 2026-09-19):
+Verified baseline (Release, 2026-09-21):
 
 ```text
-1956/1956 non-performance test executions passed
-31/31 allocation test executions passed, including the independent zero-allocation hot path
-1460 shared Markdown Conformance cases in 89 documents
+2031/2031 non-performance test executions passed
+32/32 allocation test executions passed, including the independent zero-allocation hot path
+1519 shared Markdown Conformance cases in 94 documents
 ```
 
 The combined verification command for the first two counts is:
 
 ```bash
-dotnet test implementation/csharp/tests/GameEventScript.Tests/GameEventScript.Tests.csproj --configuration Release --filter "TestCategory!=Performance|TestCategory=Allocation"
+dotnet test GameEventScript.sln --configuration Release --filter "TestCategory!=Performance|TestCategory=Allocation"
 ```
 
 Elapsed-time benchmarks are a separate, profile-matched performance gate and
 are not included in these counts.
 
+## Swift port
+
+The separate Swift Runtime package implements Program validation, `.gesb` V1
+Reader/Writer, GESA dumping, serial host lifecycle, the register VM, private
+random streams/scopes, extensions/external types, and runtime literal parsing.
+Runtime remains independent of Conformance and Compiler. The separate
+`implementation/swift/GameEventScriptCompiler` package depends only on Runtime
+and implements source parsing, validation, lowering, optimization, register
+allocation and Program generation. Conformance depends on both packages.
+There is no extra Core package. File I/O belongs to the executable adapter/tests.
+
+Every Swift target, including executable and test targets, declares a direct
+target/product dependency for each repository module it imports. Transitive
+availability alone is insufficient for reliable native incremental builds.
+`python3 scripts/verify-swift-dependencies.py` checks imports against SwiftPM's
+target/source descriptions; Swift CI runs this gate.
+
+Swift Host and Compiler expose createBuilder()/create() factories matching the
+C# builder workflow. Swift collections use immutable value semantics and copy-on-write storage.
+Text and map-key equality/order use Unicode scalars, not Swift String's
+canonical equivalence. Keep Int64 and Binary64 storage separate. Message and
+Handler value storage is inline; VM entry borrows arguments by index rather
+than allocating an argument array. Mutable callback arguments are borrowed only
+for the synchronous invocation.
+
+`./scripts/build-swift.sh` builds all SwiftPM packages independently in Release
+without .NET; `--configuration debug` selects Debug. `./scripts/format-swift.sh`
+checks the formatter configuration; `--fix` applies formatting. Swift uses a
+250-character target width and respects existing line breaks, including deliberately
+multiline function bodies. Parameter/argument lists
+that need wrapping use one parameter/argument per line (`lineBreakBeforeEachArgument`);
+short lists may stay on one line. Exactly one blank line
+separates callable/type declarations from neighbouring items, before any attached
+documentation or attributes; none is added just inside an opening brace. The
+SwiftSyntax helper in `scripts/SwiftDeclarationSpacing.swift` enforces this in
+addition to swift-format. Swift CI requires both the formatting gate and its
+regression controls (`python3 scripts/test-swift-spacing.py`).
+Native SwiftPM build/test commands use `--disable-build-manifest-caching` to
+rediscover added, renamed and removed sources in local dependency packages.
+This regenerates build planning, not compiled objects. Keep the same option in
+new native SwiftPM entry points. `python3 scripts/test-swift-incremental.py`
+verifies source discovery and unchanged-build object reuse through the build script.
+Run `./scripts/test-swift.sh` and `python3 scripts/verify-swift-api.py`.
+The test script uses .NET 10 to export C#-compiled binary inputs below
+`artifacts/swift/runtime-fixtures`, then verifies Swift in Release against the
+original Markdown expectations. The manifest binds each input to its binary
+and complete source-document SHA-256. No expected result is exported from C#.
+`verify-swift-bytecode.py` checks the explicit enum and operand registry against
+C#; ordinary package builds do not generate source.
+
+Verified Swift coverage (Release, 2026-09-21): all 1,519 behavior checks from
+94 shared Markdown documents pass with native Swift compilation. The strict
+hardware-independent report passes 1,488 cases and skips 31 optional performance
+measurements. The last calibrated performance run passed all 31 measured workloads. Independent
+Runtime verification passes 1,258 cases using C#-compiled Programs. Eighteen Conformance/adapter/bootstrap tests, seventeen SwiftBridge tests, and
+twenty-eight CLI tests pass. `scripts/test-swift.sh` requires strict native acceptance and keeps
+Runtime interoperability reports separate.
+
+`python3 scripts/test-number-text-roundtrip.py` builds the executable adapters and
+checks actual C# ↔ Swift numeric text exchange using fixed random bits and edge
+cases. `test-swift.sh` runs it with `--skip-build`. It compares exact canonical
+Number/Quantity/Percentage identities, including kind and unit, rather than text
+spelling or approximate equality. Negative controls qualify the comparator;
+reports live under `artifacts/swift/number-text-roundtrip`. See
+`conformance/cross-language/NumberTextRoundtrip.md`.
+
+`scripts/test-swift-performance.sh` verifies the measured
+`swift-6.4-release-macos26-arm64-m3max` profile. Five samples per workload use
+median elapsed time and maximum cumulative requested libmalloc bytes on the
+calling thread. Sixteen warmed dispatch cases measure zero bytes and allocation
+counts. The native C instrumentation is an executable-only target; portable
+libraries remain independent of measurement instrumentation. Controls qualify the counter before
+measurement. Hardware/toolchain mismatches and failed controls are errors.
+Baseline calibration and received Markdown preparation never overwrite corpus
+references automatically; see `implementation/swift/Performance.md`.
+
+`ConformanceEnvironment` advertises all Core capabilities and GESA snapshots.
+Performance is opt-in and requires a profile plus measurement provider.
+Its optional resource resolver accepts IDs and byte bounds; only the executable
+adapter maps fixture paths to files. Native compilation itself needs no .NET.
+Build products, symbol graphs, generated binary inputs and reports belong under
+ignored `artifacts`. Public Swift API changes update `specs/PublicApi.md` and
+`implementation/swift/api`. The separate `GameEventScriptTool` package implements
+the native Swift `ges` CLI; it depends on Runtime and Compiler, never Conformance.
+Foundation, filesystem/console I/O and POSIX terminal editing remain in that
+executable package. `scripts/test-swift-tool.sh` verifies CLI adapters and real
+process/PTY behavior without .NET; the full Swift test script includes it.
+The GES/GESA grammars are embedded from the canonical TextMate files; refresh
+them with `scripts/sync-swift-cli-grammars.py` and verify with `--check`.
+`install-swift-tool.sh` builds and installs/updates `ges` in `$HOME/.local/bin`
+or a selected `--tool-path`; the matching uninstall script removes only its
+owned binary. The C# `dotnet ges` and Swift `ges` commands can coexist.
+
+`GameEventScriptSwiftBridge` is an optional Runtime-only package for closure
+handlers/publish sinks/extensions, strict native value conversions and explicit
+KeyPath/getter/constructor bindings. Do not add a Compiler or Conformance
+dependency to it. Compiler integration tests live in Conformance's native test
+target; native Bridge tests live in the Bridge package. Run
+`scripts/test-swift-bridge.sh` without .NET, or the full `scripts/test-swift.sh`.
+The API gate and Xcode workspace include the Bridge.
+
+Native conversion must reject numeric truncation, unit/kind loss and Swift
+Dictionary collisions between scalar-distinct GES keys. Ordered message pairs
+preserve signature labels; dictionary input requires an existing named signature.
+External descriptor instances own executable bindings; Programs retain only
+declarative data. The optional Swift Host runner takes exclusive ownership via
+`sending` and uses a recursive lock. Both bridges wait for explicit Start on a
+loading host, then schedule ordinary work on a shared background dispatcher.
+Wrapping an already ready host schedules its pending work immediately. Runner lifecycle handles use its gate; raw Host
+or callback state must not be accessed outside the transferred ownership domain.
+
 ## CLI
 
-The `ges` tool provides `compile`, `check`, `run`, and `dump`. `check` uses the
-complete compiler pipeline without writing a binary or executing handlers.
+The C# `dotnet ges` and Swift `ges` tools provide `compile`, `check`, `run`, and
+`dump`. The C# NuGet package remains `GameEventScript.Tool`; the installed command is
+`dotnet-ges`, resolved by `dotnet ges` when the tool directory is on `PATH`.
+`check` uses the complete compiler pipeline without writing a binary or executing
+handlers.
 `run` accepts jointly compiled sources or multiple `.gesb` files loaded in input
 order. All Programs are loaded into one host before execution. By default it
 drains initialization and then sends one `Main(args)` message, with a List of Text
@@ -276,10 +414,21 @@ Duplicate/anonymous modules can be selected by @ID. These inspection commands
 write to stderr without executing handlers or re-reading files. Their inventory
 belongs to the CLI and records only successful persistent loads/subscriptions.
 
+`:unload <module|@ID>` detaches one Program; `:unloadAll` detaches all Programs.
+Native console handlers, random state and script exit code remain. `:reload`
+re-reads active Programs in their original source groups/load order on a fresh
+host, preserving active IDs and never reusing detached IDs. It initializes the
+complete group without calling Main, restarts a fixed seed and resets script exit
+code. Preparation failures preserve the old session; runtime failures end it.
+`:help reload` documents the lifecycle commands; `--quiet` hides their success reports.
+
 Keep command parsing, file I/O, console observation, and process integration in
-the tool. CLI adapter tests belong in `Native/Tool`; portable language and host
-semantics remain covered by shared Markdown. The command contract and examples
-are documented in `implementation/csharp/tools/GameEventScript.Tool/README.md`.
+the tool. C# CLI adapter tests belong in `implementation/csharp/GameEventScript.Tool/tests`; Swift adapters are tested in
+`GameEventScriptTool/Tests` and `scripts/test-swift-tool.py`. Portable language
+and host semantics remain covered by shared Markdown. The command contract and examples
+are documented in `implementation/csharp/GameEventScript.Tool/README.md`;
+Swift installation and verification are documented in
+`implementation/swift/GameEventScriptTool/README.md`.
 
 ## Documentation and backlog
 

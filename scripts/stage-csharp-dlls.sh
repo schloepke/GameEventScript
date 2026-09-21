@@ -9,10 +9,10 @@ release_version=${1:-0.1.0}
 build_mode=${2:-build}
 artifact_root="$repository_root/artifacts/csharp/dll/$release_version"
 staging_root="$repository_root/artifacts/csharp/dll/.staging-$release_version"
-runtime_output="$repository_root/implementation/csharp/src/GameEventScript.Runtime/bin/Release/netstandard2.1"
-compiler_output="$repository_root/implementation/csharp/src/GameEventScript.Compiler/bin/Release/netstandard2.1"
-bridge_output="$repository_root/implementation/csharp/src/GameEventScript.CSharpBridge/bin/Release/netstandard2.1"
-conformance_output="$repository_root/implementation/csharp/src/GameEventScript.Conformance/bin/Release/netstandard2.1"
+runtime_output="$repository_root/implementation/csharp/GameEventScript.Runtime/src/bin/Release/netstandard2.1"
+compiler_output="$repository_root/implementation/csharp/GameEventScript.Compiler/src/bin/Release/netstandard2.1"
+bridge_output="$repository_root/implementation/csharp/GameEventScript.CSharpBridge/src/bin/Release/netstandard2.1"
+conformance_output="$repository_root/implementation/csharp/GameEventScript.Conformance/src/bin/Release/netstandard2.1"
 
 case "$release_version" in
     ''|.*|*[!0-9A-Za-z.-]*)
@@ -23,10 +23,10 @@ esac
 
 cd "$repository_root"
 if [ "$build_mode" = "build" ]; then
-    dotnet restore implementation/csharp/src/GameEventScript.CSharpBridge/GameEventScript.CSharpBridge.csproj -p:NuGetAudit=false
-    dotnet restore implementation/csharp/src/GameEventScript.Conformance/GameEventScript.Conformance.csproj -p:NuGetAudit=false
-    dotnet build implementation/csharp/src/GameEventScript.CSharpBridge/GameEventScript.CSharpBridge.csproj --configuration Release --no-restore -p:Version="$release_version"
-    dotnet build implementation/csharp/src/GameEventScript.Conformance/GameEventScript.Conformance.csproj --configuration Release --no-restore -p:Version="$release_version"
+    dotnet restore implementation/csharp/GameEventScript.CSharpBridge/src/GameEventScript.CSharpBridge.csproj -p:NuGetAudit=false
+    dotnet restore implementation/csharp/GameEventScript.Conformance/src/GameEventScript.Conformance.csproj -p:NuGetAudit=false
+    dotnet build implementation/csharp/GameEventScript.CSharpBridge/src/GameEventScript.CSharpBridge.csproj --configuration Release --no-restore -p:Version="$release_version"
+    dotnet build implementation/csharp/GameEventScript.Conformance/src/GameEventScript.Conformance.csproj --configuration Release --no-restore -p:Version="$release_version"
 elif [ "$build_mode" != "--no-build" ]; then
     echo "Unknown staging mode: $build_mode" >&2
     exit 1

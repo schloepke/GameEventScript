@@ -1,0 +1,9 @@
+{
+  "indentation": {
+    "spaces": 4
+  },
+  "lineLength": 250,
+  "respectsExistingLineBreaks": true,
+  "maximumBlankLines": 1,
+  "lineBreakBeforeEachArgument": true
+}

@@ -12,6 +12,16 @@ here. Add or update this matrix in the same change as new portable behavior.
 
 | Behavior | Stable portable case IDs |
 | --- | --- |
+| Weighted choice predicates and weights cannot resolve each other's sibling binding | `compile.build-errors/choose-sibling-scope-predicate`, `choose-sibling-scope-weight` |
+| CreateMap returns Nothing for mismatched key/value counts without reading unstaged registers, clears staging, and permits subsequent valid construction | `program.binary-format/valid-map-stage-count-mismatch` |
+| Stack-safe compiler resource analysis for deep acyclic calls within portable limits | `compile.deep-call-graph/ten-thousand-calls` |
+| Enclosing selector bindings retain their value across nested projection/aggregation iterations, including fused projections and binary roundtrips | `runtime.atomic.iterator-core/nested-projection-capture`, `triple-projection-capture`, `nested-aggregation-capture`, `fused-projection-capture` |
+| Duplicate typed local parameters are diagnosed independently of call/declaration order and source boundaries | `compile.build-errors/duplicate-typed-parameters-forward`, `duplicate-typed-parameters-backward`, `duplicate-typed-parameters-cross-source` |
+| Choice counts accept the signed-immediate maximum and reject larger counts without truncation in deterministic, random, and weighted variants | `runtime.atomic.iterator-core/choose-maximum-count`; `compile.build-errors/choose-count-{first,random,weighted}-{32768,65537}` |
+| Quoted text cannot substitute for grammar tokens; numeric constant signs reject nonnumeric literals | `compile.lexical-boundaries/quoted-be`, `quoted-parameter-open`, `quoted-infix`, `quoted-emit`, `negative-text-constant`, `negative-tag-constant`, `negative-boolean-constant`, `negative-nothing-constant`; positive controls: `negative-numeric-constants`, `keyword-text-values` |
+| Expression bindings retain ancestor visibility in functions, generators, nested selectors, fields, tags, seeds, and weights; siblings may reuse names | `compile.lexical-boundaries/function-parameter-shadow`, `generated-local-shadow`, `nested-selector-shadow`, `nested-generator-shadow`, `record-field-shadow`, `message-tag-shadow`, `random-seed-shadow`, `nested-weight-shadow`, `sibling-selector-scopes` |
+| List subtraction removes one matching Nothing element, with ordinary scalar propagation unchanged | `runtime.atomic.collection-nothing/literal`, `dynamic` |
+| Unconstrained external Vector/Point declarations preserve constructor and getter units | `runtime.atomic.external-spatial-units/fields`, `map` |
 | External constructor and field failures preserve stable diagnostics, abort only the current handler, and keep the Host reusable | `runtime.external-callback-failures/constructor-unexpected`, `constructor-declared-context`, `field-unexpected`, `field-declared-context` |
 | Diagnostic context is filled only when absent and caller-supplied fields are preserved independently | `runtime.external-callback-failures/constructor-declared-context`, `field-declared-context`, `runtime.host-dispatch/native-declared-fault-context`, `native-supplied-fault-context` |
 | Shared exact decimal decoding for compiler literals, constants, Number/Percentage casts, exponent/separator grammar, units, ties, underflow and overflow | `runtime.text-literal-conversion/numeric-text-grammar`, `invalid-number-text-and-fallback`, `exact-decimal-boundaries`, `compiler-literal-01` through `compiler-literal-07`, `percentage-literal-overflow` |
@@ -56,7 +66,7 @@ here. Add or update this matrix in the same change as new portable behavior.
 | Load/Detach/Subscribe/Unsubscribe during dispatch | `runtime.host-lifecycle/detach-unsubscribe-snapshot`, `runtime.host-lifecycle/load-subscribe-after-dispatch` |
 | Idempotent Subscription/Instance handle results | `runtime.host-lifecycle/subscription-handle-state`, `runtime.host-lifecycle/instance-handle-state` |
 | Enqueue-time subscription snapshot | `runtime.host-lifecycle/detach-unsubscribe-snapshot` |
-| Initialization once per instance and load/queue ordering | `runtime.host-dispatch/case-0008`, `runtime.host-lifecycle/load-subscribe-after-dispatch`, `runtime.host-lifecycle/initialization-queue-order` |
+| Initialization once per instance, initial Start barrier, failure cancellation and load/queue ordering | `runtime.host-startup/*`, `runtime.host-dispatch/case-0008`, `runtime.host-lifecycle/load-subscribe-after-dispatch`, `runtime.host-lifecycle/initialization-queue-order` |
 | Loading while a handler is paused preserves VM state | `runtime.host-lifecycle/load-while-paused` |
 | Native message-name matching | `runtime.host-lifecycle/native-message-name-subscription` |
 | Native handlers are atomic under frame budgets | `runtime.host-lifecycle/native-handler-frame-atomicity` |
@@ -67,12 +77,15 @@ here. Add or update this matrix in the same change as new portable behavior.
 | Missing and mismatched external runtime constructors | `compile.external-type-linking/missing-runtime-constructor`, `compile.external-type-linking/mismatched-runtime-constructor` |
 | Portable external-type catalog duplicate rejection | `api.external-types/duplicate-type-name` |
 | Canonical binding, message-name and embedded-source dumps | `compile.program-dumps/compact-bindings`, `compile.program-dumps/message-name-and-source` |
+| Canonical GESA binary64 immediates: exponent spelling, decimal/scientific boundaries, exact significant digits, zero, subnormal/normal limits, infinity, Percentage ratios and staged operands | Binary fixtures: `compile.program-dumps/float-exponents`, `float-notation-boundaries`, `float-extremes`, `float-staging`; native compiler: `float-source` |
 | Fixed extension environment (`echo`, `fail`, `floor`, navigation) | `runtime.atomic.external-access/case-0010`, `runtime.atomic.control-flow/case-0002`, `runtime.extensions-sequences/case-0001` |
 
 The complete portable `.gesb` fixture manifest is
-`program.binary-format` together with `program.call-graph-depth`. It covers canonical and noncanonical valid Programs,
+`program.binary-format`, `program.call-graph-depth`, and the four binary-backed
+GESA cases in `compile.program-dumps`. It covers canonical and noncanonical valid Programs,
 opaque optional data, stable structural errors, stable semantic validation
-errors, bounded resource resolution, rewrite identity, and runtime execution.
+errors, bounded resource resolution, rewrite identity, runtime execution, and
+canonical dumps of identical Program data across implementations.
 
 Cross-language acceptance, corpus identity, shared parser bootstrap fixtures,
 and the compact C# reference result are defined in
@@ -111,4 +124,4 @@ semantics also has a portable case:
 
 These tests must not become required behavior for other language ports.
 The test-project structure and retention rule are documented in the
-[C# test README](../../implementation/csharp/tests/GameEventScript.Tests/README.md).
+[C# test README](../../implementation/csharp/verification/README.md).

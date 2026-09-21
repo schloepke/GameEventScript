@@ -2003,3 +2003,66 @@ binary:
   sectionType: 32
   entryIndex: 0
 ```
+
+---
+
+## Test: map stage count mismatch produces Nothing and clears staging
+
+This case executes accepted V1 bytecode with too few, too many, and no staged map values, including a key list longer than the register storage. Each mismatch produces Nothing, and a subsequent valid map proves that staging is cleared.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-map-stage-count-mismatch
+binaryFixture:
+  id: gesb-v1-valid-map-stage-count-mismatch
+  resourceId: gesb-v1.valid-map-stage-count-mismatch
+  relativePath: GesbV1/valid-map-stage-count-mismatch.gesb
+  sha256: 7246EBD7ED9EC6EA5C6A6F7685465C9B11483AFE15C316DBD63531DEB675D3A1
+  compilerId: ges.fixture.direct
+  compilerVersion: 0.1.0
+  programVersion: 0
+  compareCompiledRuntime: false
+  derivation: "Direct V1 fixture without debug or build metadata. Strings: mapstaging, Start, Done, key, missing, extra, unstaged, empty, valid. Lists: empty, 64 copies of string index 3, [3], [4,5,6,7,8], [0,1,2,3,4]. Start() reserves five locals, stages 1 and creates r0 with 64 keys; stages 1 and 2 and creates r1 with one key; creates r2 with one key and no staged values; stages 3 and creates r3 with no keys; stages 7 and creates r4 with one key; emits Done(missing:r0,extra:r1,unstaged:r2,empty:r3,valid:r4) and returns. Program and handler resource declarations are seven registers and zero call depth."
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| execute | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: 7246EBD7ED9EC6EA5C6A6F7685465C9B11483AFE15C316DBD63531DEB675D3A1
+  moduleName: mapstaging
+  requiredRegisterCount: 7
+  requiredCallStackDepth: 0
+  opaqueSectionCount: 0
+steps:
+  execute:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: missing
+            value: { type: ":Nothing" }
+          - name: extra
+            value: { type: ":Nothing" }
+          - name: unstaged
+            value: { type: ":Nothing" }
+          - name: empty
+            value: { type: ":Nothing" }
+          - name: valid
+            value:
+              type: ":Map"
+              entries:
+                - key: key
+                  value: { type: ":Number.int64", value: "7" }
+```

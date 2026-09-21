@@ -7,4 +7,5 @@ set -eu
 repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$repository_root"
 
-GES_RUN_PERFORMANCE_TESTS=1 dotnet test implementation/csharp/tests/GameEventScript.Tests/GameEventScript.Tests.csproj --configuration Release --filter "TestCategory=Performance"
+# Keep separate test assemblies from competing with elapsed-time measurements.
+GES_RUN_PERFORMANCE_TESTS=1 dotnet test GameEventScript.sln --configuration Release -m:1 --filter "TestCategory=Performance"

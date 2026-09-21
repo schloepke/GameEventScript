@@ -3,6 +3,17 @@ module ges.cli.example
 function double(_ x as :Number) be x + x
 
 on Main(args) {
+	// Ein interressantes konzept ist die übermittling nach einer gegeben zeit
+	// das kann sekunden sein oder ggf. ticks. Dabei ist die Frage nach der
+	// tick größe interressant. Eventuell wäre es sinnvoller ticks und
+	// Zeiten intern umzurechnen.
+	//
+	// Wichtig ist das wir kein Wait einbauen sondern stattdessen eine message
+	// die in einer bestimmten Zeit zugestellt wird. Möglich wäre das in dem
+	// wir einer Message einfach
+	//
+	// emit after 5s ConsoleOut("Timed emit")
+
 	if args is :List {
 		emit ConsoleErr("We have a list of strings in the args parameter")
 		// we are going to convert all strings in args and parse them

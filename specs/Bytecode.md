@@ -482,7 +482,8 @@ undeliverable as message
 
 `initialization` is encoded as a `MessageHandler` entry without
 arguments. It is not normal external dispatch input; the host queues all loaded
-initialization handlers directly when a `GameEventScriptContext` starts.
+initialization handlers as instance-specific snapshots. Their Start barrier and
+later FIFO execution are defined in [HostRuntime](HostRuntime.md#loading-and-startup).
 
 `undeliverable` is encoded as a `MessageNameHandler` entry with message name
 `undeliverable`. It receives the original `:Message` when no `MessageHandler`
@@ -1006,7 +1007,9 @@ compiler-assigned iterator register.
   before the opcode as list items.
 - `CreateMap dst keyNameListIndex` consumes the contiguous staged value sequence
   immediately before the opcode as map values; keys remain in `keyNameListIndex`
-  in V1.
+  in V1. If the key count differs from the staged value count, it writes
+  `nothing` to `dst` and execution continues. In either case the complete staged
+  sequence is consumed; mismatched counts must never read beyond that sequence.
 - `CreateRange dst fromRegister toRegister`
 
 `IndexAccess` is reserved for non-negative literal selectors that fit the

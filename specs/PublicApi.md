@@ -426,7 +426,7 @@ reentrancy requirements of those callbacks.
 | `WithExternalTypeRegistry(registry)` | Selects the runtime external-constructor registry. |
 | `WithPublishSink(sink)` | Selects the single outbound sink. Not calling it means no sink. |
 | `WithRuntimeObserver(observer)` | Selects the single observer. Not calling it means no observer. |
-| `Build()` | Validates configuration and returns a new idle, native-capable Host with no loaded Program or subscription. |
+| `Build()` | Validates configuration and returns a new loading, native-capable Host with no loaded Program or subscription. |
 
 ### RuntimeLimits
 
@@ -468,12 +468,14 @@ rules are in [Host runtime](HostRuntime.md).
 | Operation | Contract |
 | --- | --- |
 | `CreateBuilder()` | Returns a new HostBuilder. |
-| `Load(program, priority = 0)` | Validates, checks resource limits, links imports, registers all script handlers additively, enqueues one initialization snapshot, and returns an Instance. It is all-or-nothing. |
+| `Load(program, priority = 0)` | Validates, links and atomically registers one instance with an initialization snapshot when present. During initial loading it joins the Start group; on a ready host it joins the ordinary FIFO. |
+| `Start()` | Synchronously initializes the initial group without processing ordinary messages and returns StartResult. Repeated calls return the original result. |
+| `IsReady` | True after successful initial Start; later instance failures and queued messages do not reset it. |
 | `Subscribe(signature, handler, requiredTags?, excludedTags?, priority = 0)` | Adds one exact-signature native subscription and returns a Subscription. Inputs are copied/retained as immutable registration data. |
 | `SubscribeMessageName(name, handler, requiredTags?, excludedTags?, priority = 0)` | Adds a native subscription matching every signature of that normalized message name. |
-| `Receive(message)` | Captures current matching subscriptions and attempts to enqueue the logical message locally. Returns whether accepted. It never pumps and never publishes outbound. |
-| `ExecuteFrame(opcodeBudget)` | Synchronously pumps on the caller until the scheduler budget pauses script execution, the Host becomes idle, or a runtime limit/error ends the call. Budget must be positive. |
-| `RunToCompletion()` | Synchronously pumps until idle or a runtime limit/error terminates this pump call. It creates no worker thread. |
+| `Receive(message)` | Captures current matching subscriptions and attempts to enqueue the logical message locally. Returns whether accepted. Before Start succeeds it returns false. It never pumps and never publishes outbound. |
+| `ExecuteFrame(opcodeBudget)` | Synchronously pumps on the caller until the scheduler budget pauses script execution, the Host becomes idle, or a runtime limit/error ends the call. Budget must be positive and the host must be ready. |
+| `RunToCompletion()` | Synchronously pumps until idle or a runtime limit/error terminates this pump call. The host must be ready. It creates no worker thread. |
 | `IsIdle` | True only when no active message/handler and no queued logical message exists. |
 | `PendingMessageCount` | Number of queued logical messages according to HostRuntime; it never counts handler invocations. |
 
@@ -482,7 +484,7 @@ captured handlers before the next logical message. Load/Subscribe/Detach/
 Unsubscribe changes affect snapshots captured afterward only.
 `Load` rejects insufficient initialization-queue capacity with
 `link.initializationQueueFull`. The full atomicity and retry contract is defined
-in [Host runtime](HostRuntime.md#program-load-atomicity).
+in [Host runtime](HostRuntime.md#loading-and-startup).
 
 `Instance` is a Host-owned lifecycle handle for one linked Program. `Program`
 is the original immutable object. `Detach()` returns true exactly once when it
@@ -495,6 +497,19 @@ message and never attaches to another Host.
 `IsSubscribed` reports that transition. Both handle types retain host identity
 and a stable non-reused host-local registration ID, not a closure.
 
+`StartResult` is an immutable value containing `State` (Ready, RuntimeError or
+RuntimeLimitReached) and optional structured `Diagnostic`. Ready does not imply
+an empty message queue. `Instance.StartResult` is absent while initialization is
+pending and retains its completed outcome after detachment or init failure.
+Init failure cancels captured recipients as specified by HostRuntime; ordinary
+Detach retains its existing captured-delivery semantics.
+
+StartResult includes ExecutedOpcodes, ProcessedMessages, EmittedMessages, and
+PublishedMessages for initialization work, using the same counter meanings as
+ExecutionResult. A host result covers its initial group; an instance result covers
+that instance. Repeated Start returns the original counters.
+
+
 ## Context, messaging, and execution results
 
 ### Context
@@ -506,13 +521,17 @@ registry, `IsIdle`, and `PendingMessageCount` as borrowed Host views.
 `Emit(message)` attempts local enqueue and returns acceptance. Convenience
 overloads construct a message from name and ordered arguments. `Publish(message)`
 first attempts the identical local enqueue, then invokes the configured outbound
-sink once unless a random fault gate forbids delivery. It returns PublishResult.
+sink once unless a random fault gate forbids delivery or initialization defers it. It returns PublishResult.
 
 Context has no independent queue, VM, or scheduler. It must not be used
 concurrently or retained for asynchronous calls after its callback. Emit and
 Publish do not recursively dispatch the new message.
 
 ### PublishSink and PublishResult
+
+`PublishResult.OutboundDeferred` distinguishes initialization publication waiting
+for commitment from a sink call already attempted. Its complete ordering and
+failure semantics are owned by HostRuntime.
 
 `PublishSink.Publish(message) -> bool` is a synchronous, preferably nonblocking
 handoff. `true` means accepted by the next layer, not remotely delivered.
@@ -522,7 +541,8 @@ handoff. `true` means accepted by the next layer, not remotely delivered.
 - `LocalAccepted`: local queue accepted the message;
 - `OutboundAttempted`: a configured sink was invoked;
 - `OutboundAccepted`: that invocation returned true;
-- `AnyAccepted`: derived `LocalAccepted || OutboundAccepted`.
+- `OutboundDeferred`: outbound delivery is waiting for successful initialization;
+- `AnyAccepted`: derived `LocalAccepted || OutboundAccepted || OutboundDeferred`.
 
 No sink produces attempted=false/accepted=false. Sink rejection is not an error.
 A sink exception becomes a runtime diagnostic and outbound rejection; it never
@@ -643,6 +663,12 @@ ordered unique fields, and ordered unique constructor signatures.
 a normalized name and exactly one portable type description: builtin kind plus
 unit, or custom type name. `ExternalTypeConstructorDefinition` contains type name,
 ordered unique parameters, and derived SignatureId.
+
+A Vector or Point declaration without a unit constraint preserves the supplied
+spatial value's unit. An explicit non-none unit overrides that unit without
+rescaling components. This applies equally to constructor arguments, direct
+field reads, and fields materialized by conversion to Map. A missing spatial
+unit constraint must never silently strip an existing unit.
 
 Construction copies sequences and rejects null entries, duplicate fields,
 duplicate constructor signatures, duplicate parameter labels, constructors for
@@ -961,7 +987,144 @@ Source-file reading belongs to the CLI or embedding. The compiler accepts
 These adapters must delegate to the portable semantics. Unity consumes the C#
 DLL and may choose main-thread/manual pumping instead of the automatic runner.
 
-### Swift, Kotlin, Go, Rust, and C++
+### Swift
+
+The Swift mapping separates the `GameEventScriptRuntime`,
+`GameEventScriptCompiler`, and `GameEventScriptConformance` SwiftPM packages.
+Compiler depends only on Runtime; Conformance depends on both. Runtime has no
+dependency on Compiler, a test framework, or Conformance.
+
+`GameEventScriptBuilder.addScript(_:sourceName:)` accepts source text and assigns
+an independent source ID to each addition, even when diagnostic names repeat.
+The builder supports `withDebugInfo`, `withProgramVersion`, and a declarative
+`withExternalTypeCatalog`. `compile(options:)` returns a reusable immutable
+Program; repeated compilation does not mutate earlier results. A supplied
+`GameEventScriptCompileOptions` overrides the builder's options for that call.
+`GameEventScriptDebugInfoOptions` independently selects symbols, source maps,
+and source archives; `.all` is the default and `.none` omits all three. Unknown
+option bits are invalid public arguments. Source diagnostics are thrown as
+`GameEventScriptCompileError` with ordered `GameEventScriptDiagnostic` values.
+Compiler internals and the compiler-only Runtime SPI are not public embedding APIs.
+
+Runtime exposes `GesValue`, `GesUnit`, immutable range descriptors, messages,
+signatures, Program data and codecs, `GameEventScriptHost`, Context, lifecycle
+handles, random generators, diagnostics, and the extension/external-type
+protocols. `GameEventScriptHost.createBuilder()` provides the same mutable
+configuration workflow as C#, including seed, entropy, sequence, limits, observer,
+sink and registries. Every `build()` creates an independent Host. The direct
+initializer remains available. `GameEventScriptBuilder.create()` creates a
+compiler builder. `load`, `start`, `isReady`, `subscribe`, `receive`, `executeFrame`,
+and `runToCompletion` retain the host contracts above. The mutable VM is host-private.
+
+Program segments use `let` properties and native Array values with copy-on-write
+storage; callers cannot mutate a Program through a returned array. Int64,
+UInt64, UInt16, and Double retain their specified transport widths. Instructions
+expose numeric words and payload bits, independently of Swift enum memory layout.
+`GameEventScriptProgramReader.read`, `GameEventScriptProgramWriter.bytes`,
+`encodedSize`, `write(_:into:)`, `GameEventScriptProgramValidator.validate`, and
+`GameEventScriptProgramDumper.dump` are synchronous and accept/return memory.
+Reader options retain the three portable retention modes and bounded read limits.
+
+Invalid public construction uses structured `throws` errors. Signature message
+creation returns an optional for mismatched arity. Decode failures use
+`GameEventScriptProgramFormatError`; linking uses `GameEventScriptDynamicLinkError`;
+execution results carry `GameEventScriptDiagnostic`. Explicit callback faults use
+`GameEventScriptExtensionFault`; unexpected errors receive the owning runtime
+boundary's stable classification. Call objects and borrowed argument views must
+not outlive their synchronous callback.
+
+Strict value equality and hashing preserve kind, unit, and Unicode-scalar
+identity. `materializedMap()` reads immutable Map/Record contents or lazily
+materializes declared external fields, propagating field failures. It does not
+perform a source-language cast. The random generator has seed, sequence, and
+entropy initializers; each Host constructs its own generator.
+
+`ConformanceMarkdownParser` accepts bytes, `ConformanceRunner` compiles and
+executes supported cases natively in memory, and `ConformanceReportWriter`
+returns report text. The default `ConformanceEnvironment` advertises all Core
+capabilities and `bytecode-snapshot`. Measurement is opt-in: an environment
+advertising `performance` must supply `performanceProfile` and a
+`ConformancePerformanceProvider`. The provider returns `ConformanceMeasuredMetric`
+values with explicit IDs, finite nonnegative Binary64 measurements and units.
+The runner executes correctness first and validates the exact profile metric
+set, units and bounds. Results expose `ConformancePerformanceResult` with each
+metric's measured, reference and allowed values; reports retain the profile ID.
+Unavailable profiles, missing/duplicate metrics and invalid readings are errors;
+values above the owning profile's bounds are performance regression failures.
+`ConformanceResourceResolver.resolve(resourceID:maximumBytes:)` supplies binary
+fixtures as copied bytes or structured `notFound`, `limitExceeded`, or `error`
+results. The environment's positive `maximumResourceBytes` defaults to 64 MiB.
+The runner independently checks the bound and declared SHA-256; failures use
+the resource error codes defined by the Conformance runner contract. Path
+interpretation belongs to the embedding, never the portable resolver interface.
+`ConformanceRuntimeRunner.runCase` additionally checks runtime scenarios from
+independently supplied `ConformanceRuntimeProgram` groups.
+`ConformanceProgramRunner` checks GESA snapshots and bounded binary fixtures.
+These Runtime-only entry points do not attribute the input compiler to Swift;
+performance scenarios verify behavior only and do not claim measurement profiles.
+The executable adapter owns filesystem access and keeps Runtime verification
+reports separate from strict full-port Conformance reports. Public declarations
+are recorded in `implementation/swift/api`; verified implementation coverage is
+recorded separately in the cross-language CapabilityMatrix.
+
+#### Native Swift adapters
+
+The optional `GameEventScriptSwiftBridge` package depends only on Runtime.
+Compiler and Runtime must not acquire a Bridge dependency. Its native tests may
+use a separate compiler consumer, but the Bridge product has no Compiler or
+Conformance dependency. These adapters do not add portable Core capabilities.
+
+Closure-based native handlers, publish sinks and extension functions delegate
+to the Runtime protocols. They preserve ordered signatures, tags, lifecycle,
+synchronous argument borrowing and the existing callback error classifications.
+Extension registries reject duplicate signatures and optionally resolve missing
+signatures through an explicit fallback registry. Dictionary message binding
+requires a known signature with exclusively named parameters and exactly one
+value for each normalized label. Ordered tuple inputs support positional labels.
+
+`GameEventScriptSwiftValueConvertible` defines explicit native conversion.
+Built-in conformances cover Boolean, Text, signed and unsigned fixed-width Swift
+integers, Float/Double, Optional, Array, String-keyed Dictionary and GesValue.
+Native decoding checks kind and units, rejects fractional or out-of-range integer
+conversion and floating-point precision loss. These conversions do not invoke
+source-language casts. Native integer encoding and decoding are bounded by both
+Int64 and the requested Swift integer type. Floating-point encoding uses the portable value factory's
+NaN, infinity, zero and integral-storage normalization. Nothing represents nil;
+GesValue conversion is identity. Collection conversions recurse and preserve
+canonical GES ordering. Dictionary decoding rejects distinct scalar keys that
+Swift String equality would merge; encoding preserves only keys present in the
+input dictionary. Native failures use `GameEventScriptSwiftConversionError`.
+
+`GameEventScriptSwiftType<Root>` exposes only its declared KeyPath/getter fields
+and constructor closures. Constructor parameter labels refer to declared fields
+and inherit their type definitions. Call arguments follow the constructor's
+declared parameter order. A type-erased binding supplies a validated compiler
+catalog and a separate executable constructor registry. Programs contain only
+the declarative transport data. Wrapped class roots preserve native identity;
+struct roots follow Swift value semantics. Unwrapping requires the exact binding
+descriptor that created the external value. Runtime field coercion and map
+materialization retain the external-value contract above.
+
+`GameEventScriptSwiftHostRunner` is an optional synchronized embedding adapter.
+It takes exclusive ownership through Swift 6 sending parameters and serializes
+Host access and lifecycle operations with one recursive lock. Transferred Host,
+callback and external-value state must not be accessed outside that ownership
+domain. Its explicit `start()` runs the initial group synchronously. Accepted
+receives and later loads schedule work on a shared serial background dispatcher,
+as in the C# bridge. An already ready transferred Host schedules preexisting work;
+a loading Host waits for Start. Immutable Programs remain reusable without exclusive
+ownership transfer. Recursive receives only enqueue; recursive pumping fails.
+`runToCompletion()` can drain a ready Host synchronously under the same gate.
+Automatic pumps continue scheduling while ready queued work remains.
+`lastResult` is a synchronized snapshot of the most recent completed pump.
+`isReady` reports the startup barrier; a registration's `startResult` reports its
+instance initialization. C# exposes the same outcome through runner.GetStartResult(instance).
+Runner-owned handles use stable registration IDs, retain their runner and detach
+idempotently under its lock. Closing rejects further work, detaches owned
+registrations and releases the Host; an already executing pump may finish.
+Blocking on another caller while inside a callback is outside this contract.
+
+### Portable language mappings
 
 Ports should prefer native immutable collection views, nullable/optional result
 types, and their standard error transport. They must retain:
@@ -996,7 +1159,7 @@ duplicated as a second source of truth here.
 | BinaryFormat constants, Reader, read options/limits/retention, Writer, Validator, format error, Dumper | Program codec, validation, and dump API |
 | Message, MessageArgument(s), MessageSignature | Message and value API |
 | Value, ValueSlice, ValueArguments, ValueMap, integer/float range | Message and value API |
-| HostBuilder, RuntimeLimits, Host, Instance, Subscription | Host construction and lifecycle API |
+| HostBuilder, RuntimeLimits, Host, StartResult/State, Instance, Subscription | Host construction and lifecycle API |
 | Context, NativeMessageHandler, PublishSink/Result, Observer, ExecutionResult/State | Context, messaging, and execution results |
 | RandomGenerator | Random generator API |
 | ExtensionReference, ExtensionRegistry/Function, ExtensionCall | Extension API |

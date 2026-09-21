@@ -69,38 +69,89 @@ active scoped stream as bytecode. The host
 reuses this state serially for every script handler and fully resets it after
 completion or failure. VM pooling across hosts is not part of this architecture.
 
-All portable failures follow [Diagnostics](Diagnostics.md). Runtime handler failures
+All portable failures follow [Diagnostics](Diagnostics.md). Ordinary runtime handler failures
 are reported to the observer, abort/reset only the failing handler, and leave the
 remaining immutable dispatch snapshot runnable. A pump result that observed a
 handler failure uses `RuntimeError` and carries its first diagnostic. Successful
 VM stepping, resume, and dispatch do not allocate diagnostic objects.
 
-## Program Load Atomicity
+## Loading and startup
 
-`Load` must either register the complete instance and enqueue its initialization
-snapshot, or reject the operation without changing the host's registrations,
-queued messages, active dispatch, VM state, or random stream. Validation and
-dynamic linking complete before the host commits any registration.
+`Build()` creates a host in its initial loading phase. `IsReady` is false, even
+when `IsIdle` is true. Register native handlers and call `Load` for every initial
+Program before `Start`. `Receive` returns false before a successful Start;
+`ExecuteFrame` and `RunToCompletion` reject pumping a host that is not ready.
 
-When the Program has initialization handlers, their single logical-message
-snapshot requires one queue slot. After linking and before registering handlers
-or preparing VM storage, `Load` checks that this slot is available under
-`MaxQueuedMessagesPerRun`. A full queue rejects the load with the structured
-link diagnostic `link.initializationQueueFull`. The caller receives no instance,
-and no initialization message is dropped or deferred implicitly. This rejected
-load does not emit a queue runtime-limit observation or fault an active handler
-whose native caller handles the link failure.
+`Load` validates and links before committing registration. Validation, resource,
+link, and initialization-queue capacity failures leave registrations, queued
+messages, active execution and random state unchanged. An initialization snapshot
+reserves one queue slot under `MaxQueuedMessagesPerRun`; insufficient capacity
+raises `link.initializationQueueFull`. A Program without initialization needs no
+slot. Loading is available to embedding code and native message handlers.
+Reentrant loading during active script/extension execution or the initial Start
+is rejected; paused execution between frames does not prohibit host-side loading.
+Scripts and extension contexts have no loading API.
 
-The active message does not occupy a queued-message slot. One remaining slot is
-sufficient, and a Program without initialization handlers needs no queue slot.
-A nonpositive queue limit permits loading without this capacity restriction.
-Successful initialization keeps its position after older queued messages and
-before later messages. Existing captured dispatch snapshots remain unchanged.
+### Initial group
 
-After pending messages have been processed, the caller may retry the same
-immutable Program. A successful retry creates one instance and queues its
-initialization exactly once. These rules also apply when loading inside a native
-callback or between frames of a paused script handler.
+`Start()` runs only initialization snapshots, in Load order. Handlers inside one
+instance retain their declaration order. All initial registrations are already
+available when any initialization emits, so its enqueue-time snapshot can include
+another member of the group. No ordinary queued message is dispatched by Start.
+
+Every initialization uses the ordinary runtime safety limits. Exhaustion fails
+startup; the initial group never becomes partially ready. Successful Start marks
+the host ready and returns `StartResult.Ready`, while emitted messages may remain
+queued. StartResult also reports initialization opcode, completed-snapshot, emit,
+and publish counters; these exclude subsequent ordinary dispatch. A runtime fault or exhausted safety limit returns `RuntimeError` or
+`RuntimeLimitReached`, with a structured diagnostic. Failure removes the group's
+registrations and discards all its queued outputs. The host remains not ready and
+cannot be started again. Repeating Start returns its original result without
+executing code. Reentrant Start and pump calls are rejected.
+
+### Later instances
+
+After Start, Load queues initialization at the normal FIFO position and returns
+an Instance with absent `StartResult`. No extra priority is assigned to init.
+The current logical message completes before the new initialization starts.
+A later initialization may pause across `ExecuteFrame` calls. Its instance cannot
+execute ordinary handlers until all its initialization handlers succeed. A later
+Program without initialization has an immediate Ready result.
+
+Success stores Ready on the instance and releases its buffered outputs. Failure
+stores RuntimeError or RuntimeLimitReached and its diagnostic, removes the
+instance's registrations, discards its buffered outputs, and cancels every pending
+recipient entry belonging to that instance. Other recipients of the same logical
+message retain their order and still execute. Messages with no surviving recipient
+are removed without dispatch or undeliverable redistribution. This failure
+cancellation is stronger than ordinary Detach, which retains captured recipients.
+The host remains ready; the embedding decides whether to retry with a new Load.
+A new instance never inherits the previous instance's captured deliveries.
+
+The instance's immutable completed StartResult remains readable after removal.
+A startup safety limit is represented by `runtime.initializationLimitReached`;
+the regular runtime-limit observer also identifies the limit and bound. Runtime
+faults retain their original diagnostic code and context.
+
+### Initialization outputs
+
+Init `Emit` captures recipients and reserves its FIFO position immediately.
+Local delivery waits until that instance succeeds. Queue limits include staged messages and queued initialization
+snapshots. Overflow of staged outputs exhausts the initialization. External
+Receive calls between paused init frames enter the ordinary queue independently
+and are not discarded as that init's output. Observer emit notifications describe
+attempts; their existence is not proof of committed delivery.
+
+Init `Publish` also defers the external sink call: until the entire initial group
+succeeds, or until the individual later init succeeds. Its immediate result has
+`OutboundDeferred` when a sink exists, with OutboundAttempted/OutboundAccepted
+false. AnyAccepted includes deferred acceptance. The observer receives the final
+publish result on release; failed initializations never call the sink. Successful
+local acceptance during init is provisional. Sink rejection/failure at release
+retains ordinary publish semantics and does not undo successful initialization.
+Direct external effects performed by arbitrary native callbacks are not rolled
+back. Host readiness promises successful init, not completion of its emitted
+message chains.
 
 ## Random Ownership, Boundaries, and Limits
 
@@ -181,7 +232,7 @@ implementation and therefore does not depend on C# reflection.
 - `Publish(message)` first attempts the same local enqueue and then calls the
   host's single synchronous `IGameEventScriptPublishSink`, if configured.
 - `GameEventScriptPublishResult` reports `LocalAccepted`, `OutboundAttempted`,
-  `OutboundAccepted`, and derived `AnyAccepted`. Sink rejection or exception
+  `OutboundAccepted`, `OutboundDeferred`, and derived `AnyAccepted`. Sink rejection or exception
   never rolls back or corrupts local delivery. The observer sees the result.
 - Queue limits count logical messages, not handler invocations.
 - Each queued message owns immutable exact/name subscription snapshots and a
@@ -189,15 +240,19 @@ implementation and therefore does not depend on C# reflection.
   the next logical message starts.
 - A detach, unsubscribe, subscribe, or load during dispatch does not modify
   already captured snapshots. It applies when a later message is enqueued.
-- `on initialization` is captured once per loaded instance and queued at the
-  exact `Load` position: after messages already waiting and before messages
-  received later.
+- `on initialization` is a special per-instance handler, never normal external
+  input. The initial Start barrier and subsequent FIFO initialization follow
+  [Loading and startup](#loading-and-startup).
 
 ## Portable State Machine
 
+The following pump states apply after successful Start. Initial loading and the
+terminal startup-failure state are defined in [Loading and startup](#loading-and-startup).
+Here `Ready` means queued work, distinct from the public `IsReady` startup flag.
+
 ```text
 Idle
-  Receive / Emit / Publish / Load(initialization)
+  Receive / Emit / Publish / Load(late initialization)
     -> enqueue message snapshot
     -> Ready
 
@@ -323,12 +378,19 @@ available for a later pump call.
 
 ## C# Automatic Runner
 
-`CSharpBridge.GameEventScriptCSharpHostRunner` is optional. It serializes access
+Both native bridge runners are optional. They take ownership without implicitly
+starting a loading host. Register handlers, load Programs, and call the runner's
+synchronous Start; successful Start schedules remaining ordinary work. A runner
+wrapping an already ready host schedules its pending work immediately. Both
+runners serialize callbacks on a shared background dispatcher and expose readiness,
+the last execution result and synchronized instance startup results.
+
+`CSharpBridge.GameEventScriptCSharpHostRunner` serializes access
 to one host with a C# lock and schedules at most one pump job for that host on a
 shared dispatcher. Concurrent `Receive`, `Load`, subscribe, detach, and
 unsubscribe calls go through the runner. Creating a runner immediately schedules
-one pump when its host already has pending work, including queued messages,
-initialization, or a paused script handler. No later `Receive` or `Load` is
+one pump when its host is ready and already has pending work, including queued
+messages, late initialization, or a paused script handler. No later `Receive` or `Load` is
 required to start that work. An idle host waits for later accepted work.
 
 The initial scheduling uses the same serialization gate and outstanding-job
@@ -366,7 +428,7 @@ synchronous core contract.
 Every implementation runs the Conformance Markdown cases through this sequence:
 
 ```text
-source -> GameEventScriptProgram -> optional .gesb Write/Read -> Host.Load
+source -> GameEventScriptProgram -> optional .gesb Write/Read -> Host.Load -> Host.Start
 YAML step input -> GameEventScriptMessage -> Host.Receive
 Host.ExecuteFrame or Host.RunToCompletion -> observed local/outbound messages
 ```

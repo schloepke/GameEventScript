@@ -39,6 +39,34 @@ All specification documents in the table are normative.
 
 [Guide](guide/README.md) contains tutorials, explanations, and examples intended for learning. A guide may simplify presentation but must link to the owning specification for exact behavior.
 
+The [C# implementation guide](../implementation/csharp/README.md) describes the
+library boundaries, solution and toolchain, build/test commands, CLI lifecycle
+and Compiler/Runtime embedding. The
+[C# CLI guide](../implementation/csharp/GameEventScript.Tool/README.md)
+documents `dotnet ges` and the interactive event console; the
+[C# distribution guide](guide/distribution/CSharp.md) covers local packages,
+DLL sets and release verification.
+
+The [Swift implementation guide](../implementation/swift/README.md) describes
+the package boundaries, current port coverage, and local verification commands.
+It also documents the [Xcode workspace](../implementation/swift/README.md#xcode-workspace)
+for building and testing all Swift packages together.
+The [Swift CLI guide](../implementation/swift/GameEventScriptTool/README.md)
+describes `ges`, installation/update, the event console and native CLI verification.
+The [SwiftBridge guide](../implementation/swift/GameEventScriptSwiftBridge/README.md)
+describes native closures, value conversions, typed external bindings and the
+optional synchronized Host runner. It depends only on Runtime.
+The [Swift performance guide](../implementation/swift/Performance.md) documents
+the measured profile, instrumentation scope and baseline review workflow.
+The generated performance baseline matrix (`artifacts/conformance/PerformanceMatrix.md`)
+lists every performance case with C# and Swift time/allocation references side by
+side. Create or refresh both tables with
+`ruby --disable-gems scripts/write-performance-matrix.rb`; the report stays under
+`artifacts`, and the shared Markdown remains the source of truth.
+
+The [numeric text roundtrip gate](../conformance/cross-language/NumberTextRoundtrip.md)
+checks exact Number, Quantity and Percentage text exchange between C# and Swift.
+
 ## Documentation rules
 
 - Normative documents describe only the current contract.

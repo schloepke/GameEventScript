@@ -12,5 +12,8 @@ Guides optimize for understanding and may omit edge cases. Exact behavior is def
 - [C# distribution](distribution/CSharp.md) describes reproducible NuGet,
   symbol, and DLL artifacts, the Unity DLL path, and the guarded release
   workflow.
-- [CLI tool](../../implementation/csharp/tools/GameEventScript.Tool/README.md)
-  describes the current `ges` entry point and local .NET tool installation.
+- [CLI tool](../../implementation/csharp/GameEventScript.Tool/README.md)
+  describes the current `dotnet ges` entry point and local .NET tool installation.
+
+The [Swift CLI guide](../../implementation/swift/GameEventScriptTool/README.md)
+describes the native `ges` command, installation and terminal console.

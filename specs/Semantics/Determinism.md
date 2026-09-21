@@ -250,6 +250,39 @@ There is intentionally no rank 7 in the V1 contract. When same-rank supported
 values have no finer ordering, their comparison is equal and stable source
 order is retained.
 
+### Highest/lowest slicing
+
+`:take highest`, `:take lowest`, `:drop highest`, and `:drop lowest` use the
+same selection order for direct collections and iterator pipelines. This order
+is distinct from the sort order above. If both values have numeric views,
+compare units first (`none`, degrees, meters, seconds), then numeric values;
+Boolean and Dice participate through their numeric views. Otherwise use:
+
+| Rank | Kinds |
+| ---: | --- |
+| 0 | nothing |
+| 1 | numeric-capable values and tags |
+| 2 | text |
+| 4 | vector |
+| 5 | point |
+| 7 | series |
+| 8 | range |
+| 9 | message |
+| 10 | handler |
+| 11 | list |
+| 12 | map and custom record/external values |
+
+Within rank 1, a Tag follows Boolean, Number and Percentage but precedes Dice;
+numeric-to-numeric comparison still takes precedence. Within rank 12, a Map
+precedes a custom value. Text/Tag pairs of the same kind compare by Unicode
+scalars; vectors/points of the same kind compare units first, then coordinates
+lexicographically. Other same-rank pairs have no finer ordering.
+
+Equal candidates retain source order. `take highest/lowest` selects successive
+extrema in that stable order; `drop highest/lowest` removes those candidates and
+retains the original order of the remaining values. Dice results retain their
+canonical descending roll representation.
+
 ## Iteration and ranges
 
 Iteration order is never inherited from a platform hash container:

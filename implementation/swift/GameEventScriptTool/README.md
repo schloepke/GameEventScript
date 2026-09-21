@@ -10,7 +10,9 @@ Runtime and Compiler remain independent of terminal and filesystem services.
 
 ## Build, install and update
 
-Use Swift 6.0 or newer on macOS or Linux. macOS is verified by the native tests
+Use Swift 6.0 or newer on macOS 10.15.4 or newer, or on Linux. The CLI requires
+macOS 10.15.4 for Foundation's throwing file-handle I/O APIs; this minimum applies
+only to the executable package. macOS is verified by the native tests
 and real pseudoterminal checks; Linux uses the same POSIX adapter.
 
 From the repository root:

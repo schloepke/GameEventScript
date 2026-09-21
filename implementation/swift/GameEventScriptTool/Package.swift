@@ -6,7 +6,7 @@ import PackageDescription
 
 let package = Package(
     name: "GameEventScriptTool",
-    platforms: [.macOS(.v10_15)],
+    platforms: [.macOS("10.15.4")],
     products: [.executable(name: "ges", targets: ["GameEventScriptTool"])],
     dependencies: [.package(path: "../GameEventScriptRuntime"), .package(path: "../GameEventScriptCompiler")],
     targets: [

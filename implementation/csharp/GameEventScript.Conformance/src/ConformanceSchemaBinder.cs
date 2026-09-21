@@ -84,6 +84,7 @@ internal static class ConformanceSchemaBinder
             var core = new List<string>(defaults.Requires.Core);
             var optional = new List<string>(defaults.Requires.Optional);
             AddKindCapabilities(defaults.Kind.Value, core, optional);
+            if (testSyntax.AssemblerBlock is not null) AddUnique(optional, "bytecode-snapshot");
             if (defaults.Kind == ConformanceTestKind.ProgramBinary && steps.Count > 0)
             {
                 AddUnique(core, "host");
@@ -1005,7 +1006,8 @@ internal static class ConformanceSchemaBinder
         {
             if (syntax.AssemblerBlock is null || expectation is not null) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "bytecodeSnapshot requires one gesa block and no expectation block.", syntax.CaseBlock!.BlockRange);
         }
-        else if (syntax.AssemblerBlock is not null) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "Only bytecodeSnapshot accepts a gesa block.", syntax.AssemblerBlock.BlockRange);
+        else if (syntax.AssemblerBlock is not null && kind != ConformanceTestKind.ProgramBinary)
+            throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "Only bytecodeSnapshot and valid programBinary cases accept a gesa block.", syntax.AssemblerBlock.BlockRange);
         if (kind is (ConformanceTestKind.CompileError or ConformanceTestKind.LoadError or ConformanceTestKind.MessageApi or ConformanceTestKind.ValueApi or ConformanceTestKind.ExternalTypeApi or
                      ConformanceTestKind.CompileMetadata or ConformanceTestKind.Bytecode or ConformanceTestKind.Performance or ConformanceTestKind.ProgramBinary) &&
             expectation is null)
@@ -1046,6 +1048,8 @@ internal static class ConformanceSchemaBinder
         else if (kind == ConformanceTestKind.ProgramBinary)
         {
             var outcome = expectation is null ? null : Optional(Optional(expectation, "binary")!, "outcome");
+            if (syntax.AssemblerBlock is not null && (outcome is null || String(outcome) != "valid"))
+                throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "Only a valid programBinary case accepts a gesa block.", syntax.AssemblerBlock.BlockRange);
             if (syntax.HasStepsTable && (outcome is null || String(outcome) != "valid"))
                 throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "Only a valid programBinary case accepts Steps.", syntax.CaseBlock!.BlockRange);
             if (!syntax.HasStepsTable && expectation is not null && Optional(expectation, "initialization") is not null)

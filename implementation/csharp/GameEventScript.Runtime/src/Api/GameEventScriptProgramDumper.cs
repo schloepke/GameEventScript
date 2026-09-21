@@ -786,7 +786,40 @@ public static class GameEventScriptProgramDumper
         => "#" + value.ToString(CultureInfo.InvariantCulture);
 
     private static string Immediate(double value)
-        => "#" + value.ToString("R", CultureInfo.InvariantCulture);
+    {
+        var text = GameEventScriptNumber.FormatCanonicalFloat(value);
+        if (value == 0 || double.IsNaN(value) || double.IsInfinity(value)) return "#" + text;
+
+        // Runtime formatters choose different decimal/exponential thresholds. Retain
+        // their shortest round-trip digits, but apply the GESA spelling independently.
+        var negative = text[0] == '-';
+        var start = negative ? 1 : 0;
+        var exponentIndex = text.IndexOf('e');
+        var end = exponentIndex < 0 ? text.Length : exponentIndex;
+        var exponent = exponentIndex < 0 ? 0 : int.Parse(text.Substring(exponentIndex + 1), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+        var point = text.IndexOf('.');
+        var digits = text.Substring(start, end - start).Replace(".", string.Empty);
+        var first = 0;
+        var last = digits.Length - 1;
+        while (digits[first] == '0') first++;
+        while (digits[last] == '0') last--;
+        exponent += (point < 0 ? end : point) - start - first - 1;
+        digits = digits.Substring(first, last - first + 1);
+
+        string magnitude;
+        if (exponent is >= -4 and < 16)
+        {
+            point = exponent + 1;
+            magnitude = point <= 0 ? "0." + new string('0', -point) + digits
+                : point >= digits.Length ? digits + new string('0', point - digits.Length)
+                : digits.Insert(point, ".");
+        }
+        else
+        {
+            magnitude = (digits.Length == 1 ? digits : digits.Insert(1, ".")) + "e" + exponent.ToString(CultureInfo.InvariantCulture);
+        }
+        return (negative ? "#-" : "#") + magnitude;
+    }
 
     private static string Register(ushort value)
         => "r" + value.ToString(CultureInfo.InvariantCulture);

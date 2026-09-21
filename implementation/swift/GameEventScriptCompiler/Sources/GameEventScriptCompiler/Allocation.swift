@@ -22,6 +22,24 @@ extension GesCompiler {
             }
             for register in registers { intervals[register] = (intervals[register]?.0 ?? index, index) }
         }
+        // Keep values entering a loop alive through its back edge: a later iteration
+        // reads them again even if their last textual use precedes other temporaries.
+        for (index, instruction) in routine.code.enumerated() {
+            switch instruction.opcode {
+            case .jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing:
+                let start = Int(instruction.word2)
+                if start <= index {
+                    for register in 0..<routine.registers {
+                        if let interval = intervals[register], interval.0 < start,
+                            interval.1 >= start, interval.1 < index
+                        {
+                            intervals[register] = (interval.0, index)
+                        }
+                    }
+                }
+            default: break
+            }
+        }
         var mapping: [Int: Int] = [:]
         var next = 0
         for register in routine.pinned.sorted() {

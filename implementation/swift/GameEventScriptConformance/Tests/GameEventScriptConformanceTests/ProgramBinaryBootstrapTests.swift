@@ -10,6 +10,28 @@ import XCTest
 /// Bootstraps the binary boundary using the existing Markdown fixture manifest.
 /// RuntimeCorpusTests additionally executes the full binary assertions and host steps.
 final class ProgramBinaryBootstrapTests: XCTestCase {
+    func testBinarySnapshotAssertsDumpAndRequiresCapability() throws {
+        var repository = URL(fileURLWithPath: #filePath)
+        for _ in 0..<6 { repository.deleteLastPathComponent() }
+        let path = repository.appendingPathComponent("conformance/suites/compile/program-dumps.md")
+        let markdown = try String(contentsOf: path, encoding: .utf8)
+        let document = try ConformanceMarkdownParser.parse(markdown)
+        let test = try XCTUnwrap(document.cases.first { $0.id == "float-exponents" })
+        XCTAssertEqual(test.requiredCore, ["program-binary"])
+        XCTAssertEqual(test.requiredOptional, ["bytecode-snapshot"])
+        let relative = try XCTUnwrap(test.metadata["binaryFixture"]?["relativePath"]?.stringValue)
+        let bytes = Array(try Data(contentsOf: repository.appendingPathComponent("conformance/fixtures/" + relative)))
+        XCTAssertEqual(ConformanceProgramRunner.runBinaryCase(test, bytes: bytes).status, "passed")
+        let wrongDocument = try ConformanceMarkdownParser.parse(
+            markdown.replacingOccurrences(of: "#1e20", with: "#2e20"))
+        let wrongTest = try XCTUnwrap(wrongDocument.cases.first { $0.id == test.id })
+        let mismatch = ConformanceProgramRunner.runBinaryCase(wrongTest, bytes: bytes)
+        XCTAssertEqual(mismatch.status, "failed")
+        XCTAssertTrue(mismatch.mismatches.contains { $0.path.hasPrefix("/gesa/") })
+        let skipped = ConformanceRunner.runCase(test, environment: .init(capabilities: ["program-binary"]))
+        XCTAssertEqual(skipped.code, "conformance.runner.missingOptionalCapability")
+    }
+
     func testSharedBinaryFixtureReadValidateRewrite() throws {
         var repository = URL(fileURLWithPath: #filePath)
         for _ in 0..<6 { repository.deleteLastPathComponent() }

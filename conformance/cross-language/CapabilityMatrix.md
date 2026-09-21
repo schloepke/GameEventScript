@@ -30,27 +30,28 @@ omit an optional capability during development, but it must then advertise that
 omission and skip exactly the affected cases with the stable runner code. The
 checked-in C# reference is the initial all-capabilities reference.
 
-Swift was verified on 2026-09-20 (Release, Swift 6.4, macOS arm64) against
-94 documents and 1,495 cases with corpus SHA-256
-`09E5E5C5F4FA9793F75793098657AF4B010895DF6D64210AE63CFE0A5D39B9EA`.
-The hardware-independent native report passes **1,464 cases**, with **zero errors
+Swift was verified on 2026-09-21 (Release, Swift 6.4, macOS arm64) against
+94 documents and 1,514 cases with corpus SHA-256
+`218C55A3DFA9C5B2521C66DDE0147AEB10F04A362F61A86FFD3F6E9E0B2ED33B`.
+The hardware-independent native report passes **1,483 cases**, with **zero errors
 or failures** and **31 optional performance measurements skipped**. A full native
-run with the calibrated Swift profile passes **all 1,495 cases**, including the
+run with the calibrated Swift profile passes **all 1,514 cases**, including the
 31 measured workloads. All Core capabilities and the
 optional GESA snapshots pass. The test adapter also executes those 31 scenarios'
-behavior through native compilation, giving **1,495/1,495 behavior checks**.
-Compiler coverage includes 147 expected compilation failures, 15 bytecode
-constraint cases, three metadata cases, eight GESA snapshots and canonical runtime
-segment comparisons against shared binary fixtures.
+behavior through native compilation, giving **1,514/1,514 behavior checks**.
+Compiler coverage includes 156 expected compilation failures, 15 bytecode
+constraint cases, three metadata cases, nine source-based GESA snapshots and canonical runtime
+segment comparisons against shared binary fixtures. Four additional GESA snapshots
+compare dumps of identical binary fixtures, independently of compiler optimization.
 
-Separate Runtime verification passes **1,245/1,245** cases:
+Separate Runtime verification passes **1,255/1,255** cases:
 
 | Scope | Passed | Input / oracle |
 | --- | ---: | --- |
-| Script scenarios | 1,155 | C#-compiled `.gesb`; original Markdown runtime assertions |
+| Script scenarios | 1,160 | C#-compiled `.gesb`; original Markdown runtime assertions |
 | Expected link errors | 4 | C#-compiled `.gesb`; original Markdown diagnostics |
-| Binary codecs, validation, and fixture execution | 47 | Shared canonical/invalid binaries and Markdown |
-| GESA dumps | 8 | C#-compiled Programs; shared GESA snapshots |
+| Binary codecs, validation, fixture execution and fixture GESA snapshots | 51 | Shared canonical/invalid binaries and Markdown |
+| GESA dumps | 9 | C#-compiled Programs; shared GESA snapshots |
 | Performance-scenario behavior | 31 | Runtime correctness only; no measurement/profile acceptance |
 
 Runtime-only verification covers host dispatch/lifecycle, VM behavior, extensions,

@@ -2195,3 +2195,243 @@ steps:
               type: ":Number.int64"
               value: "0"
 ```
+
+---
+
+## Test: nested projections preserve their outer binding
+
+This case reads each outer item in both inner iterations, including after a later literal is evaluated.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nested-projection-capture
+kind: scriptApi
+level: scenario
+compile:
+  binaryRoundTrip: true
+sources:
+  - name: nested-projection-capture.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: [10, 20][:select x => [1, 2][:select y => x + y + 1]])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":List", items: [{ type: ":List", items: [{ type: ":Number.int64", value: "12" }, { type: ":Number.int64", value: "13" }] }, { type: ":List", items: [{ type: ":Number.int64", value: "22" }, { type: ":Number.int64", value: "23" }] }] }
+```
+
+---
+
+## Test: three nested projections preserve both outer bindings
+
+This case keeps each enclosing binding stable across every inner loop back edge.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: triple-projection-capture
+kind: scriptApi
+level: scenario
+compile:
+  binaryRoundTrip: true
+sources:
+  - name: triple-projection-capture.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: [10, 20][:select x => [1, 2][:select y => [3, 4][:select z => x + y + z + 1]]])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":List", items: [{ type: ":List", items: [{ type: ":List", items: [{ type: ":Number.int64", value: "15" }, { type: ":Number.int64", value: "16" }] }, { type: ":List", items: [{ type: ":Number.int64", value: "16" }, { type: ":Number.int64", value: "17" }] }] }, { type: ":List", items: [{ type: ":List", items: [{ type: ":Number.int64", value: "25" }, { type: ":Number.int64", value: "26" }] }, { type: ":List", items: [{ type: ":Number.int64", value: "26" }, { type: ":Number.int64", value: "27" }] }] }] }
+```
+
+---
+
+## Test: nested aggregation preserves its outer binding
+
+This case sums the projections using the same outer value on each inner iteration.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nested-aggregation-capture
+kind: scriptApi
+level: scenario
+compile:
+  binaryRoundTrip: true
+sources:
+  - name: nested-aggregation-capture.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: [10, 20][:select x => [1, 2][:sum y => x + y + 1]])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":List", items: [{ type: ":Number.int64", value: "25" }, { type: ":Number.int64", value: "45" }] }
+```
+
+---
+
+## Test: a fused projection remains stable inside a nested selector
+
+This case captures a computed pipeline value rather than the original iterator item.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: fused-projection-capture
+kind: scriptApi
+level: scenario
+compile:
+  binaryRoundTrip: true
+sources:
+  - name: fused-projection-capture.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: [10, 20][:select item => item + 100][:select x => [1, 2][:select y => x + y + 1]])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":List", items: [{ type: ":List", items: [{ type: ":Number.int64", value: "112" }, { type: ":Number.int64", value: "113" }] }, { type: ":List", items: [{ type: ":Number.int64", value: "122" }, { type: ":Number.int64", value: "123" }] }] }
+```
+
+---
+
+## Test: choose accepts the largest signed immediate count
+
+This case checks the supported count boundary for deterministic, random, filtered and weighted choice without depending on random order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: choose-maximum-count
+kind: scriptApi
+level: scenario
+compile:
+  binaryRoundTrip: true
+sources:
+  - name: choose-maximum-count.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: [[1, 2, 3][:choose 32767][:count], [1, 2, 3][:choose 32767 at random][:count], [1, 2, 3][:choose 32767 item where item > 1][:count], [1, 2, 3][:choose 32767 weighted by item => item][:count]])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":List", items: [{ type: ":Number.int64", value: "3" }, { type: ":Number.int64", value: "3" }, { type: ":Number.int64", value: "2" }, { type: ":Number.int64", value: "3" }] }
+```

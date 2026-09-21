@@ -401,9 +401,13 @@ public static class ConformanceRunner
             if (!fixtureRuntime.AsSpan().SequenceEqual(compiledRuntime))
                 AddMismatch(validMismatches, "/binary/compiledRuntimeSegments", Sha256(fixtureRuntime), Sha256(compiledRuntime));
         }
+        var assembler = testCase.ExpectedAssembler is null ? null : NormalizeLf(program.Dump());
+        if (assembler is not null && !string.Equals(NormalizeLf(testCase.ExpectedAssembler!), assembler, StringComparison.Ordinal))
+            AddMismatch(validMismatches, "/assembler", NormalizeLf(testCase.ExpectedAssembler!), assembler);
         if (validMismatches.Count > 0)
-            return Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: validMismatches);
-        if (testCase.Steps.Count == 0) return Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed);
+            return Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: validMismatches, actualAssembler: assembler);
+        if (testCase.Steps.Count == 0)
+            return Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed, actualAssembler: options.IncludeActualAssemblerOnSuccess ? assembler : null);
 
         var collectorMismatches = new List<ConformanceMismatch>();
         RuntimeCollector collector;
@@ -418,8 +422,10 @@ public static class ConformanceRunner
         }
         if (technical is not null) return Result(testCase, ConformanceCaseStatus.Error, ConformanceRunnerCodes.InvalidEnvironment, diagnostics: collector.AllDiagnostics, runtimeLimits: collector.AllLimitResults, technical: technical);
         return collectorMismatches.Count == 0
-            ? Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed, diagnostics: collector.AllDiagnostics, runtimeLimits: collector.AllLimitResults)
-            : Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: collectorMismatches, diagnostics: collector.AllDiagnostics, runtimeLimits: collector.AllLimitResults);
+            ? Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed,
+                diagnostics: collector.AllDiagnostics, runtimeLimits: collector.AllLimitResults, actualAssembler: options.IncludeActualAssemblerOnSuccess ? assembler : null)
+            : Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch,
+                mismatches: collectorMismatches, diagnostics: collector.AllDiagnostics, runtimeLimits: collector.AllLimitResults, actualAssembler: assembler);
     }
 
     private static ConformanceCaseResult RunMessageApi(ConformanceCase testCase)

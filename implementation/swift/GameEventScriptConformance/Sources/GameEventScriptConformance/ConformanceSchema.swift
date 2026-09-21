@@ -120,7 +120,7 @@ internal enum ConformanceSchema {
             default: core = unique(core + ["compiler"])
             }
             if kind == "performance" { optional = unique(optional + ["performance"]) }
-            if kind == "bytecodeSnapshot" { optional = unique(optional + ["bytecode-snapshot"]) }
+            if test.assembler != nil { optional = unique(optional + ["bytecode-snapshot"]) }
             if kind == "programBinary" && !steps.isEmpty {
                 core = unique(core + ["host", "vm", "observer", "publish-sink"])
             }
@@ -278,8 +278,8 @@ internal enum ConformanceSchema {
             guard syntax.assembler != nil && expect == nil else {
                 throw fail("invalidCardinality", "A snapshot requires one gesa block and no expect block.", node)
             }
-        } else if syntax.assembler != nil {
-            throw fail("invalidCardinality", "Only bytecodeSnapshot accepts gesa.", node)
+        } else if syntax.assembler != nil && kind != "programBinary" {
+            throw fail("invalidCardinality", "Only bytecodeSnapshot and valid programBinary cases accept gesa.", node)
         }
         let expectationNames = [
             "compileError": "error", "loadError": "error", "messageApi": "message", "valueApi": "value",
@@ -308,6 +308,9 @@ internal enum ConformanceSchema {
                 throw fail("invalidCardinality", "Runtime cases require Steps or initialization expectations.", node)
             }
         } else if kind == "programBinary" {
+            if syntax.assembler != nil && expect?["binary"]?["outcome"]?.string != "valid" {
+                throw fail("invalidCardinality", "Only valid programBinary cases accept gesa.", node)
+            }
             if syntax.hasSteps && expect?["binary"]?["outcome"]?.string != "valid" {
                 throw fail("invalidCardinality", "Only valid programBinary cases accept Steps.", node)
             }

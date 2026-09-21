@@ -41,6 +41,8 @@ extension GesCompiler {
                     "validate.invalidIdentifierCase", module.location, symbol: module.name, kind: .globalDefinition)
             }
         }
+        // A body may infer the return type of a later definition, including in another source.
+        // Validate every parameter scope before inference constructs any parameter dictionary.
         for module in modules {
             for d in module.definitions {
                 if !d.kind.hasSuffix("andler") && d.name.contains("_") {
@@ -63,6 +65,11 @@ extension GesCompiler {
                 if d.name == "undeliverable", d.kind != "messageNameHandler" {
                     throw error("validate.invalidMessageCase", d.location, symbol: d.name, kind: .handler)
                 }
+            }
+        }
+        for module in modules {
+            for d in module.definitions {
+                let names = Set(d.parameters.map(\.name))
                 let types = Dictionary(
                     uniqueKeysWithValues: d.parameters.compactMap { p in p.type.map { (p.name, $0) } })
                 try validateStatements(d.statements, names, [], types)

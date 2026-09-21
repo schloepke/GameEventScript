@@ -444,7 +444,7 @@ second
             .WithDebugInfo(GameEventScriptDebugInfoOptions.None)
             .Compile());
         var hash = Convert.ToHexString(SHA256.HashData(bytes));
-        var document = Parse("programBinary", $$"""
+        var body = $$"""
 ```yaml
 gesBlock: case
 id: case
@@ -464,7 +464,8 @@ binary:
   rewriteByteExact: true
   moduleName: fixture
 ```
-""", includeDefaultCase: false);
+""";
+        var document = Parse("programBinary", body, includeDefaultCase: false);
         var resolver = new RecordingResourceResolver(bytes);
         var environment = new ConformanceRunnerEnvironment("runner", "1", "impl", "1", ["program-binary"], resourceResolver: resolver);
 
@@ -490,6 +491,19 @@ binary:
         Assert.AreEqual(ConformanceRunnerCodes.ResourceLimitExceeded, oversized.Code);
         Assert.AreEqual(ConformanceRunnerCodes.InvalidEnvironment, missingResolver.Code);
         Assert.AreEqual(ConformanceRunnerCodes.ResourceIntegrityMismatch, tampered.Code);
+
+        var dump = GameEventScriptProgramReader.Read(bytes).Dump();
+        var snapshot = Parse("programBinary", body + "\n```gesa\n" + dump + "\n```", includeDefaultCase: false);
+        var dumpEnvironment = new ConformanceRunnerEnvironment("runner", "1", "impl", "1", ["program-binary", "bytecode-snapshot"], resourceResolver: resolver);
+        Assert.AreEqual(ConformanceCaseStatus.Passed, ConformanceRunner.RunCase(snapshot, "case", dumpEnvironment).Status);
+        Assert.AreEqual(ConformanceRunnerCodes.MissingOptionalCapability, ConformanceRunner.RunCase(snapshot, "case", environment).Code);
+        var wrongSnapshot = Parse("programBinary", body + "\n```gesa\n" + dump.Replace("ReturnVoid", "LoadNothing", StringComparison.Ordinal) + "\n```", includeDefaultCase: false);
+        var mismatch = ConformanceRunner.RunCase(wrongSnapshot, "case", dumpEnvironment);
+        Assert.AreEqual(ConformanceCaseStatus.Failed, mismatch.Status);
+        Assert.AreEqual("/assembler", mismatch.Mismatches[0].Path);
+        var invalidBody = body.Replace("  outcome: valid\n  rewriteByteExact: true\n  moduleName: fixture", "  outcome: readError\n  errorCode: InvalidMagic", StringComparison.Ordinal);
+        var invalid = Assert.ThrowsExactly<ConformanceParseException>(() => Parse("programBinary", invalidBody + "\n```gesa\ninvalid\n```", includeDefaultCase: false));
+        Assert.AreEqual(ConformanceDiagnosticCodes.SchemaInvalidCardinality, invalid.Diagnostics[0].Code);
     }
 
     private static ConformanceDocument Parse(string kind, string body, bool includeDefaultCase = true, string? optionalRequires = null)

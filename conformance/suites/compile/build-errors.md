@@ -2002,3 +2002,313 @@ error:
   phase: "parse"
   code: "parse.syntax"
 ```
+
+---
+
+## Test: duplicate typed parameters are rejected in forward calls
+
+This case requires a validation diagnostic for duplicate local parameter names even when a call triggers return-type inference.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: duplicate-typed-parameters-forward
+kind: compileError
+level: scenario
+sources:
+  - name: duplicate-typed-parameters-forward-0.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let result be f(1, 2)
+  emit Done(value: result)
+}
+
+function f(_ x as :Number, _ x as :Number) be x
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: validate, code: validate.duplicateDefinitionParameter }
+```
+
+---
+
+## Test: duplicate typed parameters are rejected in backward calls
+
+This case requires a validation diagnostic for duplicate local parameter names even when a call triggers return-type inference.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: duplicate-typed-parameters-backward
+kind: compileError
+level: scenario
+sources:
+  - name: duplicate-typed-parameters-backward-0.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+function f(_ x as :Number, _ x as :Number) be x
+
+on Start {
+  let result be f(1, 2)
+  emit Done(value: result)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: validate, code: validate.duplicateDefinitionParameter }
+```
+
+---
+
+## Test: duplicate typed parameters are rejected in cross-source calls
+
+This case requires a validation diagnostic for duplicate local parameter names even when a call triggers return-type inference.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: duplicate-typed-parameters-cross-source
+kind: compileError
+level: scenario
+sources:
+  - name: duplicate-typed-parameters-cross-source-0.ges
+    program: main
+  - name: duplicate-typed-parameters-cross-source-1.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let result be f(1, 2)
+  emit Done(value: result)
+}
+```
+
+```ges
+function f(_ x as :Number, _ x as :Number) be x
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: validate, code: validate.duplicateDefinitionParameter }
+```
+
+---
+
+## Test: choose first rejects count 32768
+
+This case rejects an unrepresentable choice count before it can wrap into a negative or smaller positive immediate.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: choose-count-first-32768
+kind: compileError
+level: scenario
+sources:
+  - name: choose-count-first-32768-0.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: [1, 2, 3][:choose 32768])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.numericLimitExceeded }
+```
+
+---
+
+## Test: choose random rejects count 32768
+
+This case rejects an unrepresentable choice count before it can wrap into a negative or smaller positive immediate.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: choose-count-random-32768
+kind: compileError
+level: scenario
+sources:
+  - name: choose-count-random-32768-0.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: [1, 2, 3][:choose 32768 at random])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.numericLimitExceeded }
+```
+
+---
+
+## Test: choose weighted rejects count 32768
+
+This case rejects an unrepresentable choice count before it can wrap into a negative or smaller positive immediate.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: choose-count-weighted-32768
+kind: compileError
+level: scenario
+sources:
+  - name: choose-count-weighted-32768-0.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: [1, 2, 3][:choose 32768 item where item > 0 weighted by item => item])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.numericLimitExceeded }
+```
+
+---
+
+## Test: choose first rejects count 65537
+
+This case rejects an unrepresentable choice count before it can wrap into a negative or smaller positive immediate.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: choose-count-first-65537
+kind: compileError
+level: scenario
+sources:
+  - name: choose-count-first-65537-0.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: [1, 2, 3][:choose 65537])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.numericLimitExceeded }
+```
+
+---
+
+## Test: choose random rejects count 65537
+
+This case rejects an unrepresentable choice count before it can wrap into a negative or smaller positive immediate.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: choose-count-random-65537
+kind: compileError
+level: scenario
+sources:
+  - name: choose-count-random-65537-0.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: [1, 2, 3][:choose 65537 at random])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.numericLimitExceeded }
+```
+
+---
+
+## Test: choose weighted rejects count 65537
+
+This case rejects an unrepresentable choice count before it can wrap into a negative or smaller positive immediate.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: choose-count-weighted-65537
+kind: compileError
+level: scenario
+sources:
+  - name: choose-count-weighted-65537-0.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: [1, 2, 3][:choose 65537 item where item > 0 weighted by item => item])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.numericLimitExceeded }
+```

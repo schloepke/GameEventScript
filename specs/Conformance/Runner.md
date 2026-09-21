@@ -250,7 +250,9 @@ in [Markdown format](MarkdownFormat.md) and compared without platform exception 
 
 For a valid Program the runner compares manifest/build identity and all present
 metadata expectations, invokes the canonical writer, and compares requested
-byte equality and rewrite SHA-256. If Steps are present, it loads that parsed
+byte equality and rewrite SHA-256. An optional `gesa` block additionally checks
+the parsed Program's canonical dump using the exact comparison defined for
+bytecode snapshots. If Steps are present, it loads that parsed
 Program into a fresh Host and executes the ordinary initialization and step
 pipeline. Embedded source remains provenance and is never opened or compiled.
 The runner never interprets `relativePath`; packaging adapters map resource IDs

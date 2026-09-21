@@ -126,7 +126,9 @@ type casts the supplied value before evaluation of the body; a failed cast binds
 `nothing`. Calls must match the declaration's ordered external labels exactly.
 Thus `function f(x) ...` is called as `f(x: 10)`, while `function f(_ x) ...` is
 called positionally as `f(10)`. Duplicate local parameter names and duplicate
-non-`_` labels are static errors.
+non-`_` labels are static errors. Duplicate local parameter names are rejected
+with `validate.duplicateDefinitionParameter`, regardless of whether a call
+precedes the definition or appears in another source document of the program.
 
 A function may return any value. A predicate must statically produce a boolean
 or `nothing`; predicate results are normalized to that three-state result.
@@ -407,6 +409,9 @@ field expressions, message tags, and random-seed expressions. A selector or
 generated-collection binding is visible to its nested predicate/projection
 expressions, but not to its source collection. Separate selector expressions
 are sibling scopes, including a `choose` predicate and its weight expression.
+An enclosing collection binding retains its current value throughout every
+nested iteration. This also applies when the binding holds the result of an
+earlier projection in a selector pipeline.
 
 ### `if`
 
@@ -1431,6 +1436,11 @@ replacement: `:choose 1 at random` returns one item or `nothing`, while
 choice evaluates the `weighted by` expression per candidate and chooses without
 replacement from positive finite weights. `:choose 1 weighted by ...` returns
 one item or `nothing`; `:choose n weighted by ...` returns a list.
+
+The count in `:choose` must fit the V1 signed 16-bit immediate: `1` through
+`32767`, inclusive. A larger count is rejected during compilation with
+`compile.numericLimitExceeded`; it must not wrap or truncate. This bound applies
+equally to deterministic, random, filtered, and weighted choice.
 
 `:reverse` is defined for lists, dice, ranges, and iterator chains. Lists
 reverse into lists. Dice reverse into lists so the requested order is preserved

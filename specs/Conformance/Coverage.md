@@ -13,6 +13,9 @@ here. Add or update this matrix in the same change as new portable behavior.
 | Behavior | Stable portable case IDs |
 | --- | --- |
 | Stack-safe compiler resource analysis for deep acyclic calls within portable limits | `compile.deep-call-graph/ten-thousand-calls` |
+| Enclosing selector bindings retain their value across nested projection/aggregation iterations, including fused projections and binary roundtrips | `runtime.atomic.iterator-core/nested-projection-capture`, `triple-projection-capture`, `nested-aggregation-capture`, `fused-projection-capture` |
+| Duplicate typed local parameters are diagnosed independently of call/declaration order and source boundaries | `compile.build-errors/duplicate-typed-parameters-forward`, `duplicate-typed-parameters-backward`, `duplicate-typed-parameters-cross-source` |
+| Choice counts accept the signed-immediate maximum and reject larger counts without truncation in deterministic, random, and weighted variants | `runtime.atomic.iterator-core/choose-maximum-count`; `compile.build-errors/choose-count-{first,random,weighted}-{32768,65537}` |
 | Quoted text cannot substitute for grammar tokens; numeric constant signs reject nonnumeric literals | `compile.lexical-boundaries/quoted-be`, `quoted-parameter-open`, `quoted-infix`, `quoted-emit`, `negative-text-constant`, `negative-tag-constant`, `negative-boolean-constant`, `negative-nothing-constant`; positive controls: `negative-numeric-constants`, `keyword-text-values` |
 | Expression bindings retain ancestor visibility in functions, generators, nested selectors, fields, tags, seeds, and weights; siblings may reuse names | `compile.lexical-boundaries/function-parameter-shadow`, `generated-local-shadow`, `nested-selector-shadow`, `nested-generator-shadow`, `record-field-shadow`, `message-tag-shadow`, `random-seed-shadow`, `nested-weight-shadow`, `sibling-selector-scopes` |
 | List subtraction removes one matching Nothing element, with ordinary scalar propagation unchanged | `runtime.atomic.collection-nothing/literal`, `dynamic` |
@@ -72,12 +75,15 @@ here. Add or update this matrix in the same change as new portable behavior.
 | Missing and mismatched external runtime constructors | `compile.external-type-linking/missing-runtime-constructor`, `compile.external-type-linking/mismatched-runtime-constructor` |
 | Portable external-type catalog duplicate rejection | `api.external-types/duplicate-type-name` |
 | Canonical binding, message-name and embedded-source dumps | `compile.program-dumps/compact-bindings`, `compile.program-dumps/message-name-and-source` |
+| Canonical GESA binary64 immediates: exponent spelling, decimal/scientific boundaries, exact significant digits, zero, subnormal/normal limits, infinity, Percentage ratios and staged operands | Binary fixtures: `compile.program-dumps/float-exponents`, `float-notation-boundaries`, `float-extremes`, `float-staging`; native compiler: `float-source` |
 | Fixed extension environment (`echo`, `fail`, `floor`, navigation) | `runtime.atomic.external-access/case-0010`, `runtime.atomic.control-flow/case-0002`, `runtime.extensions-sequences/case-0001` |
 
 The complete portable `.gesb` fixture manifest is
-`program.binary-format` together with `program.call-graph-depth`. It covers canonical and noncanonical valid Programs,
+`program.binary-format`, `program.call-graph-depth`, and the four binary-backed
+GESA cases in `compile.program-dumps`. It covers canonical and noncanonical valid Programs,
 opaque optional data, stable structural errors, stable semantic validation
-errors, bounded resource resolution, rewrite identity, and runtime execution.
+errors, bounded resource resolution, rewrite identity, runtime execution, and
+canonical dumps of identical Program data across implementations.
 
 Cross-language acceptance, corpus identity, shared parser bootstrap fixtures,
 and the compact C# reference result are defined in

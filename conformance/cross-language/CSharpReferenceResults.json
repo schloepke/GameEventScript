@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "09E5E5C5F4FA9793F75793098657AF4B010895DF6D64210AE63CFE0A5D39B9EA",
+    "sha256": "218C55A3DFA9C5B2521C66DDE0147AEB10F04A362F61A86FFD3F6E9E0B2ED33B",
     "documentCount": 94,
-    "caseCount": 1495
+    "caseCount": 1514
   },
   "cases": [
     {
@@ -2199,6 +2199,123 @@
       "code": "conformance.passed"
     },
     {
+      "id": "compile.build-errors/choose-count-first-32768",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/choose-count-first-65537",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/choose-count-random-32768",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/choose-count-random-65537",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/choose-count-weighted-32768",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/choose-count-weighted-65537",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/duplicate-typed-parameters-backward",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/duplicate-typed-parameters-cross-source",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/duplicate-typed-parameters-forward",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "compile.bytecode-lowering/case-0001",
       "kind": "bytecode",
       "level": "atomic",
@@ -2829,6 +2946,82 @@
       "requires": {
         "core": [
           "compiler"
+        ],
+        "optional": [
+          "bytecode-snapshot"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.program-dumps/float-exponents",
+      "kind": "programBinary",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": [
+          "bytecode-snapshot"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.program-dumps/float-extremes",
+      "kind": "programBinary",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": [
+          "bytecode-snapshot"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.program-dumps/float-notation-boundaries",
+      "kind": "programBinary",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": [
+          "bytecode-snapshot"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.program-dumps/float-source",
+      "kind": "bytecodeSnapshot",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "program-binary"
+        ],
+        "optional": [
+          "bytecode-snapshot"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.program-dumps/float-staging",
+      "kind": "programBinary",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "program-binary"
         ],
         "optional": [
           "bytecode-snapshot"
@@ -11056,6 +11249,96 @@
           "compiler",
           "host",
           "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/choose-maximum-count",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/fused-projection-capture",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/nested-aggregation-capture",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/nested-projection-capture",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/triple-projection-capture",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
           "publish-sink",
           "vm"
         ],

@@ -212,7 +212,7 @@ private final class GesProgramDump {
         case .indexImmediate: return "#" + String(i.word1)
         case .stepImmediate: return "#" + String(Int16(bitPattern: i.a))
         case .integerImmediate: return "#" + String(i.integer)
-        case .floatImmediate: return "#" + GesNumber.format(i.float)
+        case .floatImmediate: return floatImmediate(i.float)
         case .unit:
             return i.unit == .none
                 ? "" : "unit:" + (i.unit == .meter ? "meter" : i.unit == .second ? "second" : "degree")
@@ -221,6 +221,39 @@ private final class GesProgramDump {
         case .seriesKind: return GameEventScriptBytecodeSeriesKind(rawValue: i.word2).map(enumName) ?? "Unknown"
         default: return ""
         }
+    }
+    private func floatImmediate(_ value: Double) -> String {
+        let text = GesNumber.format(value)
+        if value == 0 || !value.isFinite { return "#" + text }
+
+        // Keep the runtime's shortest round-trip digits, with GESA's own notation threshold.
+        let negative = value < 0
+        let magnitude = negative ? String(text.dropFirst()) : text
+        let parts = magnitude.split(separator: "e")
+        let coefficient = parts[0].split(separator: ".", omittingEmptySubsequences: false)
+        let digits = Array(coefficient.joined().utf8)
+        var first = 0
+        var last = digits.count - 1
+        while digits[first] == 48 { first += 1 }
+        while digits[last] == 48 { last -= 1 }
+        let exponent = (parts.count == 2 ? Int(parts[1])! : 0) + coefficient[0].count - first - 1
+        let significant = String(decoding: digits[first...last], as: UTF8.self)
+        let formatted: String
+        if (-4..<16).contains(exponent) {
+            let point = exponent + 1
+            if point <= 0 {
+                formatted = "0." + String(repeating: "0", count: -point) + significant
+            } else if point >= significant.count {
+                formatted = significant + String(repeating: "0", count: point - significant.count)
+            } else {
+                formatted = significant.prefix(point) + "." + significant.dropFirst(point)
+            }
+        } else {
+            let significand =
+                significant.count == 1 ? significant : significant.prefix(1) + "." + significant.dropFirst()
+            formatted = significand + "e" + String(exponent)
+        }
+        return (negative ? "#-" : "#") + formatted
     }
     func comment(_ i: GameEventScriptBytecodeInstruction, _ part: GesOperand) -> String? {
         if part.isString { return quote(text(part == .customTypeName ? i.word2 : i.word1)) }

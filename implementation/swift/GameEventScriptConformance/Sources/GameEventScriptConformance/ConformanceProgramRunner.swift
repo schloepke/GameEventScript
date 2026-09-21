@@ -13,6 +13,9 @@ public enum ConformanceProgramRunner {
         guard testCase.kind == "bytecodeSnapshot", let expected = testCase.assembler else {
             return result(testCase, [], error: "Expected a GESA snapshot case")
         }
+        return result(testCase, dumpDifferences(expected, program: program))
+    }
+    private static func dumpDifferences(_ expected: String, program: GameEventScriptProgram) -> [ConformanceMismatch] {
         let actual = GameEventScriptProgramDumper.dump(program)
         let expectedLines = expected.split(separator: "\n", omittingEmptySubsequences: false)
         let actualLines = actual.split(separator: "\n", omittingEmptySubsequences: false)
@@ -24,7 +27,7 @@ public enum ConformanceProgramRunner {
                 differences.append(.init(path: "/gesa/line/" + String(index + 1), expected: left, actual: right))
             }
         }
-        return result(testCase, differences)
+        return differences
     }
 
     /// The embedding bounds and resolves bytes; SHA-256 is checked before decoding.
@@ -88,6 +91,9 @@ public enum ConformanceProgramRunner {
                             path: "/binary/compiledRuntimeSegments", expected: ConformanceSha256.hex(reference),
                             actual: ConformanceSha256.hex(actual)))
                 }
+            }
+            if let expectedDump = testCase.assembler {
+                differences += dumpDifferences(expectedDump, program: program)
             }
             if differences.isEmpty && !testCase.steps.isEmpty {
                 let scenario = try RuntimeScenario(testCase, programs: [.init(id: "main", program: program)])

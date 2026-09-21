@@ -189,7 +189,29 @@ An instruction consists of the opcode name followed by its operands in the order
 | Unit | `unit:` plus the portable unit type name | `unit:meter` |
 | Enum operand | portable enum member name | `Fibonacci` |
 
-Binary64 immediates use invariant round-trip formatting. The register form always retains the physical register ID. When DebugSymbols contain more than one live symbol for a register and address, the matching symbol with the shortest code range wins.
+Binary64 immediates use the following canonical, locale-independent spelling after `#`:
+
+- For a finite nonzero value, use the fewest significant decimal digits that
+  round-trip to the same binary64 bits under round-to-nearest, ties-to-even.
+  If multiple such significands exist, choose the decimal value closest to the
+  exact binary64 value; an exact tie chooses an even final significand digit.
+- Let `e` be the exponent when those digits are normalized to one nonzero digit
+  before the decimal point. Use decimal notation when `-4 <= e < 16`; otherwise
+  use scientific notation with exactly one digit before the decimal point.
+- Use `.` as the decimal separator. Omit insignificant trailing fractional
+  zeroes and an empty fractional part. Decimal notation below one retains the
+  leading `0`; scientific notation uses lowercase `e`, no positive exponent
+  sign, and no exponent leading zeroes.
+- Negative nonzero values have a leading `-`. Both signed zeroes write as `0`.
+  Nonfinite values write as `Infinity`, `-Infinity`, or `NaN`.
+
+Examples are `#0.0001`, `#1e-5`, `#0.5`, `#1000000000000000`, `#1e16`,
+`#1.0000000000000002e16`, `#1e20`, and `#5e-324`. These rules apply to every
+binary64 immediate operand, including Percentage ratios and staged values.
+They do not change the permitted language-level `as :Text` spellings defined
+in [Number semantics](Semantics/Numbers.md#numeric-text-output-and-roundtrip).
+
+The register form always retains the physical register ID. When DebugSymbols contain more than one live symbol for a register and address, the matching symbol with the shortest code range wins.
 
 Non-zero instruction flags follow all normal operands:
 

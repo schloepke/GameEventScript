@@ -217,7 +217,7 @@ internal sealed partial class GesBinaryBuilder
         var planItems = _rewrittenItems ?? LinearizePlanItems();
         var optimizedItems = _optimize ? RunDefaultOptimizationPasses(planItems) : CopyPlanItems(planItems);
         var labelAddresses = ResolveLabelAddresses(optimizedItems);
-        var registerAllocation = AllocateRegisters(optimizedItems);
+        var registerAllocation = AllocateRegisters(optimizedItems, labelAddresses);
         var registerMap = registerAllocation.RegisterMap;
         var items = PatchRoutineRegisterLocals(optimizedItems, registerAllocation);
         var resourceAnalysis = AnalyzeProgramResources(items, registerAllocation);
@@ -903,9 +903,9 @@ internal sealed partial class GesBinaryBuilder
             ? registerIndex
             : throw new InvalidOperationException($"Register '{register.Id}' was not allocated.");
 
-    private RegisterAllocationResult AllocateRegisters(IReadOnlyList<PlanItem> items)
+    private RegisterAllocationResult AllocateRegisters(IReadOnlyList<PlanItem> items, IReadOnlyDictionary<int, ushort> labelAddresses)
     {
-        var intervals = BuildRegisterIntervals(items);
+        var intervals = BuildRegisterIntervals(items, labelAddresses);
         if (_routines.Count > 0) return AllocateScopedRegisters(intervals);
 
         var result = new Dictionary<int, ushort>();
@@ -949,20 +949,41 @@ internal sealed partial class GesBinaryBuilder
         return new RegisterAllocationResult(result, []);
     }
 
-    private RegisterInterval[] BuildRegisterIntervals(IReadOnlyList<PlanItem> items)
+    private RegisterInterval[] BuildRegisterIntervals(IReadOnlyList<PlanItem> items, IReadOnlyDictionary<int, ushort> labelAddresses)
     {
         var intervals = new RegisterInterval[_registers.Count];
+        var address = 0;
         for (var index = 0; index < items.Count; index++)
         {
             if (items[index].Instruction is not { } instruction) continue;
-            AddOperandRegisterIntervals(intervals, instruction.Destination, index);
-            AddOperandRegisterIntervals(intervals, instruction.X, index);
-            AddOperandRegisterIntervals(intervals, instruction.Y, index);
-            AddOperandRegisterIntervals(intervals, instruction.A, index);
-            AddOperandRegisterIntervals(intervals, instruction.B, index);
-            AddOperandRegisterIntervals(intervals, instruction.C, index);
-            AddOperandRegisterIntervals(intervals, instruction.D, index);
-            AddOperandRegisterIntervals(intervals, instruction.SecondaryList, index);
+            AddOperandRegisterIntervals(intervals, instruction.Destination, address);
+            AddOperandRegisterIntervals(intervals, instruction.X, address);
+            AddOperandRegisterIntervals(intervals, instruction.Y, address);
+            AddOperandRegisterIntervals(intervals, instruction.A, address);
+            AddOperandRegisterIntervals(intervals, instruction.B, address);
+            AddOperandRegisterIntervals(intervals, instruction.C, address);
+            AddOperandRegisterIntervals(intervals, instruction.D, address);
+            AddOperandRegisterIntervals(intervals, instruction.SecondaryList, address);
+            address++;
+        }
+
+        // Values entering a loop remain live through its back edge, even when their
+        // last textual use occurs earlier in the body. Inner iterations may read them again.
+        address = 0;
+        for (var index = 0; index < items.Count; index++)
+        {
+            if (items[index].Instruction is not { } instruction) continue;
+            if (ReadJumpTarget(instruction) is { } target && labelAddresses[target.Id] <= address)
+            {
+                var start = labelAddresses[target.Id];
+                for (var register = 0; register < intervals.Length; register++)
+                {
+                    ref var interval = ref intervals[register];
+                    if (interval.HasValue && interval.Start < start && interval.End >= start && interval.End < address)
+                        interval.End = address;
+                }
+            }
+            address++;
         }
 
         return intervals;

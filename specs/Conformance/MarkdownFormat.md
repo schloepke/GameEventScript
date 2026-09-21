@@ -125,7 +125,7 @@ backticks at column zero:
 | `yaml` with `gesBlock: case` | Case metadata and execution configuration | exactly one per test |
 | `ges` | One GES source input | kind-dependent |
 | `yaml` with `gesBlock: expect` | Structured expectations | zero or one, kind-dependent |
-| `gesa` | Expected Game Event Script Assembler dump | exactly one for `bytecodeSnapshot` |
+| `gesa` | Expected Game Event Script Assembler dump | exactly one for `bytecodeSnapshot`; optional for a valid `programBinary` |
 
 Opening or closing fences may not have trailing whitespace. Semantic fences may
 not be indented or nested. The payload is the sequence of logical content lines
@@ -878,6 +878,14 @@ source-comment, or metadata field is ignored.
 Requires `program-binary`, one `binaryFixture` mapping, and one binary
 expectation. Source fences are optional provenance and are never compiled.
 `compile.binaryRoundTrip` is invalid because the input is already binary.
+
+A case with `binary.outcome: valid` may also contain one `gesa` block. This
+implicitly requires the optional capability `bytecode-snapshot`. After reading
+and validating the fixture, the runner compares its dump with the block using
+the same exact, LF-normalized UTF-8 comparison as `bytecodeSnapshot`. It never
+substitutes compiler output for the fixture. This form isolates portable dump
+formatting from legal differences in compiler optimization. Error outcomes
+cannot contain a `gesa` block.
 
 ```yaml
 binary:

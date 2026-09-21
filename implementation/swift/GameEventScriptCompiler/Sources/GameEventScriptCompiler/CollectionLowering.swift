@@ -53,6 +53,7 @@ extension GesCompiler {
                 s.operation == "hasPattern" ? .hasPattern : .takePattern, d, input, s.count,
                 payload: UInt64(kind) | UInt64(face) << 16)
         case "choose":
+            if s.count > Int(Int16.max) { throw error("compile.numericLimitExceeded", r.location, phase: .compile) }
             if s.expressions.count > 1 {
                 try weightedChoose(input, s, d, r, scope)
             } else {

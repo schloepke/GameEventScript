@@ -6,7 +6,7 @@ set -eu
 
 repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 release_version=${1:-0.1.0}
-package_output=${2:-"$repository_root/artifacts/csharp/packages"}
+package_output=${2:-"$repository_root/artifacts/csharp/packages/$release_version"}
 consumer_project="$repository_root/implementation/csharp/verification/GameEventScript.PackageConsumer/GameEventScript.PackageConsumer.csproj"
 consumer_packages="$repository_root/artifacts/csharp/package-consumer/nuget"
 runtime_project="$repository_root/implementation/csharp/verification/GameEventScript.RuntimeConsumer/GameEventScript.RuntimeConsumer.csproj"

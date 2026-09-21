@@ -22,7 +22,7 @@ case "$#" in
 esac
 
 ges_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ges_paths=()
+ges_paths=("$ges_root/Package.swift" "$ges_root/implementation/swift/verification")
 for ges_manifest in "$ges_root"/implementation/swift/*/Package.swift; do
     [[ -f "$ges_manifest" ]] || continue
     ges_paths+=("$ges_manifest")

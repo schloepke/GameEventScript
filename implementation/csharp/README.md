@@ -76,7 +76,7 @@ checkout correctly when invoked by absolute path from another directory:
 | `./scripts/test-csharp-performance.sh` | Run Release allocation and elapsed-time gates; timing measurements require the matching calibrated profile |
 | `./scripts/install-csharp-tool.sh` | Build the solution and install/update the global `dotnet ges` CLI |
 | `./scripts/uninstall-csharp-tool.sh` | Remove the C# CLI installation; succeeds when already absent |
-| `./scripts/pack-csharp.sh 0.1.0-rc.1` | Build canonical NuGet and symbol packages for the four libraries |
+| `./scripts/pack-csharp.sh 0.1.0-rc.1` | Build canonical NuGet and symbol packages for the three public libraries |
 | `./scripts/release-csharp-dry-run.sh 0.1.0-rc.1` | Pack, stage DLL sets and verify artifact consumption without publishing |
 | `./scripts/verify-csharp-reproducibility.sh 0.1.0-rc.1` | Build packages independently twice and verify byte-identical results |
 
@@ -257,10 +257,12 @@ ordering, execution limits and diagnostic behavior.
 
 ## Distribution
 
-The four libraries are packaged independently. Local packages are written to
-`artifacts/csharp/packages`; the release dry run also stages versioned DLL sets
-below `artifacts/csharp/dll/<version>` for Runtime, Compiler, Unity adapters and
-Conformance consumers. XML documentation and portable symbols accompany the
+Runtime, Compiler and CSharpBridge are packaged independently with a shared
+release version. Conformance stays internal; the CLI is not published on NuGet.
+Local packages are written to
+`artifacts/csharp/packages/<version>`; the release dry run also stages versioned DLL sets
+below `artifacts/csharp/dll/<version>` for Runtime, Compiler and Unity adapters.
+XML documentation and portable symbols accompany the
 assemblies. CLI packaging is handled separately by its installer.
 
 Use the [C# distribution guide](../../docs/guide/distribution/CSharp.md) for local

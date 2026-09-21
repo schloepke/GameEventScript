@@ -46,6 +46,8 @@ and Compiler/Runtime embedding. The
 documents `dotnet ges` and the interactive event console; the
 [C# distribution guide](guide/distribution/CSharp.md) covers local packages,
 DLL sets and release verification.
+The [package release guide](guide/distribution/Packages.md) describes the shared
+NuGet/SwiftPM release scope, Xcode consumption and publisher setup.
 
 The [Swift implementation guide](../implementation/swift/README.md) describes
 the package boundaries, current port coverage, and local verification commands.

@@ -3,7 +3,7 @@
 
 # C# distribution
 
-The C# reference implementation produces four independently consumable
+The C# reference implementation publishes three independently consumable
 packages under the `GameEventScript` product name:
 
 - `GameEventScript.Runtime` contains the portable Runtime, Program codec and
@@ -12,8 +12,9 @@ packages under the `GameEventScript` product name:
   and compilation options/errors and depends only on Runtime.
 - `GameEventScript.CSharpBridge` contains optional C# delegate, reflection,
   dictionary, and automatic-runner adapters and depends only on Runtime.
-- `GameEventScript.Conformance` contains the portable Markdown parser,
-  runner, and report writers and depends on Runtime and Compiler.
+
+Conformance remains an internal project for repository verification. The CLI is
+not published on NuGet; its local tool package is only an installation mechanism.
 
 For precompiled `.gesb` execution, reference Runtime and optionally CSharpBridge.
 Source compilation additionally requires Compiler. The direct entry points are
@@ -22,14 +23,14 @@ Source compilation additionally requires Compiler. The direct entry points are
 File reading belongs to the CLI or embedding, which supplies text through
 `AddScript(text, sourceName)`; the previous Bridge `AddFile` helper is removed.
 
-All four libraries target `netstandard2.1`. Their NuGet packages contain the
+All three public libraries target `netstandard2.1`. Their NuGet packages contain the
 Apache-2.0 license, repository README, XML API documentation, deterministic
 assemblies, and separate portable-PDB symbol packages.
 
 Package and assembly names identify the module; the shared namespace root is
 `GameEventScript`. Public APIs use `GameEventScript.Api`, values use
 `GameEventScript.Runtime.Values`, and the optional libraries use
-`GameEventScript.CSharpBridge` and `GameEventScript.Conformance`.
+`GameEventScript.CSharpBridge`.
 The public type names retain their existing `GameEventScript` or `Ges` prefixes.
 
 ## Local release dry run
@@ -64,25 +65,22 @@ Generated files exist only under the ignored `artifacts/` tree:
 
 ```text
 artifacts/csharp/
-  packages/
+  packages/<version>/
     GameEventScript.Runtime.<version>.nupkg
     GameEventScript.Runtime.<version>.snupkg
     GameEventScript.Compiler.<version>.nupkg
     GameEventScript.Compiler.<version>.snupkg
     GameEventScript.CSharpBridge.<version>.nupkg
     GameEventScript.CSharpBridge.<version>.snupkg
-    GameEventScript.Conformance.<version>.nupkg
-    GameEventScript.Conformance.<version>.snupkg
   dll/<version>/
     runtime/
     compiler/
     unity/
-    conformance/
 ```
 
 The `runtime` set contains Runtime alone; `compiler` contains Runtime and
-Compiler; `unity` contains Runtime and CSharpBridge; `conformance` contains
-Runtime, Compiler, and Conformance. All sets include matching XML and PDB files.
+Compiler; `unity` contains Runtime and CSharpBridge. All sets include matching
+XML and PDB files.
 
 ## Unity DLL use
 
@@ -109,10 +107,11 @@ reproducibility comparison. Performance references are measured separately by
 the manually triggered `C# Performance Gate` on a self-hosted macOS/ARM64 runner
 matching the checked-in performance profile.
 
-`C# Release Candidate` prepares and uploads private workflow artifacts. NuGet
+`C# Release Candidate` prepares and uploads workflow artifacts (with visibility inherited from the repository). NuGet
 publishing is additionally gated by all of the following:
 
-- the manual `publish` input;
+- the manual `publish` input and matching Git version tag;
+- the independent SwiftPM distribution consumer check;
 - repository variable `NUGET_PUBLISH_ENABLED=true`;
 - the protected `nuget` GitHub environment;
 - a NuGet trusted-publishing policy for this repository/workflow/environment;
@@ -123,3 +122,8 @@ The repository variable is absent or false by default, so the publishing job
 cannot run. Availability of the chosen package IDs and publisher identity must
 be confirmed before that gate is enabled. Language-port and publication
 follow-up work is tracked in `BACKLOG.md`.
+
+The [package release guide](Packages.md) describes owner configuration, Trusted
+Publishing and the shared Git-tag/version workflow. The upload script explicitly
+selects Runtime, Compiler and CSharpBridge at the requested version, including
+their symbol packages. It never uploads every package found in a directory.

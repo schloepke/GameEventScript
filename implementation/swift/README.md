@@ -21,6 +21,13 @@ is the user-facing tool; `ges-conformance` is the corpus verification tool.
 
 ## Build and verify
 
+For application dependencies, use the repository-root SwiftPM package. It exposes
+Runtime, Compiler and SwiftBridge as three selectable library products with one
+shared version. The packages below this directory remain local development entry
+points; CLI and Conformance are internal to the repository distribution.
+See the [package release guide](../../docs/guide/distribution/Packages.md) for
+Xcode installation, tagged consumer verification and release preparation.
+
 ### Xcode workspace
 
 [`GameEventScript.xcworkspace`](GameEventScript.xcworkspace) opens Runtime,
@@ -42,8 +49,13 @@ first setup, the workspace can also be opened directly in Finder.
 
 Select **My Mac** and one of the `GameEventScriptRuntime`,
 `GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptConformance` or `GameEventScriptTool`
-schemes to build with **Cmd+B**. `GameEventScriptTool` runs the native CLI tests with **Cmd+U**;
-The `ges` executable scheme runs the CLI. The shared `GameEventScriptConformance`
+schemes to build with **Cmd+B**. The shared `GameEventScriptTool` scheme builds the
+`ges` executable: **Cmd+R** launches it with `--help`, **Cmd+U** runs its native CLI
+tests, and Profile uses the Release executable. Change CLI arguments under
+**Product → Scheme → Edit Scheme → Run → Arguments**. For relative input paths,
+set the working directory under **Run → Options** or pass absolute paths.
+SwiftPM is the CLI's build system; its executable package is not a public library
+dependency. The shared `GameEventScriptConformance`
 scheme runs the native Bridge and corpus tests with **Cmd+U** in Debug. The
 `GameEventScriptSwiftBridge` scheme runs its native tests independently.
 Before the first full test run, execute

@@ -26,7 +26,7 @@ IMPORT = re.compile(
 
 def main():
     descriptions = []
-    for manifest in sorted((ROOT / "implementation/swift").glob("*/Package.swift")):
+    for manifest in [ROOT / "Package.swift", *sorted((ROOT / "implementation/swift").glob("*/Package.swift"))]:
         package = manifest.parent
         result = subprocess.run(
             ["swift", "package", "--package-path", str(package),

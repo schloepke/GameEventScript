@@ -6,6 +6,7 @@ import PackageDescription
 
 let package = Package(
     name: "GameEventScriptConformance",
+    platforms: [.macOS("10.15.4")],
     products: [.library(name: "GameEventScriptConformance", targets: ["GameEventScriptConformance"]), .executable(name: "ges-conformance", targets: ["GameEventScriptConformanceTool"])],
     dependencies: [.package(path: "../GameEventScriptRuntime"), .package(path: "../GameEventScriptCompiler"), .package(path: "../GameEventScriptSwiftBridge")],
     targets: [

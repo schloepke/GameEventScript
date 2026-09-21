@@ -64,6 +64,9 @@ side. Create or refresh both tables with
 `ruby --disable-gems scripts/write-performance-matrix.rb`; the report stays under
 `artifacts`, and the shared Markdown remains the source of truth.
 
+The [numeric text roundtrip gate](../conformance/cross-language/NumberTextRoundtrip.md)
+checks exact Number, Quantity and Percentage text exchange between C# and Swift.
+
 ## Documentation rules
 
 - Normative documents describe only the current contract.

@@ -11,6 +11,10 @@ enum ToolError: Error {
 
 func run() throws -> Int32 {
     var arguments = Array(CommandLine.arguments.dropFirst())
+    if arguments.count == 3 && arguments[0] == "--number-text" {
+        try NumberTextProbe.run(input: arguments[1], output: arguments[2])
+        return 0
+    }
     if arguments.isEmpty || arguments.contains("--help") {
         print(
             """
@@ -19,6 +23,8 @@ func run() throws -> Int32 {
                                    [--binary-fixtures <fixtures-directory>]
                                    [--runtime-programs <CSharp-export-directory>]
                                    [--performance | --calibrate-performance]
+
+            Interoperability adapter: ges-conformance --number-text <input.json> <output.json>
 
             Compiles and runs the shared Markdown corpus natively in Swift, emitting full JSON,
             Markdown, and compact results. --binary-fixtures supplies declared binary resources.

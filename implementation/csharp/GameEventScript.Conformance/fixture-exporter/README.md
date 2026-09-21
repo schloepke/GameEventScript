@@ -24,3 +24,8 @@ Swift verifies the hashes and executes the unchanged Markdown expectations.
 A stale manifest fails verification. The output is Runtime evidence using C#
 compiler inputs, not evidence of a Swift compiler. Performance cases supply
 behavior scenarios only; Swift measurement profiles are separate.
+
+The additional `--number-text <input.json> <output.json>` mode is an executable
+adapter for the [bidirectional numeric text gate](../../../../conformance/cross-language/NumberTextRoundtrip.md).
+It executes casts in the VM and returns exact numeric identities and formatted
+text; its caller writes all temporary inputs and results below `artifacts`.

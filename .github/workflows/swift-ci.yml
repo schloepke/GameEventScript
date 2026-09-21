@@ -31,6 +31,9 @@ jobs:
       - name: Record Swift toolchain
         run: swift --version
 
+      - name: Verify Swift formatting
+        run: ./scripts/format-swift.sh
+
       - name: Verify direct Swift target dependencies
         run: python3 scripts/verify-swift-dependencies.py
 
@@ -51,6 +54,8 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: swift-conformance
-          path: artifacts/swift/conformance-results/
+          path: |
+            artifacts/swift/conformance-results/
+            artifacts/swift/number-text-roundtrip/
           if-no-files-found: error
           retention-days: 14

@@ -164,6 +164,16 @@ enum GesTakeDrop {
             return a.asNumber < b.asNumber ? -1 : a.asNumber > b.asNumber ? 1 : 0
         }
         if rank(a) != rank(b) { return rank(a) < rank(b) ? -1 : 1 }
+        // Selection has its own same-rank kind order; sort's heterogeneous
+        // ranks would reverse Boolean/Tag and Map/Record pairs here.
+        func tieRank(_ value: GesValue) -> Int {
+            switch value.kind {
+            case .tag, .record, .external: 1
+            case .dice: 2
+            default: 0
+            }
+        }
+        if tieRank(a) != tieRank(b) { return tieRank(a) < tieRank(b) ? -1 : 1 }
         if a.spatialValue != nil && a.kind == b.kind && a.unit != b.unit { return unit(a.unit) < unit(b.unit) ? -1 : 1 }
         return GesComparison.order(a, b) ?? 0
     }

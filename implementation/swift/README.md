@@ -78,7 +78,8 @@ invoked by absolute path from another working directory:
 | `./scripts/test-swift-bridge.sh` | Verify native Swift adapters and Compiler/Runtime binding integration without .NET |
 | `./scripts/install-swift-tool.sh` | Build all packages and install/update the native `ges` CLI |
 | `./scripts/uninstall-swift-tool.sh` | Remove the owned Swift CLI installation |
-| `./scripts/test-swift.sh` | Export C# interoperability fixtures, run native tests and strict shared Conformance |
+| `./scripts/test-swift.sh` | Export C# interoperability fixtures, run native tests, strict shared Conformance and bidirectional numeric text roundtrips |
+| `python3 scripts/test-number-text-roundtrip.py` | Verify exact C# ↔ Swift Number/Quantity/Percentage text exchange with deterministic inputs |
 | `./scripts/test-swift-performance.sh` | Verify the calibrated Release performance profile |
 | `python3 scripts/verify-swift-api.py` | Verify approved public API snapshots and public Swift documentation |
 | `python3 scripts/test-swift-api.py` | Verify the documentation gate's positive and negative controls |
@@ -133,18 +134,18 @@ python3 scripts/verify-swift-api.py --update
 
 Verified on 2026-09-21 with Swift 6.4 on macOS arm64, Release:
 
-- **1,517/1,517 behavior checks** from the original 94 Markdown documents pass
+- **1,519/1,519 behavior checks** from the original 94 Markdown documents pass
   with native Swift compilation, including 158 expected compilation failures,
   15 bytecode constraints, three metadata cases, and all nine source-based GESA snapshots.
-- The ordinary hardware-independent report passes **1,486 cases** and skips
-  **31 optional performance measurements**. With the calibrated profile enabled,
-  the strict report passes **all 1,517 cases**, including actual measurements.
+- The ordinary hardware-independent report passes **1,488 cases** and skips
+  **31 optional performance measurements**. The last calibrated performance run
+  passed all 31 measured workloads.
 - The Swift 6.4/macOS 26/Apple M3 Max profile measures cumulative allocations and
   elapsed time. All sixteen warmed dispatch variants have **zero allocations**.
   See [Performance.md](Performance.md) for scope, references and reproduction.
 - All 52 shared binary cases pass, including canonical runtime-segment comparisons
   against Swift compiler output, malformed inputs, rewrites, fixture execution and four GESA snapshots of identical binary inputs.
-- Independent Runtime verification passes **1,256/1,256** cases with C# inputs.
+- Independent Runtime verification passes **1,258/1,258** cases with C# inputs.
 - Eighteen Conformance/adapter/bootstrap tests pass, including the Markdown bootstrap
   fixtures, compiler ownership/options and resource-limit failure paths.
 

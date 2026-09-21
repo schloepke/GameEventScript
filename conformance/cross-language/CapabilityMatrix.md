@@ -31,24 +31,23 @@ omission and skip exactly the affected cases with the stable runner code. The
 checked-in C# reference is the initial all-capabilities reference.
 
 Swift was verified on 2026-09-21 (Release, Swift 6.4, macOS arm64) against
-94 documents and 1,517 cases with corpus SHA-256
-`766F4CCE5A2B7057DE2C4A72763AD446443FFF441B2BF33A08E016861551F7A2`.
-The hardware-independent native report passes **1,486 cases**, with **zero errors
-or failures** and **31 optional performance measurements skipped**. A full native
-run with the calibrated Swift profile passes **all 1,517 cases**, including the
-31 measured workloads. All Core capabilities and the
+94 documents and 1,519 cases with corpus SHA-256
+`96BD22300D65C91288CF5EDD4CD6759D13182FE271A9DA2C52863FC78F8DF362`.
+The hardware-independent native report passes **1,488 cases**, with **zero errors
+or failures** and **31 optional performance measurements skipped**. The last
+calibrated performance run passed all 31 measured workloads. All Core capabilities and the
 optional GESA snapshots pass. The test adapter also executes those 31 scenarios'
-behavior through native compilation, giving **1,517/1,517 behavior checks**.
+behavior through native compilation, giving **1,519/1,519 behavior checks**.
 Compiler coverage includes 158 expected compilation failures, 15 bytecode
 constraint cases, three metadata cases, nine source-based GESA snapshots and canonical runtime
 segment comparisons against shared binary fixtures. Four additional GESA snapshots
 compare dumps of identical binary fixtures, independently of compiler optimization.
 
-Separate Runtime verification passes **1,256/1,256** cases:
+Separate Runtime verification passes **1,258/1,258** cases:
 
 | Scope | Passed | Input / oracle |
 | --- | ---: | --- |
-| Script scenarios | 1,160 | C#-compiled `.gesb`; original Markdown runtime assertions |
+| Script scenarios | 1,162 | C#-compiled `.gesb`; original Markdown runtime assertions |
 | Expected link errors | 4 | C#-compiled `.gesb`; original Markdown diagnostics |
 | Binary codecs, validation, fixture execution and fixture GESA snapshots | 52 | Shared canonical/invalid binaries and Markdown |
 | GESA dumps | 9 | C#-compiled Programs; shared GESA snapshots |

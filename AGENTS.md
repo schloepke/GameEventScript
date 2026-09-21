@@ -240,9 +240,9 @@ current C# implementation, not cross-platform benchmark claims.
 Verified baseline (Release, 2026-09-21):
 
 ```text
-2029/2029 non-performance test executions passed
+2031/2031 non-performance test executions passed
 32/32 allocation test executions passed, including the independent zero-allocation hot path
-1517 shared Markdown Conformance cases in 94 documents
+1519 shared Markdown Conformance cases in 94 documents
 ```
 
 The combined verification command for the first two counts is:
@@ -281,7 +281,8 @@ for the synchronous invocation.
 
 `./scripts/build-swift.sh` builds all SwiftPM packages independently in Release
 without .NET; `--configuration debug` selects Debug. `./scripts/format-swift.sh`
-checks the existing formatter configuration; `--fix` applies formatting.
+checks the existing formatter configuration; `--fix` applies formatting. Swift CI
+requires this formatting gate.
 Native SwiftPM build/test commands use `--disable-build-manifest-caching` to
 rediscover added, renamed and removed sources in local dependency packages.
 This regenerates build planning, not compiled objects. Keep the same option in
@@ -295,13 +296,21 @@ and complete source-document SHA-256. No expected result is exported from C#.
 `verify-swift-bytecode.py` checks the explicit enum and operand registry against
 C#; ordinary package builds do not generate source.
 
-Verified Swift coverage (Release, 2026-09-21): all 1,517 behavior checks from
+Verified Swift coverage (Release, 2026-09-21): all 1,519 behavior checks from
 94 shared Markdown documents pass with native Swift compilation. The strict
-hardware-independent report passes 1,486 cases and skips 31 optional performance
-measurements. Enabling the measured profile passes all 1,517 cases. Independent
-Runtime verification passes 1,256 cases using C#-compiled Programs. Eighteen Conformance/adapter/bootstrap tests, seventeen SwiftBridge tests, and
+hardware-independent report passes 1,488 cases and skips 31 optional performance
+measurements. The last calibrated performance run passed all 31 measured workloads. Independent
+Runtime verification passes 1,258 cases using C#-compiled Programs. Eighteen Conformance/adapter/bootstrap tests, seventeen SwiftBridge tests, and
 twenty-eight CLI tests pass. `scripts/test-swift.sh` requires strict native acceptance and keeps
 Runtime interoperability reports separate.
+
+`python3 scripts/test-number-text-roundtrip.py` builds the executable adapters and
+checks actual C# ↔ Swift numeric text exchange using fixed random bits and edge
+cases. `test-swift.sh` runs it with `--skip-build`. It compares exact canonical
+Number/Quantity/Percentage identities, including kind and unit, rather than text
+spelling or approximate equality. Negative controls qualify the comparator;
+reports live under `artifacts/swift/number-text-roundtrip`. See
+`conformance/cross-language/NumberTextRoundtrip.md`.
 
 `scripts/test-swift-performance.sh` verifies the measured
 `swift-6.4-release-macos26-arm64-m3max` profile. Five samples per workload use

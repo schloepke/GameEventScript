@@ -2435,3 +2435,424 @@ steps:
           - name: value
             value: { type: ":List", items: [{ type: ":Number.int64", value: "3" }, { type: ":Number.int64", value: "3" }, { type: ":Number.int64", value: "2" }, { type: ":Number.int64", value: "3" }] }
 ```
+
+---
+
+## Test: take drop boolean tag order
+
+This runtime case checks Boolean/Tag selection in both input orders through direct lists and iterator pipelines.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: take-drop-boolean-tag-order
+kind: scriptApi
+level: atomic
+sources:
+  - name: "take-drop-boolean-tag-order.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  for values in [[true, #tag], [#tag, true], [false, #tag], [#tag, false]] {
+    emit Direct(values: [values[:take highest 1][1], values[:take lowest 1][1], values[:drop highest 1], values[:drop lowest 1]])
+    emit Iterator(values: [values[:filter item where true][:take highest 1][1], values[:filter item where true][:take lowest 1][1], values[:filter item where true][:drop highest 1], values[:filter item where true][:drop lowest 1]])
+  }
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Direct"
+        args:
+          - name: "values"
+            value:
+              type: ":List"
+              items:
+                - type: ":Tag"
+                  value: "tag"
+                - type: ":Boolean"
+                  value: true
+                - type: ":List"
+                  items:
+                    - type: ":Boolean"
+                      value: true
+                - type: ":List"
+                  items:
+                    - type: ":Tag"
+                      value: "tag"
+      - name: "Iterator"
+        args:
+          - name: "values"
+            value:
+              type: ":List"
+              items:
+                - type: ":Tag"
+                  value: "tag"
+                - type: ":Boolean"
+                  value: true
+                - type: ":List"
+                  items:
+                    - type: ":Boolean"
+                      value: true
+                - type: ":List"
+                  items:
+                    - type: ":Tag"
+                      value: "tag"
+      - name: "Direct"
+        args:
+          - name: "values"
+            value:
+              type: ":List"
+              items:
+                - type: ":Tag"
+                  value: "tag"
+                - type: ":Boolean"
+                  value: true
+                - type: ":List"
+                  items:
+                    - type: ":Boolean"
+                      value: true
+                - type: ":List"
+                  items:
+                    - type: ":Tag"
+                      value: "tag"
+      - name: "Iterator"
+        args:
+          - name: "values"
+            value:
+              type: ":List"
+              items:
+                - type: ":Tag"
+                  value: "tag"
+                - type: ":Boolean"
+                  value: true
+                - type: ":List"
+                  items:
+                    - type: ":Boolean"
+                      value: true
+                - type: ":List"
+                  items:
+                    - type: ":Tag"
+                      value: "tag"
+      - name: "Direct"
+        args:
+          - name: "values"
+            value:
+              type: ":List"
+              items:
+                - type: ":Tag"
+                  value: "tag"
+                - type: ":Boolean"
+                  value: false
+                - type: ":List"
+                  items:
+                    - type: ":Boolean"
+                      value: false
+                - type: ":List"
+                  items:
+                    - type: ":Tag"
+                      value: "tag"
+      - name: "Iterator"
+        args:
+          - name: "values"
+            value:
+              type: ":List"
+              items:
+                - type: ":Tag"
+                  value: "tag"
+                - type: ":Boolean"
+                  value: false
+                - type: ":List"
+                  items:
+                    - type: ":Boolean"
+                      value: false
+                - type: ":List"
+                  items:
+                    - type: ":Tag"
+                      value: "tag"
+      - name: "Direct"
+        args:
+          - name: "values"
+            value:
+              type: ":List"
+              items:
+                - type: ":Tag"
+                  value: "tag"
+                - type: ":Boolean"
+                  value: false
+                - type: ":List"
+                  items:
+                    - type: ":Boolean"
+                      value: false
+                - type: ":List"
+                  items:
+                    - type: ":Tag"
+                      value: "tag"
+      - name: "Iterator"
+        args:
+          - name: "values"
+            value:
+              type: ":List"
+              items:
+                - type: ":Tag"
+                  value: "tag"
+                - type: ":Boolean"
+                  value: false
+                - type: ":List"
+                  items:
+                    - type: ":Boolean"
+                      value: false
+                - type: ":List"
+                  items:
+                    - type: ":Tag"
+                      value: "tag"
+```
+
+---
+
+## Test: take drop record map order
+
+This runtime case checks Record/Map selection, stable Record ties, retained source order after dropping, and exact result types for direct lists and iterator pipelines.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: take-drop-record-map-order
+kind: scriptApi
+level: atomic
+sources:
+  - name: "take-drop-record-map-order.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Box as { value: :Number }
+on Start {
+  for values in [[:Box(value: 1), [value: 2], :Box(value: 3)], [[value: 2], :Box(value: 3), :Box(value: 1)]] {
+    emit Direct(values: [values[:take highest 1][1], values[:take lowest 1][1], values[:drop highest 1], values[:drop lowest 1]])
+    emit Iterator(values: [values[:filter item where true][:take highest 1][1], values[:filter item where true][:take lowest 1][1], values[:filter item where true][:drop highest 1], values[:filter item where true][:drop lowest 1]])
+  }
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Direct"
+        args:
+          - name: "values"
+            value:
+              type: ":List"
+              items:
+                - type: ":Box"
+                  entries:
+                    - key: "value"
+                      value:
+                        type: ":Number.int64"
+                        value: "1"
+                - type: ":Map"
+                  entries:
+                    - key: "value"
+                      value:
+                        type: ":Number.int64"
+                        value: "2"
+                - type: ":List"
+                  items:
+                    - type: ":Map"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "2"
+                    - type: ":Box"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "3"
+                - type: ":List"
+                  items:
+                    - type: ":Box"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "1"
+                    - type: ":Box"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "3"
+      - name: "Iterator"
+        args:
+          - name: "values"
+            value:
+              type: ":List"
+              items:
+                - type: ":Box"
+                  entries:
+                    - key: "value"
+                      value:
+                        type: ":Number.int64"
+                        value: "1"
+                - type: ":Map"
+                  entries:
+                    - key: "value"
+                      value:
+                        type: ":Number.int64"
+                        value: "2"
+                - type: ":List"
+                  items:
+                    - type: ":Map"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "2"
+                    - type: ":Box"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "3"
+                - type: ":List"
+                  items:
+                    - type: ":Box"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "1"
+                    - type: ":Box"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "3"
+      - name: "Direct"
+        args:
+          - name: "values"
+            value:
+              type: ":List"
+              items:
+                - type: ":Box"
+                  entries:
+                    - key: "value"
+                      value:
+                        type: ":Number.int64"
+                        value: "3"
+                - type: ":Map"
+                  entries:
+                    - key: "value"
+                      value:
+                        type: ":Number.int64"
+                        value: "2"
+                - type: ":List"
+                  items:
+                    - type: ":Map"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "2"
+                    - type: ":Box"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "1"
+                - type: ":List"
+                  items:
+                    - type: ":Box"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "3"
+                    - type: ":Box"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "1"
+      - name: "Iterator"
+        args:
+          - name: "values"
+            value:
+              type: ":List"
+              items:
+                - type: ":Box"
+                  entries:
+                    - key: "value"
+                      value:
+                        type: ":Number.int64"
+                        value: "3"
+                - type: ":Map"
+                  entries:
+                    - key: "value"
+                      value:
+                        type: ":Number.int64"
+                        value: "2"
+                - type: ":List"
+                  items:
+                    - type: ":Map"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "2"
+                    - type: ":Box"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "1"
+                - type: ":List"
+                  items:
+                    - type: ":Box"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "3"
+                    - type: ":Box"
+                      entries:
+                        - key: "value"
+                          value:
+                            type: ":Number.int64"
+                            value: "1"
+```

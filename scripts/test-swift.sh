@@ -23,3 +23,5 @@ swift run --package-path "$ges_package" --scratch-path "$ges_scratch" --build-sy
     --output "$ges_root/artifacts/swift/conformance-results" \
     --runtime-programs "$ges_root/artifacts/swift/runtime-fixtures" \
     --binary-fixtures "$ges_root/conformance/fixtures"
+
+python3 "$ges_root/scripts/test-number-text-roundtrip.py" --skip-build

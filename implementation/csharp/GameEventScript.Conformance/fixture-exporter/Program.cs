@@ -7,6 +7,8 @@ using GameEventScript.Api;
 using GameEventScript.Conformance;
 using GameEventScript.Tests.Conformance;
 
+if (args.Length == 3 && args[0] == "--number-text") return NumberTextProbe.Run(args[1], args[2]);
+
 if (args.Length != 2)
 {
     Console.Error.WriteLine("Usage: runtime-fixture-exporter <corpus-directory> <artifacts-output-directory>");

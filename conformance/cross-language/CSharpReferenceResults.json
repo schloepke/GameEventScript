@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "766F4CCE5A2B7057DE2C4A72763AD446443FFF441B2BF33A08E016861551F7A2",
+    "sha256": "96BD22300D65C91288CF5EDD4CD6759D13182FE271A9DA2C52863FC78F8DF362",
     "documentCount": 94,
-    "caseCount": 1517
+    "caseCount": 1519
   },
   "cases": [
     {
@@ -11364,6 +11364,40 @@
           "host",
           "observer",
           "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/take-drop-boolean-tag-order",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/take-drop-record-map-order",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
           "publish-sink",
           "vm"
         ],

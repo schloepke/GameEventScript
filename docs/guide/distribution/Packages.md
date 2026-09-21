@@ -42,7 +42,7 @@ targets: [
 ```
 
 For a prerelease, select that exact version, for example
-`.package(url: "https://github.com/schloepke/GameEventScript.git", exact: "0.1.0-rc.1")`.
+`.package(url: "https://github.com/schloepke/GameEventScript.git", exact: "0.1.0-rc1")`.
 These version numbers are examples, not a claim that they have been published.
 Use `import GameEventScriptRuntime` and optionally the Compiler/SwiftBridge imports.
 
@@ -57,8 +57,8 @@ under `implementation/swift` remain local development and verification entry poi
 ## Verify a release without publishing
 
 ```sh
-./scripts/release-csharp-dry-run.sh 0.1.0-rc.1
-./scripts/verify-csharp-reproducibility.sh 0.1.0-rc.1
+./scripts/release-csharp-dry-run.sh 0.1.0-rc1
+./scripts/verify-csharp-reproducibility.sh 0.1.0-rc1
 python3 scripts/test-publish-csharp-packages.py
 python3 scripts/test-swift-package.py
 ```
@@ -109,10 +109,10 @@ this workflow. Canonical packaging must precede any optional signing.
 
 1. Merge the reviewed changes and verify the C# and Swift checks for the selected
    commit. Run the release workflow with `publish=false` and the intended version.
-2. Once the release is approved, create and push a Git tag such as `0.1.0-rc.1`
-   (or `v0.1.0-rc.1`) on that same commit. This is already the SwiftPM publication
+2. Once the release is approved, create and push a Git tag such as `0.1.0-rc1`
+   (or `v0.1.0-rc1`) on that same commit. This is already the SwiftPM publication
    step; do not create public version tags merely to test packaging.
-3. Dispatch **C# Release Candidate** against that tag, enter version `0.1.0-rc.1`
+3. Dispatch **C# Release Candidate** against that tag, enter version `0.1.0-rc1`
    without the optional `v`, and select `publish=true`. Publication from a branch
    or a different version tag is rejected. The workflow must exist on the default
    branch before it can be dispatched normally through GitHub Actions.

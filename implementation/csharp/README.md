@@ -76,9 +76,9 @@ checkout correctly when invoked by absolute path from another directory:
 | `./scripts/test-csharp-performance.sh` | Run Release allocation and elapsed-time gates; timing measurements require the matching calibrated profile |
 | `./scripts/install-csharp-tool.sh` | Build the solution and install/update the global `dotnet ges` CLI |
 | `./scripts/uninstall-csharp-tool.sh` | Remove the C# CLI installation; succeeds when already absent |
-| `./scripts/pack-csharp.sh 0.1.0-rc.1` | Build canonical NuGet and symbol packages for the three public libraries |
-| `./scripts/release-csharp-dry-run.sh 0.1.0-rc.1` | Pack, stage DLL sets and verify artifact consumption without publishing |
-| `./scripts/verify-csharp-reproducibility.sh 0.1.0-rc.1` | Build packages independently twice and verify byte-identical results |
+| `./scripts/pack-csharp.sh 0.1.0-rc1` | Build canonical NuGet and symbol packages for the three public libraries |
+| `./scripts/release-csharp-dry-run.sh 0.1.0-rc1` | Pack, stage DLL sets and verify artifact consumption without publishing |
+| `./scripts/verify-csharp-reproducibility.sh 0.1.0-rc1` | Build packages independently twice and verify byte-identical results |
 
 Normal library build and test intermediates use project-local `bin`/`obj`
 directories. Packages, staged DLL sets, CLI build outputs and generated reports

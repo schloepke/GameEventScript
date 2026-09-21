@@ -109,8 +109,8 @@ Build outputs use `artifacts/swift/runtime`, `compiler`, `swiftbridge`, `conform
 the Conformance directory is shared with the existing test scripts. Build and
 format scripts discover local packages from their manifests, so added packages
 participate without duplicating source lists. Formatting excludes generated
-artifacts and Xcode's user state. SwiftPM publication remains deferred. The CLI
-installer defaults to `$HOME/.local/bin` and supports `--tool-path DIRECTORY`;
+artifacts and Xcode's user state. Public SwiftPM consumption uses the root
+package and a published version tag. The CLI installer defaults to `$HOME/.local/bin` and supports `--tool-path DIRECTORY`;
 see the [CLI guide](GameEventScriptTool/README.md) for installation and updates.
 
 Build/test scripts regenerate the native SwiftPM build plan with
@@ -272,8 +272,10 @@ ordered argument labels follow the shared specifications. VM entry reads
 arguments by index; frame/register storage and callback objects are reused.
 Callbacks and argument borrows are synchronous and must not be retained.
 
-Remote SwiftPM registry publication remains deferred. Packages can currently be
-consumed independently by local path from the monorepo checkout.
+Public SwiftPM consumption uses one repository-root Git dependency after a
+version tag has been published; no Swift registry upload is required. See the
+[root quick start](../../README.md#swift--swiftpm-and-xcode). The individual
+packages can also be consumed by local path for development.
 
 ## Native Swift integration
 

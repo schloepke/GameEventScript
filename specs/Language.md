@@ -409,6 +409,9 @@ field expressions, message tags, and random-seed expressions. A selector or
 generated-collection binding is visible to its nested predicate/projection
 expressions, but not to its source collection. Separate selector expressions
 are sibling scopes, including a `choose` predicate and its weight expression.
+Each expression can resolve its own binding and visible ancestor bindings,
+but not the other expression's binding. An otherwise unbound reference to that
+sibling binding is `compile.unresolvedSymbol`.
 An enclosing collection binding retains its current value throughout every
 nested iteration. This also applies when the binding holds the result of an
 earlier projection in a selector pipeline.

@@ -161,7 +161,11 @@ enum GameEventScriptVirtualMachine {
             s.clearStage()
         case .createMap:
             let names = s.list(i.word1)
-            s.set(d, .map(names.enumerated().map { .init(key: s.text($0.element), value: s.staged($0.offset)) }))
+            if names.count == s.stageLength {
+                s.set(d, .map(names.enumerated().map { .init(key: s.text($0.element), value: s.staged($0.offset)) }))
+            } else {
+                s.set(d, .nothing)
+            }
             s.clearStage()
         case .createRange, .createRangeWithStep, .createRangeIterator, .createRangeIteratorWithStep,
             .createRangeIteratorShort:

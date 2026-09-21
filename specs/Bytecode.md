@@ -1007,7 +1007,9 @@ compiler-assigned iterator register.
   before the opcode as list items.
 - `CreateMap dst keyNameListIndex` consumes the contiguous staged value sequence
   immediately before the opcode as map values; keys remain in `keyNameListIndex`
-  in V1.
+  in V1. If the key count differs from the staged value count, it writes
+  `nothing` to `dst` and execution continues. In either case the complete staged
+  sequence is consumed; mismatched counts must never read beyond that sequence.
 - `CreateRange dst fromRegister toRegister`
 
 `IndexAccess` is reserved for non-negative literal selectors that fit the

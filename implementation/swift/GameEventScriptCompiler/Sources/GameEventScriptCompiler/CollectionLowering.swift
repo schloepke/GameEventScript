@@ -87,14 +87,15 @@ extension GesCompiler {
         r.emit(.listBuilderCreate, weightsBuilder)
         let begin = r.code.count
         let end = r.emit(.iteratorNext, item, iterator)
-        let child = GesScope(scope)
-        child.values[s.name] = item
-        child.values[s.weightName] = item
+        let predicateScope = GesScope(scope)
+        predicateScope.values[s.name] = item
         var skips: [Int] = []
         if let condition = s.expressions.first {
-            skips.append(r.emit(.jumpIfNotTrue, 0, try expression(condition, r, child)))
+            skips.append(r.emit(.jumpIfNotTrue, 0, try expression(condition, r, predicateScope)))
         }
-        let weight = try expression(s.expressions[1], r, child)
+        let weightScope = GesScope(scope)
+        weightScope.values[s.weightName] = item
+        let weight = try expression(s.expressions[1], r, weightScope)
         r.emit(.loadInteger, zero)
         r.emit(.loadFloat, infinity, payload: Double.infinity.bitPattern)
         r.emit(.greater, comparison, weight, zero)

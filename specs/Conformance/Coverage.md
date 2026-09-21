@@ -12,6 +12,8 @@ here. Add or update this matrix in the same change as new portable behavior.
 
 | Behavior | Stable portable case IDs |
 | --- | --- |
+| Weighted choice predicates and weights cannot resolve each other's sibling binding | `compile.build-errors/choose-sibling-scope-predicate`, `choose-sibling-scope-weight` |
+| CreateMap returns Nothing for mismatched key/value counts without reading unstaged registers, clears staging, and permits subsequent valid construction | `program.binary-format/valid-map-stage-count-mismatch` |
 | Stack-safe compiler resource analysis for deep acyclic calls within portable limits | `compile.deep-call-graph/ten-thousand-calls` |
 | Enclosing selector bindings retain their value across nested projection/aggregation iterations, including fused projections and binary roundtrips | `runtime.atomic.iterator-core/nested-projection-capture`, `triple-projection-capture`, `nested-aggregation-capture`, `fused-projection-capture` |
 | Duplicate typed local parameters are diagnosed independently of call/declaration order and source boundaries | `compile.build-errors/duplicate-typed-parameters-forward`, `duplicate-typed-parameters-backward`, `duplicate-typed-parameters-cross-source` |

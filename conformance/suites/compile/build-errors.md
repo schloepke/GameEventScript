@@ -2312,3 +2312,69 @@ on Start {
 gesBlock: expect
 error: { phase: compile, code: compile.numericLimitExceeded }
 ```
+
+---
+
+## Test: choose predicate cannot read the weight binding
+
+This case rejects a reference to the other sibling expression's binding in a weighted choice.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: choose-sibling-scope-predicate
+kind: compileError
+level: scenario
+sources:
+  - name: choose-sibling-scope-predicate.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: [1, 2][:choose 1 item where weight > 0 weighted by weight => weight])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.unresolvedSymbol, symbol: weight }
+```
+
+---
+
+## Test: choose weight cannot read the predicate binding
+
+This case rejects a reference to the other sibling expression's binding in a weighted choice.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: choose-sibling-scope-weight
+kind: compileError
+level: scenario
+sources:
+  - name: choose-sibling-scope-weight.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: [1, 2][:choose 1 item where item > 0 weighted by weight => item])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.unresolvedSymbol, symbol: item }
+```

@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "218C55A3DFA9C5B2521C66DDE0147AEB10F04A362F61A86FFD3F6E9E0B2ED33B",
+    "sha256": "766F4CCE5A2B7057DE2C4A72763AD446443FFF441B2BF33A08E016861551F7A2",
     "documentCount": 94,
-    "caseCount": 1514
+    "caseCount": 1517
   },
   "cases": [
     {
@@ -2265,6 +2265,32 @@
     },
     {
       "id": "compile.build-errors/choose-count-weighted-65537",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/choose-sibling-scope-predicate",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/choose-sibling-scope-weight",
       "kind": "compileError",
       "level": "scenario",
       "requires": {
@@ -5156,6 +5182,23 @@
       "requires": {
         "core": [
           "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/valid-map-stage-count-mismatch",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
           "host",
           "observer",
           "program-binary",

@@ -133,18 +133,18 @@ python3 scripts/verify-swift-api.py --update
 
 Verified on 2026-09-21 with Swift 6.4 on macOS arm64, Release:
 
-- **1,514/1,514 behavior checks** from the original 94 Markdown documents pass
-  with native Swift compilation, including 156 expected compilation failures,
+- **1,517/1,517 behavior checks** from the original 94 Markdown documents pass
+  with native Swift compilation, including 158 expected compilation failures,
   15 bytecode constraints, three metadata cases, and all nine source-based GESA snapshots.
-- The ordinary hardware-independent report passes **1,483 cases** and skips
+- The ordinary hardware-independent report passes **1,486 cases** and skips
   **31 optional performance measurements**. With the calibrated profile enabled,
-  the strict report passes **all 1,514 cases**, including actual measurements.
+  the strict report passes **all 1,517 cases**, including actual measurements.
 - The Swift 6.4/macOS 26/Apple M3 Max profile measures cumulative allocations and
   elapsed time. All sixteen warmed dispatch variants have **zero allocations**.
   See [Performance.md](Performance.md) for scope, references and reproduction.
-- All 51 shared binary cases pass, including canonical runtime-segment comparisons
+- All 52 shared binary cases pass, including canonical runtime-segment comparisons
   against Swift compiler output, malformed inputs, rewrites, fixture execution and four GESA snapshots of identical binary inputs.
-- Independent Runtime verification passes **1,255/1,255** cases with C# inputs.
+- Independent Runtime verification passes **1,256/1,256** cases with C# inputs.
 - Eighteen Conformance/adapter/bootstrap tests pass, including the Markdown bootstrap
   fixtures, compiler ownership/options and resource-limit failure paths.
 

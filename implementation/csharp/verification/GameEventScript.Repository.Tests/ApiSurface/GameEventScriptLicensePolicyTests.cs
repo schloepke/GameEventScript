@@ -33,8 +33,7 @@ public sealed class GameEventScriptLicensePolicyTests
         {
             (TestRepositoryPaths.LibraryProjectDirectory, "GameEventScript.Runtime", "Portable, deterministic Game Event Script runtime, serial message host, and Program binary codec. No source compiler dependency."),
             (TestRepositoryPaths.CompilerProjectDirectory, "GameEventScript.Compiler", "Portable Game Event Script source compiler. Depends on the separately consumable runtime."),
-            (TestRepositoryPaths.CSharpBridgeProjectDirectory, "GameEventScript.CSharpBridge", "C# adapters for Game Event Script reflection, delegates, dictionaries, and automatic host execution."),
-            (TestRepositoryPaths.ConformanceProjectDirectory, "GameEventScript.Conformance", "Portable Markdown parser, runner, and report writers for the Game Event Script conformance corpus.")
+            (TestRepositoryPaths.CSharpBridgeProjectDirectory, "GameEventScript.CSharpBridge", "C# adapters for Game Event Script reflection, delegates, dictionaries, and automatic host execution.")
         };
 
         foreach (var (projectDirectory, packageId, description) in projects)
@@ -53,6 +52,9 @@ public sealed class GameEventScriptLicensePolicyTests
             AssertPackageFile(project, "README.md");
             Assert.IsFalse(project.Descendants("PackageReference").Any(), $"{packageId} must not acquire an external package dependency.");
         }
+
+        var conformance = XDocument.Load(Path.Combine(TestRepositoryPaths.ConformanceProjectDirectory, "GameEventScript.Conformance.csproj"));
+        Assert.AreEqual("false", SingleValue(conformance, "IsPackable"), "Internal Conformance must not enter NuGet distribution.");
     }
 
     [TestMethod]

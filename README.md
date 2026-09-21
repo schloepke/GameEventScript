@@ -61,6 +61,9 @@ uninstallation succeeds when the tool is already absent.
 The [C# distribution guide](docs/guide/distribution/CSharp.md) documents package
 contents, the staged Unity DLL set, reproducibility, and the deliberately gated
 NuGet release workflow.
+The [package release guide](docs/guide/distribution/Packages.md) covers the three
+public libraries per language, publisher setup and the shared version/tag flow.
+Conformance is internal; CLI tools are not published through NuGet or SwiftPM.
 
 ## Swift implementation
 
@@ -89,7 +92,10 @@ Install or update the native Swift `ges` command with
 `./scripts/install-swift-tool.sh`; remove it with `./scripts/uninstall-swift-tool.sh`.
 Both accept `--tool-path DIRECTORY` and otherwise use `$HOME/.local/bin`.
 See the [Swift CLI guide](implementation/swift/GameEventScriptTool/README.md).
-SwiftPM registry publication remains deferred.
+The root `Package.swift` exposes Runtime, Compiler and SwiftBridge through one
+Git-based SwiftPM dependency. See the [Xcode installation instructions](docs/guide/distribution/Packages.md#swiftpm-and-xcode).
+Verify the distribution with `python3 scripts/test-swift-package.py`; no registry
+upload is required.
 
 ## License
 

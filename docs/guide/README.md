@@ -9,6 +9,8 @@ Guides optimize for understanding and may omit edge cases. Exact behavior is def
 
 ## Distribution
 
+- [Library packages and releases](distribution/Packages.md) describes public
+  NuGet/SwiftPM products, Xcode consumption and the shared release procedure.
 - [C# distribution](distribution/CSharp.md) describes reproducible NuGet,
   symbol, and DLL artifacts, the Unity DLL path, and the guarded release
   workflow.

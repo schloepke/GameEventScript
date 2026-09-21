@@ -74,8 +74,8 @@ here.
 - Add an independent CI job with build, unit tests, strict shared Conformance,
   canonical `.gesb` fixtures and cross-language result comparison for every new
   implementation. A future C runtime additionally requires sanitizer jobs.
-- Add SwiftPM and Maven publication only with their real implementations; do not
-  introduce empty package scaffolds.
+- Add Maven publication with the real Kotlin implementation; do not introduce
+  empty package scaffolds.
 - Consider a C runtime and optional thin C++ facade when gaming adoption or a
   later enterprise/embedded position justifies the native maintenance cost.
 - Define a portable standard-extension library only after its contracts and
@@ -89,8 +89,9 @@ here.
   be ported for each runtime. Keep native allocation and platform integration
   checks in their implementation-specific harnesses.
 
-- Integrate CLI tool packaging and installation checks into the release workflow
-  before publishing it.
+- Distribute standalone CLI archives through GitHub Releases and website links,
+  with platform-specific installation checks; optionally add Homebrew. CLI and
+  Conformance are excluded from public NuGet and SwiftPM library distribution.
 
 ## Unity and editor integration
 

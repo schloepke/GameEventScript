@@ -154,5 +154,13 @@ python3 scripts/test-swift-tool.py artifacts/swift/tool/release/ges \
 The TextMate grammar source remains under `tools/editors/TextMate`. After editing
 it, refresh the embedded Swift constants explicitly with
 `python3 scripts/sync-swift-cli-grammars.py`; normal Swift builds need no generator.
-The Xcode workspace includes this package and a shared `GameEventScriptTool` test
-scheme. The CLI exposes no additional portable library API.
+The Xcode workspace includes this executable package and a shared
+`GameEventScriptTool` scheme. Select **My Mac** and use **Cmd+B** to build,
+**Cmd+R** to launch `ges`, or **Cmd+U** to run the native CLI tests. Run defaults
+to `--help`; change arguments under **Product → Scheme → Edit Scheme → Run →
+Arguments**, and configure a working directory under **Run → Options** when
+using relative file paths. Tests do not inherit the CLI launch arguments.
+Use an actual terminal for full interactive terminal editing; Xcode's debug
+console is not a terminal replacement. The package is a build/test definition
+for the executable, not a published library. The CLI exposes no additional
+portable library API.

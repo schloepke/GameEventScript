@@ -2,9 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using GameEventScript.Api;
-#if !UNITY_DLL_SMOKE
-using GameEventScript.Conformance;
-#endif
 using GameEventScript.CSharpBridge;
 using GameEventScript.Runtime.Values;
 
@@ -29,12 +26,6 @@ internal static class Program
         var execution = host.RunToCompletion();
         if (execution.State != GameEventScriptExecutionState.Completed || result != 42) return Fail("The packaged compiler/runtime/bridge pipeline did not produce 42.");
 
-#if !UNITY_DLL_SMOKE
-        var document = ConformanceMarkdownParser.Parse(ConformanceMarkdown);
-        if (document.SuiteId != "package.consumer" || document.Cases.Count != 1 || document.Cases[0].FullId != "package.consumer/signature-mismatch")
-            return Fail("The packaged Conformance parser returned an unexpected model.");
-#endif
-
         Console.WriteLine("C# distribution consumer smoke test passed.");
         return 0;
     }
@@ -45,36 +36,4 @@ internal static class Program
         return 1;
     }
 
-    private const string ConformanceMarkdown = """
-        ---
-        formatVersion: 1
-        suiteId: package.consumer
-        kind: messageApi
-        level: atomic
-        ---
-
-        ## Test: Signature mismatch
-
-        ```yaml
-        gesBlock: case
-        id: signature-mismatch
-        messageApi:
-          signature:
-            name: Start
-            parameters: [a]
-          message:
-            name: Start
-            args: []
-        ```
-
-        ```yaml
-        gesBlock: expect
-        message:
-          name: Start
-          signatureId: "Start(a)"
-          messageSignatureId: "Start()"
-          matches: false
-          argumentCount: 0
-        ```
-        """;
 }

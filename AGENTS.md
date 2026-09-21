@@ -254,6 +254,28 @@ dotnet test GameEventScript.sln --configuration Release --filter "TestCategory!=
 Elapsed-time benchmarks are a separate, profile-matched performance gate and
 are not included in these counts.
 
+## Package distribution
+
+Public NuGet distribution consists only of Runtime, Compiler and CSharpBridge,
+with one release version and canonical packages below
+`artifacts/csharp/packages/<version>`. Conformance is not packable. CLI NuGet
+packages are local installation artifacts only. DLL distribution also excludes
+Conformance. Keep the explicit upload allowlist in
+`scripts/publish-csharp-packages.sh`; its fake-client tests never publish.
+
+The root `Package.swift` is the public SwiftPM entry point with three library
+products: GameEventScriptRuntime, GameEventScriptCompiler and
+GameEventScriptSwiftBridge. They use existing sources and share a Git tag/version;
+local development packages remain separate. Do not expose CLI or Conformance in
+the root manifest. `python3 scripts/test-swift-package.py` checks tagged Git
+consumption, the product/dependency graph and Runtime-only builds in disposable
+repositories under artifacts, without changing this repository's tags.
+
+Publication is manual and requires a matching version tag, verified NuGet and
+SwiftPM consumers, and the protected `nuget` environment. Preparing or checking
+packages never publishes. See `docs/guide/distribution/Packages.md` for the
+release procedure and required account configuration.
+
 ## Swift port
 
 The separate Swift Runtime package implements Program validation, `.gesb` V1

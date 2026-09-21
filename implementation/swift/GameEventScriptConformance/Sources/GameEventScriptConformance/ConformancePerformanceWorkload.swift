@@ -5,13 +5,21 @@ import GameEventScriptRuntime
 
 /// Prepared workload used only by platform measurement adapters; contains no clocks or instrumentation.
 @_spi(Performance) public final class ConformancePerformanceWorkload {
+    /// Validated authored case supplying sources, inputs and performance configuration.
     public let test: ConformanceCase
+    /// Number of measured input batches.
     public let iterations: Int
+    /// Number of input batches requested before measurement.
     public let warmupIterations: Int
+    /// Number of compilation warmup iterations requested by the case.
     public let compileWarmupIterations: Int
+    /// Whether runtime observer callbacks participate in the workload.
     public let observeRuntime: Bool
     let inputs: [GameEventScriptMessage]
     let budgets: [Int?]
+    /// Prepares reusable inputs and frame budgets for a supported single-host performance case.
+    ///
+    /// - Throws: A conformance input error for unsupported workload shapes or invalid input messages.
     public init(_ test: ConformanceCase) throws {
         guard test.kind == "performance", let config = test.metadata["performance"],
             let count = config["iterations"]?.integerValue, count > 0,
@@ -35,12 +43,16 @@ import GameEventScriptRuntime
         }
         budgets = test.steps.map { $0.pump == "frames" ? $0.budget : nil }
     }
+    /// Compiles the workload's single Program group, propagating compiler or invalid-input errors.
     public func compile() throws -> GameEventScriptProgram {
         guard let program = try ConformanceCompilerRunner.compile(test).first?.program else {
             throw ConformanceExecutionError.invalidInput("Missing performance Program")
         }
         return program
     }
+    /// Loads, starts and drains initialization on a fresh host outside the measurement interval.
+    ///
+    /// - Throws: A linking, runtime or conformance input error if preparation fails.
     public func prepare(_ program: GameEventScriptProgram) throws -> ConformancePerformanceExecution {
         try .init(self, program)
     }
@@ -48,10 +60,33 @@ import GameEventScriptRuntime
 
 /// Integer counters establish that measured samples execute the prepared amount of work.
 @_spi(Performance) public struct ConformanceWorkCounters: Equatable {
-    public var opcodes = 0, messages = 0, emits = 0, publishes = 0, pauses = 0
-    public var started = 0, completed = 0, observedEmits = 0, observedPublishes = 0, outbound = 0
-    public var limits = 0, errors = 0
+    /// Executed bytecode instructions.
+    public var opcodes = 0
+    /// Processed logical messages.
+    public var messages = 0
+    /// Emit operations reported by execution results.
+    public var emits = 0
+    /// Publish operations reported by execution results.
+    public var publishes = 0
+    /// Frames that paused before completing available work.
+    public var pauses = 0
+    /// Handler-entry observer callbacks.
+    public var started = 0
+    /// Handler-completion observer callbacks.
+    public var completed = 0
+    /// Emit observer callbacks.
+    public var observedEmits = 0
+    /// Publish observer callbacks.
+    public var observedPublishes = 0
+    /// Outbound sink invocations.
+    public var outbound = 0
+    /// Runtime-limit observer callbacks.
+    public var limits = 0
+    /// Runtime-error observer callbacks.
+    public var errors = 0
+    /// Creates zeroed counters.
     public init() {}
+    /// Multiplies every counter by a batch count for comparison with a measured run.
     public func scaled(_ count: Int) -> Self {
         var value = self
         value.opcodes *= count
@@ -70,6 +105,7 @@ import GameEventScriptRuntime
     }
 }
 
+/// A prepared host and reusable inputs owned by one synchronous measurement adapter.
 @_spi(Performance) public final class ConformancePerformanceExecution {
     let workload: ConformancePerformanceWorkload
     let host: GameEventScriptHost
@@ -85,6 +121,9 @@ import GameEventScriptRuntime
             throw ConformanceExecutionError.invalidInput("Performance initialization failed")
         }
     }
+    /// Executes repeated input batches and returns work counters, resetting observation counts for this call.
+    ///
+    /// - Throws: A conformance input error for negative counts, rejected inputs, faults or stalled execution.
     public func run(iterations: Int) throws -> ConformanceWorkCounters {
         guard iterations >= 0 else { throw ConformanceExecutionError.invalidInput("Invalid iteration count") }
         observer.counts = .init()

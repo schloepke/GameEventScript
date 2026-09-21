@@ -94,7 +94,7 @@ public static class GameEventScriptProgramValidator
         for (var index = 0; index < program.Bindings.Entries.Count; index++)
         {
             var bind = program.Bindings.Entries[index];
-            if (!Enum.IsDefined(typeof(GameEventScriptBinaryBindKind), bind.Kind))
+            if (!GesProgramEnumValidation.IsDefined(bind.Kind))
                 Throw(GameEventScriptProgramFormatErrorCode.InvalidBindingKind, $"Unknown binding kind 0x{(byte)bind.Kind:X2}.", (ushort)GameEventScriptSectionType.Bindings, index);
             if (bind.Name >= program.StringConstants.Slices.Count)
                 Throw(GameEventScriptProgramFormatErrorCode.InvalidStringIndex, "Binding name references a missing string.", (ushort)GameEventScriptSectionType.Bindings, index);
@@ -163,7 +163,7 @@ public static class GameEventScriptProgramValidator
         for (var index = 0; index < program.Code.Count; index++)
         {
             var instruction = program.Code[index];
-            if (!Enum.IsDefined(typeof(GameEventScriptBytecodeOpCode), instruction.OpCode))
+            if (!GesProgramEnumValidation.IsDefined(instruction.OpCode))
                 Throw(GameEventScriptProgramFormatErrorCode.InvalidOpcode, $"Unknown opcode 0x{(byte)instruction.OpCode:X2}.", (ushort)GameEventScriptSectionType.Code, index);
             ValidateInstructionOperands(program, indexedBindingIds, instruction, index);
         }
@@ -173,7 +173,7 @@ public static class GameEventScriptProgramValidator
     {
         var encodedUnit = instruction.UnitAndFlags & 0x1F;
         var encodedFlags = instruction.UnitAndFlags & 0xE0;
-        if (!Enum.IsDefined(typeof(GameEventScriptBytecodeInstructionUnit), (byte)encodedUnit) || encodedUnit == (byte)GameEventScriptBytecodeInstructionUnit.UnitInvalid ||
+        if (!GesProgramEnumValidation.IsDefined((GameEventScriptBytecodeInstructionUnit)encodedUnit) || encodedUnit == (byte)GameEventScriptBytecodeInstructionUnit.UnitInvalid ||
             (encodedFlags & ~(byte)GameEventScriptInstructionFlag.NormalizeResultAsPredicate) != 0)
             InvalidOperand("Instruction contains an unknown unit or instruction flag.", instructionIndex);
 
@@ -213,9 +213,9 @@ public static class GameEventScriptProgramValidator
                 ValidateInstructionList(program, listIndex, operand, instructionIndex);
                 continue;
             }
-            if (operand == GameEventScriptOpcodePrinter.OperandPart.TypeKind && !Enum.IsDefined(typeof(GameEventScriptBytecodeTypeKind), instruction.TypeKind)) InvalidOperand("Instruction contains an unknown type kind.", instructionIndex);
-            if (operand == GameEventScriptOpcodePrinter.OperandPart.PatternKind && !Enum.IsDefined(typeof(GameEventScriptBytecodePatternKind), instruction.AU)) InvalidOperand("Instruction contains an unknown pattern kind.", instructionIndex);
-            if (operand == GameEventScriptOpcodePrinter.OperandPart.SeriesKind && !Enum.IsDefined(typeof(GameEventScriptBytecodeSeriesKind), instruction.TypeOperand)) InvalidOperand("Instruction contains an unknown series kind.", instructionIndex);
+            if (operand == GameEventScriptOpcodePrinter.OperandPart.TypeKind && !GesProgramEnumValidation.IsDefined(instruction.TypeKind)) InvalidOperand("Instruction contains an unknown type kind.", instructionIndex);
+            if (operand == GameEventScriptOpcodePrinter.OperandPart.PatternKind && !GesProgramEnumValidation.IsDefined((GameEventScriptBytecodePatternKind)instruction.AU)) InvalidOperand("Instruction contains an unknown pattern kind.", instructionIndex);
+            if (operand == GameEventScriptOpcodePrinter.OperandPart.SeriesKind && !GesProgramEnumValidation.IsDefined((GameEventScriptBytecodeSeriesKind)instruction.TypeOperand)) InvalidOperand("Instruction contains an unknown series kind.", instructionIndex);
             if (operand == GameEventScriptOpcodePrinter.OperandPart.OutboundMessage && !HasBind(indexedBindingIds, OutboundMessage, instruction.MessageDestination))
                 InvalidOperand("Instruction references a missing outbound-message binding.", instructionIndex);
             if (operand == GameEventScriptOpcodePrinter.OperandPart.RecordReference && !HasBind(indexedBindingIds, Record, instruction.BindId)) InvalidOperand("Instruction references a missing record binding.", instructionIndex);
@@ -471,7 +471,7 @@ public static class GameEventScriptProgramValidator
             for (var index = 0; index < program.DebugSymbols.Symbols.Count; index++)
             {
                 var symbol = program.DebugSymbols.Symbols[index];
-                if (!Enum.IsDefined(typeof(GameEventScriptDebugSymbolKind), symbol.Kind) ||
+                if (!GesProgramEnumValidation.IsDefined(symbol.Kind) ||
                     symbol.Name is null || (symbol.Name != GameEventScriptMessageSignature.UnlabeledParameterName && !GameEventScriptText.IsIdentifier(symbol.Name)) || symbol.CodeLength == 0 ||
                     (ulong)symbol.CodeStart + symbol.CodeLength > (ulong)program.Code.Count || symbol.RegisterId == ushort.MaxValue)
                     Throw(GameEventScriptProgramFormatErrorCode.InvalidDebugSymbol, "Debug symbol has an invalid kind, name, register, or code range.", (ushort)GameEventScriptSectionType.DebugSymbols, index);

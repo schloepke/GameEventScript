@@ -5,21 +5,31 @@ import GameEventScriptRuntime
 
 /// One declared field and a typed Swift getter. Getters run synchronously under the owning Host.
 public struct GameEventScriptSwiftField<Root> {
+    /// Portable field declaration independent of the executable Swift getter.
     public let definition: GameEventScriptExternalTypeFieldDefinition
     let read: (Root) throws -> GesValue
 
+    /// Binds a field to a typed KeyPath using strict native value conversion.
+    ///
+    /// - Throws: An API error for invalid field/type names; getter conversion runs later during access.
     public init<Value: GameEventScriptSwiftValueConvertible>(
         _ name: String, typeName: String, keyPath: KeyPath<Root, Value>
     ) throws {
         definition = try .init(name: name, typeName: typeName)
         read = { try $0[keyPath: keyPath].toGesValue() }
     }
+    /// Binds a source type declaration to a synchronous throwing getter.
+    ///
+    /// - Throws: An API error for invalid field/type names.
     public init(
         _ name: String, typeName: String, get: @escaping (Root) throws -> GesValue
     ) throws {
         definition = try .init(name: name, typeName: typeName)
         read = get
     }
+    /// Binds a built-in field kind and optional unit to a synchronous throwing getter.
+    ///
+    /// - Throws: An API error for invalid names or unsupported kind/unit combinations.
     public init(
         _ name: String, kind: GameEventScriptBytecodeTypeKind, unit: GesUnit = .none,
         get: @escaping (Root) throws -> GesValue
@@ -33,6 +43,8 @@ public struct GameEventScriptSwiftField<Root> {
 public struct GameEventScriptSwiftConstructor<Root> {
     let parameters: [String]
     let create: (GesValueArguments) throws -> Root
+    /// Retains ordered parameter labels and a factory. Labels are validated against fields when the owning type
+    /// descriptor is created; borrowed callback arguments must not escape.
     public init(parameters: [String] = [], create: @escaping (GesValueArguments) throws -> Root) {
         self.parameters = parameters
         self.create = create
@@ -42,10 +54,14 @@ public struct GameEventScriptSwiftConstructor<Root> {
 /// Immutable explicit Swift binding, reusable for the compiler catalog and runtime registry.
 /// Struct roots keep Swift value semantics; class roots retain their original identity and remain host-owned.
 public final class GameEventScriptSwiftType<Root> {
+    /// Immutable portable declaration for the compiler catalog and runtime linker.
     public let definition: GameEventScriptExternalTypeDefinition
     private let fields: [String: GameEventScriptSwiftField<Root>]
     private let constructors: [GameEventScriptSwiftConstructor<Root>]
 
+    /// Validates and indexes fields and constructor bindings for one native type.
+    ///
+    /// - Throws: An API error for invalid names, duplicate declarations or constructor labels without matching fields.
     public init(
         _ name: String, fields: [GameEventScriptSwiftField<Root>],
         constructors: [GameEventScriptSwiftConstructor<Root>] = []
@@ -83,6 +99,8 @@ public final class GameEventScriptSwiftType<Root> {
                 SwiftConstructor(definition: $0.0, type: self, create: $0.1.create)
             })
     }
+    /// Wraps a native value using this descriptor; structs retain value semantics and class roots retain their native
+    /// object identity.
     public func wrap(_ value: Root) -> GesValue { .external(SwiftExternalValue(value, type: self)) }
 
     /// Only values created by this exact descriptor may be unwrapped.
@@ -98,6 +116,7 @@ public final class GameEventScriptSwiftType<Root> {
 
 /// Heterogeneous registry entry, produced by a typed descriptor rather than an unchecked constructor.
 public struct GameEventScriptSwiftTypeBinding {
+    /// Portable declaration associated with the retained executable bindings.
     public let definition: GameEventScriptExternalTypeDefinition
     fileprivate let constructors: [any GameEventScriptExternalTypeConstructor]
 }
@@ -108,7 +127,11 @@ public struct GameEventScriptSwiftExternalTypeRegistry: GameEventScriptExternalT
 {
     private let catalog: GameEventScriptExternalTypeCatalog
     private let constructors: [String: any GameEventScriptExternalTypeConstructor]
+    /// Portable type declarations in registration order.
     public var types: [GameEventScriptExternalTypeDefinition] { catalog.types }
+    /// Builds a compiler catalog and runtime constructor index from explicit bindings.
+    ///
+    /// - Throws: An API error for duplicate type or constructor identities.
     public init(_ bindings: [GameEventScriptSwiftTypeBinding]) throws {
         catalog = try .init(bindings.map(\.definition))
         var constructors: [String: any GameEventScriptExternalTypeConstructor] = [:]
@@ -121,9 +144,13 @@ public struct GameEventScriptSwiftExternalTypeRegistry: GameEventScriptExternalT
         }
         self.constructors = constructors
     }
+    /// Returns a type declaration for a normalized name or an executable constructor for an exact reference, otherwise
+    /// nil. The type-name overload throws for invalid identifiers.
     public func resolve(_ typeName: String) throws -> GameEventScriptExternalTypeDefinition? {
         try catalog.resolve(typeName)
     }
+    /// Returns a type declaration for a normalized name or an executable constructor for an exact reference, otherwise
+    /// nil. The type-name overload throws for invalid identifiers.
     public func resolve(_ reference: GameEventScriptExternalTypeConstructorReference) -> (
         any GameEventScriptExternalTypeConstructor
     )? {

@@ -109,11 +109,6 @@ here.
 
 ## Performance and optimizer follow-ups
 
-- Investigate the C# `performance.core` allocation gate before qualifying its
-  existing profile: the pre-layout commit `5e22c67` fails three cases, and the
-  module test layout adds 424 bytes per Load in that harness while direct probes
-  and compiled Program bytes remain identical. Explain the measurement difference
-  and review the existing budgets without automatically accepting new references.
 - Treat the current performance and allocation tests as regression gates against
   the established C# and Swift profiles. In a more mature multi-runtime state, design a
   real benchmark system with representative multi-program workloads, separated

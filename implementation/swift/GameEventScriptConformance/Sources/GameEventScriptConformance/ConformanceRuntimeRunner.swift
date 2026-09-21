@@ -5,8 +5,11 @@ import GameEventScriptRuntime
 
 /// One compiler-produced Program supplied by the embedding for Runtime-only verification.
 public struct ConformanceRuntimeProgram {
+    /// Logical Program group identifier from the case sources.
     public let id: String
+    /// Already compiled immutable Program used for runtime verification.
     public let program: GameEventScriptProgram
+    /// Associates an already compiled Program with its logical source group.
     public init(id: String, program: GameEventScriptProgram) {
         self.id = id
         self.program = program
@@ -16,6 +19,8 @@ public struct ConformanceRuntimeProgram {
 /// Verifies the runtime portion of shared scenarios using already compiled Programs.
 /// This entry point does not claim or test a Swift compiler or full-port acceptance.
 public enum ConformanceRuntimeRunner {
+    /// Checks runtime scenario behavior using supplied Programs in authored group order. Compilation and performance
+    /// measurement are outside this entry point; invalid inputs are reported as case errors.
     public static func runCase(_ testCase: ConformanceCase, programs: [ConformanceRuntimeProgram])
         -> ConformanceCaseResult
     {

@@ -4,8 +4,11 @@
 /// Synchronous services for the currently executing native, extension, or script handler.
 public final class GameEventScriptContext {
     private weak var host: GameEventScriptHost?
+    /// The executing host's private mutable random stream; access is serial.
     public let random: GameEventScriptRandomGenerator
+    /// Execution and resource limits configured on the owning host.
     public let runtimeLimits: GameEventScriptRuntimeLimits
+    /// The optional host extension resolver.
     public let extensionRegistry: (any GameEventScriptExtensionRegistry)?
     let observer: (any GameEventScriptRuntimeObserver)?
     lazy var budget = GesRuntimeBudget(context: self)
@@ -19,16 +22,26 @@ public final class GameEventScriptContext {
         extensionRegistry = extensions
         self.observer = observer
     }
+    /// Number of queued messages, or zero if the owning host no longer exists.
     public var pendingMessageCount: Int { host?.pendingMessageCount ?? 0 }
+    /// Whether the owning host has no queued or active work.
     public var isIdle: Bool { host?.isIdle ?? true }
+    /// Enqueues local delivery without pumping. Returns false if the host no longer exists or rejects the message. The
+    /// name overload validates message arguments and may throw.
     @discardableResult public func emit(_ message: GameEventScriptMessage) -> Bool { host?.emit(message) ?? false }
+    /// Enqueues local delivery and attempts outbound delivery, or stages publication during initialization. Returns
+    /// separate acceptance flags. The name overload validates the message and may throw.
     @discardableResult public func publish(_ message: GameEventScriptMessage) -> GameEventScriptPublishResult {
         host?.publish(message) ?? .init(localAccepted: false, outboundAttempted: false, outboundAccepted: false)
     }
+    /// Enqueues local delivery without pumping. Returns false if the host no longer exists or rejects the message. The
+    /// name overload validates message arguments and may throw.
     @discardableResult public func emit(_ name: String, arguments: [GameEventScriptMessageArgument] = []) throws -> Bool
     {
         emit(try .init(name: name, arguments: arguments))
     }
+    /// Enqueues local delivery and attempts outbound delivery, or stages publication during initialization. Returns
+    /// separate acceptance flags. The name overload validates the message and may throw.
     @discardableResult public func publish(_ name: String, arguments: [GameEventScriptMessageArgument] = []) throws
         -> GameEventScriptPublishResult
     {

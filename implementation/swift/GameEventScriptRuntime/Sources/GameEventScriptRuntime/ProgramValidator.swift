@@ -3,6 +3,9 @@
 
 /// Complete, host-independent validation shared by reading, writing, and loading.
 public enum GameEventScriptProgramValidator {
+    /// Checks complete Program structure, references, debug data and resource metadata without resolving host imports.
+    ///
+    /// - Throws: `GameEventScriptProgramFormatError` with a stable classification on failure.
     public static func validate(_ p: GameEventScriptProgram) throws {
         if p.formatVersion != 1 { throw failure(.unsupportedFormatVersion) }
         if !GesNames.module(p.moduleName) { throw failure(.invalidProgram, 1) }

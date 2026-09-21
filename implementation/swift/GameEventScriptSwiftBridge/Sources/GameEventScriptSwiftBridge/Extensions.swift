@@ -5,8 +5,12 @@ import GameEventScriptRuntime
 
 /// One validated extension signature and its synchronous Swift implementation.
 public struct GameEventScriptSwiftExtension: GameEventScriptExtensionFunction {
+    /// Validated portable signature used during host linking.
     public let reference: GameEventScriptExtensionReference
     private let body: (GesExtensionCall) throws -> Void
+    /// Validates an extension signature and retains its synchronous implementation.
+    ///
+    /// - Throws: An API or message error for invalid names or duplicate named parameters.
     public init(
         namespace: String, name: String, parameters: [String] = [], body: @escaping (GesExtensionCall) throws -> Void
     ) throws {
@@ -15,6 +19,7 @@ public struct GameEventScriptSwiftExtension: GameEventScriptExtensionFunction {
         guard Set(named).count == named.count else { throw GameEventScriptMessageError.duplicateArgumentName }
         self.body = body
     }
+    /// Invokes the stored closure with the borrowed runtime call, propagating its error.
     public func invoke(_ call: GesExtensionCall) throws { try body(call) }
 }
 
@@ -22,6 +27,9 @@ public struct GameEventScriptSwiftExtension: GameEventScriptExtensionFunction {
 public struct GameEventScriptSwiftExtensionRegistry: GameEventScriptExtensionRegistry {
     private let functions: [String: GameEventScriptSwiftExtension]
     private let fallback: (any GameEventScriptExtensionRegistry)?
+    /// Indexes unique extension signatures and optionally delegates missing imports to a fallback.
+    ///
+    /// - Throws: An API error for duplicate signatures.
     public init(_ extensions: [GameEventScriptSwiftExtension], fallback: (any GameEventScriptExtensionRegistry)? = nil)
         throws
     {
@@ -35,6 +43,7 @@ public struct GameEventScriptSwiftExtensionRegistry: GameEventScriptExtensionReg
         self.functions = functions
         self.fallback = fallback
     }
+    /// Returns the exact registered function, otherwise queries the optional fallback and propagates resolver errors.
     public func resolve(_ reference: GameEventScriptExtensionReference) throws -> (
         any GameEventScriptExtensionFunction
     )? {

@@ -3,18 +3,23 @@
 
 /// An ordered map input or output entry. Keys compare by exact Unicode scalar sequence.
 public struct GesMapEntry: Hashable {
+    /// Text key compared by exact Unicode scalar sequence.
     public let key: String
+    /// Value associated with the key, including Nothing.
     public let value: GesValue
 
+    /// Creates an entry without changing its key or value.
     public init(key: String, value: GesValue) {
         self.key = key
         self.value = value
     }
 
+    /// Compares scalar-exact keys and structurally equal values.
     public static func == (left: Self, right: Self) -> Bool {
         GesText.scalarEqual(left.key, right.key) && left.value == right.value
     }
 
+    /// Hashes the scalar-exact key and value consistently with equality.
     public func hash(into hasher: inout Hasher) {
         GesText.hashScalars(key, into: &hasher)
         hasher.combine(value)
@@ -23,8 +28,10 @@ public struct GesMapEntry: Hashable {
 
 /// An immutable map in ascending Unicode scalar key order with last-entry-wins duplicates.
 public struct GesValueMap: Hashable {
+    /// Canonical entries in ascending Unicode scalar key order.
     public let entries: [GesMapEntry]
 
+    /// Sorts entries by scalar-exact keys and keeps the last input value for each duplicate key.
     public init(_ entries: [GesMapEntry]) {
         let sorted = entries.enumerated().sorted {
             if GesText.scalarEqual($0.element.key, $1.element.key) { return $0.offset < $1.offset }
@@ -42,11 +49,13 @@ public struct GesValueMap: Hashable {
         self.entries = normalized
     }
 
+    /// Number of distinct keys.
     public var length: Int { entries.count }
 
     /// Text keys in canonical map order.
     public var keys: [GesValue] { entries.map { .text($0.key) } }
 
+    /// Values in the same canonical order as `keys` and `entries`.
     public var values: [GesValue] { entries.map(\.value) }
 
     /// Looks up an exact scalar key, distinguishing absence from a stored Nothing.
@@ -62,6 +71,7 @@ public struct GesValueMap: Hashable {
         return nil
     }
 
+    /// Tests whether a scalar-exact key is present, including keys storing Nothing.
     public func containsKey(_ key: String) -> Bool { get(key) != nil }
 
     /// Reads an entry by its zero-based API index. Invalid indices are caller errors.

@@ -7,14 +7,18 @@ import GameEventScriptRuntime
 
 /// A runner-owned registration. All lifecycle access uses the same serialization gate as execution.
 public struct GameEventScriptSwiftRegistration: Sendable {
+    /// Stable identifier within the runner's owning host.
     public let registrationID: Int64
     private let owner: GameEventScriptSwiftHostRunner
     fileprivate init(_ id: Int64, owner: GameEventScriptSwiftHostRunner) {
         registrationID = id
         self.owner = owner
     }
+    /// Reads whether the instance or subscription is still attached under the runner's gate.
     public var isAttached: Bool { owner.isAttached(registrationID) }
+    /// Initialization result for a tracked Program, or nil while pending, detached, or for native subscriptions.
     public var startResult: GameEventScriptStartResult? { owner.startResult(registrationID) }
+    /// Idempotently detaches a registration under the serialization gate. Returns true only when this call removes it.
     @discardableResult public func detach() -> Bool { owner.detach(registrationID) }
 }
 
@@ -38,10 +42,16 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
         if host.isReady && !host.isIdle { schedule() }
         gate.unlock()
     }
+    /// Last completed pump result, read under the serialization gate; nil before the first pump.
     public var lastResult: GameEventScriptExecutionResult? { locked { result } }
+    /// Whether the owned host has no active or queued work; true after close.
     public var isIdle: Bool { locked { host?.isIdle ?? true } }
+    /// Whether the owned host successfully started; false after close.
     public var isReady: Bool { locked { host?.isReady ?? false } }
 
+    /// Starts the initial Program group under the gate, then schedules ordinary queued work on success.
+    ///
+    /// - Throws: An API error if the runner is closed or host startup preconditions fail.
     public func start() throws -> GameEventScriptStartResult {
         try locked {
             let host = try activeHost()
@@ -54,6 +64,10 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
         locked { instances[id]?.startResult }
     }
 
+    /// Transfers and enqueues a message under the gate, scheduling a pump when accepted.
+    ///
+    /// - Returns: Whether local delivery was accepted.
+    /// - Throws: An API error if the runner is closed.
     @discardableResult public func receive(_ message: sending GameEventScriptMessage) throws -> Bool {
         try locked {
             let host = try activeHost()
@@ -74,6 +88,10 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
             return .init(instance.registrationID, owner: self)
         }
     }
+    /// Transfers a native closure into the runner and registers an exact signature with optional tag filters.
+    ///
+    /// - Returns: A registration whose lifecycle uses the same gate as execution.
+    /// - Throws: An API error if closed, or a registration validation error.
     public func subscribe(
         _ signature: GameEventScriptMessageSignature, matchingTags: [String] = [], withoutTags: [String] = [],
         priority: Int = 0,

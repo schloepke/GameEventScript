@@ -3,10 +3,14 @@
 
 /// An immutable signed-64 range descriptor. Terms are computed lazily without binary64 conversion.
 public struct GesIntegerRange: Hashable {
+    /// First term of the range.
     public let from: Int64
+    /// Inclusive endpoint bound; it need not itself be a generated term.
     public let to: Int64
+    /// Signed increment; zero or a direction incompatible with the bounds gives an empty range.
     public let step: Int64
 
+    /// Creates a lazy range descriptor without enumerating its terms. The default step is one.
     public init(from: Int64, to: Int64, step: Int64 = 1) {
         self.from = from
         self.to = to
@@ -53,10 +57,14 @@ public struct GesIntegerRange: Hashable {
 
 /// An immutable binary64 range descriptor; multiplication and addition define each lazy term separately.
 public struct GesFloatRange: Hashable {
+    /// First term of the range.
     public let from: Double
+    /// Inclusive endpoint bound; it need not itself be a generated term.
     public let to: Double
+    /// Signed increment; zero or a direction incompatible with the bounds gives an empty range.
     public let step: Double
 
+    /// Creates a lazy range descriptor without enumerating its terms. The default step is one.
     public init(from: Double, to: Double, step: Double = 1) {
         self.from = GesNumber.canonicalZero(from)
         self.to = GesNumber.canonicalZero(to)

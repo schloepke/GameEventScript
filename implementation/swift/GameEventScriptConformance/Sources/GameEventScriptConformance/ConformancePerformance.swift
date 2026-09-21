@@ -5,9 +5,13 @@ import GameEventScriptRuntime
 
 /// One platform measurement in exactly the unit declared by its profile.
 public struct ConformanceMeasuredMetric: Sendable {
+    /// Stable metric identifier selected by the performance profile.
     public let id: String
+    /// Measured nonnegative finite value in the declared unit.
     public let value: Double
+    /// Unit identifier matching the expectation profile.
     public let unit: String
+    /// Creates an adapter measurement; the runner validates metric identity, unit and numeric bounds.
     public init(id: String, value: Double, unit: String) {
         self.id = id
         self.value = value
@@ -16,18 +20,30 @@ public struct ConformanceMeasuredMetric: Sendable {
 }
 /// Measurement is supplied by an adapter; the portable runner owns comparisons.
 public protocol ConformancePerformanceProvider: Sendable {
+    /// Measures the declared workload for the selected platform profile. Return exactly the expected metric set and
+    /// units. Adapter failures may throw and are reported as invalid measurement environments.
     func measure(_ test: ConformanceCase, profile: String) throws -> [ConformanceMeasuredMetric]
 }
+/// One measured metric compared with its reference and effective upper bound.
 public struct ConformancePerformanceMetricResult: Sendable {
+    /// Stable metric identifier.
     public let id: String
+    /// Observed value in the declared unit.
     public let measured: Double
+    /// Authored baseline value.
     public let reference: Double
+    /// Effective maximum after applying all declared tolerances and ceilings.
     public let allowed: Double
+    /// Shared unit of measurement and expectation.
     public let unit: String
+    /// Whether the observed value is at or below the effective upper bound.
     public var passed: Bool { measured <= allowed }
 }
+/// Performance comparisons for one case and platform profile.
 public struct ConformancePerformanceResult: Sendable {
+    /// Selected platform profile identifier.
     public let profile: String
+    /// Per-metric measurements and effective limits.
     public let metrics: [ConformancePerformanceMetricResult]
 }
 

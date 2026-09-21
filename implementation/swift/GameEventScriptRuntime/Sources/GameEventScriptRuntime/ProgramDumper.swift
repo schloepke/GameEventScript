@@ -4,6 +4,8 @@
 /// Deterministic GESA presentation of a validated Program, including retained source/debug data.
 /// Dumping neither executes code nor accesses files; it is outside the runtime hot path.
 public enum GameEventScriptProgramDumper {
+    /// Renders a validated Program as deterministic GESA text, optionally including instruction addresses. Performs no
+    /// execution or file I/O.
     public static func dump(_ program: GameEventScriptProgram, includeInstructionAddresses: Bool = false) -> String {
         GesProgramDump(program).dump(addresses: includeInstructionAddresses)
     }

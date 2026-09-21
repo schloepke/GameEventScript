@@ -16,6 +16,9 @@ def lower(name):
 
 
 def enum_values(text, name, swift=False):
+    # These registries contain numeric enum declarations. Documentation can
+    # contain braces or example assignments and must not delimit the enum body.
+    text = re.sub(r"//[^\n]*", "", text)
     match = re.search(r"enum " + name + r"\b[^\{]*\{([^}]+)\}", text, re.S)
     if not match:
         raise RuntimeError(f"Missing enum {name}")

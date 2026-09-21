@@ -32,16 +32,26 @@ public final class GameEventScriptRandomGenerator {
     private var fault: BoundaryFault = .none
     var hasActiveScopeFault: Bool { faultState != nil }
 
+    /// Creates a private deterministic stream from a signed 64-bit seed with up to 16 nested scopes.
     public convenience init(seed: Int64) { self.init(seed: seed, sequence: [], maxScopeDepth: 16) }
+    /// Copies initial draws and continues with a private PRNG when exhausted. A missing fallback seed uses fresh
+    /// entropy.
     public convenience init(sequence: [Double], fallbackSeed: Int64? = nil) {
         self.init(seed: fallbackSeed ?? Self.entropySeed(), sequence: sequence, maxScopeDepth: 16)
     }
+    /// Creates a stream from portable entropy mixing.
+    ///
+    /// - Throws: An API error if `entropy` is empty.
     public convenience init(entropy: [UInt8]) throws { self.init(seed: try Self.seedFromEntropy(entropy)) }
+    /// Creates a private stream using fresh system entropy.
     public convenience init() { self.init(seed: Self.entropySeed()) }
     init(seed: Int64, sequence: [Double], maxScopeDepth: Int) {
         state = State(seed: seed, sequence: sequence)
         self.maxScopeDepth = maxScopeDepth
     }
+    /// Deterministically mixes nonempty entropy bytes into a signed 64-bit seed.
+    ///
+    /// - Throws: An API error if `entropy` is empty.
     public static func seedFromEntropy(_ entropy: [UInt8]) throws -> Int64 {
         guard !entropy.isEmpty else { throw GameEventScriptAPIError.invalidArgument("Entropy must not be empty") }
         var state: UInt64 = 0x9e37_79b9_7f4a_7c15
@@ -61,6 +71,8 @@ public final class GameEventScriptRandomGenerator {
         // Nonempty by construction; entropy mixing has no other failure path.
         return try! seedFromEntropy(bytes)
     }
+    /// Saves the parent stream and enters a seeded scope, or a copy of the current stream when no seed is given.
+    /// Returns false on scope-limit or boundary faults.
     @discardableResult public func push(seed: Int64? = nil) -> Bool {
         if hasActiveScopeFault {
             overpushDepth += 1
@@ -76,6 +88,8 @@ public final class GameEventScriptRandomGenerator {
         if let seed { state = State(seed: seed) }
         return true
     }
+    /// Restores the parent stream, discarding draws from the nested scope. Returns false when no scope can be popped or
+    /// a boundary fault is active.
     @discardableResult public func pop() -> Bool {
         if hasActiveScopeFault {
             if overpushDepth > 0 { overpushDepth -= 1 }
@@ -92,6 +106,8 @@ public final class GameEventScriptRandomGenerator {
         parents[scopeDepth] = nil
         return true
     }
+    /// Draws an integer between the two bounds inclusively, accepting either order. Start-sequence values are converted
+    /// and clamped to those bounds.
     public func nextInclusiveInteger(_ first: Int64, _ second: Int64) -> Int64 {
         let lower = min(first, second)
         let upper = max(first, second)
@@ -100,6 +116,8 @@ public final class GameEventScriptRandomGenerator {
         let span = UInt64(bitPattern: upper &- lower) &+ 1
         return lower &+ Int64(bitPattern: nextBelow(span))
     }
+    /// Draws a binary64 number using the ordered bounds; start-sequence values are clamped. A NaN bound returns NaN and
+    /// equal bounds return that value.
     public func nextFloat(_ first: Double, _ second: Double) -> Double {
         if first.isNaN || second.isNaN { return .nan }
         let lower = min(first, second)

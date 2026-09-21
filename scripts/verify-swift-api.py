@@ -2,12 +2,14 @@
 # Copyright 2026 Stephan Schlöpke
 # SPDX-License-Identifier: Apache-2.0
 
-"""Verify declared Swift public API against explicitly approved symbol snapshots.
+"""Verify Swift public API snapshots and documentation of authored declarations.
 
 SwiftPM builds and symbol graphs stay below artifacts/swift-api. Snapshots retain
 declarations, generic requirements, availability, and public type relationships;
 source locations, documentation, compiler metadata, and synthesized members are
 excluded. This script needs only Python's standard library and the Swift toolchain.
+Authored public symbols must have nonempty documentation from their own module;
+inherited standard-library comments do not document a handwritten implementation.
 """
 
 import argparse
@@ -147,6 +149,27 @@ def snapshot(package, graphs):
     return "\n".join(header + sorted(records)) + "\n"
 
 
+def documentation_issues(package, graphs):
+    """Check actual public symbols, including enum cases and protocol requirements."""
+    missing = set()
+    for graph in graphs:
+        for symbol in graph.get("symbols", []):
+            if symbol.get("accessLevel") not in ("public", "open"):
+                continue
+            location = symbol.get("location")
+            if not location:
+                # Compiler-synthesized conformances and members have no authored declaration.
+                continue
+            comment = symbol.get("docComment", {})
+            if (comment.get("module", package) == package
+                    and any(line.get("text", "").strip() for line in comment.get("lines", []))):
+                continue
+            path = package + "." + ".".join(symbol["pathComponents"])
+            line = location.get("position", {}).get("line", 0) + 1
+            missing.add(f"{location['uri']}:{line}: missing Swift documentation for {path}")
+    return sorted(missing)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--update", action="store_true", help="approve the current declarations after review")
@@ -156,12 +179,20 @@ def main():
         parser.error("swift must be available on PATH")
 
     generated = []
+    undocumented = []
     try:
         for package in PACKAGES:
-            generated.append((package, snapshot(package, dump_graphs(swift, package))))
+            graphs = dump_graphs(swift, package)
+            generated.append((package, snapshot(package, graphs)))
+            undocumented.extend(documentation_issues(package, graphs))
     except (OSError, ValueError, KeyError, RuntimeError) as error:
         print(str(error), file=sys.stderr)
         return 2
+
+    if undocumented:
+        print("\n".join(undocumented), file=sys.stderr)
+        print(f"{len(undocumented)} public Swift declarations lack documentation.", file=sys.stderr)
+        return 1
 
     # Extract all packages successfully before changing any approved snapshot.
     if arguments.update:

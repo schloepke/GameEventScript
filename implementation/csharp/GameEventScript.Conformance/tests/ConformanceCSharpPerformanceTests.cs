@@ -99,10 +99,10 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
             throw new InvalidOperationException("C# performance cases do not currently support declarative native handlers.");
 
         var options = new GameEventScriptCompileOptions { DebugInfo = DebugInfo(testCase.Compile.DebugInfo) };
-        WarmCompile(testCase, options, testCase.Performance.CompileWarmupIterations);
+        void Warmup() => WarmCompile(testCase, options, testCase.Performance.CompileWarmupIterations);
 
-        var ast = MeasureBest(() => CreateBuilder(testCase).BuildModule(options));
-        var binary = MeasureBest(() => GesCompiler.Compile(ast.Value, options));
+        var ast = MeasureBest(() => CreateBuilder(testCase).BuildModule(options), Warmup);
+        var binary = MeasureBest(() => GesCompiler.Compile(ast.Value, options), Warmup);
         var program = testCase.Compile.BinaryRoundTrip
             ? GameEventScriptProgramReader.Read(GameEventScriptProgramWriter.ToArray(binary.Value))
             : binary.Value;
@@ -110,7 +110,7 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
         {
             var host = CreateLoadHost(testCase);
             return host.Load(program);
-        });
+        }, Warmup);
         var run = MeasureRunBest(testCase, program);
 
         var values = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -156,7 +156,7 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
         {
             var syntax = CreateBuilder(testCase).BuildModule(options);
             var program = GesCompiler.Compile(syntax, options);
-            _ = CreateHost(testCase).Load(program);
+            _ = CreateLoadHost(testCase).Load(program);
         }
     }
 
@@ -179,8 +179,8 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
         for (var index = 0; index < inputs.Length; index++)
             inputs[index] = ConformanceRuntimeValueCodec.DecodeMessage(testCase.Steps[index].Expectation.Input);
 
-        Run(host, inputs, testCase.Performance!.WarmupIterations);
         ForceFullCollection();
+        Run(host, inputs, testCase.Performance!.WarmupIterations);
         var before = GC.GetAllocatedBytesForCurrentThread();
         var started = Stopwatch.GetTimestamp();
         Run(host, inputs, testCase.Performance.Iterations);
@@ -279,20 +279,23 @@ internal sealed class ConformanceCSharpPerformanceProvider : IConformancePerform
         return result;
     }
 
-    private static Measured<T> MeasureBest<T>(Func<T> action)
+    private static Measured<T> MeasureBest<T>(Func<T> action, Action warmup)
     {
-        var best = Measure(action);
+        var best = Measure(action, warmup);
         for (var sample = 1; sample < MeasurementSamples; sample++)
         {
-            var current = Measure(action);
+            var current = Measure(action, warmup);
             if (current.Elapsed < best.Elapsed) best = current;
         }
         return best;
     }
 
-    private static Measured<T> Measure<T>(Func<T> action)
+    private static Measured<T> Measure<T>(Func<T> action, Action warmup)
     {
         ForceFullCollection();
+        // Establish the declared warm cache state after collection, independently for every sample.
+        // Do not reclaim runtime metadata between warmup and measurement.
+        warmup();
         var before = GC.GetAllocatedBytesForCurrentThread();
         var started = Stopwatch.GetTimestamp();
         var value = action();

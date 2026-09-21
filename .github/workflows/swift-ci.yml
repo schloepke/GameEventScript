@@ -40,7 +40,10 @@ jobs:
       - name: Build packages and verify shared conformance
         run: ./scripts/test-swift.sh
 
-      - name: Verify Swift API surface
+      - name: Verify Swift documentation gate controls
+        run: python3 scripts/test-swift-api.py
+
+      - name: Verify Swift API surface and documentation
         run: python3 scripts/verify-swift-api.py
 
       - name: Upload full and compact conformance results

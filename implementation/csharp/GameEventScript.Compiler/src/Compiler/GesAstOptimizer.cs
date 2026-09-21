@@ -118,12 +118,12 @@ internal static class GesAstOptimizer
         for (var index = 0; index < optimized.Length; index++)
         {
             var field = fields[index];
-            optimized[index] = field with
-            {
-                MinimumExpression = field.MinimumExpression is null ? null : OptimizeExpression(field.MinimumExpression, knownTypeNames),
-                MaximumExpression = field.MaximumExpression is null ? null : OptimizeExpression(field.MaximumExpression, knownTypeNames),
-                ComputedExpression = field.ComputedExpression is null ? null : OptimizeExpression(field.ComputedExpression, knownTypeNames)
-            };
+            var minimum = field.MinimumExpression is null ? null : OptimizeExpression(field.MinimumExpression, knownTypeNames);
+            var maximum = field.MaximumExpression is null ? null : OptimizeExpression(field.MaximumExpression, knownTypeNames);
+            var computed = field.ComputedExpression is null ? null : OptimizeExpression(field.ComputedExpression, knownTypeNames);
+            optimized[index] = ReferenceEquals(minimum, field.MinimumExpression) && ReferenceEquals(maximum, field.MaximumExpression) && ReferenceEquals(computed, field.ComputedExpression)
+                ? field
+                : field with { MinimumExpression = minimum, MaximumExpression = maximum, ComputedExpression = computed };
         }
 
         return optimized;

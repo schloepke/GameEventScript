@@ -6,6 +6,7 @@ import GameEventScriptRuntime
 /// Verifies Runtime codecs and presentation from the shared Markdown corpus.
 /// Compiler inputs are supplied independently; their compilation is not attributed to Swift.
 public enum ConformanceProgramRunner {
+    /// Compares a supplied Program's GESA dump with the case's authored expectation, returning structured mismatches.
     public static func runDumpCase(_ testCase: ConformanceCase, program: GameEventScriptProgram)
         -> ConformanceCaseResult
     {

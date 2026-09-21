@@ -5,9 +5,17 @@ import Foundation
 
 /// The fileless, synchronous parser for strict Conformance Markdown V1.
 public enum ConformanceMarkdownParser {
+    /// Parses and validates a complete Markdown conformance document under resource limits. The byte overload rejects
+    /// malformed UTF-8; no partial model is returned.
+    ///
+    /// - Throws: `ConformanceParseError` with stable code and source range.
     public static func parse(_ text: String, limits: ConformanceParserLimits = .default) throws -> ConformanceDocument {
         try parse(Array(text.utf8), limits: limits)
     }
+    /// Parses and validates a complete Markdown conformance document under resource limits. The byte overload rejects
+    /// malformed UTF-8; no partial model is returned.
+    ///
+    /// - Throws: `ConformanceParseError` with stable code and source range.
     public static func parse(_ bytes: [UInt8], limits: ConformanceParserLimits = .default) throws -> ConformanceDocument
     {
         guard limits.maxDocumentBytes > 0, bytes.count <= limits.maxDocumentBytes else {

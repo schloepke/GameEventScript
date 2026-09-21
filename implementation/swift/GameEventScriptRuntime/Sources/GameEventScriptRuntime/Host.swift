@@ -37,6 +37,10 @@ public final class GameEventScriptHost {
     private var randomBoundary = 0
     private var pumping = false
 
+    /// Creates a loading, single-caller host with a private random stream. Load initial Programs and call `start()`
+    /// before receiving messages.
+    ///
+    /// - Throws: `GameEventScriptAPIError.invalidArgument` if the random-scope limit is outside 0...65535.
     public init(
         seed: Int64? = nil, sequence: [Double] = [], limits: GameEventScriptRuntimeLimits = .init(),
         observer: (any GameEventScriptRuntimeObserver)? = nil,
@@ -56,12 +60,23 @@ public final class GameEventScriptHost {
             seed: seed ?? GameEventScriptRandomGenerator.entropySeed(), sequence: sequence,
             maxScopeDepth: limits.maxRandomScopeDepth)
     }
+    /// Creates mutable configuration for independent hosts.
     public static func createBuilder() -> GameEventScriptHostBuilder { .init() }
+    /// Whether the complete initial load group started successfully; later instance failures do not clear readiness.
     public private(set) var isReady = false
+    /// Number of queued ordinary and initialization messages, excluding an active dispatch.
     public var pendingMessageCount: Int { queue.count + startupQueue.count }
+    /// Whether no dispatch is active and both message queues are empty; this does not imply readiness.
     public var isIdle: Bool { active == nil && queue.count == 0 && startupQueue.count == 0 }
 
     /// Validates and links before atomically publishing registrations and initialization.
+    /// Before `start()`, the instance joins the initial load group. On a ready host, its initialization enters
+    /// the normal FIFO; `startResult` remains nil until initialization completes. Failure removes that instance
+    /// and its captured deliveries while preserving other recipients.
+    ///
+    /// - Returns: An idempotently detachable Program instance; loading itself does not pump messages.
+    /// - Throws: A format or linking error for invalid/unresolvable Programs, or an API error during
+    ///   initialization, script execution or after failed initial startup. Failed linking adds no registrations.
     public func load(_ program: GameEventScriptProgram, priority: Int = 0) throws -> GameEventScriptInstance {
         guard !starting, !executingScript, startupResult == nil || isReady else {
             throw GameEventScriptAPIError.invalidOperation(
@@ -105,6 +120,11 @@ public final class GameEventScriptHost {
         }
         return instance
     }
+    /// Registers a synchronous native handler for an exact signature and optional tag filters. Higher priority runs
+    /// first, then registration order.
+    ///
+    /// - Returns: An idempotently detachable subscription.
+    /// - Throws: An API error for invalid tag names or exhausted registration IDs.
     public func subscribe(
         _ signature: GameEventScriptMessageSignature, handler: any GameEventScriptNativeMessageHandler,
         matchingTags: [String] = [], withoutTags: [String] = [], priority: Int = 0
@@ -113,6 +133,10 @@ public final class GameEventScriptHost {
             signature, handler: handler, matchingTags: matchingTags, withoutTags: withoutTags, priority: priority,
             matchArguments: true)
     }
+    /// Registers a native handler matching a message name with any argument labels and optional tag filters.
+    ///
+    /// - Returns: An idempotently detachable subscription.
+    /// - Throws: An API error for an empty name, invalid tags or exhausted registration IDs.
     public func subscribeMessageName(
         _ name: String, handler: any GameEventScriptNativeMessageHandler,
         matchingTags: [String] = [], withoutTags: [String] = [], priority: Int = 0
@@ -138,10 +162,17 @@ public final class GameEventScriptHost {
         native[id] = entry
         return GameEventScriptSubscription(host: self, id: id)
     }
+    /// Enqueues an external message using the current subscription snapshot. Returns false before readiness, for
+    /// initialization messages, or when the queue rejects delivery.
     @discardableResult public func receive(_ message: GameEventScriptMessage) -> Bool {
         if !isReady || message.name.isEmpty || message.name == "initialization" { return false }
         return enqueue(message)
     }
+    /// Processes queued work up to an opcode budget, preserving a paused script for the next frame. Native callbacks
+    /// execute atomically.
+    ///
+    /// - Returns: Execution state, counters and an optional runtime diagnostic.
+    /// - Throws: An API error for a nonpositive budget, a host that is not ready or reentrant execution.
     public func executeFrame(opcodeBudget: Int) throws -> GameEventScriptExecutionResult {
         guard opcodeBudget > 0 else { throw GameEventScriptAPIError.invalidArgument("Opcode budget must be positive") }
         guard isReady else {
@@ -255,6 +286,10 @@ public final class GameEventScriptHost {
             executedOpcodes: opcodes, processedMessages: processed, emittedMessages: emitted,
             publishedMessages: published, diagnostic: diagnostic)
     }
+    /// Pumps queued work until idle, a runtime fault or a runtime limit; it does not start a loading host.
+    ///
+    /// - Returns: Execution state and counters for this call.
+    /// - Throws: An API error for invalid lifecycle or reentrant execution.
     public func runToCompletion() throws -> GameEventScriptExecutionResult {
         var totalOpcodes = 0
         var totalProcessed = 0
@@ -426,12 +461,17 @@ public final class GameEventScriptHost {
     }
 }
 
+/// A host-local loaded Program handle. Detachment is idempotent and does not revoke ordinary captured deliveries.
 public final class GameEventScriptInstance {
     private weak var host: GameEventScriptHost?
+    /// Stable registration identifier, unique within the owning host.
     public let registrationID: Int64
     let linked: GesLinkedProgram
+    /// The immutable Program shared by this instance.
     public var program: GameEventScriptProgram { linked.program }
+    /// Whether the owning host still registers this instance.
     public var isAttached: Bool { host?.isAttached(registrationID) ?? false }
+    /// Nil while initialization is pending; retains its success or failure result after completion.
     public internal(set) var startResult: GameEventScriptStartResult? {
         didSet { initializationFailed = startResult != nil && startResult?.state != .ready }
     }
@@ -441,16 +481,23 @@ public final class GameEventScriptInstance {
         registrationID = id
         self.linked = linked
     }
+    /// Removes this instance from future subscription snapshots. Returns true only when this call removed a
+    /// registration.
     @discardableResult public func detach() -> Bool { host?.detach(registrationID) ?? false }
 }
+/// An idempotently detachable native subscription identified within its owning host.
 public final class GameEventScriptSubscription {
     private weak var host: GameEventScriptHost?
+    /// Stable registration identifier, unique within the owning host.
     public let registrationID: Int64
+    /// Whether the host still registers this native handler.
     public var isSubscribed: Bool { host?.isSubscribed(registrationID) ?? false }
     init(host: GameEventScriptHost, id: Int64) {
         self.host = host
         registrationID = id
     }
+    /// Removes this handler from future subscription snapshots. Returns true only when this call removed it; already
+    /// captured deliveries remain valid.
     @discardableResult public func unsubscribe() -> Bool { host?.unsubscribe(registrationID) ?? false }
 }
 
@@ -556,7 +603,13 @@ private struct GesDeferredPublication {
 }
 
 extension GameEventScriptHost {
-    /// Initializes the initial load group without dispatching its emitted messages. Repeated calls return the original outcome.
+    /// Initializes the initial load group in Load order without dispatching its emitted messages.
+    /// The host becomes ready only if the entire group succeeds; staged outbound publications are then committed.
+    /// On failure the host stays unready and initial Program registrations and staged deliveries are discarded.
+    /// Repeated non-reentrant calls return the original outcome.
+    ///
+    /// - Returns: The retained group initialization result, including runtime failures and limit violations.
+    /// - Throws: An API error if startup or pumping is reentered.
     public func start() throws -> GameEventScriptStartResult {
         guard !pumping, !starting else {
             throw GameEventScriptAPIError.invalidOperation("A host cannot be started recursively")

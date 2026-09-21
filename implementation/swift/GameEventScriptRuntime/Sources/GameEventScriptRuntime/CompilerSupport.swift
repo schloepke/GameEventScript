@@ -3,10 +3,13 @@
 
 /// Shared implementation boundary for the separately packaged compiler.
 @_spi(Compiler) public enum GameEventScriptCompilerSupport {
+    /// Recognizes a source numeric literal using the runtime's numeric rules; returns nil for invalid input.
     public static func number(_ text: String, percentage: Bool = false) -> GesValue? {
         TextNumberCast.read(text, percentage: percentage, allowGrouping: false)
     }
+    /// Applies the source Number cast, including text parsing and invalid-input-to-Nothing conversion.
     public static func castNumber(_ value: GesValue) -> GesValue { GesCasts.number(value) }
+    /// Evaluates a supported constant arithmetic operation; returns nil for an unsupported opcode.
     public static func arithmetic(_ opcode: GameEventScriptBytecodeOpCode, _ left: GesValue, _ right: GesValue)
         -> GesValue?
     {
@@ -18,8 +21,13 @@
         default: return nil
         }
     }
+    /// Decodes a complete quoted source Text literal, or returns nil for invalid syntax or escapes.
     public static func quotedText(_ text: String) -> String? { GesLiteralParser.sourceText(text) }
+    /// Computes the portable SHA-256 digest used by compiler source metadata.
     public static func sha256(_ bytes: [UInt8]) -> [UInt8] { GesSha256.digest(bytes) }
+    /// Assembles and validates a V1 Program from compiler-produced transport data.
+    ///
+    /// - Throws: `GameEventScriptProgramFormatError` for inconsistent data or resource metadata.
     public static func program(
         moduleName: String, programVersion: UInt64, requiredRegisterCount: UInt16,
         requiredCallStackDepth: UInt16, strings: [String], indexLists: [[UInt16]],
@@ -58,6 +66,7 @@ extension GameEventScriptCompilerSupport {
             }
         }
     }
+    /// Returns operand positions referencing index lists, selecting text lists or register lists with `text`.
     public static func listSlots(_ instruction: GameEventScriptBytecodeInstruction, text: Bool) -> [Int] {
         instruction.operands.compactMap { operand in
             guard operand.isList && operand.isTextList == text else { return nil }
@@ -70,6 +79,7 @@ extension GameEventScriptCompilerSupport {
             }
         }
     }
+    /// Returns operand positions referencing individual string constants.
     public static func textSlots(_ instruction: GameEventScriptBytecodeInstruction) -> [Int] {
         instruction.operands.compactMap { operand in operand.isString ? (operand == .customTypeName ? 2 : 1) : nil }
     }

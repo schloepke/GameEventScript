@@ -3,12 +3,18 @@
 
 /// Canonical little-endian `.gesb` encoding, independent of host state and memory layout.
 public enum GameEventScriptProgramWriter {
+    /// Validates a Program and computes its canonical encoded byte count without producing the binary buffer.
+    ///
+    /// - Throws: `GameEventScriptProgramFormatError` for invalid Program data.
     public static func encodedSize(_ program: GameEventScriptProgram) throws -> Int {
         try GameEventScriptProgramValidator.validate(program)
         var output = GesBinaryOutput(countOnly: true)
         try encode(program, &output, fileSize: 0)
         return output.count
     }
+    /// Validates and encodes a Program as canonical little-endian `.gesb` V1 bytes.
+    ///
+    /// - Throws: `GameEventScriptProgramFormatError` for invalid Program data.
     public static func bytes(_ program: GameEventScriptProgram) throws -> [UInt8] {
         let size = try encodedSize(program)
         var output = GesBinaryOutput(capacity: size)

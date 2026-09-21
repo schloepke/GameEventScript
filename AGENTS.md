@@ -55,6 +55,12 @@ Every public C# type and member requires valid XML documentation. Missing or
 malformed XML documentation is a build error and must not be hidden with
 `#pragma`.
 
+Every authored public Swift declaration requires meaningful `///` documentation,
+including enum cases, protocol requirements and bridge extensions. Document
+lifetimes, failure behavior and conversion guarantees where relevant. The Swift
+symbol-graph API gate rejects missing/empty comments and comments merely inherited
+from another module; compiler-synthesized members are exempt.
+
 Licensing follows `LICENSING.md`. Use exactly `Copyright 2026 Stephan Schlöpke`
 and `SPDX-License-Identifier: Apache-2.0`, retain third-party notices, and honor
 the documented generated, strict-format, and binary exclusions.
@@ -234,8 +240,8 @@ current C# implementation, not cross-platform benchmark claims.
 Verified baseline (Release, 2026-09-21):
 
 ```text
-2006/2006 non-performance test executions passed
-31/31 allocation test executions passed, including the independent zero-allocation hot path
+2007/2007 non-performance test executions passed
+32/32 allocation test executions passed, including the independent zero-allocation hot path
 1495 shared Markdown Conformance cases in 94 documents
 ```
 

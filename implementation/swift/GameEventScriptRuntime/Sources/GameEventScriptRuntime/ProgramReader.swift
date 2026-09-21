@@ -3,6 +3,10 @@
 
 /// Bounded, fileless decoding of a complete `.gesb` V1 image.
 public enum GameEventScriptProgramReader {
+    /// Decodes and validates a complete `.gesb` byte buffer under the supplied retention and resource limits.
+    ///
+    /// - Returns: An immutable reusable Program.
+    /// - Throws: `GameEventScriptProgramFormatError` with a stable code and available location context.
     public static func read(_ bytes: [UInt8], options: GameEventScriptProgramReadOptions = .init()) throws
         -> GameEventScriptProgram
     {

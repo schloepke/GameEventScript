@@ -5,20 +5,29 @@ import GameEventScriptRuntime
 
 /// Invalid corpus or result identities cannot be exported as an acceptance artifact.
 public enum ConformanceReportError: Error {
+    /// Corpus identity cannot be formed because documents or case identities are invalid.
     case invalidCorpus
+    /// Result identities or case metadata do not match the supplied corpus.
     case inconsistentResults
 }
 
 /// Identity of the exact authored Markdown corpus, independent of discovery order.
 public struct ConformanceCorpusIdentity: Sendable {
+    /// Common Markdown schema version of the identified documents.
     public let markdownFormatVersion: Int
+    /// Lowercase SHA-256 of the canonical corpus identity framing and source bytes.
     public let sha256: String
+    /// Number of uniquely identified documents.
     public let documentCount: Int
+    /// Number of uniquely identified cases.
     public let caseCount: Int
 }
 
 /// Canonical report and cross-language identity output. No files are opened here.
 public enum ConformanceReportWriter {
+    /// Hashes the exact authored corpus in canonical suite order.
+    ///
+    /// - Throws: `ConformanceReportError.invalidCorpus` for an empty, duplicate or inconsistent corpus.
     public static func identify(_ documents: [ConformanceDocument]) throws -> ConformanceCorpusIdentity {
         guard !documents.isEmpty, Set(documents.map(\.suiteID)).count == documents.count,
             Set(documents.map(\.formatVersion)).count == 1
@@ -44,6 +53,9 @@ public enum ConformanceReportWriter {
             documentCount: documents.count, caseCount: cases.count)
     }
 
+    /// Writes canonical cross-language acceptance JSON tied to the exact corpus identity.
+    ///
+    /// - Throws: `ConformanceReportError` if the corpus or result identities are inconsistent.
     public static func crossLanguage(_ documents: [ConformanceDocument], report: ConformanceRunReport) throws -> String
     {
         let identity = try identify(documents)
@@ -87,6 +99,7 @@ public enum ConformanceReportWriter {
             ]))
     }
 
+    /// Renders the complete machine-readable JSON report without file I/O.
     public static func full(_ report: ConformanceRunReport) -> String {
         let entries = report.cases.map { result -> ConformanceData in
             let testCase = result.testCase
@@ -140,6 +153,7 @@ public enum ConformanceReportWriter {
             ]))
     }
 
+    /// Renders a human-readable Markdown report without file I/O.
     public static func markdown(_ report: ConformanceRunReport) -> String {
         var result = "# Swift Conformance results\n\n"
         result += "Capabilities: " + report.capabilities.joined(separator: ", ") + ".\n\n"

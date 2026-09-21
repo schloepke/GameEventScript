@@ -97,6 +97,17 @@ use their macOS ARM64 profile and remain outside the `Allocation` category.
 `scripts/test-csharp-performance.sh` runs test projects serially so separate
 assemblies do not compete with elapsed-time measurements.
 
+Each elapsed-profile sample performs a full collection **before** its declared
+warmup, then measures without another forced collection. AST, binary and Load
+samples each repeat `compileWarmupIterations` across the compile/load pipeline;
+dispatch samples warm their own fresh host using `warmupIterations`. Zero warmup
+still means zero warmup. This measures warmed execution when the corpus requests
+it, rather than implicitly measuring reclaimed reflection caches after warmup.
+Three samples are taken and the fastest sample supplies both elapsed time and
+its corresponding allocation count. Host construction is included in Load;
+warmup, collection and measurement setup are excluded. No test-discovery metadata
+is pinned and no reference is adjusted automatically.
+
 The ordinary Markdown corpus uses an echo provider for performance expectations
 and verifies correctness and report structure only. Those echoed numbers are
 not measurements and cannot qualify any allocation profile. Generated received

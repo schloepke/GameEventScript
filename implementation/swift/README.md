@@ -80,7 +80,8 @@ invoked by absolute path from another working directory:
 | `./scripts/uninstall-swift-tool.sh` | Remove the owned Swift CLI installation |
 | `./scripts/test-swift.sh` | Export C# interoperability fixtures, run native tests and strict shared Conformance |
 | `./scripts/test-swift-performance.sh` | Verify the calibrated Release performance profile |
-| `python3 scripts/verify-swift-api.py` | Verify approved public API snapshots |
+| `python3 scripts/verify-swift-api.py` | Verify approved public API snapshots and public Swift documentation |
+| `python3 scripts/test-swift-api.py` | Verify the documentation gate's positive and negative controls |
 | `python3 scripts/test-swift-incremental.py` | Verify added/renamed/removed dependency sources and unchanged-build object reuse |
 | `python3 scripts/verify-swift-dependencies.py` | Verify direct target dependencies for imports, including native tests |
 | `python3 scripts/verify-swift-bytecode.py` | Verify the shared opcode/operand registry |
@@ -116,6 +117,12 @@ Conformance report. Separately it exports C#-compiled binary inputs and verifies
 them against the same Markdown expectations in the Swift Runtime. Those manifests
 include both binary SHA-256 and complete Markdown-document SHA-256; no expected
 results are exported from C#. Neither Compiler nor Runtime depends on .NET.
+
+Every authored public declaration has a `///` documentation comment, including
+properties, initializers, enum cases, protocol requirements and bridge extensions.
+These comments are available in Xcode Quick Help and Swift symbol graphs. The API
+gate rejects missing or empty comments and comments merely inherited from another
+module for handwritten implementations. Compiler-synthesized members are excluded.
 
 The API gate compares all four library packages' declared exported symbols with
 `api/*.approved.txt`. Update snapshots explicitly after reviewing API changes:

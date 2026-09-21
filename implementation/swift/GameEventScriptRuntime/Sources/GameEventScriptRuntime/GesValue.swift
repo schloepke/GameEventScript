@@ -3,8 +3,16 @@
 
 /// Portable quantity units. The names do not depend on the embedding platform.
 public enum GesUnit: String, Hashable {
-    case none, meter, second, degree
+    /// A unitless value.
+    case none
+    /// Distance measured in meters.
+    case meter
+    /// Duration measured in seconds.
+    case second
+    /// Angle measured in degrees.
+    case degree
 
+    /// Portable text suffix: m, s, °, or an empty string for unitless values.
     public var suffix: String {
         switch self {
         case .none: ""
@@ -17,16 +25,56 @@ public enum GesUnit: String, Hashable {
 
 /// Exact storage discriminants; integer and binary64 range payloads remain distinct.
 public enum GesValueKind: Hashable {
-    case nothing, boolean, integer, float, percentage, text, tag, vector, point
-    case dice, list, map, record, integerRange, floatRange, message, handler, series, external
+    /// Absence of a value.
+    case nothing
+    /// Boolean value.
+    case boolean
+    /// Exact signed Int64 number.
+    case integer
+    /// IEEE 754 binary64 number.
+    case float
+    /// Binary64 ratio carrying Percentage kind.
+    case percentage
+    /// Unicode text.
+    case text
+    /// Validated tag name.
+    case tag
+    /// Three-coordinate vector.
+    case vector
+    /// Three-coordinate point.
+    case point
+    /// Descending Int32 dice rolls.
+    case dice
+    /// Ordered immutable value collection.
+    case list
+    /// Canonical Text-keyed value map.
+    case map
+    /// A script record carrying its declared type name and fields.
+    case record
+    /// A lazy range with exact Int64 bounds and step.
+    case integerRange
+    /// A lazy range with binary64 bounds and step.
+    case floatRange
+    /// Message signature, arguments and tags.
+    case message
+    /// Message-handler signature.
+    case handler
+    /// Lazy built-in numeric series.
+    case series
+    /// A host-provided external value.
+    case external
 }
 
 /// An immutable vector or point's binary64 coordinates.
 public struct GesSpatialValue: Hashable {
+    /// Binary64 x coordinate.
     public let x: Double
+    /// Binary64 y coordinate.
     public let y: Double
+    /// Binary64 z coordinate.
     public let z: Double
 
+    /// Creates coordinates, normalizing signed zero; omitted y and z coordinates are zero.
     public init(x: Double, y: Double = 0, z: Double = 0) {
         self.x = GesNumber.canonicalZero(x)
         self.y = GesNumber.canonicalZero(y)
@@ -36,23 +84,29 @@ public struct GesSpatialValue: Hashable {
 
 /// Invalid arguments to public value factories.
 public enum GesValueError: Error, Equatable {
+    /// The associated name violates the portable lowercase tag-name grammar.
     case invalidTag(String)
 }
 
 /// Immutable metadata for a built-in series; execution of series terms belongs to the VM.
 public struct GesSeriesValue: Hashable {
+    /// Portable series signature identifying the built-in series.
     public let signatureID: String
+    /// Signed term offset applied before series evaluation.
     public let offset: Int64
 
+    /// Creates a series descriptor with a signature and optional term offset.
     public init(signatureID: String, offset: Int64 = 0) {
         self.signatureID = signatureID
         self.offset = offset
     }
 
+    /// Compares scalar-exact series signatures and exact term offsets.
     public static func == (left: Self, right: Self) -> Bool {
         GesText.scalarEqual(left.signatureID, right.signatureID) && left.offset == right.offset
     }
 
+    /// Hashes the scalar-exact signature and offset consistently with equality.
     public func hash(into hasher: inout Hasher) {
         GesText.hashScalars(signatureID, into: &hasher)
         hasher.combine(offset)
@@ -92,6 +146,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
     }
 
     private let storage: Storage
+    /// Quantity unit carried by numeric or spatial storage.
     public let unit: GesUnit
 
     private init(_ storage: Storage, unit: GesUnit = .none) {
@@ -99,8 +154,11 @@ public struct GesValue: Hashable, CustomStringConvertible {
         self.unit = unit
     }
 
+    /// The canonical absence value.
     public static var nothing: Self { Self(.nothing) }
+    /// Creates a Boolean value.
     public static func boolean(_ value: Bool) -> Self { Self(.boolean(value)) }
+    /// Creates an exact signed Int64 value with an optional quantity unit.
     public static func integer(_ value: Int64, unit: GesUnit = .none) -> Self { Self(.integer(value), unit: unit) }
 
     /// Creates a number, normalizing NaN, zero, and finite integral Int64 values.
@@ -116,48 +174,66 @@ public struct GesValue: Hashable, CustomStringConvertible {
         return Self(.percentage(GesNumber.canonicalZero(ratio)))
     }
 
+    /// Preserves text verbatim; equality uses Unicode scalars rather than canonical-equivalence normalization.
     public static func text(_ value: String) -> Self { Self(.text(ScalarText(value: value))) }
 
+    /// Creates a tag from its name without a leading #.
+    ///
+    /// - Throws: `GesValueError.invalidTag` when the name violates the lowercase portable grammar.
     public static func tag(_ name: String) throws -> Self {
         guard GesText.isLowerName(name) else { throw GesValueError.invalidTag(name) }
         return Self(.tag(ScalarText(value: name)))
     }
 
+    /// Creates a binary64 vector with optional unit. Any NaN coordinate yields Nothing; signed zeros are normalized.
     public static func vector(x: Double, y: Double = 0, z: Double = 0, unit: GesUnit = .none) -> Self {
         guard !x.isNaN, !y.isNaN, !z.isNaN else { return .nothing }
         return Self(.vector(GesSpatialValue(x: x, y: y, z: z)), unit: unit)
     }
 
+    /// Creates a binary64 point with optional unit. Any NaN coordinate yields Nothing; signed zeros are normalized.
     public static func point(x: Double, y: Double = 0, z: Double = 0, unit: GesUnit = .none) -> Self {
         guard !x.isNaN, !y.isNaN, !z.isNaN else { return .nothing }
         return Self(.point(GesSpatialValue(x: x, y: y, z: z)), unit: unit)
     }
 
+    /// Copies and sorts supplied Int32 rolls in descending order without drawing random numbers.
     public static func dice(_ rolls: [Int32]) -> Self { Self(.dice(rolls.sorted(by: >))) }
+    /// Creates an immutable ordered list of values.
     public static func list(_ values: [GesValue]) -> Self { Self(.list(values)) }
+    /// Creates a map in scalar key order, keeping the last entry for duplicate keys.
     public static func map(_ entries: [GesMapEntry]) -> Self { Self(.map(GesValueMap(entries))) }
+    /// Creates record storage with a type name and canonical field map; does not invoke a script constructor.
     public static func record(typeName: String, entries: [GesMapEntry]) -> Self {
         Self(.record(ScalarText(value: typeName), GesValueMap(entries)))
     }
 
+    /// Creates an exact lazy Int64 range; a zero step or incompatible direction yields the canonical empty range.
     public static func integerRange(from: Int64, to: Int64, step: Int64 = 1) -> Self {
         let range = GesIntegerRange(from: from, to: to, step: step)
         return Self(.integerRange(range.count == 0 ? GesIntegerRange(from: 0, to: 0, step: 0) : range))
     }
 
+    /// Creates a lazy binary64 range. Nonfinite bounds or step yield Nothing; empty results use the canonical empty
+    /// integer range.
     public static func floatRange(from: Double, to: Double, step: Double = 1) -> Self {
         guard from.isFinite, to.isFinite, step.isFinite else { return .nothing }
         let range = GesFloatRange(from: from, to: to, step: step)
         return range.count == 0 ? .integerRange(from: 0, to: 0, step: 0) : Self(.floatRange(range))
     }
 
+    /// Wraps a message as a value.
     public static func message(_ value: GameEventScriptMessage) -> Self { Self(.message(value)) }
+    /// Wraps a message signature as a Handler value.
     public static func handler(_ value: GameEventScriptMessageSignature) -> Self { Self(.handler(value)) }
+    /// Wraps a built-in series descriptor without evaluating terms.
     public static func series(_ value: GesSeriesValue) -> Self { Self(.series(value)) }
 
+    /// Wraps a host-provided external value and captures its declared type definition.
     public static func external(_ value: any GameEventScriptExternalValue) -> Self {
         Self(.external(GesExternalStorage(value: value)))
     }
+    /// Underlying host value for external storage, otherwise nil.
     public var externalValue: (any GameEventScriptExternalValue)? {
         if case .external(let storage) = storage { storage.value } else { nil }
     }
@@ -174,6 +250,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         return nil
     }
 
+    /// Exact storage kind, including integer versus binary64 distinctions.
     public var kind: GesValueKind {
         switch storage {
         case .nothing: .nothing
@@ -198,6 +275,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         }
     }
 
+    /// Whether storage participates in numeric conversion: Boolean, integer, binary64, Percentage or Dice.
     public var isNumeric: Bool {
         switch storage {
         case .boolean, .integer, .float, .percentage, .dice: true
@@ -205,9 +283,12 @@ public struct GesValue: Hashable, CustomStringConvertible {
         }
     }
 
+    /// Whether the value represents absence.
     public var isNothing: Bool { kind == .nothing }
+    /// Whether a quantity unit other than none is attached.
     public var hasUnit: Bool { unit != .none }
 
+    /// False for Nothing or an empty text/collection/range; true for other values, including false and zero.
     public var hasValue: Bool {
         switch storage {
         case .nothing: false
@@ -221,6 +302,8 @@ public struct GesValue: Hashable, CustomStringConvertible {
         }
     }
 
+    /// Applies the portable Boolean conversion. Text accepts 1 or ASCII case-insensitive true; unsupported values yield
+    /// false.
     public var asBoolean: Bool {
         switch storage {
         case .boolean(let value): value
@@ -234,6 +317,8 @@ public struct GesValue: Hashable, CustomStringConvertible {
         }
     }
 
+    /// Numeric projection of Boolean, Number, Percentage or summed Dice; other storage yields NaN. Text parsing belongs
+    /// to the language cast operation.
     public var asNumber: Double {
         switch storage {
         case .boolean(let value): value ? 1 : 0
@@ -244,6 +329,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         }
     }
 
+    /// Preserves exact integer storage; otherwise saturates the numeric projection to Int64, with NaN becoming zero.
     public var asInteger: Int64 {
         if case .integer(let value) = storage { return value }
         return GesNumber.saturatedInteger(asNumber)
@@ -266,39 +352,53 @@ public struct GesValue: Hashable, CustomStringConvertible {
         return Int(min(count, Int64(Int32.max)))
     }
 
+    /// Exact Int64 payload when stored as integer, otherwise nil.
     public var integerValue: Int64? { if case .integer(let value) = storage { value } else { nil } }
+    /// Binary64 payload for Number or Percentage storage, otherwise nil.
     public var floatValue: Double? {
         switch storage {
         case .float(let value), .percentage(let value): value
         default: nil
         }
     }
+    /// Unquoted text or bare tag name, otherwise nil.
     public var textValue: String? {
         switch storage {
         case .text(let value), .tag(let value): value.value
         default: nil
         }
     }
+    /// Coordinates for a Vector or Point, otherwise nil.
     public var spatialValue: GesSpatialValue? {
         switch storage {
         case .vector(let value), .point(let value): value
         default: nil
         }
     }
+    /// Spatial x coordinate, or zero for non-spatial values.
     public var x: Double { spatialValue?.x ?? 0 }
+    /// Spatial y coordinate, or zero for non-spatial values.
     public var y: Double { spatialValue?.y ?? 0 }
+    /// Spatial z coordinate, or zero for non-spatial values.
     public var z: Double { spatialValue?.z ?? 0 }
+    /// Stored List elements, or nil for other kinds.
     public var listValue: [GesValue]? { if case .list(let value) = storage { value } else { nil } }
+    /// Stored descending dice rolls, or nil for other kinds.
     public var diceRolls: [Int32]? { if case .dice(let value) = storage { value } else { nil } }
+    /// Stored Map or Record fields, otherwise nil; does not invoke external field getters.
     public var asMap: GesValueMap? {
         switch storage {
         case .map(let value), .record(_, let value): value
         default: nil
         }
     }
+    /// Stored List elements, or an empty array for other kinds.
     public var asList: [GesValue] { listValue ?? [] }
+    /// Stored Dice rolls, or an empty array for other kinds.
     public var asDice: [Int32] { diceRolls ?? [] }
+    /// Canonical Map or Record entries, otherwise nil.
     public var mapEntries: [GesMapEntry]? { asMap?.entries }
+    /// Declared Record or external type name, otherwise nil.
     public var customTypeName: String? {
         switch storage {
         case .record(let name, _): name.value
@@ -306,16 +406,22 @@ public struct GesValue: Hashable, CustomStringConvertible {
         default: nil
         }
     }
+    /// Exact integer range descriptor, or nil for other kinds.
     public var integerRangeValue: GesIntegerRange? { if case .integerRange(let value) = storage { value } else { nil } }
+    /// Binary64 range descriptor, or nil for other kinds.
     public var floatRangeValue: GesFloatRange? { if case .floatRange(let value) = storage { value } else { nil } }
+    /// Stored Message, or nil for other kinds.
     public var messageValue: GameEventScriptMessage? { if case .message(let value) = storage { value } else { nil } }
+    /// Stored Handler signature, or nil for other kinds.
     public var signatureValue: GameEventScriptMessageSignature? {
         if case .handler(let value) = storage { value } else { nil }
     }
+    /// Stored series descriptor, or nil for other kinds.
     public var seriesValue: GesSeriesValue? { if case .series(let value) = storage { value } else { nil } }
 
     /// Typed API text view. Tags expose their name; use toText for the language representation with '#'.
     public var asText: String { textValue ?? toText }
+    /// The same portable language text representation as `toText`.
     public var description: String { toText }
 
     /// Language text representation, quoting nested Text values and preserving canonical map ordering.

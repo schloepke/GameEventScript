@@ -5,19 +5,29 @@ import GameEventScriptRuntime
 
 /// A stable assertion difference, independent of platform exception text.
 public struct ConformanceMismatch: Sendable {
+    /// Structured assertion path locating the differing value.
     public let path: String
+    /// Expected value when present.
     public let expected: String?
+    /// Observed value when present.
     public let actual: String?
 }
 
 /// The outcome of one independently executed portable case.
 public struct ConformanceCaseResult: Sendable {
+    /// The authored case that produced this result.
     public let testCase: ConformanceCase
+    /// Stable outcome: passed, failed, skipped or error.
     public let status: String
+    /// Stable runner or assertion classification.
     public let code: String
+    /// Required capabilities unavailable in the selected environment.
     public let missingCapabilities: [String]
+    /// Structured assertion differences.
     public let mismatches: [ConformanceMismatch]
+    /// Optional adapter troubleshooting details, not a portable assertion key.
     public let technicalDetails: String?
+    /// Measured profile results, or nil when no measurements were made.
     public let performance: ConformancePerformanceResult?
     init(
         testCase: ConformanceCase, status: String, code: String, missingCapabilities: [String],
@@ -35,14 +45,20 @@ public struct ConformanceCaseResult: Sendable {
 
 /// A bounded resource lookup outcome supplied by the embedding.
 public enum ConformanceResourceResult: Sendable {
+    /// Resource bytes returned by the embedding.
     case found([UInt8])
+    /// The requested resource identifier is unavailable.
     case notFound
+    /// The resource exceeds the requested byte bound.
     case limitExceeded
+    /// Resource resolution failed with implementation-specific technical detail.
     case error(String)
 }
 
 /// Resolves portable IDs without exposing paths or file access to the runner.
 public protocol ConformanceResourceResolver: Sendable {
+    /// Synchronously resolves a portable resource ID within `maximumBytes`; filesystem mapping belongs to the
+    /// embedding, not the runner.
     func resolve(resourceID: String, maximumBytes: Int) -> ConformanceResourceResult
 }
 
@@ -53,11 +69,18 @@ public struct ConformanceEnvironment: Sendable {
         "compiler", "program-binary", "host", "vm", "message-api", "value-api", "external-types",
         "native-handlers", "publish-sink", "observer", "bytecode-snapshot",
     ]
+    /// Deduplicated, sorted capabilities advertised by this environment.
     public let capabilities: [String]
+    /// Optional bounded resolver for binary fixture resources.
     public let resourceResolver: (any ConformanceResourceResolver)?
+    /// Maximum bytes accepted from a resource lookup; must be positive.
     public let maximumResourceBytes: Int
+    /// Optional exact platform profile identifier for measurements.
     public let performanceProfile: String?
+    /// Optional native measurement adapter; required when performance is advertised.
     public let performanceProvider: (any ConformancePerformanceProvider)?
+    /// Creates an execution environment, normalizing capability order. The runner validates capability and measurement
+    /// configuration before execution.
     public init(
         capabilities: [String] = Self.supportedCapabilities,
         resourceResolver: (any ConformanceResourceResolver)? = nil,
@@ -74,24 +97,30 @@ public struct ConformanceEnvironment: Sendable {
 
 /// A complete execution report, including cases whose Core capabilities are unavailable.
 public struct ConformanceRunReport: Sendable {
+    /// Capabilities advertised for this run.
     public let capabilities: [String]
+    /// Case results in execution order.
     public let cases: [ConformanceCaseResult]
+    /// Measurement profile selected for this run, if any.
     public let performanceProfile: String?
     init(capabilities: [String], cases: [ConformanceCaseResult], performanceProfile: String? = nil) {
         self.capabilities = capabilities
         self.cases = cases
         self.performanceProfile = performanceProfile
     }
+    /// Aggregate outcome: error takes precedence over failed, then passed, then skipped.
     public var status: String {
         if cases.contains(where: { $0.status == "error" }) { return "error" }
         if cases.contains(where: { $0.status == "failed" }) { return "failed" }
         return cases.contains(where: { $0.status == "passed" }) ? "passed" : "skipped"
     }
+    /// Counts results whose stable status equals the supplied string.
     public func count(_ status: String) -> Int { cases.filter { $0.status == status }.count }
 }
 
 /// Executes validated documents without file access, a test framework, or ambient state.
 public enum ConformanceRunner {
+    /// Executes validated documents in order and reports duplicate corpus identities as errors. Performs no file I/O.
     public static func runCorpus(_ documents: [ConformanceDocument], environment: ConformanceEnvironment = .init())
         -> ConformanceRunReport
     {
@@ -107,12 +136,15 @@ public enum ConformanceRunner {
             capabilities: environment.capabilities, cases: results, performanceProfile: environment.performanceProfile)
     }
 
+    /// Executes every case in one validated document using the supplied environment.
     public static func runDocument(_ document: ConformanceDocument, environment: ConformanceEnvironment = .init())
         -> ConformanceRunReport
     {
         runCorpus([document], environment: environment)
     }
 
+    /// Executes one validated case after checking capabilities and environment configuration; reports portable outcomes
+    /// and structured mismatches.
     public static func runCase(_ testCase: ConformanceCase, environment: ConformanceEnvironment = .init())
         -> ConformanceCaseResult
     {

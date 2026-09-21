@@ -410,7 +410,8 @@ final class GesCompiler {
             for c in sources[Int(id)].text.unicodeScalars {
                 let k = key(line, column)
                 if needed.contains(k) { positions[k] = offset }
-                offset += c.utf8.count
+                // Scalar UTF8View requires newer Apple deployment targets; the encoded width is platform-independent.
+                offset += c.value < 0x80 ? 1 : c.value < 0x800 ? 2 : c.value < 0x10000 ? 3 : 4
                 if c == "\r" {
                     line += 1
                     column = 1

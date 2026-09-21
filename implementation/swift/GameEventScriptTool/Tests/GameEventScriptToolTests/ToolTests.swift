@@ -10,42 +10,50 @@ import XCTest
 
 final class ToolTests: XCTestCase {
     var directory: URL!
+
     override func setUpWithError() throws {
         var root = URL(fileURLWithPath: #filePath)
         for _ in 0..<6 { root.deleteLastPathComponent() }
         directory = root.appendingPathComponent("artifacts/swift/tool-tests/\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
+
     override func tearDownWithError() throws { try FileManager.default.removeItem(at: directory) }
+
     func file(_ name: String, _ text: String) throws -> String {
         let path = directory.appendingPathComponent(name)
         try FileManager.default.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true)
         try Data(text.utf8).write(to: path)
         return path.path
     }
+
     struct Result {
         let code: Int
         let output: String
         let error: String
     }
-    func run(
-        _ arguments: [String], input: [String] = [], noColor: Bool = false,
-        beforeInput: ((String) throws -> Void)? = nil
-    ) -> Result {
+
+    func run(_ arguments: [String], input: [String] = [], noColor: Bool = false, beforeInput: ((String) throws -> Void)? = nil) -> Result {
         var stdout = ""
         var stderr = ""
         var lines = input
         let io = ToolIO(
-            output: { stdout += $0 }, error: { stderr += $0 },
+            output: { stdout += $0 },
+            error: { stderr += $0 },
             input: {
                 guard !lines.isEmpty else { return nil }
                 let line = lines.removeFirst()
                 try beforeInput?(line)
                 return line
             },
-            inputTerminal: false, outputTerminal: false, errorTerminal: false, noColor: noColor)
+            inputTerminal: false,
+            outputTerminal: false,
+            errorTerminal: false,
+            noColor: noColor
+        )
         return Result(code: Tool(io: io).run(arguments), output: stdout, error: stderr)
     }
+
     func testHelpVersionAndUsage() {
         XCTAssertEqual(run([]).code, 0)
         XCTAssertTrue(run(["--version"]).output.contains("(Swift)"))
@@ -58,6 +66,7 @@ final class ToolTests: XCTestCase {
         }
         XCTAssertEqual(run(["unknown"]).code, 2)
     }
+
     func testCompileBinaryDebugOptionsAndCheck() throws {
         let source = try file("game.ges", "module cli.test\non Main(args) { emit ConsoleOut(args[:count]) }\n")
         let checked = run(["check", source, "--verbose"])
@@ -81,6 +90,7 @@ final class ToolTests: XCTestCase {
         XCTAssertNil(decoded.sourceMap)
         XCTAssertNil(decoded.debugSymbols)
     }
+
     func testJointCompilationOrderWildcardAndDeduplication() throws {
         let a = try file("parts/a.ges", "on Main(args) { emit ConsoleOut(double(21)) }")
         let b = try file("parts/b.ges", "function double(_ x) be x + x")
@@ -97,6 +107,7 @@ final class ToolTests: XCTestCase {
         XCTAssertEqual(run(["check", directory.appendingPathComponent("parts/**.ges").path]).code, 2)
         XCTAssertEqual(run(["check", directory.appendingPathComponent("missing*.ges").path]).code, 1)
     }
+
     func testAtomicOutputsAndInvalidEncodingPreserveFiles() throws {
         let source = try file("game.ges", "on Main(args) { emit ConsoleOut(1) }")
         let output = try file("output.gesb", "sentinel")
@@ -113,9 +124,9 @@ final class ToolTests: XCTestCase {
         XCTAssertTrue(encoding.error.contains(source))
         let bom = try file("bom.ges", "\u{feff}on Main(args) {}")
         XCTAssertEqual(run(["check", bom]).code, 0)
-        XCTAssertFalse(
-            try FileManager.default.contentsOfDirectory(atPath: directory.path).contains { $0.hasSuffix(".tmp") })
+        XCTAssertFalse(try FileManager.default.contentsOfDirectory(atPath: directory.path).contains { $0.hasSuffix(".tmp") })
     }
+
     func testDumpRoundtripOutputAndDecodeContext() throws {
         let source = try file("source.ges", "on Main(args) {\n\temit ConsoleOut(42)\n}\n")
         XCTAssertEqual(run(["compile", source, "-q"]).code, 0)
@@ -139,27 +150,22 @@ final class ToolTests: XCTestCase {
         XCTAssertTrue(bad.error.contains(binary))
         XCTAssertEqual(try String(contentsOfFile: destination, encoding: .utf8), result.output)
     }
+
     func testMainArgumentFormsRemainText() throws {
-        let source = try file(
-            "args.ges", "on Main(args) { for arg in args { emit ConsoleOut(arg is :Text, \":\", arg) } }")
-        let result = run([
-            "run", source, "--arg", "--help", "--args", "12", "-.5", "-", "Hello", "--color", "--", "--quiet", "34",
-        ])
+        let source = try file("args.ges", "on Main(args) { for arg in args { emit ConsoleOut(arg is :Text, \":\", arg) } }")
+        let result = run(["run", source, "--arg", "--help", "--args", "12", "-.5", "-", "Hello", "--color", "--", "--quiet", "34"])
         XCTAssertEqual(result.code, 0, result.error)
-        let plain = result.output.replacingOccurrences(of: "\u{1b}[35m", with: "").replacingOccurrences(
-            of: "\u{1b}[0m", with: "")
+        let plain = result.output.replacingOccurrences(of: "\u{1b}[35m", with: "").replacingOccurrences(of: "\u{1b}[0m", with: "")
         XCTAssertEqual(plain, "true:--help\ntrue:12\ntrue:-.5\ntrue:-\ntrue:Hello\ntrue:--quiet\ntrue:34\n")
         XCTAssertTrue(result.error.contains("Run completed:"))
         XCTAssertEqual(run(["run", source, "--arg", "", "-q"]).output, "true:\n")
     }
+
     func testInvalidRunOptionsNeverExecute() throws {
         let source = try file("init.ges", "on initialization { emit ConsoleOut(\"should not run\") }")
         let invalid: [[String]] = [
-            ["--args"], ["--args", "--color"], ["--seed", "1.5"], ["--seed", "9223372036854775808"],
-            ["--seed", "1", "--seed", "2"], ["--max-steps", "0"], ["--max-messages", "2147483648"],
-            ["--max-messages", "+1"], ["--quiet", "--verbose"], ["--interactive", "--scenario", source],
-            ["--interactive", "--arg", "x"], ["--interactive", "--"], ["--scenario", source, "--args", "x"],
-            ["--args", "12", "--colro"], ["--scenario", ""], ["--scenario", "--color"], ["--arg"],
+            ["--args"], ["--args", "--color"], ["--seed", "1.5"], ["--seed", "9223372036854775808"], ["--seed", "1", "--seed", "2"], ["--max-steps", "0"], ["--max-messages", "2147483648"], ["--max-messages", "+1"], ["--quiet", "--verbose"],
+            ["--interactive", "--scenario", source], ["--interactive", "--arg", "x"], ["--interactive", "--"], ["--scenario", source, "--args", "x"], ["--args", "12", "--colro"], ["--scenario", ""], ["--scenario", "--color"], ["--arg"],
         ]
         for options in invalid {
             let result = run(["run", source] + options)
@@ -167,6 +173,7 @@ final class ToolTests: XCTestCase {
             XCTAssertEqual(result.output, "", "\(options)")
         }
     }
+
     func testMainRequirementsAndInitializationOrdering() throws {
         let missing = try file("missing.ges", "on initialization { emit ConsoleOut(\"must not run\") }")
         let result = run(["run", missing])
@@ -177,32 +184,26 @@ final class ToolTests: XCTestCase {
             let path = try file("wrong.ges", handler)
             XCTAssertTrue(run(["run", path]).error.contains("cli.missingMain"))
         }
-        let source = try file(
-            "main.ges", "on initialization { emit ConsoleOut(\"init\") }\non Main(args) { emit ConsoleOut(\"main\") }")
+        let source = try file("main.ges", "on initialization { emit ConsoleOut(\"init\") }\non Main(args) { emit ConsoleOut(\"main\") }")
         XCTAssertEqual(run(["run", source, "-q"]).output, "init\nmain\n")
         let byName = try file("name.ges", "on Main as message { emit ConsoleOut(message) }")
         XCTAssertEqual(run(["run", byName, "-q"]).code, 0)
     }
+
     func testMultipleBinariesAndScenarioAreLoadedBeforeInitialization() throws {
-        let a = try file(
-            "first.ges", "on initialization { emit Start() }\non Main(args) { emit ConsoleOut(\"first\") }")
-        let b = try file(
-            "second.ges", "on Start() { emit ConsoleOut(\"ready\") }\non Main(args) { emit ConsoleOut(\"second\") }")
+        let a = try file("first.ges", "on initialization { emit Start() }\non Main(args) { emit ConsoleOut(\"first\") }")
+        let b = try file("second.ges", "on Start() { emit ConsoleOut(\"ready\") }\non Main(args) { emit ConsoleOut(\"second\") }")
         XCTAssertEqual(run(["compile", a, "-q"]).code, 0)
         XCTAssertEqual(run(["compile", b, "-q"]).code, 0)
-        let binaries = [
-            directory.appendingPathComponent("first.gesb").path, directory.appendingPathComponent("second.gesb").path,
-        ]
+        let binaries = [directory.appendingPathComponent("first.gesb").path, directory.appendingPathComponent("second.gesb").path]
         XCTAssertEqual(run(["run"] + binaries + ["-q"]).output, "ready\nfirst\nsecond\n")
         XCTAssertEqual(run(["run", a, binaries[1]]).code, 2)
         let scenario = try file("scenario.ges", "on initialization { emit Start() }")
         XCTAssertEqual(run(["run", b, "--scenario", scenario, "-q"]).output, "ready\n")
     }
+
     func testConsoleChannelsColorsExitCodesAndFailureOverride() throws {
-        let source = try file(
-            "console.ges",
-            "on Main(args) { emit ConsoleOut(\"value=\", 12, true); emit ConsoleErr(\"bad\", 3); emit ErrorCode(code: 7); emit ConsoleOut(\"after\") }"
-        )
+        let source = try file("console.ges", "on Main(args) { emit ConsoleOut(\"value=\", 12, true); emit ConsoleErr(\"bad\", 3); emit ErrorCode(code: 7); emit ConsoleOut(\"after\") }")
         let plain = run(["run", source, "-q"])
         XCTAssertEqual(plain.code, 7, plain.error)
         XCTAssertEqual(plain.output, "value=12true\nafter\n")
@@ -225,18 +226,15 @@ final class ToolTests: XCTestCase {
         XCTAssertEqual(result.code, 1)
         XCTAssertTrue(result.error.contains("cli.runtimeLimit"))
     }
+
     func testInteractiveRecoveryLoadAndInspection() throws {
-        let source = try file(
-            "loaded file.ges",
-            "module cli.loaded\non initialization { emit ConsoleOut(\"init\") }\non Start(value) matching #ready { emit ConsoleOut(value) }\non Main(args) { emit ConsoleOut(\"main\") }\n"
-        )
+        let source = try file("loaded file.ges", "module cli.loaded\non initialization { emit ConsoleOut(\"init\") }\non Start(value) matching #ready { emit ConsoleOut(value) }\non Main(args) { emit ConsoleOut(\"main\") }\n")
         let result = run(
             ["run", "--interactive", "--quiet"],
             input: [
-                ":help", ":load \"\(source)\"", ":list", ":handler", ":source @1", ":dump cli.loaded",
-                "emit Start(value: 42) with #ready", "let local be 3", "emit ConsoleOut(local)",
-                ":load missing.ges", "emit ConsoleOut(\"still active\")", ":quit",
-            ])
+                ":help", ":load \"\(source)\"", ":list", ":handler", ":source @1", ":dump cli.loaded", "emit Start(value: 42) with #ready", "let local be 3", "emit ConsoleOut(local)", ":load missing.ges", "emit ConsoleOut(\"still active\")", ":quit",
+            ]
+        )
         XCTAssertEqual(result.code, 1)
         XCTAssertEqual(result.output, "init\n42\nstill active\n")
         XCTAssertTrue(result.error.hasPrefix("\nGES event console"))
@@ -248,15 +246,11 @@ final class ToolTests: XCTestCase {
         XCTAssertFalse(result.error.contains("ges> "))
         XCTAssertFalse(result.error.contains("Run completed:"))
     }
+
     func testInteractiveFailuresDoNotRegisterOrConsumeIds() throws {
         let bad = try file("bad.ges", "on Start() { broken }")
         let good = try file("good.ges", "module cli.same\non Start() { emit ConsoleOut(1) }")
-        let result = run(
-            ["run", "--interactive", "-q"],
-            input: [
-                ":load \(bad)", ":load \(good)", ":load \(good)", ":dump cli.same", ":dump @99", ":list", ":unknown",
-                "emit Start()", ":quit",
-            ])
+        let result = run(["run", "--interactive", "-q"], input: [":load \(bad)", ":load \(good)", ":load \(good)", ":dump cli.same", ":dump @99", ":list", ":unknown", "emit Start()", ":quit"])
         XCTAssertEqual(result.code, 1)
         XCTAssertEqual(result.output, "1\n1\n")
         XCTAssertTrue(result.error.contains("Loaded programs (2):"))
@@ -265,6 +259,7 @@ final class ToolTests: XCTestCase {
         XCTAssertTrue(result.error.contains("more than once"))
         XCTAssertFalse(result.error.contains("@3  "))
     }
+
     func testSourcePreservesCRLFWithoutExtraBlankLines() throws {
         let text = "module cli.crlf\r\non Main(args) {}\r\n"
         let source = try file("crlf.ges", text)
@@ -277,32 +272,28 @@ final class ToolTests: XCTestCase {
         let source = try file("no-debug.ges", "module cli.nodebug\non Start() {}")
         XCTAssertEqual(run(["compile", source, "--no-debug", "-q"]).code, 0)
         let binary = directory.appendingPathComponent("no-debug.gesb").path
-        let result = run(
-            ["run", binary, "--interactive", "--color", "-v"], input: [":source @1", "emit ConsoleOut(12)", ":quit"])
+        let result = run(["run", binary, "--interactive", "--color", "-v"], input: [":source @1", "emit ConsoleOut(12)", ":quit"])
         XCTAssertEqual(result.code, 0, result.error)
         XCTAssertTrue(result.error.contains("No embedded sources available"))
         XCTAssertTrue(result.error.contains("\u{1b}[33memit "))
         XCTAssertTrue(result.output.contains("\u{1b}[34m12"))
     }
+
     func testInteractiveRuntimeLimitEndsSessionAndRejectsAdditionalHandlers() throws {
         let source = try file("loop.ges", "on Tick() { emit Tick() }")
-        let result = run(
-            ["run", source, "--interactive", "--max-messages", "2"],
-            input: ["emit Tick()", "emit ConsoleOut(\"must not run\")"])
+        let result = run(["run", source, "--interactive", "--max-messages", "2"], input: ["emit Tick()", "emit ConsoleOut(\"must not run\")"])
         XCTAssertEqual(result.code, 1)
         XCTAssertEqual(result.output, "")
         XCTAssertTrue(result.error.contains("cli.runtimeLimit"))
-        let injection = run(
-            ["run", "--interactive", "-q"], input: ["}\non Injected() {}\non initialization {", ":handler", ":quit"])
+        let injection = run(["run", "--interactive", "-q"], input: ["}\non Injected() {}\non initialization {", ":handler", ":quit"])
         XCTAssertEqual(injection.code, 1)
         XCTAssertTrue(injection.error.contains("cli.interactiveInput"))
         XCTAssertTrue(injection.error.contains("Registered handlers (3):"))
     }
+
     func testOutputFailureReturnsFailureAndLoadQuoting() throws {
         let source = try file("output.ges", "on Main(args) { emit ConsoleOut(42); emit ErrorCode(7) }")
-        let io = ToolIO(
-            output: { _ in throw ToolError.io("closed") }, error: { _ in }, input: { nil }, inputTerminal: false,
-            outputTerminal: false, errorTerminal: false)
+        let io = ToolIO(output: { _ in throw ToolError.io("closed") }, error: { _ in }, input: { nil }, inputTerminal: false, outputTerminal: false, errorTerminal: false)
         XCTAssertEqual(Tool(io: io).run(["run", source]), 1)
         XCTAssertEqual(try Tool.loadPath("'it''s.ges'"), "it's.ges")
         XCTAssertEqual(try Tool.loadPath("C:\\games\\x.ges"), "C:\\games\\x.ges")

@@ -9,11 +9,7 @@ public enum GameEventScriptProgramValidator {
     public static func validate(_ p: GameEventScriptProgram) throws {
         if p.formatVersion != 1 { throw failure(.unsupportedFormatVersion) }
         if !GesNames.module(p.moduleName) { throw failure(.invalidProgram, 1) }
-        if [p.stringConstants.count, p.uint16IndexLists.count, p.bindings.count, p.code.count].contains(where: {
-            $0 > 65535
-        }) {
-            throw failure(.tooManyEntries)
-        }
+        if [p.stringConstants.count, p.uint16IndexLists.count, p.bindings.count, p.code.count].contains(where: { $0 > 65535 }) { throw failure(.tooManyEntries) }
         var ids: Set<UInt64> = []
         var functions: Set<String> = []
         var predicates: Set<String> = []
@@ -22,9 +18,7 @@ public enum GameEventScriptProgramValidator {
         var maxDepth: UInt16 = 0
         for (index, binding) in p.bindings.enumerated() {
             let textIndices = [binding.name] + binding.argumentNames + binding.requiredTags + binding.excludedTags
-            if textIndices.contains(where: { Int($0) >= p.stringConstants.count }) {
-                throw failure(.invalidStringIndex, 4, index)
-            }
+            if textIndices.contains(where: { Int($0) >= p.stringConstants.count }) { throw failure(.invalidStringIndex, 4, index) }
             let name = p.stringConstants[Int(binding.name)]
             let valid: Bool
             switch binding.kind {
@@ -38,30 +32,18 @@ public enum GameEventScriptProgramValidator {
             for argument in binding.argumentNames {
                 let text = p.stringConstants[Int(argument)]
                 if text == "_" { continue }
-                if !GesNames.identifier(text) || !names.insert(text).inserted {
-                    throw failure(.invalidProgram, 4, index)
-                }
+                if !GesNames.identifier(text) || !names.insert(text).inserted { throw failure(.invalidProgram, 4, index) }
             }
-            for tag in binding.requiredTags + binding.excludedTags {
-                if !GesNames.plain(p.stringConstants[Int(tag)]) { throw failure(.invalidProgram, 4, index) }
-            }
+            for tag in binding.requiredTags + binding.excludedTags { if !GesNames.plain(p.stringConstants[Int(tag)]) { throw failure(.invalidProgram, 4, index) } }
             if binding.kind == .function || binding.kind == .predicate {
-                let signature =
-                    "\(binding.kind.rawValue):\(name)("
-                    + binding.argumentNames.map { p.stringConstants[Int($0)] }.joined(separator: ",") + ")"
+                let signature = "\(binding.kind.rawValue):\(name)(" + binding.argumentNames.map { p.stringConstants[Int($0)] }.joined(separator: ",") + ")"
                 if !signatures.insert(signature).inserted { throw failure(.invalidProgram, 4, index) }
                 if binding.kind == .function { functions.insert(name) } else { predicates.insert(name) }
             }
-            let key =
-                binding.isHandler
-                ? (UInt64(1) << 63) | (UInt64(binding.kind.rawValue) << 32) | (UInt64(binding.name) << 16)
-                    | UInt64(binding.id)
-                : (UInt64(binding.kind.rawValue) << 16) | UInt64(binding.id)
+            let key = binding.isHandler ? (UInt64(1) << 63) | (UInt64(binding.kind.rawValue) << 32) | (UInt64(binding.name) << 16) | UInt64(binding.id) : (UInt64(binding.kind.rawValue) << 16) | UInt64(binding.id)
             if binding.id != .max, !ids.insert(key).inserted { throw failure(.duplicateBindingId, 4, index) }
             if binding.isExecutable {
-                if binding.entryAddress == .max || Int(binding.entryAddress) >= p.code.count {
-                    throw failure(.invalidEntryAddress, 4, index)
-                }
+                if binding.entryAddress == .max || Int(binding.entryAddress) >= p.code.count { throw failure(.invalidEntryAddress, 4, index) }
             } else if binding.entryAddress != .max {
                 throw failure(.invalidEntryAddress, 4, index)
             }
@@ -71,33 +53,19 @@ public enum GameEventScriptProgramValidator {
             }
         }
         if !functions.isDisjoint(with: predicates) { throw failure(.invalidProgram, 4) }
-        if maxRegisters != p.requiredRegisterCount || maxDepth != p.requiredCallStackDepth {
-            throw failure(.invalidResourceMetadata, 1)
-        }
-        if !p.stringConstants.contains(where: { GesText.scalarEqual($0, p.moduleName) }) {
-            throw failure(.invalidStringIndex, 1)
-        }
-        for (index, instruction) in p.code.enumerated() {
-            try validateInstruction(p, instruction, index, ids)
-        }
+        if maxRegisters != p.requiredRegisterCount || maxDepth != p.requiredCallStackDepth { throw failure(.invalidResourceMetadata, 1) }
+        if !p.stringConstants.contains(where: { GesText.scalarEqual($0, p.moduleName) }) { throw failure(.invalidStringIndex, 1) }
+        for (index, instruction) in p.code.enumerated() { try validateInstruction(p, instruction, index, ids) }
         try validateDebug(p)
         try validateOpaque(p)
         try GesProgramResourceValidator.validate(p)
     }
 
-    static func failure(_ code: GameEventScriptProgramFormatErrorCode, _ section: UInt16? = nil, _ entry: Int? = nil)
-        -> GameEventScriptProgramFormatError
-    {
-        .init(code, sectionType: section, entryIndex: entry)
-    }
+    static func failure(_ code: GameEventScriptProgramFormatErrorCode, _ section: UInt16? = nil, _ entry: Int? = nil) -> GameEventScriptProgramFormatError { .init(code, sectionType: section, entryIndex: entry) }
 
-    static func validateInstruction(
-        _ p: GameEventScriptProgram, _ i: GameEventScriptBytecodeInstruction, _ index: Int, _ ids: Set<UInt64>
-    ) throws {
+    static func validateInstruction(_ p: GameEventScriptProgram, _ i: GameEventScriptBytecodeInstruction, _ index: Int, _ ids: Set<UInt64>) throws {
         if i.unitAndFlags & 0x1f > 3 || i.unitAndFlags & 0xc0 != 0 { throw failure(.invalidOperand, 16, index) }
-        if i.opcode == .parseLiteral && (i.unitAndFlags != 0 || i.word2 != 0 || i.payload != 0) {
-            throw failure(.invalidOperand, 16, index)
-        }
+        if i.opcode == .parseLiteral && (i.unitAndFlags != 0 || i.word2 != 0 || i.payload != 0) { throw failure(.invalidOperand, 16, index) }
         for (position, operand) in i.operands.enumerated() {
             if operand.isRegister {
                 if i.register(operand, position) == .max { throw failure(.invalidOperand, 16, index) }
@@ -107,9 +75,7 @@ public enum GameEventScriptProgramValidator {
                 let stringIndex = operand == .customTypeName ? i.word2 : i.word1
                 if Int(stringIndex) >= p.stringConstants.count { throw failure(.invalidStringIndex, 16, index) }
                 let text = p.stringConstants[Int(stringIndex)]
-                if operand == .tag && !GesNames.plain(text) || operand == .customTypeName && !GesNames.type(text) {
-                    throw failure(.invalidOperand, 16, index)
-                }
+                if operand == .tag && !GesNames.plain(text) || operand == .customTypeName && !GesNames.type(text) { throw failure(.invalidOperand, 16, index) }
             } else if operand.isList {
                 let listIndex = Int(i.list(operand))
                 if listIndex >= p.uint16IndexLists.count { throw failure(.invalidListIndex, 16, index) }
@@ -126,65 +92,35 @@ public enum GameEventScriptProgramValidator {
                         continue
                     }
                     if text != "_" && !GesNames.plain(text) { throw failure(.invalidOperand, 16, index) }
-                    if operand != .keyNameList && text != "_", !seen.insert(text).inserted {
-                        throw failure(.invalidOperand, 16, index)
-                    }
+                    if operand != .keyNameList && text != "_", !seen.insert(text).inserted { throw failure(.invalidOperand, 16, index) }
                 }
             } else {
                 switch operand {
-                case .typeKind:
-                    if GameEventScriptBytecodeTypeKind(rawValue: i.word2) == nil {
-                        throw failure(.invalidOperand, 16, index)
-                    }
-                case .patternKind:
-                    if GameEventScriptBytecodePatternKind(rawValue: i.a) == nil {
-                        throw failure(.invalidOperand, 16, index)
-                    }
-                case .seriesKind:
-                    if GameEventScriptBytecodeSeriesKind(rawValue: i.word2) == nil {
-                        throw failure(.invalidOperand, 16, index)
-                    }
+                case .typeKind: if GameEventScriptBytecodeTypeKind(rawValue: i.word2) == nil { throw failure(.invalidOperand, 16, index) }
+                case .patternKind: if GameEventScriptBytecodePatternKind(rawValue: i.a) == nil { throw failure(.invalidOperand, 16, index) }
+                case .seriesKind: if GameEventScriptBytecodeSeriesKind(rawValue: i.word2) == nil { throw failure(.invalidOperand, 16, index) }
                 case .outboundMessage, .recordReference, .externalReference:
-                    let kind: GameEventScriptBinaryBindKind =
-                        operand == .outboundMessage
-                        ? .outboundMessage
-                        : operand == .recordReference
-                            ? .record : i.opcode == .callExternal ? .extensionCall : .externalType
+                    let kind: GameEventScriptBinaryBindKind = operand == .outboundMessage ? .outboundMessage : operand == .recordReference ? .record : i.opcode == .callExternal ? .extensionCall : .externalType
                     let id = operand == .outboundMessage ? i.word0 : i.word1
-                    if !ids.contains(UInt64(kind.rawValue) << 16 | UInt64(id)) {
-                        throw failure(.invalidOperand, 16, index)
-                    }
+                    if !ids.contains(UInt64(kind.rawValue) << 16 | UInt64(id)) { throw failure(.invalidOperand, 16, index) }
                 default: break
                 }
             }
         }
     }
 
-    static func validateFrame(
-        _ p: GameEventScriptProgram, _ i: GameEventScriptBytecodeInstruction, _ index: Int, _ length: Int
-    ) throws {
+    static func validateFrame(_ p: GameEventScriptProgram, _ i: GameEventScriptBytecodeInstruction, _ index: Int, _ length: Int) throws {
         for (position, operand) in i.operands.enumerated() {
-            if operand.isRegister && Int(i.register(operand, position)) >= length {
-                throw failure(.invalidOperand, 16, index)
-            }
-            if operand.isList && !operand.isTextList
-                && p.uint16IndexLists[Int(i.list(operand))].contains(where: { Int($0) >= length })
-            {
-                throw failure(.invalidOperand, 16, index)
-            }
+            if operand.isRegister && Int(i.register(operand, position)) >= length { throw failure(.invalidOperand, 16, index) }
+            if operand.isList && !operand.isTextList && p.uint16IndexLists[Int(i.list(operand))].contains(where: { Int($0) >= length }) { throw failure(.invalidOperand, 16, index) }
         }
     }
 }
 
 extension GesOperand {
-    var isRegister: Bool {
-        self != .outboundMessage && (rawValue <= Self.auxDRegister.rawValue || self == .faceRegister)
-    }
+    var isRegister: Bool { self != .outboundMessage && (rawValue <= Self.auxDRegister.rawValue || self == .faceRegister) }
     var isAddress: Bool { (Self.jumpTarget.rawValue...Self.valueEntry.rawValue).contains(rawValue) }
-    var isString: Bool {
-        (Self.string.rawValue...Self.typeName.rawValue).contains(rawValue) && self != .typeKind && self != .patternKind
-            && self != .seriesKind
-    }
+    var isString: Bool { (Self.string.rawValue...Self.typeName.rawValue).contains(rawValue) && self != .typeKind && self != .patternKind && self != .seriesKind }
     var isList: Bool { (Self.messageShapeList.rawValue...Self.tagRegisterList.rawValue).contains(rawValue) }
     var isTextList: Bool { self == .messageShapeList || self == .argumentNameList || self == .keyNameList }
 }
@@ -197,12 +133,11 @@ extension GameEventScriptBytecodeInstruction {
         }
         return opcode.operands
     }
+
     func register(_ operand: GesOperand, _ position: Int) -> UInt16 {
         switch operand {
         case .targetRegister, .outboundMessage: word0
-        case .rightRegister, .objectRegister, .itemRegister, .keyRegister, .indexRegister, .defaultRegister,
-            .needleRegister, .toRegister, .minimumRegister:
-            word2
+        case .rightRegister, .objectRegister, .itemRegister, .keyRegister, .indexRegister, .defaultRegister, .needleRegister, .toRegister, .minimumRegister: word2
         case .valueRegister, .auxItemBindingRegister, .stepRegister, .maximumRegister, .auxARegister: a
         case .itemBindingRegister: position >= 3 ? a : word2
         case .weightRegister: opcode == .takeWeighted ? a : word2
@@ -212,6 +147,7 @@ extension GameEventScriptBytecodeInstruction {
         default: word1
         }
     }
+
     func address(_ operand: GesOperand) -> UInt16 {
         switch operand {
         case .projectionEntry, .keyEntry: a
@@ -219,6 +155,7 @@ extension GameEventScriptBytecodeInstruction {
         default: word2
         }
     }
+
     func list(_ operand: GesOperand) -> UInt16 {
         switch operand {
         case .messageShapeList where opcode == .loadMessage: word1
@@ -233,30 +170,37 @@ extension GameEventScriptBytecodeInstruction {
 /// ASCII grammars used at the binary boundary; no Unicode normalization is applied.
 enum GesNames {
     static func lower(_ c: UInt8) -> Bool { (97...122).contains(c) }
+
     static func upper(_ c: UInt8) -> Bool { (65...90).contains(c) }
+
     static func digit(_ c: UInt8) -> Bool { (48...57).contains(c) }
+
     static func alnum(_ c: UInt8) -> Bool { lower(c) || upper(c) || digit(c) }
+
     static func plain(_ text: String) -> Bool {
         let bytes = Array(text.utf8)
         return bytes.first.map(lower) == true && bytes.dropFirst().allSatisfy(alnum)
     }
+
     static func type(_ text: String) -> Bool {
         let bytes = Array(text.utf8)
         return bytes.first.map(upper) == true && bytes.dropFirst().allSatisfy(alnum)
     }
+
     static func message(_ text: String) -> Bool { type(text) || text == "initialization" || text == "undeliverable" }
+
     static func identifier(_ text: String) -> Bool {
         let parts = text.split(separator: "_", omittingEmptySubsequences: false)
         if parts.count == 1 { return plain(text) }
         guard parts.count == 2, plain(String(parts[0])), !parts[1].isEmpty else { return false }
         return (parts[1] == "0" || parts[1].utf8.first != 48) && parts[1].utf8.allSatisfy(digit)
     }
+
     static func module(_ text: String) -> Bool {
         if text.isEmpty { return false }
-        return text.split(separator: ".", omittingEmptySubsequences: false).allSatisfy { part in
-            part.utf8.first.map(lower) == true && part.utf8.allSatisfy { lower($0) || digit($0) }
-        }
+        return text.split(separator: ".", omittingEmptySubsequences: false).allSatisfy { part in part.utf8.first.map(lower) == true && part.utf8.allSatisfy { lower($0) || digit($0) } }
     }
+
     static func extensionName(_ text: String) -> Bool {
         let parts = text.split(separator: ".", omittingEmptySubsequences: false)
         return parts.count == 2 && parts.allSatisfy { plain(String($0)) }

@@ -15,10 +15,9 @@ public struct ConformanceSourceRange: Equatable, Sendable {
     public let endLine: Int
     /// One-based end column measured in Unicode scalars.
     public let endColumn: Int
+
     /// Creates source coordinates; defaults to an empty span at the start of the document.
-    public init(
-        byteOffset: Int = 0, byteLength: Int = 0, line: Int = 1, column: Int = 1, endLine: Int = 1, endColumn: Int = 1
-    ) {
+    public init(byteOffset: Int = 0, byteLength: Int = 0, line: Int = 1, column: Int = 1, endLine: Int = 1, endColumn: Int = 1) {
         self.byteOffset = byteOffset
         self.byteLength = byteLength
         self.line = line
@@ -45,12 +44,9 @@ public struct ConformanceParseError: Error, Sendable, CustomStringConvertible {
     /// Single-element diagnostic collection containing this parse failure.
     public var diagnostics: [ConformanceDiagnostic] { [diagnostic] }
     /// Human-readable diagnostic code, line, column and message for display.
-    public var description: String {
-        "\(diagnostic.code) at \(diagnostic.range.line):\(diagnostic.range.column): \(diagnostic.message)"
-    }
-    internal init(_ code: String, _ message: String, _ range: ConformanceSourceRange = .init()) {
-        diagnostic = .init(code: code, message: message, range: range)
-    }
+    public var description: String { "\(diagnostic.code) at \(diagnostic.range.line):\(diagnostic.range.column): \(diagnostic.message)" }
+
+    internal init(_ code: String, _ message: String, _ range: ConformanceSourceRange = .init()) { diagnostic = .init(code: code, message: message, range: range) }
 }
 
 /// Bounded resource consumption for the synchronous authoring parser.
@@ -75,6 +71,7 @@ public struct ConformanceParserLimits: Sendable {
     public var maxScalarBytes = 1024 * 1024
     /// Maximum parsed YAML node count.
     public var maxYamlNodes = 262144
+
     /// Creates the standard parser limits.
     public init() {}
 }

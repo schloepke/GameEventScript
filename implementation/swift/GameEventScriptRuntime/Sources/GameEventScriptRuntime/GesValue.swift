@@ -102,9 +102,7 @@ public struct GesSeriesValue: Hashable {
     }
 
     /// Compares scalar-exact series signatures and exact term offsets.
-    public static func == (left: Self, right: Self) -> Bool {
-        GesText.scalarEqual(left.signatureID, right.signatureID) && left.offset == right.offset
-    }
+    public static func == (left: Self, right: Self) -> Bool { GesText.scalarEqual(left.signatureID, right.signatureID) && left.offset == right.offset }
 
     /// Hashes the scalar-exact signature and offset consistently with equality.
     public func hash(into hasher: inout Hasher) {
@@ -117,6 +115,7 @@ private struct ScalarText: Hashable {
     let value: String
 
     static func == (left: Self, right: Self) -> Bool { GesText.scalarEqual(left.value, right.value) }
+
     func hash(into hasher: inout Hasher) { GesText.hashScalars(value, into: &hasher) }
 }
 
@@ -156,8 +155,10 @@ public struct GesValue: Hashable, CustomStringConvertible {
 
     /// The canonical absence value.
     public static var nothing: Self { Self(.nothing) }
+
     /// Creates a Boolean value.
     public static func boolean(_ value: Bool) -> Self { Self(.boolean(value)) }
+
     /// Creates an exact signed Int64 value with an optional quantity unit.
     public static func integer(_ value: Int64, unit: GesUnit = .none) -> Self { Self(.integer(value), unit: unit) }
 
@@ -199,14 +200,15 @@ public struct GesValue: Hashable, CustomStringConvertible {
 
     /// Copies and sorts supplied Int32 rolls in descending order without drawing random numbers.
     public static func dice(_ rolls: [Int32]) -> Self { Self(.dice(rolls.sorted(by: >))) }
+
     /// Creates an immutable ordered list of values.
     public static func list(_ values: [GesValue]) -> Self { Self(.list(values)) }
+
     /// Creates a map in scalar key order, keeping the last entry for duplicate keys.
     public static func map(_ entries: [GesMapEntry]) -> Self { Self(.map(GesValueMap(entries))) }
+
     /// Creates record storage with a type name and canonical field map; does not invoke a script constructor.
-    public static func record(typeName: String, entries: [GesMapEntry]) -> Self {
-        Self(.record(ScalarText(value: typeName), GesValueMap(entries)))
-    }
+    public static func record(typeName: String, entries: [GesMapEntry]) -> Self { Self(.record(ScalarText(value: typeName), GesValueMap(entries))) }
 
     /// Creates an exact lazy Int64 range; a zero step or incompatible direction yields the canonical empty range.
     public static func integerRange(from: Int64, to: Int64, step: Int64 = 1) -> Self {
@@ -224,23 +226,24 @@ public struct GesValue: Hashable, CustomStringConvertible {
 
     /// Wraps a message as a value.
     public static func message(_ value: GameEventScriptMessage) -> Self { Self(.message(value)) }
+
     /// Wraps a message signature as a Handler value.
     public static func handler(_ value: GameEventScriptMessageSignature) -> Self { Self(.handler(value)) }
+
     /// Wraps a built-in series descriptor without evaluating terms.
     public static func series(_ value: GesSeriesValue) -> Self { Self(.series(value)) }
 
     /// Wraps a host-provided external value and captures its declared type definition.
-    public static func external(_ value: any GameEventScriptExternalValue) -> Self {
-        Self(.external(GesExternalStorage(value: value)))
-    }
+    public static func external(_ value: any GameEventScriptExternalValue) -> Self { Self(.external(GesExternalStorage(value: value))) }
+
     /// Underlying host value for external storage, otherwise nil.
-    public var externalValue: (any GameEventScriptExternalValue)? {
-        if case .external(let storage) = storage { storage.value } else { nil }
-    }
+    public var externalValue: (any GameEventScriptExternalValue)? { if case .external(let storage) = storage { storage.value } else { nil } }
+
     func externalField(_ name: String) throws -> GesValue? {
         if case .external(let storage) = storage { return try storage.field(name) }
         return nil
     }
+
     /// Returns map data, materializing declared external fields when necessary.
     /// External field failures propagate to the caller.
     public func materializedMap() throws -> GesValueMap? { try asMap ?? externalMap() }
@@ -310,9 +313,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         case .integer(let value): value != 0
         case .float(let value), .percentage(let value): value != 0
         case .vector(let value), .point(let value): value.x != 0 || value.y != 0 || value.z != 0
-        case .text(let value):
-            value.value.utf8.elementsEqual("1".utf8)
-                || value.value.utf8.lazy.map { $0 >= 65 && $0 <= 90 ? $0 + 32 : $0 }.elementsEqual("true".utf8)
+        case .text(let value): value.value.utf8.elementsEqual("1".utf8) || value.value.utf8.lazy.map { $0 >= 65 && $0 <= 90 ? $0 + 32 : $0 }.elementsEqual("true".utf8)
         default: false
         }
     }
@@ -413,9 +414,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
     /// Stored Message, or nil for other kinds.
     public var messageValue: GameEventScriptMessage? { if case .message(let value) = storage { value } else { nil } }
     /// Stored Handler signature, or nil for other kinds.
-    public var signatureValue: GameEventScriptMessageSignature? {
-        if case .handler(let value) = storage { value } else { nil }
-    }
+    public var signatureValue: GameEventScriptMessageSignature? { if case .handler(let value) = storage { value } else { nil } }
     /// Stored series descriptor, or nil for other kinds.
     public var seriesValue: GesSeriesValue? { if case .series(let value) = storage { value } else { nil } }
 
@@ -438,15 +437,9 @@ public struct GesValue: Hashable, CustomStringConvertible {
         case .point(let value): return formatSpatial(":Point", value)
         case .dice(let values): return ":Dice[" + values.map(String.init).joined(separator: ", ") + "]"
         case .list(let values): return "[" + values.map(\.nestedText).joined(separator: ", ") + "]"
-        case .map(let map), .record(_, let map):
-            return (map.length == 0 ? "[:" : "[")
-                + map.entries.map {
-                    (GesText.isLowerName($0.key) ? $0.key : GesText.quoted($0.key)) + ": " + $0.value.nestedText
-                }.joined(separator: ", ") + "]"
+        case .map(let map), .record(_, let map): return (map.length == 0 ? "[:" : "[") + map.entries.map { (GesText.isLowerName($0.key) ? $0.key : GesText.quoted($0.key)) + ": " + $0.value.nestedText }.joined(separator: ", ") + "]"
         case .integerRange(let range): return "range[\(range.from) to \(range.to) step \(range.step)]"
-        case .floatRange(let range):
-            return
-                "range[\(GesNumber.format(range.from)) to \(GesNumber.format(range.to)) step \(GesNumber.format(range.step))]"
+        case .floatRange(let range): return "range[\(GesNumber.format(range.from)) to \(GesNumber.format(range.to)) step \(GesNumber.format(range.step))]"
         case .message(let value): return value.description
         case .handler(let value): return "handler " + value.signatureId
         case .series(let value): return "series[\(value.signatureID) offset \(value.offset)]"
@@ -459,7 +452,5 @@ public struct GesValue: Hashable, CustomStringConvertible {
         return toText
     }
 
-    private func formatSpatial(_ name: String, _ value: GesSpatialValue) -> String {
-        "\(name)(x: \(GesNumber.format(value.x))\(unit.suffix), y: \(GesNumber.format(value.y))\(unit.suffix), z: \(GesNumber.format(value.z))\(unit.suffix))"
-    }
+    private func formatSpatial(_ name: String, _ value: GesSpatialValue) -> String { "\(name)(x: \(GesNumber.format(value.x))\(unit.suffix), y: \(GesNumber.format(value.y))\(unit.suffix), z: \(GesNumber.format(value.z))\(unit.suffix))" }
 }

@@ -11,10 +11,7 @@ extension GesCompiler {
             prefix.insert(selector, at: 0)
             root = parent
         }
-        let terminals = [
-            "filter", "select", "any", "all", "count", "sum", "average", "min", "max", "map", "group", "order",
-            "distinct", "first", "last", "single", "objectMatch", "take", "drop", "draw",
-        ]
+        let terminals = ["filter", "select", "any", "all", "count", "sum", "average", "min", "max", "map", "group", "order", "distinct", "first", "last", "single", "objectMatch", "take", "drop", "draw"]
         if !prefix.isEmpty && terminals.contains(s.operation) {
             try pipeline(expression(root, r, scope), prefix, s, d, r, scope)
             return
@@ -30,28 +27,19 @@ extension GesCompiler {
             } else {
                 r.emit(.propertyAccess, d, try expression(index, r, scope), input)
             }
-        case "keys", "values", "entries":
-            r.emit(
-                s.operation == "keys" ? .keysOfMap : s.operation == "values" ? .valuesOfMap : .entriesOfMap, d, input)
+        case "keys", "values", "entries": r.emit(s.operation == "keys" ? .keysOfMap : s.operation == "values" ? .valuesOfMap : .entriesOfMap, d, input)
         case "shuffle", "reverse": r.emit(s.operation == "shuffle" ? .shuffle : .reverse, d, input)
         case "sort": r.emit(s.mode == "descending" ? .sortDescending : .sortAscending, d, input)
-        case "contains":
-            r.emit(
-                s.mode == "all" ? .containsAll : s.mode == "any" ? .containsAny : .contains, d,
-                try expression(s.expressions[0], r, scope), input)
+        case "contains": r.emit(s.mode == "all" ? .containsAll : s.mode == "any" ? .containsAny : .contains, d, try expression(s.expressions[0], r, scope), input)
         case "term": r.emit(.term, d, input, try expression(s.expressions[0], r, scope))
         case "distinct" where s.expressions.isEmpty: r.emit(.distinct, d, input)
         case "count" where s.expressions.isEmpty: r.emit(.count, d, input)
-        case "first" where s.expressions.isEmpty, "last" where s.expressions.isEmpty,
-            "single" where s.expressions.isEmpty:
-            r.emit(s.operation == "first" ? .first : s.operation == "last" ? .last : .single, d, input)
+        case "first" where s.expressions.isEmpty, "last" where s.expressions.isEmpty, "single" where s.expressions.isEmpty: r.emit(s.operation == "first" ? .first : s.operation == "last" ? .last : .single, d, input)
         case "take", "drop", "draw": try slice(s, d, input, r)
         case "hasPattern", "takePattern":
             let kind = s.mode == "fullHouse" ? 2 : s.mode == "straight" ? 3 : s.mode == "face" ? 1 : 0
             let face = try s.expressions.first.map { try expression($0, r, scope) } ?? 0
-            r.emit(
-                s.operation == "hasPattern" ? .hasPattern : .takePattern, d, input, s.count,
-                payload: UInt64(kind) | UInt64(face) << 16)
+            r.emit(s.operation == "hasPattern" ? .hasPattern : .takePattern, d, input, s.count, payload: UInt64(kind) | UInt64(face) << 16)
         case "choose":
             if s.count > Int(Int16.max) { throw error("compile.numericLimitExceeded", r.location, phase: .compile) }
             if s.expressions.count > 1 {
@@ -60,18 +48,14 @@ extension GesCompiler {
                 var values = input
                 if let condition = s.expressions.first {
                     values = r.temporary()
-                    try pipeline(
-                        input, [], .init(operation: "filter", name: s.name, expressions: [condition]), values, r, scope)
+                    try pipeline(input, [], .init(operation: "filter", name: s.name, expressions: [condition]), values, r, scope)
                 }
-                if s.mode == "random" {
-                    r.emit(s.count == 1 ? .oneRandom : .takeRandom, d, values, s.count == 1 ? 0 : s.count)
-                } else {
-                    r.emit(s.count == 1 ? .first : .takeFirst, d, values, s.count == 1 ? 0 : s.count)
-                }
+                if s.mode == "random" { r.emit(s.count == 1 ? .oneRandom : .takeRandom, d, values, s.count == 1 ? 0 : s.count) } else { r.emit(s.count == 1 ? .first : .takeFirst, d, values, s.count == 1 ? 0 : s.count) }
             }
         default: try pipeline(input, [], s, d, r, scope)
         }
     }
+
     func weightedChoose(_ input: Int, _ s: GesSelector, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
         let iterator = r.temporary()
         let item = r.temporary()
@@ -90,9 +74,7 @@ extension GesCompiler {
         let predicateScope = GesScope(scope)
         predicateScope.values[s.name] = item
         var skips: [Int] = []
-        if let condition = s.expressions.first {
-            skips.append(r.emit(.jumpIfNotTrue, 0, try expression(condition, r, predicateScope)))
-        }
+        if let condition = s.expressions.first { skips.append(r.emit(.jumpIfNotTrue, 0, try expression(condition, r, predicateScope))) }
         let weightScope = GesScope(scope)
         weightScope.values[s.weightName] = item
         let weight = try expression(s.expressions[1], r, weightScope)
@@ -110,16 +92,13 @@ extension GesCompiler {
         r.emit(.iteratorClose, 0, iterator)
         r.emit(.listBuilderFinish, items, itemsBuilder)
         r.emit(.listBuilderFinish, weights, weightsBuilder)
-        if s.count == 1 {
-            r.emit(.oneWeighted, d, items, weights)
-        } else {
-            r.emit(.takeWeighted, d, items, s.count, payload: UInt64(weights))
-        }
+        if s.count == 1 { r.emit(.oneWeighted, d, items, weights) } else { r.emit(.takeWeighted, d, items, s.count, payload: UInt64(weights)) }
         let done = r.emit(.jump)
         r.patch(invalid, target: r.code.count)
         r.emit(.loadNothing, d)
         r.patch(done, target: r.code.count)
     }
+
     func slice(_ s: GesSelector, _ d: Int, _ source: Int, _ r: GesRoutine) throws {
         if s.count > Int(Int16.max) { throw error("compile.numericLimitExceeded", r.location, phase: .compile) }
         if s.operation == "draw" {
@@ -127,25 +106,13 @@ extension GesCompiler {
             return
         }
         let take = s.operation == "take"
-        let op: Op =
-            s.mode == "first"
-            ? (take ? .takeFirst : .dropFirst)
-            : s.mode == "last"
-                ? (take ? .takeLast : .dropLast)
-                : s.mode == "highest" ? (take ? .takeHighest : .dropHighest) : (take ? .takeLowest : .dropLowest)
+        let op: Op = s.mode == "first" ? (take ? .takeFirst : .dropFirst) : s.mode == "last" ? (take ? .takeLast : .dropLast) : s.mode == "highest" ? (take ? .takeHighest : .dropHighest) : (take ? .takeLowest : .dropLowest)
         r.emit(op, d, source, s.count)
     }
-    func pipeline(
-        _ source: Int, _ prefix: [GesSelector], _ s: GesSelector, _ d: Int, _ r: GesRoutine, _ scope: GesScope
-    ) throws {
+
+    func pipeline(_ source: Int, _ prefix: [GesSelector], _ s: GesSelector, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
         let identity: Bool
-        if s.expressions.isEmpty {
-            identity = true
-        } else if case .name(let name) = s.expressions[0].kind {
-            identity = name == s.name
-        } else {
-            identity = false
-        }
+        if s.expressions.isEmpty { identity = true } else if case .name(let name) = s.expressions[0].kind { identity = name == s.name } else { identity = false }
         if prefix.isEmpty && ["sum", "average"].contains(s.operation) && identity {
             aggregate(source, average: s.operation == "average", d, r)
             return
@@ -165,8 +132,7 @@ extension GesCompiler {
             for i in guardOK { r.patch(i, target: r.code.count) }
         }
         invalid.append(r.emit(.iteratorCreateOrJump, iterator, source))
-        let collection = ["filter", "select", "map", "group", "distinct", "order", "take", "drop", "draw"].contains(
-            s.operation)
+        let collection = ["filter", "select", "map", "group", "distinct", "order", "take", "drop", "draw"].contains(s.operation)
         var builder = 0
         var count = d
         var one = 0
@@ -177,13 +143,7 @@ extension GesCompiler {
         switch s.operation {
         case "filter", "select", "map", "group", "distinct", "order", "take", "drop", "draw":
             builder = r.temporary()
-            let create: Op =
-                s.operation == "map"
-                ? .mapBuilderCreate
-                : s.operation == "group"
-                    ? .groupBuilderCreate
-                    : s.operation == "distinct"
-                        ? .distinctBuilderCreate : s.operation == "order" ? .orderBuilderCreate : .listBuilderCreate
+            let create: Op = s.operation == "map" ? .mapBuilderCreate : s.operation == "group" ? .groupBuilderCreate : s.operation == "distinct" ? .distinctBuilderCreate : s.operation == "order" ? .orderBuilderCreate : .listBuilderCreate
             r.emit(create, builder)
         case "count", "average":
             r.emit(.loadInteger, count)
@@ -223,48 +183,30 @@ extension GesCompiler {
         for p in prefix {
             let child = GesScope(scope)
             child.values[p.name] = current
-            if p.operation == "filter" {
-                if scalarConstant(p.expressions[0]) != .boolean(true) {
-                    nextJumps.append(r.emit(.jumpIfNotTrue, 0, try expression(p.expressions[0], r, child)))
-                }
-            } else {
-                current = try expression(p.expressions[0], r, child)
-            }
+            if p.operation == "filter" { if scalarConstant(p.expressions[0]) != .boolean(true) { nextJumps.append(r.emit(.jumpIfNotTrue, 0, try expression(p.expressions[0], r, child))) } } else { current = try expression(p.expressions[0], r, child) }
         }
         let child = GesScope(scope)
         child.values[s.name] = current
         let projected: Int
-        if ["objectMatch", "take", "drop", "draw"].contains(s.operation)
-            || ["count", "filter"].contains(s.operation)
-                && s.expressions.first.flatMap(scalarConstant) == .boolean(true)
-        {
+        if ["objectMatch", "take", "drop", "draw"].contains(s.operation) || ["count", "filter"].contains(s.operation) && s.expressions.first.flatMap(scalarConstant) == .boolean(true) {
             projected = current
         } else {
             projected = try s.expressions.first.map { try expression($0, r, child) } ?? current
         }
         switch s.operation {
         case "filter", "select", "take", "drop", "draw":
-            if s.operation == "filter" && s.expressions.first.flatMap(scalarConstant) != .boolean(true) {
-                nextJumps.append(r.emit(.jumpIfNotTrue, 0, projected))
-            }
+            if s.operation == "filter" && s.expressions.first.flatMap(scalarConstant) != .boolean(true) { nextJumps.append(r.emit(.jumpIfNotTrue, 0, projected)) }
             r.emit(.listBuilderAdd, 0, builder, s.operation == "select" ? projected : current)
         case "map", "group", "distinct", "order":
-            let value =
-                s.operation == "map" && s.expressions.count > 1 ? try expression(s.expressions[1], r, child) : current
-            let op: Op =
-                s.operation == "map"
-                ? .mapBuilderAdd
-                : s.operation == "group"
-                    ? .groupBuilderAdd : s.operation == "distinct" ? .distinctBuilderAdd : .orderBuilderAdd
+            let value = s.operation == "map" && s.expressions.count > 1 ? try expression(s.expressions[1], r, child) : current
+            let op: Op = s.operation == "map" ? .mapBuilderAdd : s.operation == "group" ? .groupBuilderAdd : s.operation == "distinct" ? .distinctBuilderAdd : .orderBuilderAdd
             r.emit(op, 0, builder, projected, payload: UInt64(value))
         case "any", "all":
             nextJumps.append(r.emit(s.operation == "all" ? .jumpIfTrue : .jumpIfNotTrue, 0, projected))
             r.emit(s.operation == "all" ? .loadFalse : .loadTrue, d)
             endJumps.append(r.emit(.jump))
         case "count":
-            if !s.expressions.isEmpty && s.expressions.first.flatMap(scalarConstant) != .boolean(true) {
-                nextJumps.append(r.emit(.jumpIfNotTrue, 0, projected))
-            }
+            if !s.expressions.isEmpty && s.expressions.first.flatMap(scalarConstant) != .boolean(true) { nextJumps.append(r.emit(.jumpIfNotTrue, 0, projected)) }
             r.emit(.add, count, count, one)
         case "sum", "average":
             if s.operation == "average" { r.emit(.add, count, count, one) }
@@ -319,12 +261,7 @@ extension GesCompiler {
                 s.operation == "map"
                 ? .mapBuilderFinish
                 : s.operation == "group"
-                    ? .groupBuilderFinish
-                    : s.operation == "distinct"
-                        ? .distinctBuilderFinish
-                        : s.operation == "order"
-                            ? (s.mode == "descending" ? .orderBuilderFinishDescending : .orderBuilderFinishAscending)
-                            : .listBuilderFinish
+                    ? .groupBuilderFinish : s.operation == "distinct" ? .distinctBuilderFinish : s.operation == "order" ? (s.mode == "descending" ? .orderBuilderFinishDescending : .orderBuilderFinishAscending) : .listBuilderFinish
             if ["take", "drop", "draw"].contains(s.operation) {
                 let collected = r.temporary()
                 r.emit(finish, collected, builder)
@@ -351,6 +288,7 @@ extension GesCompiler {
         r.emit(.loadNothing, d)
         r.patch(done, target: r.code.count)
     }
+
     func aggregate(_ source: Int, average: Bool, _ d: Int, _ r: GesRoutine) {
         let iterator = r.temporary()
         let item = r.temporary()
@@ -382,6 +320,7 @@ extension GesCompiler {
         r.patch(done1, target: r.code.count)
         r.patch(done2, target: r.code.count)
     }
+
     func objectMatch(_ value: Int, _ pattern: GesExpression, _ r: GesRoutine, _ scope: GesScope) throws -> Int {
         let result = r.temporary()
         r.emit(.loadTrue, result)

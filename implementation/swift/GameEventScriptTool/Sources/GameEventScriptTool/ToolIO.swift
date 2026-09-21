@@ -34,27 +34,25 @@ final class ToolIO {
         self.errorTerminal = errorTerminal
         self.noColor = noColor
     }
+
     func write(_ text: String, toError: Bool = false) {
         guard outputError == nil else { return }
         do { try (toError ? error : output)(text) } catch { outputError = error }
     }
+
     func line(_ text: String = "", toError: Bool = false) { write(text + "\n", toError: toError) }
+
     func diagnostic(_ diagnostic: GameEventScriptDiagnostic, fallback: String) {
         var prefix = diagnostic.sourceLocation?.sourceName ?? fallback
-        if let line = diagnostic.sourceLocation?.line {
-            prefix += "(\(line),\(diagnostic.sourceLocation?.column ?? 1))"
-        }
-        let context = [
-            diagnostic.programName.map { "program=" + $0 }, diagnostic.handlerName.map { "handler=" + $0 },
-            diagnostic.symbol.map { "symbol=" + $0 },
-        ].compactMap { $0 }
+        if let line = diagnostic.sourceLocation?.line { prefix += "(\(line),\(diagnostic.sourceLocation?.column ?? 1))" }
+        let context = [diagnostic.programName.map { "program=" + $0 }, diagnostic.handlerName.map { "handler=" + $0 }, diagnostic.symbol.map { "symbol=" + $0 }].compactMap { $0 }
         let suffix = context.isEmpty ? "" : " [" + context.joined(separator: ", ") + "]"
         line("\(prefix): error \(diagnostic.code): \(diagnostic.message)\(suffix)", toError: true)
     }
+
     func report(_ failure: any Error, fallback: String = "compile", argumentCode: String = "cli.usage") {
         switch failure {
-        case let error as GameEventScriptCompileError:
-            for value in error.diagnostics { diagnostic(value, fallback: fallback) }
+        case let error as GameEventScriptCompileError: for value in error.diagnostics { diagnostic(value, fallback: fallback) }
         case let error as GameEventScriptDynamicLinkError: diagnostic(error.diagnostic, fallback: "link")
         case let error as GameEventScriptProgramFormatError:
             line("\(fallback): error decode.\(error.code): \(error.message)", toError: true)
@@ -62,8 +60,7 @@ final class ToolIO {
             if let section = error.sectionType { line(String(format: "  sectionType=0x%04X", section), toError: true) }
             if let entry = error.entryIndex { line("  entryIndex=\(entry)", toError: true) }
         case ToolError.usage(let message): line("error \(argumentCode): \(message)", toError: true)
-        case ToolError.encoding(let path):
-            line("\(path): error cli.invalidEncoding: Expected valid UTF-8.", toError: true)
+        case ToolError.encoding(let path): line("\(path): error cli.invalidEncoding: Expected valid UTF-8.", toError: true)
         case ToolError.io(let message): line("error cli.io: \(message)", toError: true)
         default: line("error cli.io: \(failure.localizedDescription)", toError: true)
         }
@@ -81,6 +78,7 @@ final class ToolLineReader {
     var buffer: [UInt8] = []
     var skipLF = false
     var eof = false
+
     func readLine() throws -> String? {
         while true {
             if skipLF && !buffer.isEmpty {
@@ -109,8 +107,7 @@ final class ToolLineReader {
 
 func quoted(_ text: String) -> String {
     // Foundation's JSON writer provides portable escaping for paths and verbose Text arguments.
-    let data = try? JSONSerialization.data(
-        withJSONObject: [text], options: [.fragmentsAllowed, .withoutEscapingSlashes])
+    let data = try? JSONSerialization.data(withJSONObject: [text], options: [.fragmentsAllowed, .withoutEscapingSlashes])
     guard let data, let array = String(data: data, encoding: .utf8) else { return "\"\"" }
     return String(array.dropFirst().dropLast())
 }

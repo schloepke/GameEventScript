@@ -93,11 +93,9 @@ public struct GameEventScriptProgramFormatError: Error, Sendable {
     public let entryIndex: Int?
     /// Human-readable explanation; not a stable comparison key.
     public let message: String
+
     /// Creates a format error with optional encoded and logical location context.
-    public init(
-        _ code: GameEventScriptProgramFormatErrorCode, message: String = "Invalid GES program",
-        byteOffset: Int? = nil, sectionType: UInt16? = nil, entryIndex: Int? = nil
-    ) {
+    public init(_ code: GameEventScriptProgramFormatErrorCode, message: String = "Invalid GES program", byteOffset: Int? = nil, sectionType: UInt16? = nil, entryIndex: Int? = nil) {
         self.code = code
         self.message = message
         self.byteOffset = byteOffset
@@ -134,6 +132,7 @@ public struct GameEventScriptProgramReadLimits: Sendable {
     public var maxStringEntries = 65535
     /// Maximum shared index-list count; defaults to 65535.
     public var maxIndexLists = 65535
+
     /// Creates the standard bounded reader limits.
     public init() {}
 }
@@ -144,10 +143,9 @@ public struct GameEventScriptProgramReadOptions: Sendable {
     public var retention: GameEventScriptProgramRetention
     /// Resource limits enforced during decoding.
     public var limits: GameEventScriptProgramReadLimits
+
     /// Creates reader options; defaults to preserving all supported data with standard limits.
-    public init(
-        retention: GameEventScriptProgramRetention = .preserveAll, limits: GameEventScriptProgramReadLimits = .init()
-    ) {
+    public init(retention: GameEventScriptProgramRetention = .preserveAll, limits: GameEventScriptProgramReadLimits = .init()) {
         self.retention = retention
         self.limits = limits
     }

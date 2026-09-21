@@ -8,6 +8,7 @@ struct GesSource {
     let name: String
     let id: UInt32
 }
+
 struct GesToken {
     // Decoded Text content never participates in keyword or punctuation matching.
     var syntaxText: String { kind == "text" ? "" : text }
@@ -20,16 +21,19 @@ struct GesToken {
     let start: Int
     let end: Int
 }
+
 struct GesParameter {
     let label: String
     let name: String
     let type: String?
     let location: GameEventScriptSourceLocation
 }
+
 struct GesArgument {
     let label: String
     let value: GesExpression
 }
+
 final class GesExpression {
     enum Kind {
         case literal(GesValue)
@@ -58,16 +62,19 @@ final class GesExpression {
         case choice([(GesExpression, GesExpression)], GesExpression)
         case generated(String, String, GesExpression, Bool, GesExpression?, GesExpression)
     }
+
     let kind: Kind
     let location: GameEventScriptSourceLocation
     var depth: Int
     var decimalLiteral = false
+
     init(_ kind: Kind, _ location: GameEventScriptSourceLocation, depth: Int = 1) {
         self.kind = kind
         self.location = location
         self.depth = depth
     }
 }
+
 struct GesSelector {
     var operation: String
     var name = "value"
@@ -76,6 +83,7 @@ struct GesSelector {
     var mode = ""
     var weightName = ""
 }
+
 struct GesStatement {
     indirect enum Kind {
         case expression(GesExpression)
@@ -85,9 +93,11 @@ struct GesStatement {
         case loop(String, GesExpression, Bool, [GesStatement])
         case seeded(GesExpression, [GesStatement])
     }
+
     let kind: Kind
     let location: GameEventScriptSourceLocation
 }
+
 struct GesDefinition {
     let kind: String
     let name: String
@@ -99,6 +109,7 @@ struct GesDefinition {
     let location: GameEventScriptSourceLocation
     var signature: String { name + "(" + parameters.map(\.label).joined(separator: ",") + ")" }
 }
+
 struct GesField {
     let name: String
     let type: String
@@ -108,11 +119,13 @@ struct GesField {
     let computed: GesExpression?
     let location: GameEventScriptSourceLocation
 }
+
 struct GesRecord {
     let name: String
     let fields: [GesField]
     let location: GameEventScriptSourceLocation
 }
+
 struct GesModule {
     let name: String
     let definitions: [GesDefinition]
@@ -121,14 +134,6 @@ struct GesModule {
     let location: GameEventScriptSourceLocation
 }
 
-func compileError(
-    _ phase: GameEventScriptDiagnosticPhase, _ code: String, _ message: String,
-    _ location: GameEventScriptSourceLocation, symbol: String? = nil,
-    kind: GameEventScriptSymbolKind = .unknown
-) -> GameEventScriptCompileError {
-    .init(diagnostics: [
-        .init(
-            phase: phase, code: code, message: message, symbol: symbol,
-            symbolKind: kind, sourceLocation: location, programName: location.moduleName)
-    ])
+func compileError(_ phase: GameEventScriptDiagnosticPhase, _ code: String, _ message: String, _ location: GameEventScriptSourceLocation, symbol: String? = nil, kind: GameEventScriptSymbolKind = .unknown) -> GameEventScriptCompileError {
+    .init(diagnostics: [.init(phase: phase, code: code, message: message, symbol: symbol, symbolKind: kind, sourceLocation: location, programName: location.moduleName)])
 }

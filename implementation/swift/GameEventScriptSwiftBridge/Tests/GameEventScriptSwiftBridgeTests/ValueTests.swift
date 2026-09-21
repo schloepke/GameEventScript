@@ -7,9 +7,7 @@ import XCTest
 
 final class ValueTests: XCTestCase {
     func testScalarConversionsAndExactIntegerBoundaries() throws {
-        for value: Int64 in [.min, .max, 0, 9_007_199_254_740_993] {
-            XCTAssertEqual(try Int64.fromGesValue(value.toGesValue()), value)
-        }
+        for value: Int64 in [.min, .max, 0, 9_007_199_254_740_993] { XCTAssertEqual(try Int64.fromGesValue(value.toGesValue()), value) }
         XCTAssertEqual(try GameEventScriptSwiftValue.decode(.boolean(true), as: Bool.self), true)
         XCTAssertEqual(try GameEventScriptSwiftValue.encode("e\u{301}"), .text("e\u{301}"))
         XCTAssertEqual(try UInt64.fromGesValue(.integer(.max)), UInt64(Int64.max))
@@ -38,9 +36,7 @@ final class ValueTests: XCTestCase {
         XCTAssertThrowsError(try Bool.fromGesValue(.text("true")))
         XCTAssertThrowsError(try Double.fromGesValue(.percentage(0.1)))
         XCTAssertThrowsError(try Int.fromGesValue(.integer(3, unit: .meter)))
-        for value in [GesValue.percentage(0.1), .integer(3, unit: .meter), .dice([2, 5]), .nothing] {
-            XCTAssertEqual(try GameEventScriptSwiftValue.decode(value, as: GesValue.self), value)
-        }
+        for value in [GesValue.percentage(0.1), .integer(3, unit: .meter), .dice([2, 5]), .nothing] { XCTAssertEqual(try GameEventScriptSwiftValue.decode(value, as: GesValue.self), value) }
     }
 
     func testNestedCollectionsAndOptionalValuesAreSnapshots() throws {
@@ -59,9 +55,7 @@ final class ValueTests: XCTestCase {
     func testDictionaryDecodeRejectsCanonicalEquivalenceCollisions() throws {
         let value = GesValue.map([.init(key: "é", value: .integer(1)), .init(key: "e\u{301}", value: .integer(2))])
         XCTAssertEqual(value.length, 2)
-        XCTAssertThrowsError(try [String: Int].fromGesValue(value)) {
-            guard case GameEventScriptSwiftConversionError.dictionaryKeyCollision = $0 else { return XCTFail("\($0)") }
-        }
+        XCTAssertThrowsError(try [String: Int].fromGesValue(value)) { guard case GameEventScriptSwiftConversionError.dictionaryKeyCollision = $0 else { return XCTFail("\($0)") } }
         XCTAssertThrowsError(try [String: Int].fromGesValue(.record(typeName: "Thing", entries: [])))
     }
 }

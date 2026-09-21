@@ -21,12 +21,7 @@ public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
         guard !normalizedName.isEmpty else { throw GameEventScriptMessageError.emptyMessageName }
         let orderedArguments = try GameEventScriptMessageArguments(arguments)
         let signatureId = normalizedName + "(" + orderedArguments.signatureLabels.joined(separator: ",") + ")"
-        self.init(
-            normalizedName: normalizedName,
-            arguments: orderedArguments,
-            signatureId: signatureId,
-            normalizedTags: try Self.normalizeTags(tags)
-        )
+        self.init(normalizedName: normalizedName, arguments: orderedArguments, signatureId: signatureId, normalizedTags: try Self.normalizeTags(tags))
     }
 
     /// Tests for a normalized delivery tag. A leading `#`, surrounding spaces, and tabs are accepted.
@@ -39,9 +34,7 @@ public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
     public func withTags(_ tags: [String]) throws -> GameEventScriptMessage {
         var merged = self.tags
         for tag in try Self.normalizeTags(tags) where !merged.contains(tag) { merged.append(tag) }
-        return GameEventScriptMessage(
-            normalizedName: name, arguments: arguments, signatureId: signatureId, normalizedTags: merged
-        )
+        return GameEventScriptMessage(normalizedName: name, arguments: arguments, signatureId: signatureId, normalizedTags: merged)
     }
 
     /// Formats the message name, arguments, and optional delivery tags.
@@ -51,9 +44,7 @@ public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
     }
 
     /// Compares signature, argument values, and ordered delivery tags.
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        GesText.scalarEqual(lhs.signatureId, rhs.signatureId) && lhs.arguments == rhs.arguments && lhs.tags == rhs.tags
-    }
+    public static func == (lhs: Self, rhs: Self) -> Bool { GesText.scalarEqual(lhs.signatureId, rhs.signatureId) && lhs.arguments == rhs.arguments && lhs.tags == rhs.tags }
 
     /// Hashes the message using the same signature, argument, and tag equality semantics.
     public func hash(into hasher: inout Hasher) {
@@ -62,10 +53,7 @@ public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
         for tag in tags { GesText.hashScalars(tag, into: &hasher) }
     }
 
-    init(
-        normalizedName: String, arguments: GameEventScriptMessageArguments, signatureId: String,
-        normalizedTags: [String]
-    ) {
+    init(normalizedName: String, arguments: GameEventScriptMessageArguments, signatureId: String, normalizedTags: [String]) {
         name = normalizedName
         self.arguments = arguments
         self.signatureId = signatureId
@@ -76,9 +64,7 @@ public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
         var normalized = MessageNames.trim(tag)
         if normalized.hasPrefix("#") { normalized.removeFirst() }
         guard !normalized.isEmpty else { return "" }
-        guard GesText.isLowerName(normalized) else {
-            throw GameEventScriptMessageError.invalidTag
-        }
+        guard GesText.isLowerName(normalized) else { throw GameEventScriptMessageError.invalidTag }
         return normalized
     }
 

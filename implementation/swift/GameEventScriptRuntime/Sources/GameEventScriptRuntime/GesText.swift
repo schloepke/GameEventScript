@@ -5,14 +5,10 @@
 /// Swift's canonical-equivalence string comparison is deliberately not used.
 public enum GesText {
     /// Compares the exact scalar sequence, without Unicode normalization.
-    public static func scalarEqual(_ left: String, _ right: String) -> Bool {
-        left.unicodeScalars.elementsEqual(right.unicodeScalars)
-    }
+    public static func scalarEqual(_ left: String, _ right: String) -> Bool { left.unicodeScalars.elementsEqual(right.unicodeScalars) }
 
     /// Orders text lexicographically by Unicode scalar value.
-    public static func scalarLess(_ left: String, _ right: String) -> Bool {
-        left.unicodeScalars.lexicographicallyPrecedes(right.unicodeScalars) { $0.value < $1.value }
-    }
+    public static func scalarLess(_ left: String, _ right: String) -> Bool { left.unicodeScalars.lexicographicallyPrecedes(right.unicodeScalars) { $0.value < $1.value } }
 
     /// Hashes the exact scalar sequence; the hash is process-local, not transport data.
     public static func hashScalars(_ text: String, into hasher: inout Hasher) {
@@ -24,11 +20,7 @@ public enum GesText {
     public static func isLowerName(_ text: String) -> Bool {
         var bytes = text.utf8.makeIterator()
         guard let first = bytes.next(), first >= 97, first <= 122 else { return false }
-        while let byte = bytes.next() {
-            if !(byte >= 65 && byte <= 90 || byte >= 97 && byte <= 122 || byte >= 48 && byte <= 57) {
-                return false
-            }
-        }
+        while let byte = bytes.next() { if !(byte >= 65 && byte <= 90 || byte >= 97 && byte <= 122 || byte >= 48 && byte <= 57) { return false } }
         return true
     }
 
@@ -36,11 +28,7 @@ public enum GesText {
     public static func isUpperName(_ text: String) -> Bool {
         var bytes = text.utf8.makeIterator()
         guard let first = bytes.next(), first >= 65, first <= 90 else { return false }
-        while let byte = bytes.next() {
-            if !(byte >= 65 && byte <= 90 || byte >= 97 && byte <= 122 || byte >= 48 && byte <= 57) {
-                return false
-            }
-        }
+        while let byte = bytes.next() { if !(byte >= 65 && byte <= 90 || byte >= 97 && byte <= 122 || byte >= 48 && byte <= 57) { return false } }
         return true
     }
 

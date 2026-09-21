@@ -5,9 +5,7 @@
 public enum GesNumber {
     /// Returns an exact signed-64 value only when the finite input is integral and in range.
     public static func exactInteger(_ value: Double) -> Int64? {
-        guard value.isFinite, value >= -9223372036854775808.0,
-            value < 9223372036854775808.0, value.rounded(.towardZero) == value
-        else { return nil }
+        guard value.isFinite, value >= -9223372036854775808.0, value < 9223372036854775808.0, value.rounded(.towardZero) == value else { return nil }
         return Int64(value)
     }
 
@@ -44,9 +42,7 @@ public enum GesNumber {
         if ratio == 0 { return "0%" }
         let text = exactInteger(ratio).map(String.init) ?? format(ratio)
         let exponentParts = text.split(separator: "e")
-        if exponentParts.count == 2, let exponent = Int(exponentParts[1]) {
-            return String(exponentParts[0]) + "e" + String(exponent + 2) + "%"
-        }
+        if exponentParts.count == 2, let exponent = Int(exponentParts[1]) { return String(exponentParts[0]) + "e" + String(exponent + 2) + "%" }
         let negative = text.first == "-"
         let magnitude = negative ? String(text.dropFirst()) : text
         let parts = magnitude.split(separator: ".", omittingEmptySubsequences: false)
@@ -58,7 +54,6 @@ public enum GesNumber {
         while integer.count > 1 && integer.first == 48 { integer.removeFirst() }
         var fraction = Array(digits.dropFirst(point))
         while fraction.last == 48 { fraction.removeLast() }
-        return (negative ? "-" : "") + String(decoding: integer, as: UTF8.self)
-            + (fraction.isEmpty ? "" : "." + String(decoding: fraction, as: UTF8.self)) + "%"
+        return (negative ? "-" : "") + String(decoding: integer, as: UTF8.self) + (fraction.isEmpty ? "" : "." + String(decoding: fraction, as: UTF8.self)) + "%"
     }
 }

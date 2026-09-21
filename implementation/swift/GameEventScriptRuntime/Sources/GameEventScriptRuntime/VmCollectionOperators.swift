@@ -2,24 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 enum GesCollectionOperators {
-    static func execute(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext) throws
-        -> GesValue
-    {
+    static func execute(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext) throws -> GesValue {
         let op = i.opcode
         let slot = s.slot(Int(i.word1))
         let a = slot.value
         switch op {
-        case .takeFirst, .takeLast, .takeHighest, .takeLowest, .dropFirst, .dropLast, .dropHighest, .dropLowest,
-            .oneRandom, .takeRandom:
-            return GesTakeDrop.execute(op, slot, count: Int(i.signedWord2), random: c.random)
-        case .oneWeighted, .takeWeighted:
-            return weighted(
-                a, s.value(Int(op == .oneWeighted ? i.word2 : i.a)), count: op == .oneWeighted ? 1 : Int(i.signedWord2),
-                single: op == .oneWeighted, random: c.random)
-        case .hasPattern, .takePattern:
-            return GesPatterns.execute(
-                slot, pattern: GameEventScriptBytecodePatternKind(rawValue: i.a)!, count: Int(i.signedWord2),
-                face: i.a == 1 ? s.value(Int(i.b)) : .nothing, take: op == .takePattern)
+        case .takeFirst, .takeLast, .takeHighest, .takeLowest, .dropFirst, .dropLast, .dropHighest, .dropLowest, .oneRandom, .takeRandom: return GesTakeDrop.execute(op, slot, count: Int(i.signedWord2), random: c.random)
+        case .oneWeighted, .takeWeighted: return weighted(a, s.value(Int(op == .oneWeighted ? i.word2 : i.a)), count: op == .oneWeighted ? 1 : Int(i.signedWord2), single: op == .oneWeighted, random: c.random)
+        case .hasPattern, .takePattern: return GesPatterns.execute(slot, pattern: GameEventScriptBytecodePatternKind(rawValue: i.a)!, count: Int(i.signedWord2), face: i.a == 1 ? s.value(Int(i.b)) : .nothing, take: op == .takePattern)
         case .count:
             if case .iterator(let iterator) = slot {
                 defer { iterator.close() }
@@ -50,10 +40,7 @@ enum GesCollectionOperators {
             guard let map = try a.asMap ?? a.externalMap() else { return .nothing }
             if op == .keysOfMap { return .list(map.keys) }
             if op == .valuesOfMap { return .list(map.values) }
-            return .list(
-                map.entries.map {
-                    .map([.init(key: "key", value: .text($0.key)), .init(key: "value", value: $0.value)])
-                })
+            return .list(map.entries.map { .map([.init(key: "key", value: .text($0.key)), .init(key: "value", value: $0.value)]) })
         case .hasAny, .hasAll:
             let all = op == .hasAll
             let iterator: GesIterator?
@@ -76,29 +63,17 @@ enum GesCollectionOperators {
             }
             if op == .contains { return .boolean(contains(a, right)) }
             let all = op == .containsAll
-            let candidates =
-                [.list, .dice, .text, .tag, .integerRange, .floatRange].contains(a.kind) ? GesIterator(a) : nil
+            let candidates = [.list, .dice, .text, .tag, .integerRange, .floatRange].contains(a.kind) ? GesIterator(a) : nil
             guard let candidates else { return .boolean(all) }
             defer { candidates.close() }
             let container: GesVmState.Slot
-            if case .iterator(let iterator) = right {
-                container = .value(.list(read(iterator)))
-            } else {
-                container = right
-            }
-            while let candidate = candidates.next() {
-                if contains(candidate, container) != all { return .boolean(!all) }
-            }
+            if case .iterator(let iterator) = right { container = .value(.list(read(iterator))) } else { container = right }
+            while let candidate = candidates.next() { if contains(candidate, container) != all { return .boolean(!all) } }
             return .boolean(all)
         case .startsWith, .endsWith:
             let b = s.value(Int(i.word2))
             if a.isNothing { return .nothing }
-            if let at = a.textValue, let bt = b.textValue {
-                return .boolean(
-                    op == .startsWith
-                        ? at.unicodeScalars.starts(with: bt.unicodeScalars)
-                        : at.unicodeScalars.reversed().starts(with: bt.unicodeScalars.reversed()))
-            }
+            if let at = a.textValue, let bt = b.textValue { return .boolean(op == .startsWith ? at.unicodeScalars.starts(with: bt.unicodeScalars) : at.unicodeScalars.reversed().starts(with: bt.unicodeScalars.reversed())) }
             guard sequence(a), sequence(b) else { return .boolean(false) }
             let ac = length(a)
             let bc = length(b)
@@ -127,38 +102,34 @@ enum GesCollectionOperators {
             return GesComparison.sorted(values, descending: op == .sortDescending).map(GesValue.list) ?? .nothing
         case .shuffle:
             guard var values = materialize(slot) else { return .nothing }
-            if values.count > 1 {
-                for index in stride(from: values.count - 1, through: 1, by: -1) {
-                    values.swapAt(index, Int(c.random.nextInclusiveInteger(0, Int64(index))))
-                }
-            }
+            if values.count > 1 { for index in stride(from: values.count - 1, through: 1, by: -1) { values.swapAt(index, Int(c.random.nextInclusiveInteger(0, Int64(index)))) } }
             return .list(values)
         default:
             s.fail("runtime.illegalOpcode")
             return .nothing
         }
     }
-    static func length(_ value: GesValue) -> Int64 {
-        value.integerRangeValue?.count ?? value.floatRangeValue?.count
-            ?? (value.spatialValue != nil ? 3 : Int64(value.length))
-    }
+
+    static func length(_ value: GesValue) -> Int64 { value.integerRangeValue?.count ?? value.floatRangeValue?.count ?? (value.spatialValue != nil ? 3 : Int64(value.length)) }
+
     static func sequence(_ value: GesValue) -> Bool { [.list, .dice, .integerRange, .floatRange].contains(value.kind) }
+
     static func materialize(_ slot: GesVmState.Slot, ranges: Bool = true) -> [GesValue]? {
         if case .iterator(let iterator) = slot { return read(iterator) }
         let value = slot.value
         if let list = value.listValue { return list }
         if let dice = value.diceRolls { return dice.map { .integer(Int64($0)) } }
-        if ranges && (value.integerRangeValue != nil || value.floatRangeValue != nil) && length(value) <= Int32.max {
-            return read(GesIterator(value)!)
-        }
+        if ranges && (value.integerRangeValue != nil || value.floatRangeValue != nil) && length(value) <= Int32.max { return read(GesIterator(value)!) }
         return nil
     }
+
     static func read(_ iterator: GesIterator) -> [GesValue] {
         defer { iterator.close() }
         var values: [GesValue] = []
         while let value = iterator.next() { values.append(value) }
         return values
     }
+
     static func contains(_ needle: GesValue, _ slot: GesVmState.Slot) -> Bool {
         if case .iterator(let iterator) = slot {
             defer { iterator.close() }
@@ -175,16 +146,10 @@ enum GesCollectionOperators {
             return (0...(a.count - b.count)).contains { a[$0..<($0 + b.count)].elementsEqual(b) }
         }
         if let list = value.listValue { return list.contains(needle) }
-        if let dice = value.diceRolls {
-            return needle.kind == .integer && !needle.hasUnit && dice.contains { Int64($0) == needle.asInteger }
-        }
+        if let dice = value.diceRolls { return needle.kind == .integer && !needle.hasUnit && dice.contains { Int64($0) == needle.asInteger } }
         if value.kind == .map { return needle.textValue.flatMap { value.asMap!.get($0) } != nil }
-        if value.spatialValue != nil {
-            return needle.isNumeric && (1...3).contains { value.index(Int64($0)) == needle }
-        }
-        if let range = value.integerRangeValue {
-            return needle.kind == .integer && !needle.hasUnit && range.contains(needle.asInteger)
-        }
+        if value.spatialValue != nil { return needle.isNumeric && (1...3).contains { value.index(Int64($0)) == needle } }
+        if let range = value.integerRangeValue { return needle.kind == .integer && !needle.hasUnit && range.contains(needle.asInteger) }
         if let range = value.floatRangeValue {
             if needle.hasUnit || (needle.kind != .integer && needle.kind != .float) { return false }
             if let integer = needle.integerValue, GesNumber.exactInteger(Double(integer)) != integer { return false }
@@ -192,6 +157,7 @@ enum GesCollectionOperators {
         }
         return false
     }
+
     static func reverseRange(_ value: GesValue) -> GesValue {
         if let range = value.integerRangeValue {
             guard let last = range.term(at: range.count) else { return .integerRange(from: 0, to: 0, step: 0) }
@@ -201,26 +167,17 @@ enum GesCollectionOperators {
         guard let last = range.term(at: range.count) else { return .integerRange(from: 0, to: 0, step: 0) }
         return .floatRange(from: last, to: range.from, step: -range.step)
     }
+
     private static func combine(_ a: GesValue, _ b: GesValue, intersect: Bool) -> GesValue {
         if a.kind == .map {
             let map = a.asMap!
             let keys: [String]
-            if b.kind == .map {
-                keys = b.asMap!.entries.map(\.key)
-            } else if let list = b.listValue, list.allSatisfy({ $0.textValue != nil }) {
-                keys = list.map(\.asText)
-            } else {
-                return .nothing
-            }
-            if intersect {
-                return .map(map.entries.filter { entry in keys.contains { GesText.scalarEqual($0, entry.key) } })
-            }
+            if b.kind == .map { keys = b.asMap!.entries.map(\.key) } else if let list = b.listValue, list.allSatisfy({ $0.textValue != nil }) { keys = list.map(\.asText) } else { return .nothing }
+            if intersect { return .map(map.entries.filter { entry in keys.contains { GesText.scalarEqual($0, entry.key) } }) }
             if b.kind == .map { return .map(map.entries + b.mapEntries!) }
             return .map(map.entries + keys.filter { map.get($0) == nil }.map { .init(key: $0, value: .boolean(true)) })
         }
-        guard let left = a.listValue ?? a.diceRolls?.map({ .integer(Int64($0)) }),
-            let right = b.listValue ?? b.diceRolls?.map({ .integer(Int64($0)) })
-        else { return .nothing }
+        guard let left = a.listValue ?? a.diceRolls?.map({ .integer(Int64($0)) }), let right = b.listValue ?? b.diceRolls?.map({ .integer(Int64($0)) }) else { return .nothing }
         var result: [GesValue]
         if intersect {
             var used = [Bool](repeating: false, count: right.count)
@@ -236,12 +193,9 @@ enum GesCollectionOperators {
         }
         return a.kind == .dice && b.kind == .dice ? .dice(result.map { Int32($0.asInteger) }) : .list(result)
     }
-    private static func weighted(
-        _ source: GesValue, _ weightsValue: GesValue, count: Int, single: Bool, random: GameEventScriptRandomGenerator
-    ) -> GesValue {
-        guard var items = source.listValue, let weights = weightsValue.listValue, weights.count >= items.count else {
-            return .nothing
-        }
+
+    private static func weighted(_ source: GesValue, _ weightsValue: GesValue, count: Int, single: Bool, random: GameEventScriptRandomGenerator) -> GesValue {
+        guard var items = source.listValue, let weights = weightsValue.listValue, weights.count >= items.count else { return .nothing }
         if items.isEmpty || count <= 0 { return single ? .nothing : .list([]) }
         var weightsBuffer = weights.prefix(items.count).map(\.asNumber)
         if weightsBuffer.contains(where: { !$0.isFinite || $0 <= 0 }) { return single ? .nothing : .list([]) }

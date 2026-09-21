@@ -10,16 +10,12 @@
 #endif
 
 enum GesMath {
-    static func execute(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext) throws
-        -> GesValue
-    {
+    static func execute(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext) throws -> GesValue {
         let a = s.value(Int(i.word1))
         // Read the second register only for instructions which actually have one.
         let b: GesValue
         switch i.opcode {
-        case .or, .and, .implies, .xor, .equal, .notEqual, .less, .greater, .lessOrEqual, .greaterOrEqual,
-            .add, .subtract, .multiply, .divide, .integerDivide, .modulo, .remainder, .power, .min, .max,
-            .clamp, .randomTake, .randomTakeFloat, .term:
+        case .or, .and, .implies, .xor, .equal, .notEqual, .less, .greater, .lessOrEqual, .greaterOrEqual, .add, .subtract, .multiply, .divide, .integerDivide, .modulo, .remainder, .power, .min, .max, .clamp, .randomTake, .randomTakeFloat, .term:
             b = s.value(Int(i.word2))
         default: b = .nothing
         }
@@ -59,31 +55,16 @@ enum GesMath {
         case .multiply, .divide, .integerDivide, .modulo, .remainder, .power: return arithmetic(i.opcode, a, b)
         case .min, .max: return GesComparison.extreme(a, b, maximum: i.opcode == .max)
         case .negate, .abs:
-            if let integer = a.integerValue {
-                return integer == .min
-                    ? .float(-Double(integer), unit: a.unit)
-                    : .integer(i.opcode == .abs ? Swift.abs(integer) : -integer, unit: a.unit)
-            }
+            if let integer = a.integerValue { return integer == .min ? .float(-Double(integer), unit: a.unit) : .integer(i.opcode == .abs ? Swift.abs(integer) : -integer, unit: a.unit) }
             if a.kind == .point { return .nothing }
-            if a.kind == .vector {
-                return i.opcode == .abs
-                    ? .float((a.x * a.x + a.y * a.y + a.z * a.z).squareRoot(), unit: a.unit)
-                    : .vector(x: -a.x, y: -a.y, z: -a.z, unit: a.unit)
-            }
+            if a.kind == .vector { return i.opcode == .abs ? .float((a.x * a.x + a.y * a.y + a.z * a.z).squareRoot(), unit: a.unit) : .vector(x: -a.x, y: -a.y, z: -a.z, unit: a.unit) }
             let number = i.opcode == .abs ? Swift.abs(a.asNumber) : -a.asNumber
             return a.kind == .percentage ? .percentage(number) : .float(number, unit: a.unit)
         case .clamp:
             let upper = s.value(Int(i.a))
-            guard a.unit == b.unit, b.unit == upper.unit, a.isNumeric, b.isNumeric, upper.isNumeric else {
-                return .nothing
-            }
-            if let av = a.integerValue, let bv = b.integerValue, let cv = upper.integerValue {
-                return .integer(Swift.min(Swift.max(av, Swift.min(bv, cv)), Swift.max(bv, cv)), unit: a.unit)
-            }
-            return .float(
-                Swift.min(
-                    Swift.max(a.asNumber, Swift.min(b.asNumber, upper.asNumber)), Swift.max(b.asNumber, upper.asNumber)),
-                unit: a.unit)
+            guard a.unit == b.unit, b.unit == upper.unit, a.isNumeric, b.isNumeric, upper.isNumeric else { return .nothing }
+            if let av = a.integerValue, let bv = b.integerValue, let cv = upper.integerValue { return .integer(Swift.min(Swift.max(av, Swift.min(bv, cv)), Swift.max(bv, cv)), unit: a.unit) }
+            return .float(Swift.min(Swift.max(a.asNumber, Swift.min(b.asNumber, upper.asNumber)), Swift.max(b.asNumber, upper.asNumber)), unit: a.unit)
         case .logN: return a.hasUnit ? .nothing : .float(log(a.asNumber))
         case .exp: return a.hasUnit ? .nothing : .float(exp(a.asNumber))
         case .floor, .ceil, .truncate, .roundHalfEven, .roundHalfUp, .roundHalfDown:
@@ -101,12 +82,8 @@ enum GesMath {
                 result = Swift.abs(n - truncated) <= 0.5 ? truncated : n.rounded(.toNearestOrAwayFromZero)
             }
             return .integer(GesNumber.saturatedInteger(result))
-        case .degreeToRadians:
-            return a.isNumeric && a.asNumber.isFinite && (a.unit == .none || a.unit == .degree)
-                ? .float(a.asNumber / 180 * Double.pi) : .nothing
-        case .degreeFromRadians:
-            return a.isNumeric && a.asNumber.isFinite && !a.hasUnit
-                ? .float(a.asNumber / Double.pi * 180, unit: .degree) : .nothing
+        case .degreeToRadians: return a.isNumeric && a.asNumber.isFinite && (a.unit == .none || a.unit == .degree) ? .float(a.asNumber / 180 * Double.pi) : .nothing
+        case .degreeFromRadians: return a.isNumeric && a.asNumber.isFinite && !a.hasUnit ? .float(a.asNumber / Double.pi * 180, unit: .degree) : .nothing
         case .wrapDegree:
             if !a.isNumeric || !a.asNumber.isFinite || (a.unit != .none && a.unit != .degree) { return .nothing }
             var value = a.asNumber.truncatingRemainder(dividingBy: 360)
@@ -114,29 +91,24 @@ enum GesMath {
             return .float(value == 360 ? 0 : value, unit: .degree)
         case .chance:
             if !a.numericOnly || a.hasUnit || !a.asNumber.isFinite { return .nothing }
-            let ratio =
-                a.kind == .integer || (a.kind == .float && Swift.abs(a.asNumber) > 1) ? a.asNumber / 100 : a.asNumber
+            let ratio = a.kind == .integer || (a.kind == .float && Swift.abs(a.asNumber) > 1) ? a.asNumber / 100 : a.asNumber
             return .boolean(ratio <= 0 ? false : ratio >= 1 ? true : c.random.nextFloat(0, 1) < ratio)
         case .randomTake, .randomTakeFloat:
             if a.unit != b.unit { return .nothing }
-            if i.opcode == .randomTake, let av = a.integerValue, let bv = b.integerValue {
-                return .integer(c.random.nextInclusiveInteger(av, bv), unit: a.unit)
-            }
-            return a.asNumber.isFinite && b.asNumber.isFinite
-                ? .float(c.random.nextFloat(a.asNumber, b.asNumber), unit: a.unit) : .nothing
+            if i.opcode == .randomTake, let av = a.integerValue, let bv = b.integerValue { return .integer(c.random.nextInclusiveInteger(av, bv), unit: a.unit) }
+            return a.asNumber.isFinite && b.asNumber.isFinite ? .float(c.random.nextFloat(a.asNumber, b.asNumber), unit: a.unit) : .nothing
         case .term: return b.isNumeric ? GesSeries.term(a, index: b.asInteger) : .nothing
         default: return GesNavigation.execute(i, s)
         }
     }
+
     static func add(_ a: GesValue, _ b: GesValue, subtract: Bool = false) -> GesValue {
         if a.isNothing || (b.isNothing && !(subtract && a.kind == .list)) { return .nothing }
         if !subtract && (a.kind == .text || b.kind == .text) { return .text(a.toText + b.toText) }
         if subtract && a.kind == .list && b.kind == .map { return .nothing }
         if a.kind == .list || (b.kind == .list && !(subtract && a.kind == .map)) {
             if !subtract { return a.listValue.map { .list($0 + [b]) } ?? .list([a] + b.listValue!) }
-            if let list = a.listValue {
-                return .list(removing(list, b.listValue ?? b.diceRolls?.map { .integer(Int64($0)) } ?? [b]))
-            }
+            if let list = a.listValue { return .list(removing(list, b.listValue ?? b.diceRolls?.map { .integer(Int64($0)) } ?? [b])) }
             if let dice = a.diceRolls { return .list(removing(dice.map { .integer(Int64($0)) }, b.listValue!)) }
             return .nothing
         }
@@ -147,41 +119,23 @@ enum GesMath {
                 return .nothing
             }
             if let dice = a.diceRolls {
-                if let other = b.diceRolls {
-                    return .dice(
-                        removing(dice.map { .integer(Int64($0)) }, other.map { .integer(Int64($0)) }).map {
-                            Int32($0.asInteger)
-                        })
-                }
-                if validFace(b) {
-                    return .dice(removing(dice.map { .integer(Int64($0)) }, [b]).map { Int32($0.asInteger) })
-                }
+                if let other = b.diceRolls { return .dice(removing(dice.map { .integer(Int64($0)) }, other.map { .integer(Int64($0)) }).map { Int32($0.asInteger) }) }
+                if validFace(b) { return .dice(removing(dice.map { .integer(Int64($0)) }, [b]).map { Int32($0.asInteger) }) }
                 return .nothing
             }
         }
         if a.kind == .map && subtract {
             let keys: [String]
-            if b.kind == .map {
-                keys = b.asMap!.entries.map(\.key)
-            } else if let key = b.textValue {
-                keys = [key]
-            } else if let list = b.listValue, list.allSatisfy({ $0.textValue != nil }) {
-                keys = list.map(\.asText)
-            } else {
-                return .nothing
-            }
+            if b.kind == .map { keys = b.asMap!.entries.map(\.key) } else if let key = b.textValue { keys = [key] } else if let list = b.listValue, list.allSatisfy({ $0.textValue != nil }) { keys = list.map(\.asText) } else { return .nothing }
             return .map(a.mapEntries!.filter { entry in !keys.contains { GesText.scalarEqual($0, entry.key) } })
         }
         if a.spatialValue != nil || b.spatialValue != nil {
             guard a.unit == b.unit else { return .nothing }
-            if a.kind == .vector && b.kind == .vector || a.kind == .point && b.kind == .vector
-                || subtract && a.kind == .point && b.kind == .point
-            {
+            if a.kind == .vector && b.kind == .vector || a.kind == .point && b.kind == .vector || subtract && a.kind == .point && b.kind == .point {
                 let x = subtract ? a.x - b.x : a.x + b.x
                 let y = subtract ? a.y - b.y : a.y + b.y
                 let z = subtract ? a.z - b.z : a.z + b.z
-                return a.kind == .point && b.kind == .vector
-                    ? .point(x: x, y: y, z: z, unit: a.unit) : .vector(x: x, y: y, z: z, unit: a.unit)
+                return a.kind == .point && b.kind == .vector ? .point(x: x, y: y, z: z, unit: a.unit) : .vector(x: x, y: y, z: z, unit: a.unit)
             }
             return .nothing
         }
@@ -200,9 +154,9 @@ enum GesMath {
         }
         return .float(subtract ? a.asNumber - b.asNumber : a.asNumber + b.asNumber, unit: a.unit)
     }
-    private static func validFace(_ value: GesValue) -> Bool {
-        value.kind == .integer && !value.hasUnit && value.asInteger > 0 && value.asInteger <= Int32.max
-    }
+
+    private static func validFace(_ value: GesValue) -> Bool { value.kind == .integer && !value.hasUnit && value.asInteger > 0 && value.asInteger <= Int32.max }
+
     private static func removing(_ values: [GesValue], _ remove: [GesValue]) -> [GesValue] {
         var used = [Bool](repeating: false, count: remove.count)
         return values.filter { value in
@@ -213,12 +167,11 @@ enum GesMath {
             return true
         }
     }
+
     static func arithmetic(_ op: GameEventScriptBytecodeOpCode, _ a: GesValue, _ b: GesValue) -> GesValue {
         if a.isNothing || b.isNothing { return .nothing }
         if op == .power {
-            if b.hasUnit || a.asNumber.isNaN || b.asNumber.isNaN || (a.hasUnit && b.asNumber != 0 && b.asNumber != 1) {
-                return .nothing
-            }
+            if b.hasUnit || a.asNumber.isNaN || b.asNumber.isNaN || (a.hasUnit && b.asNumber != 0 && b.asNumber != 1) { return .nothing }
             return .float(pow(a.asNumber, b.asNumber), unit: b.asNumber == 1 ? a.unit : .none)
         }
         let unit: GesUnit?
@@ -235,13 +188,9 @@ enum GesMath {
                 let vector = a.kind == .vector ? a : b
                 let scalar = a.kind == .vector ? b : a
                 guard vector.kind == .vector, scalar.asNumber.isFinite else { return .nothing }
-                return .vector(
-                    x: vector.x * scalar.asNumber, y: vector.y * scalar.asNumber, z: vector.z * scalar.asNumber,
-                    unit: unit)
+                return .vector(x: vector.x * scalar.asNumber, y: vector.y * scalar.asNumber, z: vector.z * scalar.asNumber, unit: unit)
             }
-            if op == .divide && a.kind == .vector && b.asNumber.isFinite && b.asNumber != 0 {
-                return .vector(x: a.x / b.asNumber, y: a.y / b.asNumber, z: a.z / b.asNumber, unit: unit)
-            }
+            if op == .divide && a.kind == .vector && b.asNumber.isFinite && b.asNumber != 0 { return .vector(x: a.x / b.asNumber, y: a.y / b.asNumber, z: a.z / b.asNumber, unit: unit) }
             return .nothing
         }
         if let av = a.integerValue, let bv = b.integerValue {
@@ -264,10 +213,8 @@ enum GesMath {
         let x = a.asNumber
         let y = b.asNumber
         switch op {
-        case .multiply:
-            return a.kind == .percentage && b.kind == .percentage ? .percentage(x * y) : .float(x * y, unit: unit)
-        case .divide:
-            return a.kind == .percentage && b.kind != .percentage ? .percentage(x / y) : .float(x / y, unit: unit)
+        case .multiply: return a.kind == .percentage && b.kind == .percentage ? .percentage(x * y) : .float(x * y, unit: unit)
+        case .divide: return a.kind == .percentage && b.kind != .percentage ? .percentage(x / y) : .float(x / y, unit: unit)
         case .integerDivide: return .float((x / y).rounded(.down), unit: unit)
         case .modulo, .remainder:
             if !x.isFinite || y.isNaN || y == 0 { return .nothing }

@@ -208,18 +208,10 @@ extension GameEventScriptBytecodeOpCode {
         case .`hypot3D`: [.targetRegister, .leftRegister, .rightRegister, .auxARegister]
         case .`distance`: [.targetRegister, .leftRegister, .rightRegister]
         case .`distance2D`: [.targetRegister, .leftRegister, .rightRegister, .auxARegister, .auxBRegister]
-        case .`distance3D`:
-            [
-                .targetRegister, .leftRegister, .rightRegister, .auxARegister, .auxBRegister, .auxCRegister,
-                .auxDRegister,
-            ]
+        case .`distance3D`: [.targetRegister, .leftRegister, .rightRegister, .auxARegister, .auxBRegister, .auxCRegister, .auxDRegister]
         case .`distanceSquared`: [.targetRegister, .leftRegister, .rightRegister]
         case .`distanceSquared2D`: [.targetRegister, .leftRegister, .rightRegister, .auxARegister, .auxBRegister]
-        case .`distanceSquared3D`:
-            [
-                .targetRegister, .leftRegister, .rightRegister, .auxARegister, .auxBRegister, .auxCRegister,
-                .auxDRegister,
-            ]
+        case .`distanceSquared3D`: [.targetRegister, .leftRegister, .rightRegister, .auxARegister, .auxBRegister, .auxCRegister, .auxDRegister]
         case .`lengthSquared`: [.targetRegister, .operandRegister]
         case .`lengthSquared2D`: [.targetRegister, .leftRegister, .rightRegister]
         case .`lengthSquared3D`: [.targetRegister, .leftRegister, .rightRegister, .auxARegister]
@@ -228,25 +220,13 @@ extension GameEventScriptBytecodeOpCode {
         case .`normalize3D`: [.targetRegister, .leftRegister, .rightRegister, .auxARegister]
         case .`dot`: [.targetRegister, .leftRegister, .rightRegister]
         case .`dot2D`: [.targetRegister, .leftRegister, .rightRegister, .auxARegister, .auxBRegister]
-        case .`dot3D`:
-            [
-                .targetRegister, .leftRegister, .rightRegister, .auxARegister, .auxBRegister, .auxCRegister,
-                .auxDRegister,
-            ]
+        case .`dot3D`: [.targetRegister, .leftRegister, .rightRegister, .auxARegister, .auxBRegister, .auxCRegister, .auxDRegister]
         case .`cross`: [.targetRegister, .leftRegister, .rightRegister]
         case .`cross2D`: [.targetRegister, .leftRegister, .rightRegister, .auxARegister, .auxBRegister]
-        case .`cross3D`:
-            [
-                .targetRegister, .leftRegister, .rightRegister, .auxARegister, .auxBRegister, .auxCRegister,
-                .auxDRegister,
-            ]
+        case .`cross3D`: [.targetRegister, .leftRegister, .rightRegister, .auxARegister, .auxBRegister, .auxCRegister, .auxDRegister]
         case .`angleBetween`: [.targetRegister, .leftRegister, .rightRegister]
         case .`angleBetween2D`: [.targetRegister, .leftRegister, .rightRegister, .auxARegister, .auxBRegister]
-        case .`angleBetween3D`:
-            [
-                .targetRegister, .leftRegister, .rightRegister, .auxARegister, .auxBRegister, .auxCRegister,
-                .auxDRegister,
-            ]
+        case .`angleBetween3D`: [.targetRegister, .leftRegister, .rightRegister, .auxARegister, .auxBRegister, .auxCRegister, .auxDRegister]
         case .`takeFirst`: [.targetRegister, .sourceRegister, .countImmediate]
         case .`dropFirst`: [.targetRegister, .sourceRegister, .countImmediate]
         case .`takeLast`: [.targetRegister, .sourceRegister, .countImmediate]

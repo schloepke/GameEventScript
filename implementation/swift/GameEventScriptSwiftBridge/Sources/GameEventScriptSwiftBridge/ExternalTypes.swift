@@ -12,28 +12,23 @@ public struct GameEventScriptSwiftField<Root> {
     /// Binds a field to a typed KeyPath using strict native value conversion.
     ///
     /// - Throws: An API error for invalid field/type names; getter conversion runs later during access.
-    public init<Value: GameEventScriptSwiftValueConvertible>(
-        _ name: String, typeName: String, keyPath: KeyPath<Root, Value>
-    ) throws {
+    public init<Value: GameEventScriptSwiftValueConvertible>(_ name: String, typeName: String, keyPath: KeyPath<Root, Value>) throws {
         definition = try .init(name: name, typeName: typeName)
         read = { try $0[keyPath: keyPath].toGesValue() }
     }
+
     /// Binds a source type declaration to a synchronous throwing getter.
     ///
     /// - Throws: An API error for invalid field/type names.
-    public init(
-        _ name: String, typeName: String, get: @escaping (Root) throws -> GesValue
-    ) throws {
+    public init(_ name: String, typeName: String, get: @escaping (Root) throws -> GesValue) throws {
         definition = try .init(name: name, typeName: typeName)
         read = get
     }
+
     /// Binds a built-in field kind and optional unit to a synchronous throwing getter.
     ///
     /// - Throws: An API error for invalid names or unsupported kind/unit combinations.
-    public init(
-        _ name: String, kind: GameEventScriptBytecodeTypeKind, unit: GesUnit = .none,
-        get: @escaping (Root) throws -> GesValue
-    ) throws {
+    public init(_ name: String, kind: GameEventScriptBytecodeTypeKind, unit: GesUnit = .none, get: @escaping (Root) throws -> GesValue) throws {
         definition = try .init(name: name, kind: kind, unit: unit)
         read = get
     }
@@ -43,6 +38,7 @@ public struct GameEventScriptSwiftField<Root> {
 public struct GameEventScriptSwiftConstructor<Root> {
     let parameters: [String]
     let create: (GesValueArguments) throws -> Root
+
     /// Retains ordered parameter labels and a factory. Labels are validated against fields when the owning type
     /// descriptor is created; borrowed callback arguments must not escape.
     public init(parameters: [String] = [], create: @escaping (GesValueArguments) throws -> Root) {
@@ -62,26 +58,14 @@ public final class GameEventScriptSwiftType<Root> {
     /// Validates and indexes fields and constructor bindings for one native type.
     ///
     /// - Throws: An API error for invalid names, duplicate declarations or constructor labels without matching fields.
-    public init(
-        _ name: String, fields: [GameEventScriptSwiftField<Root>],
-        constructors: [GameEventScriptSwiftConstructor<Root>] = []
-    ) throws {
+    public init(_ name: String, fields: [GameEventScriptSwiftField<Root>], constructors: [GameEventScriptSwiftConstructor<Root>] = []) throws {
         var byName: [String: GameEventScriptSwiftField<Root>] = [:]
-        for field in fields {
-            guard byName.updateValue(field, forKey: field.definition.name) == nil else {
-                throw GameEventScriptAPIError.invalidArgument("Duplicate external field: " + field.definition.name)
-            }
-        }
+        for field in fields { guard byName.updateValue(field, forKey: field.definition.name) == nil else { throw GameEventScriptAPIError.invalidArgument("Duplicate external field: " + field.definition.name) } }
         let definitions = try constructors.map { constructor in
             let parameters = try constructor.parameters.map { label in
                 let normalized = try GameEventScriptExternalTypeParameterDefinition(name: label, typeName: "Text").name
-                guard let field = byName[normalized]?.definition else {
-                    throw GameEventScriptAPIError.invalidArgument("Constructor parameter has no field: " + normalized)
-                }
-                if let kind = field.kind {
-                    return try GameEventScriptExternalTypeParameterDefinition(
-                        name: normalized, kind: kind, unit: field.unit)
-                }
+                guard let field = byName[normalized]?.definition else { throw GameEventScriptAPIError.invalidArgument("Constructor parameter has no field: " + normalized) }
+                if let kind = field.kind { return try GameEventScriptExternalTypeParameterDefinition(name: normalized, kind: kind, unit: field.unit) }
                 return try GameEventScriptExternalTypeParameterDefinition(name: normalized, typeName: field.typeName)
             }
             return try GameEventScriptExternalTypeConstructorDefinition(typeName: name, parameters: parameters)
@@ -92,25 +76,18 @@ public final class GameEventScriptSwiftType<Root> {
     }
 
     /// Type-erased registration retains this descriptor, its getters and factories.
-    public var binding: GameEventScriptSwiftTypeBinding {
-        .init(
-            definition: definition,
-            constructors: zip(definition.constructors, constructors).map {
-                SwiftConstructor(definition: $0.0, type: self, create: $0.1.create)
-            })
-    }
+    public var binding: GameEventScriptSwiftTypeBinding { .init(definition: definition, constructors: zip(definition.constructors, constructors).map { SwiftConstructor(definition: $0.0, type: self, create: $0.1.create) }) }
+
     /// Wraps a native value using this descriptor; structs retain value semantics and class roots retain their native
     /// object identity.
     public func wrap(_ value: Root) -> GesValue { .external(SwiftExternalValue(value, type: self)) }
 
     /// Only values created by this exact descriptor may be unwrapped.
     public func unwrap(_ value: GesValue) throws -> Root {
-        guard let box = value.externalValue as? SwiftExternalValue<Root>, box.type === self else {
-            throw GameEventScriptSwiftConversionError.typeMismatch(
-                expected: definition.name, actual: value.customTypeName ?? String(describing: value.kind))
-        }
+        guard let box = value.externalValue as? SwiftExternalValue<Root>, box.type === self else { throw GameEventScriptSwiftConversionError.typeMismatch(expected: definition.name, actual: value.customTypeName ?? String(describing: value.kind)) }
         return box.value
     }
+
     fileprivate func read(_ value: Root, field: String) throws -> GesValue? { try fields[field]?.read(value) }
 }
 
@@ -122,13 +99,12 @@ public struct GameEventScriptSwiftTypeBinding {
 }
 
 /// One validated catalog for compilation and constructor registry for execution; no Compiler dependency.
-public struct GameEventScriptSwiftExternalTypeRegistry: GameEventScriptExternalTypeCatalogProtocol,
-    GameEventScriptExternalTypeRegistry
-{
+public struct GameEventScriptSwiftExternalTypeRegistry: GameEventScriptExternalTypeCatalogProtocol, GameEventScriptExternalTypeRegistry {
     private let catalog: GameEventScriptExternalTypeCatalog
     private let constructors: [String: any GameEventScriptExternalTypeConstructor]
     /// Portable type declarations in registration order.
     public var types: [GameEventScriptExternalTypeDefinition] { catalog.types }
+
     /// Builds a compiler catalog and runtime constructor index from explicit bindings.
     ///
     /// - Throws: An API error for duplicate type or constructor identities.
@@ -136,43 +112,37 @@ public struct GameEventScriptSwiftExternalTypeRegistry: GameEventScriptExternalT
         catalog = try .init(bindings.map(\.definition))
         var constructors: [String: any GameEventScriptExternalTypeConstructor] = [:]
         for binding in bindings {
-            for constructor in binding.constructors {
-                guard constructors.updateValue(constructor, forKey: constructor.definition.signatureID) == nil else {
-                    throw GameEventScriptAPIError.invalidArgument("Duplicate external constructor")
-                }
-            }
+            for constructor in binding.constructors { guard constructors.updateValue(constructor, forKey: constructor.definition.signatureID) == nil else { throw GameEventScriptAPIError.invalidArgument("Duplicate external constructor") } }
         }
         self.constructors = constructors
     }
+
     /// Returns a type declaration for a normalized name or an executable constructor for an exact reference, otherwise
     /// nil. The type-name overload throws for invalid identifiers.
-    public func resolve(_ typeName: String) throws -> GameEventScriptExternalTypeDefinition? {
-        try catalog.resolve(typeName)
-    }
+    public func resolve(_ typeName: String) throws -> GameEventScriptExternalTypeDefinition? { try catalog.resolve(typeName) }
+
     /// Returns a type declaration for a normalized name or an executable constructor for an exact reference, otherwise
     /// nil. The type-name overload throws for invalid identifiers.
-    public func resolve(_ reference: GameEventScriptExternalTypeConstructorReference) -> (
-        any GameEventScriptExternalTypeConstructor
-    )? {
-        constructors[reference.signatureID]
-    }
+    public func resolve(_ reference: GameEventScriptExternalTypeConstructorReference) -> (any GameEventScriptExternalTypeConstructor)? { constructors[reference.signatureID] }
 }
 
 private final class SwiftExternalValue<Root>: GameEventScriptExternalValue {
     let value: Root
     let type: GameEventScriptSwiftType<Root>
     var definition: GameEventScriptExternalTypeDefinition { type.definition }
+
     init(_ value: Root, type: GameEventScriptSwiftType<Root>) {
         self.value = value
         self.type = type
     }
+
     func field(_ name: String) throws -> GesValue? { try type.read(value, field: name) }
 }
+
 private struct SwiftConstructor<Root>: GameEventScriptExternalTypeConstructor {
     let definition: GameEventScriptExternalTypeConstructorDefinition
     let type: GameEventScriptSwiftType<Root>
     let create: (GesValueArguments) throws -> Root
-    func invoke(_ call: GesExternalTypeConstructorCall) throws {
-        try call.setExternalValue(SwiftExternalValue(create(call.arguments), type: type))
-    }
+
+    func invoke(_ call: GesExternalTypeConstructorCall) throws { try call.setExternalValue(SwiftExternalValue(create(call.arguments), type: type)) }
 }

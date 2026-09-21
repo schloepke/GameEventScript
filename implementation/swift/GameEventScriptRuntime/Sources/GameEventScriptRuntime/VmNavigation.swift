@@ -42,11 +42,7 @@ enum GesNavigation {
             guard a.spatialValue != nil, b.spatialValue != nil else { return .nothing }
             return pair(op, a.x, a.y, a.z, b.x, b.y, b.z, unit: a.unit)
         }
-        let dimension =
-            [
-                .hypot3D, .lengthSquared3D, .normalize3D, .distance3D, .distanceSquared3D, .dot3D, .cross3D,
-                .angleBetween3D,
-            ].contains(op) ? 3 : 2
+        let dimension = [.hypot3D, .lengthSquared3D, .normalize3D, .distance3D, .distanceSquared3D, .dot3D, .cross3D, .angleBetween3D].contains(op) ? 3 : 2
         let single = [.hypot2D, .hypot3D, .lengthSquared2D, .lengthSquared3D, .normalize2D, .normalize3D].contains(op)
         let count = single ? dimension : dimension * 2
         let registers = [i.word1, i.word2, i.a, i.b, i.c, i.d]
@@ -62,27 +58,23 @@ enum GesNavigation {
             let squared = values[0] * values[0] + values[1] * values[1] + z * z
             return op == .hypot2D || op == .hypot3D ? .float(squared.squareRoot(), unit: a.unit) : .float(squared)
         }
-        return dimension == 3
-            ? pair(op, values[0], values[1], values[2], values[3], values[4], values[5], unit: a.unit)
-            : pair(op, values[0], values[1], 0, values[2], values[3], 0, unit: a.unit)
+        return dimension == 3 ? pair(op, values[0], values[1], values[2], values[3], values[4], values[5], unit: a.unit) : pair(op, values[0], values[1], 0, values[2], values[3], 0, unit: a.unit)
     }
+
     private static func normalize(_ x: Double, _ y: Double, _ z: Double) -> GesValue {
         let length = (x * x + y * y + z * z).squareRoot()
         if length == 0 || length.isNaN { return .nothing }
         return .vector(x: x / length, y: y / length, z: z / length)
     }
-    private static func pair(
-        _ op: GameEventScriptBytecodeOpCode, _ ax: Double, _ ay: Double, _ az: Double, _ bx: Double, _ by: Double,
-        _ bz: Double, unit: GesUnit
-    ) -> GesValue {
+
+    private static func pair(_ op: GameEventScriptBytecodeOpCode, _ ax: Double, _ ay: Double, _ az: Double, _ bx: Double, _ by: Double, _ bz: Double, unit: GesUnit) -> GesValue {
         switch op {
         case .distance, .distance2D, .distance3D, .distanceSquared, .distanceSquared2D, .distanceSquared3D:
             let dx = ax - bx
             let dy = ay - by
             let dz = az - bz
             let squared = dx * dx + dy * dy + dz * dz
-            return [.distance, .distance2D, .distance3D].contains(op)
-                ? .float(squared.squareRoot(), unit: unit) : .float(squared)
+            return [.distance, .distance2D, .distance3D].contains(op) ? .float(squared.squareRoot(), unit: unit) : .float(squared)
         case .dot, .dot2D, .dot3D: return .float(ax * bx + ay * by + az * bz)
         case .cross2D: return .float(ax * by - ay * bx)
         case .cross, .cross3D: return .vector(x: ay * bz - az * by, y: az * bx - ax * bz, z: ax * by - ay * bx)

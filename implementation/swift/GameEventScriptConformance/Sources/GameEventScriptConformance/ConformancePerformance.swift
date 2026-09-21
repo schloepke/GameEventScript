@@ -11,6 +11,7 @@ public struct ConformanceMeasuredMetric: Sendable {
     public let value: Double
     /// Unit identifier matching the expectation profile.
     public let unit: String
+
     /// Creates an adapter measurement; the runner validates metric identity, unit and numeric bounds.
     public init(id: String, value: Double, unit: String) {
         self.id = id
@@ -18,12 +19,14 @@ public struct ConformanceMeasuredMetric: Sendable {
         self.unit = unit
     }
 }
+
 /// Measurement is supplied by an adapter; the portable runner owns comparisons.
 public protocol ConformancePerformanceProvider: Sendable {
     /// Measures the declared workload for the selected platform profile. Return exactly the expected metric set and
     /// units. Adapter failures may throw and are reported as invalid measurement environments.
     func measure(_ test: ConformanceCase, profile: String) throws -> [ConformanceMeasuredMetric]
 }
+
 /// One measured metric compared with its reference and effective upper bound.
 public struct ConformancePerformanceMetricResult: Sendable {
     /// Stable metric identifier.
@@ -39,6 +42,7 @@ public struct ConformancePerformanceMetricResult: Sendable {
     /// Whether the observed value is at or below the effective upper bound.
     public var passed: Bool { measured <= allowed }
 }
+
 /// Performance comparisons for one case and platform profile.
 public struct ConformancePerformanceResult: Sendable {
     /// Selected platform profile identifier.
@@ -49,55 +53,40 @@ public struct ConformancePerformanceResult: Sendable {
 
 extension ConformanceRunner {
     static func performance(_ test: ConformanceCase, _ environment: ConformanceEnvironment) -> ConformanceCaseResult {
-        func failure(_ code: String, _ detail: String? = nil) -> ConformanceCaseResult {
-            .init(
-                testCase: test, status: "error", code: code, missingCapabilities: [], mismatches: [],
-                technicalDetails: detail)
+        func failure(_ code: String, _ detail: String? = nil) -> ConformanceCaseResult { .init(testCase: test, status: "error", code: code, missingCapabilities: [], mismatches: [], technicalDetails: detail) }
+
+        guard let profile = environment.performanceProfile, let expected = test.expectation["performance"]?["profiles"]?[profile]?["metrics"]?.objectValue, let provider = environment.performanceProvider else {
+            return failure("conformance.runner.missingPerformanceProfile")
         }
-        guard let profile = environment.performanceProfile,
-            let expected = test.expectation["performance"]?["profiles"]?[profile]?["metrics"]?.objectValue,
-            let provider = environment.performanceProvider
-        else { return failure("conformance.runner.missingPerformanceProfile") }
         let correctness = ConformanceCompilerRunner.runCase(test)
         guard correctness.status == "passed" else { return correctness }
         do {
             let measurements = try provider.measure(test, profile: profile)
-            guard Set(measurements.map(\.id)).count == measurements.count,
-                Set(measurements.map(\.id)) == Set(expected.map(\.key))
-            else {
-                return failure(
-                    "conformance.runner.invalidEnvironment", "Measurement metric set does not match the profile")
-            }
+            guard Set(measurements.map(\.id)).count == measurements.count, Set(measurements.map(\.id)) == Set(expected.map(\.key)) else { return failure("conformance.runner.invalidEnvironment", "Measurement metric set does not match the profile") }
             var metrics: [ConformancePerformanceMetricResult] = []
             for entry in expected {
                 let actual = measurements.first { $0.id == entry.key }!
-                guard actual.value.isFinite, actual.value >= 0, actual.unit == entry.value["unit"]?.stringValue else {
-                    return failure(
-                        "conformance.runner.invalidEnvironment", "Invalid performance value or unit: " + entry.key)
-                }
-                func number(_ key: String) -> Double? {
-                    entry.value[key].flatMap { Double($0.numberValue ?? $0.stringValue ?? "") }
-                }
+                guard actual.value.isFinite, actual.value >= 0, actual.unit == entry.value["unit"]?.stringValue else { return failure("conformance.runner.invalidEnvironment", "Invalid performance value or unit: " + entry.key) }
+
+                func number(_ key: String) -> Double? { entry.value[key].flatMap { Double($0.numberValue ?? $0.stringValue ?? "") } }
+
                 guard let reference = number("reference") else { return failure("conformance.runner.invalidModel") }
                 var allowed = number("maximum") ?? Double.infinity
                 if let relative = number("toleranceRelative") { allowed = min(allowed, reference * (1 + relative)) }
                 if let absolute = number("toleranceAbsolute") { allowed = min(allowed, reference + absolute) }
                 guard allowed.isFinite else { return failure("conformance.runner.invalidModel") }
-                metrics.append(
-                    .init(
-                        id: entry.key, measured: actual.value, reference: reference, allowed: allowed, unit: actual.unit
-                    ))
+                metrics.append(.init(id: entry.key, measured: actual.value, reference: reference, allowed: allowed, unit: actual.unit))
             }
-            let differences = metrics.filter { !$0.passed }.map {
-                ConformanceMismatch(
-                    path: "/performance/metrics/" + $0.id, expected: GesValue.float($0.allowed).asText,
-                    actual: GesValue.float($0.measured).asText)
-            }
+            let differences = metrics.filter { !$0.passed }.map { ConformanceMismatch(path: "/performance/metrics/" + $0.id, expected: GesValue.float($0.allowed).asText, actual: GesValue.float($0.measured).asText) }
             return ConformanceCaseResult(
-                testCase: test, status: differences.isEmpty ? "passed" : "failed",
+                testCase: test,
+                status: differences.isEmpty ? "passed" : "failed",
                 code: differences.isEmpty ? "conformance.passed" : "conformance.performance.regression",
-                missingCapabilities: [], mismatches: differences, technicalDetails: nil,
-                performance: .init(profile: profile, metrics: metrics))
+                missingCapabilities: [],
+                mismatches: differences,
+                technicalDetails: nil,
+                performance: .init(profile: profile, metrics: metrics)
+            )
         } catch { return failure("conformance.runner.invalidEnvironment", String(describing: error)) }
     }
 }

@@ -30,9 +30,8 @@ public indirect enum ConformanceData: Equatable, Sendable {
     }
 
     /// Looks up a scalar-exact object key; returns nil for absence or a non-object value.
-    public subscript(_ key: String) -> ConformanceData? {
-        objectValue?.first(where: { $0.key.utf8.elementsEqual(key.utf8) })?.value
-    }
+    public subscript(_ key: String) -> ConformanceData? { objectValue?.first(where: { $0.key.utf8.elementsEqual(key.utf8) })?.value }
+
     /// Text payload, or nil for other kinds.
     public var stringValue: String? {
         if case .string(let value) = self { return value }
@@ -63,11 +62,7 @@ public indirect enum ConformanceData: Equatable, Sendable {
 
     internal func replacing(_ key: String, with value: ConformanceData) -> ConformanceData {
         var entries = objectValue ?? []
-        if let index = entries.firstIndex(where: { $0.key.utf8.elementsEqual(key.utf8) }) {
-            entries[index] = .init(key: key, value: value)
-        } else {
-            entries.append(.init(key: key, value: value))
-        }
+        if let index = entries.firstIndex(where: { $0.key.utf8.elementsEqual(key.utf8) }) { entries[index] = .init(key: key, value: value) } else { entries.append(.init(key: key, value: value)) }
         return .object(entries)
     }
 }
@@ -78,15 +73,15 @@ public struct ConformanceEntry: Equatable, Sendable {
     public let key: String
     /// Schema value associated with the key.
     public let value: ConformanceData
+
     /// Creates an ordered schema key/value entry.
     public init(key: String, value: ConformanceData) {
         self.key = key
         self.value = value
     }
+
     /// Compares scalar-exact keys and ordered schema values.
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.key.utf8.elementsEqual(rhs.key.utf8) && lhs.value == rhs.value
-    }
+    public static func == (lhs: Self, rhs: Self) -> Bool { lhs.key.utf8.elementsEqual(rhs.key.utf8) && lhs.value == rhs.value }
 }
 
 /// The validated suite and exact original bytes supplied by the embedding.

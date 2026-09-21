@@ -13,9 +13,7 @@ final class CallbackTests: XCTestCase {
         let signature = try GameEventScriptMessageSignature(name: "Start", parameters: ["value"])
         var received: [String] = []
         let low = try host.subscribe(signature) { message, _ in received.append("low:\(message.arguments[0])") }
-        _ = try host.subscribe(signature, matchingTags: ["ready"], withoutTags: ["skip"], priority: 5) { _, _ in
-            received.append("high")
-        }
+        _ = try host.subscribe(signature, matchingTags: ["ready"], withoutTags: ["skip"], priority: 5) { _, _ in received.append("high") }
         _ = try host.subscribeMessageName("Start", priority: -1) { _, _ in received.append("name") }
         host.receive(try .init(name: "Start", swiftArguments: [("value", 42)], tags: ["ready"]))
         XCTAssertTrue(low.unsubscribe())
@@ -52,8 +50,7 @@ final class CallbackTests: XCTestCase {
         XCTAssertThrowsError(try signature.withSwiftArguments(["a": 1]))
         XCTAssertThrowsError(try signature.withSwiftArguments(["a": 1, "other": 2]))
         XCTAssertThrowsError(try signature.withSwiftArguments(["a": 1, " a ": 2]))
-        XCTAssertThrowsError(
-            try GameEventScriptMessageSignature(name: "Done", parameters: ["_"]).withSwiftArguments(["_": 1]))
+        XCTAssertThrowsError(try GameEventScriptMessageSignature(name: "Done", parameters: ["_"]).withSwiftArguments(["_": 1]))
         let positional = try GameEventScriptMessage(name: "Done", swiftArguments: [(nil, 1), (nil, "two")])
         XCTAssertEqual(positional.signatureId, "Done(_,_)")
     }
@@ -80,21 +77,16 @@ final class CallbackTests: XCTestCase {
     }
 
     func testExtensionRegistryValidatesIdentityAndFallsBack() throws {
-        let function = try GameEventScriptSwiftExtension(namespace: "app", name: "value", parameters: ["a", "b"]) {
-            try $0.setSwiftValue(42)
-        }
+        let function = try GameEventScriptSwiftExtension(namespace: "app", name: "value", parameters: ["a", "b"]) { try $0.setSwiftValue(42) }
         let fallback = try GameEventScriptSwiftExtensionRegistry([function])
         let registry = try GameEventScriptSwiftExtensionRegistry([], fallback: fallback)
         let call = GesExtensionCall()
         try XCTUnwrap(registry.resolve(function.reference)).invoke(call)
         XCTAssertEqual(call.result, .integer(42))
-        XCTAssertNil(
-            try registry.resolve(.init(extensionName: "app", functionName: "value", argumentLabels: ["b", "a"])))
+        XCTAssertNil(try registry.resolve(.init(extensionName: "app", functionName: "value", argumentLabels: ["b", "a"])))
         XCTAssertThrowsError(try GameEventScriptSwiftExtensionRegistry([function, function]))
-        XCTAssertThrowsError(
-            try GameEventScriptSwiftExtension(namespace: "app", name: "value", parameters: ["a", "a"]) { _ in })
-        XCTAssertNoThrow(
-            try GameEventScriptSwiftExtension(namespace: "app", name: "value", parameters: ["_", "_"]) { _ in })
+        XCTAssertThrowsError(try GameEventScriptSwiftExtension(namespace: "app", name: "value", parameters: ["a", "a"]) { _ in })
+        XCTAssertNoThrow(try GameEventScriptSwiftExtension(namespace: "app", name: "value", parameters: ["_", "_"]) { _ in })
         XCTAssertThrowsError(try GesValueArguments().swiftValue(at: 0, as: Int?.self))
     }
 }

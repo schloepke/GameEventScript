@@ -8,11 +8,5 @@ let package = Package(
     name: "GameEventScriptCompiler",
     products: [.library(name: "GameEventScriptCompiler", targets: ["GameEventScriptCompiler"])],
     dependencies: [.package(path: "../GameEventScriptRuntime")],
-    targets: [
-        .target(
-            name: "GameEventScriptCompiler",
-            dependencies: [
-                .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")
-            ])
-    ]
+    targets: [.target(name: "GameEventScriptCompiler", dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")])]
 )

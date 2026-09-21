@@ -4,9 +4,7 @@
 /// GES grammar, exact Int64 conversion, and decimal percentage scaling.
 /// Swift's decimal conversion is used only after grammar validation for binary64 rounding.
 enum TextNumberCast {
-    static func read(
-        _ input: String, percentage: Bool = false, allowGrouping: Bool = true, percentageMagnitude: Bool = false
-    ) -> GesValue? {
+    static func read(_ input: String, percentage: Bool = false, allowGrouping: Bool = true, percentageMagnitude: Bool = false) -> GesValue? {
         var text = MessageNames.trim(input)
         guard !text.isEmpty else { return nil }
         var unit: GesUnit = .none
@@ -30,12 +28,12 @@ enum TextNumberCast {
         let negative = bytes[0] == 45
         if bytes[0] == 43 || bytes[0] == 45 { position += 1 }
         if position == bytes.count { return nil }
-        if bytes[position...].elementsEqual("Infinity".utf8) {
-            return percentage ? .nothing : .float(negative ? -.infinity : .infinity, unit: unit)
-        }
+        if bytes[position...].elementsEqual("Infinity".utf8) { return percentage ? .nothing : .float(negative ? -.infinity : .infinity, unit: unit) }
         let digitsStart = position
         var underscores = false
+
         func digit(_ byte: UInt8) -> Bool { (48...57).contains(byte) }
+
         func readDigits() -> Int {
             var count = 0
             while position < bytes.count && digit(bytes[position]) {
@@ -48,6 +46,7 @@ enum TextNumberCast {
             }
             return count
         }
+
         let integerDigits = readDigits()
         if integerDigits == 0 { return nil }
         let grouping = position < bytes.count && bytes[position] == 44
@@ -72,35 +71,25 @@ enum TextNumberCast {
             if position < bytes.count && (bytes[position] == 45 || bytes[position] == 43) { position += 1 }
             let start = position
             if readDigits() == 0 { return nil }
-            for byte in bytes[start..<position] where digit(byte) {
-                exponent = min(1 << 50, exponent * 10 + Int64(byte - 48))
-            }
+            for byte in bytes[start..<position] where digit(byte) { exponent = min(1 << 50, exponent * 10 + Int64(byte - 48)) }
             if exponentNegative { exponent = -exponent }
         }
         if position != bytes.count || grouping && underscores { return nil }
         let digits = bytes[digitsStart..<mantissaEnd].filter(digit)
-        guard let first = digits.firstIndex(where: { $0 != 48 }), let last = digits.lastIndex(where: { $0 != 48 })
-        else { return percentage ? .percentage(0) : .integer(0, unit: unit) }
+        guard let first = digits.firstIndex(where: { $0 != 48 }), let last = digits.lastIndex(where: { $0 != 48 }) else { return percentage ? .percentage(0) : .integer(0, unit: unit) }
         let power = exponent - Int64(fractionalDigits) + Int64(digits.count - last - 1) - (scaled ? 2 : 0)
         if !percentage && power >= 0 && Int64(last - first + 1) + power <= 19 {
             var magnitude: UInt64 = 0
             for byte in digits[first...last] { magnitude = magnitude * 10 + UInt64(byte - 48) }
             for _ in 0..<Int(power) { magnitude *= 10 }
-            if magnitude <= (negative ? UInt64(1) << 63 : UInt64(Int64.max)) {
-                return .integer(Int64(bitPattern: negative ? 0 &- magnitude : magnitude), unit: unit)
-            }
+            if magnitude <= (negative ? UInt64(1) << 63 : UInt64(Int64.max)) { return .integer(Int64(bitPattern: negative ? 0 &- magnitude : magnitude), unit: unit) }
         }
         let decimal: String
-        if !underscores && !grouping && !scaled {
-            decimal = text
-        } else {
-            decimal =
-                String(decoding: bytes[..<mantissaEnd].filter { $0 != 95 && $0 != 44 }, as: UTF8.self) + "e"
-                + String(exponent - (scaled ? 2 : 0))
-        }
+        if !underscores && !grouping && !scaled { decimal = text } else { decimal = String(decoding: bytes[..<mantissaEnd].filter { $0 != 95 && $0 != 44 }, as: UTF8.self) + "e" + String(exponent - (scaled ? 2 : 0)) }
         guard let number = Double(decimal) else { return nil }
         return percentage ? number.isFinite ? .percentage(number) : .nothing : .float(number, unit: unit)
     }
+
     static func percentage(_ value: GesValue) -> GesValue {
         if value.kind == .text { return read(value.textValue!, percentage: true) ?? .nothing }
         if value.kind == .percentage { return value }

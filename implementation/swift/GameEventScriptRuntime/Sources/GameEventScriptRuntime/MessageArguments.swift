@@ -16,9 +16,7 @@ public struct GameEventScriptMessageArgument: Hashable {
     }
 
     /// Compares the normalized label and value.
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        GesText.scalarEqual(lhs.name, rhs.name) && lhs.value == rhs.value
-    }
+    public static func == (lhs: Self, rhs: Self) -> Bool { GesText.scalarEqual(lhs.name, rhs.name) && lhs.value == rhs.value }
 
     /// Hashes the normalized label and value using their equality semantics.
     public func hash(into hasher: inout Hasher) {
@@ -42,11 +40,7 @@ public struct GameEventScriptMessageArguments: Sequence, Hashable, CustomStringC
     /// Copies an ordered argument list and validates named-label uniqueness.
     public init(_ arguments: [GameEventScriptMessageArgument] = []) throws {
         var names = Set<String>()
-        for argument in arguments where argument.name != GameEventScriptMessageSignature.unlabeledParameterName {
-            guard names.insert(argument.name).inserted else {
-                throw GameEventScriptMessageError.duplicateArgumentName
-            }
-        }
+        for argument in arguments where argument.name != GameEventScriptMessageSignature.unlabeledParameterName { guard names.insert(argument.name).inserted else { throw GameEventScriptMessageError.duplicateArgumentName } }
         self.arguments = arguments
     }
 
@@ -130,14 +124,10 @@ public struct GameEventScriptMessageArguments: Sequence, Hashable, CustomStringC
     }
 
     /// Iterates argument pairs in their original order.
-    public func makeIterator() -> IndexingIterator<[GameEventScriptMessageArgument]> {
-        arguments.makeIterator()
-    }
+    public func makeIterator() -> IndexingIterator<[GameEventScriptMessageArgument]> { arguments.makeIterator() }
 
     /// Formats ordered labels and language text values for message display.
-    public var description: String {
-        arguments.map { $0.name + ": " + $0.value.description }.joined(separator: ", ")
-    }
+    public var description: String { arguments.map { $0.name + ": " + $0.value.description }.joined(separator: ", ") }
 
     init(normalizedArguments: [GameEventScriptMessageArgument]) { arguments = normalizedArguments }
 }

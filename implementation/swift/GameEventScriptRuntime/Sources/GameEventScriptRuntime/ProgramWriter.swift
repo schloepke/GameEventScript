@@ -12,6 +12,7 @@ public enum GameEventScriptProgramWriter {
         try encode(program, &output, fileSize: 0)
         return output.count
     }
+
     /// Validates and encodes a Program as canonical little-endian `.gesb` V1 bytes.
     ///
     /// - Throws: `GameEventScriptProgramFormatError` for invalid Program data.
@@ -21,13 +22,11 @@ public enum GameEventScriptProgramWriter {
         try encode(program, &output, fileSize: size)
         return output.storage
     }
+
     /// Writes into existing storage, preserving it on validation or capacity failure.
-    @discardableResult
-    public static func write(_ program: GameEventScriptProgram, into destination: inout [UInt8]) throws -> Int {
+    @discardableResult public static func write(_ program: GameEventScriptProgram, into destination: inout [UInt8]) throws -> Int {
         let size = try encodedSize(program)
-        if destination.count < size {
-            throw GameEventScriptProgramFormatError(.invalidPayloadLength, message: "Destination is too small")
-        }
+        if destination.count < size { throw GameEventScriptProgramFormatError(.invalidPayloadLength, message: "Destination is too small") }
         let encoded = try bytes(program)
         destination.replaceSubrange(0..<size, with: encoded)
         return size
@@ -39,9 +38,7 @@ public enum GameEventScriptProgramWriter {
         try out.u16(0)
         try out.u32(16)
         try out.u32(UInt32(fileSize))
-        guard let module = p.stringConstants.firstIndex(where: { GesText.scalarEqual($0, p.moduleName) }) else {
-            throw GameEventScriptProgramValidator.failure(.invalidStringIndex)
-        }
+        guard let module = p.stringConstants.firstIndex(where: { GesText.scalarEqual($0, p.moduleName) }) else { throw GameEventScriptProgramValidator.failure(.invalidStringIndex) }
         try out.section(1, flags: 1, size: 16)
         try out.u16(UInt16(module))
         try out.u16(p.requiredRegisterCount)
@@ -59,11 +56,13 @@ public enum GameEventScriptProgramWriter {
             try out.length(list.count)
             for value in list { try out.u16(value) }
         }
+
         func findList(_ values: [UInt16]) throws -> UInt16 {
             if let index = p.uint16IndexLists.firstIndex(of: values) { return UInt16(index) }
             if values.isEmpty { return .max }
             throw GameEventScriptProgramValidator.failure(.invalidListIndex)
         }
+
         try out.section(4, flags: 1, size: 4 + 20 * p.bindings.count)
         try out.length(p.bindings.count)
         for binding in p.bindings {
@@ -91,9 +90,7 @@ public enum GameEventScriptProgramWriter {
         }
         if let symbols = p.debugSymbols {
             var names: [String] = []
-            for symbol in symbols where !names.contains(where: { GesText.scalarEqual($0, symbol.name) }) {
-                names.append(symbol.name)
-            }
+            for symbol in symbols where !names.contains(where: { GesText.scalarEqual($0, symbol.name) }) { names.append(symbol.name) }
             let size = 8 + 16 * symbols.count + names.reduce(0) { $0 + 4 + $1.utf8.count }
             try out.section(32, size: size)
             try out.length(names.count)
@@ -109,9 +106,7 @@ public enum GameEventScriptProgramWriter {
             }
         }
         if let map = p.sourceMap {
-            let size =
-                8 + 20 * map.entries.count
-                + map.sources.reduce(0) { $0 + 44 + $1.sourceName.utf8.count + 4 * $1.lineStartByteOffsets.count }
+            let size = 8 + 20 * map.entries.count + map.sources.reduce(0) { $0 + 44 + $1.sourceName.utf8.count + 4 * $1.lineStartByteOffsets.count }
             try out.section(33, size: size)
             try out.length(map.sources.count)
             for source in map.sources {
@@ -147,9 +142,7 @@ public enum GameEventScriptProgramWriter {
             try out.string(build.compilerVersion)
         }
         for section in p.opaqueSections.sorted(by: { $0.originalOrdinal < $1.originalOrdinal }) {
-            try out.section(
-                section.sectionType, flags: section.flags, size: section.rawPayload.count,
-                version: section.sectionVersion)
+            try out.section(section.sectionType, flags: section.flags, size: section.rawPayload.count, version: section.sectionVersion)
             try out.raw(section.rawPayload)
         }
     }
@@ -159,40 +152,49 @@ private struct GesBinaryOutput {
     var storage: [UInt8] = []
     var count = 0
     let countOnly: Bool
+
     init(countOnly: Bool = false, capacity: Int = 0) {
         self.countOnly = countOnly
         if !countOnly { storage.reserveCapacity(capacity) }
     }
+
     mutating func u8(_ value: UInt8) throws {
         if count == Int(Int32.max) { throw GameEventScriptProgramValidator.failure(.sectionTooLarge) }
         count += 1
         if !countOnly { storage.append(value) }
     }
+
     mutating func u16(_ value: UInt16) throws {
         try u8(UInt8(truncatingIfNeeded: value))
         try u8(UInt8(truncatingIfNeeded: value >> 8))
     }
+
     mutating func u32(_ value: UInt32) throws {
         try u16(UInt16(truncatingIfNeeded: value))
         try u16(UInt16(truncatingIfNeeded: value >> 16))
     }
+
     mutating func u64(_ value: UInt64) throws {
         try u32(UInt32(truncatingIfNeeded: value))
         try u32(UInt32(truncatingIfNeeded: value >> 32))
     }
+
     mutating func length(_ value: Int) throws {
         if value < 0 || value > Int(Int32.max) { throw GameEventScriptProgramValidator.failure(.sectionTooLarge) }
         try u32(UInt32(value))
     }
+
     mutating func raw(_ bytes: [UInt8]) throws {
         if bytes.count > Int(Int32.max) - count { throw GameEventScriptProgramValidator.failure(.sectionTooLarge) }
         count += bytes.count
         if !countOnly { storage.append(contentsOf: bytes) }
     }
+
     mutating func string(_ text: String) throws {
         try length(text.utf8.count)
         try raw(Array(text.utf8))
     }
+
     mutating func section(_ type: UInt16, flags: UInt16 = 0, size: Int, version: UInt16 = 1) throws {
         try u16(type)
         try u16(flags)

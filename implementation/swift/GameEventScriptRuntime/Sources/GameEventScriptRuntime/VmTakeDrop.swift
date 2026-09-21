@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 enum GesTakeDrop {
-    static func execute(
-        _ op: GameEventScriptBytecodeOpCode, _ slot: GesVmState.Slot, count: Int, random: GameEventScriptRandomGenerator
-    ) -> GesValue {
+    static func execute(_ op: GameEventScriptBytecodeOpCode, _ slot: GesVmState.Slot, count: Int, random: GameEventScriptRandomGenerator) -> GesValue {
         let source = slot.value
         let count = max(0, count)
         if let series = source.seriesValue {
@@ -17,9 +15,7 @@ enum GesTakeDrop {
         }
         if source.integerRangeValue != nil || source.floatRangeValue != nil {
             let length = GesCollectionOperators.length(source)
-            if op == .oneRandom {
-                return length == 0 ? .nothing : source.index(random.nextInclusiveInteger(0, length - 1) + 1)
-            }
+            if op == .oneRandom { return length == 0 ? .nothing : source.index(random.nextInclusiveInteger(0, length - 1) + 1) }
             if op == .takeRandom {
                 let selectedCount = min(Int64(count), length)
                 var indexes: [Int64] = []
@@ -56,9 +52,7 @@ enum GesTakeDrop {
             return .list(values)
         }
         guard let values = GesCollectionOperators.materialize(slot, ranges: false) else { return .nothing }
-        if op == .oneRandom {
-            return values.isEmpty ? .nothing : values[Int(random.nextInclusiveInteger(0, Int64(values.count - 1)))]
-        }
+        if op == .oneRandom { return values.isEmpty ? .nothing : values[Int(random.nextInclusiveInteger(0, Int64(values.count - 1)))] }
         let number = min(count, values.count)
         let result: [GesValue]
         switch op {
@@ -69,10 +63,7 @@ enum GesTakeDrop {
         case .takeRandom:
             var available = Array(values.indices)
             var selected: [GesValue] = []
-            for _ in 0..<number {
-                selected.append(
-                    values[available.remove(at: Int(random.nextInclusiveInteger(0, Int64(available.count - 1))))])
-            }
+            for _ in 0..<number { selected.append(values[available.remove(at: Int(random.nextInclusiveInteger(0, Int64(available.count - 1))))]) }
             result = selected
         case .takeHighest, .takeLowest, .dropHighest, .dropLowest:
             let highest = op == .takeHighest || op == .dropHighest
@@ -97,6 +88,7 @@ enum GesTakeDrop {
         }
         return source.kind == .dice ? .dice(result.map { Int32($0.asInteger) }) : .list(result)
     }
+
     private static func range(_ op: GameEventScriptBytecodeOpCode, _ source: GesValue, count: Int64) -> GesValue {
         let length = GesCollectionOperators.length(source)
         let ascending = (source.integerRangeValue?.step ?? 0) > 0 || (source.floatRangeValue?.step ?? 0) > 0
@@ -122,18 +114,16 @@ enum GesTakeDrop {
         default: return .nothing
         }
     }
+
     private static func sliced(_ value: GesValue, first: Int64, last: Int64, preserveEnd: Bool) -> GesValue {
         if let range = value.integerRangeValue {
-            guard let from = range.term(at: first), let to = preserveEnd ? range.to : range.term(at: last) else {
-                return .nothing
-            }
+            guard let from = range.term(at: first), let to = preserveEnd ? range.to : range.term(at: last) else { return .nothing }
             return .integerRange(from: from, to: to, step: range.step)
         }
-        guard let range = value.floatRangeValue, let from = range.term(at: first),
-            let to = preserveEnd ? range.to : range.term(at: last)
-        else { return .nothing }
+        guard let range = value.floatRangeValue, let from = range.term(at: first), let to = preserveEnd ? range.to : range.term(at: last) else { return .nothing }
         return .floatRange(from: from, to: to, step: range.step)
     }
+
     private static func extremeOrder(_ a: GesValue, _ b: GesValue) -> Int {
         func unit(_ value: GesUnit) -> Int {
             switch value {
@@ -143,6 +133,7 @@ enum GesTakeDrop {
             case .second: 3
             }
         }
+
         func rank(_ value: GesValue) -> Int {
             if value.isNumeric { return 1 }
             switch value.kind {
@@ -159,11 +150,13 @@ enum GesTakeDrop {
             default: return 8
             }
         }
+
         if a.isNumeric && b.isNumeric {
             if a.unit != b.unit { return unit(a.unit) < unit(b.unit) ? -1 : 1 }
             return a.asNumber < b.asNumber ? -1 : a.asNumber > b.asNumber ? 1 : 0
         }
         if rank(a) != rank(b) { return rank(a) < rank(b) ? -1 : 1 }
+
         // Selection has its own same-rank kind order; sort's heterogeneous
         // ranks would reverse Boolean/Tag and Map/Record pairs here.
         func tieRank(_ value: GesValue) -> Int {
@@ -173,6 +166,7 @@ enum GesTakeDrop {
             default: 0
             }
         }
+
         if tieRank(a) != tieRank(b) { return tieRank(a) < tieRank(b) ? -1 : 1 }
         if a.spatialValue != nil && a.kind == b.kind && a.unit != b.unit { return unit(a.unit) < unit(b.unit) ? -1 : 1 }
         return GesComparison.order(a, b) ?? 0

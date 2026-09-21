@@ -11,11 +11,13 @@ final class RunnerTests: XCTestCase {
     final class Trace: @unchecked Sendable {
         private let gate = NSLock()
         private var entries: [Int] = []
+
         func append(_ value: Int) {
             gate.lock()
             defer { gate.unlock() }
             entries.append(value)
         }
+
         var values: [Int] {
             gate.lock()
             defer { gate.unlock() }
@@ -48,11 +50,7 @@ final class RunnerTests: XCTestCase {
             try context.emit("Done", swiftArguments: [("value", number)])
         }
         let second = try runner.subscribe(done) { message, _ in trace.append(Int(message.arguments[0].asInteger)) }
-        DispatchQueue.concurrentPerform(iterations: 100) { index in
-            do { try runner.receive(.init(name: "Start", swiftArguments: [("value", index)])) } catch {
-                XCTFail("\(error)")
-            }
-        }
+        DispatchQueue.concurrentPerform(iterations: 100) { index in do { try runner.receive(.init(name: "Start", swiftArguments: [("value", index)])) } catch { XCTFail("\(error)") } }
         while !runner.isIdle { _ = try runner.runToCompletion() }
         let values = trace.values
         XCTAssertEqual(values.count, 200)

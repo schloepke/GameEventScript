@@ -6,13 +6,10 @@ import TerminalSupport
 
 enum TextDisplay {
     static func width(_ character: Character) -> Int {
-        if character.unicodeScalars.contains(where: {
-            $0.value == 0x200d || $0.value == 0xfe0f || $0.properties.isEmojiPresentation
-        }) {
-            return 2
-        }
+        if character.unicodeScalars.contains(where: { $0.value == 0x200d || $0.value == 0xfe0f || $0.properties.isEmojiPresentation }) { return 2 }
         return character.unicodeScalars.reduce(0) { $0 + max(0, Int(ges_scalar_width($1.value))) }
     }
+
     static func expandTabs(_ text: String) -> String {
         var result = ""
         var column = 0
@@ -23,11 +20,7 @@ enum TextDisplay {
                 column += count
             } else {
                 result.append(character)
-                if character == "\n" || character == "\r" || character == "\r\n" {
-                    column = 0
-                } else {
-                    column += width(character)
-                }
+                if character == "\n" || character == "\r" || character == "\r\n" { column = 0 } else { column += width(character) }
             }
         }
         return result
@@ -44,16 +37,15 @@ enum TerminalKey: Equatable {
 
 final class TerminalKeys {
     let read: (Int32) -> Int32
+
     init(read: @escaping (Int32) -> Int32 = ges_terminal_read) { self.read = read }
+
     static let sequences: [(String, TerminalKey)] = [
-        ("\u{1b}[A", .up), ("\u{1b}[B", .down), ("\u{1b}[C", .right), ("\u{1b}[D", .left),
-        ("\u{1b}[H", .home), ("\u{1b}[F", .end), ("\u{1b}OH", .home), ("\u{1b}OF", .end),
-        ("\u{1b}[1~", .home), ("\u{1b}[4~", .end), ("\u{1b}[3~", .delete),
-        ("\u{1b}[1;5D", .wordLeft), ("\u{1b}[1;5C", .wordRight),
-        ("\u{1b}[27;2;13~", .newline), ("\u{1b}[13;2u", .newline),
-        ("\u{1b}[27;3;13~", .newline), ("\u{1b}[13;3u", .newline),
-        ("\u{1b}\r", .newline), ("\u{1b}\n", .newline), ("\u{1b}[200~", .paste("")),
+        ("\u{1b}[A", .up), ("\u{1b}[B", .down), ("\u{1b}[C", .right), ("\u{1b}[D", .left), ("\u{1b}[H", .home), ("\u{1b}[F", .end), ("\u{1b}OH", .home), ("\u{1b}OF", .end), ("\u{1b}[1~", .home), ("\u{1b}[4~", .end), ("\u{1b}[3~", .delete),
+        ("\u{1b}[1;5D", .wordLeft), ("\u{1b}[1;5C", .wordRight), ("\u{1b}[27;2;13~", .newline), ("\u{1b}[13;2u", .newline), ("\u{1b}[27;3;13~", .newline), ("\u{1b}[13;3u", .newline), ("\u{1b}\r", .newline), ("\u{1b}\n", .newline),
+        ("\u{1b}[200~", .paste("")),
     ]
+
     func next() throws -> TerminalKey {
         let first = read(-1)
         if first == -1 { return .eof }
@@ -86,8 +78,7 @@ final class TerminalKeys {
         default:
             if first < 32 && first != 9 { return .unrecognized([UInt8(first)]) }
             var bytes = [UInt8(first)]
-            let count =
-                first < 0x80 ? 1 : first & 0xe0 == 0xc0 ? 2 : first & 0xf0 == 0xe0 ? 3 : first & 0xf8 == 0xf0 ? 4 : 1
+            let count = first < 0x80 ? 1 : first & 0xe0 == 0xc0 ? 2 : first & 0xf0 == 0xe0 ? 3 : first & 0xf8 == 0xf0 ? 4 : 1
             for _ in 1..<count {
                 let next = read(-1)
                 guard next >= 0 else { throw ToolError.encoding("<stdin>") }
@@ -97,6 +88,7 @@ final class TerminalKeys {
             return .text(text)
         }
     }
+
     private func paste() throws -> TerminalKey {
         let end = Array("\u{1b}[201~".utf8)
         var bytes: [UInt8] = []
@@ -121,7 +113,9 @@ final class TerminalPrompt {
     let keys = TerminalKeys()
     let highlighting = Highlighting()
     var history: [String] = []
+
     init(io: ToolIO) { self.io = io }
+
     func readLine() throws -> String? {
         guard ges_terminal_begin() != 0 else { throw ToolError.io("Could not enable terminal editing.") }
         defer {
@@ -134,6 +128,7 @@ final class TerminalPrompt {
         var historyIndex = history.count
         var draft = ""
         var previousRow = 0
+
         func position(_ input: ArraySlice<Character>, columns: Int) -> (Int, Int) {
             var row = 0
             var column = 5
@@ -155,6 +150,7 @@ final class TerminalPrompt {
             }
             return column >= columns ? (row + 1, 0) : (row, column)
         }
+
         func draw() {
             let columns = max(10, Int(ges_terminal_columns()))
             io.write("\r" + (previousRow > 0 ? "\u{1b}[\(previousRow)A" : "") + "\u{1b}[J", toError: true)
@@ -169,6 +165,7 @@ final class TerminalPrompt {
             io.write("\r" + (caret.1 > 0 ? "\u{1b}[\(caret.1)C" : ""), toError: true)
             previousRow = caret.0
         }
+
         draw()
         while io.outputError == nil {
             let key = try keys.next()

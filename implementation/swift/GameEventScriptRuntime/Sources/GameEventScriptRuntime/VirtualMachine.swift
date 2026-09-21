@@ -3,13 +3,8 @@
 
 /// Stateless executor. Every mutable execution resource belongs to the host's reusable state.
 enum GameEventScriptVirtualMachine {
-    static func begin(
-        _ state: GesVmState, linked: GesLinkedProgram, message: GameEventScriptMessage,
-        matchArguments: Bool, entry: Int, signature: String
-    ) throws {
-        if state.processing {
-            throw GesRuntimeError(diagnostic: .init(phase: .runtime, code: "runtime.vmStateConflict"))
-        }
+    static func begin(_ state: GesVmState, linked: GesLinkedProgram, message: GameEventScriptMessage, matchArguments: Bool, entry: Int, signature: String) throws {
+        if state.processing { throw GesRuntimeError(diagnostic: .init(phase: .runtime, code: "runtime.vmStateConflict")) }
         state.reset()
         state.linked = linked
         state.handlerName = signature
@@ -17,13 +12,10 @@ enum GameEventScriptVirtualMachine {
         let count = matchArguments ? message.arguments.count : 1
         guard state.ensure(count) else { return }
         state.frameLength = count
-        if matchArguments {
-            for index in 0..<count { state.set(index, message.arguments[index]) }
-        } else {
-            state.set(0, .message(message))
-        }
+        if matchArguments { for index in 0..<count { state.set(index, message.arguments[index]) } } else { state.set(0, .message(message)) }
         state.processing = true
     }
+
     static func runSlice(_ state: GesVmState, context: GameEventScriptContext, budget: Int) -> Int {
         var executed = 0
         let reserved = context.budget.reserve(budget)
@@ -38,15 +30,12 @@ enum GameEventScriptVirtualMachine {
                 try execute(instruction, state, context)
                 executed += 1
             }
-        } catch let fault as GameEventScriptExtensionFault { state.fail(fault.diagnostic) } catch let fault
-            as GesRuntimeError
-        { state.fail(fault.diagnostic) } catch { state.fail("runtime.unhandledFailure", error: error) }
+        } catch let fault as GameEventScriptExtensionFault { state.fail(fault.diagnostic) } catch let fault as GesRuntimeError { state.fail(fault.diagnostic) } catch { state.fail("runtime.unhandledFailure", error: error) }
         context.budget.complete(executed: executed, reserved: reserved, processing: state.processing)
         return executed
     }
-    private static func execute(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext)
-        throws
-    {
+
+    private static func execute(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext) throws {
         let d = Int(i.word0)
         let x = Int(i.word1)
         let y = Int(i.word2)
@@ -63,9 +52,7 @@ enum GameEventScriptVirtualMachine {
         case .returnValue: s.returnValue(s.value(x))
         case .createSeries: s.set(d, .series(.init(signatureID: i.word2 == 1 ? "fibonacci" : "factorial")))
         case .callExternal: try GesCallbacks.extensionCall(i, s, c)
-        case .emitMessage, .emitMessageWithTags, .publishMessage, .publishMessageWithTags,
-            .emitMessageValue, .emitMessageValueWithTags, .publishMessageValue, .publishMessageValueWithTags:
-            try message(i, s, c)
+        case .emitMessage, .emitMessageWithTags, .publishMessage, .publishMessageWithTags, .emitMessageValue, .emitMessageValueWithTags, .publishMessageValue, .publishMessageValueWithTags: try message(i, s, c)
         case .cast: s.set(d, try GesCasts.cast(s.value(x), GameEventScriptBytecodeTypeKind(rawValue: i.word2)!, c))
         case .castCustom:
             let value = s.value(x)
@@ -82,16 +69,11 @@ enum GameEventScriptVirtualMachine {
         case .castUnit: s.set(d, GesCasts.unit(s.value(x), i.unit))
         case .castNumeric: s.set(d, GesCasts.number(s.value(x)))
         case .parseLiteral: s.set(d, GesLiteralParser.parse(s.value(x), context: c))
-        case .checkType:
-            s.set(d, .boolean(GesCasts.check(s.value(x), GameEventScriptBytecodeTypeKind(rawValue: i.word2)!)))
+        case .checkType: s.set(d, .boolean(GesCasts.check(s.value(x), GameEventScriptBytecodeTypeKind(rawValue: i.word2)!)))
         case .checkCustomType: s.set(d, .boolean(s.value(x).customTypeName == s.text(i.word2)))
         case .checkUnit:
             let value = s.value(x)
-            s.set(
-                d,
-                .boolean(
-                    ((value.kind == .integer || value.kind == .float) || value.spatialValue != nil)
-                        && value.unit == i.unit))
+            s.set(d, .boolean(((value.kind == .integer || value.kind == .float) || value.spatialValue != nil) && value.unit == i.unit))
         case .checkNumeric: s.set(d, .boolean(s.value(x).isNumeric))
         case .checkInteger:
             let v = s.value(x)
@@ -106,15 +88,8 @@ enum GameEventScriptVirtualMachine {
         case .propertyAccess:
             let key = s.value(x)
             let value = s.value(y)
-            if let integer = key.integerValue {
-                s.set(d, value.index(integer))
-            } else if let text = key.textValue {
-                s.set(d, try value.member(text))
-            } else {
-                s.set(d, .nothing)
-            }
-        case .bindHandler:
-            s.set(d, s.value(x).signatureValue?.createMessage(s.values(i.word2)).map(GesValue.message) ?? .nothing)
+            if let integer = key.integerValue { s.set(d, value.index(integer)) } else if let text = key.textValue { s.set(d, try value.member(text)) } else { s.set(d, .nothing) }
+        case .bindHandler: s.set(d, s.value(x).signatureValue?.createMessage(s.values(i.word2)).map(GesValue.message) ?? .nothing)
         case .loadNothing: s.set(d, .nothing)
         case .loadTrue: s.set(d, .boolean(true))
         case .loadFalse: s.set(d, .boolean(false))
@@ -129,13 +104,8 @@ enum GameEventScriptVirtualMachine {
                 s.fail("runtime.invalidMessageShape")
                 return
             }
-            let signature = try GameEventScriptMessageSignature(
-                name: s.text(shape[0]), parameters: shape.dropFirst().map(s.text))
-            s.set(
-                d,
-                i.opcode == .loadHandler
-                    ? .handler(signature) : signature.createMessage(s.values(i.word2)).map(GesValue.message) ?? .nothing
-            )
+            let signature = try GameEventScriptMessageSignature(name: s.text(shape[0]), parameters: shape.dropFirst().map(s.text))
+            s.set(d, i.opcode == .loadHandler ? .handler(signature) : signature.createMessage(s.values(i.word2)).map(GesValue.message) ?? .nothing)
         case .stageRegister: s.stage(s.value(x))
         case .stageNothing: s.stage(.nothing)
         case .stageTrue: s.stage(.boolean(true))
@@ -161,29 +131,16 @@ enum GameEventScriptVirtualMachine {
             s.clearStage()
         case .createMap:
             let names = s.list(i.word1)
-            if names.count == s.stageLength {
-                s.set(d, .map(names.enumerated().map { .init(key: s.text($0.element), value: s.staged($0.offset)) }))
-            } else {
-                s.set(d, .nothing)
-            }
+            if names.count == s.stageLength { s.set(d, .map(names.enumerated().map { .init(key: s.text($0.element), value: s.staged($0.offset)) })) } else { s.set(d, .nothing) }
             s.clearStage()
-        case .createRange, .createRangeWithStep, .createRangeIterator, .createRangeIteratorWithStep,
-            .createRangeIteratorShort:
+        case .createRange, .createRangeWithStep, .createRangeIterator, .createRangeIteratorWithStep, .createRangeIteratorShort:
             let value: GesValue
             if i.opcode == .createRangeIteratorShort {
-                value = .integerRange(
-                    from: Int64(i.signedWord1), to: Int64(i.signedWord2), step: Int64(Int16(bitPattern: i.a)))
+                value = .integerRange(from: Int64(i.signedWord1), to: Int64(i.signedWord2), step: Int64(Int16(bitPattern: i.a)))
             } else {
-                value = range(
-                    s.value(x), s.value(y),
-                    [.createRangeWithStep, .createRangeIteratorWithStep].contains(i.opcode)
-                        ? s.value(Int(i.a)) : .integer(1))
+                value = range(s.value(x), s.value(y), [.createRangeWithStep, .createRangeIteratorWithStep].contains(i.opcode) ? s.value(Int(i.a)) : .integer(1))
             }
-            if i.opcode == .createRange || i.opcode == .createRangeWithStep {
-                s.set(d, value)
-            } else {
-                iterator(s, d, value, c, checkRangeLimit: true)
-            }
+            if i.opcode == .createRange || i.opcode == .createRangeWithStep { s.set(d, value) } else { iterator(s, d, value, c, checkRangeLimit: true) }
         case .createRecord:
             guard let binding = s.linked!.records[i.word1] else {
                 s.fail("runtime.invalidRecordBinding")
@@ -203,15 +160,9 @@ enum GameEventScriptVirtualMachine {
             s.set(d, value.hasValue ? value : s.value(y))
         case .randomPush:
             let seed = s.value(x)
-            if !c.random.push(seed: seed.kind == .integer && !seed.hasUnit ? seed.asInteger : nil) {
-                c.budget.exhaust("MaxRandomScopeDepth", c.runtimeLimits.maxRandomScopeDepth)
-            }
-        case .randomPushConstant:
-            if !c.random.push(seed: i.integer) {
-                c.budget.exhaust("MaxRandomScopeDepth", c.runtimeLimits.maxRandomScopeDepth)
-            }
-        case .randomPop:
-            if !c.random.pop() && !c.budget.isExhausted { s.fail("runtime.randomStackUnderflow") }
+            if !c.random.push(seed: seed.kind == .integer && !seed.hasUnit ? seed.asInteger : nil) { c.budget.exhaust("MaxRandomScopeDepth", c.runtimeLimits.maxRandomScopeDepth) }
+        case .randomPushConstant: if !c.random.push(seed: i.integer) { c.budget.exhaust("MaxRandomScopeDepth", c.runtimeLimits.maxRandomScopeDepth) }
+        case .randomPop: if !c.random.pop() && !c.budget.isExhausted { s.fail("runtime.randomStackUnderflow") }
         case .iteratorCreate, .iteratorCreateOrJump:
             iterator(s, d, s.value(x), c)
             if i.opcode == .iteratorCreateOrJump, case .value = s.slot(d) { s.ip = y }
@@ -237,53 +188,25 @@ enum GameEventScriptVirtualMachine {
             }
             s.setSlot(d, .builder(GesCollectionBuilder(kind)))
         case .listBuilderAdd, .mapBuilderAdd, .distinctBuilderAdd, .groupBuilderAdd, .orderBuilderAdd:
-            if case .builder(let builder) = s.slot(x) {
-                if i.opcode == .listBuilderAdd {
-                    builder.add(value: s.value(y), budget: c.budget)
-                } else {
-                    builder.add(key: s.value(y), value: s.value(Int(i.a)), budget: c.budget)
-                }
-            }
-        case .listBuilderFinish, .mapBuilderFinish, .distinctBuilderFinish, .groupBuilderFinish,
-            .orderBuilderFinishAscending, .orderBuilderFinishDescending:
-            if case .builder(let builder) = s.slot(x) {
-                s.set(d, builder.finish(descending: i.opcode == .orderBuilderFinishDescending))
-            } else {
-                s.set(d, .nothing)
-            }
-        default:
-            if i.opcode.rawValue >= 0x50 && i.opcode.rawValue <= 0x97 {
-                s.set(d, try GesMath.execute(i, s, c))
-            } else {
-                s.set(d, try GesCollectionOperators.execute(i, s, c))
-            }
+            if case .builder(let builder) = s.slot(x) { if i.opcode == .listBuilderAdd { builder.add(value: s.value(y), budget: c.budget) } else { builder.add(key: s.value(y), value: s.value(Int(i.a)), budget: c.budget) } }
+        case .listBuilderFinish, .mapBuilderFinish, .distinctBuilderFinish, .groupBuilderFinish, .orderBuilderFinishAscending, .orderBuilderFinishDescending:
+            if case .builder(let builder) = s.slot(x) { s.set(d, builder.finish(descending: i.opcode == .orderBuilderFinishDescending)) } else { s.set(d, .nothing) }
+        default: if i.opcode.rawValue >= 0x50 && i.opcode.rawValue <= 0x97 { s.set(d, try GesMath.execute(i, s, c)) } else { s.set(d, try GesCollectionOperators.execute(i, s, c)) }
         }
     }
-    static func iterator(
-        _ s: GesVmState, _ destination: Int, _ value: GesValue, _ c: GameEventScriptContext,
-        checkRangeLimit: Bool = false
-    ) {
+
+    static func iterator(_ s: GesVmState, _ destination: Int, _ value: GesValue, _ c: GameEventScriptContext, checkRangeLimit: Bool = false) {
         var value = value
-        if checkRangeLimit, let count = value.integerRangeValue?.count ?? value.floatRangeValue?.count,
-            !c.budget.range(count)
-        {
-            value = .integerRange(from: 0, to: 0, step: 0)
-        }
-        if let iterator = GesIterator(value) {
-            s.setSlot(destination, .iterator(iterator))
-        } else {
-            s.set(destination, .nothing)
-        }
+        if checkRangeLimit, let count = value.integerRangeValue?.count ?? value.floatRangeValue?.count, !c.budget.range(count) { value = .integerRange(from: 0, to: 0, step: 0) }
+        if let iterator = GesIterator(value) { s.setSlot(destination, .iterator(iterator)) } else { s.set(destination, .nothing) }
     }
+
     private static func range(_ from: GesValue, _ to: GesValue, _ step: GesValue) -> GesValue {
-        if let from = from.integerValue, let to = to.integerValue, let step = step.integerValue {
-            return .integerRange(from: from, to: to, step: step)
-        }
-        if from.isNumeric && to.isNumeric && step.isNumeric {
-            return .floatRange(from: from.asNumber, to: to.asNumber, step: step.asNumber)
-        }
+        if let from = from.integerValue, let to = to.integerValue, let step = step.integerValue { return .integerRange(from: from, to: to, step: step) }
+        if from.isNumeric && to.isNumeric && step.isNumeric { return .floatRange(from: from.asNumber, to: to.asNumber, step: step.asNumber) }
         return .nothing
     }
+
     private static func spatial(_ s: GesVmState, start: Int, point: Bool) -> GesValue {
         var xyz = [0.0, 0.0, 0.0]
         var unit: GesUnit?
@@ -305,16 +228,11 @@ enum GameEventScriptVirtualMachine {
                 xyz[start + index] = value.asNumber
             }
         }
-        return point
-            ? .point(x: xyz[0], y: xyz[1], z: xyz[2], unit: unit ?? .none)
-            : .vector(x: xyz[0], y: xyz[1], z: xyz[2], unit: unit ?? .none)
+        return point ? .point(x: xyz[0], y: xyz[1], z: xyz[2], unit: unit ?? .none) : .vector(x: xyz[0], y: xyz[1], z: xyz[2], unit: unit ?? .none)
     }
-    private static func message(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext)
-        throws
-    {
-        let valueMessage = [
-            .emitMessageValue, .emitMessageValueWithTags, .publishMessageValue, .publishMessageValueWithTags,
-        ].contains(i.opcode)
+
+    private static func message(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext) throws {
+        let valueMessage = [.emitMessageValue, .emitMessageValueWithTags, .publishMessageValue, .publishMessageValueWithTags].contains(i.opcode)
         var message: GameEventScriptMessage?
         if valueMessage {
             let value = s.value(Int(i.word1))
@@ -327,25 +245,11 @@ enum GameEventScriptVirtualMachine {
             message = signature.createMessage(s.values(i.word2))
         }
         guard var message else { return }
-        if [.emitMessageWithTags, .emitMessageValueWithTags, .publishMessageWithTags, .publishMessageValueWithTags]
-            .contains(i.opcode)
-        {
+        if [.emitMessageWithTags, .emitMessageValueWithTags, .publishMessageWithTags, .publishMessageValueWithTags].contains(i.opcode) {
             var tags: [String] = []
-            for value in s.values(valueMessage ? i.word2 : i.word1) {
-                if value.kind == .tag {
-                    tags.append(value.asText)
-                } else if let list = value.listValue {
-                    for item in list where item.kind == .tag { tags.append(item.asText) }
-                }
-            }
+            for value in s.values(valueMessage ? i.word2 : i.word1) { if value.kind == .tag { tags.append(value.asText) } else if let list = value.listValue { for item in list where item.kind == .tag { tags.append(item.asText) } } }
             message = try message.withTags(tags)
         }
-        if [.publishMessage, .publishMessageWithTags, .publishMessageValue, .publishMessageValueWithTags].contains(
-            i.opcode)
-        {
-            c.publish(message)
-        } else {
-            c.emit(message)
-        }
+        if [.publishMessage, .publishMessageWithTags, .publishMessageValue, .publishMessageValueWithTags].contains(i.opcode) { c.publish(message) } else { c.emit(message) }
     }
 }

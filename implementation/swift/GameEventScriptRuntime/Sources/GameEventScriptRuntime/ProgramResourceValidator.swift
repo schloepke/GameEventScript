@@ -6,9 +6,7 @@ enum GesProgramResourceValidator {
     static func validate(_ p: GameEventScriptProgram) throws {
         if p.code.isEmpty { return }
         let executable = p.bindings.filter(\.isExecutable)
-        let entries = Set(
-            executable.map { Int($0.entryAddress) } + p.code.filter { $0.opcode == .call }.map { Int($0.word2) }
-        ).sorted()
+        let entries = Set(executable.map { Int($0.entryAddress) } + p.code.filter { $0.opcode == .call }.map { Int($0.word2) }).sorted()
         let indexes = Dictionary(uniqueKeysWithValues: entries.enumerated().map { ($0.element, $0.offset) })
         var recordIDs: [UInt16: Int] = [:]
         var recordNames: [String: Int] = [:]
@@ -16,6 +14,7 @@ enum GesProgramResourceValidator {
             recordIDs[binding.id] = Int(binding.entryAddress)
             recordNames[p.stringConstants[Int(binding.name)]] = Int(binding.entryAddress)
         }
+
         func callee(_ i: GameEventScriptBytecodeInstruction) -> Int? {
             let address: Int?
             switch i.opcode {
@@ -26,13 +25,12 @@ enum GesProgramResourceValidator {
             }
             return address.flatMap { indexes[$0] }
         }
+
         var calls = [[Int]](repeating: [], count: entries.count)
         for routine in entries.indices {
             let end = routine + 1 < entries.count ? entries[routine + 1] : p.code.count
             var seen: Set<Int> = []
-            for index in entries[routine]..<end {
-                if let target = callee(p.code[index]), seen.insert(target).inserted { calls[routine].append(target) }
-            }
+            for index in entries[routine]..<end { if let target = callee(p.code[index]), seen.insert(target).inserted { calls[routine].append(target) } }
         }
         // No recursion: malformed or deep programs cannot exhaust the native stack.
         var states = [UInt8](repeating: 0, count: entries.count)
@@ -62,9 +60,9 @@ enum GesProgramResourceValidator {
         var maximumFrames = registers
         var frames = [Int](repeating: -1, count: p.code.count)
         var stages = frames
-        func invalid(_ index: Int) -> GameEventScriptProgramFormatError {
-            GameEventScriptProgramValidator.failure(.invalidResourceMetadata, 16, index)
-        }
+
+        func invalid(_ index: Int) -> GameEventScriptProgramFormatError { GameEventScriptProgramValidator.failure(.invalidResourceMetadata, 16, index) }
+
         for binding in executable {
             let routine = indexes[Int(binding.entryAddress)]!
             let count = binding.kind == .messageNameHandler ? 1 : binding.argumentNames.count
@@ -90,6 +88,7 @@ enum GesProgramResourceValidator {
             registers[routine] = max(0, arguments[routine])
             maximumFrames[routine] = registers[routine]
             var pending: [Int] = []
+
             func enqueue(_ address: Int, _ frame: Int, _ stage: Int) throws {
                 if address < start || address >= end { throw invalid(address) }
                 if frames[address] >= 0 {
@@ -100,6 +99,7 @@ enum GesProgramResourceValidator {
                 stages[address] = stage
                 pending.append(address)
             }
+
             try enqueue(start, registers[routine], 0)
             var cursor = 0
             while cursor < pending.count {
@@ -119,9 +119,7 @@ enum GesProgramResourceValidator {
                 if opcode.isStage { stage += 1 }
                 registers[routine] = max(registers[routine], frame + stage)
                 if let target = callee(i) {
-                    if (opcode == .call || opcode == .createRecord) && stage != arguments[target] {
-                        throw invalid(index)
-                    }
+                    if (opcode == .call || opcode == .createRecord) && stage != arguments[target] { throw invalid(index) }
                     registers[routine] = max(registers[routine], frame + registers[target])
                     depths[routine] = max(depths[routine], 1 + depths[target])
                 }
@@ -135,45 +133,24 @@ enum GesProgramResourceValidator {
         var routine = -1
         for index in p.code.indices {
             if routine + 1 < entries.count && index == entries[routine + 1] { routine += 1 }
-            if frames[index] < 0 {
-                try GameEventScriptProgramValidator.validateFrame(
-                    p, p.code[index], index, routine < 0 ? 0 : maximumFrames[routine])
-            }
+            if frames[index] < 0 { try GameEventScriptProgramValidator.validateFrame(p, p.code[index], index, routine < 0 ? 0 : maximumFrames[routine]) }
         }
         for (index, symbol) in (p.debugSymbols ?? []).enumerated() {
             let position = entries.partitionPoint { $0 > Int(symbol.codeStart) } - 1
             let end = position + 1 < entries.count ? entries[position + 1] : p.code.count
-            if position < 0 || UInt64(symbol.codeStart) + UInt64(symbol.codeLength) > UInt64(end)
-                || Int(symbol.registerID) >= maximumFrames[position]
-            {
-                throw GameEventScriptProgramValidator.failure(.invalidDebugSymbol, 32, index)
-            }
+            if position < 0 || UInt64(symbol.codeStart) + UInt64(symbol.codeLength) > UInt64(end) || Int(symbol.registerID) >= maximumFrames[position] { throw GameEventScriptProgramValidator.failure(.invalidDebugSymbol, 32, index) }
         }
         for (index, binding) in p.bindings.enumerated() where binding.isHandler {
             let routine = indexes[Int(binding.entryAddress)]!
-            if Int(binding.requiredRegisterCount) < registers[routine]
-                || Int(binding.requiredCallStackDepth) < depths[routine]
-            {
-                throw GameEventScriptProgramValidator.failure(.invalidResourceMetadata, 4, index)
-            }
+            if Int(binding.requiredRegisterCount) < registers[routine] || Int(binding.requiredCallStackDepth) < depths[routine] { throw GameEventScriptProgramValidator.failure(.invalidResourceMetadata, 4, index) }
         }
     }
 }
 
 extension GameEventScriptBytecodeOpCode {
-    var isStage: Bool {
-        [
-            .stageRegister, .stageNothing, .stageTrue, .stageFalse, .stageInteger, .stageFloat, .stageText, .stageTag,
-            .stagePercentage,
-        ].contains(self)
-    }
-    var consumesStage: Bool {
-        [.call, .createVector, .createPoint, .createList, .createMap, .createRecord, .createExternalType].contains(self)
-    }
-    var branches: Bool {
-        [.jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing, .iteratorCreateOrJump, .iteratorNext]
-            .contains(self)
-    }
+    var isStage: Bool { [.stageRegister, .stageNothing, .stageTrue, .stageFalse, .stageInteger, .stageFloat, .stageText, .stageTag, .stagePercentage].contains(self) }
+    var consumesStage: Bool { [.call, .createVector, .createPoint, .createList, .createMap, .createRecord, .createExternalType].contains(self) }
+    var branches: Bool { [.jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing, .iteratorCreateOrJump, .iteratorNext].contains(self) }
 }
 
 extension Array where Element == Int {

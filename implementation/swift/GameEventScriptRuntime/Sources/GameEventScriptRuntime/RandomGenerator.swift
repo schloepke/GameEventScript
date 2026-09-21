@@ -8,6 +8,7 @@ public final class GameEventScriptRandomGenerator {
         var sequence: [Double] = []
         var sequenceIndex = 0
         var s0: UInt64, s1: UInt64, s2: UInt64, s3: UInt64
+
         init(seed: Int64, sequence: [Double] = []) {
             var mix = UInt64(bitPattern: seed)
             s0 = splitMix(&mix)
@@ -18,7 +19,9 @@ public final class GameEventScriptRandomGenerator {
             self.sequence = sequence
         }
     }
+
     enum BoundaryFault { case none, limitExceeded, boundaryUnderflow, unbalanced }
+
     private var state: State
     private let maxScopeDepth: Int
     private var parents: [State?] = []
@@ -34,21 +37,24 @@ public final class GameEventScriptRandomGenerator {
 
     /// Creates a private deterministic stream from a signed 64-bit seed with up to 16 nested scopes.
     public convenience init(seed: Int64) { self.init(seed: seed, sequence: [], maxScopeDepth: 16) }
+
     /// Copies initial draws and continues with a private PRNG when exhausted. A missing fallback seed uses fresh
     /// entropy.
-    public convenience init(sequence: [Double], fallbackSeed: Int64? = nil) {
-        self.init(seed: fallbackSeed ?? Self.entropySeed(), sequence: sequence, maxScopeDepth: 16)
-    }
+    public convenience init(sequence: [Double], fallbackSeed: Int64? = nil) { self.init(seed: fallbackSeed ?? Self.entropySeed(), sequence: sequence, maxScopeDepth: 16) }
+
     /// Creates a stream from portable entropy mixing.
     ///
     /// - Throws: An API error if `entropy` is empty.
     public convenience init(entropy: [UInt8]) throws { self.init(seed: try Self.seedFromEntropy(entropy)) }
+
     /// Creates a private stream using fresh system entropy.
     public convenience init() { self.init(seed: Self.entropySeed()) }
+
     init(seed: Int64, sequence: [Double], maxScopeDepth: Int) {
         state = State(seed: seed, sequence: sequence)
         self.maxScopeDepth = maxScopeDepth
     }
+
     /// Deterministically mixes nonempty entropy bytes into a signed 64-bit seed.
     ///
     /// - Throws: An API error if `entropy` is empty.
@@ -61,6 +67,7 @@ public final class GameEventScriptRandomGenerator {
         }
         return Int64(bitPattern: state)
     }
+
     static func entropySeed() -> Int64 {
         var source = SystemRandomNumberGenerator()
         var bytes: [UInt8] = []
@@ -71,6 +78,7 @@ public final class GameEventScriptRandomGenerator {
         // Nonempty by construction; entropy mixing has no other failure path.
         return try! seedFromEntropy(bytes)
     }
+
     /// Saves the parent stream and enters a seeded scope, or a copy of the current stream when no seed is given.
     /// Returns false on scope-limit or boundary faults.
     @discardableResult public func push(seed: Int64? = nil) -> Bool {
@@ -88,6 +96,7 @@ public final class GameEventScriptRandomGenerator {
         if let seed { state = State(seed: seed) }
         return true
     }
+
     /// Restores the parent stream, discarding draws from the nested scope. Returns false when no scope can be popped or
     /// a boundary fault is active.
     @discardableResult public func pop() -> Bool {
@@ -106,6 +115,7 @@ public final class GameEventScriptRandomGenerator {
         parents[scopeDepth] = nil
         return true
     }
+
     /// Draws an integer between the two bounds inclusively, accepting either order. Start-sequence values are converted
     /// and clamped to those bounds.
     public func nextInclusiveInteger(_ first: Int64, _ second: Int64) -> Int64 {
@@ -116,6 +126,7 @@ public final class GameEventScriptRandomGenerator {
         let span = UInt64(bitPattern: upper &- lower) &+ 1
         return lower &+ Int64(bitPattern: nextBelow(span))
     }
+
     /// Draws a binary64 number using the ordered bounds; start-sequence values are clamped. A NaN bound returns NaN and
     /// equal bounds return that value.
     public func nextFloat(_ first: Double, _ second: Double) -> Double {
@@ -131,17 +142,15 @@ public final class GameEventScriptRandomGenerator {
         let scaled = (upper - lower) * unit
         return lower + scaled
     }
+
     func markBoundary() -> Int {
         nextToken = nextToken &+ 1
         if nextToken == 0 { nextToken = nextToken &+ 1 }
-        if boundaryDepth == boundaries.count {
-            boundaries.append((nextToken, scopeDepth))
-        } else {
-            boundaries[boundaryDepth] = (nextToken, scopeDepth)
-        }
+        if boundaryDepth == boundaries.count { boundaries.append((nextToken, scopeDepth)) } else { boundaries[boundaryDepth] = (nextToken, scopeDepth) }
         boundaryDepth += 1
         return nextToken
     }
+
     func releaseBoundary(_ token: Int) -> BoundaryFault {
         precondition(boundaryDepth > 0 && boundaries[boundaryDepth - 1].token == token)
         boundaryDepth -= 1
@@ -159,12 +168,14 @@ public final class GameEventScriptRandomGenerator {
         }
         return result
     }
+
     private func enterFault(_ fault: BoundaryFault, overpush: Int) {
         faultState = state
         self.fault = fault
         overpushDepth = overpush
         faultOwner = boundaryDepth == 0 ? 0 : boundaries[boundaryDepth - 1].token
     }
+
     private func clearFault() {
         state = faultState!
         faultState = nil
@@ -172,11 +183,13 @@ public final class GameEventScriptRandomGenerator {
         overpushDepth = 0
         fault = .none
     }
+
     private func dequeue() -> Double? {
         if state.sequenceIndex >= state.sequence.count { return nil }
         defer { state.sequenceIndex += 1 }
         return state.sequence[state.sequenceIndex]
     }
+
     private func nextUInt64() -> UInt64 {
         let result = Self.rotate(state.s1 &* 5, 7) &* 9
         let t = state.s1 << 17
@@ -188,6 +201,7 @@ public final class GameEventScriptRandomGenerator {
         state.s3 = Self.rotate(state.s3, 45)
         return result
     }
+
     private func nextBelow(_ upper: UInt64) -> UInt64 {
         if upper == 0 { return nextUInt64() }
         let threshold = (0 &- upper) % upper
@@ -196,6 +210,7 @@ public final class GameEventScriptRandomGenerator {
             if value >= threshold { return value % upper }
         }
     }
+
     private static func rotate(_ value: UInt64, _ offset: Int) -> UInt64 { value << offset | value >> (64 - offset) }
 }
 

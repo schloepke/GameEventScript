@@ -8,20 +8,20 @@ internal struct ConformanceLine {
     let scalars: [Unicode.Scalar]
     let number: Int
     let byteOffset: Int
+
     init(_ text: String, number: Int, byteOffset: Int) {
         self.text = text
         self.scalars = Array(text.unicodeScalars)
         self.number = number
         self.byteOffset = byteOffset
     }
+
     func range(_ offset: Int = 0, _ length: Int? = nil) -> ConformanceSourceRange {
         let begin = min(max(0, offset), scalars.count)
         let count = min(max(0, length ?? (scalars.count - begin)), scalars.count - begin)
         let prefix = String(String.UnicodeScalarView(scalars[..<begin]))
         let value = String(String.UnicodeScalarView(scalars[begin..<(begin + count)]))
-        return .init(
-            byteOffset: byteOffset + prefix.utf8.count, byteLength: value.utf8.count,
-            line: number, column: begin + 1, endLine: number, endColumn: begin + count + 1)
+        return .init(byteOffset: byteOffset + prefix.utf8.count, byteLength: value.utf8.count, line: number, column: begin + 1, endLine: number, endColumn: begin + count + 1)
     }
 }
 
@@ -30,11 +30,13 @@ internal indirect enum ConformanceYamlContent {
     case array([ConformanceYamlNode])
     case object([ConformanceYamlEntry])
 }
+
 internal struct ConformanceYamlEntry {
     let key: String
     let value: ConformanceYamlNode
     let range: ConformanceSourceRange
 }
+
 internal struct ConformanceYamlNode {
     let content: ConformanceYamlContent
     let range: ConformanceSourceRange
@@ -53,9 +55,9 @@ internal struct ConformanceYamlNode {
     var string: String? { scalar?.stringValue }
     var number: String? { scalar?.numberValue }
     var boolean: Bool? { scalar?.boolValue }
-    subscript(_ key: String) -> ConformanceYamlNode? {
-        entries?.first(where: { $0.key.utf8.elementsEqual(key.utf8) })?.value
-    }
+
+    subscript(_ key: String) -> ConformanceYamlNode? { entries?.first(where: { $0.key.utf8.elementsEqual(key.utf8) })?.value }
+
     var data: ConformanceData {
         switch content {
         case .scalar(let value): return value
@@ -70,6 +72,7 @@ internal final class ConformanceYamlParser {
     let limits: ConformanceParserLimits
     private var index = 0
     private var nodes = 0
+
     init(_ lines: [ConformanceLine], limits: ConformanceParserLimits) {
         self.lines = lines
         self.limits = limits
@@ -80,23 +83,19 @@ internal final class ConformanceYamlParser {
         guard index < lines.count else { throw failure("syntax", "A YAML root mapping is required.") }
         let root = try block(0, 0)
         skipEmpty()
-        guard index == lines.count, root.entries != nil else {
-            throw failure("syntax", "The YAML root must be one mapping.")
-        }
+        guard index == lines.count, root.entries != nil else { throw failure("syntax", "The YAML root must be one mapping.") }
         return root
     }
+
     private func block(_ indent: Int, _ depth: Int) throws -> ConformanceYamlNode {
         try checkDepth(depth)
         skipEmpty()
-        guard index < lines.count, try indentation(lines[index]) == indent, indent % 2 == 0 else {
-            throw failure("syntax", "YAML requires exactly two spaces per indentation level.")
-        }
+        guard index < lines.count, try indentation(lines[index]) == indent, indent % 2 == 0 else { throw failure("syntax", "YAML requires exactly two spaces per indentation level.") }
         let text = content(lines[index], indent)
-        if text == "---" || text == "..." || text.first == "%" {
-            throw failure("unsupportedFeature", "YAML directives and multiple documents are not supported.")
-        }
+        if text == "---" || text == "..." || text.first == "%" { throw failure("unsupportedFeature", "YAML directives and multiple documents are not supported.") }
         return try text.first == "-" ? sequence(indent, depth) : mapping(indent, depth)
     }
+
     private func mapping(_ indent: Int, _ depth: Int) throws -> ConformanceYamlNode {
         let range = lines[index].range(indent)
         try countNode(range)
@@ -117,6 +116,7 @@ internal final class ConformanceYamlParser {
         }
         return .init(content: .object(entries), range: range)
     }
+
     private func sequence(_ indent: Int, _ depth: Int) throws -> ConformanceYamlNode {
         let range = lines[index].range(indent)
         try countNode(range)
@@ -136,9 +136,7 @@ internal final class ConformanceYamlParser {
             if item.isEmpty {
                 index += 1
                 skipEmpty()
-                guard index < lines.count, try indentation(lines[index]) == indent + 2 else {
-                    throw failure("syntax", "A sequence item requires a nested value.")
-                }
+                guard index < lines.count, try indentation(lines[index]) == indent + 2 else { throw failure("syntax", "A sequence item requires a nested value.") }
                 values.append(try block(indent + 2, depth + 1))
             } else if Self.mappingColon(item) != nil && !"[{\"'".contains(item.first!) {
                 try checkDepth(depth + 1)
@@ -151,14 +149,10 @@ internal final class ConformanceYamlParser {
                     if index == lines.count { break }
                     let actual = try indentation(lines[index])
                     if actual < indent + 2 { break }
-                    guard actual == indent + 2 else {
-                        throw failure("syntax", "Unexpected sequence mapping indentation.")
-                    }
+                    guard actual == indent + 2 else { throw failure("syntax", "Unexpected sequence mapping indentation.") }
                     let next = Self.trimEnd(Self.stripComment(content(lines[index], indent + 2)))
                     if next.first == "-" { break }
-                    try property(
-                        next, line: lines[index], offset: indent + 2, depth: depth + 1, entries: &entries, names: &names
-                    )
+                    try property(next, line: lines[index], offset: indent + 2, depth: depth + 1, entries: &entries, names: &names)
                 }
                 values.append(.init(content: .object(entries), range: line.range(indent + 2)))
             } else {
@@ -168,20 +162,13 @@ internal final class ConformanceYamlParser {
         }
         return .init(content: .array(values), range: range)
     }
-    private func property(
-        _ raw: String, line: ConformanceLine, offset: Int, depth: Int,
-        entries: inout [ConformanceYamlEntry], names: inout Set<[UInt8]>
-    ) throws {
-        guard let colon = Self.mappingColon(raw), colon > 0 else {
-            throw failure("syntax", "A mapping entry requires key: value.", line.range(offset))
-        }
+
+    private func property(_ raw: String, line: ConformanceLine, offset: Int, depth: Int, entries: inout [ConformanceYamlEntry], names: inout Set<[UInt8]>) throws {
+        guard let colon = Self.mappingColon(raw), colon > 0 else { throw failure("syntax", "A mapping entry requires key: value.", line.range(offset)) }
         let chars = Array(raw.unicodeScalars)
         let token = Self.trimEnd(String(String.UnicodeScalarView(chars[..<colon])))
         let key = try parseKey(token, line: line, offset: offset)
-        guard names.insert(Array(key.utf8)).inserted else {
-            throw failure(
-                "duplicateKey", "Duplicate YAML key '\(key)'.", line.range(offset, token.unicodeScalars.count))
-        }
+        guard names.insert(Array(key.utf8)).inserted else { throw failure("duplicateKey", "Duplicate YAML key '\(key)'.", line.range(offset, token.unicodeScalars.count)) }
         var start = colon + 1
         while start < chars.count && chars[start] == " " { start += 1 }
         let valueText = String(String.UnicodeScalarView(chars[start...]))
@@ -190,9 +177,7 @@ internal final class ConformanceYamlParser {
         if valueText.isEmpty {
             skipEmpty()
             if index < lines.count, try indentation(lines[index]) > offset {
-                guard try indentation(lines[index]) == offset + 2 else {
-                    throw failure("syntax", "YAML uses exactly two spaces per indentation level.")
-                }
+                guard try indentation(lines[index]) == offset + 2 else { throw failure("syntax", "YAML uses exactly two spaces per indentation level.") }
                 value = try block(offset + 2, depth + 1)
             } else {
                 value = try node(.scalar(.null), line.range(offset + colon + 1, 0))
@@ -202,92 +187,67 @@ internal final class ConformanceYamlParser {
         }
         entries.append(.init(key: key, value: value, range: line.range(offset, token.unicodeScalars.count)))
     }
+
     fileprivate func parseKey(_ token: String, line: ConformanceLine, offset: Int) throws -> String {
         if token.first == "\"" || token.first == "'" {
             let value = try inline(token, line: line, offset: offset, depth: 1)
-            guard let string = value.string else {
-                throw failure("syntax", "Quoted keys must be strings.", line.range(offset))
-            }
+            guard let string = value.string else { throw failure("syntax", "Quoted keys must be strings.", line.range(offset)) }
             return string
         }
-        if token == "<<" {
-            throw failure("unsupportedFeature", "YAML merge keys are not supported.", line.range(offset))
-        }
+        if token == "<<" { throw failure("unsupportedFeature", "YAML merge keys are not supported.", line.range(offset)) }
         let bytes = Array(token.utf8)
-        guard let first = bytes.first, Self.letter(first),
-            bytes.dropFirst().allSatisfy({ Self.letter($0) || (48...57).contains($0) || [95, 46, 45].contains($0) })
-        else {
+        guard let first = bytes.first, Self.letter(first), bytes.dropFirst().allSatisfy({ Self.letter($0) || (48...57).contains($0) || [95, 46, 45].contains($0) }) else {
             throw failure("syntax", "Invalid plain YAML mapping key.", line.range(offset))
         }
         return token
     }
+
     private func inline(_ text: String, line: ConformanceLine, offset: Int, depth: Int) throws -> ConformanceYamlNode {
         let parser = ConformanceYamlFlow(owner: self, text: text, line: line, offset: offset)
         let value = try parser.value(depth)
         parser.spaces()
-        guard parser.atEnd else {
-            throw failure("syntax", "Unexpected characters after YAML value.", line.range(offset + parser.position))
-        }
+        guard parser.atEnd else { throw failure("syntax", "Unexpected characters after YAML value.", line.range(offset + parser.position)) }
         return value
     }
-    fileprivate func node(_ value: ConformanceYamlContent, _ range: ConformanceSourceRange) throws
-        -> ConformanceYamlNode
-    {
+
+    fileprivate func node(_ value: ConformanceYamlContent, _ range: ConformanceSourceRange) throws -> ConformanceYamlNode {
         try countNode(range)
-        if case .scalar(let scalar) = value,
-            let text = scalar.stringValue ?? scalar.numberValue,
-            text.utf8.count > limits.maxScalarBytes
-        {
-            throw failure("limitExceeded", "YAML scalar exceeds maxScalarBytes.", range)
-        }
+        if case .scalar(let scalar) = value, let text = scalar.stringValue ?? scalar.numberValue, text.utf8.count > limits.maxScalarBytes { throw failure("limitExceeded", "YAML scalar exceeds maxScalarBytes.", range) }
         return .init(content: value, range: range)
     }
-    fileprivate func checkDepth(_ depth: Int) throws {
-        guard limits.maxYamlDepth > 0, depth <= limits.maxYamlDepth else {
-            throw failure("limitExceeded", "YAML nesting exceeds maxYamlDepth.")
-        }
+
+    fileprivate func checkDepth(_ depth: Int) throws { guard limits.maxYamlDepth > 0, depth <= limits.maxYamlDepth else { throw failure("limitExceeded", "YAML nesting exceeds maxYamlDepth.") } }
+
+    fileprivate func failure(_ code: String, _ message: String, _ range: ConformanceSourceRange? = nil) -> ConformanceParseError {
+        .init("conformance.yaml.\(code)", message, range ?? (lines.isEmpty ? .init() : lines[min(index, lines.count - 1)].range()))
     }
-    fileprivate func failure(_ code: String, _ message: String, _ range: ConformanceSourceRange? = nil)
-        -> ConformanceParseError
-    {
-        .init(
-            "conformance.yaml.\(code)", message,
-            range ?? (lines.isEmpty ? .init() : lines[min(index, lines.count - 1)].range()))
-    }
+
     private func countNode(_ range: ConformanceSourceRange) throws {
         nodes += 1
-        guard limits.maxYamlNodes > 0, nodes <= limits.maxYamlNodes else {
-            throw failure("limitExceeded", "YAML node count exceeds maxYamlNodes.", range)
-        }
+        guard limits.maxYamlNodes > 0, nodes <= limits.maxYamlNodes else { throw failure("limitExceeded", "YAML node count exceeds maxYamlNodes.", range) }
     }
+
     private func indentation(_ line: ConformanceLine) throws -> Int {
         let count = line.scalars.prefix(while: { $0 == " " }).count
-        if count < line.scalars.count, line.scalars[count] == "\t" {
-            throw failure("syntax", "Tabs are invalid in YAML indentation.", line.range(count, 1))
-        }
+        if count < line.scalars.count, line.scalars[count] == "\t" { throw failure("syntax", "Tabs are invalid in YAML indentation.", line.range(count, 1)) }
         return count
     }
-    private func content(_ line: ConformanceLine, _ offset: Int) -> String {
-        String(String.UnicodeScalarView(line.scalars.dropFirst(offset)))
-    }
+
+    private func content(_ line: ConformanceLine, _ offset: Int) -> String { String(String.UnicodeScalarView(line.scalars.dropFirst(offset))) }
+
     private func skipEmpty() { while index < lines.count && Self.empty(lines[index].text) { index += 1 } }
+
     private static func empty(_ value: String) -> Bool {
         let text = trim(value)
         return text.isEmpty || text.first == "#"
     }
-    static func trim(_ value: String) -> String {
-        String(
-            String.UnicodeScalarView(
-                value.unicodeScalars.drop(while: { $0 == " " || $0 == "\t" }).reversed().drop(while: {
-                    $0 == " " || $0 == "\t"
-                }).reversed()))
-    }
-    fileprivate static func trimEnd(_ value: String) -> String {
-        String(
-            String.UnicodeScalarView(
-                value.unicodeScalars.reversed().drop(while: { $0 == " " || $0 == "\t" }).reversed()))
-    }
+
+    static func trim(_ value: String) -> String { String(String.UnicodeScalarView(value.unicodeScalars.drop(while: { $0 == " " || $0 == "\t" }).reversed().drop(while: { $0 == " " || $0 == "\t" }).reversed())) }
+
+    fileprivate static func trimEnd(_ value: String) -> String { String(String.UnicodeScalarView(value.unicodeScalars.reversed().drop(while: { $0 == " " || $0 == "\t" }).reversed())) }
+
     fileprivate static func letter(_ byte: UInt8) -> Bool { (65...90).contains(byte) || (97...122).contains(byte) }
+
     private static func mappingColon(_ value: String) -> Int? {
         let chars = Array(value.unicodeScalars)
         var quote: Unicode.Scalar?
@@ -320,6 +280,7 @@ internal final class ConformanceYamlParser {
         }
         return nil
     }
+
     private static func stripComment(_ value: String) -> String {
         let chars = Array(value.unicodeScalars)
         var quote: Unicode.Scalar?
@@ -356,13 +317,16 @@ private final class ConformanceYamlFlow {
     let offset: Int
     var position = 0
     var atEnd: Bool { position == text.count }
+
     init(owner: ConformanceYamlParser, text: String, line: ConformanceLine, offset: Int) {
         self.owner = owner
         self.text = Array(text.unicodeScalars)
         self.line = line
         self.offset = offset
     }
+
     func spaces() { while position < text.count && text[position] == " " { position += 1 } }
+
     func value(_ depth: Int) throws -> ConformanceYamlNode {
         try owner.checkDepth(depth)
         spaces()
@@ -379,9 +343,7 @@ private final class ConformanceYamlFlow {
                 spaces()
                 if consume("]") { return try owner.node(.array(items), range(start)) }
                 try require(",")
-                if position < text.count && text[position] == "]" {
-                    throw error("syntax", "Trailing flow commas are not supported.")
-                }
+                if position < text.count && text[position] == "]" { throw error("syntax", "Trailing flow commas are not supported.") }
             }
         case "{":
             position += 1
@@ -400,9 +362,7 @@ private final class ConformanceYamlFlow {
                     let token = ConformanceYamlParser.trimEnd(String(String.UnicodeScalarView(text[begin..<position])))
                     key = try owner.parseKey(token, line: line, offset: offset + begin)
                 }
-                guard keys.insert(Array(key.utf8)).inserted else {
-                    throw error("duplicateKey", "Duplicate YAML key '\(key)'.", begin)
-                }
+                guard keys.insert(Array(key.utf8)).inserted else { throw error("duplicateKey", "Duplicate YAML key '\(key)'.", begin) }
                 try require(":")
                 let nested = try value(depth + 1)
                 entries.append(.init(key: key, value: nested, range: range(begin)))
@@ -411,8 +371,7 @@ private final class ConformanceYamlFlow {
                 try require(",")
             }
         case "\"", "'": return try owner.node(.scalar(.string(quoted())), range(start))
-        case "|", ">", "&", "*", "!", "%", "@", "`":
-            throw error("unsupportedFeature", "This YAML feature is not supported.")
+        case "|", ">", "&", "*", "!", "%", "@", "`": throw error("unsupportedFeature", "This YAML feature is not supported.")
         default:
             while position < text.count && ![",", "]", "}"].contains(text[position]) {
                 if text[position] == "#", position == start || text[position - 1].properties.isWhitespace { break }
@@ -430,19 +389,14 @@ private final class ConformanceYamlFlow {
             } else if Self.number(token), let value = Double(token), value.isFinite {
                 result = .number(token)
             } else {
-                if [".nan", ".inf", "-.inf"].contains(token) || token.lowercased().hasPrefix("0x")
-                    || token.lowercased().hasPrefix("0o")
-                {
-                    throw error("unsupportedFeature", "This YAML numeric form is not supported.", start)
-                }
-                if token.contains(": ") {
-                    throw error("syntax", "A plain scalar containing ': ' must be quoted.", start)
-                }
+                if [".nan", ".inf", "-.inf"].contains(token) || token.lowercased().hasPrefix("0x") || token.lowercased().hasPrefix("0o") { throw error("unsupportedFeature", "This YAML numeric form is not supported.", start) }
+                if token.contains(": ") { throw error("syntax", "A plain scalar containing ': ' must be quoted.", start) }
                 result = .string(token)
             }
             return try owner.node(.scalar(result), range(start))
         }
     }
+
     private func quoted() throws -> String {
         let quote = text[position]
         position += 1
@@ -474,18 +428,12 @@ private final class ConformanceYamlFlow {
             case "u":
                 let first = try hex4()
                 if (0xd800...0xdbff).contains(first) {
-                    guard consume("\\"), consume("u") else {
-                        throw error("invalidScalar", "A high surrogate must be followed by a low surrogate.")
-                    }
+                    guard consume("\\"), consume("u") else { throw error("invalidScalar", "A high surrogate must be followed by a low surrogate.") }
                     let second = try hex4()
-                    guard (0xdc00...0xdfff).contains(second) else {
-                        throw error("invalidScalar", "Invalid low surrogate.")
-                    }
+                    guard (0xdc00...0xdfff).contains(second) else { throw error("invalidScalar", "Invalid low surrogate.") }
                     result.append(Unicode.Scalar(0x10000 + (first - 0xd800) * 1024 + second - 0xdc00)!)
                 } else {
-                    guard let scalar = Unicode.Scalar(first) else {
-                        throw error("invalidScalar", "Unpaired low surrogate.")
-                    }
+                    guard let scalar = Unicode.Scalar(first) else { throw error("invalidScalar", "Unpaired low surrogate.") }
                     result.append(scalar)
                 }
             default: throw error("invalidScalar", "Unsupported YAML string escape.")
@@ -493,6 +441,7 @@ private final class ConformanceYamlFlow {
         }
         throw error("syntax", "Unterminated quoted string.")
     }
+
     private func hex4() throws -> UInt32 {
         guard position + 4 <= text.count else { throw error("invalidScalar", "Incomplete Unicode escape.") }
         let digits = String(String.UnicodeScalarView(text[position..<(position + 4)]))
@@ -500,6 +449,7 @@ private final class ConformanceYamlFlow {
         guard let value = UInt32(digits, radix: 16) else { throw error("invalidScalar", "Invalid Unicode escape.") }
         return value
     }
+
     private static func number(_ value: String) -> Bool {
         let bytes = Array(value.utf8)
         var i = 0
@@ -526,18 +476,20 @@ private final class ConformanceYamlFlow {
         }
         return i == bytes.count
     }
+
     private func consume(_ char: Unicode.Scalar) -> Bool {
         guard position < text.count && text[position] == char else { return false }
         position += 1
         return true
     }
+
     private func require(_ char: Unicode.Scalar) throws {
         spaces()
         guard consume(char) else { throw error("syntax", "Expected '\(char)'.") }
         spaces()
     }
+
     private func range(_ start: Int) -> ConformanceSourceRange { line.range(offset + start, max(0, position - start)) }
-    private func error(_ code: String, _ message: String, _ start: Int? = nil) -> ConformanceParseError {
-        owner.failure(code, message, range(start ?? position))
-    }
+
+    private func error(_ code: String, _ message: String, _ start: Int? = nil) -> ConformanceParseError { owner.failure(code, message, range(start ?? position)) }
 }

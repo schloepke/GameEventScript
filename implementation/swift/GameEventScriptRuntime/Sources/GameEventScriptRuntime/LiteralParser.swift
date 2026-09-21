@@ -7,9 +7,11 @@ struct GesLiteralParser {
         let value = parser.quoted()
         return parser.position == parser.bytes.count ? value : nil
     }
+
     private let bytes: [UInt8]
     private var position = 0, items = 0
     private var limit: String?
+
     static func parse(_ input: GesValue, context: GameEventScriptContext) -> GesValue {
         guard input.kind == .text, let text = input.textValue else { return .nothing }
         if text.unicodeScalars.count > 1_048_576 {
@@ -25,6 +27,7 @@ struct GesLiteralParser {
         }
         return parser.position == parser.bytes.count ? result ?? input : input
     }
+
     private mutating func value(depth: Int) -> GesValue? {
         whitespace()
         if position == bytes.count { return nil }
@@ -45,9 +48,7 @@ struct GesLiteralParser {
             return dice ? readDice() : collection(depth: depth + 1)
         }
         let start = position
-        while position < bytes.count && !Self.space(bytes[position]) && ![44, 93, 91].contains(bytes[position]) {
-            position += 1
-        }
+        while position < bytes.count && !Self.space(bytes[position]) && ![44, 93, 91].contains(bytes[position]) { position += 1 }
         if start == position { return nil }
         let token = String(decoding: bytes[start..<position], as: UTF8.self)
         switch token {
@@ -62,6 +63,7 @@ struct GesLiteralParser {
         }
         return TextNumberCast.read(token, percentage: token.hasSuffix("%"), allowGrouping: false)
     }
+
     private mutating func spatial(depth: Int, point: Bool) -> GesValue? {
         position += point ? 6 : 7
         whitespace()
@@ -92,23 +94,15 @@ struct GesLiteralParser {
                 if index > 2 || index <= previous { return nil }
                 previous = index
                 let start = position
-                while position < bytes.count && !Self.space(bytes[position]) && bytes[position] != 44
-                    && bytes[position] != 41
-                { position += 1 }
+                while position < bytes.count && !Self.space(bytes[position]) && bytes[position] != 44 && bytes[position] != 41 { position += 1 }
                 if start == position { return nil }
                 let token = String(decoding: bytes[start..<position], as: UTF8.self)
-                guard let value = TextNumberCast.read(token, percentage: token.hasSuffix("%"), allowGrouping: false),
-                    value.numericOnly
-                else { return nil }
+                guard let value = TextNumberCast.read(token, percentage: token.hasSuffix("%"), allowGrouping: false), value.numericOnly else { return nil }
                 if let unit, unit != value.unit { return nil }
                 unit = value.unit
                 components[index] = value.asNumber
                 whitespace()
-                if consume(41) {
-                    return point
-                        ? .point(x: components[0], y: components[1], z: components[2], unit: unit!)
-                        : .vector(x: components[0], y: components[1], z: components[2], unit: unit!)
-                }
+                if consume(41) { return point ? .point(x: components[0], y: components[1], z: components[2], unit: unit!) : .vector(x: components[0], y: components[1], z: components[2], unit: unit!) }
                 if !consume(44) { return nil }
                 whitespace()
                 if position == bytes.count || bytes[position] == 41 { return nil }
@@ -117,6 +111,7 @@ struct GesLiteralParser {
         }
         return point ? .point(x: 0) : .vector(x: 0)
     }
+
     private mutating func readDice() -> GesValue? {
         position += 1
         whitespace()
@@ -124,9 +119,7 @@ struct GesLiteralParser {
         var rolls: [Int32] = []
         while position < bytes.count {
             if !item() || !GesNames.digit(bytes[position]) { return nil }
-            guard let roll = value(depth: 0), !roll.hasUnit, let integer = roll.integerValue, integer > 0,
-                integer <= Int32.max
-            else { return nil }
+            guard let roll = value(depth: 0), !roll.hasUnit, let integer = roll.integerValue, integer > 0, integer <= Int32.max else { return nil }
             rolls.append(Int32(integer))
             whitespace()
             if consume(93) { return .dice(rolls) }
@@ -136,6 +129,7 @@ struct GesLiteralParser {
         }
         return nil
     }
+
     private mutating func collection(depth: Int) -> GesValue? {
         position += 1
         whitespace()
@@ -160,9 +154,7 @@ struct GesLiteralParser {
                 whitespace()
                 guard let key, consume(58) else { return nil }
                 whitespace()
-                let parsed: GesValue? =
-                    position < bytes.count && (bytes[position] == 44 || bytes[position] == 93)
-                    ? .boolean(true) : value(depth: depth)
+                let parsed: GesValue? = position < bytes.count && (bytes[position] == 44 || bytes[position] == 93) ? .boolean(true) : value(depth: depth)
                 guard let parsed else { return nil }
                 entries.append(.init(key: key, value: parsed))
             } else {
@@ -177,6 +169,7 @@ struct GesLiteralParser {
         }
         return nil
     }
+
     private mutating func key() -> String? {
         whitespace()
         if position == bytes.count { return nil }
@@ -187,6 +180,7 @@ struct GesLiteralParser {
         while position < bytes.count && GesNames.alnum(bytes[position]) { position += 1 }
         return String(decoding: bytes[start..<position], as: UTF8.self)
     }
+
     private mutating func quoted() -> String? {
         let quote = bytes[position]
         position += 1
@@ -207,6 +201,7 @@ struct GesLiteralParser {
         }
         return nil
     }
+
     private mutating func item() -> Bool {
         if items >= 65536 {
             limit = "MaxLiteralItems"
@@ -215,12 +210,16 @@ struct GesLiteralParser {
         items += 1
         return true
     }
+
     private mutating func consume(_ byte: UInt8) -> Bool {
         if position >= bytes.count || bytes[position] != byte { return false }
         position += 1
         return true
     }
+
     private mutating func whitespace() { while position < bytes.count && Self.space(bytes[position]) { position += 1 } }
+
     private static func space(_ byte: UInt8) -> Bool { byte == 32 || byte == 9 || byte == 10 || byte == 13 }
+
     private func starts(_ token: String) -> Bool { bytes[position...].starts(with: token.utf8) }
 }

@@ -10,24 +10,28 @@ final class Highlighting {
         let color: Int
         let captures: [(Int, Int)]
     }
+
     let sourceRules: [Rule]
     let assemblyRules: [Rule]
     let sourceLiterals = try! NSRegularExpression(pattern: #"//[^\r\n]*|'(?:''|[^'])*'?|"(?:""|[^"])*"?"#)
     let assemblyLiterals = try! NSRegularExpression(pattern: #"//[^\r\n]*|"(?:\\.|[^"\\])*"?"#)
     let embedded: NSRegularExpression
     let sourceEnd: NSRegularExpression
+
     init() {
         sourceRules = Self.rules(EmbeddedGrammars.source, embedded: false)
         assemblyRules = Self.rules(EmbeddedGrammars.assembly, embedded: true)
         let root = Self.grammar(EmbeddedGrammars.assembly)
         let repository = root["repository"] as! [String: [String: Any]]
         let patterns = repository["embedded-source"]!["patterns"] as! [[String: Any]]
-        embedded = Self.regex(
-            "(?<sourceBlock>" + (patterns[0]["begin"] as! String) + ")|(?:" + (patterns[1]["begin"] as! String) + ")")
+        embedded = Self.regex("(?<sourceBlock>" + (patterns[0]["begin"] as! String) + ")|(?:" + (patterns[1]["begin"] as! String) + ")")
         sourceEnd = Self.regex(patterns[0]["end"] as! String)
     }
+
     static func paint(_ text: String, _ color: Int) -> String { "\u{1b}[\(color)m" + text + "\u{1b}[0m" }
+
     func render(_ text: String) -> String { render(text, literals: sourceLiterals, rules: sourceRules) }
+
     func renderAssembly(_ text: String) -> String {
         guard text.utf16.count < 262_144 else { return text }
         let source = text as NSString
@@ -40,17 +44,10 @@ final class Highlighting {
         let boundaries = matches(sourceEnd, text: text, deadline: deadline)
         for match in regions where match.range.location >= position {
             let start = NSMaxRange(match.range)
-            output += render(
-                source.substring(with: NSRange(location: position, length: start - position)),
-                literals: assemblyLiterals, rules: assemblyRules)
+            output += render(source.substring(with: NSRange(location: position, length: start - position)), literals: assemblyLiterals, rules: assemblyRules)
             let stop: Int
             if match.range(withName: "sourceBlock").location != NSNotFound {
-                stop =
-                    boundaries.first { boundary in
-                        boundary.range.location >= start
-                            && !literals.contains { literal in NSLocationInRange(boundary.range.location, literal.range)
-                            }
-                    }?.range.location ?? end
+                stop = boundaries.first { boundary in boundary.range.location >= start && !literals.contains { literal in NSLocationInRange(boundary.range.location, literal.range) } }?.range.location ?? end
             } else {
                 let range = source.range(of: "\n", range: NSRange(location: start, length: end - start))
                 stop = range.location == NSNotFound ? end : range.location
@@ -61,28 +58,23 @@ final class Highlighting {
         output += render(source.substring(from: position), literals: assemblyLiterals, rules: assemblyRules)
         return output
     }
+
     func render(_ text: String, literals: NSRegularExpression, rules: [Rule]) -> String {
         guard !text.isEmpty, text.utf16.count < 262_144 else { return text }
         let source = text as NSString
         var colors = [Int](repeating: 0, count: source.length)
         let deadline = ProcessInfo.processInfo.systemUptime + 0.1
+
         func fill(_ range: NSRange, _ color: Int, protect: Bool = true) {
             guard range.location != NSNotFound, range.length > 0 else { return }
             let indices = range.location..<NSMaxRange(range)
             if !protect || indices.allSatisfy({ colors[$0] == 0 }) { for index in indices { colors[index] = color } }
         }
-        for match in matches(literals, text: text, deadline: deadline) {
-            fill(match.range, source.substring(with: match.range).hasPrefix("//") ? 90 : 32)
-        }
+
+        for match in matches(literals, text: text, deadline: deadline) { fill(match.range, source.substring(with: match.range).hasPrefix("//") ? 90 : 32) }
         for rule in rules {
             for match in matches(rule.pattern, text: text, deadline: deadline) {
-                if rule.captures.isEmpty {
-                    fill(match.range, rule.color)
-                } else {
-                    for (group, color) in rule.captures where group < match.numberOfRanges {
-                        fill(match.range(at: group), color)
-                    }
-                }
+                if rule.captures.isEmpty { fill(match.range, rule.color) } else { for (group, color) in rule.captures where group < match.numberOfRanges { fill(match.range(at: group), color) } }
             }
             if ProcessInfo.processInfo.systemUptime > deadline { return text }
         }
@@ -97,43 +89,34 @@ final class Highlighting {
         }
         return result
     }
+
     private func matches(_ regex: NSRegularExpression, text: String, deadline: Double) -> [NSTextCheckingResult] {
         var results: [NSTextCheckingResult] = []
-        regex.enumerateMatches(in: text, options: [.reportProgress], range: NSRange(text.startIndex..., in: text)) {
-            match, _, stop in
-            if ProcessInfo.processInfo.systemUptime > deadline {
-                stop.pointee = true
-            } else if let match {
-                results.append(match)
-            }
+        regex.enumerateMatches(in: text, options: [.reportProgress], range: NSRange(text.startIndex..., in: text)) { match, _, stop in
+            if ProcessInfo.processInfo.systemUptime > deadline { stop.pointee = true } else if let match { results.append(match) }
         }
         return results
     }
-    static func grammar(_ json: String) -> [String: Any] {
-        try! JSONSerialization.jsonObject(with: Data(json.utf8)) as! [String: Any]
-    }
-    static func regex(_ pattern: String) -> NSRegularExpression {
-        try! NSRegularExpression(pattern: pattern, options: [.anchorsMatchLines])
-    }
+
+    static func grammar(_ json: String) -> [String: Any] { try! JSONSerialization.jsonObject(with: Data(json.utf8)) as! [String: Any] }
+
+    static func regex(_ pattern: String) -> NSRegularExpression { try! NSRegularExpression(pattern: pattern, options: [.anchorsMatchLines]) }
+
     static func rules(_ json: String, embedded: Bool) -> [Rule] {
         let root = grammar(json)
         let repository = root["repository"] as! [String: [String: Any]]
         return (root["patterns"] as! [[String: String]]).flatMap { entry -> [Rule] in
             let name = String(entry["include"]!.dropFirst())
             return (repository[name]!["patterns"] as! [[String: Any]]).compactMap { pattern in
-                let expression =
-                    pattern["match"] as? String
-                    ?? (embedded && pattern["beginCaptures"] != nil ? pattern["begin"] as? String : nil)
+                let expression = pattern["match"] as? String ?? (embedded && pattern["beginCaptures"] != nil ? pattern["begin"] as? String : nil)
                 guard let expression else { return nil }
-                let groups =
-                    (pattern[pattern["match"] == nil ? "beginCaptures" : "captures"] as? [String: [String: String]])
-                    ?? [:]
+                let groups = (pattern[pattern["match"] == nil ? "beginCaptures" : "captures"] as? [String: [String: String]]) ?? [:]
                 let captures = groups.map { (Int($0.key)!, scopeColor($0.value["name"]!)) }.sorted { $0.0 < $1.0 }
-                return Rule(
-                    pattern: regex(expression), color: scopeColor(pattern["name"] as? String ?? ""), captures: captures)
+                return Rule(pattern: regex(expression), color: scopeColor(pattern["name"] as? String ?? ""), captures: captures)
             }
         }
     }
+
     static func scopeColor(_ scope: String) -> Int {
         if scope.hasPrefix("comment") { return 90 }
         if scope.hasPrefix("string") { return 32 }

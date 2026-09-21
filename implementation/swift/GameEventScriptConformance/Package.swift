@@ -6,36 +6,21 @@ import PackageDescription
 
 let package = Package(
     name: "GameEventScriptConformance",
-    products: [
-        .library(name: "GameEventScriptConformance", targets: ["GameEventScriptConformance"]),
-        .executable(name: "ges-conformance", targets: ["GameEventScriptConformanceTool"]),
-    ],
-    dependencies: [
-        .package(path: "../GameEventScriptRuntime"), .package(path: "../GameEventScriptCompiler"),
-        .package(path: "../GameEventScriptSwiftBridge"),
-    ],
+    products: [.library(name: "GameEventScriptConformance", targets: ["GameEventScriptConformance"]), .executable(name: "ges-conformance", targets: ["GameEventScriptConformanceTool"])],
+    dependencies: [.package(path: "../GameEventScriptRuntime"), .package(path: "../GameEventScriptCompiler"), .package(path: "../GameEventScriptSwiftBridge")],
     targets: [
-        .target(
-            name: "GameEventScriptConformance",
-            dependencies: [
-                .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
-                .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"),
-            ]),
+        .target(name: "GameEventScriptConformance", dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"), .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler")]),
         .target(name: "ConformanceInstrumentation"),
         .executableTarget(
             name: "GameEventScriptConformanceTool",
-            dependencies: [
-                "GameEventScriptConformance", "ConformanceInstrumentation",
-                .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"),
-                .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
-            ]),
+            dependencies: ["GameEventScriptConformance", "ConformanceInstrumentation", .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"), .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")]
+        ),
         .testTarget(
             name: "GameEventScriptConformanceTests",
             dependencies: [
-                "GameEventScriptConformance",
-                .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
-                .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"),
+                "GameEventScriptConformance", .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"), .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"),
                 .product(name: "GameEventScriptSwiftBridge", package: "GameEventScriptSwiftBridge"),
-            ]),
+            ]
+        ),
     ]
 )

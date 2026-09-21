@@ -281,8 +281,16 @@ for the synchronous invocation.
 
 `./scripts/build-swift.sh` builds all SwiftPM packages independently in Release
 without .NET; `--configuration debug` selects Debug. `./scripts/format-swift.sh`
-checks the existing formatter configuration; `--fix` applies formatting. Swift CI
-requires this formatting gate.
+checks the formatter configuration; `--fix` applies formatting. Swift uses a
+250-character target width and respects existing line breaks, including deliberately
+multiline function bodies. Parameter/argument lists
+that need wrapping use one parameter/argument per line (`lineBreakBeforeEachArgument`);
+short lists may stay on one line. Exactly one blank line
+separates callable/type declarations from neighbouring items, before any attached
+documentation or attributes; none is added just inside an opening brace. The
+SwiftSyntax helper in `scripts/SwiftDeclarationSpacing.swift` enforces this in
+addition to swift-format. Swift CI requires both the formatting gate and its
+regression controls (`python3 scripts/test-swift-spacing.py`).
 Native SwiftPM build/test commands use `--disable-build-manifest-caching` to
 rediscover added, renamed and removed sources in local dependency packages.
 This regenerates build planning, not compiled objects. Keep the same option in

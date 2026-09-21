@@ -11,19 +11,10 @@ let package = Package(
     dependencies: [.package(path: "../GameEventScriptRuntime"), .package(path: "../GameEventScriptCompiler")],
     targets: [
         .target(name: "TerminalSupport"),
-        .executableTarget(
-            name: "GameEventScriptTool",
-            dependencies: [
-                .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
-                .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"),
-                "TerminalSupport",
-            ]),
+        .executableTarget(name: "GameEventScriptTool", dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"), .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"), "TerminalSupport"]),
         .testTarget(
             name: "GameEventScriptToolTests",
-            dependencies: [
-                "GameEventScriptTool", "TerminalSupport",
-                .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
-                .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"),
-            ]),
+            dependencies: ["GameEventScriptTool", "TerminalSupport", .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"), .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler")]
+        ),
     ]
 )

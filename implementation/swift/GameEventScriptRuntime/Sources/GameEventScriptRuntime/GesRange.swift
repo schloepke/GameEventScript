@@ -20,10 +20,7 @@ public struct GesIntegerRange: Hashable {
     /// Inclusive length, saturated at Int64.max.
     public var count: Int64 {
         guard step != 0, step > 0 ? from <= to : from >= to else { return 0 }
-        let distance =
-            step > 0
-            ? UInt64(bitPattern: to) &- UInt64(bitPattern: from)
-            : UInt64(bitPattern: from) &- UInt64(bitPattern: to)
+        let distance = step > 0 ? UInt64(bitPattern: to) &- UInt64(bitPattern: from) : UInt64(bitPattern: from) &- UInt64(bitPattern: to)
         let magnitude = step > 0 ? UInt64(step) : 0 &- UInt64(bitPattern: step)
         let zeroBasedCount = distance / magnitude
         return zeroBasedCount >= UInt64(Int64.max) ? .max : Int64(zeroBasedCount + 1)
@@ -35,10 +32,7 @@ public struct GesIntegerRange: Hashable {
         let magnitude = step > 0 ? UInt64(step) : 0 &- UInt64(bitPattern: step)
         let product = UInt64(oneBasedIndex - 1).multipliedReportingOverflow(by: magnitude)
         guard !product.overflow else { return nil }
-        let bits =
-            step > 0
-            ? UInt64(bitPattern: from) &+ product.partialValue
-            : UInt64(bitPattern: from) &- product.partialValue
+        let bits = step > 0 ? UInt64(bitPattern: from) &+ product.partialValue : UInt64(bitPattern: from) &- product.partialValue
         let result = Int64(bitPattern: bits)
         return (step > 0 ? result >= from && result <= to : result <= from && result >= to) ? result : nil
     }
@@ -46,12 +40,8 @@ public struct GesIntegerRange: Hashable {
     /// Exact membership without materializing the range.
     public func contains(_ value: Int64) -> Bool {
         guard step != 0 else { return false }
-        if step > 0 {
-            return value >= from && value <= to
-                && (UInt64(bitPattern: value) &- UInt64(bitPattern: from)) % UInt64(step) == 0
-        }
-        return value <= from && value >= to
-            && (UInt64(bitPattern: from) &- UInt64(bitPattern: value)) % (0 &- UInt64(bitPattern: step)) == 0
+        if step > 0 { return value >= from && value <= to && (UInt64(bitPattern: value) &- UInt64(bitPattern: from)) % UInt64(step) == 0 }
+        return value <= from && value >= to && (UInt64(bitPattern: from) &- UInt64(bitPattern: value)) % (0 &- UInt64(bitPattern: step)) == 0
     }
 }
 
@@ -73,9 +63,7 @@ public struct GesFloatRange: Hashable {
 
     /// Inclusive length, saturated at Int64.max; invalid descriptors have length zero.
     public var count: Int64 {
-        guard from.isFinite, to.isFinite, step.isFinite, step != 0,
-            step > 0 ? from <= to : from >= to
-        else { return 0 }
+        guard from.isFinite, to.isFinite, step.isFinite, step != 0, step > 0 ? from <= to : from >= to else { return 0 }
         let distance = step > 0 ? (to - from) / step : (from - to) / -step
         if distance >= 9223372036854775808.0 { return .max }
         return Int64(distance.rounded(.down)) + 1
@@ -92,9 +80,7 @@ public struct GesFloatRange: Hashable {
     /// Exact membership in the generated binary64 sequence, without a tolerance or enumeration.
     public func contains(_ value: Double) -> Bool {
         let length = count
-        guard value.isFinite, length > 0, step > 0 ? value >= from && value <= to : value <= from && value >= to else {
-            return false
-        }
+        guard value.isFinite, length > 0, step > 0 ? value >= from && value <= to : value <= from && value >= to else { return false }
         var low: Int64 = 0
         var high = length - 1
         while low <= high {

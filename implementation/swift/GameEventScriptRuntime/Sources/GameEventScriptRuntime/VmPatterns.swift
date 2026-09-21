@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 enum GesPatterns {
-    static func execute(
-        _ slot: GesVmState.Slot, pattern: GameEventScriptBytecodePatternKind, count: Int, face: GesValue, take: Bool
-    ) -> GesValue {
+    static func execute(_ slot: GesVmState.Slot, pattern: GameEventScriptBytecodePatternKind, count: Int, face: GesValue, take: Bool) -> GesValue {
         let source = slot.value
         if source.kind == .series { return .nothing }
         let values: [GesValue]
@@ -19,11 +17,7 @@ enum GesPatterns {
         var result: [GesValue]?
         switch pattern {
         case .countFace:
-            if !take && source.kind == .dice {
-                return .boolean(
-                    face.asNumber.isFinite
-                        && values.filter { $0.asInteger == GesNumber.saturatedInteger(face.asNumber) }.count >= count)
-            }
+            if !take && source.kind == .dice { return .boolean(face.asNumber.isFinite && values.filter { $0.asInteger == GesNumber.saturatedInteger(face.asNumber) }.count >= count) }
             let matches = values.filter { $0 == face }
             if matches.count >= count { result = Array(matches.prefix(max(0, count))) }
         case .countAny:
@@ -52,15 +46,10 @@ enum GesPatterns {
             if values.contains(where: { !$0.asNumber.isFinite }) { break }
             var seen = Set<Int64>()
             var selected: [GesValue] = []
-            for value in values where seen.insert(GesNumber.saturatedInteger(value.asNumber)).inserted {
-                selected.append(value)
-            }
+            for value in values where seen.insert(GesNumber.saturatedInteger(value.asNumber)).inserted { selected.append(value) }
             let numbers = seen.sorted()
             if numbers.count < 2 { break }
-            if numbers.indices.dropFirst().allSatisfy({ numbers[$0 - 1] != .max && numbers[$0 - 1] + 1 == numbers[$0] })
-            {
-                result = selected
-            }
+            if numbers.indices.dropFirst().allSatisfy({ numbers[$0 - 1] != .max && numbers[$0 - 1] + 1 == numbers[$0] }) { result = selected }
         }
         if !take { return .boolean(result != nil) }
         guard let result else { return .nothing }

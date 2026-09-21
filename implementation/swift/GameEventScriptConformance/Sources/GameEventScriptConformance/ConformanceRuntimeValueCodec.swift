@@ -3,9 +3,7 @@
 
 import GameEventScriptRuntime
 
-enum ConformanceExecutionError: Error {
-    case invalidInput(String)
-}
+enum ConformanceExecutionError: Error { case invalidInput(String) }
 
 extension ConformanceData {
     func required(_ key: String) throws -> ConformanceData {
@@ -14,9 +12,7 @@ extension ConformanceData {
     }
 
     func text(_ key: String) throws -> String {
-        guard let value = self[key]?.stringValue ?? self[key]?.numberValue else {
-            throw ConformanceExecutionError.invalidInput("Expected scalar \(key)")
-        }
+        guard let value = self[key]?.stringValue ?? self[key]?.numberValue else { throw ConformanceExecutionError.invalidInput("Expected scalar \(key)") }
         return value
     }
 
@@ -50,18 +46,11 @@ enum ConformanceRuntimeValueCodec {
         return value
     }
 
-    static func signature(_ node: ConformanceData) throws -> GameEventScriptMessageSignature {
-        try GameEventScriptMessageSignature(
-            name: node.text("name"), parameters: node.values("parameters").map { $0.stringValue })
-    }
+    static func signature(_ node: ConformanceData) throws -> GameEventScriptMessageSignature { try GameEventScriptMessageSignature(name: node.text("name"), parameters: node.values("parameters").map { $0.stringValue }) }
 
     static func message(_ node: ConformanceData) throws -> GameEventScriptMessage {
-        let arguments = try node.values("args").map { argument in
-            try GameEventScriptMessageArgument(
-                name: argument["name"]?.stringValue, value: decode(argument.required("value")))
-        }
-        return try GameEventScriptMessage(
-            name: node.text("name"), arguments: arguments, tags: node.values("tags").compactMap(\.stringValue))
+        let arguments = try node.values("args").map { argument in try GameEventScriptMessageArgument(name: argument["name"]?.stringValue, value: decode(argument.required("value"))) }
+        return try GameEventScriptMessage(name: node.text("name"), arguments: arguments, tags: node.values("tags").compactMap(\.stringValue))
     }
 
     static func decode(_ node: ConformanceData, mutateSource: Bool = false) throws -> GesValue {
@@ -75,12 +64,8 @@ enum ConformanceRuntimeValueCodec {
         case ":Percentage": return try .percentage(number(node.text("value")))
         case ":Text": return try .text(node.text("value"))
         case ":Tag": return try .tag(node.text("value"))
-        case ":Vector":
-            return try .vector(
-                x: number(node.text("x")), y: number(node.text("y")), z: number(node.text("z")), unit: unit)
-        case ":Point":
-            return try .point(
-                x: number(node.text("x")), y: number(node.text("y")), z: number(node.text("z")), unit: unit)
+        case ":Vector": return try .vector(x: number(node.text("x")), y: number(node.text("y")), z: number(node.text("z")), unit: unit)
+        case ":Point": return try .point(x: number(node.text("x")), y: number(node.text("y")), z: number(node.text("z")), unit: unit)
         case ":List":
             var items = try node.values("items").map { try decode($0) }
             let result = GesValue.list(items)
@@ -88,28 +73,18 @@ enum ConformanceRuntimeValueCodec {
             return result
         case ":Dice":
             var rolls = try node.values("rolls").map { value in
-                guard let result = Int32(value.numberValue ?? value.stringValue ?? "") else {
-                    throw ConformanceExecutionError.invalidInput("Invalid roll")
-                }
+                guard let result = Int32(value.numberValue ?? value.stringValue ?? "") else { throw ConformanceExecutionError.invalidInput("Invalid roll") }
                 return result
             }
             let result = GesValue.dice(rolls)
             if mutateSource && !rolls.isEmpty { rolls[0] = .min }
             return result
-        case ":Range.int64":
-            return try .integerRange(
-                from: integer(node.text("from")), to: integer(node.text("to")), step: integer(node.text("step")))
-        case ":Range.binary64":
-            return try .floatRange(
-                from: number(node.text("from")), to: number(node.text("to")), step: number(node.text("step")))
+        case ":Range.int64": return try .integerRange(from: integer(node.text("from")), to: integer(node.text("to")), step: integer(node.text("step")))
+        case ":Range.binary64": return try .floatRange(from: number(node.text("from")), to: number(node.text("to")), step: number(node.text("step")))
         case ":Message": return try .message(message(node.required("message")))
         default:
-            var entries = try node.values("entries").map {
-                try GesMapEntry(key: $0.text("key"), value: decode($0.required("value")))
-            }
-            let result =
-                type == ":Map"
-                ? GesValue.map(entries) : GesValue.record(typeName: String(type.dropFirst()), entries: entries)
+            var entries = try node.values("entries").map { try GesMapEntry(key: $0.text("key"), value: decode($0.required("value"))) }
+            let result = type == ":Map" ? GesValue.map(entries) : GesValue.record(typeName: String(type.dropFirst()), entries: entries)
             if mutateSource && !entries.isEmpty { entries[0] = GesMapEntry(key: "mutated", value: .nothing) }
             return result
         }
@@ -121,29 +96,23 @@ enum ConformanceRuntimeValueCodec {
         if left == right { return true }
         if !left.isFinite || !right.isFinite { return false }
         let mask: UInt64 = 0x8000_0000_0000_0000
-        func ordered(_ number: Double) -> UInt64 {
-            number.bitPattern & mask == 0 ? number.bitPattern | mask : ~number.bitPattern
-        }
+
+        func ordered(_ number: Double) -> UInt64 { number.bitPattern & mask == 0 ? number.bitPattern | mask : ~number.bitPattern }
+
         let a = ordered(left)
         let b = ordered(right)
         let limit = UInt64(comparison?["binary64"]?["maxUlps"]?.numberValue ?? "0") ?? 0
         return (a >= b ? a - b : b - a) <= limit
     }
 
-    static func messagesEqual(
-        _ expected: ConformanceData, _ actual: GameEventScriptMessage, comparison: ConformanceData?
-    ) throws -> Bool {
+    static func messagesEqual(_ expected: ConformanceData, _ actual: GameEventScriptMessage, comparison: ConformanceData?) throws -> Bool {
         guard scalarEqual(try expected.text("name"), actual.name) else { return false }
         let tags = expected.values("tags").compactMap(\.stringValue)
-        guard tags.count == actual.tags.count, zip(tags, actual.tags).allSatisfy({ scalarEqual($0, $1) }) else {
-            return false
-        }
+        guard tags.count == actual.tags.count, zip(tags, actual.tags).allSatisfy({ scalarEqual($0, $1) }) else { return false }
         let args = expected.values("args")
         guard args.count == actual.arguments.count else { return false }
         for (index, argument) in args.enumerated() {
-            guard scalarEqual(argument["name"]?.stringValue ?? "_", actual.arguments.nameAt(index)) else {
-                return false
-            }
+            guard scalarEqual(argument["name"]?.stringValue ?? "_", actual.arguments.nameAt(index)) else { return false }
             if try !equal(argument.required("value"), actual.arguments[index], comparison: comparison) { return false }
         }
         return true
@@ -156,64 +125,44 @@ enum ConformanceRuntimeValueCodec {
         switch type {
         case ":Nothing": return actual.isNothing
         case ":Boolean": return actual.kind == .boolean && (expected["value"]?.boolValue == true) == actual.asBoolean
-        case ":Number.int64", ":Quantity.int64":
-            return try actual.kind == .integer && expectedUnit == actual.unit
-                && integer(expected.text("value")) == actual.integerValue
+        case ":Number.int64", ":Quantity.int64": return try actual.kind == .integer && expectedUnit == actual.unit && integer(expected.text("value")) == actual.integerValue
         case ":Number.binary64", ":Quantity.binary64", ":Percentage":
             let number = try number(expected.text("value"))
             if number.isNaN { return actual.isNothing }
-            return actual.kind == (type == ":Percentage" ? .percentage : .float) && expectedUnit == actual.unit
-                && binaryEqual(number, actual.asNumber, comparison: comparison)
-        case ":Text", ":Tag":
-            return try actual.kind == (type == ":Text" ? .text : .tag)
-                && scalarEqual(expected.text("value"), actual.textValue ?? "")
+            return actual.kind == (type == ":Percentage" ? .percentage : .float) && expectedUnit == actual.unit && binaryEqual(number, actual.asNumber, comparison: comparison)
+        case ":Text", ":Tag": return try actual.kind == (type == ":Text" ? .text : .tag) && scalarEqual(expected.text("value"), actual.textValue ?? "")
         case ":Vector", ":Point":
             let x = try number(expected.text("x"))
             let y = try number(expected.text("y"))
             let z = try number(expected.text("z"))
             if x.isNaN || y.isNaN || z.isNaN { return actual.isNothing }
-            guard actual.kind == (type == ":Vector" ? .vector : .point), expectedUnit == actual.unit,
-                let spatial = actual.spatialValue
-            else { return false }
-            return binaryEqual(x, spatial.x, comparison: comparison)
-                && binaryEqual(y, spatial.y, comparison: comparison)
-                && binaryEqual(z, spatial.z, comparison: comparison)
+            guard actual.kind == (type == ":Vector" ? .vector : .point), expectedUnit == actual.unit, let spatial = actual.spatialValue else { return false }
+            return binaryEqual(x, spatial.x, comparison: comparison) && binaryEqual(y, spatial.y, comparison: comparison) && binaryEqual(z, spatial.z, comparison: comparison)
         case ":List":
             guard let items = actual.listValue, items.count == expected.values("items").count else { return false }
-            for (a, b) in zip(expected.values("items"), items) {
-                if try !equal(a, b, comparison: comparison) { return false }
-            }
+            for (a, b) in zip(expected.values("items"), items) { if try !equal(a, b, comparison: comparison) { return false } }
             return true
         case ":Dice":
             let rolls = try expected.values("rolls").map { value in
-                guard let roll = Int32(value.numberValue ?? value.stringValue ?? "") else {
-                    throw ConformanceExecutionError.invalidInput("Invalid expected roll")
-                }
+                guard let roll = Int32(value.numberValue ?? value.stringValue ?? "") else { throw ConformanceExecutionError.invalidInput("Invalid expected roll") }
                 return roll
             }
             return actual.diceRolls == rolls
         case ":Range.int64":
             guard let range = actual.integerRangeValue else { return false }
-            return try range.from == integer(expected.text("from")) && range.to == integer(expected.text("to"))
-                && range.step == integer(expected.text("step"))
+            return try range.from == integer(expected.text("from")) && range.to == integer(expected.text("to")) && range.step == integer(expected.text("step"))
         case ":Range.binary64":
             let from = try number(expected.text("from"))
             let to = try number(expected.text("to"))
             let step = try number(expected.text("step"))
             if from.isNaN || to.isNaN || step.isNaN { return actual.isNothing }
             guard let range = actual.floatRangeValue else { return false }
-            return binaryEqual(from, range.from, comparison: comparison)
-                && binaryEqual(to, range.to, comparison: comparison)
-                && binaryEqual(step, range.step, comparison: comparison)
+            return binaryEqual(from, range.from, comparison: comparison) && binaryEqual(to, range.to, comparison: comparison) && binaryEqual(step, range.step, comparison: comparison)
         case ":Message":
             guard let message = actual.messageValue else { return false }
             return try messagesEqual(expected.required("message"), message, comparison: comparison)
         default:
-            guard type == ":Map" ? actual.kind == .map : actual.kind == .record || actual.kind == .external,
-                let entries = try actual.materializedMap()?.entries
-            else {
-                return false
-            }
+            guard type == ":Map" ? actual.kind == .map : actual.kind == .record || actual.kind == .external, let entries = try actual.materializedMap()?.entries else { return false }
             if type != ":Map" && !scalarEqual(String(type.dropFirst()), actual.customTypeName ?? "") { return false }
             var normalized: [([UInt32], ConformanceData)] = []
             for entry in expected.values("entries") {
@@ -222,11 +171,7 @@ enum ConformanceRuntimeValueCodec {
                 normalized.append((key, try entry.required("value")))
             }
             guard normalized.count == entries.count else { return false }
-            for (key, value) in normalized {
-                guard let match = entries.first(where: { $0.key.unicodeScalars.map(\.value) == key }),
-                    try equal(value, match.value, comparison: comparison)
-                else { return false }
-            }
+            for (key, value) in normalized { guard let match = entries.first(where: { $0.key.unicodeScalars.map(\.value) == key }), try equal(value, match.value, comparison: comparison) else { return false } }
             return true
         }
     }
@@ -234,6 +179,4 @@ enum ConformanceRuntimeValueCodec {
     static func scalarEqual(_ a: String, _ b: String) -> Bool { a.unicodeScalars.elementsEqual(b.unicodeScalars) }
 }
 
-extension String {
-    fileprivate func replacingColonPrefix() -> String { hasPrefix(":") ? String(dropFirst()) : self }
-}
+extension String { fileprivate func replacingColonPrefix() -> String { hasPrefix(":") ? String(dropFirst()) : self } }

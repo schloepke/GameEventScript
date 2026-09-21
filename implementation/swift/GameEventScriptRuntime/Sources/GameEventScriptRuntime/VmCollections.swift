@@ -7,6 +7,7 @@ final class GesIterator {
     private var textIndex: String.UnicodeScalarView.Index?
     private var closed = false
     let isPatternSequence: Bool
+
     init?(_ source: GesValue) {
         switch source.kind {
         case .integerRange, .floatRange, .list, .dice, .map, .record, .vector, .point, .text, .tag: break
@@ -16,6 +17,7 @@ final class GesIterator {
         isPatternSequence = [.list, .dice, .map, .record].contains(source.kind)
         textIndex = source.textValue?.unicodeScalars.startIndex
     }
+
     func next() -> GesValue? {
         if closed { return nil }
         let result: GesValue?
@@ -31,8 +33,7 @@ final class GesIterator {
         case .map, .record:
             let entries = source.mapEntries!
             result = index < entries.count ? entries[Int(index)].value : nil
-        case .vector, .point:
-            result = index < 3 ? .float(index == 0 ? source.x : index == 1 ? source.y : source.z) : nil
+        case .vector, .point: result = index < 3 ? .float(index == 0 ? source.x : index == 1 ? source.y : source.z) : nil
         case .text, .tag:
             let scalars = source.textValue!.unicodeScalars
             if let current = textIndex, current < scalars.endIndex {
@@ -46,6 +47,7 @@ final class GesIterator {
         if result == nil || index == .max - 1 { closed = true } else { index += 1 }
         return result
     }
+
     func close() {
         closed = true
         source = .nothing
@@ -55,16 +57,18 @@ final class GesIterator {
 
 final class GesCollectionBuilder {
     enum Kind { case list, map, distinct, group, order }
+
     let kind: Kind
     var values: [GesValue] = []
     private var keys: [GesValue] = []
     private var textKeys: [String] = []
     private var groups: [[GesValue]] = []
+
     init(_ kind: Kind) { self.kind = kind }
+
     func add(key: GesValue = .nothing, value: GesValue, budget: GesRuntimeBudget) {
         switch kind {
-        case .list:
-            if budget.generated(values.count + 1) { values.append(value) }
+        case .list: if budget.generated(values.count + 1) { values.append(value) }
         case .map:
             let name = key.isNothing ? "" : key.textValue ?? key.toText
             if name.isEmpty { return }
@@ -97,13 +101,13 @@ final class GesCollectionBuilder {
             }
         }
     }
+
     func finish(descending: Bool = false) -> GesValue {
         switch kind {
         case .list, .distinct: return .list(values)
         case .map: return .map(zip(textKeys, values).map { .init(key: $0.0, value: $0.1) })
         case .group: return .map(zip(textKeys, groups).map { .init(key: $0.0, value: .list($0.1)) })
-        case .order:
-            return GesComparison.sorted(values, keys: keys, descending: descending).map(GesValue.list) ?? .nothing
+        case .order: return GesComparison.sorted(values, keys: keys, descending: descending).map(GesValue.list) ?? .nothing
         }
     }
 }
@@ -116,6 +120,7 @@ extension GesValue {
         }
     }
     var numericOnly: Bool { [.integer, .float, .percentage].contains(kind) }
+
     func index(_ oneBased: Int64) -> GesValue {
         if oneBased <= 0 { return .nothing }
         let index = oneBased - 1
@@ -136,6 +141,7 @@ extension GesValue {
         default: return .nothing
         }
     }
+
     func member(_ key: String) throws -> GesValue {
         if kind == .external { return try externalField(key) ?? .nothing }
         if let map = asMap { return map.get(key) ?? .nothing }
@@ -151,11 +157,7 @@ extension GesValue {
             switch key {
             case "name": return .text(message.name)
             case "signature": return .text(message.signatureId)
-            case "arguments":
-                return .map(
-                    (0..<message.arguments.count).map {
-                        .init(key: message.arguments.nameAt($0), value: message.arguments[$0])
-                    })
+            case "arguments": return .map((0..<message.arguments.count).map { .init(key: message.arguments.nameAt($0), value: message.arguments[$0]) })
             case "tags": return .list(try message.tags.map(GesValue.tag))
             default: return .nothing
             }

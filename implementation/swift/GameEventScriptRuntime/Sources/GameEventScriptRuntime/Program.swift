@@ -49,10 +49,7 @@ public struct GameEventScriptBytecodeInstruction: Sendable, Equatable {
     public let payload: UInt64
 
     /// Creates logical instruction data without validation; the Program validator checks operands and references.
-    public init(
-        opcode: GameEventScriptBytecodeOpCode, unitAndFlags: UInt8 = 0,
-        word0: UInt16 = 0, word1: UInt16 = 0, word2: UInt16 = 0, payload: UInt64 = 0
-    ) {
+    public init(opcode: GameEventScriptBytecodeOpCode, unitAndFlags: UInt8 = 0, word0: UInt16 = 0, word1: UInt16 = 0, word2: UInt16 = 0, payload: UInt64 = 0) {
         self.opcode = opcode
         self.unitAndFlags = unitAndFlags
         self.word0 = word0
@@ -60,6 +57,7 @@ public struct GameEventScriptBytecodeInstruction: Sendable, Equatable {
         self.word2 = word2
         self.payload = payload
     }
+
     /// Second operand word reinterpreted as signed Int16.
     public var signedWord1: Int16 { Int16(bitPattern: word1) }
     /// Third operand word reinterpreted as signed Int16.
@@ -113,9 +111,15 @@ public struct GameEventScriptBinding: Sendable {
     /// Creates binding data. Names and tag values are string-table indexes; omitted IDs and entry addresses use
     /// UInt16.max. The Program validator enforces consistency.
     public init(
-        kind: GameEventScriptBinaryBindKind, name: UInt16, argumentNames: [UInt16] = [],
-        entryAddress: UInt16 = .max, id: UInt16 = .max, requiredTags: [UInt16] = [],
-        excludedTags: [UInt16] = [], requiredRegisterCount: UInt16 = 0, requiredCallStackDepth: UInt16 = 0
+        kind: GameEventScriptBinaryBindKind,
+        name: UInt16,
+        argumentNames: [UInt16] = [],
+        entryAddress: UInt16 = .max,
+        id: UInt16 = .max,
+        requiredTags: [UInt16] = [],
+        excludedTags: [UInt16] = [],
+        requiredRegisterCount: UInt16 = 0,
+        requiredCallStackDepth: UInt16 = 0
     ) {
         self.kind = kind
         self.id = id
@@ -127,6 +131,7 @@ public struct GameEventScriptBinding: Sendable {
         self.requiredRegisterCount = requiredRegisterCount
         self.requiredCallStackDepth = requiredCallStackDepth
     }
+
     var isExecutable: Bool { [.messageHandler, .messageNameHandler, .function, .predicate, .record].contains(kind) }
     var isHandler: Bool { kind == .messageHandler || kind == .messageNameHandler }
 }
@@ -151,10 +156,9 @@ public struct GameEventScriptDebugSymbol: Sendable {
     public let codeStart: UInt32
     /// Number of instructions covered by the symbol lifetime.
     public let codeLength: UInt32
+
     /// Creates debug-symbol data with a register and half-open instruction lifetime.
-    public init(
-        kind: GameEventScriptDebugSymbolKind, registerID: UInt16, name: String, codeStart: UInt32, codeLength: UInt32
-    ) {
+    public init(kind: GameEventScriptDebugSymbolKind, registerID: UInt16, name: String, codeStart: UInt32, codeLength: UInt32) {
         self.kind = kind
         self.registerID = registerID
         self.name = name
@@ -175,10 +179,9 @@ public struct GameEventScriptSourceMapSource: Sendable {
     public let sha256: [UInt8]
     /// Zero-based UTF-8 byte offset of each line start.
     public let lineStartByteOffsets: [UInt32]
+
     /// Creates source identity metadata; the Program validator checks checksum size and line boundaries.
-    public init(
-        sourceID: UInt32, sourceName: String, sourceByteLength: UInt32, sha256: [UInt8], lineStartByteOffsets: [UInt32]
-    ) {
+    public init(sourceID: UInt32, sourceName: String, sourceByteLength: UInt32, sha256: [UInt8], lineStartByteOffsets: [UInt32]) {
         self.sourceID = sourceID
         self.sourceName = sourceName
         self.sourceByteLength = sourceByteLength
@@ -199,10 +202,9 @@ public struct GameEventScriptSourceMapEntry: Sendable {
     public let sourceStartByteOffset: UInt32
     /// Length of the source span in UTF-8 bytes.
     public let sourceByteLength: UInt32
+
     /// Creates instruction-to-source mapping data; the Program validator checks all bounds.
-    public init(
-        codeStart: UInt32, codeLength: UInt32, sourceID: UInt32, sourceStartByteOffset: UInt32, sourceByteLength: UInt32
-    ) {
+    public init(codeStart: UInt32, codeLength: UInt32, sourceID: UInt32, sourceStartByteOffset: UInt32, sourceByteLength: UInt32) {
         self.codeStart = codeStart
         self.codeLength = codeLength
         self.sourceID = sourceID
@@ -217,6 +219,7 @@ public struct GameEventScriptSourceMap: Sendable {
     public let sources: [GameEventScriptSourceMapSource]
     /// Instruction-to-source mappings in stored order.
     public let entries: [GameEventScriptSourceMapEntry]
+
     /// Creates an immutable source map from document identities and mappings.
     public init(sources: [GameEventScriptSourceMapSource], entries: [GameEventScriptSourceMapEntry]) {
         self.sources = sources
@@ -232,12 +235,14 @@ public struct GameEventScriptSourceArchiveEntry: Sendable {
     public let sourceName: String
     /// Original UTF-8 document bytes.
     public let utf8Content: [UInt8]
+
     /// Creates archive data; the Program validator verifies UTF-8 and corresponding source metadata.
     public init(sourceID: UInt32, sourceName: String, utf8Content: [UInt8]) {
         self.sourceID = sourceID
         self.sourceName = sourceName
         self.utf8Content = utf8Content
     }
+
     /// Decodes the archived UTF-8 bytes as text.
     public var text: String { String(decoding: utf8Content, as: UTF8.self) }
 }
@@ -248,6 +253,7 @@ public struct GameEventScriptBuildMetadata: Sendable {
     public let compilerID: String
     /// Version string reported by that compiler.
     public let compilerVersion: String
+
     /// Creates compiler provenance metadata.
     public init(compilerID: String, compilerVersion: String) {
         self.compilerID = compilerID
@@ -267,6 +273,7 @@ public struct GameEventScriptOpaqueSection: Sendable {
     public let rawPayload: [UInt8]
     /// Zero-based section position in the original input.
     public let originalOrdinal: Int
+
     /// Creates retained section data; the Program validator checks permitted framing and flag values.
     public init(sectionType: UInt16, flags: UInt16, sectionVersion: UInt16, rawPayload: [UInt8], originalOrdinal: Int) {
         self.sectionType = sectionType

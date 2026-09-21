@@ -21,18 +21,10 @@ extension GesCompiler {
                 if case .message(let name, let arguments) = message.kind {
                     let regs = try arguments.map { try expression($0.value, r, scope) }
                     let bind = importBinding(.outboundMessage, name, arguments.map(\.label))
-                    r.emit(
-                        publish
-                            ? (tags.isEmpty ? .publishMessage : .publishMessageWithTags)
-                            : (tags.isEmpty ? .emitMessage : .emitMessageWithTags),
-                        bind, tags.isEmpty ? 0 : list(tagRegisters), list(regs))
+                    r.emit(publish ? (tags.isEmpty ? .publishMessage : .publishMessageWithTags) : (tags.isEmpty ? .emitMessage : .emitMessageWithTags), bind, tags.isEmpty ? 0 : list(tagRegisters), list(regs))
                 } else {
                     let reg = try expression(message, r, scope)
-                    r.emit(
-                        publish
-                            ? (tags.isEmpty ? .publishMessageValue : .publishMessageValueWithTags)
-                            : (tags.isEmpty ? .emitMessageValue : .emitMessageValueWithTags),
-                        0, reg, tags.isEmpty ? 0 : list(tagRegisters))
+                    r.emit(publish ? (tags.isEmpty ? .publishMessageValue : .publishMessageValueWithTags) : (tags.isEmpty ? .emitMessageValue : .emitMessageValueWithTags), 0, reg, tags.isEmpty ? 0 : list(tagRegisters))
                 }
             case .condition(let condition, let yes, let no):
                 let reg = try expression(condition, r, scope)
@@ -62,6 +54,7 @@ extension GesCompiler {
             }
         }
     }
+
     func randomPush(_ seed: GesExpression, _ r: GesRoutine, _ scope: GesScope) throws {
         if let value = scalarConstant(seed), let i = value.integerValue, !value.hasUnit {
             r.emit(.randomPushConstant, payload: UInt64(bitPattern: i))
@@ -70,14 +63,12 @@ extension GesCompiler {
             r.emit(.randomPush, 0, value)
         }
     }
+
     func iterator(_ e: GesExpression, _ range: Bool, _ r: GesRoutine, _ scope: GesScope) throws -> Int {
         let target = r.temporary()
         if range, case .range(let from, let to, let step) = e.kind {
-            if let a = scalarConstant(from)?.integerValue, let b = scalarConstant(to)?.integerValue,
-                let c = step.map({ scalarConstant($0)?.integerValue }) ?? 1,
-                [a, b, c].allSatisfy({ $0 >= Int16.min && $0 <= Int16.max }),
-                scalarConstant(from)?.hasUnit == false, scalarConstant(to)?.hasUnit == false,
-                step == nil || scalarConstant(step!)?.hasUnit == false
+            if let a = scalarConstant(from)?.integerValue, let b = scalarConstant(to)?.integerValue, let c = step.map({ scalarConstant($0)?.integerValue }) ?? 1, [a, b, c].allSatisfy({ $0 >= Int16.min && $0 <= Int16.max }),
+                scalarConstant(from)?.hasUnit == false, scalarConstant(to)?.hasUnit == false, step == nil || scalarConstant(step!)?.hasUnit == false
             {
                 r.emit(.createRangeIteratorShort, target, Int(a), Int(b), payload: UInt64(UInt16(bitPattern: Int16(c))))
                 return target
@@ -96,6 +87,7 @@ extension GesCompiler {
         }
         return target
     }
+
     func literal(_ value: GesValue, _ target: Int, _ r: GesRoutine) throws {
         let flag: UInt8 = value.unit == .degree ? 1 : value.unit == .meter ? 2 : value.unit == .second ? 3 : 0
         switch value.kind {
@@ -109,14 +101,13 @@ extension GesCompiler {
         default: throw error("compile.unsupportedConstruct", r.location, phase: .compile)
         }
     }
+
     func expression(_ e: GesExpression, _ r: GesRoutine, _ scope: GesScope, destination: Int? = nil) throws -> Int {
         let oldLocation = r.location
         r.location = e.location
         defer { r.location = oldLocation }
         if case .name(let name) = e.kind {
-            guard let value = scope.get(name) else {
-                throw error("compile.unresolvedSymbol", e.location, symbol: name, phase: .compile)
-            }
+            guard let value = scope.get(name) else { throw error("compile.unresolvedSymbol", e.location, symbol: name, phase: .compile) }
             if let destination, destination != value {
                 r.emit(.move, destination, value)
                 return destination
@@ -124,15 +115,11 @@ extension GesCompiler {
             return value
         }
         if case .constant(let name) = e.kind {
-            guard let value = constants[name] else {
-                throw error("compile.unresolvedSymbol", e.location, symbol: name, phase: .compile)
-            }
+            guard let value = constants[name] else { throw error("compile.unresolvedSymbol", e.location, symbol: name, phase: .compile) }
             return try expression(value, r, scope, destination: destination)
         }
         let d = destination ?? r.temporary()
-        if let value = scalarConstant(e),
-            [.nothing, .boolean, .integer, .float, .percentage, .text, .tag].contains(value.kind)
-        {
+        if let value = scalarConstant(e), [.nothing, .boolean, .integer, .float, .percentage, .text, .tag].contains(value.kind) {
             try literal(value, d, r)
             return d
         }
@@ -142,19 +129,13 @@ extension GesCompiler {
         case .unary(let op, let input):
             if op == "predicate", case .extensionCall(let ns, let function, let args) = input.kind {
                 let regs = try args.map { try expression($0.value, r, scope) }
-                r.emit(
-                    .callExternal, d, importBinding(.extensionCall, ns + "." + function, args.map(\.label)), list(regs),
-                    flags: 0x20)
+                r.emit(.callExternal, d, importBinding(.extensionCall, ns + "." + function, args.map(\.label)), list(regs), flags: 0x20)
                 break
             }
             let a = try expression(input, r, scope)
             let mapping: [String: Op] = [
-                "-": .negate, "!": .not, "parse": .parseLiteral, "empty": .isEmpty, "hasValue": .hasValue,
-                "abs": .abs, "ln": .logN, "exp": .exp, "chance": .chance, "floor": .floor, "ceil": .ceil,
-                "truncate": .truncate,
-                "rad": .degreeToRadians, "deg": .degreeFromRadians, "wrapDegree": .wrapDegree,
-                "roundHalfEven": .roundHalfEven, "roundHalfUp": .roundHalfUp, "roundHalfDown": .roundHalfDown,
-                "sin": .sin, "cos": .cos, "tan": .tan, "asin": .asin, "acos": .acos, "atan": .atan,
+                "-": .negate, "!": .not, "parse": .parseLiteral, "empty": .isEmpty, "hasValue": .hasValue, "abs": .abs, "ln": .logN, "exp": .exp, "chance": .chance, "floor": .floor, "ceil": .ceil, "truncate": .truncate, "rad": .degreeToRadians,
+                "deg": .degreeFromRadians, "wrapDegree": .wrapDegree, "roundHalfEven": .roundHalfEven, "roundHalfUp": .roundHalfUp, "roundHalfDown": .roundHalfDown, "sin": .sin, "cos": .cos, "tan": .tan, "asin": .asin, "acos": .acos, "atan": .atan,
             ]
             if op == "predicate" {
                 r.emit(.loadTrue, d)
@@ -167,14 +148,8 @@ extension GesCompiler {
             let short = ["or", "and", "->"].contains(op) ? r.emit(op == "or" ? .jumpIfTrue : .jumpIfFalse, 0, a) : nil
             let b = try expression(right, r, scope)
             let mapping: [String: Op] = [
-                "+": .add, "-": .subtract, "*": .multiply, "/": .divide, "^": .power,
-                "div": .integerDivide, "mod": .modulo, "rem": .remainder, "=": .equal, "<>": .notEqual, "<": .less,
-                ">": .greater,
-                "<=": .lessOrEqual, ">=": .greaterOrEqual, "default": .default, "or": .or, "and": .and, "xor": .xor,
-                "->": .implies,
-                "in": .contains, "not in": .contains, "inValues": .containsValue, "startsWith": .startsWith,
-                "endsWith": .endsWith,
-                "|": .union, "&": .intersect, "zip": .zip,
+                "+": .add, "-": .subtract, "*": .multiply, "/": .divide, "^": .power, "div": .integerDivide, "mod": .modulo, "rem": .remainder, "=": .equal, "<>": .notEqual, "<": .less, ">": .greater, "<=": .lessOrEqual, ">=": .greaterOrEqual,
+                "default": .default, "or": .or, "and": .and, "xor": .xor, "->": .implies, "in": .contains, "not in": .contains, "inValues": .containsValue, "startsWith": .startsWith, "endsWith": .endsWith, "|": .union, "&": .intersect, "zip": .zip,
             ]
             if let opcode = mapping[op] {
                 r.emit(opcode, d, a, b)
@@ -191,19 +166,12 @@ extension GesCompiler {
         case .call(let name, let arguments):
             let regs = try arguments.map { try expression($0.value, r, scope) }
             if let handler = scope.get(name) {
-                if let labels = scope.handler(name), labels != arguments.map(\.label) {
-                    r.emit(.loadNothing, d)
-                } else {
-                    r.emit(.bindHandler, d, handler, list(regs))
-                }
+                if let labels = scope.handler(name), labels != arguments.map(\.label) { r.emit(.loadNothing, d) } else { r.emit(.bindHandler, d, handler, list(regs)) }
             } else {
                 let key = signature(name, arguments.map(\.label))
                 if definitions[key] == nil {
                     if let definition = definitions.values.first(where: { $0.name == name }) {
-                        throw error(
-                            definition.kind == "predicate"
-                                ? "validate.wrongPredicateArity" : "validate.wrongFunctionArity", e.location,
-                            symbol: name, kind: definition.kind == "predicate" ? .predicate : .function)
+                        throw error(definition.kind == "predicate" ? "validate.wrongPredicateArity" : "validate.wrongFunctionArity", e.location, symbol: name, kind: definition.kind == "predicate" ? .predicate : .function)
                     }
                     throw error("validate.missingCallable", e.location, symbol: name, kind: .globalDefinition)
                 }
@@ -213,12 +181,8 @@ extension GesCompiler {
                 r.dependencies.insert(key)
             }
         case .predicate(let value, let name):
-            let matches = definitions.values.filter {
-                $0.name == name && $0.kind == "predicate" && $0.parameters.count == 1
-            }
-            guard matches.count == 1, let definition = matches.first else {
-                throw error("validate.invalidPredicate", e.location, symbol: name, kind: .predicate)
-            }
+            let matches = definitions.values.filter { $0.name == name && $0.kind == "predicate" && $0.parameters.count == 1 }
+            guard matches.count == 1, let definition = matches.first else { throw error("validate.invalidPredicate", e.location, symbol: name, kind: .predicate) }
             stage([try expression(value, r, scope)], r)
             let instruction = r.emit(.call, d, flags: 0x20)
             r.calls.append((instruction, definition.signature))
@@ -264,9 +228,7 @@ extension GesCompiler {
             _ = try expression(value, r, scope, destination: d)
             r.emit(.randomPop)
         case .dice(let count, let sides):
-            if count > Int(Int16.max) || sides > Int(Int16.max) {
-                throw error("compile.numericLimitExceeded", e.location, phase: .compile)
-            }
+            if count > Int(Int16.max) || sides > Int(Int16.max) { throw error("compile.numericLimitExceeded", e.location, phase: .compile) }
             r.emit(.createDice, d, count, sides)
         case .series(let kind): r.emit(.createSeries, d, 0, kind == "fibonacci" ? 1 : 2)
         case .choice(let branches, let fallback):
@@ -301,6 +263,7 @@ extension GesCompiler {
         }
         return d
     }
+
     func constructor(_ type: String, _ arguments: [GesArgument], _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
         if type == "vector" || type == "point" {
             let first = arguments.first?.label ?? "_"
@@ -329,23 +292,16 @@ extension GesCompiler {
         }
         if type.first?.isUppercase == true, let external = try catalog?.resolve(type) {
             let labels = arguments.map(\.label)
-            guard
-                let ctor = external.constructors.first(where: { $0.parameters.map(\.name).sorted() == labels.sorted() })
-            else {
-                throw error("validate.invalidTypeConstructor", r.location, symbol: type, kind: .type)
-            }
+            guard let ctor = external.constructors.first(where: { $0.parameters.map(\.name).sorted() == labels.sorted() }) else { throw error("validate.invalidTypeConstructor", r.location, symbol: type, kind: .type) }
             let ordered = ctor.parameters.map { p in arguments.first { $0.label == p.name }! }
             try stageExpressions(ordered.map(\.value), r, scope)
-            r.emit(
-                .createExternalType, d, importBinding(.externalType, type, ctor.parameters.map(\.name)),
-                textList(ctor.parameters.map(\.name)))
+            r.emit(.createExternalType, d, importBinding(.externalType, type, ctor.parameters.map(\.name)), textList(ctor.parameters.map(\.name)))
             return
         }
-        guard arguments.count == 1 else {
-            throw error("compile.invalidArity", r.location, symbol: type, phase: .compile)
-        }
+        guard arguments.count == 1 else { throw error("compile.invalidArity", r.location, symbol: type, phase: .compile) }
         try cast(d, expression(arguments[0].value, r, scope), type, r)
     }
+
     func intrinsic(_ name: String, _ args: [GesExpression], _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
         let regs = try args.map { try expression($0, r, scope) }
         if name == "min" || name == "max" {
@@ -356,17 +312,11 @@ extension GesCompiler {
             return
         }
         let signatures: [String: [Int: Op]] = [
-            "clamp": [3: .clamp], "atan2": [2: .atan2], "hypot": [2: .hypot2D, 3: .hypot3D],
-            "distance": [2: .distance, 4: .distance2D, 6: .distance3D],
-            "distanceSquared": [2: .distanceSquared, 4: .distanceSquared2D, 6: .distanceSquared3D],
-            "lengthSquared": [1: .lengthSquared, 2: .lengthSquared2D, 3: .lengthSquared3D],
-            "normalize": [1: .normalize, 2: .normalize2D, 3: .normalize3D],
-            "dot": [2: .dot, 4: .dot2D, 6: .dot3D], "cross": [2: .cross, 4: .cross2D, 6: .cross3D],
+            "clamp": [3: .clamp], "atan2": [2: .atan2], "hypot": [2: .hypot2D, 3: .hypot3D], "distance": [2: .distance, 4: .distance2D, 6: .distance3D], "distanceSquared": [2: .distanceSquared, 4: .distanceSquared2D, 6: .distanceSquared3D],
+            "lengthSquared": [1: .lengthSquared, 2: .lengthSquared2D, 3: .lengthSquared3D], "normalize": [1: .normalize, 2: .normalize2D, 3: .normalize3D], "dot": [2: .dot, 4: .dot2D, 6: .dot3D], "cross": [2: .cross, 4: .cross2D, 6: .cross3D],
             "angleBetween": [2: .angleBetween, 4: .angleBetween2D, 6: .angleBetween3D],
         ]
-        guard let opcode = signatures[name]?[regs.count] else {
-            throw error("compile.invalidArity", r.location, symbol: name, phase: .compile)
-        }
+        guard let opcode = signatures[name]?[regs.count] else { throw error("compile.invalidArity", r.location, symbol: name, phase: .compile) }
         var payload: UInt64 = 0
         for (i, value) in regs.dropFirst(2).enumerated() { payload |= UInt64(value) << (i * 16) }
         r.emit(opcode, d, regs[0], regs.count > 1 ? regs[1] : 0, payload: payload)

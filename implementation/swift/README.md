@@ -72,8 +72,9 @@ invoked by absolute path from another working directory:
 | `./scripts/clean.sh [--dry-run] [--artifacts-only]` | Remove repository build outputs; preview with `--dry-run` ([scope](../../README.md#clean-build-outputs)) |
 | `./scripts/build-swift.sh` | Build every SwiftPM package independently in Release; no .NET dependency |
 | `./scripts/build-swift.sh --configuration debug` | Build the same packages in Debug |
-| `./scripts/format-swift.sh` | Check manifests, Sources and Tests using the existing `.swift-format` configuration |
-| `./scripts/format-swift.sh --fix` | Apply formatting to those files |
+| `./scripts/format-swift.sh` | Check 250-column formatting and one blank line around callable/type declarations |
+| `./scripts/format-swift.sh --fix` | Apply formatting to manifests, Sources, Tests and the spacing helper |
+| `python3 scripts/test-swift-spacing.py` | Verify syntax-aware declaration spacing and preservation of comments/strings |
 | `./scripts/test-swift-tool.sh` | Verify CLI adapters, real process I/O and terminal editing without .NET |
 | `./scripts/test-swift-bridge.sh` | Verify native Swift adapters and Compiler/Runtime binding integration without .NET |
 | `./scripts/install-swift-tool.sh` | Build all packages and install/update the native `ges` CLI |
@@ -266,3 +267,21 @@ value conversion, extension registries, KeyPath-based external types and the
 synchronized Host runner. Its package depends only on Runtime; compiler catalogs
 use Runtime's declarative interfaces. Existing portable protocols remain usable
 without any Bridge dependency.
+
+### Declaration spacing
+
+Swift formatting uses a 250-character target width and respects existing line
+breaks. Deliberately multiline function bodies remain multiline; compact bodies
+may stay on one line. This also preserves existing breaks elsewhere.
+`lineBreakBeforeEachArgument` places each parameter/argument on its own line
+when a list wraps; fitting lists may remain on one line. Functions, methods, initializers, deinitializers,
+subscripts and type declarations (including extensions) are separated from
+neighbouring items by exactly one blank line. Documentation comments and
+attributes stay with their declaration; no blank line is inserted immediately
+after an opening brace. Consecutive stored properties remain grouped.
+
+`swift-format` controls wrapping and maximum blank lines. The formatting script
+also uses the active toolchain’s SwiftParser/SwiftSyntax modules to enforce
+declaration spacing without rewriting string contents. Its compiled helper is
+cached under `artifacts/swift/formatting`; it adds no package dependency. Both
+formatting and the helper’s regression controls run in Swift CI.

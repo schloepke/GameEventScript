@@ -8,6 +8,7 @@ enum GesCasts {
         if value.kind == .series { return number(GesSeries.term(value, index: 0)) }
         return .float(value.asNumber, unit: value.kind == .float ? value.unit : .none)
     }
+
     static func unit(_ value: GesValue, _ unit: GesUnit) -> GesValue {
         guard unit == .none || value.unit == .none || value.unit == unit else { return .nothing }
         switch value.kind {
@@ -18,6 +19,7 @@ enum GesCasts {
         default: return .nothing
         }
     }
+
     static func check(_ value: GesValue, _ kind: GameEventScriptBytecodeTypeKind) -> Bool {
         switch kind {
         case .nothing: value.isNothing
@@ -39,18 +41,13 @@ enum GesCasts {
         default: false
         }
     }
-    static func cast(_ value: GesValue, _ kind: GameEventScriptBytecodeTypeKind, _ context: GameEventScriptContext)
-        throws -> GesValue
-    {
+
+    static func cast(_ value: GesValue, _ kind: GameEventScriptBytecodeTypeKind, _ context: GameEventScriptContext) throws -> GesValue {
         switch kind {
         case .nothing: return .nothing
         case .boolean: return .boolean(value.asBoolean)
-        case .integer:
-            return GesNumber.exactInteger(value.asNumber).map {
-                .integer($0, unit: value.kind == .integer || value.kind == .float ? value.unit : .none)
-            } ?? .nothing
-        case .float:
-            return .float(value.asNumber, unit: value.kind == .integer || value.kind == .float ? value.unit : .none)
+        case .integer: return GesNumber.exactInteger(value.asNumber).map { .integer($0, unit: value.kind == .integer || value.kind == .float ? value.unit : .none) } ?? .nothing
+        case .float: return .float(value.asNumber, unit: value.kind == .integer || value.kind == .float ? value.unit : .none)
         case .percentage: return TextNumberCast.percentage(value)
         case .text: return .text(value.toText)
         case .tag:
@@ -73,12 +70,7 @@ enum GesCasts {
         case .list:
             if value.kind == .list { return value }
             if let text = value.textValue { return .list(text.unicodeScalars.map { .text(String($0)) }) }
-            if value.spatialValue != nil {
-                return .list([
-                    .float(value.x, unit: value.unit), .float(value.y, unit: value.unit),
-                    .float(value.z, unit: value.unit),
-                ])
-            }
+            if value.spatialValue != nil { return .list([.float(value.x, unit: value.unit), .float(value.y, unit: value.unit), .float(value.z, unit: value.unit)]) }
             if let dice = value.diceRolls { return .list(dice.map { .integer(Int64($0)) }) }
             if value.integerRangeValue != nil || value.floatRangeValue != nil {
                 let count = value.integerRangeValue?.count ?? value.floatRangeValue!.count
@@ -93,17 +85,12 @@ enum GesCasts {
             return .list([])
         case .map:
             if let map = try value.asMap ?? value.externalMap() { return .map(map.entries) }
-            if value.spatialValue != nil {
-                return .map([
-                    .init(key: "x", value: .float(value.x, unit: value.unit)),
-                    .init(key: "y", value: .float(value.y, unit: value.unit)),
-                    .init(key: "z", value: .float(value.z, unit: value.unit)),
-                ])
-            }
+            if value.spatialValue != nil { return .map([.init(key: "x", value: .float(value.x, unit: value.unit)), .init(key: "y", value: .float(value.y, unit: value.unit)), .init(key: "z", value: .float(value.z, unit: value.unit))]) }
             return .map([])
         default: return check(value, kind) ? value : .nothing
         }
     }
+
     private static func spatial(_ value: GesValue, point: Bool) -> GesValue {
         var x = 0.0
         var y = 0.0

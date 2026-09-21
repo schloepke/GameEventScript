@@ -12,20 +12,15 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
         let name: String
         let score: Int
     }
+
     enum Failure: Error { case unexpected }
 
     func testTypedCatalogExtensionAndExternalConstructorExecuteFromBinary() throws {
         let player = try GameEventScriptSwiftType<Player>(
             "Player",
-            fields: [
-                .init("name", typeName: "Text", keyPath: \Player.name),
-                .init("score", typeName: "Number", keyPath: \Player.score),
-            ],
-            constructors: [
-                .init(parameters: ["score", "name"]) { args in
-                    try Player(name: args.swiftValue(at: 1), score: args.swiftValue(at: 0))
-                }
-            ])
+            fields: [.init("name", typeName: "Text", keyPath: \Player.name), .init("score", typeName: "Number", keyPath: \Player.score)],
+            constructors: [.init(parameters: ["score", "name"]) { args in try Player(name: args.swiftValue(at: 1), score: args.swiftValue(at: 0)) }]
+        )
         let types = try GameEventScriptSwiftExternalTypeRegistry([player.binding])
         let extensions = try GameEventScriptSwiftExtensionRegistry([
             .init(namespace: "app", name: "double", parameters: ["_"]) { call in
@@ -60,23 +55,20 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
                 if explicit { throw try GameEventScriptExtensionFault(code: "app.failure", message: "Failed") }
                 throw Failure.unexpected
             }
-            let extensions = try GameEventScriptSwiftExtensionRegistry([
-                .init(namespace: "app", name: "fail") { _ in try fail() }
-            ])
+            let extensions = try GameEventScriptSwiftExtensionRegistry([.init(namespace: "app", name: "fail") { _ in try fail() }])
             let type = try GameEventScriptSwiftType<Player>(
-                "Player", fields: [],
+                "Player",
+                fields: [],
                 constructors: [
                     .init { _ in
                         try fail()
                         return Player(name: "", score: 0)
                     }
-                ])
+                ]
+            )
             let types = try GameEventScriptSwiftExternalTypeRegistry([type.binding])
-            for (expression, unexpected) in [
-                (":app.fail()", "runtime.extensionCallFailed"), (":Player()", "runtime.externalConstructorFailed"),
-            ] {
-                let program = try GameEventScriptBuilder().withExternalTypeCatalog(types)
-                    .addScript("on Start() { emit Done(\(expression)) }").compile()
+            for (expression, unexpected) in [(":app.fail()", "runtime.extensionCallFailed"), (":Player()", "runtime.externalConstructorFailed")] {
+                let program = try GameEventScriptBuilder().withExternalTypeCatalog(types).addScript("on Start() { emit Done(\(expression)) }").compile()
                 let host = try GameEventScriptHost(seed: 1, extensions: extensions, externalTypes: types).startForTest()
                 _ = try host.load(program)
                 host.receive(try .init(name: "Start"))
@@ -89,9 +81,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
     }
 
     func testRunnerSchedulesInitializationAndDetachesProgram() throws {
-        let program = try GameEventScriptBuilder().addScript(
-            "on initialization { emit Ready() }\non Start() { emit Done() }"
-        ).compile()
+        let program = try GameEventScriptBuilder().addScript("on initialization { emit Ready() }\non Start() { emit Done() }").compile()
         let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 1).startForTest())
         defer { runner.close() }
         let instance = try runner.load(program)

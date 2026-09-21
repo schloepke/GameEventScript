@@ -31,6 +31,9 @@ jobs:
       - name: Record Swift toolchain
         run: swift --version
 
+      - name: Verify Swift declaration spacing controls
+        run: python3 scripts/test-swift-spacing.py
+
       - name: Verify Swift formatting
         run: ./scripts/format-swift.sh
 

@@ -4,8 +4,4 @@
 
 import PackageDescription
 
-let package = Package(
-    name: "GameEventScriptRuntime",
-    products: [.library(name: "GameEventScriptRuntime", targets: ["GameEventScriptRuntime"])],
-    targets: [.target(name: "GameEventScriptRuntime")]
-)
+let package = Package(name: "GameEventScriptRuntime", products: [.library(name: "GameEventScriptRuntime", targets: ["GameEventScriptRuntime"])], targets: [.target(name: "GameEventScriptRuntime")])

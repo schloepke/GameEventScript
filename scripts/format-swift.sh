@@ -35,10 +35,16 @@ if [[ "${#ges_paths[@]}" -eq 0 ]]; then
     exit 1
 fi
 
+ges_paths+=("$ges_root/scripts/SwiftDeclarationSpacing.swift")
+
 if [[ "$ges_fix" == true ]]; then
+    swift format format --in-place --recursive \
+        --configuration "$ges_root/implementation/swift/.swift-format" "${ges_paths[@]}"
+    python3 "$ges_root/scripts/format-swift-spacing.py" --fix "${ges_paths[@]}"
     swift format format --in-place --recursive \
         --configuration "$ges_root/implementation/swift/.swift-format" "${ges_paths[@]}"
 else
     swift format lint --strict --recursive \
         --configuration "$ges_root/implementation/swift/.swift-format" "${ges_paths[@]}"
+    python3 "$ges_root/scripts/format-swift-spacing.py" "${ges_paths[@]}"
 fi

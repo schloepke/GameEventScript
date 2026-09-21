@@ -44,9 +44,7 @@ public struct GameEventScriptMessageSignature: Hashable, CustomStringConvertible
         labels.reserveCapacity(parameters.count)
         for parameter in parameters {
             let label = try Self.normalizeParameterName(parameter)
-            if label != Self.unlabeledParameterName && labels.contains(label) {
-                throw GameEventScriptMessageError.duplicateArgumentName
-            }
+            if label != Self.unlabeledParameterName && labels.contains(label) { throw GameEventScriptMessageError.duplicateArgumentName }
             labels.append(label)
         }
         self.init(normalizedName: normalizedName, parameters: labels)
@@ -56,12 +54,8 @@ public struct GameEventScriptMessageSignature: Hashable, CustomStringConvertible
     /// Nil and an empty result normalize to the empty identity.
     public static func normalizeMessageName(_ name: String?) throws -> String {
         let normalized = MessageNames.trim(name ?? "")
-        if normalized.isEmpty || normalized == "initialization" || normalized == "undeliverable" {
-            return normalized
-        }
-        guard GesText.isUpperName(normalized) else {
-            throw GameEventScriptMessageError.invalidName
-        }
+        if normalized.isEmpty || normalized == "initialization" || normalized == "undeliverable" { return normalized }
+        guard GesText.isUpperName(normalized) else { throw GameEventScriptMessageError.invalidName }
         return normalized
     }
 
@@ -70,9 +64,7 @@ public struct GameEventScriptMessageSignature: Hashable, CustomStringConvertible
     public static func normalizeParameterName(_ name: String?) throws -> String {
         let normalized = MessageNames.trim(name ?? "")
         if normalized.isEmpty || normalized == unlabeledParameterName { return unlabeledParameterName }
-        guard GesText.isLowerName(normalized) else {
-            throw GameEventScriptMessageError.invalidParameterName
-        }
+        guard GesText.isLowerName(normalized) else { throw GameEventScriptMessageError.invalidParameterName }
         return normalized
     }
 
@@ -85,29 +77,18 @@ public struct GameEventScriptMessageSignature: Hashable, CustomStringConvertible
     }
 
     /// Whether the concrete message has this name and ordered label identity.
-    public func matches(_ message: GameEventScriptMessage) -> Bool {
-        GesText.scalarEqual(signatureId, message.signatureId)
-    }
+    public func matches(_ message: GameEventScriptMessage) -> Bool { GesText.scalarEqual(signatureId, message.signatureId) }
 
     /// Binds ordered values to this signature, or returns nil for an empty name or wrong arity.
     public func createMessage(_ arguments: [GesValue]) -> GameEventScriptMessage? {
         guard !name.isEmpty, arguments.count == parameters.count else { return nil }
-        let pairs = zip(parameters, arguments).map {
-            GameEventScriptMessageArgument(normalizedName: $0.0, value: $0.1)
-        }
-        return GameEventScriptMessage(
-            normalizedName: name,
-            arguments: GameEventScriptMessageArguments(normalizedArguments: pairs),
-            signatureId: signatureId,
-            normalizedTags: []
-        )
+        let pairs = zip(parameters, arguments).map { GameEventScriptMessageArgument(normalizedName: $0.0, value: $0.1) }
+        return GameEventScriptMessage(normalizedName: name, arguments: GameEventScriptMessageArguments(normalizedArguments: pairs), signatureId: signatureId, normalizedTags: [])
     }
 
     /// Binds ordered values to this signature, throwing when a concrete message cannot be created.
     public func withArguments(_ arguments: [GesValue]) throws -> GameEventScriptMessage {
-        guard let message = createMessage(arguments) else {
-            throw GameEventScriptMessageError.argumentCountMismatch
-        }
+        guard let message = createMessage(arguments) else { throw GameEventScriptMessageError.argumentCountMismatch }
         return message
     }
 
@@ -115,14 +96,10 @@ public struct GameEventScriptMessageSignature: Hashable, CustomStringConvertible
     public var description: String { signatureId }
 
     /// Compares exact signature identities without Unicode normalization.
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        GesText.scalarEqual(lhs.signatureId, rhs.signatureId)
-    }
+    public static func == (lhs: Self, rhs: Self) -> Bool { GesText.scalarEqual(lhs.signatureId, rhs.signatureId) }
 
     /// Hashes the signature identity; the numeric hash is process-local.
-    public func hash(into hasher: inout Hasher) {
-        GesText.hashScalars(signatureId, into: &hasher)
-    }
+    public func hash(into hasher: inout Hasher) { GesText.hashScalars(signatureId, into: &hasher) }
 
     private init(normalizedName: String, parameters: [String]) {
         name = normalizedName

@@ -15,9 +15,7 @@ public struct GesMapEntry: Hashable {
     }
 
     /// Compares scalar-exact keys and structurally equal values.
-    public static func == (left: Self, right: Self) -> Bool {
-        GesText.scalarEqual(left.key, right.key) && left.value == right.value
-    }
+    public static func == (left: Self, right: Self) -> Bool { GesText.scalarEqual(left.key, right.key) && left.value == right.value }
 
     /// Hashes the scalar-exact key and value consistently with equality.
     public func hash(into hasher: inout Hasher) {
@@ -39,13 +37,7 @@ public struct GesValueMap: Hashable {
         }
         var normalized: [GesMapEntry] = []
         normalized.reserveCapacity(sorted.count)
-        for item in sorted {
-            if let last = normalized.last, GesText.scalarEqual(last.key, item.element.key) {
-                normalized[normalized.count - 1] = item.element
-            } else {
-                normalized.append(item.element)
-            }
-        }
+        for item in sorted { if let last = normalized.last, GesText.scalarEqual(last.key, item.element.key) { normalized[normalized.count - 1] = item.element } else { normalized.append(item.element) } }
         self.entries = normalized
     }
 

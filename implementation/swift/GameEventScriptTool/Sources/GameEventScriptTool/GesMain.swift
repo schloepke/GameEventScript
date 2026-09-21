@@ -4,8 +4,7 @@
 import Foundation
 import TerminalSupport
 
-@main
-struct GesMain {
+@main struct GesMain {
     static func main() {
         ges_terminal_initialize()
         let io = ToolIO()

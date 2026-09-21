@@ -4,13 +4,149 @@
 # Game Event Script
 
 Game Event Script is a portable, deterministic scripting language and serial
-message host for game logic. The current C# implementation is the reference for
-the language-neutral contracts. Additional language implementations are tracked
-in [`BACKLOG.md`](BACKLOG.md).
+message host for game logic. C# and Swift implement the shared
+language-neutral contracts, with C# as the reference implementation. Additional
+language implementations are tracked in [`BACKLOG.md`](BACKLOG.md).
 
 The canonical documentation starts at [Documentation](docs/README.md).
 Portable behavior is defined by the normative specifications and executable
 Markdown conformance corpus; the C# API is one language-specific mapping.
+
+## Install and use
+
+The examples below target the **`0.1.0-rc1`** prerelease. Public package
+installation requires that version to have been published to NuGet and tagged
+in this repository for SwiftPM. For use from a checkout, see the
+[C#](implementation/csharp/README.md) and [Swift](implementation/swift/README.md)
+implementation guides.
+
+| Use case | NuGet package | SwiftPM product |
+| --- | --- | --- |
+| Execute precompiled `.gesb` programs | `GameEventScript.Runtime` | `GameEventScriptRuntime` |
+| Also compile GES source text | `GameEventScript.Compiler` | `GameEventScriptCompiler` |
+| Native callbacks and type adapters | `GameEventScript.CSharpBridge` | `GameEventScriptSwiftBridge` |
+
+Compiler and each native Bridge depend only on Runtime. Precompiled applications
+can omit Compiler; the native Bridge is optional. CLI and Conformance are not
+part of the public library packages.
+
+### C# / NuGet
+
+The libraries target .NET Standard 2.1. For a .NET 8 or newer console application,
+install all three packages to run the example below:
+
+```bash
+dotnet new console -n GesExample
+cd GesExample
+dotnet add package GameEventScript.Runtime --version 0.1.0-rc1
+dotnet add package GameEventScript.Compiler --version 0.1.0-rc1
+dotnet add package GameEventScript.CSharpBridge --version 0.1.0-rc1
+```
+
+Replace `Program.cs` with:
+
+```csharp
+using System;
+using GameEventScript.Api;
+using GameEventScript.CSharpBridge;
+
+var program = GameEventScriptBuilder.Create()
+    .AddScript("""
+        module example
+        function double(_ value as :Number) be value + value
+        on Start() { emit Done(value: double(21)) }
+        """, "example.ges")
+    .Compile();
+
+var host = GameEventScriptHost.CreateBuilder().Build();
+host.Subscribe("Done", ["value"], (message, _) =>
+    Console.WriteLine(message.Arguments.GetAsInteger("value")));
+host.Load(program);
+
+if (host.Start().State != GameEventScriptStartState.Ready)
+    throw new InvalidOperationException("Host startup failed.");
+
+host.Receive(GameEventScriptMessage.Create("Start"));
+var result = host.RunToCompletion();
+if (result.State != GameEventScriptExecutionState.Completed)
+    throw new InvalidOperationException($"Execution stopped: {result.State}");
+```
+
+Run `dotnet run`; the native callback prints `42`. Compiler, startup and runtime
+failures have structured diagnostics; see the [C# embedding guide](implementation/csharp/README.md#compile-source-text).
+
+### Swift / SwiftPM and Xcode
+
+In Xcode, choose **File → Add Package Dependencies**, enter
+`https://github.com/schloepke/GameEventScript.git`, and select **Exact Version**
+`0.1.0-rc1`. Add the Runtime, Compiler and SwiftBridge products to your app target
+for the example below. The public package requires Swift 6.0 or newer; macOS is
+the currently CI-verified platform.
+
+For a SwiftPM executable, use this `Package.swift` and put the example in
+`Sources/GesExample/main.swift`:
+
+```swift
+// swift-tools-version: 6.0
+import PackageDescription
+
+let package = Package(
+    name: "GesExample",
+    dependencies: [
+        .package(url: "https://github.com/schloepke/GameEventScript.git", exact: "0.1.0-rc1")
+    ],
+    targets: [
+        .executableTarget(name: "GesExample", dependencies: [
+            .product(name: "GameEventScriptRuntime", package: "GameEventScript"),
+            .product(name: "GameEventScriptCompiler", package: "GameEventScript"),
+            .product(name: "GameEventScriptSwiftBridge", package: "GameEventScript")
+        ])
+    ]
+)
+```
+
+```swift
+import GameEventScriptRuntime
+import GameEventScriptCompiler
+import GameEventScriptSwiftBridge
+
+let program = try GameEventScriptBuilder.create()
+    .addScript("""
+        module example
+        function double(_ value as :Number) be value + value
+        on Start() { emit Done(value: double(21)) }
+        """, sourceName: "example.ges")
+    .compile()
+
+let host = try GameEventScriptHost.createBuilder().build()
+let done = try GameEventScriptMessageSignature(name: "Done", parameters: ["value"])
+_ = try host.subscribe(done) { message, _ in
+    print(try Int.fromGesValue(message.arguments[0]))
+}
+_ = try host.load(program)
+
+guard try host.start().state == .ready else {
+    fatalError("Host startup failed.")
+}
+
+host.receive(try GameEventScriptMessage(name: "Start"))
+let result = try host.runToCompletion()
+guard result.state == .completed else {
+    fatalError("Execution stopped: \(result.state)")
+}
+```
+
+Run `swift run GesExample`; the native callback prints `42`. In an Xcode app,
+call the example from a throwing function on the host's serial execution path.
+See the [Swift embedding guide](implementation/swift/README.md#compile-source-text)
+for structured diagnostics and integration details.
+
+Both examples compile source, register a native receiver, load the program,
+start the host and explicitly send `Start()`. Load all initial programs before
+calling `Start` / `start`; then pump messages with `RunToCompletion` /
+`runToCompletion`, or use frame stepping in a game loop. The host retains loaded
+programs and subscriptions until explicitly detached or unsubscribed.
+See the [Host contract](specs/HostRuntime.md) for lifecycle and ordering guarantees.
 
 ## Repository layout
 
@@ -42,8 +178,8 @@ points:
 ./scripts/test-csharp-performance.sh
 ./scripts/format-csharp.sh
 ./scripts/pack-csharp.sh
-./scripts/release-csharp-dry-run.sh 0.1.0-rc.1
-./scripts/verify-csharp-reproducibility.sh 0.1.0-rc.1
+./scripts/release-csharp-dry-run.sh 0.1.0-rc1
+./scripts/verify-csharp-reproducibility.sh 0.1.0-rc1
 ```
 
 Normal build and test output remains below project-local `bin`/`obj` directories.

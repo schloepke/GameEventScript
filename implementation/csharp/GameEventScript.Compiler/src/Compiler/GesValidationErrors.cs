@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using GameEventScript.Api;
 
 namespace GameEventScript.Compiler;
@@ -188,7 +189,7 @@ internal sealed class GesValidationErrors
                     ? forStatement
                     : FindNodeInIterationSource(forStatement.Source, symbol) ??
                       FindNodeInStatements(forStatement.Body.Statements, symbol),
-                IfStatementNode ifStatement => FindNodeInExpression(ifStatement.Condition, symbol) ??
+                IfStatementNode ifStatement => ifStatement.Conditions.Select(condition => condition.Binding == symbol ? condition : FindNodeInExpression(condition.Expression, symbol)).FirstOrDefault(node => node is not null) ??
                                                FindNodeInStatements(ifStatement.ThenBody.Statements, symbol) ??
                                                (ifStatement.ElseBody is null ? null : FindNodeInStatements(ifStatement.ElseBody.Statements, symbol)),
                 PublishStatementNode publish => FindNodeInExpression(publish.MessageExpression, symbol),
@@ -237,6 +238,7 @@ internal sealed class GesValidationErrors
 
         return expression switch
         {
+            SendExpressionNode send => (send.Delay is null ? null : FindNodeInExpression(send.Delay, symbol)) ?? FindNodeInExpression(send.Message, symbol),
             UnaryExpressionNode unary => FindNodeInExpression(unary.Operand, symbol),
             BinaryExpressionNode binary => FindNodeInExpression(binary.Left, symbol) ?? FindNodeInExpression(binary.Right, symbol),
             TypeCastExpressionNode cast => FindNodeInExpression(cast.Value, symbol),
@@ -312,6 +314,7 @@ internal sealed class GesValidationErrors
             FilterSelectorNode filterSelector => FindNodeInExpression(filterSelector.Predicate, symbol),
             SumSelectorNode sumSelector => FindNodeInExpression(sumSelector.Projection, symbol),
             AverageSelectorNode averageSelector => FindNodeInExpression(averageSelector.Projection, symbol),
+            FoldSelectorNode fold => (fold.Seed is null ? null : FindNodeInExpression(fold.Seed, symbol)) ?? FindNodeInExpression(fold.Projection, symbol),
             SelectSelectorNode selectSelector => FindNodeInExpression(selectSelector.Projection, symbol),
             MapSelectorNode dictionarySelector => FindNodeInExpression(dictionarySelector.KeyProjection, symbol) ??
                                                          (dictionarySelector.ValueProjection is null ? null : FindNodeInExpression(dictionarySelector.ValueProjection, symbol)),

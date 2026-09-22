@@ -10,6 +10,9 @@ public final class GameEventScriptContext {
     public let runtimeLimits: GameEventScriptRuntimeLimits
     /// The optional host extension resolver.
     public let extensionRegistry: (any GameEventScriptExtensionRegistry)?
+
+    func send(_ message: GameEventScriptMessage, publish: Bool, microseconds: Int64) -> Bool { host?.send(message, publish: publish, microseconds: microseconds) ?? false }
+
     let observer: (any GameEventScriptRuntimeObserver)?
     lazy var budget = GesRuntimeBudget(context: self)
 

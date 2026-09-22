@@ -100,7 +100,27 @@ extension GesParser {
         return result
     }
 
+    func sendExpression(_ publish: Bool, _ start: GesToken) throws -> GesExpression {
+        newlines()
+        let delay = match("after") ? try expression() : nil
+        let message: GesExpression
+        if current.kind == "message" {
+            let token = advance()
+            let args = current.syntaxText == "(" ? try arguments() : []
+            message = node(.message(token.text, args), token)
+        } else {
+            message = try expression(15)
+        }
+        var tags: [GesExpression] = []
+        if match("with") { repeat { tags.append(try expression(15)) } while match(",") }
+        return node(.send(publish, message, tags, delay), start)
+    }
+
     func primary() throws -> GesExpression {
+        if current.syntaxText == "emit" || current.syntaxText == "publish" {
+            let start = advance()
+            return try sendExpression(start.text == "publish", start)
+        }
         let start = current
         if current.kind == "number" {
             let token = advance()
@@ -343,6 +363,18 @@ extension GesParser {
             s.name = try identifier()
             try expect(op == "count" ? "where" : "=>")
             s.expressions = [try expression()]
+        case "fold", "reduce":
+            s.accumulator = try identifier()
+            if op == "fold" {
+                try expect("be")
+                s.expressions.append(try expression())
+            }
+            try expect(",")
+            newlines()
+            s.name = try identifier()
+            try expect("=>")
+            newlines()
+            s.expressions.append(try expression())
         case "select", "min", "max", "highest", "lowest":
             s.name = try identifier()
             try expect("=>")

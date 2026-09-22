@@ -183,7 +183,7 @@ internal sealed partial class GesBinaryBuilder
         return new GesBindRef(bind.Index);
     }
 
-    private GesBinaryBuilder AddOpcode(
+    internal GesBinaryBuilder AddOpcode(
         GameEventScriptBytecodeOpCode opcode,
         GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone,
         GameEventScriptInstructionFlag flags = GameEventScriptInstructionFlag.None,

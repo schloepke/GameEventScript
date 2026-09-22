@@ -8,6 +8,8 @@ public final class GameEventScriptHost {
     private let extensions: (any GameEventScriptExtensionRegistry)?
     private let externalTypes: (any GameEventScriptExternalTypeRegistry)?
     private let limits: GameEventScriptRuntimeLimits
+    private let clock: GesClockSource?
+    private var delayed: [GesDelayedMessage] = []
     private let sink: (any GameEventScriptPublishSink)?
     private lazy var context = GameEventScriptContext(host: self, random: random, limits: limits, extensions: extensions, observer: observer)
     private var exact: [String: [GesSubscriptionEntry]] = [:]
@@ -47,7 +49,8 @@ public final class GameEventScriptHost {
         observer: (any GameEventScriptRuntimeObserver)? = nil,
         extensions: (any GameEventScriptExtensionRegistry)? = nil,
         externalTypes: (any GameEventScriptExternalTypeRegistry)? = nil,
-        publishSink: (any GameEventScriptPublishSink)? = nil
+        publishSink: (any GameEventScriptPublishSink)? = nil,
+        clock: (any GameEventScriptClock)? = nil
     ) throws {
         guard (0...65535).contains(limits.maxRandomScopeDepth) else { throw GameEventScriptAPIError.invalidArgument("Invalid random scope depth") }
         self.limits = limits
@@ -55,6 +58,7 @@ public final class GameEventScriptHost {
         self.extensions = extensions
         self.externalTypes = externalTypes
         sink = publishSink
+        self.clock = clock.map(GesClockSource.init)
         random = GameEventScriptRandomGenerator(seed: seed ?? GameEventScriptRandomGenerator.entropySeed(), sequence: sequence, maxScopeDepth: limits.maxRandomScopeDepth)
     }
 
@@ -64,9 +68,9 @@ public final class GameEventScriptHost {
     /// Whether the complete initial load group started successfully; later instance failures do not clear readiness.
     public private(set) var isReady = false
     /// Number of queued ordinary and initialization messages, excluding an active dispatch.
-    public var pendingMessageCount: Int { queue.count + startupQueue.count }
+    public var pendingMessageCount: Int { queue.count + startupQueue.count + delayed.count }
     /// Whether no dispatch is active and both message queues are empty; this does not imply readiness.
-    public var isIdle: Bool { active == nil && queue.count == 0 && startupQueue.count == 0 }
+    public var isIdle: Bool { active == nil && pendingMessageCount == 0 }
 
     /// Validates and links before atomically publishing registrations and initialization.
     /// Before `start()`, the instance joins the initial load group. On a ready host, its initialization enters
@@ -173,6 +177,12 @@ public final class GameEventScriptHost {
         var limitReached = false
         while remaining > 0 {
             if active == nil {
+                if !starting { promoteDelayed() }
+                if limits.maxProcessedEventsPerRun > 0 && processed >= limits.maxProcessedEventsPerRun && (starting ? startupQueue.count : queue.count) > 0 {
+                    context.reportLimit("MaxProcessedEventsPerRun", limits.maxProcessedEventsPerRun)
+                    limitReached = true
+                    break
+                }
                 active = starting ? startupQueue.dequeue() : queue.dequeue()
                 if active == nil { break }
                 initializationInstance = active?.initialization
@@ -214,11 +224,6 @@ public final class GameEventScriptHost {
                 completeInitialization()
                 active = nil
                 processed += 1
-                if limits.maxProcessedEventsPerRun > 0 && processed >= limits.maxProcessedEventsPerRun && (starting ? startupQueue.count : queue.count) > 0 {
-                    context.reportLimit("MaxProcessedEventsPerRun", limits.maxProcessedEventsPerRun)
-                    limitReached = true
-                    break
-                }
                 continue
             }
             activeHandler = next
@@ -255,7 +260,7 @@ public final class GameEventScriptHost {
             }
         }
         return .init(
-            state: diagnostic != nil ? .runtimeError : limitReached ? .runtimeLimitReached : isIdle ? .completed : .paused,
+            state: diagnostic != nil ? .runtimeError : limitReached ? .runtimeLimitReached : isIdle ? .completed : active == nil && queue.count == 0 && !starting ? .waiting : .paused,
             executedOpcodes: opcodes,
             processedMessages: processed,
             emittedMessages: emitted,
@@ -264,7 +269,7 @@ public final class GameEventScriptHost {
         )
     }
 
-    /// Pumps queued work until idle, a runtime fault or a runtime limit; it does not start a loading host.
+    /// Pumps runnable work until idle, waiting for future messages, a runtime fault or a runtime limit; never sleeps or starts a loading host.
     ///
     /// - Returns: Execution state and counters for this call.
     /// - Throws: An API error for invalid lifecycle or reentrant execution.
@@ -281,6 +286,72 @@ public final class GameEventScriptHost {
             totalPublished += step.publishedMessages
             if step.state != .paused || step.executedOpcodes + step.processedMessages + step.emittedMessages + step.publishedMessages == 0 {
                 return .init(state: step.state, executedOpcodes: totalOpcodes, processedMessages: totalProcessed, emittedMessages: totalEmitted, publishedMessages: totalPublished, diagnostic: step.diagnostic)
+            }
+        }
+    }
+
+    private var elapsedMicroseconds: Int64 { clock?.value.elapsedMicroseconds ?? GesSystemClock.read() }
+
+    /// Whole microseconds until the earliest delayed message, or nil when none remain. Reading does not pump.
+    public var nextMessageDelay: Int64? { delayed.first.map { max(0, $0.deadline - elapsedMicroseconds) } }
+
+    func send(_ message: GameEventScriptMessage, publish: Bool, microseconds: Int64) -> Bool {
+        guard microseconds >= 0 && !random.hasActiveScopeFault else { return false }
+        if microseconds == 0 {
+            let matches = (exact[message.signatureId] ?? []).contains { $0.matches(message) } || (byName[message.name] ?? []).contains { $0.matches(message) }
+            let fallback = message.name != "undeliverable" && ((exact["undeliverable(message)"] ?? []).contains { $0.matches(message) } || (byName["undeliverable"] ?? []).contains { $0.matches(message) })
+            if queueFull && (matches || fallback) {
+                context.budget.exhaust("MaxQueuedMessagesPerRun", limits.maxQueuedMessagesPerRun)
+                return false
+            }
+            if publish { _ = self.publish(message) } else { _ = emit(message) }
+            return !context.budget.isExhausted
+        }
+        let now = elapsedMicroseconds
+        guard now >= 0 && microseconds <= Int64.max - now else { return false }
+        if queueFull {
+            context.budget.exhaust("MaxQueuedMessagesPerRun", limits.maxQueuedMessagesPerRun)
+            return false
+        }
+        var exact = self.exact[message.signatureId] ?? []
+        var names = byName[message.name] ?? []
+        if !exact.contains(where: { $0.matches(message) }) && !names.contains(where: { $0.matches(message) }) && message.name != "undeliverable" {
+            exact = self.exact["undeliverable(message)"] ?? []
+            names = byName["undeliverable"] ?? []
+        }
+        let pending = GesPendingMessage(message: message, exact: exact, names: names, initializationOutputID: initializationInstance?.registrationID ?? 0)
+        let entry = GesDelayedMessage(deadline: now + microseconds, pending: pending, publish: publish, owner: initializationInstance)
+        var lo = 0
+        var hi = delayed.count
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2
+            if delayed[mid].deadline <= entry.deadline { lo = mid + 1 } else { hi = mid }
+        }
+        delayed.insert(entry, at: lo)
+        if publish {
+            published += 1
+            if initializationInstance != nil { initializationPublishes += 1 }
+        } else {
+            emitted += 1
+            if initializationInstance != nil { initializationEmits += 1 }
+            observer?.messageEmitted(message, accepted: true)
+        }
+        return true
+    }
+
+    private func promoteDelayed() {
+        guard !delayed.isEmpty else { return }
+        let now = elapsedMicroseconds
+        while let entry = delayed.first, entry.deadline <= now {
+            delayed.removeFirst()
+            if entry.owner?.initializationFailed ?? false { continue }
+            let local = entry.pending.hasRecipients
+            if local { queue.enqueue(entry.pending) }
+            if entry.publish {
+                let attempted = sink != nil
+                var accepted = false
+                if attempted { do { accepted = try sink!.publish(entry.pending.message) } catch { observer?.runtimeError(runtimeDiagnostic("runtime.publishSinkFailure", error: error)) } }
+                observer?.messagePublished(entry.pending.message, result: .init(localAccepted: local, outboundAttempted: attempted, outboundAccepted: accepted))
             }
         }
     }
@@ -509,6 +580,13 @@ private final class GesSubscriptionEntry {
     static func precedes(_ left: GesSubscriptionEntry, _ right: GesSubscriptionEntry) -> Bool { left.priority != right.priority ? left.priority > right.priority : left.order < right.order }
 }
 
+private struct GesDelayedMessage {
+    let deadline: Int64
+    let pending: GesPendingMessage
+    let publish: Bool
+    let owner: GameEventScriptInstance?
+}
+
 private struct GesPendingMessage {
     let message: GameEventScriptMessage
     let exact: [GesSubscriptionEntry], names: [GesSubscriptionEntry]
@@ -631,6 +709,7 @@ extension GameEventScriptHost {
                     _ = instance.detach()
                 }
                 queue.clear()
+                delayed.removeAll()
                 startupQueue.clear()
                 startupPublications.removeAll(keepingCapacity: true)
                 return result
@@ -672,6 +751,7 @@ extension GameEventScriptHost {
         initializationDiagnostic = nil
         active = nil
         queue.removeFailedRecipients(discardingOutputsFrom: instance.registrationID)
+        delayed.removeAll { ($0.owner?.initializationFailed ?? false) || !$0.publish && !$0.pending.hasRecipients }
     }
 
     private func initializationLimitDiagnostic(_ instance: GameEventScriptInstance?) -> GameEventScriptDiagnostic {

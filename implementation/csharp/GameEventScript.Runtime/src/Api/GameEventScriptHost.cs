@@ -50,7 +50,7 @@ public sealed partial class GameEventScriptHost
         IGameEventScriptExtensionRegistry? extensionRegistry,
         IGameEventScriptExternalTypeRegistry? externalTypeRegistry,
         GameEventScriptRuntimeLimits? limits,
-        IGameEventScriptPublishSink? publishSink)
+        IGameEventScriptPublishSink? publishSink, IGameEventScriptClock? clock = null)
     {
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _observer = observer;
@@ -58,6 +58,7 @@ public sealed partial class GameEventScriptHost
         _externalTypeRegistry = externalTypeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance;
         _limits = limits ?? GameEventScriptRuntimeLimits.Default;
         _publishSink = publishSink;
+        _clock = clock ?? new GameEventScriptSystemClock();
         _context = new GameEventScriptContext(this, _random, _limits, _extensionRegistry, _observer);
     }
 
@@ -69,11 +70,11 @@ public sealed partial class GameEventScriptHost
     /// <summary>
     /// Gets the number of logical messages waiting behind the currently active message.
     /// </summary>
-    public int PendingMessageCount => _queue.Count + _startupQueue.Count;
+    public int PendingMessageCount => _queue.Count + _startupQueue.Count + (_delayed?.Count ?? 0);
     /// <summary>
     /// Gets a value indicating whether no message is active or queued.
     /// </summary>
-    public bool IsIdle => !_hasActiveMessage && _queue.Count == 0 && _startupQueue.Count == 0;
+    public bool IsIdle => !_hasActiveMessage && PendingMessageCount == 0;
     internal GesVmState? VmState => _vmState;
 
     /// <summary>
@@ -285,7 +286,17 @@ public sealed partial class GameEventScriptHost
 
         while (remaining > 0)
         {
-            if (!_hasActiveMessage && !StartNextMessage()) break;
+            if (!_hasActiveMessage)
+            {
+                if (!_starting) PromoteDelayed();
+                if (_limits.MaxProcessedEventsPerRun > 0 && _stepProcessedMessages >= _limits.MaxProcessedEventsPerRun && (_starting ? _startupQueue.Count : _queue.Count) > 0)
+                {
+                    _context.RecordRuntimeLimitReached(nameof(GameEventScriptRuntimeLimits.MaxProcessedEventsPerRun), "Message processing limit reached before the host became idle.", _limits.MaxProcessedEventsPerRun);
+                    runtimeLimitReached = true;
+                    break;
+                }
+                if (!StartNextMessage()) break;
+            }
 
             if (_scriptHandlerActive)
             {
@@ -340,16 +351,6 @@ public sealed partial class GameEventScriptHost
                 CompleteInitialization();
                 _hasActiveMessage = false;
                 _stepProcessedMessages++;
-                if (_limits.MaxProcessedEventsPerRun > 0 &&
-                    _stepProcessedMessages >= _limits.MaxProcessedEventsPerRun && (_starting ? _startupQueue.Count : _queue.Count) > 0)
-                {
-                    _context.RecordRuntimeLimitReached(
-                        nameof(GameEventScriptRuntimeLimits.MaxProcessedEventsPerRun),
-                        "Message processing limit reached before the host became idle.",
-                        _limits.MaxProcessedEventsPerRun);
-                    runtimeLimitReached = true;
-                    break;
-                }
                 continue;
             }
 
@@ -397,10 +398,10 @@ public sealed partial class GameEventScriptHost
     }
 
     /// <summary>
-    /// Synchronously pumps the host until it is idle or a configured runtime boundary stops execution.
+    /// Synchronously pumps until idle, only future messages remain, or a runtime boundary stops execution.
     /// </summary>
     /// <returns>A value-type aggregate of all internally executed frames.</returns>
-    /// <remarks>The caller must serialize access to a host. No thread or task is created.</remarks>
+    /// <remarks>The caller must serialize access to a host. No thread or task is created. Future-only work returns Waiting without sleeping.</remarks>
     /// <exception cref="InvalidOperationException">The host is not ready or is already executing a callback.</exception>
     public GameEventScriptExecutionResult RunToCompletion()
     {
@@ -485,7 +486,8 @@ public sealed partial class GameEventScriptHost
                 ? GameEventScriptExecutionState.RuntimeError
                 : runtimeLimitReached
                 ? GameEventScriptExecutionState.RuntimeLimitReached
-                : IsIdle ? GameEventScriptExecutionState.Completed : GameEventScriptExecutionState.Paused,
+                : IsIdle ? GameEventScriptExecutionState.Completed
+                : !_hasActiveMessage && _queue.Count == 0 && !_starting ? GameEventScriptExecutionState.Waiting : GameEventScriptExecutionState.Paused,
             _stepExecutedOpcodes, _stepProcessedMessages, _stepEmittedMessages, _stepPublishedMessages,
             _stepRuntimeDiagnostic);
 

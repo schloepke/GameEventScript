@@ -175,9 +175,10 @@ public static class ConformanceRunner
     {
         technical = null;
         var collector = new RuntimeCollector(testCase.PublishSink);
+        var clock = new VirtualClock();
         var builder = GameEventScriptHost.CreateBuilder()
             .WithRuntimeLimits(CreateRuntimeLimits(testCase.RuntimeLimits))
-            .WithRuntimeObserver(collector);
+            .WithRuntimeObserver(collector).WithClock(clock);
         ConfigureRandom(builder, testCase.Random);
         if (testCase.PublishSink != ConformancePublishSinkMode.Absent) builder.WithPublishSink(collector);
         if (environment.ExtensionRegistry is not null) builder.WithRegistry(environment.ExtensionRegistry);
@@ -188,7 +189,7 @@ public static class ConformanceRunner
             _ => environment.ExternalTypeRegistry
         };
         if (externalTypeRegistry is not null) builder.WithExternalTypeRegistry(externalTypeRegistry);
-        var state = new HostScenarioState(builder.Build(), programs, testCase.NativeHandlers, testCase.DeferredPrograms, mismatches, collector.AllDiagnostics, pathPrefix);
+        var state = new HostScenarioState(builder.Build(), programs, testCase.NativeHandlers, testCase.DeferredPrograms, mismatches, collector.AllDiagnostics, pathPrefix, clock);
         state.Configure();
 
         state.Host.Start();
@@ -206,10 +207,12 @@ public static class ConformanceRunner
             state.ApplyActions(step.Actions, state.ActionPath + "/actions");
             var accepted = state.Host.Receive(ConformanceRuntimeValueCodec.DecodeMessage(step.Expectation.Input));
             var paused = false;
+            var waiting = false;
             if (state.Host.IsReady && step.Pump == ConformancePumpMode.Completion)
             {
                 var execution = state.Host.RunToCompletion();
                 paused = execution.State == GameEventScriptExecutionState.Paused;
+                waiting = execution.State == GameEventScriptExecutionState.Waiting;
             }
             else if (state.Host.IsReady && step.Pump == ConformancePumpMode.Frames)
             {
@@ -220,6 +223,7 @@ public static class ConformanceRunner
                     if (++frames > options.Limits.MaxFramesPerStep) { technical = "MaxFramesPerStep was exceeded."; return collector; }
                     execution = state.Host.ExecuteFrame(checked((int)step.Budget!.Value));
                     if (execution.State == GameEventScriptExecutionState.Paused) paused = true;
+                    waiting = execution.State == GameEventScriptExecutionState.Waiting;
                 }
                 while (execution.State == GameEventScriptExecutionState.Paused);
             }
@@ -227,10 +231,12 @@ public static class ConformanceRunner
             {
                 var execution = state.Host.ExecuteFrame(checked((int)step.Budget!.Value));
                 paused = execution.State == GameEventScriptExecutionState.Paused;
+                waiting = execution.State == GameEventScriptExecutionState.Waiting;
             }
 
             var path = pathPrefix + "/steps/" + step.Id;
             if (accepted != step.Expectation.Accepted) AddMismatch(mismatches, path + "/accepted", step.Expectation.Accepted ? "true" : "false", accepted ? "true" : "false");
+            if (step.Expectation.Waiting is { } expectedWaiting && expectedWaiting != waiting) AddMismatch(mismatches, path + "/waiting", expectedWaiting ? "true" : "false", waiting ? "true" : "false");
             if (step.Expectation.Paused is { } expectedPaused && expectedPaused != paused) AddMismatch(mismatches, path + "/paused", expectedPaused ? "true" : "false", paused ? "true" : "false");
             CompareChannel(path + "/local", step.Expectation.Local, collector.Local, testCase.Comparison, mismatches);
             CompareChannel(path + "/outbound", step.Expectation.Outbound, collector.Outbound, testCase.Comparison, mismatches);
@@ -746,8 +752,21 @@ public static class ConformanceRunner
 
     private sealed class ContextualNativeFault(GameEventScriptDiagnostic diagnostic) : GameEventScriptFatalRuntimeException(diagnostic);
 
+    private sealed class VirtualClock : IGameEventScriptClock
+    {
+        public long ElapsedMicroseconds { get; private set; }
+        internal bool Advance(string amount)
+        {
+            var delta = long.Parse(amount, System.Globalization.CultureInfo.InvariantCulture);
+            if (delta > long.MaxValue - ElapsedMicroseconds) return false;
+            ElapsedMicroseconds += delta;
+            return true;
+        }
+    }
+
     private sealed class HostScenarioState
     {
+        private readonly VirtualClock _clock;
         private readonly IReadOnlyList<CompiledProgram> _programs;
         private readonly IReadOnlyList<ConformanceNativeHandler> _definitions;
         private readonly HashSet<string> _deferred;
@@ -764,10 +783,11 @@ public static class ConformanceRunner
             IReadOnlyList<string> deferred,
             List<ConformanceMismatch> mismatches,
             List<ConformanceResultDiagnostic> diagnostics,
-            string pathPrefix
+            string pathPrefix, VirtualClock clock
         )
         {
             Host = host;
+            _clock = clock;
             _programs = programs;
             _definitions = definitions;
             _deferred = new HashSet<string>(deferred, StringComparer.Ordinal);
@@ -832,6 +852,7 @@ public static class ConformanceRunner
         {
             switch (action.Kind)
             {
+                case ConformanceNativeActionKind.AdvanceMicroseconds: return _clock.Advance(action.Target);
                 case ConformanceNativeActionKind.LoadProgram: return Load(action.Target);
                 case ConformanceNativeActionKind.DetachProgram:
                     return _instances.TryGetValue(action.Target, out var instance) && instance.Detach();

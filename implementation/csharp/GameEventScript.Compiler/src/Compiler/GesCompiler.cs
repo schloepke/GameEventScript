@@ -412,16 +412,26 @@ internal static class GesCompiler
 
         private void EmitIf(IfStatementNode ifStatement, LoweringContext context)
         {
-            var condition = EmitExpressionForRead(ifStatement.Condition, context, new ExpressionState(context.RegisterCount));
             var elseLabel = _builder.AddLabel("if_else");
             var endLabel = _builder.AddLabel("if_end");
-            _builder.JumpIfNotTrue(condition, elseLabel);
-            EmitStatements(ifStatement.ThenBody.Statements, ifStatement.ThenBody.IsBlock ? context.CreateChild() : context);
+            var conditionContext = context.CreateChild();
+            foreach (var step in ifStatement.Conditions)
+            {
+                GesRegisterRef condition;
+                if (step.Binding is { } binding)
+                {
+                    EmitStatements([new LetStatementNode(binding, step.Expression) { SourceRange = step.SourceRange }], conditionContext);
+                    condition = EmitExpressionForRead(new UnaryExpressionNode(GesUnaryOperator.HasValue, new IdentifierExpressionNode(binding)), conditionContext, new ExpressionState(conditionContext.RegisterCount));
+                }
+                else condition = EmitExpressionForRead(step.Expression, conditionContext, new ExpressionState(conditionContext.RegisterCount));
+                _builder.JumpIfNotTrue(condition, elseLabel);
+            }
+            EmitStatements(ifStatement.ThenBody.Statements, conditionContext);
             _builder.Jump(endLabel);
             _builder.MarkLabel(elseLabel);
             if (ifStatement.ElseBody is not null)
             {
-                EmitStatements(ifStatement.ElseBody.Statements, ifStatement.ElseBody.IsBlock ? context.CreateChild() : context);
+                EmitStatements(ifStatement.ElseBody.Statements, context.CreateChild());
             }
 
             _builder.MarkLabel(endLabel);
@@ -442,6 +452,31 @@ internal static class GesCompiler
             _builder.Jump(loopLabel);
             _builder.MarkLabel(endLabel);
             _builder.IteratorClose(iterator);
+        }
+
+        private void EmitSend(GesRegisterRef destination, SendExpressionNode send, LoweringContext context, ExpressionState state)
+        {
+            var delay = send.Delay is null ? (GesRegisterRef?)null : EmitExpressionForRead(send.Delay, context, state);
+            var tags = EmitExpressionRegisters(send.Tags, context, state);
+            GesOperand messageOperand;
+            GesOperand arguments = default;
+            var flags = tags.Length > 0 ? GameEventScriptInstructionFlag.WithTags : GameEventScriptInstructionFlag.None;
+            if (send.Message is MessageLiteralExpressionNode message)
+            {
+                var registers = EmitArgumentExpressionRegisters(message.Arguments, context, state);
+                messageOperand = GesOperand.Bind(ResolveOutboundMessage(message.Message, ReadArgumentNames(message.Arguments)));
+                arguments = GesOperand.RegisterList(registers);
+            }
+            else
+            {
+                messageOperand = GesOperand.Register(EmitExpressionForRead(send.Message, context, state));
+                flags |= GameEventScriptInstructionFlag.Indirect;
+            }
+            var opcode = send.Kind == PublishStatementKind.Publish
+                ? delay is null ? GameEventScriptBytecodeOpCode.PublishInstant : GameEventScriptBytecodeOpCode.PublishAfter
+                : delay is null ? GameEventScriptBytecodeOpCode.EmitInstant : GameEventScriptBytecodeOpCode.EmitAfter;
+            _builder.AddOpcode(opcode, flags: flags, dst: GesOperand.Register(destination), x: messageOperand, y: arguments,
+                a: tags.Length > 0 ? GesOperand.RegisterList(tags) : default, b: delay is { } time ? GesOperand.Register(time) : default);
         }
 
         private void EmitPublish(PublishStatementNode publish, LoweringContext context)
@@ -526,6 +561,9 @@ internal static class GesCompiler
 
                     return EmitExpressionToRegister(value with { SourceRange = constant.SourceRange }, destination, context, state);
                 }
+                case SendExpressionNode send:
+                    EmitSend(destination, send, context, state);
+                    return true;
                 case UnaryExpressionNode unary:
                 {
                     var operand = EmitExpressionForRead(unary.Operand, context, state);
@@ -875,6 +913,9 @@ internal static class GesCompiler
                     return;
                 case FilterSelectorNode filter:
                     EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { filter }, 0, filter, context, state);
+                    return;
+                case FoldSelectorNode fold:
+                    EmitFold(destination, target, fold, context, state);
                     return;
                 case SelectSelectorNode select:
                     EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { select }, 0, select, context, state);
@@ -1540,6 +1581,40 @@ internal static class GesCompiler
             _builder.Jump(nextLabel);
             _builder.MarkLabel(addLabel);
             _builder.Add(sum, sum, value);
+        }
+
+        private void EmitFold(GesRegisterRef destination, GesRegisterRef source, FoldSelectorNode fold, LoweringContext context, ExpressionState state)
+        {
+            var accumulator = state.AllocateTemporary(_builder, context);
+            var iterator = state.AllocateTemporary(_builder, context);
+            var item = state.AllocateTemporary(_builder, context);
+            var loop = _builder.AddLabel("fold_next");
+            var end = _builder.AddLabel("fold_end");
+            var invalid = _builder.AddLabel("fold_invalid");
+            var done = _builder.AddLabel("fold_done");
+            if (fold.Seed is null) _builder.LoadNothing(accumulator);
+            else
+            {
+                var seed = EmitExpressionForRead(fold.Seed, context, state);
+                _builder.Move(accumulator, seed);
+            }
+            _builder.IteratorCreateOrJump(iterator, source, invalid);
+            if (fold.Seed is null) _builder.IteratorNext(accumulator, iterator, end);
+            _builder.MarkLabel(loop);
+            _builder.IteratorNext(item, iterator, end);
+            var child = context.CreateChild();
+            child.DeclareExisting(fold.Accumulator, accumulator);
+            child.DeclareExisting(fold.Identifier, item);
+            var result = EmitExpressionForRead(fold.Projection, child, state);
+            if (result.Id != accumulator.Id) _builder.Move(accumulator, result);
+            _builder.Jump(loop);
+            _builder.MarkLabel(end);
+            _builder.IteratorClose(iterator);
+            _builder.Move(destination, accumulator);
+            _builder.Jump(done);
+            _builder.MarkLabel(invalid);
+            _builder.LoadNothing(destination);
+            _builder.MarkLabel(done);
         }
 
         private GesRegisterRef EmitSelectorExpressionForRead(string identifier, GesRegisterRef current, ExpressionNode expression, LoweringContext context, ExpressionState state)

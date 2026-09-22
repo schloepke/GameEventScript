@@ -10,6 +10,20 @@ namespace GameEventScript.Tests.Native.CSharpBridge;
 [DoNotParallelize]
 public sealed class GameEventScriptCSharpHostRunnerTests
 {
+    /// <summary>Verifies timer-driven resumption without another native Receive call.</summary>
+    [TestMethod]
+    public void AutomaticRunnerWakesForDelayedMessagesWithoutFurtherInput()
+    {
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        host.Load(GameEventScriptBuilder.Create().AddScript("on Start { emit after 0.02s Done() }").Compile());
+        using var done = new ManualResetEventSlim(false);
+        host.Subscribe("Done", [], (_, _) => done.Set());
+        using var runner = host.RunAutomatically();
+        runner.Start();
+        Assert.IsTrue(runner.Receive(GameEventScriptMessage.Create("Start")));
+        Assert.IsTrue(done.Wait(TimeSpan.FromSeconds(5)), "A future-only queue must wake without another Receive.");
+    }
+
     [TestMethod]
     [DataRow(false)]
     [DataRow(true)]

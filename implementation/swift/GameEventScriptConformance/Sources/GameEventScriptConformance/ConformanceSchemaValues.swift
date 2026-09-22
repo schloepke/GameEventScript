@@ -218,8 +218,8 @@ extension ConformanceSchema {
     }
 
     static func validateStepExpectation(_ node: Node) throws {
-        try closed(node, ["input", "accepted", "local", "outbound", "paused", "runtimeLimits", "diagnostics", "trace", "hostReady", "programStarts"])
-        try boolFields(node, ["accepted", "paused"])
+        try closed(node, ["input", "accepted", "local", "outbound", "paused", "waiting", "runtimeLimits", "diagnostics", "trace", "hostReady", "programStarts"])
+        try boolFields(node, ["accepted", "paused", "waiting"])
         try validateObservations(node)
         if let input = node["input"] {
             try closed(input, ["tags", "args"])

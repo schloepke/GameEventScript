@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 
@@ -25,6 +26,7 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
     private readonly GameEventScriptHost _host;
     private readonly GameEventScriptCSharpDispatcher _dispatcher;
     private readonly object _gate = new();
+    private Timer? _timer;
     private bool _scheduled;
     private bool _disposed;
     private GameEventScriptExecutionResult? _lastResult;
@@ -188,11 +190,17 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
     /// </summary>
     public void Dispose()
     {
-        lock (_gate) _disposed = true;
+        lock (_gate)
+        {
+            _disposed = true;
+            _timer?.Dispose();
+            _timer = null;
+        }
     }
 
     private void Schedule()
     {
+        _timer?.Change(Timeout.Infinite, Timeout.Infinite);
         if (_scheduled) return;
         _scheduled = true;
         _dispatcher.Enqueue(Pump);
@@ -207,7 +215,15 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
             finally
             {
                 _scheduled = false;
-                if (_host.IsReady && !_host.IsIdle) Schedule();
+                if (_host.IsReady && !_host.IsIdle)
+                {
+                    if (_lastResult?.State == GameEventScriptExecutionState.Waiting && _host.NextMessageDelay is { } delay)
+                    {
+                        _timer ??= new Timer(_ => { lock (_gate) { if (!_disposed) Schedule(); } }, null, Timeout.Infinite, Timeout.Infinite);
+                        _timer.Change((int)Math.Min(int.MaxValue, delay / 1000 + (delay % 1000 == 0 ? 0 : 1)), Timeout.Infinite);
+                    }
+                    else Schedule();
+                }
             }
         }
     }

@@ -69,17 +69,24 @@ internal sealed class RunSession
             _publishes += start.PublishedMessages;
             if (start.State != GameEventScriptStartState.Ready) return false;
         }
-        var result = Host.RunToCompletion();
-        _processedMessages += result.ProcessedMessages;
-        _opcodes += result.ExecutedOpcodes;
-        _emits += result.EmittedMessages;
-        _publishes += result.PublishedMessages;
-        if (Observer.OutputError is { } outputError)
+        GameEventScriptExecutionResult result;
+        do
         {
-            Console.Error.WriteLine($"error cli.io: {outputError.Message}");
-            return false;
-        }
-        return !Observer.Failed && result.State == GameEventScriptExecutionState.Completed;
+            result = Host.RunToCompletion();
+            _processedMessages += result.ProcessedMessages;
+            _opcodes += result.ExecutedOpcodes;
+            _emits += result.EmittedMessages;
+            _publishes += result.PublishedMessages;
+            if (Observer.OutputError is { } outputError)
+            {
+                Console.Error.WriteLine($"error cli.io: {outputError.Message}");
+                return false;
+            }
+            if (Observer.Failed) return false;
+            if (!_interactive && result.State == GameEventScriptExecutionState.Waiting && Host.NextMessageDelay is { } delay)
+                Thread.Sleep((int)Math.Min(1000, delay / 1000 + (delay % 1000 == 0 ? 0 : 1)));
+        } while (!_interactive && result.State == GameEventScriptExecutionState.Waiting);
+        return result.State is GameEventScriptExecutionState.Completed or GameEventScriptExecutionState.Waiting;
     }
 
     internal void WriteSummary()

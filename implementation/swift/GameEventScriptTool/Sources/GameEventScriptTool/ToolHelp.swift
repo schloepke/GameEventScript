@@ -150,6 +150,7 @@ enum ToolHelp {
           emit Start(value: 41)
           emit Main(args: ["12", "Hello"])
           emit ConsoleOut("Result: ", 1 + 2)
+          emit after 0.2s ConsoleOut("Later")
           emit ConsoleErr("Problem found")
           emit ErrorCode(code: 7)
           emit ErrorCode(nothing)
@@ -170,6 +171,7 @@ enum ToolHelp {
 
         Editing:
           The editor and terminal source/dump displays use a tab width of four columns.
+          Delayed output is pumped while waiting for input; unfinished input is preserved.
           Enter submits. Plain/redirected input accepts one line (braces/semicolons allowed).
           With --color and terminal streams: live syntax colors, cursor editing, Up/Down
           history, Ctrl+N to insert a newline, Ctrl+C to cancel, Ctrl+D on empty input to quit.

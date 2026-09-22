@@ -61,7 +61,26 @@ def main():
     for required in ("if a == 1 { return opcode.operands + [.countImmediate, .faceRegister] }", "if a == 0 { return opcode.operands + [.countImmediate] }"):
         if re.sub(r"\s+", "", required) not in re.sub(r"\s+", "", validator):
             raise RuntimeError("Swift dynamic pattern operands changed")
-    print(f"Verified {len(names)} V1 enums and {len(expected) + 2} opcode operand definitions against C#.")
+    # Result-bearing sends use the same eight flag-dependent layouts in both ports.
+    send_block = printer.split("return (indirect, tags, after) switch", 1)[1].split("};", 1)[0]
+    forms = re.findall(r"\((true|false), (true|false), (true|false)\) => \[([^\]]*)\]", send_block)
+    if len(forms) != 8:
+        raise RuntimeError("Missing result-send operand forms")
+    for indirect, tags, after, parts in forms:
+        layout = ["TargetRegister"] + (["MessageRegister"] if indirect == "true" else ["OutboundMessage", "ArgumentRegisterList"])
+        if tags == "true": layout.append("TagRegisterList")
+        if after == "true": layout.append("AuxBRegister")
+        if [p.strip() for p in parts.split(",")] != layout:
+            raise RuntimeError("Changed result-send operands")
+    for required in (
+        "var result: [GesOperand] = [.targetRegister]",
+        "result += unitAndFlags & 0x80 != 0 ? [.messageRegister] : [.outboundMessage, .argumentRegisterList]",
+        "if unitAndFlags & 0x40 != 0 { result.append(.tagRegisterList) }",
+        "if opcode == .emitAfter || opcode == .publishAfter { result.append(.auxBRegister) }",
+    ):
+        if re.sub(r"\s+", "", required) not in re.sub(r"\s+", "", validator):
+            raise RuntimeError("Swift result-send dynamic operands changed")
+    print(f"Verified {len(names)} V1 enums and {len(expected) + 6} opcode operand definitions against C#.")
 
 
 if __name__ == "__main__":

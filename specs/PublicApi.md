@@ -475,7 +475,7 @@ rules are in [Host runtime](HostRuntime.md).
 | `SubscribeMessageName(name, handler, requiredTags?, excludedTags?, priority = 0)` | Adds a native subscription matching every signature of that normalized message name. |
 | `Receive(message)` | Captures current matching subscriptions and attempts to enqueue the logical message locally. Returns whether accepted. Before Start succeeds it returns false. It never pumps and never publishes outbound. |
 | `ExecuteFrame(opcodeBudget)` | Synchronously pumps on the caller until the scheduler budget pauses script execution, the Host becomes idle, or a runtime limit/error ends the call. Budget must be positive and the host must be ready. |
-| `RunToCompletion()` | Synchronously pumps until idle or a runtime limit/error terminates this pump call. The host must be ready. It creates no worker thread. |
+| `RunToCompletion()` | Synchronously pumps until idle, only future messages remain, or a runtime limit/error terminates this pump call. The host must be ready. It creates no worker thread. |
 | `IsIdle` | True only when no active message/handler and no queued logical message exists. |
 | `PendingMessageCount` | Number of queued logical messages according to HostRuntime; it never counts handler invocations. |
 
@@ -581,6 +581,7 @@ The states are:
 - `Paused`: a script handler remains resumable because ExecuteFrame exhausted
   its scheduler opcode budget;
 - `Completed`: the pump reached idle without a stopping limit/error;
+- `Waiting`: no runnable work remains but delayed messages are pending; the caller may wait for `NextMessageDelay` and pump again;
 - `RuntimeLimitReached`: a configured safety limit stopped the pump;
 - `RuntimeError`: at least one runtime diagnostic occurred during the pump; the
   Host still completes the remaining captured dispatch work unless another
@@ -1173,3 +1174,17 @@ duplicated as a second source of truth here.
 The portable public API is limited to the families above. VM execution state,
 compiler trees, filesystem services, network clients, task schedulers, and
 reflection objects remain private or embedding-specific.
+
+## Monotonic scheduling API
+
+C# `IGameEventScriptClock.ElapsedMicroseconds` and Swift
+`GameEventScriptClock.elapsedMicroseconds` provide a borrowed monotonic Int64
+microsecond source. Host builders accept `WithClock` / `withClock`; absent an
+injected source, each host uses an independent origin on the system monotonic
+clock. A shared injected clock is read serially by its embedding.
+
+Host `NextMessageDelay` / `nextMessageDelay` returns optional remaining Int64
+microseconds without pumping. `Waiting` / `waiting` extends execution results
+when only delayed work remains. The authoritative timing and lifecycle rules
+are in HostRuntime. C# and Swift automatic runners arm wake-ups outside Runtime,
+reschedule when new work arrives and cancel wake-ups when closed/disposed.

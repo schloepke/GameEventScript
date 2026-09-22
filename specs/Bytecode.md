@@ -182,12 +182,13 @@ shared program validator enforces this for compiler output and loaded binaries.
 
 ```text
 bits 0..4  UnitId        0..31
-bits 5..7  Reserved      must be zero in portable bytecode
+bits 5     NormalizeResultAsPredicate
+bits 6     WithTags (result-bearing sends only)
+bits 7     Indirect (result-bearing sends only)
 ```
 
-Reserved bits are consumed from the most significant bit downward. Bit 5 stays
-reserved so the UnitId field can be extended to 6 bits without reshaping the
-instruction field.
+Flag meanings are opcode-specific. Result-bearing sends reject bit 5; existing
+instructions reject bits 6 and 7. Undefined flag combinations are invalid.
 
 The UnitId map keeps the defined ids stable and reserves
 room for likely game-domain units:
@@ -371,7 +372,7 @@ groups are:
 0xA0 Group 3: collection slicing, text/collection operators, map projections
 0xB0 Group 3 membership, collection algebra, map projections, element terminals
 0xC0 Group 3 iterators, aggregations, weighted terminals, collect terminals
-0xD0 Group 3 generated collection/order/group/distinct builders, pattern operators, literal parsing, reserved tail 0xDA..0xFF
+0xD0 Group 3 generated collection/order/group/distinct builders, pattern operators, literal parsing, result-bearing sends, reserved tail 0xDE..0xFF
 ```
 
 The exhaustive [canonical opcode field map](#canonical-opcode-field-map) in this document lists every defined opcode as its own row, and every group ends with one `reserved` row for its unused tail range.
@@ -1618,7 +1619,11 @@ as a dead write and must not be folded past runtime-limit checks.
 | 0xD7 | `HasPattern` | - | result register | `XRegister`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face register for `CountFace` | Tests a dice/card pattern and returns boolean. |
 | 0xD8 | `TakePattern` | - | result register | `XRegister`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face register for `CountFace` | Takes items matching a dice/card pattern. Dice sources produce dice; list sources produce lists. |
 | 0xD9 | `ParseLiteral` | - | result register | `XRegister`=Text input | - | - | Recognizes one complete data literal, preserving original Text on recognition failure. |
-| 0xDA..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3 for future collection, iterator, pipeline, extension, or VM opcodes. |
+| 0xDA | `EmitInstant` | WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged | Accepts immediate dispatch; see result-bearing sends below. |
+| 0xDB | `EmitAfter` | WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged, `BU`=duration register | Accepts delayed dispatch; see result-bearing sends below. |
+| 0xDC | `PublishInstant` | WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged | Accepts immediate dispatch; see result-bearing sends below. |
+| 0xDD | `PublishAfter` | WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged, `BU`=duration register | Accepts delayed dispatch; see result-bearing sends below. |
+| 0xDE..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3 for future collection, iterator, pipeline, extension, or VM opcodes. |
 
 ## Side-Table Summary
 
@@ -1634,3 +1639,27 @@ directly from the instruction word. Record constructor code addresses live in
 `Record` bind entries, not in `CreateRecord` instructions.
 Pipeline selectors are lowered into linear helper entries and fixed iterator or
 terminal opcodes; there are no pipeline selector or pattern pools.
+
+## Result-bearing send instructions
+
+V1 adds `EmitInstant` (0xDA), `EmitAfter` (0xDB), `PublishInstant` (0xDC), and
+`PublishAfter` (0xDD). The existing eight send instructions retain their encoding
+and behavior. Unsupported opcode values must be rejected before execution.
+
+Only these four instructions accept `WithTags` (0x40) and `Indirect` (0x80).
+They reject the predicate-normalization flag and nonzero unit bits. Destination
+is the Boolean result register. X is an outbound binding ID or, with Indirect,
+a Message register. Y is the argument-register list for static sends and zero
+for indirect sends. AU is the additional tag-register list with WithTags and
+zero otherwise. BU is the time-value register for After and zero for Instant.
+CU and DU must be zero. All active operands undergo ordinary frame/list/binding
+validation. Tags already contained in a Message are retained without WithTags.
+
+After validates and converts its time register according to Language and
+HostRuntime. Instant requires no zero-time temporary register. Each send counts
+as one opcode, independently of scheduler work. Result storage occurs after
+callbacks return and must not retain a mutable register reference across them.
+
+Fold/reduce lower to ordinary iterator loops and accumulator registers. Their
+step expressions run in the normal VM execution stream and can pause/resume.
+No fold/reduce opcode or implicit per-element budget surcharge is introduced.

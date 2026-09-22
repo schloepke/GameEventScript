@@ -245,19 +245,25 @@ internal static class ConformanceSchemaBinder
         RequireKind(node, YamlNodeKind.Sequence, "nativeHandlers.actions must be a sequence.");
         foreach (var item in node.Items)
         {
-            Closed(item, "loadProgram", "detachProgram", "subscribeHandler", "unsubscribeHandler", "expectResult", "expectError");
+            Closed(item, "advanceMicroseconds", "loadProgram", "detachProgram", "subscribeHandler", "unsubscribeHandler", "expectResult", "expectError");
             var operations = item.Properties.Where(property => property.Name is not ("expectResult" or "expectError")).ToArray();
             if (operations.Length != 1) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "A native handler action requires exactly one operation.", item.Range);
             var operation = operations[0];
             var kind = operation.Name switch
             {
+                "advanceMicroseconds" => ConformanceNativeActionKind.AdvanceMicroseconds,
                 "loadProgram" => ConformanceNativeActionKind.LoadProgram,
                 "detachProgram" => ConformanceNativeActionKind.DetachProgram,
                 "subscribeHandler" => ConformanceNativeActionKind.SubscribeHandler,
                 _ => ConformanceNativeActionKind.UnsubscribeHandler
             };
             var target = String(operation.Value);
-            RequireId(target, operation.Value.Range);
+            if (kind == ConformanceNativeActionKind.AdvanceMicroseconds)
+            {
+                if (!long.TryParse(target, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var amount) || amount < 0 || target != amount.ToString(System.Globalization.CultureInfo.InvariantCulture))
+                    throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "advanceMicroseconds requires a canonical nonnegative Int64 string.", operation.Value.Range);
+            }
+            else RequireId(target, operation.Value.Range);
             var expectedResult = OptionalBoolean(item, "expectResult");
             var expectedError = Optional(item, "expectError") is { } error ? BindDiagnostic(error) : null;
             if (expectedError is not null && (kind != ConformanceNativeActionKind.LoadProgram || expectedResult is not null || expectedError.Phase != "link"))
@@ -310,6 +316,7 @@ internal static class ConformanceSchemaBinder
     {
         var valid = action.Kind switch
         {
+            ConformanceNativeActionKind.AdvanceMicroseconds => true,
             ConformanceNativeActionKind.LoadProgram => deferred.Contains(action.Target),
             ConformanceNativeActionKind.DetachProgram => programs.Contains(action.Target),
             _ => handlers.Contains(action.Target)
@@ -513,7 +520,7 @@ internal static class ConformanceSchemaBinder
         if (node is null)
             return new ConformanceStepExpectation(
                 new ConformanceMessage(receive, Array.Empty<string>(), Array.Empty<ConformanceArgument>()), true, Array.Empty<ConformanceMessage>(), Array.Empty<ConformanceMessage>(), null, EmptyObservations());
-        Closed(node, "input", "accepted", "local", "outbound", "paused", "runtimeLimits", "diagnostics", "trace", "hostReady", "programStarts");
+        Closed(node, "input", "accepted", "local", "outbound", "paused", "waiting", "runtimeLimits", "diagnostics", "trace", "hostReady", "programStarts");
         var inputNode = Optional(node, "input");
         var tags = new List<string>();
         IReadOnlyList<ConformanceArgument> args = Array.Empty<ConformanceArgument>();
@@ -526,7 +533,7 @@ internal static class ConformanceSchemaBinder
         }
         return new ConformanceStepExpectation(
             new ConformanceMessage(receive, tags, args), OptionalBoolean(node, "accepted") ?? true,
-            BindMessages(Optional(node, "local")), BindMessages(Optional(node, "outbound")), OptionalBoolean(node, "paused"), BindObservations(node));
+            BindMessages(Optional(node, "local")), BindMessages(Optional(node, "outbound")), OptionalBoolean(node, "paused"), BindObservations(node), OptionalBoolean(node, "waiting"));
     }
 
     private static ConformanceExpectation BindExpectation(ConformanceTestKind kind, YamlNode? node)

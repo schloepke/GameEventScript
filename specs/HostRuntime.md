@@ -274,7 +274,12 @@ Dispatching
 
   no remaining handler
     -> complete logical message
-    -> Ready when queue is non-empty, otherwise Idle
+    -> Ready when runnable work remains, Waiting when only timers remain, otherwise Idle
+
+Waiting
+  caller pumps at or after NextMessageDelay
+    -> promote due messages behind runnable FIFO work
+    -> Ready, or remain Waiting if no message is due
 
 ScriptRunning
   ExecuteFrame budget remains
@@ -300,7 +305,7 @@ ScriptRunning
 `ExecuteFrame(opcodeBudget)` is a caller-thread scheduler slice. Its opcode
 budget is independent from safety limits and may pause only script bytecode;
 native handlers remain atomic. `RunToCompletion()` pumps synchronously until the
-host becomes idle or a runtime limit stops the run. Core code starts no thread
+host becomes idle, only future work remains, or a runtime limit stops the run. Core code starts no thread
 and performs no synchronization. A host is serial but not thread-affine: only
 one caller may access it at a time, while later frames may run on another thread
 when the embedding environment supplies the required happens-before handoff.
@@ -438,3 +443,46 @@ frame pause/resume, runtime limits, and Emit/Publish/Receive behavior for every
 language in the monorepo. Message `args` are always encoded as an ordered YAML
 sequence of mappings with `name` and `value` entries, including nested message
 values and expected local/outbound messages.
+
+## Delayed dispatch
+
+Each Host borrows a monotonic clock reporting nonnegative whole microseconds.
+The default clock measures actual elapsed time; an embedding can supply a clock
+for deterministic simulation or testing. Clock reads never pump messages.
+
+A positive finite time quantity is converted to microseconds, rounded upward.
+Integer seconds are converted with checked integer arithmetic. Binary64 seconds
+are multiplied by 1,000,000 using binary64 arithmetic and rounded upward; the
+result must be smaller than 2^63. A negative input is invalid even if rounding
+would produce zero. The absolute deadline is clock time at acceptance plus the
+delay; overflow rejects the send. This is a minimum scheduling delay, not a
+real-time execution guarantee.
+
+Delayed entries capture the same recipient snapshot as instant enqueue. Newly
+registered recipients do not receive older entries. Ordinary detach retains its
+captured-delivery behavior. When deadlines become due, entries are appended to
+the runnable FIFO in deadline order; equal deadlines retain enqueue order.
+Promotion occurs between complete logical messages, never in the middle of an
+active or paused handler. Future entries do not block runnable messages.
+
+Publish delays both local delivery and the outbound sink invocation. A later sink
+rejection or failure cannot change the Boolean already returned to script.
+The existing sink diagnostic behavior remains applicable. Emit observations occur
+at acceptance; delayed publish observations occur when the publication is released.
+
+Init computes deadlines when the expression executes but cannot release its
+outputs before its initial group or later-instance initialization succeeds.
+Already due entries become eligible after that barrier. Initial-group failure
+clears all outputs; later-instance failure clears its staged outputs and removes
+captured deliveries to the failed instance without canceling independent outbound
+publication or other recipients. Accepted sends outlive ordinary sender detach.
+Delayed entries count towards the existing logical-message queue limit; promotion
+does not reserve a second slot.
+
+`RunToCompletion` and `ExecuteFrame` never wait or advance the clock. `Waiting`
+means only future work remains, `Completed` means no work remains, and `Paused`
+retains its frame-budget meaning. Errors and limits retain precedence.
+`PendingMessageCount` includes delayed entries but excludes the active message;
+`IsIdle` is false while delayed entries remain. `NextMessageDelay` reports remaining
+whole microseconds, clamped to zero, or no value when there is no delayed entry.
+Bridges and command-line adapters own timers and serialize all Host access.

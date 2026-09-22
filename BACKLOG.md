@@ -50,10 +50,6 @@ here.
   implemented. Handler signatures and built-in Series kind/offset are data and
   can receive representations without capturing executable host state;
   reconstruction of bound values needs a separate contract.
-- Add a general immutable collection `fold`/`reduce` operation if concrete use
-  cases exceed the existing specialized aggregations (`sum`, `average`, `min`,
-  `max`, and `count`). Prefer a bounded collection operation over recursion or
-  general local mutation.
 - Design host-bound Tables as the explicit mutation model. Mutations should
   enter a deterministic modification queue; snapshot visibility,
   read-your-writes, commit boundaries, rollback, observation, persistence and

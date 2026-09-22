@@ -9,10 +9,11 @@ Game Event Script compiler and runtime port must reproduce. It complements
 [Host runtime](../HostRuntime.md).
 
 Determinism means that the same validated program, ordered inputs, host
-configuration, initial random seed, and runtime limits produce the same visible
+configuration, initial random seed, observed monotonic-clock readings, and runtime limits produce the same visible
 messages and values. Wall-clock time, thread scheduling, object identity,
 platform hash iteration, and the non-seeded `Create()` random source are not
-deterministic inputs.
+deterministic inputs. Delayed dispatch is reproducible when clock observations
+and pump boundaries are reproduced; see [Host runtime](../HostRuntime.md#delayed-dispatch).
 
 This cross-implementation guarantee is subject to the explicitly permitted
 numeric variation in [Number semantics](Numbers.md), including math-library
@@ -112,11 +113,13 @@ platform entropy source. Host configuration may provide an explicit fallback
 seed; Markdown conformance uses seed `0`, so an exhausted test sequence remains
 portable and reproducible.
 
-Acquiring default entropy is the single platform-specific operation in the
-otherwise portable core. Each language port implements it natively, it never
-participates in the deterministic contract, and the Conformance corpus never
-exercises it because every case pins an explicit seed, fixed entropy bytes,
-or a sequence with a deterministic fallback seed.
+The portable core has two platform-specific default services: entropy acquisition
+and a monotonic clock. Each language port supplies native implementations. Default
+entropy never participates in the deterministic contract; Conformance cases pin
+an explicit seed, fixed entropy bytes, or a sequence with a deterministic fallback
+seed. Time-dependent execution additionally requires identical observed clock
+readings and pump calls for reproduction. Conformance supplies a controlled clock.
+The clock and delayed-delivery contract is owned by [HostRuntime](../HostRuntime.md).
 
 A host never accepts or retains an externally owned mutable generator. Its
 builder accepts a seed, entropy bytes, or immutable sequence values and

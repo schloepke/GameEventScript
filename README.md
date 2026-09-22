@@ -19,7 +19,8 @@ Markdown conformance corpus; the C# API is one language-specific mapping.
 
 The badges above show the latest non-prerelease NuGet package and GitHub release
 once published. See [release notes](https://github.com/schloepke/GameEventScript/releases)
-for changes and migration guidance. All libraries share the GES release version;
+for published changes and migration guidance, and the [changelog](CHANGELOG.md)
+for changes planned for the next release. All libraries share the GES release version;
 language and API contracts may change during 0.x development.
 
 SwiftPM consumes version tags from this repository; a tag alone does not create

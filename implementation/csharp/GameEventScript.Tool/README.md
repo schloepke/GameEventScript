@@ -678,3 +678,15 @@ For project-local use, install into a .NET tool manifest instead of supplying
 `dotnet ges --help` when the tool directory is on `PATH`.
 
 The tool is licensed under Apache-2.0; the package includes the full license.
+
+### Delayed messages
+
+`run` waits for delayed messages and exits only when no work remains. Scripts
+that keep scheduling messages can run until interrupted with Ctrl+C. Runtime
+pumps themselves never sleep; the command-line adapter waits between pumps.
+
+The event console returns its prompt after current runnable work. While waiting
+for input it processes messages as they become due and restores the current
+input and cursor after terminal output. Delayed sends use monotonic time, with
+durations rounded upward to whole microseconds; actual dispatch also depends on
+when the host can pump.

@@ -8,6 +8,18 @@ import XCTest
 
 /// Native binding tests live outside the portable Markdown oracle. Compiler is a test-only dependency of the bridge consumer.
 final class SwiftBridgeIntegrationTests: XCTestCase {
+    func testRunnerWakesForDelayedMessagesWithoutFurtherInput() throws {
+        let program = try GameEventScriptBuilder().addScript("on Start { emit after 0.02s Done() }").compile()
+        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.createBuilder().build())
+        defer { runner.close() }
+        let done = expectation(description: "Delayed delivery without another Receive")
+        _ = try runner.subscribe(.init(name: "Done")) { _, _ in done.fulfill() }
+        _ = try runner.load(program)
+        XCTAssertEqual(try runner.start().state, .ready)
+        XCTAssertTrue(try runner.receive(.init(name: "Start")))
+        wait(for: [done], timeout: 5)
+    }
+
     struct Player {
         let name: String
         let score: Int

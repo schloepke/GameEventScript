@@ -17,6 +17,7 @@ internal static class GesSourceNesting
     {
         var children = node switch
         {
+            SendExpressionNode value => Math.Max(Depth(value.Message), Math.Max(Depth(value.Delay), Maximum(value.Tags))),
             UnaryExpressionNode value => Depth(value.Operand),
             BinaryExpressionNode value => Math.Max(Depth(value.Left), Depth(value.Right)),
             MessageLiteralExpressionNode value => Arguments(value.ArgumentList),
@@ -53,6 +54,7 @@ internal static class GesSourceNesting
             FilterSelectorNode value => Depth(value.Predicate),
             SumSelectorNode value => Depth(value.Projection),
             AverageSelectorNode value => Depth(value.Projection),
+            FoldSelectorNode value => Math.Max(Depth(value.Seed), Depth(value.Projection)),
             SelectSelectorNode value => Depth(value.Projection),
             MapSelectorNode value => Math.Max(Depth(value.KeyProjection), Depth(value.ValueProjection)),
             MinSelectorNode value => Depth(value.Projection),

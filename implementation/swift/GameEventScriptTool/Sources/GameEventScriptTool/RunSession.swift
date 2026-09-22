@@ -50,12 +50,30 @@ final class RunSession {
             publishes += start.publishedMessages
             guard start.state == .ready else { return false }
         }
-        let result = try host.runToCompletion()
-        messages += result.processedMessages
-        opcodes += result.executedOpcodes
-        emits += result.emittedMessages
-        publishes += result.publishedMessages
-        return !observer.failed && io.outputError == nil && result.state == .completed
+        while true {
+            let result = try host.runToCompletion()
+            messages += result.processedMessages
+            opcodes += result.executedOpcodes
+            emits += result.emittedMessages
+            publishes += result.publishedMessages
+            if observer.failed || io.outputError != nil { return false }
+            if !options.interactive && result.state == .waiting {
+                Thread.sleep(forTimeInterval: Double(min(host.nextMessageDelay ?? 0, 1_000_000)) / 1_000_000)
+                continue
+            }
+            return result.state == .completed || result.state == .waiting
+        }
+    }
+
+    func readInput() throws -> String? {
+        guard host.nextMessageDelay != nil else { return try io.input() }
+        let reader = PendingInput(io.input)
+        reader.start()
+        while !reader.isReady {
+            if try host.nextMessageDelay == 0 && !pump() { throw ToolError.io("Delayed message processing failed.") }
+            Thread.sleep(forTimeInterval: 0.01)
+        }
+        return try reader.result().get()
     }
 
     func summary() { io.line("Run completed: \(messages) messages, \(opcodes) opcodes, \(emits) emits, \(publishes) publishes.", toError: true) }
@@ -138,5 +156,34 @@ final class RunObserver: GameEventScriptRuntimeObserver {
         }
 
         private func invalid() throws -> GameEventScriptExtensionFault { try .init(code: "cli.errorCodeArgument", message: "ErrorCode requires one code argument: a unitless integer from 0 to 255, or nothing.") }
+    }
+}
+
+private final class PendingInput: @unchecked Sendable {
+    private let lock = NSLock()
+    private let input: () throws -> String?
+    private var value: Result<String?, any Error>?
+
+    init(_ input: @escaping () throws -> String?) { self.input = input }
+
+    func start() {
+        DispatchQueue.global().async {
+            let result = Result { try self.input() }
+            self.lock.lock()
+            self.value = result
+            self.lock.unlock()
+        }
+    }
+
+    var isReady: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return value != nil
+    }
+
+    func result() -> Result<String?, any Error> {
+        lock.lock()
+        defer { lock.unlock() }
+        return value!
     }
 }

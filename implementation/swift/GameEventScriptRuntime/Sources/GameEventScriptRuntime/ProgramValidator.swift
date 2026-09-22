@@ -64,7 +64,15 @@ public enum GameEventScriptProgramValidator {
     static func failure(_ code: GameEventScriptProgramFormatErrorCode, _ section: UInt16? = nil, _ entry: Int? = nil) -> GameEventScriptProgramFormatError { .init(code, sectionType: section, entryIndex: entry) }
 
     static func validateInstruction(_ p: GameEventScriptProgram, _ i: GameEventScriptBytecodeInstruction, _ index: Int, _ ids: Set<UInt64>) throws {
-        if i.unitAndFlags & 0x1f > 3 || i.unitAndFlags & 0xc0 != 0 { throw failure(.invalidOperand, 16, index) }
+        if i.opcode.isResultSend {
+            if i.unitAndFlags & 0x3f != 0 || i.c != 0 || i.d != 0 || i.unitAndFlags & 0x40 == 0 && i.a != 0 || i.unitAndFlags & 0x80 != 0 && i.word2 != 0
+                || (i.opcode == .emitInstant || i.opcode == .publishInstant) && i.b != 0
+            {
+                throw failure(.invalidOperand, 16, index)
+            }
+        } else if i.unitAndFlags & 0x1f > 3 || i.unitAndFlags & 0xc0 != 0 {
+            throw failure(.invalidOperand, 16, index)
+        }
         if i.opcode == .parseLiteral && (i.unitAndFlags != 0 || i.word2 != 0 || i.payload != 0) { throw failure(.invalidOperand, 16, index) }
         for (position, operand) in i.operands.enumerated() {
             if operand.isRegister {
@@ -101,7 +109,7 @@ public enum GameEventScriptProgramValidator {
                 case .seriesKind: if GameEventScriptBytecodeSeriesKind(rawValue: i.word2) == nil { throw failure(.invalidOperand, 16, index) }
                 case .outboundMessage, .recordReference, .externalReference:
                     let kind: GameEventScriptBinaryBindKind = operand == .outboundMessage ? .outboundMessage : operand == .recordReference ? .record : i.opcode == .callExternal ? .extensionCall : .externalType
-                    let id = operand == .outboundMessage ? i.word0 : i.word1
+                    let id = operand == .outboundMessage && !i.opcode.isResultSend ? i.word0 : i.word1
                     if !ids.contains(UInt64(kind.rawValue) << 16 | UInt64(id)) { throw failure(.invalidOperand, 16, index) }
                 default: break
                 }
@@ -127,6 +135,13 @@ extension GesOperand {
 
 extension GameEventScriptBytecodeInstruction {
     var operands: [GesOperand] {
+        if opcode.isResultSend {
+            var result: [GesOperand] = [.targetRegister]
+            result += unitAndFlags & 0x80 != 0 ? [.messageRegister] : [.outboundMessage, .argumentRegisterList]
+            if unitAndFlags & 0x40 != 0 { result.append(.tagRegisterList) }
+            if opcode == .emitAfter || opcode == .publishAfter { result.append(.auxBRegister) }
+            return result
+        }
         if opcode == .hasPattern || opcode == .takePattern {
             if a == 1 { return opcode.operands + [.countImmediate, .faceRegister] }
             if a == 0 { return opcode.operands + [.countImmediate] }
@@ -161,6 +176,7 @@ extension GameEventScriptBytecodeInstruction {
         case .messageShapeList where opcode == .loadMessage: word1
         case .keyNameList: word1
         case .captureRegisterList: b
+        case .tagRegisterList where opcode.isResultSend: a
         case .tagRegisterList where opcode == .emitMessageWithTags || opcode == .publishMessageWithTags: word1
         default: word2
         }

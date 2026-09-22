@@ -14,6 +14,16 @@ public sealed class GameEventScriptCheckRunCommandTests
     private const string ProgramSource = "module game\non Start(value) { emit ConsoleOut(value: value + 1) }\n";
     private const string ScenarioSource = "module scenario\non initialization { emit Start(value: 41) }\n";
 
+    /// <summary>Checks that batch execution waits for chained delayed outputs and their final exit code.</summary>
+    [TestMethod]
+    public void RunWaitsForAllDelayedMessages()
+    {
+        Write("delayed.ges", "on Main(args) { emit after 0.01s Tick() }\non Tick { emit ConsoleOut('delayed'); emit after 0.01s ErrorCode(7) }");
+        var result = Run("run", "delayed.ges", "--quiet");
+        Assert.AreEqual(7, result.ExitCode, result.StandardError);
+        Assert.AreEqual(Lines("delayed"), result.StandardOutput);
+    }
+
     /// <summary>Creates an isolated CLI workspace under artifacts.</summary>
     [TestInitialize]
     public void CreateWorkspace()

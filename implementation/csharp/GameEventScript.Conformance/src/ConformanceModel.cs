@@ -223,7 +223,9 @@ public enum ConformanceNativeActionKind
     /// <summary>
     /// Identifies the unsubscribe handler value.
     /// </summary>
-    UnsubscribeHandler = 3
+    UnsubscribeHandler = 3,
+    /// <summary>Advances the virtual clock by the canonical nonnegative Int64 microsecond count in Target, without pumping.</summary>
+    AdvanceMicroseconds = 4
 }
 
 /// <summary>
@@ -895,13 +897,14 @@ public sealed class ConformanceStep
 /// </summary>
 public sealed class ConformanceStepExpectation
 {
-    internal ConformanceStepExpectation(ConformanceMessage input, bool accepted, IReadOnlyList<ConformanceMessage> local, IReadOnlyList<ConformanceMessage> outbound, bool? paused, ConformanceObservationExpectation observations)
+    internal ConformanceStepExpectation(ConformanceMessage input, bool accepted, IReadOnlyList<ConformanceMessage> local, IReadOnlyList<ConformanceMessage> outbound, bool? paused, ConformanceObservationExpectation observations, bool? waiting = null)
     {
         Input = input;
         Accepted = accepted;
         Local = ConformanceDocument.Copy(local);
         Outbound = ConformanceDocument.Copy(outbound);
         Paused = paused;
+        Waiting = waiting;
         Observations = observations;
     }
 
@@ -925,6 +928,8 @@ public sealed class ConformanceStepExpectation
     /// Gets the paused.
     /// </summary>
     public bool? Paused { get; }
+    /// <summary>Gets whether the last pump must have returned Waiting, or null when not asserted.</summary>
+    public bool? Waiting { get; }
     /// <summary>
     /// Gets the observations.
     /// </summary>

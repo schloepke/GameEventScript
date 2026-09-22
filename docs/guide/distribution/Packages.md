@@ -107,6 +107,13 @@ this workflow. Canonical packaging must precede any optional signing.
 
 ## Publish a shared version
 
+Before the release preparation PR is merged, move the applicable `Unreleased`
+entries in [CHANGELOG.md](../../../CHANGELOG.md) into a section named for the
+selected version and release date, leaving an empty `Unreleased` section for
+future changes. Review migration guidance alongside the implementation. Use
+that versioned section as the basis for the GitHub Release description; generated
+PR lists may supplement it.
+
 1. Merge the reviewed changes and verify the C# and Swift checks for the selected
    commit. Run the release workflow with `publish=false` and the intended version.
 2. Once the release is approved, create and push a Git tag such as `0.1.0-rc1`

@@ -60,6 +60,7 @@ public sealed partial class GameEventScriptHost
                         instance.Detach();
                     }
                     _queue.Clear();
+                    _delayed?.Clear();
                     _startupQueue.Clear();
                     _startupPublications?.Clear();
                     return failure;
@@ -105,6 +106,7 @@ public sealed partial class GameEventScriptHost
         _initializationDiagnostic = null;
         _hasActiveMessage = false;
         _queue.RemoveFailedRecipients();
+        RemoveFailedDelayed();
     }
 
     private static GameEventScriptDiagnostic InitializationLimitDiagnostic(GameEventScriptInstance? instance)

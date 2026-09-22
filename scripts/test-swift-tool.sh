@@ -8,3 +8,4 @@ python3 "$ges_root/scripts/sync-swift-cli-grammars.py" --check
 swift test --package-path "$ges_root/implementation/swift/GameEventScriptTool" \
     --scratch-path "$ges_root/artifacts/swift/tool" --build-system native --disable-build-manifest-caching --configuration release
 python3 "$ges_root/scripts/test-swift-tool.py" "$ges_root/artifacts/swift/tool/release/ges"
+python3 "$ges_root/scripts/test-cli-delayed.py" "$ges_root/artifacts/swift/tool/release/ges"

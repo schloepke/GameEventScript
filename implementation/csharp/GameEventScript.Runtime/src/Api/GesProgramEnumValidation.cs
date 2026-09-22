@@ -10,7 +10,7 @@ internal static class GesProgramEnumValidation
     internal static bool IsDefined(GameEventScriptBytecodeOpCode value)
         => (byte)value <= (byte)GameEventScriptBytecodeOpCode.Default
             || (byte)value >= (byte)GameEventScriptBytecodeOpCode.Or && (byte)value <= (byte)GameEventScriptBytecodeOpCode.AngleBetween3D
-            || (byte)value >= (byte)GameEventScriptBytecodeOpCode.TakeFirst && (byte)value <= (byte)GameEventScriptBytecodeOpCode.ParseLiteral;
+            || (byte)value >= (byte)GameEventScriptBytecodeOpCode.TakeFirst && (byte)value <= (byte)GameEventScriptBytecodeOpCode.PublishAfter;
 
     internal static bool IsDefined(GameEventScriptBinaryBindKind value)
         => value is GameEventScriptBinaryBindKind.MessageHandler

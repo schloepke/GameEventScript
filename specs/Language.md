@@ -435,9 +435,37 @@ Single-statement bodies are allowed:
 if ready emit Ready
 ```
 
-A braced body creates a child lexical scope; an unbraced single statement uses
-the surrounding scope. Only the value `true` enters the then-branch. `false` and
-`nothing` select `else` or continue after the statement.
+Every `if` owns a local scope shared by its header and then body. Its else body
+owns a separate sibling scope. Braces do not change these scope boundaries:
+no binding declared in either branch is visible after the `if`. Only the value
+`true` enters the then-branch. `false` and `nothing` select `else` or continue
+after the statement. To declare a binding for subsequent statements, use a
+conditional expression such as `let y be 20 when condition otherwise nothing`;
+the binding always exists, even when its value is nothing.
+
+An `if` header may contain multiple semicolon-separated checks, evaluated from
+left to right. Each check is either an ordinary condition or `let name be
+expression`. A final semicolon before a braced body is optional. Newlines within
+a continued header are formatting; they do not replace the semicolon. Commas
+inside guarded-choice expressions retain their normal meaning and require no
+additional parentheses.
+
+```ges
+if let scan be lookup();
+   let target be scan.target;
+   target.distance < 100m {
+  emit Found(target)
+}
+```
+
+A binding initializer is evaluated once and implicitly tested with `has value`.
+This is not truth conversion: zero and false have value; nothing and empty
+collections/text fail according to the existing `has value` rule. The first
+failed check selects the else branch without evaluating later checks. Each
+successful binding is visible in subsequent checks and the then body, including
+an unbraced then body, but never in its own initializer, the else body, or after
+the `if`. Bindings cannot shadow visible names or repeat in the chain. Ordinary
+conditions still require true; `let` is not a general expression.
 
 ### `for`
 
@@ -2004,3 +2032,51 @@ Adjacent `NUMBER VARIABLE_NAME` tokens without whitespace are also accepted as
 implicit multiplication. This applies only to numeric literals followed by an
 identifier or math constant; ordinary expressions require an explicit
 multiplication operator.
+
+## Fold and reduce selectors
+
+`source[:fold acc be seed, value => expression]` performs a left fold in the
+source's ordinary iterator order. Source and seed are evaluated exactly once,
+including the seed for an empty or invalid source. The seed is the initial
+accumulator; the step runs once per element. Empty sources return the seed.
+
+`source[:reduce acc, value => expression]` uses the first element as the initial
+accumulator and evaluates the step for each remaining element. Empty sources
+return nothing; a single element is returned unchanged without evaluating the
+step. Both operations accept the existing finite iterator sources used by
+projection selectors; an invalid iterator source produces nothing.
+
+The accumulator and element names are distinct, cannot shadow visible bindings,
+and are visible only in the step. The step is an ordinary expression, including
+`when ... otherwise ...`; its result replaces the internal accumulator, even if
+nothing. This does not add mutable script bindings or implicit early termination.
+The operation does not materialize its source or construct an output collection.
+Only actually executed bytecode instructions consume opcode budget, using the
+same rules as other selectors. No synthetic cost equalization is performed.
+
+## Result-bearing and delayed sends
+
+`emit Message(...)` and `publish Message(...)` are also expressions. Their Boolean
+result means the host accepted the send, independent of recipient existence,
+handler success, or publish-sink acceptance. A statement discards the result.
+Unused results never make sends removable side effects. Ordinary expression
+short-circuiting can prevent a send from being evaluated. In result-bearing sends,
+an indirect message operand and each `with` operand use unary precedence; binary
+operators following them apply to the send result. Parenthesize a compound
+message or tag expression, for example `emit (primary default fallback)` or
+`emit Ping() with (tags | extraTags)`. This applies to delayed sends as well.
+Legacy immediate statement sends retain their full-expression operands.
+
+`emit after duration Message(...) with tags` and the corresponding `publish`
+form add a delay. Duration is evaluated first, then additional tags and message
+arguments using the existing send argument order; each is evaluated once. The
+message and tags are captured immediately. Duration must be a numeric Quantity(s),
+not a unitless number or another unit. Unit-preserving computations such as
+`abs (-0.2s)` are valid durations; a numeric result must not be assumed unitless
+when its unit is unknown. Statically established wrong types produce
+`validate.invalidTypeConstructor`; dynamically invalid values, nothing, negative
+values, nonfinite values or unrepresentable delays produce false without sending.
+Zero seconds uses the instant send path. Timing, rounding, delivery snapshots and
+initialization staging are defined in HostRuntime. Emit/publish do not become
+synchronous handler calls. A result-bearing send also returns false when its
+message operand is not a Message or its tag clause cannot be normalized.

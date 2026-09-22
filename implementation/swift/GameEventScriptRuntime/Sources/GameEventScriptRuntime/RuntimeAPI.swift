@@ -218,6 +218,8 @@ final class GesStartDiagnostic: Sendable {
 
 /// Outcome of one host pump call.
 public enum GameEventScriptExecutionState: Sendable {
+    /// Only delayed work remains. The caller may wait until the next message delay before pumping again.
+    case waiting
     /// Work remains after the frame or scheduling budget was consumed.
     case paused
     /// The host finished the available work.

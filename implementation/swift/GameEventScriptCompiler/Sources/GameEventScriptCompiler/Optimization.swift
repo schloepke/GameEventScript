@@ -24,6 +24,7 @@ extension GesCompiler {
                 let destination = move.word0
                 guard !routine.pinned.contains(source), reads[source] == 1, writes[source]?.count == 1, let writer = writes[source]?.first, writer < index, !removed.contains(writer) else { continue }
                 let instruction = routine.code[writer]
+                if branches.contains(instruction.opcode) { continue }
                 let fields = instruction.fields
                 if GameEventScriptCompilerSupport.registerSlots(instruction).contains(where: { $0 != 0 && fields[$0] == destination }) { continue }
                 var blocked = targets.contains(index)

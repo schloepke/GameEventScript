@@ -1776,26 +1776,26 @@ binary:
 
 ---
 
-## Test: invalid-reserved-opcode-da
+## Test: invalid-reserved-opcode-de
 
-This case checks the ParseLiteral binary contract. Replace byte(s) at ParseLiteral instruction 1, operand offset 0, with da.
+This case checks the ParseLiteral binary contract. Replace byte(s) at ParseLiteral instruction 1, operand offset 0, with de.
 
 ### Case description
 
 ```yaml
 gesBlock: case
-id: invalid-reserved-opcode-da
+id: invalid-reserved-opcode-de
 compile:
   debugInfo: []
 binaryFixture:
-  id: gesb-v1-invalid-reserved-opcode-da
-  resourceId: gesb-v1.invalid-reserved-opcode-da
-  relativePath: GesbV1/invalid-reserved-opcode-da.gesb
-  sha256: 2D8F30057069590D1D38A5A50B4B3BCE72B514B324333ECA4AD518021373BA87
+  id: gesb-v1-invalid-reserved-opcode-de
+  resourceId: gesb-v1.invalid-reserved-opcode-de
+  relativePath: GesbV1/invalid-reserved-opcode-de.gesb
+  sha256: FCE4B44FDC79C512D8D79996D9FD534429033C19E60EFC26A8997B8E5304A7DB
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 0
-  derivation: "Replace byte(s) at ParseLiteral instruction 1, operand offset 0, with da."
+  derivation: "Replace byte(s) at ParseLiteral instruction 1, operand offset 0, with de."
 ```
 
 ### Source code under test
@@ -2065,4 +2065,361 @@ steps:
               entries:
                 - key: key
                   value: { type: ":Number.int64", value: "7" }
+```
+
+---
+
+## Test: valid-result-send
+
+This case verifies canonical result-bearing send compilation.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-result-send
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-valid-result-send
+  resourceId: gesb-v1.valid-result-send
+  relativePath: GesbV1/valid-result-send.gesb
+  sha256: 877ECDAD1CD167BFBF5091BBB1334AB4DE85140947F089FA9BBE8B22D1914ECF
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Canonical result-bearing send compilation."
+```
+
+### Source code under test
+
+```ges
+module sendfixture
+on Start(delay) {
+  let accepted be emit after delay Ping(value: 7) with #ready
+  emit Done(value: accepted)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+```
+
+---
+
+## Test: send-invalid-flags
+
+This case rejects instruction 3 after replacing operand offset 1 with 20.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: send-invalid-flags
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-send-invalid-flags
+  resourceId: gesb-v1.send-invalid-flags
+  relativePath: GesbV1/send-invalid-flags.gesb
+  sha256: CFD69147DF5746D75C269DE9DF27789E57CE12D693B2B325014787EEDF52659C
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 3 operand offset 1 with 20."
+```
+
+### Source code under test
+
+```ges
+module sendfixture
+on Start(delay) {
+  let accepted be emit after delay Ping(value: 7) with #ready
+  emit Done(value: accepted)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 3
+```
+
+---
+
+## Test: send-invalid-unit
+
+This case rejects instruction 3 after replacing operand offset 1 with 43.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: send-invalid-unit
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-send-invalid-unit
+  resourceId: gesb-v1.send-invalid-unit
+  relativePath: GesbV1/send-invalid-unit.gesb
+  sha256: 2F9B49361E4A0C136C4E6D7857BAC3E8CBD25996E4015231D2CC80C932D54C86
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 3 operand offset 1 with 43."
+```
+
+### Source code under test
+
+```ges
+module sendfixture
+on Start(delay) {
+  let accepted be emit after delay Ping(value: 7) with #ready
+  emit Done(value: accepted)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 3
+```
+
+---
+
+## Test: send-invalid-result
+
+This case rejects instruction 3 after replacing operand offset 2 with ffff.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: send-invalid-result
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-send-invalid-result
+  resourceId: gesb-v1.send-invalid-result
+  relativePath: GesbV1/send-invalid-result.gesb
+  sha256: D11EB1EA2976C303EF1D4242CC72028623C965DF107A5297628D34F0AB7E6B4C
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 3 operand offset 2 with ffff."
+```
+
+### Source code under test
+
+```ges
+module sendfixture
+on Start(delay) {
+  let accepted be emit after delay Ping(value: 7) with #ready
+  emit Done(value: accepted)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 3
+```
+
+---
+
+## Test: send-invalid-binding
+
+This case rejects instruction 3 after replacing operand offset 4 with feff.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: send-invalid-binding
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-send-invalid-binding
+  resourceId: gesb-v1.send-invalid-binding
+  relativePath: GesbV1/send-invalid-binding.gesb
+  sha256: 7F195C57E0E346312272B19B5CB5B42117FE1390044BAD3D31BD5A7C4E50E1A6
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 3 operand offset 4 with feff."
+```
+
+### Source code under test
+
+```ges
+module sendfixture
+on Start(delay) {
+  let accepted be emit after delay Ping(value: 7) with #ready
+  emit Done(value: accepted)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 3
+```
+
+---
+
+## Test: send-invalid-tags
+
+This case rejects instruction 3 after replacing operand offset 8 with ffff.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: send-invalid-tags
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-send-invalid-tags
+  resourceId: gesb-v1.send-invalid-tags
+  relativePath: GesbV1/send-invalid-tags.gesb
+  sha256: 1C33B1D1195B197C028276809BC469812E2C3D99B415E6FEF6146E6A4B5F8D3F
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 3 operand offset 8 with ffff."
+```
+
+### Source code under test
+
+```ges
+module sendfixture
+on Start(delay) {
+  let accepted be emit after delay Ping(value: 7) with #ready
+  emit Done(value: accepted)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidListIndex
+  sectionType: 16
+  entryIndex: 3
+```
+
+---
+
+## Test: send-invalid-delay
+
+This case rejects instruction 3 after replacing operand offset 10 with ffff.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: send-invalid-delay
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-send-invalid-delay
+  resourceId: gesb-v1.send-invalid-delay
+  relativePath: GesbV1/send-invalid-delay.gesb
+  sha256: 7DB3DB550172FCC7C6505DE3C1FA95C20AFA7C422E08986C0BF584FABF7A0993
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 3 operand offset 10 with ffff."
+```
+
+### Source code under test
+
+```ges
+module sendfixture
+on Start(delay) {
+  let accepted be emit after delay Ping(value: 7) with #ready
+  emit Done(value: accepted)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 3
+```
+
+---
+
+## Test: send-reserved-payload
+
+This case rejects instruction 3 after replacing operand offset 12 with 0100.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: send-reserved-payload
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-send-reserved-payload
+  resourceId: gesb-v1.send-reserved-payload
+  relativePath: GesbV1/send-reserved-payload.gesb
+  sha256: 8749F958289647DF6CCC8CFE60A59F5559C473CD5FFEFE6B60D82187F64D5D65
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 3 operand offset 12 with 0100."
+```
+
+### Source code under test
+
+```ges
+module sendfixture
+on Start(delay) {
+  let accepted be emit after delay Ping(value: 7) with #ready
+  emit Done(value: accepted)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 3
 ```

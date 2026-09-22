@@ -84,12 +84,17 @@ extension ConformanceSchema {
     }
 
     static func validateActions(_ node: Node) throws {
-        let operations = ["loadProgram", "detachProgram", "subscribeHandler", "unsubscribeHandler"]
+        let operations = ["advanceMicroseconds", "loadProgram", "detachProgram", "subscribeHandler", "unsubscribeHandler"]
         for item in try array(node) {
             try closed(item, operations + ["expectResult", "expectError"])
             let supplied = operations.filter { item[$0] != nil }
             guard supplied.count == 1 else { throw fail("invalidCardinality", "Host actions require exactly one operation.", item) }
-            _ = try identifier(required(item, supplied[0]))
+            if supplied[0] == "advanceMicroseconds" {
+                let value = try string(required(item, supplied[0]))
+                guard let amount = Int64(value), amount >= 0, String(amount) == value else { throw fail("invalidValue", "advanceMicroseconds requires a canonical nonnegative Int64 string.", item) }
+            } else {
+                _ = try identifier(required(item, supplied[0]))
+            }
             try boolFields(item, ["expectResult"])
             if let error = item["expectError"] {
                 try validateDiagnostic(error)
@@ -111,7 +116,8 @@ extension ConformanceSchema {
         actions.append(contentsOf: (node["stepActions"]?.entries ?? []).map(\.value))
         for sequence in actions {
             for action in sequence.items ?? [] {
-                let entry = action.entries!.first(where: { ["loadProgram", "detachProgram", "subscribeHandler", "unsubscribeHandler"].contains($0.key) })!
+                let entry = action.entries!.first(where: { ["advanceMicroseconds", "loadProgram", "detachProgram", "subscribeHandler", "unsubscribeHandler"].contains($0.key) })!
+                if entry.key == "advanceMicroseconds" { continue }
                 let target = entry.value.string!
                 let valid = entry.key == "loadProgram" ? deferred.contains(target) : entry.key == "detachProgram" ? programs.contains(target) : handlerIDs.contains(target)
                 guard valid else { throw fail("unknownReference", "Unknown or invalid host action target '\(target)'.", entry.value) }

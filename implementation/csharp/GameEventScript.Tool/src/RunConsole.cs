@@ -13,14 +13,17 @@ internal static class RunConsole
         var terminal = !Console.IsInputRedirected;
         if (terminal) Console.Error.WriteLine("GES event console. Type :help for commands and examples, :load <file> to add a program, or :quit to exit.");
         using var input = new StreamReader(Console.OpenStandardInput(), new UTF8Encoding(false, true), detectEncodingFromByteOrderMarks: false);
-        using var prompt = color && terminal && !Console.IsOutputRedirected && !Console.IsErrorRedirected ? new RunPrompt() : null;
+        var history = new RunHistory();
+        using var prompt = color && terminal && !Console.IsOutputRedirected && !Console.IsErrorRedirected ? new RunPrompt(history) : null;
         var success = true;
         var lineNumber = 0;
         while (true)
         {
-            if (terminal && prompt is null) Console.Error.Write("ges> ");
-            var line = prompt is null ? input.ReadLine() : prompt.ReadLine();
+            var waiting = session.Host.NextMessageDelay is not null;
+            if (terminal && prompt is null && !waiting) Console.Error.Write("ges> ");
+            var line = waiting ? RunWaitingInput.Read(session, input, terminal && !Console.IsErrorRedirected, color, history) : prompt is null ? input.ReadLine() : prompt.ReadLine();
             if (line is null) return success;
+            history.Add(line);
             lineNumber++;
             if (lineNumber == 1 && line.StartsWith('\uFEFF')) line = line[1..];
             if (string.IsNullOrWhiteSpace(line)) continue;

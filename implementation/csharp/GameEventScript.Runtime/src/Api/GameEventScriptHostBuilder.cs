@@ -21,6 +21,17 @@ public sealed class GameEventScriptHostBuilder
     private GameEventScriptRuntimeLimits _limits = GameEventScriptRuntimeLimits.Default;
     private IGameEventScriptPublishSink? _publishSink;
 
+    private IGameEventScriptClock? _clock;
+
+    /// <summary>Configures the monotonic time source borrowed by subsequently built hosts.</summary>
+    /// <param name="clock">A serially accessed clock which never moves backwards.</param>
+    /// <returns>This builder.</returns>
+    public GameEventScriptHostBuilder WithClock(IGameEventScriptClock clock)
+    {
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        return this;
+    }
+
     /// <summary>Configures the deterministic seed used to create this host's private random generator.</summary>
     /// <param name="seed">The complete signed 64-bit seed.</param>
     /// <returns>This builder.</returns>
@@ -140,6 +151,6 @@ public sealed class GameEventScriptHostBuilder
         else
             random = GameEventScriptRandomGenerator.CreateForHost(maxRandomScopeDepth);
 
-        return new GameEventScriptHost(random, _observer, _extensionRegistry, _externalTypeRegistry, _limits, _publishSink);
+        return new GameEventScriptHost(random, _observer, _extensionRegistry, _externalTypeRegistry, _limits, _publishSink, _clock);
     }
 }

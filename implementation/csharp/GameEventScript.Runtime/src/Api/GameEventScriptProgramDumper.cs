@@ -372,7 +372,7 @@ public static class GameEventScriptProgramDumper
         return part switch
         {
             TargetRegister => RegisterAtAddress(instruction.DestinationRegister),
-            OutboundMessage => context.OutboundMessageLabel(instruction.MessageDestination),
+            OutboundMessage => context.OutboundMessageLabel(GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode) ? instruction.BindId : instruction.MessageDestination),
 
             SourceRegister => RegisterAtAddress(instruction.XRegister),
             LeftRegister => RegisterAtAddress(instruction.XRegister),
@@ -451,7 +451,8 @@ public static class GameEventScriptProgramDumper
             KeyNameList => context.ListLabel(instruction.SecondaryListIndex),
             ValueRegisterList => context.ListLabel(instruction.ListIndex),
             CaptureRegisterList => context.ListLabel(CaptureRegisterListIndex(instruction)),
-            TagRegisterList => context.ListLabel(instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessageWithTags or GameEventScriptBytecodeOpCode.PublishMessageWithTags
+            TagRegisterList => context.ListLabel(GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode) ? instruction.AU
+                : instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessageWithTags or GameEventScriptBytecodeOpCode.PublishMessageWithTags
                 ? instruction.SecondaryListIndex
                 : instruction.ListIndex),
             RecordReference => context.RecordLabel(instruction.BindId),
@@ -500,7 +501,7 @@ public static class GameEventScriptProgramDumper
                     AddListTextComment(comments, context, instruction.SecondaryListIndex);
                     break;
                 case OutboundMessage:
-                    AddOutboundMessageComment(comments, context, instruction.MessageDestination);
+                    AddOutboundMessageComment(comments, context, GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode) ? instruction.BindId : instruction.MessageDestination);
                     break;
                 case RecordReference:
                     AddRecordComment(comments, context, instruction.BindId);
@@ -1351,7 +1352,8 @@ public static class GameEventScriptProgramDumper
                 case CaptureRegisterList:
                     return (CaptureRegisterListIndex(instruction), "Captures", ListRole.Registers);
                 case TagRegisterList:
-                    var index = instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessageWithTags or GameEventScriptBytecodeOpCode.PublishMessageWithTags
+                    var index = GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode) ? instruction.AU
+                : instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessageWithTags or GameEventScriptBytecodeOpCode.PublishMessageWithTags
                         ? instruction.SecondaryListIndex
                         : instruction.ListIndex;
                     return (index, "Tags", ListRole.Registers);

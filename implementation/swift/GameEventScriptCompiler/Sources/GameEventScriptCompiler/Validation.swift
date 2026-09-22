@@ -88,9 +88,19 @@ extension GesCompiler {
             case .publish(_, let e, let tags):
                 try validateExpression(e, visible: names.union(ancestors), types: types)
                 for tag in tags { try validateExpression(tag, visible: names.union(ancestors), types: types) }
-            case .condition(let e, let yes, let no):
-                try validateExpression(e, visible: names.union(ancestors), types: types)
-                try validateStatements(yes, [], ancestors.union(names), types)
+            case .condition(let conditions, let yes, let no):
+                var bindings: Set<String> = []
+                var conditionTypes = types
+                for (binding, value) in conditions {
+                    try validateExpression(value, visible: names.union(ancestors).union(bindings), types: conditionTypes)
+                    if let binding {
+                        if bindings.contains(binding) { throw error("validate.duplicateVariable", value.location, symbol: binding, kind: .variable) }
+                        if names.contains(binding) || ancestors.contains(binding) { throw error("validate.shadowedVariable", value.location, symbol: binding, kind: .variable) }
+                        conditionTypes[binding] = infer(value, conditionTypes)
+                        bindings.insert(binding)
+                    }
+                }
+                try validateStatements(yes, bindings, ancestors.union(names), conditionTypes)
                 try validateStatements(no, [], ancestors.union(names), types)
             case .loop(let name, let e, _, let body):
                 try validateExpression(e, visible: names.union(ancestors), types: types)
@@ -127,6 +137,12 @@ extension GesCompiler {
         case .handler(let name, let params):
             var labels: Set<String> = []
             for p in params where p.label != "_" { if !labels.insert(p.label).inserted { throw error("validate.duplicateHandlerParameter", e.location, symbol: name, kind: .handler) } }
+        case .send(_, let message, let tags, let delay):
+            if let delay {
+                let type = infer(delay, types)
+                if !["unknown", "other", "nothing", "quantity:s", "quantity:second"].contains(type) { throw error("validate.invalidTypeConstructor", delay.location, symbol: "Quantity(s)", kind: .type) }
+            }
+            children = (delay.map { [$0] } ?? []) + [message] + tags
         case .unary(_, let a), .member(let a, _), .predicate(let a, _): children = [a]
         case .cast(let a, _), .check(let a, _): children = [a]
         case .binary(_, let a, let b), .random(let a, let b): children = [a, b]
@@ -155,7 +171,13 @@ extension GesCompiler {
         case .map(let entries): children = entries.map(\.1)
         case .selector(let a, let s):
             try validateExpression(a, visible: visible, types: types)
-            if s.operation == "choose" {
+            if s.operation == "fold" || s.operation == "reduce" {
+                if s.operation == "fold" { try validateExpression(s.expressions[0], visible: visible, types: types) }
+                if visible.contains(s.accumulator) { throw error("validate.shadowedVariable", e.location, symbol: s.accumulator, kind: .variable) }
+                if visible.contains(s.name) { throw error("validate.shadowedVariable", e.location, symbol: s.name, kind: .variable) }
+                if s.name == s.accumulator { throw error("validate.duplicateVariable", e.location, symbol: s.name, kind: .variable) }
+                try validateExpression(s.expressions.last!, visible: visible.union([s.name, s.accumulator]), types: types)
+            } else if s.operation == "choose" {
                 for (index, expression) in s.expressions.enumerated() { try boundExpressions([expression], name: index == 0 ? s.name : s.weightName) }
             } else if !s.expressions.isEmpty && ["any", "all", "filter", "count", "sum", "average", "select", "min", "max", "first", "last", "single", "map", "group", "order", "distinct"].contains(s.operation) {
                 try boundExpressions(s.expressions, name: s.name)

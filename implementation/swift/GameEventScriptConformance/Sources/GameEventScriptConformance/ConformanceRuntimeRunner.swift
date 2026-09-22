@@ -52,7 +52,19 @@ public enum ConformanceRuntimeRunner {
     }
 }
 
+final class ConformanceVirtualClock: GameEventScriptClock {
+    var elapsedMicroseconds: Int64 = 0
+
+    func advance(_ amount: String) -> Bool {
+        let delta = Int64(amount)!
+        guard delta <= Int64.max - elapsedMicroseconds else { return false }
+        elapsedMicroseconds += delta
+        return true
+    }
+}
+
 final class RuntimeScenario {
+    let clock = ConformanceVirtualClock()
     let test: ConformanceCase
     let programs: [ConformanceRuntimeProgram]
     let host: GameEventScriptHost
@@ -66,10 +78,10 @@ final class RuntimeScenario {
         self.test = test
         self.programs = programs
         collector = RuntimeCollector(sink: test.metadata["publishSink"]?.stringValue ?? "accept")
-        host = try Self.makeHost(test, observer: collector, publishSink: collector.sink == "absent" ? nil : collector)
+        host = try Self.makeHost(test, observer: collector, publishSink: collector.sink == "absent" ? nil : collector, clock: clock)
     }
 
-    static func makeHost(_ test: ConformanceCase, observer: (any GameEventScriptRuntimeObserver)?, publishSink: (any GameEventScriptPublishSink)?) throws -> GameEventScriptHost {
+    static func makeHost(_ test: ConformanceCase, observer: (any GameEventScriptRuntimeObserver)?, publishSink: (any GameEventScriptPublishSink)?, clock: (any GameEventScriptClock)? = nil) throws -> GameEventScriptHost {
         var limits = GameEventScriptRuntimeLimits()
         let setters: [String: WritableKeyPath<GameEventScriptRuntimeLimits, Int>] = [
             "maxProcessedEventsPerRun": \.maxProcessedEventsPerRun, "maxQueuedMessagesPerRun": \.maxQueuedMessagesPerRun, "maxExecutionSteps": \.maxExecutionSteps, "maxRegisterValues": \.maxRegisterValues, "maxLoopIterations": \.maxLoopIterations,
@@ -95,7 +107,8 @@ final class RuntimeScenario {
             observer: observer,
             extensions: RuntimeFixtures(),
             externalTypes: test.metadata["externalTypeRegistry"]?.stringValue == "absent" ? nil : RuntimeFixtures(mismatch: test.metadata["externalTypeRegistry"]?.stringValue == "mismatch"),
-            publishSink: publishSink
+            publishSink: publishSink,
+            clock: clock
         )
     }
 
@@ -118,21 +131,30 @@ final class RuntimeScenario {
             let input = (expected["input"] ?? .object([])).replacing("name", with: step.receive ?? .string(""))
             let accepted = host.receive(try ConformanceRuntimeValueCodec.message(input))
             var paused = false
+            var waiting = false
             switch host.isReady ? step.pump : "enqueue" {
-            case "completion": paused = try host.runToCompletion().state == .paused
-            case "frame": paused = try host.executeFrame(opcodeBudget: step.budget!).state == .paused
+            case "completion":
+                let result = try host.runToCompletion()
+                paused = result.state == .paused
+                waiting = result.state == .waiting
+            case "frame":
+                let result = try host.executeFrame(opcodeBudget: step.budget!)
+                paused = result.state == .paused
+                waiting = result.state == .waiting
             case "frames":
                 var frames = 0
                 while true {
                     frames += 1
                     if frames > 1_000_000 { throw ConformanceExecutionError.invalidInput("Frame limit exceeded") }
                     let result = try host.executeFrame(opcodeBudget: step.budget!)
+                    waiting = result.state == .waiting
                     if result.state != .paused { break }
                     paused = true
                 }
             default: break
             }
             check(path + "/accepted", expected["accepted"]?.boolValue ?? true, accepted)
+            if let wanted = expected["waiting"]?.boolValue { check(path + "/waiting", wanted, waiting) }
             if let wanted = expected["paused"]?.boolValue { check(path + "/paused", wanted, paused) }
             try compare(expected, path: path)
         }
@@ -141,11 +163,12 @@ final class RuntimeScenario {
     func actions(_ actions: [ConformanceData], path: String) throws {
         for (index, action) in actions.enumerated() {
             let prefix = path + "/" + String(index)
-            let operation = ["loadProgram", "detachProgram", "subscribeHandler", "unsubscribeHandler"].first { action[$0] != nil }!
+            let operation = ["advanceMicroseconds", "loadProgram", "detachProgram", "subscribeHandler", "unsubscribeHandler"].first { action[$0] != nil }!
             let target = action[operation]!.stringValue!
             let result: Bool
             do {
                 switch operation {
+                case "advanceMicroseconds": result = clock.advance(target)
                 case "loadProgram": result = try load(target)
                 case "detachProgram": result = instances[target]?.detach() ?? false
                 case "subscribeHandler": result = try subscribe(target)

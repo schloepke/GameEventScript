@@ -44,6 +44,7 @@ final class GesExpression {
         case call(String, [GesArgument])
         case extensionCall(String, String, [GesArgument])
         case constructor(String, [GesArgument])
+        case send(Bool, GesExpression, [GesExpression], GesExpression?)
         case message(String, [GesArgument])
         case handler(String, [GesParameter])
         case list([GesExpression])
@@ -82,6 +83,7 @@ struct GesSelector {
     var count = 0
     var mode = ""
     var weightName = ""
+    var accumulator = ""
 }
 
 struct GesStatement {
@@ -89,7 +91,7 @@ struct GesStatement {
         case expression(GesExpression)
         case letBinding(String, GesExpression)
         case publish(Bool, GesExpression, [GesExpression])
-        case condition(GesExpression, [GesStatement], [GesStatement])
+        case condition([(String?, GesExpression)], [GesStatement], [GesStatement])
         case loop(String, GesExpression, Bool, [GesStatement])
         case seeded(GesExpression, [GesStatement])
     }

@@ -41,13 +41,18 @@ final class TerminalKeys {
     init(read: @escaping (Int32) -> Int32 = ges_terminal_read) { self.read = read }
 
     static let sequences: [(String, TerminalKey)] = [
+        ("\u{1b}OA", .up), ("\u{1b}OB", .down), ("\u{1b}OC", .right), ("\u{1b}OD", .left),
         ("\u{1b}[A", .up), ("\u{1b}[B", .down), ("\u{1b}[C", .right), ("\u{1b}[D", .left), ("\u{1b}[H", .home), ("\u{1b}[F", .end), ("\u{1b}OH", .home), ("\u{1b}OF", .end), ("\u{1b}[1~", .home), ("\u{1b}[4~", .end), ("\u{1b}[3~", .delete),
         ("\u{1b}[1;5D", .wordLeft), ("\u{1b}[1;5C", .wordRight), ("\u{1b}[27;2;13~", .newline), ("\u{1b}[13;2u", .newline), ("\u{1b}[27;3;13~", .newline), ("\u{1b}[13;3u", .newline), ("\u{1b}\r", .newline), ("\u{1b}\n", .newline),
         ("\u{1b}[200~", .paste("")),
     ]
 
-    func next() throws -> TerminalKey {
-        let first = read(-1)
+    func next(idle: (() throws -> Void)? = nil) throws -> TerminalKey {
+        var first: Int32
+        repeat {
+            first = read(idle == nil ? -1 : 20)
+            if first == -2 { try idle?() }
+        } while first == -2
         if first == -1 { return .eof }
         guard first >= 0 else { throw ToolError.io("Could not read terminal input.") }
         switch first {
@@ -114,9 +119,14 @@ final class TerminalPrompt {
     let highlighting = Highlighting()
     var history: [String] = []
 
-    init(io: ToolIO) { self.io = io }
+    let color: Bool
 
-    func readLine() throws -> String? {
+    init(io: ToolIO, color: Bool = true) {
+        self.io = io
+        self.color = color
+    }
+
+    func readLine(session: RunSession? = nil) throws -> String? {
         guard ges_terminal_begin() != 0 else { throw ToolError.io("Could not enable terminal editing.") }
         defer {
             io.write("\u{1b}[?2004l", toError: true)
@@ -155,7 +165,7 @@ final class TerminalPrompt {
             let columns = max(10, Int(ges_terminal_columns()))
             io.write("\r" + (previousRow > 0 ? "\u{1b}[\(previousRow)A" : "") + "\u{1b}[J", toError: true)
             let visible = TextDisplay.expandTabs(String(text))
-            let colored = highlighting.render(visible).replacingOccurrences(of: "\n", with: "\n ... ")
+            let colored = (color ? highlighting.render(visible) : visible).replacingOccurrences(of: "\n", with: "\n ... ")
             io.write("ges> " + colored, toError: true)
             let end = position(text[...], columns: columns)
             let caret = position(text[..<cursor], columns: columns)
@@ -168,7 +178,17 @@ final class TerminalPrompt {
 
         draw()
         while io.outputError == nil {
-            let key = try keys.next()
+            let key = try keys.next(
+                idle: session.map { session in
+                    {
+                        guard let delay = session.host.nextMessageDelay, delay == 0 else { return }
+                        self.io.write("\r" + (previousRow > 0 ? "\u{1b}[\(previousRow)A" : "") + "\u{1b}[J", toError: true)
+                        previousRow = 0
+                        guard try session.pump() else { throw ToolError.io("Delayed message processing failed.") }
+                        draw()
+                    }
+                }
+            )
             switch key {
             case .text(let value), .paste(let value):
                 // Re-segment after insertion so combining marks/emoji remain one editable grapheme.

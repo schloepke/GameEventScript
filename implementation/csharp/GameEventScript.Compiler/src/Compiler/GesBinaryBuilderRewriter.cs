@@ -1150,6 +1150,7 @@ internal sealed partial class GesBinaryBuilder
                 if (remove[index] ||
                     remove[index + 1] ||
                     context.GetInstruction(index) is not { } instruction ||
+                    instruction.OpCode is GameEventScriptBytecodeOpCode.IteratorNext or GameEventScriptBytecodeOpCode.IteratorCreateOrJump ||
                     context.GetInstruction(index + 1) is not { } move ||
                     move.OpCode != GameEventScriptBytecodeOpCode.Move ||
                     instruction.Destination.Kind != GesOperandKind.Register ||

@@ -26,10 +26,16 @@ extension GesCompiler {
             guard !visiting.contains(key), let value = d.expression else { return "unknown" }
             let declared = Dictionary(uniqueKeysWithValues: d.parameters.compactMap { p in p.type.map { (p.name, $0) } })
             return infer(value, declared, visiting.union([key]))
+        case .send: return "boolean"
         case .unary(let op, let value):
             if ["predicate", "empty", "hasValue", "chance"].contains(op) { return "boolean" }
             if op == "parse" { return "unknown" }
             if op == "-" { return child(value) }
+            if op == "abs" {
+                let input = child(value)
+                if input.hasPrefix("quantity:") { return input }
+                return ["unknown", "other", "vector"].contains(input) ? "other" : "number"
+            }
             if op == "!" { return predicate(child(value)) ? "boolean" : "unknown" }
             return "number"
         case .binary(let op, let a, let b):
@@ -44,7 +50,9 @@ extension GesCompiler {
             let results = branches.map { child($0.0) } + [child(fallback)]
             return results.allSatisfy(predicate) ? results.contains("boolean") ? "boolean" : "nothing" : "unknown"
         case .seeded(_, let value): return child(value)
-        case .intrinsic(let name, let args): return name == "normalize" || name == "cross" && [2, 6].contains(args.count) ? "vector" : "number"
+        case .intrinsic(let name, let args):
+            if ["hypot", "distance", "clamp", "min", "max"].contains(name) { return "other" }
+            return name == "normalize" || name == "cross" && [2, 6].contains(args.count) ? "vector" : "number"
         default: return "other"
         }
     }

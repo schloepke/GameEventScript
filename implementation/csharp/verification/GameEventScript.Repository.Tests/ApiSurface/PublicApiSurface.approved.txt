@@ -288,6 +288,10 @@ enum GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field HasPattern = 215
   enum-field TakePattern = 216
   enum-field ParseLiteral = 217
+  enum-field EmitInstant = 218
+  enum-field EmitAfter = 219
+  enum-field PublishInstant = 220
+  enum-field PublishAfter = 221
 enum GameEventScript.Api.GameEventScriptBytecodePatternKind
   enum-field CountAny = 0
   enum-field CountFace = 1
@@ -471,6 +475,7 @@ enum GameEventScript.Api.GameEventScriptExecutionState
   enum-field Completed = 1
   enum-field RuntimeLimitReached = 2
   enum-field RuntimeError = 3
+  enum-field Waiting = 4
 sealed class GameEventScript.Api.GameEventScriptExtensionFaultException
   ctor GameEventScriptExtensionFaultException(System.String code, System.String message, System.String symbol, System.Exception innerException)
 sealed class GameEventScript.Api.GameEventScriptExtensionReference
@@ -536,9 +541,11 @@ sealed class GameEventScript.Api.GameEventScriptHost
   property System.Boolean IsIdle { get }
   property System.Boolean IsReady { get }
   property System.Int32 PendingMessageCount { get }
+  property System.Int64? NextMessageDelay { get }
 sealed class GameEventScript.Api.GameEventScriptHostBuilder
   ctor GameEventScriptHostBuilder()
   method GameEventScript.Api.GameEventScriptHost Build()
+  method GameEventScript.Api.GameEventScriptHostBuilder WithClock(GameEventScript.Api.IGameEventScriptClock clock)
   method GameEventScript.Api.GameEventScriptHostBuilder WithExternalTypeRegistry(GameEventScript.Api.IGameEventScriptExternalTypeRegistry registry)
   method GameEventScript.Api.GameEventScriptHostBuilder WithPublishSink(GameEventScript.Api.IGameEventScriptPublishSink publishSink)
   method GameEventScript.Api.GameEventScriptHostBuilder WithRandomEntropy(System.ReadOnlySpan<System.Byte> entropy)
@@ -556,6 +563,8 @@ sealed class GameEventScript.Api.GameEventScriptInstance
 enum GameEventScript.Api.GameEventScriptInstructionFlag
   enum-field None = 0
   enum-field NormalizeResultAsPredicate = 32
+  enum-field WithTags = 64
+  enum-field Indirect = 128
 sealed class GameEventScript.Api.GameEventScriptIntegerRange
   ctor GameEventScriptIntegerRange(System.Int64 from, System.Int64 to, System.Int64 step)
   property System.Int64 From { get }
@@ -903,6 +912,8 @@ sealed class GameEventScript.Api.GesExternalTypeConstructorCall
   method System.Void SetNothing()
   property GameEventScript.Runtime.Values.GesValue Result { get }
   property GameEventScript.Runtime.Values.GesValueArguments Arguments { get }
+interface GameEventScript.Api.IGameEventScriptClock
+  property System.Int64 ElapsedMicroseconds { get }
 interface GameEventScript.Api.IGameEventScriptExtensionFunction
   method System.Void Invoke(GameEventScript.Api.GesExtensionCall call)
 interface GameEventScript.Api.IGameEventScriptExtensionRegistry
@@ -1261,6 +1272,7 @@ enum GameEventScript.Conformance.ConformanceNativeActionKind
   enum-field DetachProgram = 1
   enum-field SubscribeHandler = 2
   enum-field UnsubscribeHandler = 3
+  enum-field AdvanceMicroseconds = 4
 sealed class GameEventScript.Conformance.ConformanceNativeEmit
   property System.Boolean ForwardArguments { get }
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Conformance.ConformanceArgument> Arguments { get }
@@ -1512,6 +1524,7 @@ sealed class GameEventScript.Conformance.ConformanceStepExpectation
   property GameEventScript.Conformance.ConformanceObservationExpectation Observations { get }
   property System.Boolean Accepted { get }
   property System.Boolean? Paused { get }
+  property System.Boolean? Waiting { get }
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Conformance.ConformanceMessage> Local { get }
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Conformance.ConformanceMessage> Outbound { get }
 enum GameEventScript.Conformance.ConformanceTestKind

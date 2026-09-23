@@ -81,9 +81,12 @@ enum GesOperand: Int, Sendable {
 }
 
 extension GameEventScriptBytecodeOpCode {
+    var isResultSend: Bool { rawValue >= 0xDA && rawValue <= 0xDD }
+
     var operands: [GesOperand] {
         switch self {
         case .hasPattern, .takePattern: [.targetRegister, .iteratorRegister, .patternKind]
+        case .emitInstant, .emitAfter, .publishInstant, .publishAfter: [.targetRegister]
         case .`nop`: []
         case .`registerLocals`: [.localRegisterDelta]
         case .`jump`: [.jumpTarget]

@@ -570,13 +570,27 @@ internal sealed class GesParser
         return WithRange(new ExpressionStatementNode(expression), expression);
     }
 
-    private PublishStatementNode ParsePublishStatement(PublishStatementKind kind)
+    private StatementNode ParsePublishStatement(PublishStatementKind kind)
     {
         var startToken = Previous;
         SkipNewLines();
+        if (IsWord("after"))
+        {
+            var send = ParseSendExpression(kind, startToken);
+            return WithRange(new ExpressionStatementNode(send), startToken);
+        }
         var messageExpression = ParsePublishMessageExpression();
         var tagExpressions = ParseOptionalTagExpressions();
         return WithRange(new PublishStatementNode(kind, messageExpression, tagExpressions), startToken);
+    }
+
+    private ExpressionNode ParseSendExpression(PublishStatementKind kind, GesToken startToken)
+    {
+        SkipNewLines();
+        ExpressionNode? delay = null;
+        if (MatchWord("after")) delay = ParseExpression();
+        var message = Current.Kind == Message ? ParseMessageLiteralExpressionCore() : ParseUnaryExpression();
+        return WithRange(new SendExpressionNode(kind, message, ParseOptionalTagExpressions(resultSend: true), delay), startToken);
     }
 
     private ExpressionNode ParsePublishMessageExpression()
@@ -589,7 +603,7 @@ internal sealed class GesParser
         return ParseExpression();
     }
 
-    private IReadOnlyList<ExpressionNode> ParseOptionalTagExpressions()
+    private IReadOnlyList<ExpressionNode> ParseOptionalTagExpressions(bool resultSend = false)
     {
         if (!Match(With))
         {
@@ -600,7 +614,7 @@ internal sealed class GesParser
         do
         {
             SkipNewLines();
-            tags.Add(ParseExpression());
+            tags.Add(resultSend ? ParseUnaryExpression() : ParseExpression());
         }
         while (Match(Comma));
 
@@ -710,7 +724,21 @@ internal sealed class GesParser
     private IfStatementNode ParseIfStatement()
     {
         var startToken = Previous;
-        var condition = ParseExpression();
+        var conditions = new List<IfConditionNode>();
+        do
+        {
+            SkipNewLines();
+            if (Is(LeftBrace) && conditions.Count > 0) break;
+            var conditionStart = Current;
+            string? binding = null;
+            if (Match(Let))
+            {
+                binding = ExpectIdentifier();
+                Expect(Be);
+            }
+            conditions.Add(WithRange(new IfConditionNode(ParseExpression(), binding), conditionStart));
+            SkipNewLines();
+        } while (Match(Semicolon));
         var thenBody = ParseStatementBody();
 
         StatementBodyNode? elseBody = null;
@@ -721,7 +749,7 @@ internal sealed class GesParser
             elseBody = ParseStatementBody();
         }
 
-        return WithRange(new IfStatementNode(condition, thenBody, elseBody), startToken);
+        return WithRange(new IfStatementNode(conditions, thenBody, elseBody), startToken);
     }
 
     private ForStatementNode ParseForStatement()
@@ -1849,6 +1877,25 @@ internal sealed class GesParser
             return ParseProjectionSelector("lowest");
         }
 
+        if (Current.Kind == Tag && (Current.Text == ":fold" || Current.Text == ":reduce"))
+        {
+            var reduce = MatchTag(":reduce");
+            if (!reduce) MatchTag(":fold");
+            var accumulator = ExpectIdentifier();
+            ExpressionNode? seed = null;
+            if (!reduce)
+            {
+                Expect(Be);
+                seed = ParseExpression();
+            }
+            Expect(Comma);
+            SkipNewLines();
+            var identifier = ExpectIdentifier();
+            Expect(ProjectionArrow);
+            SkipNewLines();
+            return WithRange(new FoldSelectorNode(accumulator, identifier, seed, ParseExpression()), startToken);
+        }
+
         if (Match(SelectorSelect))
         {
             var identifier = ExpectIdentifier();
@@ -2069,6 +2116,8 @@ internal sealed class GesParser
 
     private ExpressionNode ParsePrimaryExpression()
     {
+        if (Match(Emit)) return ParseSendExpression(PublishStatementKind.Emit, Previous);
+        if (Match(Publish)) return ParseSendExpression(PublishStatementKind.Publish, Previous);
         ThrowIfIllegalToken();
 
         if (IsTypeConstructorStart())

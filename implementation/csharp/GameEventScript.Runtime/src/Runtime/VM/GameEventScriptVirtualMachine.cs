@@ -78,6 +78,12 @@ internal static class GameEventScriptVirtualMachine
                         vmState.ReturnValue(instruction.XRegister);
                         break;
 
+                    case EmitInstant:
+                    case EmitAfter:
+                    case PublishInstant:
+                    case PublishAfter:
+                        vmState.SetBoolean(instruction.DestinationRegister, vmState.Send(instruction, context));
+                        break;
                     case EmitMessage:
                         vmState.GesVmPublishMessage(instruction.MessageDestination, vmState.Program.UInt16IndexLists.Resolve(instruction.ListIndex), false, context);
                         break;

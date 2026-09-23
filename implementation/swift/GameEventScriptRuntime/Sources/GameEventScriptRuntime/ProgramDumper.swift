@@ -153,7 +153,11 @@ private final class GesProgramDump {
             let parts = i.operands
             let operands = parts.enumerated().map { operand(i, $0.element, $0.offset, address) }.filter { !$0.isEmpty }
             if !operands.isEmpty { output += " " + operands.joined(separator: ", ") }
-            if i.normalizeResultAsPredicate { output += " flags=NormalizeResultAsPredicate" }
+            var flags: [String] = []
+            if i.normalizeResultAsPredicate { flags.append("NormalizeResultAsPredicate") }
+            if i.unitAndFlags & 0x40 != 0 { flags.append("WithTags") }
+            if i.unitAndFlags & 0x80 != 0 { flags.append("Indirect") }
+            if !flags.isEmpty { output += " flags=" + flags.joined(separator: ", ") }
             let comments = parts.compactMap { comment(i, $0) }
             if !comments.isEmpty { output += " // " + comments.joined(separator: ", ") }
             output += "\n"
@@ -233,7 +237,7 @@ private final class GesProgramDump {
 
     func binding(_ i: GameEventScriptBytecodeInstruction, _ part: GesOperand) -> Int? {
         let kind: GameEventScriptBinaryBindKind = part == .outboundMessage ? .outboundMessage : part == .recordReference ? .record : i.opcode == .createExternalType ? .externalType : .extensionCall
-        let id = part == .outboundMessage ? i.word0 : i.word1
+        let id = part == .outboundMessage && !i.opcode.isResultSend ? i.word0 : i.word1
         return p.bindings.firstIndex { $0.kind == kind && $0.id == id }
     }
 

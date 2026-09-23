@@ -9,6 +9,9 @@ namespace GameEventScript.Api;
 // ReSharper disable InconsistentNaming
 internal static class GameEventScriptOpcodePrinter
 {
+    internal static bool IsResultSend(GameEventScriptBytecodeOpCode opcode)
+        => opcode is >= GameEventScriptBytecodeOpCode.EmitInstant and <= GameEventScriptBytecodeOpCode.PublishAfter;
+
     internal enum OperandPart
     {
         TargetRegister,
@@ -94,6 +97,24 @@ internal static class GameEventScriptOpcodePrinter
         ExternalReference
     }
 
+    private static ReadOnlySpan<OperandPart> SendOperands(GameEventScriptBytecodeInstruction instruction)
+    {
+        var indirect = (instruction.InstructionFlags & GameEventScriptInstructionFlag.Indirect) != 0;
+        var tags = (instruction.InstructionFlags & GameEventScriptInstructionFlag.WithTags) != 0;
+        var after = instruction.OpCode is GameEventScriptBytecodeOpCode.EmitAfter or GameEventScriptBytecodeOpCode.PublishAfter;
+        return (indirect, tags, after) switch
+        {
+            (false, false, false) => [TargetRegister, OutboundMessage, ArgumentRegisterList],
+            (false, false, true) => [TargetRegister, OutboundMessage, ArgumentRegisterList, AuxBRegister],
+            (false, true, false) => [TargetRegister, OutboundMessage, ArgumentRegisterList, TagRegisterList],
+            (false, true, true) => [TargetRegister, OutboundMessage, ArgumentRegisterList, TagRegisterList, AuxBRegister],
+            (true, false, false) => [TargetRegister, MessageRegister],
+            (true, false, true) => [TargetRegister, MessageRegister, AuxBRegister],
+            (true, true, false) => [TargetRegister, MessageRegister, TagRegisterList],
+            (true, true, true) => [TargetRegister, MessageRegister, TagRegisterList, AuxBRegister],
+        };
+    }
+
     internal static ReadOnlySpan<OperandPart> PrintInstruction(GameEventScriptBytecodeInstruction instruction)
     {
         return instruction.OpCode switch
@@ -111,6 +132,7 @@ internal static class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.ReturnVoid => [],
             GameEventScriptBytecodeOpCode.ReturnValue => [ReturnRegister],
 
+            GameEventScriptBytecodeOpCode.EmitInstant or GameEventScriptBytecodeOpCode.EmitAfter or GameEventScriptBytecodeOpCode.PublishInstant or GameEventScriptBytecodeOpCode.PublishAfter => SendOperands(instruction),
             GameEventScriptBytecodeOpCode.EmitMessage => [OutboundMessage, ArgumentRegisterList],
             GameEventScriptBytecodeOpCode.EmitMessageWithTags => [OutboundMessage, ArgumentRegisterList, TagRegisterList],
             GameEventScriptBytecodeOpCode.EmitMessageValue => [MessageRegister],

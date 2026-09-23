@@ -960,7 +960,11 @@ public enum GameEventScriptInstructionFlag : byte
     /// <summary>
     /// Identifies the normalize result as predicate value.
     /// </summary>
-    NormalizeResultAsPredicate = 0x20
+    NormalizeResultAsPredicate = 0x20,
+    /// <summary>Supplies an additional tag register list to a result-bearing send instruction.</summary>
+    WithTags = 0x40,
+    /// <summary>Reads a Message value rather than an outbound binding in a result-bearing send instruction.</summary>
+    Indirect = 0x80
 }
 
 /// <summary>
@@ -2119,6 +2123,14 @@ public enum GameEventScriptBytecodeOpCode : byte
     /// Recognizes a complete data literal from Text, preserving the original Text on recognition failure.
     /// </summary>
     ParseLiteral = 0xD9,
+    /// <summary>Emits without a delay and writes host acceptance to the destination register.</summary>
+    EmitInstant = 0xDA,
+    /// <summary>Emits after a time quantity and writes host acceptance to the destination register.</summary>
+    EmitAfter = 0xDB,
+    /// <summary>Publishes without a delay and writes host acceptance to the destination register.</summary>
+    PublishInstant = 0xDC,
+    /// <summary>Publishes after a time quantity and writes host acceptance to the destination register.</summary>
+    PublishAfter = 0xDD,
 
     #endregion
 }

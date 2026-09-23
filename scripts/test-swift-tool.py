@@ -46,6 +46,10 @@ assert run(['run', '--interactive', '-q'], input=b'emit ConsoleOut(1)\r\n:quit\r
 assert b'cli.invalidEncoding' in run(['run', '--interactive', '-q'], input=b'\xff\n', expected=1).stderr
 run(['run', 'main.ges', '-q'], env=dict(environment, NO_COLOR='1'))
 
+# Batch execution waits through chained timers and uses the delayed exit code.
+(workspace / 'delayed.ges').write_text("on Main(args) { emit after 0.01s Tick() }\non Tick { emit ConsoleOut('delayed'); emit after 0.01s ErrorCode(7) }")
+assert run(['run', 'delayed.ges', '-q'], expected=7).stdout == b'delayed\n'
+
 # A closed stdout must become failure status 1, never SIGPIPE or a successful script code.
 (workspace / 'output.ges').write_text('on Main(args) { emit ConsoleOut(42); emit ErrorCode(7) }')
 read_fd, write_fd = os.pipe()
@@ -96,6 +100,14 @@ def terminal_test(interrupt=False):
                 os.write(master, b'let x be 21' + newline + b'emit ConsoleOut("RESULT:", x+x)\r')
                 until(b'RESULT:\x1b[34m42\x1b[0m\r\n')
                 until(b'ges> ')
+            # The prompt returns immediately; asynchronous output preserves unfinished input.
+            os.write(master, b'emit after 0.2s ConsoleOut("WAKE")\r')
+            until(b'ges> ')
+            os.write(master, b'emit ConsoleOut("PRESERVED")')
+            until(b'WAKE\r\n')
+            os.write(master, b'\r')
+            until(b'PRESERVED\r\n')
+            until(b'ges> ')
             # A bracketed paste includes newlines without submitting until Enter arrives.
             payload = 'let y be "Grüße 👩‍💻"\nemit ConsoleOut(y)'.encode()
             os.write(master, b'\x1b[200~' + payload + b'\x1b[201~\r')
@@ -106,6 +118,13 @@ def terminal_test(interrupt=False):
             until(b'ges> ')
             os.write(master, b'\x1b[A\r')
             until(b'EDIT:\x1b[34m13\x1b[0m\r\n')
+            until(b'ges> ')
+            # Ghostty can send SS3 cursor keys in application cursor mode.
+            os.write(master, b'\x1bOA\r')
+            until(b'EDIT:\x1b[34m13\x1b[0m\r\n')
+            until(b'ges> ')
+            os.write(master, b'emit ConsoleOut("DRAFT")\x1bOA\x1bOB\r')
+            until(b'DRAFT\r\n')
             until(b'ges> ')
             os.write(master, b'emit ConsoleOut("CANCELLED")\x03')
             until(b'^C\r\n')

@@ -8,12 +8,12 @@ import GameEventScriptRuntime
 extension Tool {
     func runConsole(_ session: RunSession, options: RunOptions) throws -> Bool {
         if io.inputTerminal { io.line("GES event console. Type :help for commands and examples, :load <file> to add a program, or :quit to exit.", toError: true) }
-        let prompt = options.color && io.inputTerminal && io.outputTerminal && io.errorTerminal ? TerminalPrompt(io: io) : nil
+        let prompt = io.inputTerminal && io.outputTerminal && io.errorTerminal ? TerminalPrompt(io: io, color: options.color) : nil
         var success = true
         var lineNumber = 0
         while io.outputError == nil {
             if io.inputTerminal && prompt == nil { io.write("ges> ", toError: true) }
-            guard var line = try prompt?.readLine() ?? (prompt == nil ? io.input() : nil) else { return success }
+            guard var line = try prompt?.readLine(session: session) ?? (prompt == nil ? session.readInput() : nil) else { return success }
             lineNumber += 1
             if lineNumber == 1 && line.hasPrefix("\u{feff}") { line.removeFirst() }
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)

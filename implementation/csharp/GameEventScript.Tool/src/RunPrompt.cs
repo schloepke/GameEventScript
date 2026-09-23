@@ -10,19 +10,27 @@ namespace GameEventScript.Tool;
 internal sealed class RunPrompt : IDisposable
 {
     private readonly bool _captureControlC = Console.TreatControlCAsInput;
-    private readonly Prompt _prompt = new(callbacks: new Callbacks(), console: new ErrorConsole(), configuration: Configuration());
+    private readonly Prompt _prompt;
+    private readonly RunHistory _history;
+
+    internal RunPrompt(RunHistory history)
+    {
+        _history = history;
+        _prompt = new(callbacks: new Callbacks(history), console: new ErrorConsole(), configuration: Configuration());
+    }
 
     private static PromptConfiguration Configuration()
     {
         // Ctrl+N has its own control character; modified Enter may arrive as ordinary Enter.
         var newLine = new KeyPressPatterns(new(ConsoleModifiers.Control, ConsoleKey.N), new(ConsoleModifiers.Shift, ConsoleKey.Enter), new(ConsoleModifiers.Alt, ConsoleKey.Enter));
-        return new PromptConfiguration(keyBindings: new KeyBindings(newLine: newLine), prompt: "ges> ", tabSize: ToolTextDisplay.TabSize);
+        return new PromptConfiguration(keyBindings: new KeyBindings(newLine: newLine, historyPrevious: new KeyPressPatterns(), historyNext: new KeyPressPatterns()), prompt: "ges> ", tabSize: ToolTextDisplay.TabSize);
     }
 
     internal string ReadLine()
     {
         while (true)
         {
+            _history.Begin();
             var response = _prompt.ReadLineAsync().GetAwaiter().GetResult();
             if (response.IsSuccess) return response.Text;
         }
@@ -54,8 +62,19 @@ internal sealed class RunPrompt : IDisposable
         public override void Clear() => Console.Error.Write("\u001b[2J\u001b[H");
     }
 
-    private sealed class Callbacks : PromptCallbacks
+    private sealed class Callbacks(RunHistory history) : PromptCallbacks
     {
+        /// <inheritdoc />
+        protected override Task<(string Text, int Caret)> FormatInput(string text, int caret, KeyPress keyPress, CancellationToken cancellationToken)
+        {
+            if (keyPress.ConsoleKeyInfo is { Modifiers: 0, Key: ConsoleKey.UpArrow or ConsoleKey.DownArrow } key)
+            {
+                text = history.Move(text, key.Key == ConsoleKey.UpArrow);
+                caret = text.Length;
+            }
+            return Task.FromResult((text, caret));
+        }
+
         /// <inheritdoc />
         protected override Task<IReadOnlyCollection<FormatSpan>> HighlightCallbackAsync(string text, CancellationToken cancellationToken)
         {

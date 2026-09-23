@@ -43,6 +43,9 @@ jobs:
       - name: Build CLI tool
         run: dotnet build implementation/csharp/GameEventScript.Tool/src/GameEventScript.Tool.csproj --configuration Release --no-restore
 
+      - name: Verify delayed CLI input and output
+        run: python3 scripts/test-cli-delayed.py dotnet artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll
+
       - name: Run non-performance tests
         run: dotnet test GameEventScript.sln --configuration Release --no-restore --filter "TestCategory!=Performance"
 

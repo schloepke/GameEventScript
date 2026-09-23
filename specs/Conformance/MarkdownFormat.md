@@ -1082,3 +1082,17 @@ steps:
             value: { type: ":Number.int64", value: "12" }
 ```
 ````
+
+## Virtual time actions
+
+Runtime cases use a virtual microsecond clock initially at zero. A host action
+`advanceMicroseconds: "200000"` advances it without pumping; its argument is a
+canonical nonnegative Int64 decimal string. Overflow returns false without
+changing time. The action can appear in stepActions or native-handler actions
+and supports expectResult. Unlike lifecycle actions, its argument is a duration,
+not a program/subscription ID. Subsequent completion/frame steps release due work.
+
+Step expectations may include `waiting: true|false`, asserting whether the last
+pump returned Waiting. An enqueue-only step has no Waiting result. Frames stop
+on Waiting instead of spinning. Tests must assert downstream emissions or trace
+entries to distinguish acceptance from actual delayed delivery.

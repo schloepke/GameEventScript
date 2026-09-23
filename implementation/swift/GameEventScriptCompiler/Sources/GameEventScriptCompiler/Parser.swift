@@ -254,6 +254,10 @@ final class GesParser {
         if current.syntaxText == "emit" || current.syntaxText == "publish" {
             let publish = advance().text == "publish"
             newlines()
+            if current.syntaxText == "after" {
+                let send = try sendExpression(publish, start)
+                return GesStatement(kind: .expression(send), location: send.location)
+            }
             let message: GesExpression
             if current.kind == "message" {
                 let name = advance().text
@@ -270,7 +274,18 @@ final class GesParser {
             try expect("be")
             kind = .letBinding(name, try expression())
         } else if match("if") {
-            let condition = try expression()
+            var conditions: [(String?, GesExpression)] = []
+            repeat {
+                newlines()
+                if current.syntaxText == "{" && !conditions.isEmpty { break }
+                var binding: String?
+                if match("let") {
+                    binding = try identifier()
+                    try expect("be")
+                }
+                conditions.append((binding, try expression()))
+                newlines()
+            } while match(";")
             let then = try body()
             var otherwise: [GesStatement] = []
             if peek(0).syntaxText == "else" {
@@ -278,7 +293,7 @@ final class GesParser {
                 try expect("else")
                 otherwise = try body()
             }
-            kind = .condition(condition, then, otherwise)
+            kind = .condition(conditions, then, otherwise)
         } else if match("for") {
             let name = try identifier()
             newlines()

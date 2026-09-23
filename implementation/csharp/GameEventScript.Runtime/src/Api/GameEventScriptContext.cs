@@ -47,6 +47,7 @@ public sealed class GameEventScriptContext
     public bool IsIdle => _host.IsIdle;
 
     internal GesRuntimeBudget RuntimeBudget { get; }
+    internal bool Send(GameEventScriptMessage message, bool publish, long microseconds) => _host.SendFromContext(message, publish, microseconds);
 
     /// <summary>
     /// Enqueues a message for local host dispatch without invoking the publish sink.

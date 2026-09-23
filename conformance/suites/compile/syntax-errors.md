@@ -39,7 +39,6 @@ sources:
 ```ges
 on Broken {
   let x be
-  emit Done
 }
 ```
 

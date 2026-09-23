@@ -474,6 +474,14 @@ public enum GameEventScriptBytecodeOpCode: UInt8, Sendable, CaseIterable {
     case `takePattern` = 0xD8
     /// Recognizes one complete data literal, preserving original Text on recognition failure.
     case `parseLiteral` = 0xD9
+    /// Emits without delay and stores host acceptance in the destination register.
+    case emitInstant = 0xDA
+    /// Emits after a time quantity and stores host acceptance in the destination register.
+    case emitAfter = 0xDB
+    /// Publishes without delay and stores host acceptance in the destination register.
+    case publishInstant = 0xDC
+    /// Publishes after a time quantity and stores host acceptance in the destination register.
+    case publishAfter = 0xDD
 }
 
 /// Portable value and VM-internal storage identifiers used as bytecode operands.

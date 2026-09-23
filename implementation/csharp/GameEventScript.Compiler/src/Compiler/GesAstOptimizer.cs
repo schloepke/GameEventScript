@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
 using GameEventScript.Runtime.Values;
@@ -83,7 +84,7 @@ internal static class GesAstOptimizer
             },
             IfStatementNode ifStatement => ifStatement with
             {
-                Condition = OptimizeExpression(ifStatement.Condition, knownTypeNames),
+                Conditions = ifStatement.Conditions.Select(condition => condition with { Expression = OptimizeExpression(condition.Expression, knownTypeNames) }).ToArray(),
                 ThenBody = OptimizeBody(ifStatement.ThenBody, knownTypeNames),
                 ElseBody = ifStatement.ElseBody is null ? null : OptimizeBody(ifStatement.ElseBody, knownTypeNames)
             },
@@ -243,6 +244,12 @@ internal static class GesAstOptimizer
     {
         var optimized = expression switch
         {
+            SendExpressionNode send => send with
+            {
+                Message = OptimizeExpression(send.Message, knownTypeNames),
+                Tags = OptimizeExpressions(send.Tags, knownTypeNames),
+                Delay = send.Delay is null ? null : OptimizeExpression(send.Delay, knownTypeNames)
+            },
             UnaryExpressionNode unary => unary with
             {
                 Operand = OptimizeExpression(unary.Operand, knownTypeNames)
@@ -409,6 +416,11 @@ internal static class GesAstOptimizer
             AverageSelectorNode averageSelector => averageSelector with
             {
                 Projection = OptimizeExpression(averageSelector.Projection, knownTypeNames)
+            },
+            FoldSelectorNode fold => fold with
+            {
+                Seed = fold.Seed is null ? null : OptimizeExpression(fold.Seed, knownTypeNames),
+                Projection = OptimizeExpression(fold.Projection, knownTypeNames)
             },
             SelectSelectorNode selectSelector => selectSelector with
             {

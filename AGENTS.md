@@ -128,6 +128,11 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   digits.
 - `constant $name be LITERAL` declares a program-wide compile-time scalar.
   Constants are inlined and do not enter Program segments or runtime state.
+- `if let name be expression; condition; let other be expression` short-circuits left to right;
+  header and then body share one local scope; else has a separate sibling scope.
+  Braced and unbraced bodies have identical scope boundaries; no branch binding escapes.
+- `[:fold acc be seed, item => expression]` and `[:reduce acc, item => expression]`
+  lower to ordinary iterator loops and an internal accumulator, without new opcodes.
 - Local declarations use only `let name be expression`. Conversions belong to
   the expression, for example `let value be input as :Number`.
 - Only variable bindings may use a canonical `_number` suffix. Other names may
@@ -176,6 +181,11 @@ only native handlers or any number of additively loaded Programs.
   message. Script handlers may pause across frames; native handlers are atomic.
 - `Receive` and `Emit` enqueue locally. `Publish` enqueues locally and then calls
   one optional synchronous `IGameEventScriptPublishSink`.
+- Result-bearing sends use EmitInstant/EmitAfter/PublishInstant/PublishAfter with
+  WithTags/Indirect flags; the original eight statement opcodes retain their encoding.
+  Time quantities round upward to whole microseconds against an injectable monotonic clock.
+  Future-only work returns Waiting; portable pumps never sleep. Delayed publications
+  reach the sink only when due. Equal deadlines preserve enqueue order.
 - Subscription snapshots are captured when a message is enqueued. Lifecycle
   changes affect subsequently enqueued messages.
 - Dispatch order is descending priority followed by registration order.
@@ -237,12 +247,12 @@ zero-allocation hot path, release artifact consumption, and byte-identical
 package reproduction. Performance references are regression gates for the
 current C# implementation, not cross-platform benchmark claims.
 
-Verified baseline (Release, 2026-09-21):
+Verified baseline (Release, 2026-09-23):
 
 ```text
-2031/2031 non-performance test executions passed
+2113/2113 non-performance test executions passed
 32/32 allocation test executions passed, including the independent zero-allocation hot path
-1519 shared Markdown Conformance cases in 94 documents
+1597 shared Markdown Conformance cases in 94 documents
 ```
 
 The combined verification command for the first two counts is:
@@ -326,12 +336,12 @@ and complete source-document SHA-256. No expected result is exported from C#.
 `verify-swift-bytecode.py` checks the explicit enum and operand registry against
 C#; ordinary package builds do not generate source.
 
-Verified Swift coverage (Release, 2026-09-21): all 1,519 behavior checks from
+Verified Swift coverage (Release, 2026-09-23): all 1,597 behavior checks from
 94 shared Markdown documents pass with native Swift compilation. The strict
-hardware-independent report passes 1,488 cases and skips 31 optional performance
+hardware-independent report passes 1,566 cases and skips 31 optional performance
 measurements. The last calibrated performance run passed all 31 measured workloads. Independent
-Runtime verification passes 1,258 cases using C#-compiled Programs. Eighteen Conformance/adapter/bootstrap tests, seventeen SwiftBridge tests, and
-twenty-eight CLI tests pass. `scripts/test-swift.sh` requires strict native acceptance and keeps
+Runtime verification passes 1,322 cases using C#-compiled Programs. Nineteen Conformance/adapter/bootstrap tests, seventeen SwiftBridge tests, and
+twenty-nine CLI tests pass. `scripts/test-swift.sh` requires strict native acceptance and keeps
 Runtime interoperability reports separate.
 
 `python3 scripts/test-number-text-roundtrip.py` builds the executable adapters and
@@ -398,7 +408,8 @@ handlers.
 order. All Programs are loaded into one host before execution. By default it
 drains initialization and then sends one `Main(args)` message, with a List of Text
 values from `--arg`, `--args`, or the remainder after `--`. No implicit parsing
-is applied. `--args` stops at the next option; `--` stops option parsing entirely.
+is applied. Batch execution waits for delayed work; interactive input pumps due work
+while preserving the current prompt and unfinished input. `--args` stops at the next option; `--` stops option parsing entirely.
 `--scenario` replaces Main with a separately compiled GES scenario; `--interactive` replaces it with an explicit event console.
 Those modes are mutually exclusive. Missing Main must not implicitly start a REPL.
 
@@ -453,6 +464,11 @@ Swift installation and verification are documented in
 `implementation/swift/GameEventScriptTool/README.md`.
 
 ## Documentation and backlog
+
+Maintain `CHANGELOG.md` under `Unreleased` for user-visible features, fixes and
+breaking changes. At release preparation, move those entries into a versioned,
+dated section and use them as the basis for GitHub release notes. Deferred ideas
+remain in `BACKLOG.md`, not the changelog.
 
 `docs/README.md` is the canonical documentation index. Every document listed as
 a specification there is normative. Normative documents describe only current

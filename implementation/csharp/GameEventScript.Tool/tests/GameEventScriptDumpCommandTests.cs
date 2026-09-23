@@ -74,8 +74,8 @@ public sealed class GameEventScriptDumpCommandTests
     [DataRow("invalid-truncated-payload.gesb", true)]
     [DataRow("invalid-string-index.gesb", false)]
     [DataRow("invalid-string-index.gesb", true)]
-    [DataRow("invalid-reserved-opcode-da.gesb", false)]
-    [DataRow("invalid-reserved-opcode-da.gesb", true)]
+    [DataRow("invalid-reserved-opcode-de.gesb", false)]
+    [DataRow("invalid-reserved-opcode-de.gesb", true)]
     public void InvalidBinaryReportsStructuredContextWithoutWriting(string fixture, bool existingOutput)
     {
         var bytes = File.ReadAllBytes(Path.Combine(TestRepositoryPaths.ConformanceDirectory, "fixtures", "GesbV1", fixture));

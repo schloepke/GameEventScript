@@ -18,6 +18,7 @@ extension GesCompiler {
         }
         let input = try expression(source, r, scope)
         switch s.operation {
+        case "fold", "reduce": try fold(input, s, d, r, scope)
         case "index":
             let index = s.expressions[0]
             if case .literal(let v) = index.kind, let n = v.integerValue, (0...65535).contains(n) {
@@ -54,6 +55,31 @@ extension GesCompiler {
             }
         default: try pipeline(input, [], s, d, r, scope)
         }
+    }
+
+    func fold(_ input: Int, _ s: GesSelector, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
+        let accumulator = r.temporary()
+        let iterator = r.temporary()
+        let item = r.temporary()
+        if s.operation == "fold" { _ = try expression(s.expressions[0], r, scope, destination: accumulator) } else { r.emit(.loadNothing, accumulator) }
+        let invalid = r.emit(.iteratorCreateOrJump, iterator, input)
+        let first = s.operation == "reduce" ? r.emit(.iteratorNext, accumulator, iterator) : nil
+        let loop = r.code.count
+        let end = r.emit(.iteratorNext, item, iterator)
+        let child = GesScope(scope)
+        child.values[s.accumulator] = accumulator
+        child.values[s.name] = item
+        let value = try expression(s.expressions.last!, r, child)
+        if value != accumulator { r.emit(.move, accumulator, value) }
+        r.emit(.jump, 0, 0, loop)
+        r.patch(end, target: r.code.count)
+        if let first { r.patch(first, target: r.code.count) }
+        r.emit(.iteratorClose, 0, iterator)
+        r.emit(.move, d, accumulator)
+        let done = r.emit(.jump)
+        r.patch(invalid, target: r.code.count)
+        r.emit(.loadNothing, d)
+        r.patch(done, target: r.code.count)
     }
 
     func weightedChoose(_ input: Int, _ s: GesSelector, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {

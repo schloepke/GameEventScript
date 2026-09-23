@@ -164,3 +164,15 @@ Use an actual terminal for full interactive terminal editing; Xcode's debug
 console is not a terminal replacement. The package is a build/test definition
 for the executable, not a published library. The CLI exposes no additional
 portable library API.
+
+### Delayed messages
+
+`run` waits for delayed messages and exits only when no work remains. Scripts
+that keep scheduling messages can run until interrupted with Ctrl+C. Runtime
+pumps themselves never sleep; the command-line adapter waits between pumps.
+
+The event console returns its prompt after current runnable work. While waiting
+for input it processes messages as they become due and restores the current
+input and cursor after terminal output. Delayed sends use monotonic time, with
+durations rounded upward to whole microseconds; actual dispatch also depends on
+when the host can pump.

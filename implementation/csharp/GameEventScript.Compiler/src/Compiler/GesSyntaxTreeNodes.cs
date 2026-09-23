@@ -161,10 +161,12 @@ internal enum PublishStatementKind
     Publish
 }
 
+internal sealed record SendExpressionNode(PublishStatementKind Kind, ExpressionNode Message, IReadOnlyList<ExpressionNode> Tags, ExpressionNode? Delay) : ExpressionNode;
 internal sealed record PublishStatementNode(PublishStatementKind Kind, ExpressionNode MessageExpression, IReadOnlyList<ExpressionNode> TagExpressions) : StatementNode;
 internal sealed record LetStatementNode(string Identifier, ExpressionNode Expression) : StatementNode;
 internal sealed record StatementBodyNode(bool IsBlock, IReadOnlyList<StatementNode> Statements) : ScriptNode;
-internal sealed record IfStatementNode(ExpressionNode Condition, StatementBodyNode ThenBody, StatementBodyNode? ElseBody) : StatementNode;
+internal sealed record IfConditionNode(ExpressionNode Expression, string? Binding = null) : ScriptNode;
+internal sealed record IfStatementNode(IReadOnlyList<IfConditionNode> Conditions, StatementBodyNode ThenBody, StatementBodyNode? ElseBody) : StatementNode;
 internal sealed record ForStatementNode(string Identifier, IterationSourceNode Source, StatementBodyNode Body) : StatementNode;
 internal sealed record SeededRandomStatementNode(ExpressionNode SeedExpression, StatementBodyNode Body) : StatementNode;
 internal sealed record ExpressionStatementNode(ExpressionNode Expression) : StatementNode;
@@ -409,6 +411,7 @@ internal sealed record EdgeSelectorNode(string Mode, string? Identifier, Express
 internal sealed record FilterSelectorNode(string Identifier, ExpressionNode Predicate) : CollectionSelectorNode;
 internal sealed record SumSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
 internal sealed record AverageSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
+internal sealed record FoldSelectorNode(string Accumulator, string Identifier, ExpressionNode? Seed, ExpressionNode Projection) : CollectionSelectorNode;
 internal sealed record SelectSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
 internal sealed record MapSelectorNode(string Identifier, ExpressionNode KeyProjection, ExpressionNode? ValueProjection) : CollectionSelectorNode;
 internal sealed record MinSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;

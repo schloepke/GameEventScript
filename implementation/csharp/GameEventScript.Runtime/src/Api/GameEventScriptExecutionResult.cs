@@ -23,7 +23,9 @@ public enum GameEventScriptExecutionState
     /// <summary>
     /// At least one handler produced a runtime diagnostic.
     /// </summary>
-    RuntimeError
+    RuntimeError,
+    /// <summary>Only future work remains. The caller may wait for the next message delay and pump again.</summary>
+    Waiting
 }
 
 /// <summary>

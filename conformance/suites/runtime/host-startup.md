@@ -662,3 +662,356 @@ steps:
       - name: First
       - name: Second
 ```
+
+---
+
+## Test: delayed-init-failure-emit
+
+This case verifies delayed-init-failure-emit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delayed-init-failure-emit
+kind: scriptApi
+level: atomic
+sources:
+  - name: "delayed-init-failure-emit.ges"
+    program: main
+stepActions:
+  step-0001:
+    - advanceMicroseconds: "1000000"
+```
+
+### Source code under test
+
+```ges
+module main
+on initialization { emit after 1s Leak(); let outcome be :test.declaredFault() }
+on Leak { emit Bad() }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Unknown | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+initialization:
+  hostReady: false
+  programStarts: { main: runtimeError }
+  local: [{ name: Leak }]
+  diagnostics:
+    - phase: runtime
+      code: test.declaredFault
+      programName: main
+      handlerName: initialization()
+steps:
+  step-0001:
+    accepted: false
+    waiting: false
+    local: []
+    outbound: []
+```
+
+---
+
+## Test: delayed-init-failure-publish
+
+This case verifies delayed-init-failure-publish.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delayed-init-failure-publish
+kind: scriptApi
+level: atomic
+sources:
+  - name: "delayed-init-failure-publish.ges"
+    program: main
+stepActions:
+  step-0001:
+    - advanceMicroseconds: "1000000"
+```
+
+### Source code under test
+
+```ges
+module main
+on initialization { publish after 1s Leak(); let outcome be :test.declaredFault() }
+on Leak { emit Bad() }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Unknown | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+initialization:
+  hostReady: false
+  programStarts: { main: runtimeError }
+  local: []
+  diagnostics:
+    - phase: runtime
+      code: test.declaredFault
+      programName: main
+      handlerName: initialization()
+steps:
+  step-0001:
+    accepted: false
+    waiting: false
+    local: []
+    outbound: []
+```
+
+---
+
+## Test: delayed-initial-group-success
+
+This case verifies delayed-initial-group-success.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delayed-initial-group-success
+kind: scriptApi
+level: atomic
+sources:
+  - name: "delayed-initial-group-success.ges"
+    program: main
+stepActions:
+  step-0002:
+    - advanceMicroseconds: "1000000"
+```
+
+### Source code under test
+
+```ges
+module main
+on initialization { emit after 1s Ping() }
+on Ping { emit Done() }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Unknown | completion |  |
+| step-0002 | Unknown | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+initialization:
+  hostReady: true
+  programStarts: { main: ready }
+  local: [{ name: Ping }]
+steps:
+  step-0001:
+    accepted: false
+    waiting: true
+    local: []
+  step-0002:
+    accepted: false
+    waiting: false
+    local: [{ name: Done }]
+```
+
+---
+
+## Test: delayed-detach-preserves-capture
+
+This case verifies delayed-detach-preserves-capture.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delayed-detach-preserves-capture
+kind: scriptApi
+level: atomic
+sources:
+  - name: "delayed-detach-preserves-capture.ges"
+    program: main
+stepActions:
+  step-0002:
+    - detachProgram: main
+      expectResult: true
+    - advanceMicroseconds: "1000000"
+```
+
+### Source code under test
+
+```ges
+module main
+on Start { emit after 1s Ping() }
+on Ping { emit Done() }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+| step-0002 | Unknown | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input: { args: [] }
+    waiting: true
+    local: [{ name: Ping }]
+  step-0002:
+    accepted: false
+    waiting: false
+    local: [{ name: Done }]
+```
+
+---
+
+## Test: delayed-snapshot-excludes-later-load
+
+This case verifies delayed deliveries across program registration and initialization.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delayed-snapshot-excludes-later-load
+deferredPrograms: [late]
+sources:
+  - name: base.ges
+    program: base
+  - name: late.ges
+    program: late
+stepActions:
+  load:
+    - loadProgram: late
+  due:
+    - advanceMicroseconds: "1000000"
+```
+
+### Source code under test
+
+```ges
+module base
+on Start { emit after 1s Tick() }
+on Tick { emit Old() }
+```
+
+```ges
+module late
+on Tick { emit New() }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| schedule | Start | completion |  |
+| load | Unknown | completion |  |
+| due | Unknown | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  schedule:
+    waiting: true
+    local: [{ name: Tick }]
+  load:
+    accepted: false
+    waiting: true
+    local: []
+  due:
+    accepted: false
+    waiting: false
+    local: [{ name: Old }]
+```
+
+---
+
+## Test: delayed-failed-recipient-and-staged-output
+
+This case verifies delayed deliveries across program registration and initialization.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delayed-failed-recipient-and-staged-output
+deferredPrograms: [late]
+sources:
+  - name: base.ges
+    program: base
+  - name: late.ges
+    program: late
+stepActions:
+  schedule:
+    - loadProgram: late
+  due:
+    - advanceMicroseconds: "1000000"
+```
+
+### Source code under test
+
+```ges
+module base
+on Start { publish after 1s Tick() }
+on Tick { emit Old() }
+on Leak { emit Bad() }
+```
+
+```ges
+module late
+on initialization { publish after 1s Leak(); let failure be :test.declaredFault() }
+on Tick { emit New() }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| queued | Start | enqueue |  |
+| schedule | Unknown | completion |  |
+| due | Unknown | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  schedule:
+    accepted: false
+    waiting: false
+    local: []
+    outbound: []
+    programStarts: { late: runtimeError }
+    diagnostics:
+      - phase: runtime
+        code: test.declaredFault
+        programName: late
+        handlerName: initialization()
+  due:
+    accepted: false
+    waiting: false
+    local: [{ name: Tick }, { name: Old }]
+    outbound: [{ name: Tick }]
+```

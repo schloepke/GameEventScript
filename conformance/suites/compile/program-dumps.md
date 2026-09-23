@@ -941,3 +941,142 @@ Start:				 // handler Start()
 // -------------------------------------------------------------------------------
 
 ```
+
+---
+
+## Test: Result-bearing and delayed sends use flag-dependent operands
+
+This snapshot verifies all four result-bearing opcodes alongside unchanged statement sends.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: result-send-layouts
+```
+
+### Source code under test
+
+```ges
+module resultlayout
+on Start(message, delay, tags) {
+  let a be emit Ping(value: 1)
+  let b be publish message with tags
+  let c be emit after delay Ping(value: 2) with tags
+  let d be publish after delay message
+  emit Done(a: a, b: b, c: c, d: d)
+}
+```
+
+### Expected Game Event Script Assembler
+
+```gesa
+// -------------------------------------------------------------------------------
+//  Module: resultlayout
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "resultlayout"
+.program-version 0
+
+// -------------------------------------------------------------------------------
+.region "Source: compile.program-dumps.result-send-layouts.ges"
+
+.segment source "compile.program-dumps.result-send-layouts.ges"
+
+module resultlayout
+on Start(message, delay, tags) {
+  let a be emit Ping(value: 1)
+  let b be publish message with tags
+  let c be emit after delay Ping(value: 2) with tags
+  let d be publish after delay message
+  emit Done(a: a, b: b, c: c, d: d)
+}
+
+.region-end "Source: compile.program-dumps.result-send-layouts.ges"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Text"
+
+.segment text
+
+T_message:			.text "message"
+T_delay:			.text "delay"
+T_tags:				.text "tags"
+T_Start:			.text "Start"
+T_value:			.text "value"
+T_Ping:				.text "Ping"
+T_a:				.text "a"
+T_b:				.text "b"
+T_c:				.text "c"
+T_d:				.text "d"
+T_Done:				.text "Done"
+T_resultlayout:		.text "resultlayout"
+
+.region-end "Text"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Lists"
+
+.segment lists
+
+U16_0:				.u16 [0, 1, 2]
+U16_1:				.u16 []
+U16_2:				.u16 [4]
+U16_3:				.u16 [6, 7, 8, 9]
+Args_4:				.registers [r7]
+Tags_5:				.registers [r2]
+Args_6:				.registers [r3, r4, r5, r6]
+
+.region-end "Lists"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Bindings"
+
+.segment bind
+
+Handler_Start:		.bind MessageHandler id=0 name=T_Start args=[T_message, T_delay, T_tags] entry=Start // "Start(message, delay, tags)"
+Outbound_Ping:		.bind OutboundMessage id=0 name=T_Ping args=[T_value] // "Ping(value)"
+Outbound_Done:		.bind OutboundMessage id=1 name=T_Done args=[T_a, T_b, T_c, T_d] // "Done(a, b, c, d)"
+
+.region-end "Bindings"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Code"
+
+.segment code
+
+.source-line "compile.program-dumps.result-send-layouts.ges" 2 | on Start(message, delay, tags) {
+Start:				 // handler Start(message, delay, tags)
+					RegisterLocals #5
+
+.source-line "compile.program-dumps.result-send-layouts.ges" 3 |   let a be emit Ping(value: 1)
+					LoadInteger r7, #1
+					EmitInstant r3(a), Outbound_Ping, Args_4 // "Ping(value)"
+
+.source-line "compile.program-dumps.result-send-layouts.ges" 4 |   let b be publish message with tags
+					PublishInstant r4(b), r0(message), Tags_5 flags=WithTags, Indirect
+
+.source-line "compile.program-dumps.result-send-layouts.ges" 5 |   let c be emit after delay Ping(value: 2) with tags
+					LoadInteger r7, #2
+					EmitAfter r5(c), Outbound_Ping, Args_4, Tags_5, r1(delay) flags=WithTags // "Ping(value)"
+
+.source-line "compile.program-dumps.result-send-layouts.ges" 6 |   let d be publish after delay message
+					PublishAfter r6(d), r0(message), r1(delay) flags=Indirect
+
+.source-line "compile.program-dumps.result-send-layouts.ges" 7 |   emit Done(a: a, b: b, c: c, d: d)
+					EmitMessage Outbound_Done, Args_6 // "Done(a, b, c, d)"
+
+.source-line "compile.program-dumps.result-send-layouts.ges" 2 | on Start(message, delay, tags) {
+					ReturnVoid
+
+.region-end "Code"
+// -------------------------------------------------------------------------------
+
+```

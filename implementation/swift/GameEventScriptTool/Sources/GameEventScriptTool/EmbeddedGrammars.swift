@@ -58,7 +58,8 @@ enum EmbeddedGrammars {
               "patterns": [
                 {
                   "match": "\\b(?:if|else|for|in|from|to|when|otherwise|matching|without|with)\\b",
-                  "name": "keyword.control.gameeventscript"
+                  "name": "keyword.control.gameeventscript",
+                  "comment": "if headers and then bodies share a local scope; else has a sibling scope, with or without braces."
                 },
                 {
                   "match": "\\b(?:as|be|where|nothing|constant)\\b",
@@ -73,7 +74,7 @@ enum EmbeddedGrammars {
                   "name": "keyword.operator.word.gameeventscript"
                 },
                 {
-                  "match": "\\b(?:emit|publish)\\b",
+                  "match": "\\b(?:emit|publish|after)\\b",
                   "name": "keyword.control.emit.gameeventscript"
                 }
               ]
@@ -335,7 +336,7 @@ enum EmbeddedGrammars {
                   }
                 },
                 {
-                  "match": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b",
+                  "match": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|fold|reduce|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b",
                   "name": "support.function.selector.pipeline.gameeventscript"
                 }
               ]

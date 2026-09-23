@@ -21,6 +21,19 @@ final class TerminalTests: XCTestCase {
         }
     }
 
+    func testNormalAndApplicationCursorKeysPreserveFollowingInput() throws {
+        let directions: [(String, TerminalKey)] = [("A", .up), ("B", .down), ("C", .right), ("D", .left)]
+        for prefix in ["\u{1b}[", "\u{1b}O"] {
+            for (suffix, expected) in directions {
+                var bytes = Array((prefix + suffix + "x").utf8).map(Int32.init)
+                let keys = TerminalKeys(read: { _ in bytes.isEmpty ? -1 : bytes.removeFirst() })
+                XCTAssertEqual(try keys.next(), expected)
+                XCTAssertEqual(try keys.next(), .text("x"))
+                XCTAssertEqual(try keys.next(), .eof)
+            }
+        }
+    }
+
     func testPasteIsOneEditableInputAndUnicodeIsPreserved() throws {
         let payload = "emit ConsoleOut(\"Grüße 👩‍💻\")\r\nemit ConsoleOut(12)"
         var bytes = Array(("\u{1b}[200~" + payload + "\u{1b}[201~").utf8).map(Int32.init)

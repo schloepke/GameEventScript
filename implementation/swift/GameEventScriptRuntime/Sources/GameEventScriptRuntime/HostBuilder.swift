@@ -3,6 +3,14 @@
 
 /// Mutable single-caller configuration. Each build creates an independent Host and private random stream.
 public final class GameEventScriptHostBuilder {
+    private var clock: (any GameEventScriptClock)?
+
+    /// Borrows a monotonic microsecond clock for subsequently built hosts. Returns this builder.
+    @discardableResult public func withClock(_ clock: any GameEventScriptClock) -> Self {
+        self.clock = clock
+        return self
+    }
+
     private var seed: Int64?
     private var sequence: [Double] = []
     private var limits = GameEventScriptRuntimeLimits()
@@ -71,5 +79,5 @@ public final class GameEventScriptHostBuilder {
     /// `start()`.
     ///
     /// - Throws: An API error for invalid host configuration.
-    public func build() throws -> GameEventScriptHost { try .init(seed: seed, sequence: sequence, limits: limits, observer: observer, extensions: extensions, externalTypes: externalTypes, publishSink: sink) }
+    public func build() throws -> GameEventScriptHost { try .init(seed: seed, sequence: sequence, limits: limits, observer: observer, extensions: extensions, externalTypes: externalTypes, publishSink: sink, clock: clock) }
 }

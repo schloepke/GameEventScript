@@ -26,12 +26,24 @@ extension GesCompiler {
                     let reg = try expression(message, r, scope)
                     r.emit(publish ? (tags.isEmpty ? .publishMessageValue : .publishMessageValueWithTags) : (tags.isEmpty ? .emitMessageValue : .emitMessageValueWithTags), 0, reg, tags.isEmpty ? 0 : list(tagRegisters))
                 }
-            case .condition(let condition, let yes, let no):
-                let reg = try expression(condition, r, scope)
-                let branch = r.emit(.jumpIfNotTrue, 0, reg)
-                try statements(yes, r, GesScope(scope))
+            case .condition(let conditions, let yes, let no):
+                let child = GesScope(scope)
+                var branches: [Int] = []
+                for (binding, value) in conditions {
+                    var reg = try expression(value, r, child)
+                    if let binding {
+                        child.values[binding] = reg
+                        r.symbols.append((binding, reg, max(0, r.code.count - 1), false))
+                        if case .handler(_, let parameters) = value.kind { child.handlers[binding] = parameters.map(\.label) }
+                        let check = r.temporary()
+                        r.emit(.hasValue, check, reg)
+                        reg = check
+                    }
+                    branches.append(r.emit(.jumpIfNotTrue, 0, reg))
+                }
+                try statements(yes, r, child)
                 let end = r.emit(.jump)
-                r.patch(branch, target: r.code.count)
+                for branch in branches { r.patch(branch, target: r.code.count) }
                 try statements(no, r, GesScope(scope))
                 r.patch(end, target: r.code.count)
             case .loop(let name, let sequence, let range, let body):
@@ -192,6 +204,22 @@ extension GesCompiler {
             let bind = importBinding(.extensionCall, ns + "." + function, arguments.map(\.label))
             r.emit(.callExternal, d, bind, list(regs))
         case .handler(let name, let parameters): r.emit(.loadHandler, d, 0, textList([name] + parameters.map(\.label)))
+        case .send(let publish, let message, let tags, let delay):
+            let time = try delay.map { try expression($0, r, scope) }
+            let tagRegisters = try tags.map { try expression($0, r, scope) }
+            var flags: UInt8 = tags.isEmpty ? 0 : 0x40
+            let x: Int
+            var y = 0
+            if case .message(let name, let arguments) = message.kind {
+                let values = try arguments.map { try expression($0.value, r, scope) }
+                x = importBinding(.outboundMessage, name, arguments.map(\.label))
+                y = list(values)
+            } else {
+                flags |= 0x80
+                x = try expression(message, r, scope)
+            }
+            let op: Op = publish ? (time == nil ? .publishInstant : .publishAfter) : (time == nil ? .emitInstant : .emitAfter)
+            r.emit(op, d, x, y, payload: UInt64(tags.isEmpty ? 0 : list(tagRegisters)) | UInt64(time ?? 0) << 16, flags: flags)
         case .message(let name, let arguments):
             let regs = try arguments.map { try expression($0.value, r, scope) }
             r.emit(.loadMessage, d, textList([name] + arguments.map(\.label)), list(regs))

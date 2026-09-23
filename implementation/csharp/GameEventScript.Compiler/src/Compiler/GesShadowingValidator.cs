@@ -85,9 +85,18 @@ internal static class GesShadowingValidator
                     scope.Declare(let.Identifier);
                     break;
                 case IfStatementNode ifStatement:
-                    VisitExpression(ifStatement.Condition, scope, script, errors);
-                    VisitBody(ifStatement.ThenBody, scope, script, errors);
-                    if (ifStatement.ElseBody is not null) VisitBody(ifStatement.ElseBody, scope, script, errors);
+                    var conditionScope = new Scope(scope);
+                    foreach (var condition in ifStatement.Conditions)
+                    {
+                        VisitExpression(condition.Expression, conditionScope, script, errors);
+                        if (condition.Binding is { } binding)
+                        {
+                            if (conditionScope.ContainsInAncestor(binding)) AddShadowError(script, errors, binding, condition);
+                            conditionScope.Declare(binding);
+                        }
+                    }
+                    VisitStatements(ifStatement.ThenBody.Statements, conditionScope, script, errors);
+                    if (ifStatement.ElseBody is not null) VisitStatements(ifStatement.ElseBody.Statements, new Scope(scope), script, errors);
                     break;
                 case ForStatementNode forStatement:
                     VisitIterationSource(forStatement.Source, scope, script, errors);
@@ -129,6 +138,11 @@ internal static class GesShadowingValidator
                 break;
             case MapLiteralExpressionNode map:
                 for (var index = 0; index < map.Entries.Count; index++) VisitExpression(map.Entries[index].Value, scope, script, errors);
+                break;
+            case SendExpressionNode send:
+                VisitOptional(send.Delay, scope, script, errors);
+                VisitExpression(send.Message, scope, script, errors);
+                VisitExpressions(send.Tags, scope, script, errors);
                 break;
             case UnaryExpressionNode unary:
                 VisitExpression(unary.Operand, scope, script, errors);
@@ -218,6 +232,14 @@ internal static class GesShadowingValidator
             case FilterSelectorNode filter: VisitBoundExpression(filter.Identifier, filter.Predicate, filter, scope, script, errors); break;
             case SumSelectorNode sum: VisitBoundExpression(sum.Identifier, sum.Projection, sum, scope, script, errors); break;
             case AverageSelectorNode average: VisitBoundExpression(average.Identifier, average.Projection, average, scope, script, errors); break;
+            case FoldSelectorNode fold:
+                VisitOptional(fold.Seed, scope, script, errors);
+                var foldScope = CreateBinderScope(scope, fold.Accumulator, fold, script, errors);
+                if (fold.Accumulator == fold.Identifier)
+                    errors.Add(script, "Fold bindings must be distinct", fold.Identifier, GameEventScriptSymbolKind.Variable, GameEventScriptDiagnosticCodes.ValidateDuplicateVariable, fold);
+                else foldScope = CreateBinderScope(foldScope, fold.Identifier, fold, script, errors);
+                VisitExpression(fold.Projection, foldScope, script, errors);
+                break;
             case SelectSelectorNode select: VisitBoundExpression(select.Identifier, select.Projection, select, scope, script, errors); break;
             case MapSelectorNode map:
                 var mapScope = CreateBinderScope(scope, map.Identifier, map, script, errors);

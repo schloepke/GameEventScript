@@ -173,8 +173,15 @@ public static class GameEventScriptProgramValidator
     {
         var encodedUnit = instruction.UnitAndFlags & 0x1F;
         var encodedFlags = instruction.UnitAndFlags & 0xE0;
+        var resultSend = GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode);
+        var allowedFlags = resultSend ? 0xC0 : (byte)GameEventScriptInstructionFlag.NormalizeResultAsPredicate;
+        if (resultSend && (encodedUnit != 0 || instruction.CU != 0 || instruction.DU != 0 ||
+            (encodedFlags & 0x40) == 0 && instruction.AU != 0 ||
+            (encodedFlags & 0x80) != 0 && instruction.YRegister != 0 ||
+            instruction.OpCode is GameEventScriptBytecodeOpCode.EmitInstant or GameEventScriptBytecodeOpCode.PublishInstant && instruction.BU != 0))
+            InvalidOperand("Send instruction contains nonzero reserved operands.", instructionIndex);
         if (!GesProgramEnumValidation.IsDefined((GameEventScriptBytecodeInstructionUnit)encodedUnit) || encodedUnit == (byte)GameEventScriptBytecodeInstructionUnit.UnitInvalid ||
-            (encodedFlags & ~(byte)GameEventScriptInstructionFlag.NormalizeResultAsPredicate) != 0)
+            (encodedFlags & ~allowedFlags) != 0)
             InvalidOperand("Instruction contains an unknown unit or instruction flag.", instructionIndex);
 
         if (instruction.OpCode == GameEventScriptBytecodeOpCode.ParseLiteral &&
@@ -214,9 +221,11 @@ public static class GameEventScriptProgramValidator
                 continue;
             }
             if (operand == GameEventScriptOpcodePrinter.OperandPart.TypeKind && !GesProgramEnumValidation.IsDefined(instruction.TypeKind)) InvalidOperand("Instruction contains an unknown type kind.", instructionIndex);
-            if (operand == GameEventScriptOpcodePrinter.OperandPart.PatternKind && !GesProgramEnumValidation.IsDefined((GameEventScriptBytecodePatternKind)instruction.AU)) InvalidOperand("Instruction contains an unknown pattern kind.", instructionIndex);
-            if (operand == GameEventScriptOpcodePrinter.OperandPart.SeriesKind && !GesProgramEnumValidation.IsDefined((GameEventScriptBytecodeSeriesKind)instruction.TypeOperand)) InvalidOperand("Instruction contains an unknown series kind.", instructionIndex);
-            if (operand == GameEventScriptOpcodePrinter.OperandPart.OutboundMessage && !HasBind(indexedBindingIds, OutboundMessage, instruction.MessageDestination))
+            if (operand == GameEventScriptOpcodePrinter.OperandPart.PatternKind && !GesProgramEnumValidation.IsDefined((GameEventScriptBytecodePatternKind)instruction.AU))
+                InvalidOperand("Instruction contains an unknown pattern kind.", instructionIndex);
+            if (operand == GameEventScriptOpcodePrinter.OperandPart.SeriesKind && !GesProgramEnumValidation.IsDefined((GameEventScriptBytecodeSeriesKind)instruction.TypeOperand))
+                InvalidOperand("Instruction contains an unknown series kind.", instructionIndex);
+            if (operand == GameEventScriptOpcodePrinter.OperandPart.OutboundMessage && !HasBind(indexedBindingIds, OutboundMessage, resultSend ? instruction.BindId : instruction.MessageDestination))
                 InvalidOperand("Instruction references a missing outbound-message binding.", instructionIndex);
             if (operand == GameEventScriptOpcodePrinter.OperandPart.RecordReference && !HasBind(indexedBindingIds, Record, instruction.BindId)) InvalidOperand("Instruction references a missing record binding.", instructionIndex);
             if (operand == GameEventScriptOpcodePrinter.OperandPart.ExternalReference)
@@ -285,6 +294,7 @@ public static class GameEventScriptProgramValidator
     private static ushort ReadListOperand(GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part)
         => part switch
         {
+            GameEventScriptOpcodePrinter.OperandPart.TagRegisterList when GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode) => instruction.AU,
             GameEventScriptOpcodePrinter.OperandPart.MessageShapeList when instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage => instruction.SecondaryListIndex,
             GameEventScriptOpcodePrinter.OperandPart.KeyNameList => instruction.SecondaryListIndex,
             GameEventScriptOpcodePrinter.OperandPart.CaptureRegisterList => instruction.BU,

@@ -149,21 +149,21 @@ The API gate compares all four library packages' declared exported symbols with
 python3 scripts/verify-swift-api.py --update
 ```
 
-Verified on 2026-09-21 with Swift 6.4 on macOS arm64, Release:
+Verified on 2026-09-23 with Swift 6.4 on macOS arm64, Release:
 
-- **1,519/1,519 behavior checks** from the original 94 Markdown documents pass
-  with native Swift compilation, including 158 expected compilation failures,
-  15 bytecode constraints, three metadata cases, and all nine source-based GESA snapshots.
-- The ordinary hardware-independent report passes **1,488 cases** and skips
+- **1,597/1,597 behavior checks** from the original 94 Markdown documents pass
+  with native Swift compilation, including 172 expected compilation failures,
+  15 bytecode constraints, three metadata cases, and all ten source-based GESA snapshots.
+- The ordinary hardware-independent report passes **1,566 cases** and skips
   **31 optional performance measurements**. The last calibrated performance run
   passed all 31 measured workloads.
 - The Swift 6.4/macOS 26/Apple M3 Max profile measures cumulative allocations and
   elapsed time. All sixteen warmed dispatch variants have **zero allocations**.
   See [Performance.md](Performance.md) for scope, references and reproduction.
-- All 52 shared binary cases pass, including canonical runtime-segment comparisons
+- All 60 shared binary cases pass, including canonical runtime-segment comparisons
   against Swift compiler output, malformed inputs, rewrites, fixture execution and four GESA snapshots of identical binary inputs.
-- Independent Runtime verification passes **1,258/1,258** cases with C# inputs.
-- Eighteen Conformance/adapter/bootstrap tests pass, including the Markdown bootstrap
+- Independent Runtime verification passes **1,322/1,322** cases with C# inputs.
+- Nineteen Conformance/adapter/bootstrap tests pass, including the Markdown bootstrap
   fixtures, compiler ownership/options and resource-limit failure paths.
 
 The [CapabilityMatrix](../../conformance/cross-language/CapabilityMatrix.md)

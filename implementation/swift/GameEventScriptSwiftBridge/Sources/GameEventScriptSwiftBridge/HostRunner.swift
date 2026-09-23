@@ -35,6 +35,7 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
     private var subscriptions: [Int64: GameEventScriptSubscription] = [:]
     private var pumping = false
     private var result: GameEventScriptExecutionResult?
+    private var wakeup: DispatchWorkItem?
     private var scheduled = false
     private static let dispatcher = DispatchQueue(label: "GameEventScript shared dispatch pump")
 
@@ -121,6 +122,8 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
             for subscription in subscriptions.values { subscription.unsubscribe() }
             instances.removeAll()
             subscriptions.removeAll()
+            wakeup?.cancel()
+            wakeup = nil
             host = nil
         }
     }
@@ -135,6 +138,8 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
     }
 
     private func schedule() {
+        wakeup?.cancel()
+        wakeup = nil
         guard !scheduled else { return }
         scheduled = true
         Self.dispatcher.async { self.automaticPump() }
@@ -144,7 +149,15 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
         locked {
             defer {
                 scheduled = false
-                if let host, host.isReady && !host.isIdle { schedule() }
+                if let host, host.isReady && !host.isIdle {
+                    if result?.state == .waiting, let delay = host.nextMessageDelay {
+                        let work = DispatchWorkItem { [weak self] in self?.locked { self?.schedule() } }
+                        wakeup = work
+                        Self.dispatcher.asyncAfter(deadline: .now() + .microseconds(Int(min(delay, 86_400_000_000))), execute: work)
+                    } else {
+                        schedule()
+                    }
+                }
             }
             guard let host, host.isReady, !host.isIdle else { return }
             // A valid ready host cannot fail the pump API preconditions under this gate.

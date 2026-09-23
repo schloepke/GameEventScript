@@ -88,6 +88,7 @@ extension GameEventScriptCompilerSupport {
             switch operand {
             case .messageShapeList where instruction.opcode == .loadMessage, .keyNameList: return 1
             case .captureRegisterList: return 4
+            case .tagRegisterList where instruction.opcode.isResultSend: return 3
             case .tagRegisterList where instruction.opcode == .emitMessageWithTags || instruction.opcode == .publishMessageWithTags: return 1
             default: return 2
             }

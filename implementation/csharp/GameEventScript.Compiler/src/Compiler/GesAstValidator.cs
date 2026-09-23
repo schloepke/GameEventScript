@@ -394,15 +394,26 @@ internal static class GesAstValidator
                 return;
 
             case IfStatementNode ifStatement:
-                ValidateExpressionReferences(parsedScriptContext, ifStatement.Condition, callables, typeDefinitions, errors, scope.DeclaredTypes);
-                ValidateStatementBodyReferences(parsedScriptContext, ifStatement.ThenBody, callables, typeDefinitions, errors, scope);
+                var conditionScope = ValidationScope.CreateChild(scope);
+                foreach (var condition in ifStatement.Conditions)
+                {
+                    if (condition.Binding is { } binding)
+                    {
+                        ValidateStatementReferences(parsedScriptContext, new LetStatementNode(binding, condition.Expression) { SourceRange = condition.SourceRange }, callables, typeDefinitions, errors, conditionScope);
+                    }
+                    else ValidateExpressionReferences(parsedScriptContext, condition.Expression, callables, typeDefinitions, errors, conditionScope.DeclaredTypes);
+                }
+                foreach (var nested in ifStatement.ThenBody.Statements)
+                    ValidateStatementReferences(parsedScriptContext, nested, callables, typeDefinitions, errors, conditionScope);
 
                 if (ifStatement.ElseBody is null)
                 {
                     return;
                 }
 
-                ValidateStatementBodyReferences(parsedScriptContext, ifStatement.ElseBody, callables, typeDefinitions, errors, scope);
+                var elseScope = ValidationScope.CreateChild(scope);
+                foreach (var nested in ifStatement.ElseBody.Statements)
+                    ValidateStatementReferences(parsedScriptContext, nested, callables, typeDefinitions, errors, elseScope);
 
                 return;
 
@@ -628,10 +639,14 @@ internal static class GesAstValidator
             case TypeConstructorExpressionNode typeConstructor:
                 return FromDeclaredType(typeConstructor.TypeName);
 
+            case SendExpressionNode:
+                return StaticExpressionInfo.Boolean;
             case UnaryExpressionNode unary:
                 return ClassifyUnary(unary, callables, typeDefinitions, declaredTypes, visitedCallables);
 
             case IntrinsicCallExpressionNode intrinsic:
+                if (intrinsic.Function is GesIntrinsicFunction.Hypot or GesIntrinsicFunction.Distance)
+                    return StaticExpressionInfo.Other(); // These operations can preserve a runtime quantity unit.
                 return intrinsic.Function is GesIntrinsicFunction.Normalize ||
                     intrinsic.Function is GesIntrinsicFunction.Cross && intrinsic.Arguments.Count is 2 or 6
                         ? StaticExpressionInfo.Other("vector")
@@ -799,7 +814,8 @@ internal static class GesAstValidator
         {
             GesUnaryOperator.Parse => StaticExpressionInfo.Unknown,
             GesUnaryOperator.HasValue or GesUnaryOperator.Empty or GesUnaryOperator.Chance => StaticExpressionInfo.Boolean,
-            GesUnaryOperator.Abs or GesUnaryOperator.NaturalLog or GesUnaryOperator.Exp or
+            GesUnaryOperator.Abs => ClassifyAbsolute(unary.Operand, callables, typeDefinitions, declaredTypes, visitedCallables),
+            GesUnaryOperator.NaturalLog or GesUnaryOperator.Exp or
                 GesUnaryOperator.Floor or GesUnaryOperator.Ceil or GesUnaryOperator.Truncate or
                 GesUnaryOperator.RoundHalfEven or GesUnaryOperator.RoundHalfUp or GesUnaryOperator.RoundHalfDown or
                 GesUnaryOperator.DegreeToRadians or GesUnaryOperator.DegreeFromRadians or GesUnaryOperator.WrapDegree or
@@ -811,6 +827,21 @@ internal static class GesAstValidator
                 : StaticExpressionInfo.Unknown,
             _ => StaticExpressionInfo.Other()
         };
+    }
+
+    private static StaticExpressionInfo ClassifyAbsolute(
+        ExpressionNode operand,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
+        IReadOnlyDictionary<string, string> declaredTypes,
+        ISet<string> visitedCallables)
+    {
+        var input = ClassifyExpression(operand, callables, typeDefinitions, declaredTypes, visitedCallables);
+        var type = input.TypeName;
+        if (type is "s" or "second" or "m" or "meter" or "degree" || type?.StartsWith("quantity:", StringComparison.Ordinal) == true)
+            return StaticExpressionInfo.Other(type);
+        // Vector magnitude retains the vector's unit, which the nominal type alone does not expose.
+        return type is null or "vector" ? StaticExpressionInfo.Other() : StaticExpressionInfo.Other("number");
     }
 
     private static StaticExpressionInfo ClassifyBinary(
@@ -1030,6 +1061,17 @@ internal static class GesAstValidator
                     expression = extensionPredicate.Value;
                     continue;
 
+                case SendExpressionNode send:
+                    ValidateExpressionReferences(parsedScriptContext, send.Message, callables, typeDefinitions, errors, declaredTypes);
+                    if (send.Delay is not null)
+                    {
+                        ValidateExpressionReferences(parsedScriptContext, send.Delay, callables, typeDefinitions, errors, declaredTypes);
+                        var delayType = ClassifyExpression(send.Delay, callables, typeDefinitions, declaredTypes, new HashSet<string>(StringComparer.Ordinal));
+                        if (delayType.TypeName is not null && delayType.Kind is not (StaticExpressionKind.Unknown or StaticExpressionKind.Nothing) && delayType.TypeName is not ("s" or "second" or "quantity:s" or "quantity:second"))
+                            errors.Add(parsedScriptContext, "Send delay requires a time quantity", "Quantity(s)", GameEventScriptSymbolKind.Type, GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor, send.Delay);
+                    }
+                    foreach (var tag in send.Tags) ValidateExpressionReferences(parsedScriptContext, tag, callables, typeDefinitions, errors, declaredTypes);
+                    return;
                 case UnaryExpressionNode unary:
                     expression = unary.Operand;
                     continue;
@@ -1286,6 +1328,12 @@ internal static class GesAstValidator
                     $"Selector identifier '{averageSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
                 ValidateExpressionReferences(parsedScriptContext, averageSelector.Projection, callables, typeDefinitions, errors, declaredTypes);
+                return;
+            case FoldSelectorNode fold:
+                ValidateIdentifierCase(parsedScriptContext, fold.Accumulator, fold.Accumulator, GameEventScriptSymbolKind.Variable, "Accumulator must use identifier casing", errors);
+                ValidateIdentifierCase(parsedScriptContext, fold.Identifier, fold.Identifier, GameEventScriptSymbolKind.Variable, "Element must use identifier casing", errors);
+                if (fold.Seed is not null) ValidateExpressionReferences(parsedScriptContext, fold.Seed, callables, typeDefinitions, errors, declaredTypes);
+                ValidateExpressionReferences(parsedScriptContext, fold.Projection, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case SelectSelectorNode selectSelector:
                 ValidateIdentifierCase(

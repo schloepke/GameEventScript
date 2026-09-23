@@ -48,6 +48,8 @@ documents `dotnet ges` and the interactive event console; the
 DLL sets and release verification.
 The [package release guide](guide/distribution/Packages.md) describes the shared
 NuGet/SwiftPM release scope, Xcode consumption and publisher setup.
+The [changelog](../CHANGELOG.md) collects user-visible changes and migration
+guidance for the next release.
 
 The [Swift implementation guide](../implementation/swift/README.md) describes
 the package boundaries, current port coverage, and local verification commands.

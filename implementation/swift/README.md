@@ -151,10 +151,10 @@ python3 scripts/verify-swift-api.py --update
 
 Verified on 2026-09-23 with Swift 6.4 on macOS arm64, Release:
 
-- **1,597/1,597 behavior checks** from the original 94 Markdown documents pass
+- **1,679/1,679 behavior checks** from the original 96 Markdown documents pass
   with native Swift compilation, including 172 expected compilation failures,
-  15 bytecode constraints, three metadata cases, and all ten source-based GESA snapshots.
-- The ordinary hardware-independent report passes **1,566 cases** and skips
+  15 bytecode constraints, three metadata cases, and all eleven source-based GESA snapshots.
+- The ordinary hardware-independent report passes **1,648 cases** and skips
   **31 optional performance measurements**. The last calibrated performance run
   passed all 31 measured workloads.
 - The Swift 6.4/macOS 26/Apple M3 Max profile measures cumulative allocations and
@@ -162,7 +162,7 @@ Verified on 2026-09-23 with Swift 6.4 on macOS arm64, Release:
   See [Performance.md](Performance.md) for scope, references and reproduction.
 - All 60 shared binary cases pass, including canonical runtime-segment comparisons
   against Swift compiler output, malformed inputs, rewrites, fixture execution and four GESA snapshots of identical binary inputs.
-- Independent Runtime verification passes **1,322/1,322** cases with C# inputs.
+- Independent Runtime verification passes **1,363/1,363** cases with C# inputs.
 - Nineteen Conformance/adapter/bootstrap tests pass, including the Markdown bootstrap
   fixtures, compiler ownership/options and resource-limit failure paths.
 
@@ -303,3 +303,13 @@ also uses the active toolchain’s SwiftParser/SwiftSyntax modules to enforce
 declaration spacing without rewriting string contents. Its compiled helper is
 cached under `artifacts/swift/formatting`; it adds no package dependency. Both
 formatting and the helper’s regression controls run in Swift CI.
+
+## Explicit message JSON exchange
+
+The Runtime provides `GameEventScriptMessageJson` for optional product transport.
+Use `Serialize`/`Deserialize` in C#, or `serialize`/`deserialize` in Swift, for
+messages; the corresponding `SerializeValue`/`serializeValue` methods encode a
+standalone value. Decoding reconstructs immutable data and never runs Record or
+native constructors. External objects export as typed Record snapshots. Local
+Publish does not serialize; configure encoding explicitly at your I/O boundary.
+The [message format](../../specs/MessageFormat.md) defines the envelope and errors.

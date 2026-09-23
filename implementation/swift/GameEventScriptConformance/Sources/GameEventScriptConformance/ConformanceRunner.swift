@@ -238,11 +238,14 @@ public enum ConformanceRunner {
         }
         do {
             let signature = try ConformanceRuntimeValueCodec.signature(definition.required("signature"))
-            let message = try ConformanceRuntimeValueCodec.message(definition.required("message"))
+            var message = try definition["json"]?.stringValue.map(GameEventScriptMessageJson.deserialize) ?? ConformanceRuntimeValueCodec.message(definition.required("message"))
+            if definition["roundTripJson"]?.boolValue == true { message = try GameEventScriptMessageJson.deserialize(GameEventScriptMessageJson.serialize(message)) }
+            if expected["json"] != nil { _ = try GameEventScriptMessageJson.serialize(message) }
             if expected["error"] != nil {
                 check(expected, "error", nil, "/message", &differences)
                 return differences
             }
+            if expected["json"] != nil { check(expected, "json", try GameEventScriptMessageJson.serialize(message), "/message", &differences) }
             check(expected, "name", message.name, "/message", &differences)
             check(expected, "signatureId", signature.signatureId, "/message", &differences)
             check(expected, "messageSignatureId", message.signatureId, "/message", &differences)
@@ -269,6 +272,8 @@ public enum ConformanceRunner {
                 let values = try definition.values("createArguments").map { try ConformanceRuntimeValueCodec.decode($0) }
                 check(expected, "createdMessageSignatureId", signature.createMessage(values)?.signatureId ?? "<null>", "/message", &differences)
             }
+        } catch let error as GameEventScriptMessageFormatError {
+            if expected["error"] == nil { differences.append(.init(path: "/message/error", expected: nil, actual: error.code)) } else { check(expected, "error", error.code, "/message", &differences) }
         } catch let error as GameEventScriptMessageError {
             let code: String
             switch error {

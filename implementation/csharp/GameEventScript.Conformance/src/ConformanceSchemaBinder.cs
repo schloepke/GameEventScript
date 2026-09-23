@@ -363,7 +363,7 @@ internal static class ConformanceSchemaBinder
     private static ConformanceMessageApiCase? BindMessageApi(YamlNode? node)
     {
         if (node is null) return null;
-        Closed(node, "signature", "message", "compareSignature", "compareMessage", "compareConformanceMessage", "compareHandler", "createArguments");
+        Closed(node, "signature", "message", "compareSignature", "compareMessage", "compareConformanceMessage", "compareHandler", "createArguments", "json", "roundTripJson");
         var signature = BindSignature(Required(node, "signature"));
         var messageNode = Required(node, "message");
         Closed(messageNode, "name", "tags", "args");
@@ -380,7 +380,7 @@ internal static class ConformanceSchemaBinder
                 new ConformanceMessage(name, tags, Array.Empty<ConformanceArgument>()), true, unordered,
                 BindOptionalSignature(Optional(node, "compareSignature")), BindOptionalMessage(Optional(node, "compareMessage")),
                 BindOptionalMessage(Optional(node, "compareConformanceMessage")),
-                BindOptionalSignature(Optional(node, "compareHandler")), BindValues(Optional(node, "createArguments")));
+                BindOptionalSignature(Optional(node, "compareHandler")), BindValues(Optional(node, "createArguments")), OptionalString(node, "json"), OptionalBoolean(node, "roundTripJson") ?? false);
         }
         var message = new ConformanceMessage(name, tags, args is null ? Array.Empty<ConformanceArgument>() : BindArguments(args));
         return new ConformanceMessageApiCase(
@@ -388,7 +388,7 @@ internal static class ConformanceSchemaBinder
             message, false, Array.Empty<ConformanceValueEntry>(),
             BindOptionalSignature(Optional(node, "compareSignature")), BindOptionalMessage(Optional(node, "compareMessage")),
             BindOptionalMessage(Optional(node, "compareConformanceMessage")),
-            BindOptionalSignature(Optional(node, "compareHandler")), BindValues(Optional(node, "createArguments")));
+            BindOptionalSignature(Optional(node, "compareHandler")), BindValues(Optional(node, "createArguments")), OptionalString(node, "json"), OptionalBoolean(node, "roundTripJson") ?? false);
     }
 
     private static ConformanceMessageSignatureDefinition BindSignature(YamlNode node)
@@ -739,7 +739,7 @@ internal static class ConformanceSchemaBinder
     private static ConformanceMessageApiExpectation BindMessageApiExpectation(YamlNode node)
     {
         Closed(node, "name", "signatureId", "messageSignatureId", "matches", "argumentCount", "signatureEquals", "signatureHashEquals", "messageEquals", "messageHashEquals",
-            "conformanceEquals", "handlerEquals", "handlerHashEquals", "createdMessageSignatureId", "error");
+            "conformanceEquals", "handlerEquals", "handlerHashEquals", "createdMessageSignatureId", "error", "json");
         if (node.Properties.Count == 0) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, "At least one message expectation field is required.", node.Range);
         var error = OptionalString(node, "error");
         if (error is not null && node.Properties.Count != 1) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A messageApi error expectation cannot contain success fields.", node.Range);
@@ -750,7 +750,7 @@ internal static class ConformanceSchemaBinder
             OptionalBoolean(node, "messageEquals"), OptionalBoolean(node, "messageHashEquals"),
             OptionalBoolean(node, "conformanceEquals"),
             OptionalBoolean(node, "handlerEquals"), OptionalBoolean(node, "handlerHashEquals"),
-            OptionalString(node, "createdMessageSignatureId"), error);
+            OptionalString(node, "createdMessageSignatureId"), error, OptionalString(node, "json"));
     }
 
     private static ConformanceValueApiExpectation BindValueApiExpectation(YamlNode node)

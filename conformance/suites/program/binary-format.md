@@ -1776,26 +1776,26 @@ binary:
 
 ---
 
-## Test: invalid-reserved-opcode-de
+## Test: invalid-reserved-opcode-e0
 
-This case checks the ParseLiteral binary contract. Replace byte(s) at ParseLiteral instruction 1, operand offset 0, with de.
+This case checks the ParseLiteral binary contract. Replace byte(s) at ParseLiteral instruction 1, operand offset 0, with e0.
 
 ### Case description
 
 ```yaml
 gesBlock: case
-id: invalid-reserved-opcode-de
+id: invalid-reserved-opcode-e0
 compile:
   debugInfo: []
 binaryFixture:
-  id: gesb-v1-invalid-reserved-opcode-de
-  resourceId: gesb-v1.invalid-reserved-opcode-de
-  relativePath: GesbV1/invalid-reserved-opcode-de.gesb
-  sha256: FCE4B44FDC79C512D8D79996D9FD534429033C19E60EFC26A8997B8E5304A7DB
+  id: gesb-v1-invalid-reserved-opcode-e0
+  resourceId: gesb-v1.invalid-reserved-opcode-e0
+  relativePath: GesbV1/invalid-reserved-opcode-e0.gesb
+  sha256: F42FE74E81A05FC41C625ABA40BD4058C7EF98C1E26B924A4584EBB4F9179900
   compilerId: steph.ges.compiler.csharp
   compilerVersion: 0.1.0
   programVersion: 0
-  derivation: "Replace byte(s) at ParseLiteral instruction 1, operand offset 0, with de."
+  derivation: "Replace byte(s) at ParseLiteral instruction 1, operand offset 0, with e0."
 ```
 
 ### Source code under test
@@ -2410,6 +2410,511 @@ module sendfixture
 on Start(delay) {
   let accepted be emit after delay Ping(value: 7) with #ready
   emit Done(value: accepted)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 3
+```
+
+---
+
+## Test: data-forms
+
+This case checks: Canonical constructor and split compilation.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: data-forms
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-data-forms
+  resourceId: gesb-v1.data-forms
+  relativePath: GesbV1/data-forms.gesb
+  sha256: 816953604C3092DD91CC0C45CC2854E7BCD5AAC48FB9E5BDDC91C9DC7E5609E2
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Canonical constructor and split compilation."
+```
+
+### Source code under test
+
+```ges
+module dataforms
+on Start(value) {
+  let range be :Range(1, 3)
+  let data be :Record("Hit", [amount: value])
+  emit Done(range: range, data: data, parts: value[:split on ","], words: value[:split on whitespace])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: 816953604C3092DD91CC0C45CC2854E7BCD5AAC48FB9E5BDDC91C9DC7E5609E2
+```
+
+---
+
+## Test: data-invalid-flags
+
+This case checks: Replace instruction 3 byte offset 1 with 20.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: data-invalid-flags
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-data-invalid-flags
+  resourceId: gesb-v1.data-invalid-flags
+  relativePath: GesbV1/data-invalid-flags.gesb
+  sha256: 53662267481ED8FC64E3A26C1300EF74E0FD7FABA83323380506D8E1BF34BFED
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 3 byte offset 1 with 20."
+```
+
+### Source code under test
+
+```ges
+module dataforms
+on Start(value) {
+  let range be :Range(1, 3)
+  let data be :Record("Hit", [amount: value])
+  emit Done(range: range, data: data, parts: value[:split on ","], words: value[:split on whitespace])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 3
+```
+
+---
+
+## Test: data-invalid-type-index
+
+This case checks: Replace instruction 3 byte offset 4 with ffff.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: data-invalid-type-index
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-data-invalid-type-index
+  resourceId: gesb-v1.data-invalid-type-index
+  relativePath: GesbV1/data-invalid-type-index.gesb
+  sha256: 3175719197A34F7D65537CE10AD1FE2A7D0BCDE426537344CEC40A680DC83C97
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 3 byte offset 4 with ffff."
+```
+
+### Source code under test
+
+```ges
+module dataforms
+on Start(value) {
+  let range be :Range(1, 3)
+  let data be :Record("Hit", [amount: value])
+  emit Done(range: range, data: data, parts: value[:split on ","], words: value[:split on whitespace])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidStringIndex
+  sectionType: 16
+  entryIndex: 3
+```
+
+---
+
+## Test: data-invalid-label-list
+
+This case checks: Replace instruction 3 byte offset 8 with ffff.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: data-invalid-label-list
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-data-invalid-label-list
+  resourceId: gesb-v1.data-invalid-label-list
+  relativePath: GesbV1/data-invalid-label-list.gesb
+  sha256: 488DF9AB62121B0C04B2973AF0F1AE460AB181A726BA0503B61F6C3E25FDBBC0
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 3 byte offset 8 with ffff."
+```
+
+### Source code under test
+
+```ges
+module dataforms
+on Start(value) {
+  let range be :Range(1, 3)
+  let data be :Record("Hit", [amount: value])
+  emit Done(range: range, data: data, parts: value[:split on ","], words: value[:split on whitespace])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidListIndex
+  sectionType: 16
+  entryIndex: 3
+```
+
+---
+
+## Test: data-invalid-reserved
+
+This case checks: Replace instruction 3 byte offset 10 with 0100.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: data-invalid-reserved
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-data-invalid-reserved
+  resourceId: gesb-v1.data-invalid-reserved
+  relativePath: GesbV1/data-invalid-reserved.gesb
+  sha256: C49C0512C103D8B86AA89405F053E05ABD0FF37AD1029BE3BA8158B8D9E6B22A
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 3 byte offset 10 with 0100."
+```
+
+### Source code under test
+
+```ges
+module dataforms
+on Start(value) {
+  let range be :Range(1, 3)
+  let data be :Record("Hit", [amount: value])
+  emit Done(range: range, data: data, parts: value[:split on ","], words: value[:split on whitespace])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 3
+```
+
+---
+
+## Test: split-invalid-mode
+
+This case checks: Replace instruction 9 byte offset 8 with 0200.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: split-invalid-mode
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-split-invalid-mode
+  resourceId: gesb-v1.split-invalid-mode
+  relativePath: GesbV1/split-invalid-mode.gesb
+  sha256: 035F2C92F45EC8E67E6D1FCDB2EFC680DD35D4E808DB4ACB24BD45C9E20467C9
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 9 byte offset 8 with 0200."
+```
+
+### Source code under test
+
+```ges
+module dataforms
+on Start(value) {
+  let range be :Range(1, 3)
+  let data be :Record("Hit", [amount: value])
+  emit Done(range: range, data: data, parts: value[:split on ","], words: value[:split on whitespace])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 9
+```
+
+---
+
+## Test: split-invalid-register
+
+This case checks: Replace instruction 9 byte offset 4 with ffff.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: split-invalid-register
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-split-invalid-register
+  resourceId: gesb-v1.split-invalid-register
+  relativePath: GesbV1/split-invalid-register.gesb
+  sha256: 3FFED0CB35AD1D12CFB3CF12C291909CC6C8AD0A0C1B2777389DBE16D699660D
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 9 byte offset 4 with ffff."
+```
+
+### Source code under test
+
+```ges
+module dataforms
+on Start(value) {
+  let range be :Range(1, 3)
+  let data be :Record("Hit", [amount: value])
+  emit Done(range: range, data: data, parts: value[:split on ","], words: value[:split on whitespace])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 9
+```
+
+---
+
+## Test: split-invalid-unit
+
+This case checks: Replace instruction 9 byte offset 1 with 01.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: split-invalid-unit
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-split-invalid-unit
+  resourceId: gesb-v1.split-invalid-unit
+  relativePath: GesbV1/split-invalid-unit.gesb
+  sha256: 25E095F90ECB73C5761E7D37F64600C291F6C95127B5E4272B75F9331B6DE18A
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 9 byte offset 1 with 01."
+```
+
+### Source code under test
+
+```ges
+module dataforms
+on Start(value) {
+  let range be :Range(1, 3)
+  let data be :Record("Hit", [amount: value])
+  emit Done(range: range, data: data, parts: value[:split on ","], words: value[:split on whitespace])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 9
+```
+
+---
+
+## Test: split-invalid-whitespace-register
+
+This case checks: Replace instruction 10 byte offset 6 with 0100.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: split-invalid-whitespace-register
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-split-invalid-whitespace-register
+  resourceId: gesb-v1.split-invalid-whitespace-register
+  relativePath: GesbV1/split-invalid-whitespace-register.gesb
+  sha256: 5F8575A17FDF9DFBB1857358C93BD3AC73530D5837C5438979675DD53BC8CF61
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 10 byte offset 6 with 0100."
+```
+
+### Source code under test
+
+```ges
+module dataforms
+on Start(value) {
+  let range be :Range(1, 3)
+  let data be :Record("Hit", [amount: value])
+  emit Done(range: range, data: data, parts: value[:split on ","], words: value[:split on whitespace])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 10
+```
+
+---
+
+## Test: data-unknown-constructor
+
+This case checks: Replace instruction 3 word offset 4 with 0.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: data-unknown-constructor
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-data-unknown-constructor
+  resourceId: gesb-v1.data-unknown-constructor
+  relativePath: GesbV1/data-unknown-constructor.gesb
+  sha256: 17E10C9B87922FB12B4E52C6B30EC2F11352E5A37E669A293F6CE73EFDE059DC
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 3 word offset 4 with 0."
+```
+
+### Source code under test
+
+```ges
+module dataforms
+on Start(value) {
+  let range be :Range(1, 3)
+  let data be :Record("Hit", [amount: value])
+  emit Done(range: range, data: data, parts: value[:split on ","], words: value[:split on whitespace])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 3
+```
+
+---
+
+## Test: data-mismatched-labels
+
+This case checks: Replace instruction 3 word offset 8 with 1.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: data-mismatched-labels
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-data-mismatched-labels
+  resourceId: gesb-v1.data-mismatched-labels
+  relativePath: GesbV1/data-mismatched-labels.gesb
+  sha256: EA3D5C59F199EFBA0D9EC01F74AF28A7F49EFCF29B21BE41D5B2E40A2C94C6D1
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace instruction 3 word offset 8 with 1."
+```
+
+### Source code under test
+
+```ges
+module dataforms
+on Start(value) {
+  let range be :Range(1, 3)
+  let data be :Record("Hit", [amount: value])
+  emit Done(range: range, data: data, parts: value[:split on ","], words: value[:split on whitespace])
 }
 ```
 

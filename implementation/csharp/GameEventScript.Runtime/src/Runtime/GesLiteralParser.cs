@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
+using GameEventScript.Runtime.VM;
+using static GameEventScript.Api.GameEventScriptBindingSegment;
 
 namespace GameEventScript.Runtime;
 
@@ -15,19 +17,21 @@ internal struct GesLiteralParser
     internal const int MaximumItems = 65536;
 
     private readonly string _text;
+    private readonly GesVmState _state;
     private int _position;
     private int _items;
     private string? _limit;
 
-    private GesLiteralParser(string text)
+    private GesLiteralParser(string text, GesVmState state)
     {
         _text = text;
+        _state = state;
         _position = 0;
         _items = 0;
         _limit = null;
     }
 
-    internal static GesValue Parse(in GesValue input, GameEventScriptContext context)
+    internal static GesValue Parse(in GesValue input, GameEventScriptContext context, GesVmState state)
     {
         if (input.Kind != GameEventScriptBytecodeTypeKind.Text) return GesValue.GesNothing();
         if (input.Length > MaximumInputScalars)
@@ -35,7 +39,7 @@ internal struct GesLiteralParser
             context.RuntimeBudget.Exhaust("MaxLiteralInputScalars", "Literal input exceeds the scalar limit.", MaximumInputScalars);
             return GesValue.GesNothing();
         }
-        var parser = new GesLiteralParser(input.TextValue);
+        var parser = new GesLiteralParser(input.TextValue, state);
         var result = parser.ReadValue(0);
         parser.SkipWhitespace();
         if (parser._limit is { } limit)
@@ -60,6 +64,13 @@ internal struct GesLiteralParser
             if (_text.AsSpan(_position).StartsWith(":Vector".AsSpan(), StringComparison.Ordinal)) return ReadSpatial(depth, point: false);
             if (_text.AsSpan(_position).StartsWith(":Point".AsSpan(), StringComparison.Ordinal)) return ReadSpatial(depth, point: true);
         }
+        if (_text[_position] == ':' && !_text.AsSpan(_position).StartsWith(":Dice[".AsSpan(), StringComparison.Ordinal))
+        {
+            var saved = _position;
+            var typed = ReadTyped(depth);
+            if (typed is not null) return typed;
+            _position = saved;
+        }
         var dice = _text[_position] == ':' && _text.AsSpan(_position).StartsWith(":Dice".AsSpan(), StringComparison.Ordinal);
         if (dice)
         {
@@ -78,7 +89,7 @@ internal struct GesLiteralParser
         }
 
         var start = _position;
-        while (_position < _text.Length && !IsWhitespace(_text[_position]) && _text[_position] is not (',' or ']' or '[')) _position++;
+        while (_position < _text.Length && !IsWhitespace(_text[_position]) && _text[_position] is not (',' or ']' or '[' or ')')) _position++;
         if (_position == start) return null;
         var token = _text.AsSpan(start, _position - start);
         if (token.SequenceEqual("true".AsSpan())) return GesValue.GesBoolean(true);
@@ -90,6 +101,147 @@ internal struct GesLiteralParser
             return GameEventScriptTagRules.IsValidTagName(name) ? GesValue.GesTag(name) : null;
         }
         return TextNumberCast.Read(_text, start, _position - start, percentage: token[token.Length - 1] == '%', allowGrouping: false);
+    }
+
+    private GesValue? ReadTyped(int depth)
+    {
+        if (depth >= MaximumDepth) { _limit = "MaxLiteralDepth"; return null; }
+        _position++;
+        var name = ReadName();
+        if (name is null || !GameEventScriptText.IsTypeName(name)) return null;
+        var builtin = name.ToLowerInvariant();
+        // Built-in names are case-sensitive; user Record definitions retain their declared spelling.
+        var isBuiltin = GesDataConstruction.IsType(builtin) && name == char.ToUpperInvariant(builtin[0]) + builtin.Substring(1);
+        GameEventScriptBinaryBindEntry? constructor = null;
+        if (!isBuiltin)
+        {
+            foreach (var binding in _state.Program.Bindings.Entries)
+                if (binding.Kind == GameEventScriptBinaryBindKind.Record && _state.FetchStringByPointer(binding.Name) == name) { constructor = binding; break; }
+            if (constructor is null) return null;
+        }
+        SkipWhitespace();
+        if (!Consume('(')) return null;
+        SkipWhitespace();
+        if (builtin is "handler" or "message" && _position < _text.Length && (char.IsUpper(_text[_position])
+                || _text.AsSpan(_position).StartsWith("initialization".AsSpan(), StringComparison.Ordinal)
+                || _text.AsSpan(_position).StartsWith("undeliverable".AsSpan(), StringComparison.Ordinal)))
+            return ReadMessageForm(depth + 1, builtin == "handler");
+        var labels = new List<string>();
+        var values = new List<GesValue>();
+        if (!Consume(')'))
+        {
+            while (_position < _text.Length)
+            {
+                if (_items++ >= MaximumItems) { _limit = "MaxLiteralItems"; return null; }
+                var saved = _position;
+                var label = ReadKey();
+                SkipWhitespace();
+                if (label is null || !Consume(':')) { label = "_"; _position = saved; }
+                else if (!GameEventScriptText.IsFieldName(label) || labels.Contains(label)) return null;
+                SkipWhitespace();
+                GesValue? value;
+                if (builtin == "series" && values.Count == 0 && _position < _text.Length && _text[_position] is >= 'a' and <= 'z')
+                {
+                    var valueStart = _position;
+                    var kind = ReadName();
+                    if (kind is "fibonacci" or "factorial") value = GesValue.GesText(kind);
+                    else { _position = valueStart; value = ReadValue(depth + 1); }
+                }
+                else value = ReadValue(depth + 1);
+                if (value is not { } item) return null;
+                labels.Add(label);
+                values.Add(item);
+                SkipWhitespace();
+                if (Consume(')')) break;
+                if (!Consume(',')) return null;
+                SkipWhitespace();
+                if (_position == _text.Length || _text[_position] == ')') return null;
+            }
+            if (_position == 0 || _text[_position - 1] != ')') return null;
+        }
+        if (isBuiltin && GesDataConstruction.Positions(builtin, labels) is null) return null;
+        if (constructor is { } record)
+        {
+            var allowed = new List<string>();
+            foreach (var parameter in record.ArgumentNames) allowed.Add(_state.FetchStringByPointer(parameter));
+            var count = 0;
+            foreach (var label in labels)
+            {
+                if (label == "_") count++;
+                else if (!allowed.Contains(label)) return null;
+            }
+            if (count > allowed.FindAll(label => label == "_").Count) return null;
+        }
+        return new GesLiteralNode(builtin, labels.ToArray(), values.ToArray(), constructor).Value;
+    }
+
+    private GesValue? ReadMessageForm(int depth, bool handler)
+    {
+        var name = ReadName();
+        if (name is null) return null;
+        try { _ = GameEventScriptMessageSignature.Create(name, null); }
+        catch (ArgumentException) { return null; }
+        SkipWhitespace();
+        if (!Consume('(')) return null;
+        SkipWhitespace();
+        var labels = new List<string>();
+        var values = new List<GesValue>();
+        if (!Consume(')'))
+        {
+            while (_position < _text.Length)
+            {
+                if (_items++ >= MaximumItems) { _limit = "MaxLiteralItems"; return null; }
+                if (handler)
+                {
+                    var label = ReadName();
+                    if (label is null || label != "_" && (!GameEventScriptText.IsFieldName(label) || labels.Contains(label))) return null;
+                    labels.Add(label);
+                }
+                else
+                {
+                    var saved = _position;
+                    var label = ReadKey();
+                    SkipWhitespace();
+                    if (label is null || !Consume(':')) { label = "_"; _position = saved; }
+                    else if (!GameEventScriptText.IsFieldName(label) || labels.Contains(label)) return null;
+                    var value = ReadValue(depth);
+                    if (value is not { } item) return null;
+                    labels.Add(label);
+                    values.Add(item);
+                }
+                SkipWhitespace();
+                if (Consume(')')) break;
+                if (!Consume(',')) return null;
+                SkipWhitespace();
+                if (_position == _text.Length || _text[_position] == ')') return null;
+            }
+        }
+        SkipWhitespace();
+        GesValue result = handler ? GesValue.GesHandler(GameEventScriptMessageSignature.Create(name, labels)) : new GesLiteralNode("@message:" + name, labels.ToArray(), values.ToArray()).Value;
+        if (!handler && _text.AsSpan(_position).StartsWith("with".AsSpan(), StringComparison.Ordinal))
+        {
+            _position += 4;
+            var tags = new List<GesValue>();
+            do
+            {
+                var value = ReadValue(depth);
+                if (value is not { } tag) return null;
+                tags.Add(tag);
+                SkipWhitespace();
+            } while (Consume(','));
+            var list = new GesValue();
+            list.SetList(tags.ToArray());
+            result = new GesLiteralNode("message", ["_", "tags"], [result, list]).Value;
+        }
+        return Consume(')') ? result : null;
+    }
+
+    private string? ReadName()
+    {
+        SkipWhitespace();
+        var start = _position;
+        while (_position < _text.Length && _text[_position] is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '9' or '_') _position++;
+        return _position == start ? null : _text.Substring(start, _position - start);
     }
 
     private GesValue? ReadSpatial(int depth, bool point)
@@ -217,7 +369,7 @@ internal struct GesLiteralParser
         var isMap = key is not null && Consume(':');
         _position = saved;
         var list = isMap ? null : new List<GesValue>();
-        var map = isMap ? new Dictionary<string, GesValue>(StringComparer.Ordinal) : null;
+        var map = isMap ? new List<KeyValuePair<string, GesValue>>() : null;
         while (_position < _text.Length)
         {
             if (_items >= MaximumItems)
@@ -237,7 +389,7 @@ internal struct GesLiteralParser
                     ? GesValue.GesBoolean(true)
                     : ReadValue(depth);
                 if (value is not { } entry) return null;
-                map![key] = entry;
+                map!.Add(new(key, entry));
             }
             else
             {
@@ -248,7 +400,12 @@ internal struct GesLiteralParser
             SkipWhitespace();
             if (Consume(']'))
             {
-                if (isMap) return CreateMap(map!);
+                if (isMap)
+                {
+                    var keys = new string[map!.Count]; var values = new GesValue[map.Count];
+                    for (var i = 0; i < keys.Length; i++) { keys[i] = map[i].Key; values[i] = map[i].Value; }
+                    return new GesLiteralNode("@map", keys, values).Value;
+                }
                 var result = new GesValue();
                 result.SetList(list!.ToArray());
                 return result;

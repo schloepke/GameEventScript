@@ -920,6 +920,63 @@ For example, `parse input as :Number` means `(parse input) as :Number`.
 Literal recognition, quoted Text decoding, and the exact original-Text fallback
 are owned by [Text semantics](Semantics/Text.md#literal-recognition-from-text).
 
+### Explicit data constructors
+
+Existing literal forms remain valid. Built-in type constructors are additional
+source expressions and their data-only argument forms are recognized by `parse`.
+
+```ges
+let measured be :Number(100.3, "s")
+let percentage be :Percentage(0.1)
+let absent be :Nothing()
+let sequence be :Range(from: 1, to: 5, step: 2)
+let seriesValue be :Series(fibonacci, offset: 3)
+let signature be :Handler(Done(value, _, _))
+let message be :Message(Done(value: 10) with #ready)
+let snapshot be :Record("Hit", [amount: 100])
+```
+
+`:Boolean(value)`, `:Text(value)`, `:Tag(value)`, `:List(value)`,
+`:Map(value)`, `:Dice(value)` and the one-argument numeric/spatial forms retain
+their cast behavior. The single argument may also use the label `value`
+(except spatial forms, which retain their component labels). `:Dice[...]` remains a deterministic result literal.
+`:Number(value, unit)` accepts the unit names/suffixes `none`/empty Text,
+`second`/`s`, `meter`/`m`, and `degree`/`°`; a conflicting existing unit yields
+`nothing`. Percentage construction uses the numeric ratio.
+`:Range(from, to, step)` defaults its step to 1. `:Series(kind, offset)` accepts
+`fibonacci`/`factorial` (bare or quoted), defaulting offset to zero; it must be a
+nonnegative unitless integer. Range and Series remain lazy.
+`:Message(...)` explicitly distinguishes a message instance, including an
+argumentless one, from `:Handler(Name(labels))`. Handler labels describe data,
+not local variable bindings; repeated `_` labels are allowed.
+
+`:Record(type, fields)` requires a PascalCase Text name and a Map. It creates
+immutable typed data directly. It does not require a Record definition or invoke
+its constructor. `:Hit(...)` retains the ordinary declared constructor behavior.
+Arguments in a source expression evaluate in source order. Invalid constructor
+shapes are compile diagnostics; invalid converted values produce `nothing`.
+Runtime recognition and execution from Text are owned by
+[Text semantics](Semantics/Text.md#explicit-data-forms).
+
+### Text splitting
+
+`text[:split on separator]` evaluates a nonempty Text separator and splits by
+exact scalar sequence. Empty pieces become `nothing`; nonempty pieces remain
+Text without trimming or literal recognition. An empty/non-Text separator or a
+non-Text receiver yields `nothing`.
+
+`text[:split on whitespace]` merges runs of the fixed Unicode White_Space set:
+U+0009–000D, 0020, 0085, 00A0, 1680, 2000–200A, 2028, 2029, 202F, 205F, 3000.
+Leading/trailing runs are discarded; empty or whitespace-only Text yields `[]`.
+U+200B and U+FEFF are not separators. `whitespace` is contextual in this selector.
+
+```ges
+let parts be "A,,B,"[:split on ","] // ["A", nothing, "B", nothing]
+let words be " Hello   world "[:split on whitespace] // ["Hello", "world"]
+```
+
+This operation performs no CSV quoting, escaping or tabular interpretation.
+
 ### Type checks
 
 `value is TypeReference` and `value is not TypeReference` test without converting.
@@ -1172,6 +1229,11 @@ let r be from 1 to 10
 let stepped be from 10 to 0 step -2
 let fractional be from 1.5 to 3.5 step 0.5
 ```
+
+All three exactly integral, Int64-representable components normalize to an exact
+integer range, including inputs supplied through a Binary64 API. Otherwise finite
+components use the Binary64 range model. This guarantees that portable numeric
+text reconstructs the same sequence without exposing storage-kind tags.
 
 Both bounds are inclusive. A zero step or a step pointing away from the end
 produces an empty range. Integer boundary handling is overflow-safe, and

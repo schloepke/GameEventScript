@@ -414,7 +414,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>:(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice)(?=$|[^A-Za-z0-9_])</string>
+					<string>:(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice|Record)(?=$|[^A-Za-z0-9_])</string>
 					<key>name</key>
 					<string>support.type.primitive.gameeventscript</string>
 				</dict>
@@ -1341,7 +1341,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>:(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|fold|reduce|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\b</string>
+					<string>:(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\b</string>
 					<key>name</key>
 					<string>support.function.selector.pipeline.gameeventscript</string>
 				</dict>

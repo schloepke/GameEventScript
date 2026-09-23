@@ -1188,3 +1188,19 @@ microseconds without pumping. `Waiting` / `waiting` extends execution results
 when only delayed work remains. The authoritative timing and lifecycle rules
 are in HostRuntime. C# and Swift automatic runners arm wake-ups outside Runtime,
 reschedule when new work arrives and cancel wake-ups when closed/disposed.
+
+## Explicit product JSON codec
+
+C# `GameEventScriptMessageJson.Serialize/Deserialize` and Swift
+`GameEventScriptMessageJson.serialize/deserialize` encode/decode messages;
+`SerializeValue/DeserializeValue` and `serializeValue/deserializeValue` handle
+standalone values. These Runtime-only APIs are synchronous, fileless and Host
+independent. They implement [MessageFormat](MessageFormat.md), including ordered
+arguments, numeric normalization, limits, data-only reconstruction and explicit
+external-to-Record export. Encoding may propagate external getter failures.
+Local message publication never implicitly invokes these APIs.
+
+`ConstructData` (0xDE) and `SplitText` (0xDF) extend the public opcode registry.
+Integral Binary64 range factory inputs normalize to the exact integer range model;
+see [Language](Language.md#range). API names that accept Binary64 describe their
+input representation, not a promise of unnormalized internal storage.

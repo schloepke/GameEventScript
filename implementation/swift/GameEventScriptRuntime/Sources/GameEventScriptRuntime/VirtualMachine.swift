@@ -48,8 +48,8 @@ enum GameEventScriptVirtualMachine {
         case .jumpIfNotTrue: if s.value(x).truth != true { s.ip = y }
         case .jumpIfNothing: if s.value(x).isNothing { s.ip = y }
         case .call: s.call(y, destination: d, predicate: i.normalizeResultAsPredicate)
-        case .returnVoid: s.returnValue()
-        case .returnValue: s.returnValue(s.value(x))
+        case .returnVoid: try s.returnValue()
+        case .returnValue: try s.returnValue(s.value(x))
         case .createSeries: s.set(d, .series(.init(signatureID: i.word2 == 1 ? "fibonacci" : "factorial")))
         case .callExternal: try GesCallbacks.extensionCall(i, s, c)
         case .emitInstant, .emitAfter, .publishInstant, .publishAfter: try send(i, s, c)
@@ -69,7 +69,9 @@ enum GameEventScriptVirtualMachine {
             }
         case .castUnit: s.set(d, GesCasts.unit(s.value(x), i.unit))
         case .castNumeric: s.set(d, GesCasts.number(s.value(x)))
-        case .parseLiteral: s.set(d, GesLiteralParser.parse(s.value(x), context: c))
+        case .constructData: s.set(d, try GesDataConstruction.create(s.text(i.word1), s.list(i.a).map(s.text), s.values(i.word2), c))
+        case .splitText: s.set(d, GesDataConstruction.split(s.value(x), s.value(y), whitespace: i.a == 1))
+        case .parseLiteral: try GesLiteralParser.evaluate(s.value(x), context: c, state: s, destination: d)
         case .checkType: s.set(d, .boolean(GesCasts.check(s.value(x), GameEventScriptBytecodeTypeKind(rawValue: i.word2)!)))
         case .checkCustomType: s.set(d, .boolean(s.value(x).customTypeName == s.text(i.word2)))
         case .checkUnit:

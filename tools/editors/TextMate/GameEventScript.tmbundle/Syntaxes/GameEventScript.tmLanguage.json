@@ -330,7 +330,7 @@
           }
         },
         {
-          "match": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|fold|reduce|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b",
+          "match": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b",
           "name": "support.function.selector.pipeline.gameeventscript"
         }
       ]
@@ -439,7 +439,7 @@
           }
         },
         {
-          "match": ":(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice)(?=$|[^A-Za-z0-9_])",
+          "match": ":(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice|Record)(?=$|[^A-Za-z0-9_])",
           "name": "support.type.primitive.gameeventscript"
         },
         {

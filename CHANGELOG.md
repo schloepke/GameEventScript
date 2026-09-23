@@ -12,6 +12,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Explicit portable type data forms, including Range, built-in Series, Handler,
+  Message and immutable Record snapshots; `parse` reconstructs them and can run
+  known script Record constructors after complete input recognition.
+- Text splitting with `[:split on separator]` and `[:split on whitespace]`.
+- Explicit Runtime-only V1 product JSON codecs in C# and Swift, preserving
+  message argument order and exporting external values as Record snapshots.
 - C# and Swift support conditional bindings with `if let`, including multiple
   bindings and conditions separated by semicolons. Checks short-circuit from
   left to right; successful bindings are available to subsequent checks and
@@ -34,6 +40,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Changed
 
+- Record, Range, Series, Handler and Message text now uses reconstructible data
+  forms. Integral Binary64 range inputs normalize to exact integer ranges.
+- GESB V1 adds ConstructData and SplitText; older readers reject these opcodes.
 - **Source compatibility:** every `if` header and then body share one local
   scope; else has a separate sibling scope. Bindings from either branch never
   escape the `if`, including unbraced bodies. For a binding needed afterward,

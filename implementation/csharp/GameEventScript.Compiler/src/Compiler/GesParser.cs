@@ -1720,6 +1720,17 @@ internal sealed class GesParser
             if (Match(LeftBracket))
             {
                 SkipNewLines();
+                if (MatchTag(":split"))
+                {
+                    Expect(On);
+                    var whitespace = MatchWord("whitespace");
+                    ExpressionNode delimiter = whitespace ? new NothingLiteralExpressionNode() : ParseExpression();
+                    SkipNewLines();
+                    Expect(RightBracket);
+                    var arguments = new ArgumentListNode(whitespace ? [new ArgumentNode(null, expression)] : [new ArgumentNode(null, expression), new ArgumentNode(null, delimiter)]);
+                    expression = WithRange(new TypeConstructorExpressionNode(whitespace ? "__splitWhitespace" : "__split", arguments), expression);
+                    continue;
+                }
                 var selector = ParseCollectionSelector();
                 SkipNewLines();
                 Expect(RightBracket);
@@ -2713,6 +2724,49 @@ internal sealed class GesParser
         var typeName = ParseTypeName();
         SkipNewLines();
         Expect(LeftParen);
+        if (typeName == "handler" && Current.Kind == Message)
+        {
+            var name = Advance().Text;
+            Expect(LeftParen); SkipNewLines();
+            var parameters = new List<ParameterNode>();
+            if (!Is(RightParen))
+            {
+                do
+                {
+                    SkipNewLines();
+                    if (Match(Underscore)) parameters.Add(new ParameterNode(null, "literalArgument" + parameters.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                    else { var label = ExpectIdentifier(); parameters.Add(new ParameterNode(label, label)); }
+                    SkipNewLines();
+                } while (Match(Comma));
+            }
+            var usedNames = new HashSet<string>(System.StringComparer.Ordinal);
+            foreach (var parameter in parameters) if (parameter.ExternalLabel is not null) usedNames.Add(parameter.LocalName);
+            for (var i = 0; i < parameters.Count; i++) if (parameters[i].ExternalLabel is null)
+            {
+                var local = parameters[i].LocalName;
+                while (!usedNames.Add(local)) local += "x";
+                parameters[i] = parameters[i] with { LocalName = local };
+            }
+            Expect(RightParen); SkipNewLines(); Expect(RightParen);
+            return WithRange(new TypeConstructorExpressionNode(typeName, new ArgumentListNode([new ArgumentNode(null, new HandlerLiteralExpressionNode(name, parameters))])), startToken);
+        }
+        if (typeName == "message" && Current.Kind == Message)
+        {
+            var message = ParseMessageLiteralExpressionCore();
+            var tags = ParseOptionalTagExpressions();
+            Expect(RightParen);
+            var items = new List<ArgumentNode> { new(null, message) };
+            if (tags.Count > 0) items.Add(new("tags", new ListLiteralExpressionNode(tags)));
+            return WithRange(new TypeConstructorExpressionNode(typeName, new ArgumentListNode(items)), startToken);
+        }
+        if (typeName == "series" && (Current.Kind is Fibonacci or Factorial))
+        {
+            var series = Advance();
+            var items = new List<ArgumentNode> { new(null, new TextLiteralExpressionNode(series.Text)) };
+            if (Match(Comma)) items.AddRange(ParseArgumentListAfterLeftParen().Arguments);
+            else Expect(RightParen);
+            return WithRange(new TypeConstructorExpressionNode(typeName, new ArgumentListNode(items)), startToken);
+        }
         var arguments = ParseArgumentListAfterLeftParen();
         return WithRange(new TypeConstructorExpressionNode(typeName, arguments), startToken);
     }
@@ -3053,6 +3107,7 @@ internal sealed class GesParser
 
         return typeName switch
         {
+            "Record" => "record",
             "Nothing" => "nothing",
             "Boolean" => "boolean",
             "Number" => "number",

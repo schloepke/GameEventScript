@@ -1080,3 +1080,117 @@ Start:				 // handler Start(message, delay, tags)
 // -------------------------------------------------------------------------------
 
 ```
+
+---
+
+## Test: explicit-data-opcodes
+
+This case checks: Pins constructor argument labels and both split modes in portable GESA.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: explicit-data-opcodes
+compile:
+  debugInfo: []
+```
+
+### Source code under test
+
+```ges
+module dataforms
+on Start(value) {
+  let range be :Range(1, 3)
+  let data be :Record("Hit", [amount: value])
+  emit Done(range: range, data: data, parts: value[:split on ","], words: value[:split on whitespace])
+}
+```
+
+### Expected Game Event Script Assembler
+
+```gesa
+// -------------------------------------------------------------------------------
+//  Module: dataforms
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "dataforms"
+.program-version 0
+
+// -------------------------------------------------------------------------------
+.region "Text"
+
+.segment text
+
+T_value:			.text "value"
+T_Start:			.text "Start"
+T_range:			.text "range"
+T_data:				.text "data"
+T_parts:			.text "parts"
+T_words:			.text "words"
+T_Done:				.text "Done"
+T_7:				.text "_"
+T_Hit:				.text "Hit"
+T_amount:			.text "amount"
+T_record:			.text "record"
+T_11:				.text ","
+T_dataforms:		.text "dataforms"
+
+.region-end "Text"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Lists"
+
+.segment lists
+
+U16_0:				.u16 [0]
+U16_1:				.u16 []
+U16_2:				.u16 [2, 3, 4, 5]
+Args_3:				.registers [r3, r4]
+Names_4:			.texts [T_7, T_7] // "_", "_"
+Keys_5:				.texts [T_amount] // "amount"
+Args_6:				.registers [r1, r2, r4, r3]
+
+.region-end "Lists"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Bindings"
+
+.segment bind
+
+Handler_Start:		.bind MessageHandler id=0 name=T_Start args=[T_value] entry=Start // "Start(value)"
+Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_range, T_data, T_parts, T_words] // "Done(range, data, parts, words)"
+
+.region-end "Bindings"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Code"
+
+.segment code
+
+// compiler-generated
+Start:				 // handler Start(value)
+					RegisterLocals #4
+					LoadInteger r3, #1
+					LoadInteger r4, #3
+					ConstructData r1, T_range, Args_3, Names_4 // "range", "_", "_"
+					LoadText r3, T_Hit // "Hit"
+					StageRegister r0
+					CreateMap r4, Keys_5 // "amount"
+					ConstructData r2, T_record, Args_3, Names_4 // "record", "_", "_"
+					LoadText r3, T_11 // ","
+					SplitText r4, r0, r3, #0
+					SplitText r3, r0, r0, #1
+					EmitMessage Outbound_Done, Args_6 // "Done(range, data, parts, words)"
+					ReturnVoid
+
+.region-end "Code"
+// -------------------------------------------------------------------------------
+
+```

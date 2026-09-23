@@ -6,6 +6,9 @@
     /// Recognizes a source numeric literal using the runtime's numeric rules; returns nil for invalid input.
     public static func number(_ text: String, percentage: Bool = false) -> GesValue? { TextNumberCast.read(text, percentage: percentage, allowGrouping: false) }
 
+    /// Validates labels for an explicit built-in data constructor without evaluating its arguments.
+    public static func dataArguments(_ type: String, _ labels: [String]) -> Bool { GesDataConstruction.positions(type, labels) != nil }
+
     /// Applies the source Number cast, including text parsing and invalid-input-to-Nothing conversion.
     public static func castNumber(_ value: GesValue) -> GesValue { GesCasts.number(value) }
 
@@ -65,7 +68,8 @@
 extension GameEventScriptCompilerSupport {
     /// Logical operand positions: words 0...2, then payload words 3...6.
     public static func registerSlots(_ instruction: GameEventScriptBytecodeInstruction) -> [Int] {
-        instruction.operands.enumerated().compactMap { position, operand in
+        if instruction.opcode == .splitText && instruction.a == 1 { return [0, 1] }
+        return instruction.operands.enumerated().compactMap { position, operand in
             guard operand.isRegister else { return nil }
             switch operand {
             case .targetRegister: return 0
@@ -87,6 +91,7 @@ extension GameEventScriptCompilerSupport {
             guard operand.isList && operand.isTextList == text else { return nil }
             switch operand {
             case .messageShapeList where instruction.opcode == .loadMessage, .keyNameList: return 1
+            case .argumentNameList where instruction.opcode == .constructData: return 3
             case .captureRegisterList: return 4
             case .tagRegisterList where instruction.opcode.isResultSend: return 3
             case .tagRegisterList where instruction.opcode == .emitMessageWithTags || instruction.opcode == .publishMessageWithTags: return 1

@@ -2151,6 +2151,26 @@ internal static class GesCompiler
 
         private void EmitTypeConstructorInto(TypeConstructorExpressionNode constructor, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
+            if (constructor.TypeName is "__split" or "__splitWhitespace")
+            {
+                var inputs = EmitArgumentExpressionRegisters(constructor.Arguments, context, state);
+                _builder.AddOpcode(
+                    GameEventScriptBytecodeOpCode.SplitText,
+                    dst: GesOperand.Register(destination),
+                    x: GesOperand.Register(inputs[0]),
+                    y: inputs.Length > 1 ? GesOperand.Register(inputs[1]) : default,
+                    a: GesOperand.U16((ushort)(inputs.Length == 1 ? 1 : 0))
+                );
+                return;
+            }
+            if (constructor.TypeName == "record" || constructor.TypeName is "number" or "range" or "series" or "message" or "nothing" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "handler" &&
+                (constructor.Arguments.Count != 1 || constructor.Arguments[0].Label is not null || constructor.TypeName == "series"))
+            {
+                var inputs = EmitArgumentExpressionRegisters(constructor.Arguments, context, state);
+                _builder.AddOpcode(GameEventScriptBytecodeOpCode.ConstructData, dst: GesOperand.Register(destination), x: GesOperand.Text(constructor.TypeName),
+                    y: GesOperand.RegisterList(inputs), a: GesOperand.TextList(ReadArgumentNames(constructor.Arguments)));
+                return;
+            }
             if (constructor.TypeName is "vector" or "point" && EmitSpatialConstructor(constructor, destination, context, state)) return;
 
             if (constructor.Arguments.Count == 1 && constructor.Arguments[0].Label is null && IsBuiltInCastType(constructor.TypeName))

@@ -18,6 +18,7 @@ Every contract area has exactly one owning document. Other documents link to tha
 | --- | --- | --- | --- |
 | Language | [Language](../specs/Language.md) | Lexical grammar, syntax, static semantics, and language constructs | Normative |
 | Public API | [Public API](../specs/PublicApi.md) | Language-neutral API responsibilities and per-language mappings | Normative |
+| Product JSON | [Message format](../specs/MessageFormat.md) | Optional versioned message/value transport and external snapshots | Normative |
 | Host runtime | [Host runtime](../specs/HostRuntime.md) | Host lifecycle, dispatch, execution, context, and outbound behavior | Normative |
 | Program model | [Program model](../specs/ProgramModel.md) | Immutable transport data, ownership, validation, and linking boundary | Normative |
 | Bytecode | [Bytecode](../specs/Bytecode.md) | Instruction model, opcode semantics, operands, and control flow | Normative |
@@ -70,6 +71,8 @@ side. Create or refresh both tables with
 
 The [numeric text roundtrip gate](../conformance/cross-language/NumberTextRoundtrip.md)
 checks exact Number, Quantity and Percentage text exchange between C# and Swift.
+The [product JSON roundtrip gate](../conformance/cross-language/MessageJsonRoundtrip.md)
+checks actual ordered message/value interchange against independent Markdown oracles.
 
 ## Documentation rules
 

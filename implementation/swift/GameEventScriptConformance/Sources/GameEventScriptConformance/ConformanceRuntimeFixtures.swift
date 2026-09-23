@@ -16,7 +16,7 @@ struct RuntimeFixtures: GameEventScriptExtensionRegistry, GameEventScriptExterna
         let unlabeled = labels.allSatisfy { $0 == "_" }
         let allowed: Bool
         switch name {
-        case "math.floor", "test.vectorSum", "test.echo", "test.notify": allowed = labels.count == 1 && unlabeled
+        case "math.floor", "test.vectorSum", "test.echo", "test.notify", "test.toJson", "test.fromJson": allowed = labels.count == 1 && unlabeled
         case "math.max": allowed = !labels.isEmpty && unlabeled
         case "nav.shortestTurn": allowed = labels == ["from", "to"]
         case "nav.isNorth": allowed = labels.count == 1
@@ -86,6 +86,12 @@ private struct FixtureFunction: GameEventScriptExtensionFunction {
             let angle = (args[0].asNumber.truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360)
             call.setBoolean(angle <= 45 || angle >= 315)
         case "test.vectorSum": if args[0].kind == .vector { call.setFloat(args[0].x + args[0].y + args[0].z, unit: args[0].unit) }
+        case "test.toJson":
+            do { call.setText(try GameEventScriptMessageJson.serializeValue(args[0])) } catch let error as GameEventScriptMessageFormatError { throw try GameEventScriptExtensionFault(code: error.code, message: error.code) }
+        case "test.fromJson":
+            if args[0].kind == .text {
+                do { call.setValue(try GameEventScriptMessageJson.deserializeValue(args[0].textValue!)) } catch let error as GameEventScriptMessageFormatError { throw try GameEventScriptExtensionFault(code: error.code, message: error.code) }
+            }
         case "test.echo": call.setValue(args[0])
         case "test.notify":
             try call.context.emit("Effect", arguments: [.init(name: "value", value: args[0])])

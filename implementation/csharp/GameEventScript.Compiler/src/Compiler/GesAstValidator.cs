@@ -1612,6 +1612,15 @@ internal static class GesAstValidator
             ValidateExpressionReferences(parsedScriptContext, argument.Expression, callables, typeDefinitions, errors, declaredTypes);
         }
 
+        if (constructor.TypeName is "__split" or "__splitWhitespace") return;
+        if (constructor.TypeName is "record" or "range" or "series" or "number" or "message" or "nothing" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "handler")
+        {
+            var labels = new string[constructor.Arguments.Count];
+            for (var i = 0; i < labels.Length; i++) labels[i] = constructor.Arguments[i].Name;
+            if (GesDataConstruction.Positions(constructor.TypeName, labels) is null)
+                AddTypeConstructorError(parsedScriptContext, constructor.TypeName, "Invalid data constructor arguments", errors);
+            return;
+        }
         if (IsBuiltinConstructorType(constructor.TypeName))
         {
             ValidateBuiltinTypeConstructor(parsedScriptContext, constructor, errors);

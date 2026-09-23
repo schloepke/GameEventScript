@@ -6,6 +6,7 @@ final class GesVmState {
     struct Frame {
         var ip = 0, start = 0, length = 0, destination = 0
         var predicate = false
+        var literal: GesLiteralEvaluation?
     }
 
     enum Slot {
@@ -88,13 +89,13 @@ final class GesVmState {
         }
     }
 
-    func call(_ address: Int, destination: Int, predicate: Bool = false) {
+    func call(_ address: Int, destination: Int, predicate: Bool = false, literal: GesLiteralEvaluation? = nil) {
         if depth >= frames.count {
             fail("runtime.callStackOverflow")
             return
         }
         if !ensure(frameStart + frameLength + stageLength) { return }
-        frames[depth] = .init(ip: ip, start: frameStart, length: frameLength, destination: destination, predicate: predicate)
+        frames[depth] = .init(ip: ip, start: frameStart, length: frameLength, destination: destination, predicate: predicate, literal: literal)
         depth += 1
         ip = address
         frameStart += frameLength
@@ -102,7 +103,7 @@ final class GesVmState {
         stageLength = 0
     }
 
-    func returnValue(_ value: GesValue = .nothing) {
+    func returnValue(_ value: GesValue = .nothing) throws {
         clear(frameStart, frameLength + stageLength)
         stageLength = 0
         if depth == 0 {
@@ -112,13 +113,16 @@ final class GesVmState {
         }
         depth -= 1
         let frame = frames[depth]
+        frames[depth] = .init()
         ip = frame.ip
         frameStart = frame.start
         frameLength = frame.length
         set(frame.destination, frame.predicate && value.kind != .boolean ? .nothing : value)
+        try frame.literal?.resume(value)
     }
 
     func reset() {
+        for index in 0..<depth { frames[index] = .init() }
         for index in registers.indices { registers[index] = .value(.nothing) }
         linked = nil
         handlerName = nil

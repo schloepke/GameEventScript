@@ -126,7 +126,6 @@ internal sealed partial class GesBinaryBuilder
             return opcode switch
             {
                 OpCode.CastCustom or
-                    OpCode.ParseLiteral or
                     OpCode.RandomTake or
                     OpCode.RandomTakeFloat or
                     OpCode.Chance or

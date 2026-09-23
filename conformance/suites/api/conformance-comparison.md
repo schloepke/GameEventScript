@@ -932,15 +932,15 @@ message:
 
 ---
 
-## Test: range-binary64-is-not-int64 with exact comparison
+## Test: integral-range-normalizes-to-int64 with exact comparison
 
-This case rejects an Int64 range expectation for a Binary64 range even when all three numeric fields are equal.
+This case verifies that exactly integral Binary64 range inputs normalize to an exact Int64 range before comparison.
 
 ### Case description
 
 ```yaml
 gesBlock: case
-id: range-binary64-is-not-int64-exact
+id: integral-range-normalizes-to-int64-exact
 comparison:
   binary64:
     mode: exact
@@ -963,7 +963,7 @@ messageApi:
 ```yaml
 gesBlock: expect
 message:
-  conformanceEquals: false
+  conformanceEquals: true
 ```
 
 ---
@@ -1365,15 +1365,15 @@ message:
 
 ---
 
-## Test: range-binary64-is-not-int64 with ulp comparison
+## Test: integral-range-normalizes-to-int64 with ulp comparison
 
-This case rejects an Int64 range expectation for a Binary64 range even when all three numeric fields are equal.
+This case verifies that exactly integral Binary64 range inputs normalize to an exact Int64 range before comparison.
 
 ### Case description
 
 ```yaml
 gesBlock: case
-id: range-binary64-is-not-int64-ulp
+id: integral-range-normalizes-to-int64-ulp
 comparison:
   binary64:
     mode: ulp
@@ -1397,7 +1397,7 @@ messageApi:
 ```yaml
 gesBlock: expect
 message:
-  conformanceEquals: false
+  conformanceEquals: true
 ```
 
 ---

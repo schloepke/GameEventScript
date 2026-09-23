@@ -273,3 +273,13 @@ remains deferred.
 
 The [documentation index](../../docs/README.md) links the owning language-neutral
 specifications. Deferred work is tracked only in [`BACKLOG.md`](../../BACKLOG.md).
+
+## Explicit message JSON exchange
+
+The Runtime provides `GameEventScriptMessageJson` for optional product transport.
+Use `Serialize`/`Deserialize` in C#, or `serialize`/`deserialize` in Swift, for
+messages; the corresponding `SerializeValue`/`serializeValue` methods encode a
+standalone value. Decoding reconstructs immutable data and never runs Record or
+native constructors. External objects export as typed Record snapshots. Local
+Publish does not serialize; configure encoding explicitly at your I/O boundary.
+The [message format](../../specs/MessageFormat.md) defines the envelope and errors.

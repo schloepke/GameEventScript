@@ -4842,7 +4842,7 @@ steps:
           - name: "value"
             value:
               type: ":Text"
-              value: ":Text(\"x\")"
+              value: "x"
     runtimeLimits:
       exclude:
         - any: true

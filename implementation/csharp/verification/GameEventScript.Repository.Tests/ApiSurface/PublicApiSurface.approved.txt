@@ -292,6 +292,8 @@ enum GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field EmitAfter = 219
   enum-field PublishInstant = 220
   enum-field PublishAfter = 221
+  enum-field ConstructData = 222
+  enum-field SplitText = 223
 enum GameEventScript.Api.GameEventScriptBytecodePatternKind
   enum-field CountAny = 0
   enum-field CountFace = 1
@@ -617,6 +619,14 @@ sealed class GameEventScript.Api.GameEventScriptMessageArguments
   property System.Collections.Generic.IEnumerable<System.String> Keys { get }
   property System.Collections.Generic.IReadOnlyList<System.String> SignatureLabels { get }
   property System.Int32 Count { get }
+sealed class GameEventScript.Api.GameEventScriptMessageFormatException
+  ctor GameEventScriptMessageFormatException(System.String code)
+  property System.String Code { get }
+static class GameEventScript.Api.GameEventScriptMessageJson
+  method static GameEventScript.Api.GameEventScriptMessage Deserialize(System.String json)
+  method static GameEventScript.Runtime.Values.GesValue DeserializeValue(System.String json)
+  method static System.String Serialize(GameEventScript.Api.GameEventScriptMessage message)
+  method static System.String SerializeValue(GameEventScript.Runtime.Values.GesValue value)
 sealed class GameEventScript.Api.GameEventScriptMessageSignature
   field static GameEventScript.Api.GameEventScriptMessageSignature Empty
   field static System.String UnlabeledParameterName
@@ -1230,9 +1240,11 @@ sealed class GameEventScript.Conformance.ConformanceMessageApiCase
   property GameEventScript.Conformance.ConformanceMessageSignatureDefinition CompareHandler { get }
   property GameEventScript.Conformance.ConformanceMessageSignatureDefinition CompareSignature { get }
   property System.Boolean ArgumentsWereMapping { get }
+  property System.Boolean RoundTripJson { get }
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Conformance.ConformanceValue> CreateArguments { get }
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Conformance.ConformanceValueEntry> UnorderedArguments { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
+  property System.String Json { get }
   property System.String SignatureName { get }
 sealed class GameEventScript.Conformance.ConformanceMessageApiExpectation
   property System.Boolean? ConformanceEquals { get }
@@ -1245,6 +1257,7 @@ sealed class GameEventScript.Conformance.ConformanceMessageApiExpectation
   property System.Boolean? SignatureHashEquals { get }
   property System.String CreatedMessageSignatureId { get }
   property System.String Error { get }
+  property System.String Json { get }
   property System.String MessageSignatureId { get }
   property System.String Name { get }
   property System.String SignatureId { get }

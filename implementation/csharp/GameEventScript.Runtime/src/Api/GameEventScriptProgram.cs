@@ -2131,6 +2131,10 @@ public enum GameEventScriptBytecodeOpCode : byte
     PublishInstant = 0xDC,
     /// <summary>Publishes after a time quantity and writes host acceptance to the destination register.</summary>
     PublishAfter = 0xDD,
+    /// <summary>Constructs a portable data value from a type name, ordered argument values and labels.</summary>
+    ConstructData = 0xDE,
+    /// <summary>Splits Text on a Text delimiter, or on portable whitespace when the delimiter is Nothing.</summary>
+    SplitText = 0xDF,
 
     #endregion
 }

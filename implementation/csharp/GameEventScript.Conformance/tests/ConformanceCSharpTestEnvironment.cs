@@ -186,6 +186,18 @@ internal sealed class ConformanceTestExtensionRegistry : IGameEventScriptExtensi
 
     private static readonly IGameEventScriptExtensionFunction TestEcho = new DelegateExtensionFunction((call, args) => { if (args.Length == 1) call.SetValue(args[0]); else call.SetNothing(); });
 
+    private static readonly IGameEventScriptExtensionFunction TestToJson = new DelegateExtensionFunction((call, args) =>
+    {
+        try { call.SetText(GameEventScriptMessageJson.SerializeValue(args[0])); }
+        catch (GameEventScriptMessageFormatException failure) { throw new GameEventScriptExtensionFaultException(failure.Code, failure.Code); }
+    });
+    private static readonly IGameEventScriptExtensionFunction TestFromJson = new DelegateExtensionFunction((call, args) =>
+    {
+        if (args[0].Kind != GameEventScriptBytecodeTypeKind.Text) { call.SetNothing(); return; }
+        try { call.SetValue(GameEventScriptMessageJson.DeserializeValue(args[0].TextValue)); }
+        catch (GameEventScriptMessageFormatException failure) { throw new GameEventScriptExtensionFaultException(failure.Code, failure.Code); }
+    });
+
     private static readonly IGameEventScriptExtensionFunction TestNotify = new DelegateExtensionFunction((call, args) =>
     {
         call.Context.Emit("Effect", [new GameEventScriptMessageArgument("value", args[0])]);
@@ -224,6 +236,8 @@ internal sealed class ConformanceTestExtensionRegistry : IGameEventScriptExtensi
             reference.ArgumentLabels.SequenceEqual(["from", "to"], StringComparer.Ordinal)) return NavShortestTurn;
         if (Matches(reference, "nav", "isNorth", 1, requireUnlabeled: false)) return NavIsNorth;
         if (Matches(reference, "test", "vectorSum", 1, requireUnlabeled: true)) return TestVectorSum;
+        if (Matches(reference, "test", "toJson", 1, requireUnlabeled: true)) return TestToJson;
+        if (Matches(reference, "test", "fromJson", 1, requireUnlabeled: true)) return TestFromJson;
         if (Matches(reference, "test", "echo", 1, requireUnlabeled: true)) return TestEcho;
         if (Matches(reference, "test", "notify", 1, requireUnlabeled: true)) return TestNotify;
         if (Matches(reference, "test", "truth", 0, requireUnlabeled: false)) return TestTruth;

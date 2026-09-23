@@ -108,7 +108,9 @@ extension ConformanceSchema {
     }
 
     static func validateMessageAPI(_ node: Node) throws {
-        try closed(node, ["signature", "message", "compareSignature", "compareMessage", "compareConformanceMessage", "compareHandler", "createArguments"])
+        try closed(node, ["signature", "message", "compareSignature", "compareMessage", "compareConformanceMessage", "compareHandler", "createArguments", "json", "roundTripJson"])
+        try stringFields(node, ["json"])
+        try boolFields(node, ["roundTripJson"])
         try validateSignature(required(node, "signature"))
         try validateMessage(required(node, "message"), allowMapping: true)
         for field in ["compareSignature", "compareHandler"] { if let value = node[field] { try validateSignature(value) } }
@@ -125,7 +127,7 @@ extension ConformanceSchema {
 
     static func validateMessageExpectation(_ node: Node) throws {
         let booleans = ["matches", "signatureEquals", "signatureHashEquals", "messageEquals", "messageHashEquals", "conformanceEquals", "handlerEquals", "handlerHashEquals"]
-        let strings = ["name", "signatureId", "messageSignatureId", "createdMessageSignatureId", "error"]
+        let strings = ["name", "signatureId", "messageSignatureId", "createdMessageSignatureId", "error", "json"]
         try closed(node, strings + booleans + ["argumentCount"])
         guard !node.entries!.isEmpty else { throw fail("missingField", "Message expectations need at least one constraint.", node) }
         if node["error"] != nil && node.entries!.count != 1 { throw fail("invalidValue", "Error expectations cannot include success constraints.", node) }

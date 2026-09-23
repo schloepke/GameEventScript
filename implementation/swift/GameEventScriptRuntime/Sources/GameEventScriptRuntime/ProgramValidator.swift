@@ -74,6 +74,7 @@ public enum GameEventScriptProgramValidator {
             throw failure(.invalidOperand, 16, index)
         }
         if i.opcode == .parseLiteral && (i.unitAndFlags != 0 || i.word2 != 0 || i.payload != 0) { throw failure(.invalidOperand, 16, index) }
+        if [.constructData, .splitText].contains(i.opcode) && (i.unitAndFlags != 0 || i.b != 0 || i.c != 0 || i.d != 0 || i.opcode == .splitText && (i.a > 1 || i.a == 1 && i.word2 != 0)) { throw failure(.invalidOperand, 16, index) }
         for (position, operand) in i.operands.enumerated() {
             if operand.isRegister {
                 if i.register(operand, position) == .max { throw failure(.invalidOperand, 16, index) }
@@ -115,6 +116,11 @@ public enum GameEventScriptProgramValidator {
                 }
             }
         }
+        if i.opcode == .constructData {
+            let type = p.stringConstants[Int(i.word1)]
+            let labels = p.uint16IndexLists[Int(i.a)].map { p.stringConstants[Int($0)] }
+            if !GesDataConstruction.types.contains(type) || GesDataConstruction.positions(type, labels) == nil || labels.count != p.uint16IndexLists[Int(i.word2)].count { throw failure(.invalidOperand, 16, index) }
+        }
     }
 
     static func validateFrame(_ p: GameEventScriptProgram, _ i: GameEventScriptBytecodeInstruction, _ index: Int, _ length: Int) throws {
@@ -122,6 +128,7 @@ public enum GameEventScriptProgramValidator {
             if operand.isRegister && Int(i.register(operand, position)) >= length { throw failure(.invalidOperand, 16, index) }
             if operand.isList && !operand.isTextList && p.uint16IndexLists[Int(i.list(operand))].contains(where: { Int($0) >= length }) { throw failure(.invalidOperand, 16, index) }
         }
+
     }
 }
 
@@ -175,6 +182,7 @@ extension GameEventScriptBytecodeInstruction {
         switch operand {
         case .messageShapeList where opcode == .loadMessage: word1
         case .keyNameList: word1
+        case .argumentNameList where opcode == .constructData: a
         case .captureRegisterList: b
         case .tagRegisterList where opcode.isResultSend: a
         case .tagRegisterList where opcode == .emitMessageWithTags || opcode == .publishMessageWithTags: word1

@@ -74,7 +74,7 @@ final class GesParser {
     func typeName() throws -> String {
         guard current.kind == "type" else { throw failure("Expected a type name.") }
         var name = String(advance().text.dropFirst())
-        let builtins = ["Nothing", "Number", "Boolean", "Percentage", "Vector", "Point", "Series", "Tag", "Text", "List", "Range", "Message", "Handler", "Map", "Dice"]
+        let builtins = ["Nothing", "Number", "Boolean", "Percentage", "Vector", "Point", "Series", "Tag", "Text", "List", "Range", "Message", "Handler", "Map", "Dice", "Record"]
         if builtins.contains(name) { name = name.lowercased() }
         if name == "Quantity", current.syntaxText == "(", peek().kind == "word" || peek().syntaxText == "degree", peek(2).syntaxText == ")" {
             advance()

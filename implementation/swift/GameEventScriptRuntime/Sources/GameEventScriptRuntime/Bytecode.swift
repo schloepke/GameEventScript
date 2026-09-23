@@ -482,6 +482,10 @@ public enum GameEventScriptBytecodeOpCode: UInt8, Sendable, CaseIterable {
     case publishInstant = 0xDC
     /// Publishes after a time quantity and stores host acceptance in the destination register.
     case publishAfter = 0xDD
+    /// Constructs explicit portable data from ordered argument registers and labels.
+    case constructData = 0xDE
+    /// Splits Text on an explicit separator or runs of whitespace.
+    case splitText = 0xDF
 }
 
 /// Portable value and VM-internal storage identifiers used as bytecode operands.

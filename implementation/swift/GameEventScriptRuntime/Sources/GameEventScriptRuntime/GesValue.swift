@@ -216,10 +216,12 @@ public struct GesValue: Hashable, CustomStringConvertible {
         return Self(.integerRange(range.count == 0 ? GesIntegerRange(from: 0, to: 0, step: 0) : range))
     }
 
-    /// Creates a lazy binary64 range. Nonfinite bounds or step yield Nothing; empty results use the canonical empty
+    /// Creates a lazy range, using exact Int64 arithmetic when all three values are integral and representable.
+    /// Nonfinite bounds or step yield Nothing; empty results use the canonical empty
     /// integer range.
     public static func floatRange(from: Double, to: Double, step: Double = 1) -> Self {
         guard from.isFinite, to.isFinite, step.isFinite else { return .nothing }
+        if let start = GesNumber.exactInteger(from), let end = GesNumber.exactInteger(to), let stride = GesNumber.exactInteger(step) { return .integerRange(from: start, to: end, step: stride) }
         let range = GesFloatRange(from: from, to: to, step: step)
         return range.count == 0 ? .integerRange(from: 0, to: 0, step: 0) : Self(.floatRange(range))
     }
@@ -437,12 +439,19 @@ public struct GesValue: Hashable, CustomStringConvertible {
         case .point(let value): return formatSpatial(":Point", value)
         case .dice(let values): return ":Dice[" + values.map(String.init).joined(separator: ", ") + "]"
         case .list(let values): return "[" + values.map(\.nestedText).joined(separator: ", ") + "]"
-        case .map(let map), .record(_, let map): return (map.length == 0 ? "[:" : "[") + map.entries.map { (GesText.isLowerName($0.key) ? $0.key : GesText.quoted($0.key)) + ": " + $0.value.nestedText }.joined(separator: ", ") + "]"
-        case .integerRange(let range): return "range[\(range.from) to \(range.to) step \(range.step)]"
-        case .floatRange(let range): return "range[\(GesNumber.format(range.from)) to \(GesNumber.format(range.to)) step \(GesNumber.format(range.step))]"
-        case .message(let value): return value.description
-        case .handler(let value): return "handler " + value.signatureId
-        case .series(let value): return "series[\(value.signatureID) offset \(value.offset)]"
+        case .map(let map): return (map.length == 0 ? "[:" : "[") + map.entries.map { (GesText.isLowerName($0.key) ? $0.key : GesText.quoted($0.key)) + ": " + $0.value.nestedText }.joined(separator: ", ") + "]"
+        case .record(let name, let map): return ":Record(" + GesText.quoted(name.value) + ", " + GesValue.map(map.entries).toText + ")"
+        case .integerRange(let range): return ":Range(from: \(range.from), to: \(range.to), step: \(range.step))"
+        case .floatRange(let range): return ":Range(from: \(GesNumber.format(range.from)), to: \(GesNumber.format(range.to)), step: \(GesNumber.format(range.step)))"
+        case .message(let value):
+            let arguments = (0..<value.arguments.count).map { index in
+                let label = value.arguments.nameAt(index)
+                return (label == "_" ? "" : label + ": ") + value.arguments[index].nestedText
+            }.joined(separator: ", ")
+            let tags = value.tags.isEmpty ? "" : " with " + value.tags.map { "#" + $0 }.joined(separator: ", ")
+            return ":Message(" + value.name + "(" + arguments + ")" + tags + ")"
+        case .handler(let value): return ":Handler(" + value.signatureId + ")"
+        case .series(let value): return ":Series(\(value.signatureID), offset: \(value.offset))"
         case .external: return "Custom"
         }
     }

@@ -12,6 +12,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- SwiftBridge annotations `@GesType`, `@GesField` and `@GesConstruct` generate
+  native bindings, with inferred field types and explicit numeric units.
+
 - Explicit portable type data forms, including Range, built-in Series, Handler,
   Message and immutable Record snapshots; `parse` reconstructs them and can run
   known script Record constructors after complete input recognition.

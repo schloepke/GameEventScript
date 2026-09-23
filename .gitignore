@@ -20,3 +20,6 @@ TestResults/
 *.snupkg
 .build/
 .swiftpm/
+
+# Library manifests pin external build dependencies; SwiftPM resolver state is generated.
+Package.resolved

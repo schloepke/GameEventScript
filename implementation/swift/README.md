@@ -282,7 +282,7 @@ packages can also be consumed by local path for development.
 The optional [SwiftBridge guide](GameEventScriptSwiftBridge/README.md) provides
 examples for closure subscriptions, ordered message arguments, strict native
 value conversion, extension registries, KeyPath-based external types and the
-synchronized Host runner. Its package depends only on Runtime; compiler catalogs
+synchronized Host runner. Its library uses Runtime plus an internal SwiftSyntax-based build-time macro target; compiler catalogs
 use Runtime's declarative interfaces. Existing portable protocols remain usable
 without any Bridge dependency.
 

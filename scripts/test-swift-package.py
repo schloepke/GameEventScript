@@ -15,12 +15,13 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
+MACROS = "GameEventScriptSwiftBridgeMacros"
 MODULES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge")
 
 
 def run(arguments, cwd, log):
     with log.open("a") as output:
-        result = subprocess.run(arguments, cwd=cwd, stdout=output, stderr=subprocess.STDOUT, timeout=300)
+        result = subprocess.run(arguments, cwd=cwd, stdout=output, stderr=subprocess.STDOUT, timeout=900)
     if result.returncode:
         raise RuntimeError(f"Command failed: {arguments!r}\nSee {log}\n{log.read_text()[-8000:]}")
 
@@ -33,8 +34,9 @@ def main():
     repository.mkdir()
     for name in ("Package.swift", "LICENSE", "README.md"):
         shutil.copy2(ROOT / name, repository / name)
-    for module in MODULES:
-        relative = Path("implementation/swift") / module / "Sources" / module
+    for module in (*MODULES, MACROS):
+        owner = "GameEventScriptSwiftBridge" if module == MACROS else module
+        relative = Path("implementation/swift") / owner / "Sources" / module
         shutil.copytree(ROOT / relative, repository / relative)
 
     description = json.loads(subprocess.check_output([
@@ -43,12 +45,21 @@ def main():
     ], text=True))
     products = {item["name"]: item for item in description["products"]}
     targets = {item["name"]: item for item in description["targets"]}
-    if set(products) != set(MODULES) or set(targets) != set(MODULES) or description.get("dependencies"):
-        raise RuntimeError("Distribution must contain exactly the three libraries and no package dependencies.")
+    if set(products) - {MACROS} != set(MODULES) or set(targets) != {*MODULES, MACROS}:
+        raise RuntimeError("Distribution must contain three public libraries and one internal macro target.")
+    dependencies = description.get("dependencies", [])
+    if len(dependencies) != 1 or dependencies[0].get("identity") != "swift-syntax":
+        raise RuntimeError("Only the official swift-syntax build dependency is permitted.")
+    if targets[MACROS].get("type") != "macro":
+        raise RuntimeError("Binding code generation must be a build-time macro target.")
+    if set(targets[MACROS].get("product_dependencies", [])) != {"SwiftCompilerPlugin", "SwiftSyntax", "SwiftSyntaxBuilder", "SwiftSyntaxMacros"}:
+        raise RuntimeError("Unexpected macro dependency graph.")
     for module in MODULES:
         if products[module]["type"] != {"library": ["automatic"]} or products[module]["targets"] != [module]:
             raise RuntimeError(f"Unexpected product definition for {module}")
         expected = [] if module == "GameEventScriptRuntime" else ["GameEventScriptRuntime"]
+        if module == "GameEventScriptSwiftBridge":
+            expected.append(MACROS)
         if targets[module].get("target_dependencies", []) != expected:
             raise RuntimeError(f"Unexpected dependency graph for {module}")
         # Explicit source lists in one manifest must not silently omit future sources.
@@ -85,7 +96,7 @@ let package = Package(name: "{consumer}",
                 "--build-system", "native", "--disable-build-manifest-caching", "--configuration", "release"]
         run(args, directory, workspace / (consumer + ".log"))
         if consumer == "RuntimeConsumer":
-            for module in MODULES[1:]:
+            for module in (*MODULES[1:], MACROS, "SwiftSyntax"):
                 # SwiftPM creates planning directories even for unused products;
                 # only emitted modules or compiled objects indicate a build.
                 objects = [path for directory in scratch.rglob(module + ".build") for path in directory.rglob("*.o")]
@@ -93,7 +104,8 @@ let package = Package(name: "{consumer}",
                     raise RuntimeError(f"Runtime-only consumption built {module}")
         binaries[consumer] = scratch / "release" / consumer
         resolved = json.loads((directory / "Package.resolved").read_text())
-        if len(resolved["pins"]) != 1 or resolved["pins"][0]["state"].get("version") != "0.1.0-package-test":
+        pins = {pin["identity"].lower(): pin for pin in resolved["pins"]}
+        if pins.get("gameeventscript", {}).get("state", {}).get("version") != "0.1.0-package-test":
             raise RuntimeError("Consumer did not resolve the tagged distribution.")
     for consumer in ("SwiftPMConsumer", "RuntimeConsumer"):
         run([str(binaries[consumer]), str(fixture)], workspace, workspace / (consumer + ".log"))

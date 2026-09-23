@@ -28,6 +28,29 @@ public enum GameEventScriptSwiftValue {
     /// Invokes the native value's strict GES conversion, propagating conversion errors.
     public static func encode<T: GameEventScriptSwiftValueConvertible>(_ value: T) throws -> GesValue { try value.toGesValue() }
 
+    /// Encodes a native numeric magnitude with an explicitly declared quantity unit.
+    /// Nothing passes through for optional/NaN values. Existing units and nonnumeric values are rejected;
+    /// `.none` delegates to normal conversion. No unit scaling or numeric truncation is performed.
+    public static func encode<T: GameEventScriptSwiftValueConvertible>(_ value: T, unit: GesUnit) throws -> GesValue {
+        let encoded = try value.toGesValue()
+        if unit == .none || encoded.isNothing { return encoded }
+        try requireKind(encoded, .integer, .float)
+        if let integer = encoded.integerValue { return .integer(integer, unit: unit) }
+        return .float(encoded.floatValue!, unit: unit)
+    }
+
+    /// Decodes a numeric magnitude only when its unit exactly matches the declared binding unit.
+    /// Nothing delegates to the native decoder for Optional support. `.none` uses normal strict conversion.
+    /// The unit is removed only after validation; the native decoder still rejects precision loss and overflow.
+    public static func decode<T: GameEventScriptSwiftValueConvertible>(_ value: GesValue, as type: T.Type = T.self, unit: GesUnit) throws -> T {
+        if unit == .none || value.isNothing { return try T.fromGesValue(value) }
+        guard value.unit == unit, value.kind == .integer || value.kind == .float else {
+            throw GameEventScriptSwiftConversionError.typeMismatch(expected: "Quantity(" + unit.suffix + ")", actual: String(describing: value.kind) + value.unit.suffix)
+        }
+        let magnitude = value.integerValue.map { GesValue.integer($0) } ?? .float(value.floatValue!)
+        return try T.fromGesValue(magnitude)
+    }
+
     /// Invokes the requested native type's strict decoder, propagating kind, unit and precision errors.
     public static func decode<T: GameEventScriptSwiftValueConvertible>(_ value: GesValue, as type: T.Type = T.self) throws -> T { try T.fromGesValue(value) }
 }

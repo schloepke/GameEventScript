@@ -1070,7 +1070,9 @@ recorded separately in the cross-language CapabilityMatrix.
 
 #### Native Swift adapters
 
-The optional `GameEventScriptSwiftBridge` package depends only on Runtime.
+The optional `GameEventScriptSwiftBridge` library depends on Runtime and an internal
+compile-time macro target. Only that macro target depends on SwiftSyntax; the
+generated bindings have no SwiftSyntax runtime dependency.
 Compiler and Runtime must not acquire a Bridge dependency. Its native tests may
 use a separate compiler consumer, but the Bridge product has no Compiler or
 Conformance dependency. These adapters do not add portable Core capabilities.
@@ -1105,6 +1107,38 @@ the declarative transport data. Wrapped class roots preserve native identity;
 struct roots follow Swift value semantics. Unwrapping requires the exact binding
 descriptor that created the external value. Runtime field coercion and map
 materialization retain the external-value contract above.
+
+`@GesType` generates a throwing static `createGesType()` factory on a nongeneric
+struct or final class. Each invocation creates a distinct descriptor; callers
+retain and reuse it for registry construction, wrapping and unwrapping. The
+optional type name defaults to the Swift name. `@GesField` exposes only the
+annotated stored or computed instance property, using its name unless overridden.
+Fields require explicit Swift type annotations. Standard numeric types infer
+Number, Bool infers Boolean, String infers Text, Array infers List and Dictionary
+infers Map; Optional delegates to its wrapped type. Aliases, custom convertible
+types and GesValue require explicit `typeName`. Swift compiler type checking
+still requires the existing strict value-conversion conformances.
+
+`@GesField(unit:)` may instead declare a numeric quantity in meters, seconds or
+degrees. It cannot be combined with `typeName` or a nonnumeric field. Encoding
+attaches the explicit unit to a native numeric magnitude; constructor decoding
+checks the exact unit before stripping it and invoking strict native conversion.
+Nothing retains existing Optional/NaN semantics. No magnitude scaling, truncation
+or implicit reinterpretation of an already unit-bearing value occurs. These
+operations are also exposed by `GameEventScriptSwiftValue.encode(_:unit:)` and
+`decode(_:as:unit:)`; `.none` delegates to the ordinary strict conversion.
+
+`@GesConstruct` exposes a synchronous, nonfailable initializer or static factory
+returning the annotated type. Throwing callbacks preserve normal classification.
+Each parameter maps first by external label to an exposed field, otherwise by
+internal name to an annotated Swift property. Declaration order defines the
+callback's argument order. Defaults do not add overloads; unmarked constructors
+remain unavailable to scripts. Async, variadic, inout, ownership-qualified and
+generic constructors are rejected. Conditional `#if` field/constructor declarations
+require manual bindings. Annotation misuse is a Swift compile error;
+portable descriptor name/signature validation still occurs when the throwing
+factory executes. Manual descriptors remain available for foreign/generic types
+and throwing getters. Macro expansion adds no GES syntax or portable behavior.
 
 `GameEventScriptSwiftHostRunner` is an optional synchronized embedding adapter.
 It takes exclusive ownership through Swift 6 sending parameters and serializes

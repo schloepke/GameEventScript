@@ -395,10 +395,14 @@ them with `scripts/sync-swift-cli-grammars.py` and verify with `--check`.
 or a selected `--tool-path`; the matching uninstall script removes only its
 owned binary. The C# `dotnet ges` and Swift `ges` commands can coexist.
 
-`GameEventScriptSwiftBridge` is an optional Runtime-only package for closure
+`GameEventScriptSwiftBridge` is an optional Runtime-based package for closure
 handlers/publish sinks/extensions, strict native value conversions and explicit
 KeyPath/getter/constructor bindings. Do not add a Compiler or Conformance
-dependency to it. Compiler integration tests live in Conformance's native test
+dependency to it. Its internal `GameEventScriptSwiftBridgeMacros` target depends on
+SwiftSyntax at build time and generates the existing descriptors for `@GesType`,
+`@GesField` and `@GesConstruct`; it is not a separate public library product.
+Keep the root distribution and local Bridge manifests aligned. Macro diagnostics
+and native conversion tests belong in the Bridge package. Compiler integration tests live in Conformance's native test
 target; native Bridge tests live in the Bridge package. Run
 `scripts/test-swift-bridge.sh` without .NET, or the full `scripts/test-swift.sh`.
 The API gate and Xcode workspace include the Bridge.

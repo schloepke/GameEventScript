@@ -20,19 +20,24 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
         wait(for: [done], timeout: 5)
     }
 
+    @GesType("Player")
     struct Player {
+        @GesField
         let name: String
+        @GesField
         let score: Int
+
+        @GesConstruct
+        init(score: Int, name: String) {
+            self.name = name
+            self.score = score
+        }
     }
 
     enum Failure: Error { case unexpected }
 
     func testTypedCatalogExtensionAndExternalConstructorExecuteFromBinary() throws {
-        let player = try GameEventScriptSwiftType<Player>(
-            "Player",
-            fields: [.init("name", typeName: "Text", keyPath: \Player.name), .init("score", typeName: "Number", keyPath: \Player.score)],
-            constructors: [.init(parameters: ["score", "name"]) { args in try Player(name: args.swiftValue(at: 1), score: args.swiftValue(at: 0)) }]
-        )
+        let player = try Player.createGesType()
         let types = try GameEventScriptSwiftExternalTypeRegistry([player.binding])
         let extensions = try GameEventScriptSwiftExtensionRegistry([
             .init(namespace: "app", name: "double", parameters: ["_"]) { call in
@@ -74,7 +79,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
                 constructors: [
                     .init { _ in
                         try fail()
-                        return Player(name: "", score: 0)
+                        return Player(score: 0, name: "")
                     }
                 ]
             )

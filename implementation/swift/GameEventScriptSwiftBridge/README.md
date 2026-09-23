@@ -4,8 +4,9 @@
 # Swift bridge
 
 `GameEventScriptSwiftBridge` is the optional native Swift adapter package. Its
-only package dependency is `GameEventScriptRuntime`; it does not require Compiler,
-Conformance, macros or Reflection. Foundation is used only by the optional
+only GES dependency is `GameEventScriptRuntime`; it does not require Compiler,
+Conformance or Reflection. Its internal macro target additionally uses the official
+SwiftSyntax package at build time. Foundation is used only by the optional
 synchronized Host runner. Runtime remains synchronous and threadless.
 
 Add this local SwiftPM dependency:
@@ -18,6 +19,70 @@ Add `.product(name: "GameEventScriptSwiftBridge", package: "GameEventScriptSwift
 to the consuming target. Import both `GameEventScriptRuntime` and
 `GameEventScriptSwiftBridge`. A source-compiling application also adds the separate
 Compiler product; a precompiled application needs only Runtime and Bridge.
+
+## Annotation-based external types
+
+Import `GameEventScriptSwiftBridge` and annotate the native data you want to expose:
+
+```swift
+@GesType("BotState")
+struct BotState {
+    @GesField
+    let energy: Double
+
+    @GesField(unit: .meter)
+    let distance: Double
+
+    @GesField("isNearWall")
+    var nearWall: Bool { distance < 5 }
+
+    @GesConstruct
+    init(energy: Double, distance: Double) {
+        self.energy = energy
+        self.distance = distance
+    }
+}
+
+let bot = try BotState.createGesType()
+let registry = try GameEventScriptSwiftExternalTypeRegistry([bot.binding])
+let value = bot.wrap(BotState(energy: 100, distance: 4))
+```
+
+Pass the same registry to the compiler's `withExternalTypeCatalog` and the host's
+`withExternalTypeRegistry`. Retain `bot`: each `createGesType()` creates a distinct
+descriptor, and `unwrap` requires the original descriptor. No global registry or
+shared mutable binding cache is introduced.
+
+Only annotated properties and constructors are exposed. `@GesType` supports
+nongeneric structs and final classes; omitted names use the Swift type/property
+name. Computed properties are read when accessed, not when registering. Fields
+must have explicit Swift type annotations. Bool, String, standard fixed-width
+integers, Float/Double, Optional, Array and Dictionary infer the corresponding
+GES type. Aliases, custom convertible types and `GesValue` require an explicit
+`@GesField(typeName: "...")`. For example, a `GesValue` getter returning a Tag uses
+`@GesField(typeName: "Tag")`.
+
+`unit: .meter`, `.second` or `.degree` explicitly maps native numeric magnitudes
+to quantities, without scaling. Constructor decoding requires exactly that unit
+before applying the normal lossless native conversion. Units cannot be combined
+with `typeName`; nonnumeric fields cannot use a numeric unit annotation.
+
+`@GesConstruct` supports synchronous, nonfailable initializers and synchronous
+static factory functions returning the enclosing type. They may throw. Parameters
+match exposed field names by external label, then Swift property names by internal
+parameter name. Defaults do not create additional GES overloads. Unannotated
+constructors, including implicit memberwise initializers, remain unavailable to
+scripts. Async, variadic, inout and generic constructors are unsupported. Conditional
+`#if` field/constructor declarations require manual bindings, so marked members
+cannot silently disappear from a generated descriptor.
+
+The annotations expand into the existing manual descriptors. SwiftSyntax and the
+macro plugin run on the build host, including consumers' builds; they are not
+application runtime dependencies. The package pins SwiftSyntax 600.0.1 to preserve
+its Swift 6.0 minimum toolchain contract. There is one Bridge library product and
+one import; no separate public macro product is needed. Runtime-only and
+Compiler-only builds do not compile the macro target. Existing manual bindings
+remain useful for foreign types, generic types and custom throwing getters.
 
 ## Messages and callbacks
 

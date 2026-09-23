@@ -15,7 +15,8 @@ permissions:
 jobs:
   verify:
     runs-on: macos-15
-    timeout-minutes: 20
+    # Clean distribution and local-package checks each build the SwiftSyntax macro plugin.
+    timeout-minutes: 60
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

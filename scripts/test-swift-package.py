@@ -26,6 +26,12 @@ def run(arguments, cwd, log):
         raise RuntimeError(f"Command failed: {arguments!r}\nSee {log}\n{log.read_text()[-8000:]}")
 
 
+def require_macos_minimum(description, owner):
+    platforms = {item["name"]: item["version"] for item in description.get("platforms", [])}
+    if platforms.get("macos") != "10.15":
+        raise RuntimeError(f"{owner} must explicitly declare macOS 10.15 for its SwiftSyntax macro dependency.")
+
+
 def main():
     artifacts = ROOT / "artifacts/swift-package"
     artifacts.mkdir(parents=True, exist_ok=True)
@@ -43,6 +49,12 @@ def main():
         "swift", "package", "--package-path", str(repository),
         "--scratch-path", str(workspace / "describe"), "describe", "--type", "json",
     ], text=True))
+    require_macos_minimum(description, "Root distribution")
+    bridge_description = json.loads(subprocess.check_output([
+        "swift", "package", "--package-path", str(ROOT / "implementation/swift/GameEventScriptSwiftBridge"),
+        "--scratch-path", str(workspace / "bridge-describe"), "describe", "--type", "json",
+    ], text=True))
+    require_macos_minimum(bridge_description, "Local SwiftBridge package")
     products = {item["name"]: item for item in description["products"]}
     targets = {item["name"]: item for item in description["targets"]}
     if set(products) - {MACROS} != set(MODULES) or set(targets) != {*MODULES, MACROS}:
@@ -88,6 +100,7 @@ def main():
         (directory / "Package.swift").write_text(f'''// swift-tools-version: 6.0
 import PackageDescription
 let package = Package(name: "{consumer}",
+    platforms: [.macOS(.v10_15)],
     dependencies: [.package(url: {json.dumps(str(repository))}, exact: "0.1.0-package-test")],
     targets: [.executableTarget(name: "{consumer}", dependencies: [{dependencies}])])
 ''')

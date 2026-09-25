@@ -31,6 +31,7 @@ but a Runtime-only dependency does not build or link Compiler or SwiftBridge.
 For a consuming Swift package, after the corresponding version has been released:
 
 ```swift
+platforms: [.macOS(.v10_15)],
 dependencies: [
     .package(url: "https://github.com/schloepke/GameEventScript.git", from: "0.1.0")
 ],
@@ -48,7 +49,10 @@ Use `import GameEventScriptRuntime` and optionally the Compiler/SwiftBridge impo
 
 Swift 6.0 or newer is required. macOS is the currently CI-verified platform;
 other platform support must be verified before being advertised. The root library
-manifest does not inherit the CLI/Conformance tools' macOS 10.15.4 requirement.
+and local SwiftBridge manifests explicitly require macOS 10.15 to match their
+SwiftSyntax macro dependency. Consuming packages must declare this or a newer
+macOS target. This is a macOS deployment minimum, not an Apple-only restriction.
+The CLI/Conformance tools separately require macOS 10.15.4.
 
 There is no upload to Apple or a Swift registry in this flow. Publishing a Git
 version tag makes the root package available to SwiftPM. The individual packages
@@ -72,7 +76,8 @@ list and that missing artifacts stop the entire upload before its first request.
 The SwiftPM check copies the current root manifest and library sources into an
 isolated Git repository under `artifacts/swift-package`, creates a local test
 tag, and resolves that version from two independent consumers. It checks all
-four products and the dependency graph, compiles/serializes/executes a Program,
+four products, the dependency graph and the explicit macOS minimum in both macro
+manifests, compiles/serializes/executes a Program,
 and runs that Program with Runtime alone. It also rejects builds of Compiler or
 Bridge in the Runtime-only consumer. No tag or commit is added to the working
 repository, and no remote is contacted by this check.

@@ -79,8 +79,10 @@ cannot silently disappear from a generated descriptor.
 The annotations expand into the existing manual descriptors. SwiftSyntax and the
 macro plugin run on the build host, including consumers' builds; they are not
 application runtime dependencies. The package pins SwiftSyntax 600.0.1 to preserve
-its Swift 6.0 minimum toolchain contract. There is one Bridge library product and
-one import; no separate public macro product is needed. Runtime-only and
+its Swift 6.0 minimum toolchain contract. Both the root distribution and local
+Bridge manifest explicitly declare macOS 10.15 to match SwiftSyntax's deployment
+minimum; SwiftPM consumers must select this or a newer macOS target. There is one
+Bridge library product and one import; no separate public macro product is needed. Runtime-only and
 Compiler-only builds do not compile the macro target. Existing manual bindings
 remain useful for foreign types, generic types and custom throwing getters.
 

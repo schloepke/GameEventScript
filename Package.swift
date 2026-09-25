@@ -8,6 +8,7 @@ import PackageDescription
 // One versioned distribution; the local packages remain independent development entry points.
 let package = Package(
     name: "GameEventScript",
+    platforms: [.macOS(.v10_15)],
     products: [
         .library(name: "GameEventScriptSyntaxHighlighter", targets: ["GameEventScriptSyntaxHighlighter"]),
         .library(name: "GameEventScriptRuntime", targets: ["GameEventScriptRuntime"]),

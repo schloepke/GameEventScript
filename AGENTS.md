@@ -407,7 +407,8 @@ KeyPath/getter/constructor bindings. Do not add a Compiler or Conformance
 dependency to it. Its internal `GameEventScriptSwiftBridgeMacros` target depends on
 SwiftSyntax at build time and generates the existing descriptors for `@GesType`,
 `@GesField` and `@GesConstruct`; it is not a separate public library product.
-Keep the root distribution and local Bridge manifests aligned. Macro diagnostics
+Keep the root distribution and local Bridge manifests aligned, including the
+explicit macOS 10.15 minimum required by SwiftSyntax. Macro diagnostics
 and native conversion tests belong in the Bridge package. Compiler integration tests live in Conformance's native test
 target; native Bridge tests live in the Bridge package. Run
 `scripts/test-swift-bridge.sh` without .NET, or the full `scripts/test-swift.sh`.

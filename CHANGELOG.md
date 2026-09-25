@@ -64,6 +64,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Fixed
 
+- SwiftPM distribution and SwiftBridge explicitly declare macOS 10.15, matching
+  SwiftSyntax's minimum and fixing dependency planning with Swift 6.1.
 - Swift highlighting preserves Unicode separators inside comments and GESA
   source-line strings without misclassifying subsequent assembler instructions.
 - C# and Swift highlighting retain declaration keyword colors across line breaks
@@ -72,4 +74,3 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - Swift CLI recognizes application-mode cursor keys used by Ghostty.
 - C# CLI retains command history when switching between the ordinary prompt
   and delayed-message input handling.
-

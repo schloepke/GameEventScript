@@ -77,9 +77,11 @@ xcodebuild -workspace implementation/swift/GameEventScript.xcworkspace \
 
 ### SwiftPM verification
 
-The CLI and Conformance packages require macOS 10.15.4 or newer for the
-executable adapters' throwing Foundation file-handle I/O. Runtime, Compiler and
-SwiftBridge do not inherit this package requirement.
+The root distribution and local SwiftBridge package explicitly require macOS
+10.15 to match the SwiftSyntax macro dependency. The CLI and Conformance packages
+require macOS 10.15.4 or newer for the executable adapters' throwing Foundation
+file-handle I/O. The standalone Runtime, Compiler and SyntaxHighlighter packages
+do not inherit these package requirements.
 
 All entry points are in the repository's `scripts` directory and can also be
 invoked by absolute path from another working directory:

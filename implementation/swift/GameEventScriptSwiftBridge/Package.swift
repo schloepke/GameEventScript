@@ -7,6 +7,7 @@ import PackageDescription
 
 let package = Package(
     name: "GameEventScriptSwiftBridge",
+    platforms: [.macOS(.v10_15)],
     products: [.library(name: "GameEventScriptSwiftBridge", targets: ["GameEventScriptSwiftBridge"])],
     dependencies: [
         .package(path: "../GameEventScriptRuntime"),

@@ -97,7 +97,8 @@ In Xcode, choose **File → Add Package Dependencies**, enter
 with the version you want from the
 [published releases](https://github.com/schloepke/GameEventScript/releases).
 Add the Runtime, Compiler and SwiftBridge products to your app target
-for the example below. The public package requires Swift 6.0 or newer; macOS is
+for the example below. The public package requires Swift 6.0 or newer and declares
+macOS 10.15 as its minimum macOS deployment target; macOS is
 the currently CI-verified platform.
 
 For a SwiftPM executable, use this `Package.swift` and put the example in
@@ -111,6 +112,7 @@ import PackageDescription
 
 let package = Package(
     name: "GesExample",
+    platforms: [.macOS(.v10_15)],
     dependencies: [
         .package(url: "https://github.com/schloepke/GameEventScript.git", exact: "<release-version>")
     ],

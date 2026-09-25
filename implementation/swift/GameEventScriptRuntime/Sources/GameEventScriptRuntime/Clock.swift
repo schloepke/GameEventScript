@@ -5,6 +5,8 @@
     import Darwin
 #elseif canImport(Glibc)
     import Glibc
+#elseif canImport(Musl)
+    import Musl
 #endif
 
 /// Monotonic time source borrowed by a serial host. Values must be nonnegative and never decrease.

@@ -22,7 +22,7 @@ final class Tool {
                 return 0
             }
             if command == "--version" {
-                io.line("ges 0.1.0 (Swift)")
+                io.line("ges \(ToolBuildInfo.version) (Swift)")
                 return 0
             }
         }

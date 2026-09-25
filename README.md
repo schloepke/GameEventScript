@@ -230,6 +230,9 @@ NuGet release workflow.
 The [package release guide](docs/guide/distribution/Packages.md) covers the three
 public libraries per language, publisher setup and the shared version/tag flow.
 Conformance is internal; CLI tools are not published through NuGet or SwiftPM.
+[Standalone CLI downloads](docs/guide/distribution/Tools.md) provide the separate
+GitHub Releases installation path without a development SDK (available with the
+next release containing CLI assets).
 
 ## Swift implementation
 

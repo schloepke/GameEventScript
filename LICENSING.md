@@ -100,3 +100,10 @@ must remain unchanged. Its redistribution terms must be reviewed, the material
 must not receive the Game Event Script header as if it were original work, and
 `LICENSE`, `NOTICE`, or a third-party-notices document must be updated when its
 terms require that.
+
+Standalone C# CLI archives also carry the exact bundled .NET runtime pack's
+`LICENSE.TXT` and `THIRD-PARTY-NOTICES.TXT`. Swift Linux archives retain the Static
+SDK SBOM and the unmodified upstream license texts under
+`tools/distribution/licenses`; the source inventory is documented there. These
+third-party texts must not receive project copyright headers. Update that inventory
+and verify applicable notices whenever the pinned SDK changes.

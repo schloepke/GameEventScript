@@ -23,13 +23,15 @@ on Attack(base, bonus) {
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
-    <header class="header wrap">
-      <a class="brand" href="/" aria-label="Game Event Script home"><img src="/brand/logo.svg" width="44" height="44" alt="" />Game Event Script</a>
-      <nav aria-label="Main navigation">
-        <a href="/docs/learn/language/">Learn</a>
-        <a href="/docs/">Documentation</a>
-        <a href="https://github.com/schloepke/GameEventScript">GitHub <span aria-hidden="true">↗</span></a>
-      </nav>
+    <header class="header">
+      <div class="header-inner wrap">
+        <a class="brand" href="/" aria-label="Game Event Script home"><img src="/brand/logo.svg" width="44" height="44" alt="" />Game Event Script</a>
+        <nav aria-label="Main navigation">
+          <a href="/docs/learn/language/">Learn</a>
+          <a href="/docs/">Documentation</a>
+          <a href="https://github.com/schloepke/GameEventScript">GitHub <span aria-hidden="true">↗</span></a>
+        </nav>
+      </div>
     </header>
     <main id="main">
       <section class="hero wrap" aria-labelledby="hero-title">
@@ -87,7 +89,8 @@ on Attack(base, bonus) {
   .wrap { width: min(1200px, calc(100% - 5rem)); margin-inline: auto; }
   .skip { position: absolute; left: 1rem; top: -5rem; background: white; padding: .75rem; z-index: 10; }
   .skip:focus { top: .5rem; }
-  .header { display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding-block: 1.6rem; border-bottom: 1px solid #dce2ec; }
+  .header { background: var(--ges-paper); border-bottom: 1px solid #dce2ec; }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding-block: 1.6rem; }
   .brand { display: flex; align-items: center; gap: .7rem; text-decoration: none; font-weight: 750; letter-spacing: -.025em; font-size: 1.2rem; }
   nav { display: flex; gap: 1.7rem; align-items: center; font-size: .9rem; }
   nav a { text-decoration: none; }
@@ -150,9 +153,10 @@ on Attack(base, bonus) {
   .next h2 { font-size: 2rem; }
   footer { display: flex; align-items: center; justify-content: space-between; gap: 2rem; color: var(--ges-muted); padding-block: 2.5rem; font-size: .8rem; }
   footer nav { font-size: .8rem; }
+  @media (min-width: 50rem) { .header { position: sticky; top: 0; z-index: 5; } :global(html) { scroll-padding-top: 7rem; } }
   @media (min-width: 1450px) { .wide-break { display: none; } }
   @media (max-width: 1000px) { .hero { gap: 2.3rem; } .wrap { width: calc(100% - 3rem); } .hero { padding-top: 4rem; } .workflow { gap: 3rem; } }
-  @media (max-width: 760px) { .header { align-items: flex-start; flex-direction: column; gap: 1rem; } .hero { grid-template-columns: 1fr; padding-block: 3rem; gap: 2.3rem; } .wide-break { display: none; } .lede { max-width: 36rem; } .principle-grid, .platforms, .workflow { grid-template-columns: 1fr; } .principle-grid { gap: 1.2rem; } .principles { padding-bottom: 3rem; } .embedding { padding-block: 3rem; } .platform { padding: 1.5rem; } .workflow { padding-block: 3rem; gap: 1.4rem; } .next, footer { flex-direction: column; align-items: flex-start; } .next { padding: 1.5rem; } }
+  @media (max-width: 760px) { .header-inner { align-items: flex-start; flex-direction: column; gap: 1rem; } .hero { grid-template-columns: 1fr; padding-block: 3rem; gap: 2.3rem; } .wide-break { display: none; } .lede { max-width: 36rem; } .principle-grid, .platforms, .workflow { grid-template-columns: 1fr; } .principle-grid { gap: 1.2rem; } .principles { padding-bottom: 3rem; } .embedding { padding-block: 3rem; } .platform { padding: 1.5rem; } .workflow { padding-block: 3rem; gap: 1.4rem; } .next, footer { flex-direction: column; align-items: flex-start; } .next { padding: 1.5rem; } }
   @media (max-width: 400px) { .wrap { width: calc(100% - 2rem); } nav { gap: 1.1rem; } .example-head { flex-wrap: wrap; gap: .3rem; } }
   @media (prefers-reduced-motion: reduce) { :global(html) { scroll-behavior: auto; } }
 </style>

@@ -21,7 +21,8 @@ versions retain their original package contents; the icon ships with the next re
 Compiler and each native Bridge depend on their Runtime. An application can use
 Runtime alone. SyntaxHighlighter is optional and depends on no other GES module. Conformance stays in the repository for development and CI. CLI
 executables are not part of the public library package distribution; their local
-installers remain available. Standalone CLI release downloads are tracked in
+installers remain available. See [standalone CLI downloads](Tools.md) for
+installation and release verification. Deferred distribution work is tracked in
 [BACKLOG.md](../../../BACKLOG.md).
 
 ## SwiftPM and Xcode

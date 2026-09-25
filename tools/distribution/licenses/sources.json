@@ -1,0 +1,18 @@
+{
+  "swift.txt": "https://raw.githubusercontent.com/swiftlang/swift/swift-6.4.0-RELEASE/LICENSE.txt",
+  "foundation.txt": "https://raw.githubusercontent.com/swiftlang/swift-corelibs-foundation/swift-6.4.0-RELEASE/LICENSE",
+  "dispatch.txt": "https://raw.githubusercontent.com/swiftlang/swift-corelibs-libdispatch/swift-6.4.0-RELEASE/LICENSE",
+  "icu.txt": "https://raw.githubusercontent.com/unicode-org/icu/release-76-1/LICENSE",
+  "llvm.txt": "https://raw.githubusercontent.com/swiftlang/llvm-project/swift-6.4.0-RELEASE/LICENSE.TXT",
+  "musl.txt": "https://git.musl-libc.org/cgit/musl/plain/COPYRIGHT?h=v1.2.5",
+  "musl-fts.txt": "https://raw.githubusercontent.com/void-linux/musl-fts/v1.2.7/COPYING",
+  "libxml2.txt": "https://raw.githubusercontent.com/GNOME/libxml2/v2.14.5/Copyright",
+  "curl.txt": "https://raw.githubusercontent.com/curl/curl/curl-8_15_0/COPYING",
+  "boringssl.txt": "https://raw.githubusercontent.com/google/boringssl/main/LICENSE",
+  "zlib.txt": "https://raw.githubusercontent.com/madler/zlib/v1.3.1/LICENSE",
+  "bzip2.txt": "https://sourceware.org/git/?p=bzip2.git;a=blob_plain;f=LICENSE;hb=bzip2-1.0.8",
+  "xz.txt": "https://raw.githubusercontent.com/tukaani-project/xz/v5.8.1/COPYING",
+  "libarchive.txt": "https://raw.githubusercontent.com/libarchive/libarchive/v3.8.1/COPYING",
+  "mimalloc.txt": "https://raw.githubusercontent.com/microsoft/mimalloc/v2.2.4/LICENSE",
+  "xz-0bsd.txt": "https://raw.githubusercontent.com/tukaani-project/xz/v5.8.1/COPYING.0BSD"
+}

@@ -92,7 +92,7 @@ new value instead of assigning to an existing name.
 on Main(args) {
     let base be 100
     let bonus be 20%
-    let total be base + base * bonus
+    let total be base + bonus
     let label be "Damage: " + (total as :Text)
     emit ConsoleOut(label)
 }
@@ -101,6 +101,11 @@ on Main(args) {
 Common data values include Number, Boolean, Text, Tag, List, Map and `nothing`.
 Numbers may carry seconds (`0.2s`), meters (`10m`) or degrees (`90°`). A percentage
 such as `20%` represents the ratio `0.2`, so `100 * 20%` gives `20`.
+
+Adding a Percentage to a Number applies a relative increase: `base + bonus`
+means `base + base * bonus`. The example therefore prints `Damage: 120`, while
+`base` remains `100`. Similarly, `100 - 20%` gives `80`. The Percentage type
+matters: `100 + 0.2` is ordinary addition and gives `100.2`.
 
 There is no mutable global script state. Each handler invocation has fresh local
 bindings. Keep persistent state in your application, or pass immutable data

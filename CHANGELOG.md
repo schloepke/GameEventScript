@@ -12,6 +12,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Standalone CLI release archives: C# for Windows, Linux and macOS; Swift for
+  Linux and macOS; x64 and ARM64 for each. Downloads include runtime dependencies,
+  license notices, release identity and checksums, with native relocation tests
+  and an explicitly triggered GitHub Release upload.
+
 - Pixel-Duo icons embedded in the NuGet library packages and local .NET CLI package.
 
 - Root SwiftPM test targets reuse native SwiftBridge, macro and highlighter tests,
@@ -68,6 +73,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   assertions, with coverage for the new language and scheduling behavior.
 
 ### Changed
+
+- Website navigation stays visible on desktop landing pages; mobile landing and
+  documentation headers scroll with the page to leave more room for content.
 
 - Record, Range, Series, Handler and Message text now uses reconstructible data
   forms. Integral Binary64 range inputs normalize to exact integer ranges.

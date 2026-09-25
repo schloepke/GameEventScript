@@ -28,6 +28,7 @@ const documents = new Map([
   ['docs/guide/distribution/CSharp.md', 'docs/distribution/csharp'],
   ['implementation/csharp/README.md', 'docs/implementations/csharp'],
   ['implementation/swift/README.md', 'docs/implementations/swift'],
+  ['docs/guide/distribution/Tools.md', 'docs/tools/downloads'],
   ['implementation/csharp/GameEventScript.Tool/README.md', 'docs/tools/csharp-cli'],
   ['implementation/swift/GameEventScriptTool/README.md', 'docs/tools/swift-cli'],
   ['implementation/csharp/GameEventScript.CSharpBridge/README.md', 'docs/integration/csharp-bridge'],

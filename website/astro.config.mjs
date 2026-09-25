@@ -44,7 +44,7 @@ export default defineConfig({
         { label: 'Embed in Swift', slug: 'docs/learn/swift' },
       ] },
       { label: 'Tools', items: [
-        'docs/tools/csharp-cli', 'docs/tools/swift-cli',
+        'docs/tools/downloads', 'docs/tools/csharp-cli', 'docs/tools/swift-cli',
         'docs/tools/csharp-highlighter', 'docs/tools/swift-highlighter',
         'docs/tools/editor-bundles',
       ] },

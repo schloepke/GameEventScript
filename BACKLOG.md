@@ -78,9 +78,9 @@ here.
   be ported for each runtime. Keep native allocation and platform integration
   checks in their implementation-specific harnesses.
 
-- Distribute standalone CLI archives through GitHub Releases and website links,
-  with platform-specific installation checks; optionally add Homebrew. CLI and
-  Conformance are excluded from public NuGet and SwiftPM library distribution.
+- Add Homebrew installation for the standalone CLI downloads and configure
+  Developer ID signing/notarization and Windows Authenticode signing before
+  promising platform-verified publisher identity.
 
 ## Unity and editor integration
 

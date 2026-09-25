@@ -68,6 +68,19 @@ mobile-starlight-toc .dropdown { max-height: calc(85dvh - var(--ges-docs-top) - 
 }
 @media (max-width: 49.99rem) {
   :root:has(.ges-development-notice) { --ges-notice-height: 4rem; }
+  :root { scroll-padding-top: 1.5rem; }
+  /* Reading on small screens keeps all navigation in the document flow. */
+  .page { position: relative; }
+  .page > .header { position: relative; height: var(--ges-docs-top); }
+  .page > .header > .header { height: calc(var(--sl-nav-height) - 2 * var(--sl-nav-pad-y)); }
+  .ges-development-notice { position: absolute; }
+  .main-frame { padding-top: 0; }
+  .sl-menu-button { position: absolute; }
+  mobile-starlight-toc nav { position: relative; top: auto; }
+  mobile-starlight-toc .dropdown { max-height: 70dvh; }
+  /* Only the open menu needs a pinned header and reachable close button. */
+  .page:has(#starlight__sidebar:popover-open) > .header { position: sticky; top: 0; }
+  .sl-menu-button:has(~ :popover-open) { position: fixed; }
 }
 @media print {
   .ges-development-notice { position: static; }

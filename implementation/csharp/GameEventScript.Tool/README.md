@@ -3,6 +3,10 @@
 
 # Game Event Script CLI
 
+For prebuilt downloads without a development SDK, see
+[standalone CLI distribution](../../../docs/guide/distribution/Tools.md).
+The instructions below build and install from a repository checkout.
+
 `GameEventScript.Tool` is a separate .NET console application packaged as
 a .NET tool with command name `dotnet-ges`, invoked as `dotnet ges`. It targets
 .NET 8 and references the portable Runtime, Compiler, and C# bridge. Terminal and filesystem integration

@@ -440,6 +440,19 @@ or callback state must not be accessed outside the transferred ownership domain.
 
 ## CLI
 
+Standalone CLI downloads are built by `scripts/package-cli.py`, verified by
+`scripts/verify-cli-archive.py` and collected by `scripts/collect-cli-release.py`.
+C# archives include the .NET runtime and use `dotnet-ges`; Swift archives use `ges`.
+Windows C# uses ZIP; macOS/Linux use tar.gz. Both architectures are independently
+verified. Swift Linux uses the pinned Swift 6.4.0 Static SDK; maintain its license
+texts under `tools/distribution/licenses` together with SDK upgrades. Swift release
+version injection changes only an isolated source copy; local builds say development.
+The CLI Distribution workflow builds targets in parallel and never publishes on PRs.
+Publishing requires the matching tag, a complete clean-source verification set,
+the `cli-release` environment and an existing GitHub release. Never overwrite assets.
+Preparing archives does not publish. Run `python3 scripts/test-cli-distribution.py`.
+See `docs/guide/distribution/Tools.md`; all output stays below `artifacts/cli`.
+
 The C# `dotnet ges` and Swift `ges` tools provide `compile`, `check`, `run`, and
 `dump`. The C# NuGet package remains `GameEventScript.Tool`; the installed command is
 `dotnet-ges`, resolved by `dotnet ges` when the tool directory is on `PATH`.

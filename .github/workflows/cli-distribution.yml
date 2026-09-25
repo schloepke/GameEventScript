@@ -1,0 +1,185 @@
+# Copyright 2026 Stephan Schlöpke
+# SPDX-License-Identifier: Apache-2.0
+
+name: CLI Distribution
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cli-distribution.yml'
+      - 'implementation/**'
+      - 'Directory.Build.props'
+      - 'global.json'
+      - 'scripts/*cli*'
+      - 'tools/distribution/**'
+      - 'docs/guide/distribution/Tools.md'
+      - 'LICENSE'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version embedded in the CLI downloads (without v prefix)
+        required: true
+        default: 0.2.0-rc.1
+        type: string
+      publish:
+        description: Attach verified downloads to the matching existing GitHub release
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cli-distribution-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CLI_VERSION: ${{ inputs.version || format('0.0.0-ci.{0}', github.run_number) }}
+
+jobs:
+  controls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Verify release selection and archive safety
+        run: python3 scripts/test-cli-distribution.py
+      - name: Require a version tag before publication
+        if: inputs.publish
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" != "refs/tags/$CLI_VERSION" && "$GITHUB_REF" != "refs/tags/v$CLI_VERSION" ]]; then
+            echo 'Publication requires the matching version tag.' >&2
+            exit 1
+          fi
+
+  native:
+    needs: controls
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { implementation: csharp, target: win-x64, runner: windows-2022 }
+          - { implementation: csharp, target: win-arm64, runner: windows-11-arm }
+          - { implementation: csharp, target: linux-x64, runner: ubuntu-22.04 }
+          - { implementation: csharp, target: linux-arm64, runner: ubuntu-22.04-arm }
+          - { implementation: csharp, target: osx-x64, runner: macos-15-intel }
+          - { implementation: csharp, target: osx-arm64, runner: macos-15 }
+          - { implementation: swift, target: osx-x64, runner: macos-15-intel }
+          - { implementation: swift, target: osx-arm64, runner: macos-15 }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - if: matrix.implementation == 'csharp'
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.201
+      - name: Build standalone archive
+        run: python3 scripts/package-cli.py '${{ matrix.implementation }}' "$CLI_VERSION" '${{ matrix.target }}'
+      - name: Verify relocated archive on its native platform
+        run: python3 scripts/verify-cli-archive.py '${{ matrix.implementation }}' "$CLI_VERSION" '${{ matrix.target }}' --directory "artifacts/cli/$CLI_VERSION"
+      - name: Verify Linux download without an installed SDK
+        if: startsWith(matrix.target, 'linux-')
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo -e CLI_VERSION ubuntu:22.04 bash -euc '
+            apt-get update -qq
+            apt-get install -y -qq python3 binutils libicu70 libssl3 zlib1g libstdc++6 ca-certificates
+            python3 scripts/verify-cli-archive.py csharp "$CLI_VERSION" "${{ matrix.target }}" --directory "artifacts/cli/$CLI_VERSION"
+          '
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cli-${{ matrix.implementation }}-${{ matrix.target }}
+          path: artifacts/cli/${{ env.CLI_VERSION }}/ges-*
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 14
+
+  swift-linux:
+    needs: controls
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x64, runner: ubuntu-22.04 }
+          - { target: linux-arm64, runner: ubuntu-22.04-arm }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build with matching Swift compiler and Static Linux SDK
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo -e CLI_VERSION \
+            swift:6.4.0-jammy@sha256:a6053d2de72091906bfa064f76f145e3f28830664cae250e1b84aa8c499a8ee6 bash -euc '
+              # The bind-mounted checkout belongs to the host runner, not container root.
+              git config --global --add safe.directory /repo
+              swift sdk install --swift-sdks-path /repo/artifacts/cli/swift-sdks \
+                https://download.swift.org/swift-6.4.0-release/static-sdk/swift-6.4.0-RELEASE/swift-6.4.0-RELEASE_static-linux-0.1.0.artifactbundle.tar.gz \
+                --checksum 47d2fd89eebfdf9eb4d536b6710414297f755c17926cdebc4742c08982b40a9e
+              python3 scripts/package-cli.py swift "$CLI_VERSION" "${{ matrix.target }}" --swift-sdks-path /repo/artifacts/cli/swift-sdks
+            '
+      - name: Verify Linux download without Swift or .NET installed
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo -e CLI_VERSION ubuntu:22.04 bash -euc '
+            apt-get update -qq
+            apt-get install -y -qq python3 binutils
+            python3 scripts/verify-cli-archive.py swift "$CLI_VERSION" "${{ matrix.target }}" --directory "artifacts/cli/$CLI_VERSION"
+          '
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cli-swift-${{ matrix.target }}
+          path: artifacts/cli/${{ env.CLI_VERSION }}/ges-*
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 14
+
+  verify:
+    needs: [controls, native, swift-linux]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every native target to pass
+        env:
+          CONTROLS: ${{ needs.controls.result }}
+          NATIVE: ${{ needs.native.result }}
+          LINUX: ${{ needs.swift-linux.result }}
+        run: test "$CONTROLS" = success && test "$NATIVE" = success && test "$LINUX" = success
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: cli-*
+          merge-multiple: true
+          path: artifacts/cli/release
+      - name: Validate complete release and create checksums without publishing
+        run: python3 scripts/collect-cli-release.py "$CLI_VERSION" --revision "$GITHUB_SHA" --directory artifacts/cli/release
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cli-release
+          path: artifacts/cli/release/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    needs: verify
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    runs-on: ubuntu-latest
+    environment: cli-release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: cli-release
+          path: artifacts/cli/release
+      - name: Attach CLI downloads to the existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/collect-cli-release.py "$CLI_VERSION" --revision "$GITHUB_SHA" --directory artifacts/cli/release --publish

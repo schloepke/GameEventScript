@@ -3,6 +3,10 @@
 
 # Native Swift CLI
 
+For prebuilt downloads without a development SDK, see
+[standalone CLI distribution](../../../docs/guide/distribution/Tools.md).
+The instructions below build and install from a repository checkout.
+
 `GameEventScriptTool` is a separate SwiftPM executable package. It installs `ges`
 and depends on the local Runtime and Compiler packages, Foundation, and a small
 POSIX terminal adapter. It has no .NET or third-party package dependency.

@@ -293,6 +293,16 @@ extension GesCompiler {
     }
 
     func constructor(_ type: String, _ arguments: [GesArgument], _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
+        if ["__split", "__splitWhitespace"].contains(type) {
+            let regs = try arguments.map { try expression($0.value, r, scope) }
+            r.emit(.splitText, d, regs[0], regs.count > 1 ? regs[1] : 0, payload: regs.count == 1 ? 1 : 0)
+            return
+        }
+        if type == "record" || type == "series" || ["number", "range", "message", "nothing", "percentage", "boolean", "text", "tag", "list", "map", "dice", "handler"].contains(type) && (arguments.count != 1 || arguments[0].label != "_") {
+            let regs = try arguments.map { try expression($0.value, r, scope) }
+            r.emit(.constructData, d, text(type), list(regs), payload: UInt64(textList(arguments.map(\.label))))
+            return
+        }
         if type == "vector" || type == "point" {
             let first = arguments.first?.label ?? "_"
             let start = ["x", "y", "z"].firstIndex(of: first) ?? 0

@@ -7,6 +7,14 @@ using GameEventScript.Api;
 using GameEventScript.Conformance;
 using GameEventScript.Tests.Conformance;
 
+if (args.Length == 3 && args[0] == "--message-json")
+{
+    var input = System.Text.Json.JsonSerializer.Deserialize<string[]>(File.ReadAllText(args[1]))!;
+    var normalized = input.Select(json => GameEventScriptMessageJson.Serialize(GameEventScriptMessageJson.Deserialize(json))).ToArray();
+    File.WriteAllText(args[2], System.Text.Json.JsonSerializer.Serialize(normalized));
+    return 0;
+}
+
 if (args.Length == 3 && args[0] == "--number-text") return NumberTextProbe.Run(args[1], args[2]);
 
 if (args.Length != 2)

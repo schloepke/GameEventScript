@@ -24,6 +24,9 @@ jobs:
       - name: Verify repository cleanup safety
         run: python3 scripts/test-clean.py
 
+      - name: Verify canonical highlighting tables
+        run: python3 scripts/sync-highlighter-grammars.py --check
+
       - name: Verify publication package selection
         run: python3 scripts/test-publish-csharp-packages.py
 

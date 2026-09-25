@@ -12,6 +12,19 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Standalone C# and Swift SyntaxHighlighter libraries, shared with both CLIs,
+  using canonical TextMate rules. They expose UTF-16 ranges, semantic categories,
+  scope stacks, incremental line states and an optional ANSI renderer.
+
+- SwiftBridge annotations `@GesType`, `@GesField` and `@GesConstruct` generate
+  native bindings, with inferred field types and explicit numeric units.
+
+- Explicit portable type data forms, including Range, built-in Series, Handler,
+  Message and immutable Record snapshots; `parse` reconstructs them and can run
+  known script Record constructors after complete input recognition.
+- Text splitting with `[:split on separator]` and `[:split on whitespace]`.
+- Explicit Runtime-only V1 product JSON codecs in C# and Swift, preserving
+  message argument order and exporting external values as Record snapshots.
 - C# and Swift support conditional bindings with `if let`, including multiple
   bindings and conditions separated by semicolons. Checks short-circuit from
   left to right; successful bindings are available to subsequent checks and
@@ -34,6 +47,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Changed
 
+- Record, Range, Series, Handler and Message text now uses reconstructible data
+  forms. Integral Binary64 range inputs normalize to exact integer ranges.
+- GESB V1 adds ConstructData and SplitText; older readers reject these opcodes.
 - **Source compatibility:** every `if` header and then body share one local
   scope; else has a separate sibling scope. Bindings from either branch never
   escape the `if`, including unbraced bodies. For a binding needed afterward,
@@ -48,7 +64,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Fixed
 
+- SwiftPM distribution and SwiftBridge explicitly declare macOS 10.15, matching
+  SwiftSyntax's minimum and fixing dependency planning with Swift 6.1.
+- Swift highlighting preserves Unicode separators inside comments and GESA
+  source-line strings without misclassifying subsequent assembler instructions.
+- C# and Swift highlighting retain declaration keyword colors across line breaks
+  and while declarations are incomplete.
+
 - Swift CLI recognizes application-mode cursor keys used by Ghostty.
 - C# CLI retains command history when switching between the ordinary prompt
   and delayed-message input handling.
-

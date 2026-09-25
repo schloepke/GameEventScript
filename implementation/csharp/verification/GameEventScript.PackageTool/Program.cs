@@ -19,7 +19,8 @@ internal static class Program
     [
         new(RuntimePackage, []),
         new("GameEventScript.Compiler", [RuntimePackage]),
-        new("GameEventScript.CSharpBridge", [RuntimePackage])
+        new("GameEventScript.CSharpBridge", [RuntimePackage]),
+        new("GameEventScript.SyntaxHighlighter", [])
     ];
 
     private static int Main(string[] arguments)

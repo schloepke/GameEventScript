@@ -415,7 +415,7 @@ public static class GameEventScriptProgramDumper
             DiceCount => Immediate(instruction.Count),
             DiceSideCount => Immediate(instruction.ImmediateY),
             ComponentCount => Immediate(instruction.ImmediateX),
-            CountImmediate => Immediate(instruction.ImmediateY),
+            CountImmediate => Immediate(instruction.OpCode == GameEventScriptBytecodeOpCode.SplitText ? instruction.AU : instruction.ImmediateY),
             IndexImmediate => Immediate(instruction.Index),
             FromImmediate => Immediate(instruction.ImmediateX),
             ToImmediate => Immediate(instruction.ImmediateY),
@@ -445,7 +445,7 @@ public static class GameEventScriptProgramDumper
             TypeName => FormatTextReference(context, instruction.StringIndex),
 
             MessageShapeList => context.ListLabel(instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage ? instruction.SecondaryListIndex : instruction.ListIndex),
-            ArgumentNameList => context.ListLabel(instruction.ListIndex),
+            ArgumentNameList => context.ListLabel(instruction.OpCode == GameEventScriptBytecodeOpCode.ConstructData ? instruction.AU : instruction.ListIndex),
             ArgumentRegisterList => context.ListLabel(instruction.ListIndex),
             ItemRegisterList => context.ListLabel(instruction.ListIndex),
             KeyNameList => context.ListLabel(instruction.SecondaryListIndex),
@@ -495,7 +495,7 @@ public static class GameEventScriptProgramDumper
                     AddListTextComment(comments, context, instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage ? instruction.SecondaryListIndex : instruction.ListIndex);
                     break;
                 case ArgumentNameList:
-                    AddListTextComment(comments, context, instruction.ListIndex);
+                    AddListTextComment(comments, context, instruction.OpCode == GameEventScriptBytecodeOpCode.ConstructData ? instruction.AU : instruction.ListIndex);
                     break;
                 case KeyNameList:
                     AddListTextComment(comments, context, instruction.SecondaryListIndex);
@@ -1340,7 +1340,7 @@ public static class GameEventScriptProgramDumper
                 case MessageShapeList:
                     return (instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage ? instruction.SecondaryListIndex : instruction.ListIndex, "Shape", ListRole.Texts);
                 case ArgumentNameList:
-                    return (instruction.ListIndex, "Names", ListRole.Texts);
+                    return (instruction.OpCode == GameEventScriptBytecodeOpCode.ConstructData ? instruction.AU : instruction.ListIndex, "Names", ListRole.Texts);
                 case KeyNameList:
                     return (instruction.SecondaryListIndex, "Keys", ListRole.Texts);
                 case ArgumentRegisterList:

@@ -1523,8 +1523,9 @@ public sealed class ConformanceMessageApiCase
         ConformanceMessage? compareMessage,
         ConformanceMessage? compareConformanceMessage,
         ConformanceMessageSignatureDefinition? compareHandler,
-        IReadOnlyList<ConformanceValue> createArguments)
+        IReadOnlyList<ConformanceValue> createArguments, string? json = null, bool roundTripJson = false)
     {
+        Json = json; RoundTripJson = roundTripJson;
         SignatureName = signatureName;
         Parameters = ConformanceDocument.Copy(parameters);
         Message = message;
@@ -1541,6 +1542,10 @@ public sealed class ConformanceMessageApiCase
     /// Gets the signature name.
     /// </summary>
     public string SignatureName { get; }
+    /// <summary>Optional product JSON input replacing the message fixture.</summary>
+    public string? Json { get; }
+    /// <summary>Whether to roundtrip the message through the V1 product codec before assertions.</summary>
+    public bool RoundTripJson { get; }
     /// <summary>
     /// Gets the parameters.
     /// </summary>
@@ -1619,7 +1624,7 @@ public sealed class ConformanceMessageApiExpectation
         bool? handlerEquals,
         bool? handlerHashEquals,
         string? createdMessageSignatureId,
-        string? error)
+        string? error, string? json = null)
     {
         Name = name;
         SignatureId = signatureId;
@@ -1634,13 +1639,15 @@ public sealed class ConformanceMessageApiExpectation
         HandlerEquals = handlerEquals;
         HandlerHashEquals = handlerHashEquals;
         CreatedMessageSignatureId = createdMessageSignatureId;
-        Error = error;
+        Error = error; Json = json;
     }
 
     /// <summary>
     /// Gets the name.
     /// </summary>
     public string? Name { get; }
+    /// <summary>Expected canonical product JSON for the actual message.</summary>
+    public string? Json { get; }
     /// <summary>
     /// Gets the signature id.
     /// </summary>

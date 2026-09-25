@@ -421,7 +421,6 @@ on Start(value) { emit Done(parsed: parse value) }
 | input-22 | Start | completion | |
 | input-23 | Start | completion | |
 | input-24 | Start | completion | |
-| input-25 | Start | completion | |
 | input-26 | Start | completion | |
 | input-27 | Start | completion | |
 | input-28 | Start | completion | |
@@ -841,23 +840,6 @@ steps:
             value:
               type: ":Text"
               value: ":Dice[1] trailing"
-    runtimeLimits:
-      exclude:
-        - any: true
-  input-25:
-    input:
-      args:
-        - name: "value"
-          value:
-            type: ":Text"
-            value: ":Dice([1, 2])"
-    local:
-      - name: "Done"
-        args:
-          - name: "parsed"
-            value:
-              type: ":Text"
-              value: ":Dice([1, 2])"
     runtimeLimits:
       exclude:
         - any: true

@@ -273,7 +273,7 @@ public struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Performs the ges range operation.
+    /// Creates a lazy range. Finite endpoints and step that are exactly representable as Int64 normalize to an exact integer range; other finite inputs use binary64 terms. Non-finite inputs produce Nothing.
     /// </summary>
     /// <param name="from">The from value.</param>
     /// <param name="to">The to value.</param>
@@ -735,6 +735,11 @@ public struct GesValue : IEquatable<GesValue>
             return;
         }
 
+        if (GameEventScriptNumber.CanRepresentAsInteger(from) && GameEventScriptNumber.CanRepresentAsInteger(to) && GameEventScriptNumber.CanRepresentAsInteger(step))
+        {
+            SetRange((long)from, (long)to, (long)step);
+            return;
+        }
         from = GameEventScriptNumber.CanonicalizeZero(from);
         to = GameEventScriptNumber.CanonicalizeZero(to);
         step = GameEventScriptNumber.CanonicalizeZero(step);
@@ -1056,12 +1061,12 @@ public struct GesValue : IEquatable<GesValue>
         Dice when ObjectValue is int[] dice => FormatDice(dice),
         List when ObjectValue is GesValue[] list => FormatList(list),
         Map when ObjectValue is GesValueMap map => FormatMap(map),
-        Custom when ObjectValue is GesCustomObject custom => FormatMap(custom.Map),
+        Custom when ObjectValue is GesCustomObject custom => FormatRecord(custom.TypeName, custom.Map),
         GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger range => FormatRange(range.From, range.To, range.Step),
         GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat range => FormatRange(range.From, range.To, range.Step),
-        Series when ObjectValue is GesSeries series => $"series[{series.SignatureId} offset {series.Offset}]",
-        GameEventScriptBytecodeTypeKind.Handler when ObjectValue is GameEventScriptMessageSignature signature => $"handler {signature.SignatureId}",
-        GameEventScriptBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage message => message.ToString(),
+        Series when ObjectValue is GesSeries series => $":Series({series.SignatureId}, offset: {series.Offset.ToString(CultureInfo.InvariantCulture)})",
+        GameEventScriptBytecodeTypeKind.Handler when ObjectValue is GameEventScriptMessageSignature signature => $":Handler({signature.SignatureId})",
+        GameEventScriptBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage message => FormatMessage(message),
         _ => Kind.ToString()
     };
 
@@ -1119,10 +1124,30 @@ public struct GesValue : IEquatable<GesValue>
         builder.Append(']');
         return builder.ToString();
     }
+    private static string FormatRecord(string name, GesValueMap fields)
+    {
+        var builder = new StringBuilder(":Record(");
+        TextLiteralReader.AppendQuoted(builder, name);
+        return builder.Append(", ").Append(FormatMap(fields)).Append(')').ToString();
+    }
+    private static string FormatMessage(GameEventScriptMessage message)
+    {
+        var builder = new StringBuilder(":Message(").Append(message.Name).Append('(');
+        for (var i = 0; i < message.Arguments.Count; i++)
+        {
+            if (i > 0) builder.Append(", ");
+            var name = message.Arguments.NameAt(i);
+            if (name != "_") builder.Append(name).Append(": ");
+            AppendNestedText(builder, message.Arguments[i]);
+        }
+        builder.Append(')');
+        for (var i = 0; i < message.Tags.Count; i++) builder.Append(i == 0 ? " with #" : ", #").Append(message.Tags[i]);
+        return builder.Append(')').ToString();
+    }
     private static string FormatRange(long from, long to, long step)
-        => $"range[{from.ToString(CultureInfo.InvariantCulture)} to {to.ToString(CultureInfo.InvariantCulture)} step {step.ToString(CultureInfo.InvariantCulture)}]";
+        => $":Range(from: {from.ToString(CultureInfo.InvariantCulture)}, to: {to.ToString(CultureInfo.InvariantCulture)}, step: {step.ToString(CultureInfo.InvariantCulture)})";
     private static string FormatRange(double from, double to, double step)
-        => $"range[{FormatRangeComponent(from)} to {FormatRangeComponent(to)} step {FormatRangeComponent(step)}]";
+        => $":Range(from: {FormatRangeComponent(from)}, to: {FormatRangeComponent(to)}, step: {FormatRangeComponent(step)})";
     private static string FormatRangeComponent(double value)
         => GameEventScriptNumber.FormatCanonicalFloat(value);
 }

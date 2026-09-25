@@ -12,7 +12,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
-PACKAGES = ("GameEventScript.Runtime", "GameEventScript.Compiler", "GameEventScript.CSharpBridge")
+PACKAGES = ("GameEventScript.Runtime", "GameEventScript.Compiler", "GameEventScript.CSharpBridge", "GameEventScript.SyntaxHighlighter")
 VERSION = "0.1.0-test.1"
 
 

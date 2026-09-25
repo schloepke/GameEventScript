@@ -348,3 +348,7 @@ special script/native precedence.
 Detach, unsubscribe, load, or subscribe during dispatch affects only messages
 whose snapshots are captured afterward. These rules are independent of frame
 budgeting and asynchronous adapters around the synchronous portable host.
+
+Integral Range normalization follows [Language](../Language.md#range): endpoints and
+step exactly representable as Int64 select integer terms before the binary64 rule
+is considered, including ranges constructed through host APIs.

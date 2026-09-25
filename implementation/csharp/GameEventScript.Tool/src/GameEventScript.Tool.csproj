@@ -26,8 +26,7 @@
     <ItemGroup>
         <InternalsVisibleTo Include="GameEventScript.Tool.Tests" />
         <PackageReference Include="PrettyPrompt" Version="4.1.1" />
-        <EmbeddedResource Include="../../../../tools/editors/TextMate/GameEventScript.tmbundle/Syntaxes/GameEventScript.tmLanguage.json" LogicalName="GameEventScript.Grammar.json" />
-        <EmbeddedResource Include="../../../../tools/editors/TextMate/GameEventScriptAssembler.tmbundle/Syntaxes/GameEventScriptAssembler.tmLanguage.json" LogicalName="GameEventScript.AssemblerGrammar.json" />
+        <ProjectReference Include="../../GameEventScript.SyntaxHighlighter/src/GameEventScript.SyntaxHighlighter.csproj" />
         <ProjectReference Include="../../GameEventScript.Runtime/src/GameEventScript.Runtime.csproj" />
         <ProjectReference Include="../../GameEventScript.Compiler/src/GameEventScript.Compiler.csproj" />
         <ProjectReference Include="../../GameEventScript.CSharpBridge/src/GameEventScript.CSharpBridge.csproj" />

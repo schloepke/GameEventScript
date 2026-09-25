@@ -184,6 +184,10 @@ public static class GameEventScriptProgramValidator
             (encodedFlags & ~allowedFlags) != 0)
             InvalidOperand("Instruction contains an unknown unit or instruction flag.", instructionIndex);
 
+        if (instruction.OpCode is GameEventScriptBytecodeOpCode.ConstructData or GameEventScriptBytecodeOpCode.SplitText &&
+            (instruction.UnitAndFlags != 0 || instruction.BU != 0 || instruction.CU != 0 || instruction.DU != 0
+                || instruction.OpCode == GameEventScriptBytecodeOpCode.SplitText && (instruction.AU > 1 || instruction.AU == 1 && instruction.YRegister != 0)))
+            InvalidOperand("Data instruction contains nonzero reserved operands.", instructionIndex);
         if (instruction.OpCode == GameEventScriptBytecodeOpCode.ParseLiteral &&
             (instruction.UnitAndFlags != 0 || instruction.YRegister != 0 || instruction.Payload != 0))
             InvalidOperand("ParseLiteral reserves the unit/flag byte, Y word, and payload.", instructionIndex);
@@ -233,6 +237,15 @@ public static class GameEventScriptProgramValidator
                 var kind = instruction.OpCode == GameEventScriptBytecodeOpCode.CallExternal ? ExtensionCall : ExternalType;
                 if (!HasBind(indexedBindingIds, kind, instruction.BindId)) InvalidOperand("Instruction references a missing external binding.", instructionIndex);
             }
+        }
+        if (instruction.OpCode == GameEventScriptBytecodeOpCode.ConstructData)
+        {
+            var type = program.StringConstants.Resolve(instruction.StringIndex);
+            var names = program.UInt16IndexLists.Resolve(instruction.AU);
+            var labels = new string[names.Length];
+            for (var index = 0; index < labels.Length; index++) labels[index] = program.StringConstants.Resolve(names[index]);
+            if (!GameEventScript.Runtime.GesDataConstruction.IsType(type) || GameEventScript.Runtime.GesDataConstruction.Positions(type, labels) is null || names.Length != program.UInt16IndexLists.Resolve(instruction.ListIndex).Length)
+                InvalidOperand("Invalid data constructor type or argument shape.", instructionIndex);
         }
     }
 
@@ -294,6 +307,7 @@ public static class GameEventScriptProgramValidator
     private static ushort ReadListOperand(GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part)
         => part switch
         {
+            GameEventScriptOpcodePrinter.OperandPart.ArgumentNameList when instruction.OpCode == GameEventScriptBytecodeOpCode.ConstructData => instruction.AU,
             GameEventScriptOpcodePrinter.OperandPart.TagRegisterList when GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode) => instruction.AU,
             GameEventScriptOpcodePrinter.OperandPart.MessageShapeList when instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage => instruction.SecondaryListIndex,
             GameEventScriptOpcodePrinter.OperandPart.KeyNameList => instruction.SecondaryListIndex,

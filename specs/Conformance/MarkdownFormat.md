@@ -1096,3 +1096,14 @@ Step expectations may include `waiting: true|false`, asserting whether the last
 pump returned Waiting. An enqueue-only step has no Waiting result. Frames stop
 on Waiting instead of spinning. Tests must assert downstream emissions or trace
 entries to distinguish acceptance from actual delayed delivery.
+
+### Product JSON message API checks
+
+`messageApi` optionally accepts `json` (a complete product message envelope) and
+`roundTripJson` (Boolean, default false). `json` replaces the ordinary message
+fixture before checks. `roundTripJson` serializes and deserializes the message
+before the existing signature, equality and structured message assertions.
+The existing signature and message metadata remain required. The expectation
+`message.json` optionally asserts the exact canonical serialized envelope;
+`message.error` can assert the stable `message.*` codec failures. This exercises
+the independent product codec, never the Conformance value transport.

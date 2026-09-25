@@ -723,10 +723,10 @@ internal sealed partial class GesBinaryBuilder
         instruction = ApplyX(instruction, plan.X, registerMap, labelAddresses, bindIds, resolveText, resolveList, resolveTextList);
         instruction = ApplyY(instruction, plan.Y, registerMap, labelAddresses, resolveText, resolveList, resolveTextList);
         instruction = ApplySecondaryList(instruction, plan.SecondaryList, registerMap, resolveList, resolveTextList);
-        instruction = ApplyAux(instruction, plan.A, 0, registerMap, labelAddresses, resolveList);
-        instruction = ApplyAux(instruction, plan.B, 1, registerMap, labelAddresses, resolveList);
-        instruction = ApplyAux(instruction, plan.C, 2, registerMap, labelAddresses, resolveList);
-        instruction = ApplyAux(instruction, plan.D, 3, registerMap, labelAddresses, resolveList);
+        instruction = ApplyAux(instruction, plan.A, 0, registerMap, labelAddresses, resolveList, resolveTextList);
+        instruction = ApplyAux(instruction, plan.B, 1, registerMap, labelAddresses, resolveList, resolveTextList);
+        instruction = ApplyAux(instruction, plan.C, 2, registerMap, labelAddresses, resolveList, resolveTextList);
+        instruction = ApplyAux(instruction, plan.D, 3, registerMap, labelAddresses, resolveList, resolveTextList);
 
         if (plan.Count.HasValue) instruction.Count = plan.Count.Value;
         if (plan.I64.HasValue) instruction.I64 = plan.I64.Value;
@@ -865,7 +865,8 @@ internal sealed partial class GesBinaryBuilder
         int index,
         IReadOnlyDictionary<int, ushort> registerMap,
         IReadOnlyDictionary<int, ushort> labelAddresses,
-        Func<IReadOnlyList<GesRegisterRef>, ushort> resolveList)
+        Func<IReadOnlyList<GesRegisterRef>, ushort> resolveList,
+        Func<IReadOnlyList<string>, ushort> resolveTextList)
     {
         if (operand.Kind == GesOperandKind.None) return instruction;
         var value = operand.Kind switch
@@ -873,6 +874,7 @@ internal sealed partial class GesBinaryBuilder
             GesOperandKind.Register => ResolveRegister(operand.RegisterRef, registerMap),
             GesOperandKind.Label => labelAddresses[operand.LabelRef.Id],
             GesOperandKind.RegisterList => resolveList(operand.RegisterListValue!),
+            GesOperandKind.TextList => resolveTextList(operand.TextListValue!),
             GesOperandKind.UShort => operand.UShort,
             GesOperandKind.Short => unchecked((ushort)operand.Short),
             GesOperandKind.Type => (ushort)operand.TypeKind,

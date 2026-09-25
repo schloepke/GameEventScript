@@ -8,18 +8,18 @@ versioned Swift module repositories.
 
 | Distribution | Public products |
 | --- | --- |
-| NuGet | `GameEventScript.Runtime`, `GameEventScript.Compiler`, `GameEventScript.CSharpBridge` |
-| SwiftPM | `GameEventScriptRuntime`, `GameEventScriptCompiler`, `GameEventScriptSwiftBridge` |
+| NuGet | `GameEventScript.Runtime`, `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, `GameEventScript.SyntaxHighlighter` |
+| SwiftPM | `GameEventScriptRuntime`, `GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntaxHighlighter` |
 
 Compiler and each native Bridge depend on their Runtime. An application can use
-Runtime alone. Conformance stays in the repository for development and CI. CLI
+Runtime alone. SyntaxHighlighter is optional and depends on no other GES module. Conformance stays in the repository for development and CI. CLI
 executables are not part of the public library package distribution; their local
 installers remain available. Standalone CLI release downloads are tracked in
 [BACKLOG.md](../../../BACKLOG.md).
 
 ## SwiftPM and Xcode
 
-The repository-root `Package.swift` is the public entry point. It declares three
+The repository-root `Package.swift` is the public entry point. It declares four
 library products using the existing source directories; it does not depend on
 the sibling development packages, expose Conformance, or include the CLI.
 
@@ -31,6 +31,7 @@ but a Runtime-only dependency does not build or link Compiler or SwiftBridge.
 For a consuming Swift package, after the corresponding version has been released:
 
 ```swift
+platforms: [.macOS(.v10_15)],
 dependencies: [
     .package(url: "https://github.com/schloepke/GameEventScript.git", from: "0.1.0")
 ],
@@ -48,7 +49,10 @@ Use `import GameEventScriptRuntime` and optionally the Compiler/SwiftBridge impo
 
 Swift 6.0 or newer is required. macOS is the currently CI-verified platform;
 other platform support must be verified before being advertised. The root library
-manifest does not inherit the CLI/Conformance tools' macOS 10.15.4 requirement.
+and local SwiftBridge manifests explicitly require macOS 10.15 to match their
+SwiftSyntax macro dependency. Consuming packages must declare this or a newer
+macOS target. This is a macOS deployment minimum, not an Apple-only restriction.
+The CLI/Conformance tools separately require macOS 10.15.4.
 
 There is no upload to Apple or a Swift registry in this flow. Publishing a Git
 version tag makes the root package available to SwiftPM. The individual packages
@@ -63,7 +67,7 @@ python3 scripts/test-publish-csharp-packages.py
 python3 scripts/test-swift-package.py
 ```
 
-The C# dry run creates three canonical NuGet packages, matching symbols and DLL
+The C# dry run creates four canonical NuGet packages, matching symbols and DLL
 sets, then compiles and executes independent consumers. See [C# distribution](CSharp.md).
 The publication-selection tests substitute a fake `dotnet`; they never contact
 NuGet. They verify that stale, internal and tool packages cannot enter the upload
@@ -72,7 +76,8 @@ list and that missing artifacts stop the entire upload before its first request.
 The SwiftPM check copies the current root manifest and library sources into an
 isolated Git repository under `artifacts/swift-package`, creates a local test
 tag, and resolves that version from two independent consumers. It checks all
-three products and the dependency graph, compiles/serializes/executes a Program,
+four products, the dependency graph and the explicit macOS minimum in both macro
+manifests, compiles/serializes/executes a Program,
 and runs that Program with Runtime alone. It also rejects builds of Compiler or
 Bridge in the Runtime-only consumer. No tag or commit is added to the working
 repository, and no remote is contacted by this check.

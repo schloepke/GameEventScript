@@ -1,6 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+using GameEventScript.SyntaxHighlighter;
 using GameEventScript.Api;
 using GameEventScript.CSharpBridge;
 using GameEventScript.Runtime.Values;
@@ -11,6 +12,8 @@ internal static class Program
 {
     private static int Main(string[] arguments)
     {
+        var highlights = new GameEventScriptSyntaxHighlighter().Highlight("emit Done(42)");
+        if (!highlights.IsComplete || !highlights.Spans.Any(span => span.Kind == GameEventScriptSyntaxKind.Number)) return Fail("The packaged highlighter did not classify a number.");
         var compiled = GameEventScriptBuilder.Create()
             .AddScript("on Start(value) { emit Done(result: (parse value) + 1) }", "package-consumer.ges")
             .Compile();

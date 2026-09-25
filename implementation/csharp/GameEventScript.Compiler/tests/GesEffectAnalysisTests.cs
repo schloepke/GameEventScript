@@ -12,7 +12,6 @@ public sealed class GesEffectAnalysisTests
     [TestMethod]
     [DataRow("value + 1")]
     [DataRow("random 1 to 6")]
-    [DataRow("parse value")]
     [DataRow("forward(value)")]
     public void UnusedRecordCastIsRemovedWhenComputedFieldsHaveNoProgramEffects(string expression)
     {
@@ -42,7 +41,6 @@ public sealed class GesEffectAnalysisTests
 
     [TestMethod]
     [DataRow("random 1 to 6", GameEventScriptBytecodeOpCode.RandomTake)]
-    [DataRow("parse value", GameEventScriptBytecodeOpCode.ParseLiteral)]
     [DataRow("value as :List", GameEventScriptBytecodeOpCode.Cast)]
     public void RandomAndBudgetChecksDoNotKeepUnusedResultsAlive(string expression, GameEventScriptBytecodeOpCode opcode)
     {

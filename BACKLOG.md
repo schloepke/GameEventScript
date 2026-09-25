@@ -43,19 +43,12 @@ here.
 
 ## Language and state
 
-- Specify data-literal representations and `parse` reconstruction for the
-  remaining value kinds: Range, Message/Handler, Series,
-  records, and external values. Independent numeric/Boolean/Text/Tag values,
-  Vector/Point data forms, Dice result literals, and recursive Lists/Maps are
-  implemented. Handler signatures and built-in Series kind/offset are data and
-  can receive representations without capturing executable host state;
-  reconstruction of bound values needs a separate contract.
+- Define reconstruction of executable host-bound values and custom Series separately.
+  Portable literals and JSON reconstruct data; external snapshots become Records.
 - Design host-bound Tables as the explicit mutation model. Mutations should
   enter a deterministic modification queue; snapshot visibility,
   read-your-writes, commit boundaries, rollback, observation, persistence and
   replication remain to be specified.
-- Finalize the product wire envelope independently of the already stable
-  Conformance transport, retaining ordered message argument arrays.
 
 ## Language ports and distribution
 

@@ -111,6 +111,8 @@ extension GameEventScriptBytecodeOpCode {
         case .`castCustom`: [.targetRegister, .sourceRegister, .customTypeName]
         case .`castUnit`: [.targetRegister, .sourceRegister, .unit]
         case .`castNumeric`: [.targetRegister, .sourceRegister]
+        case .constructData: [.targetRegister, .text, .argumentRegisterList, .argumentNameList]
+        case .splitText: [.targetRegister, .sourceRegister, .rightRegister, .countImmediate]
         case .`parseLiteral`: [.targetRegister, .sourceRegister]
         case .`checkType`: [.targetRegister, .sourceRegister, .typeKind]
         case .`checkCustomType`: [.targetRegister, .sourceRegister, .customTypeName]

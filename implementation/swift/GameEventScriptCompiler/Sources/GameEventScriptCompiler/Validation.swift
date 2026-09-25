@@ -1,7 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-import GameEventScriptRuntime
+@_spi(Compiler) import GameEventScriptRuntime
 
 extension GesCompiler {
     func validate() throws {
@@ -67,7 +67,8 @@ extension GesCompiler {
     }
 
     func knownType(_ type: String) -> Bool {
-        ["number", "numeric", "nothing", "boolean", "percentage", "vector", "point", "series", "tag", "text", "list", "range", "message", "handler", "map", "dice", "unit", "integer", "fractional"].contains(type) || type.hasPrefix("quantity:")
+        ["record", "number", "numeric", "nothing", "boolean", "percentage", "vector", "point", "series", "tag", "text", "list", "range", "message", "handler", "map", "dice", "unit", "integer", "fractional"].contains(type)
+            || type.hasPrefix("quantity:")
             || records[type] != nil || catalog?.types.contains { $0.name == type } == true
     }
 
@@ -151,8 +152,11 @@ extension GesCompiler {
             children = [a, b]
         case .call(let name, let args), .message(let name, let args), .extensionCall(_, let name, let args): try arguments(args, name)
         case .constructor(let name, let args):
-            try validateType(name, e.location)
+            if !["__split", "__splitWhitespace"].contains(name) { try validateType(name, e.location) }
             try arguments(args, name)
+            if ["record", "number", "range", "series", "message", "nothing", "percentage", "boolean", "text", "tag", "list", "map", "dice", "handler"].contains(name) && !GameEventScriptCompilerSupport.dataArguments(name, args.map(\.label)) {
+                throw error("validate.invalidTypeConstructor", e.location, symbol: name, kind: .type)
+            }
             if ["vector", "point"].contains(name) {
                 let labeled = args.filter { $0.label != "_" }
                 let first = ["x", "y", "z"].firstIndex(of: labeled.first?.label ?? "") ?? -1

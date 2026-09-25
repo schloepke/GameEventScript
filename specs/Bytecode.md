@@ -372,7 +372,7 @@ groups are:
 0xA0 Group 3: collection slicing, text/collection operators, map projections
 0xB0 Group 3 membership, collection algebra, map projections, element terminals
 0xC0 Group 3 iterators, aggregations, weighted terminals, collect terminals
-0xD0 Group 3 generated collection/order/group/distinct builders, pattern operators, literal parsing, result-bearing sends, reserved tail 0xDE..0xFF
+0xD0 Group 3 generated collection/order/group/distinct builders, pattern operators, literal parsing, result-bearing sends, reserved tail 0xE0..0xFF
 ```
 
 The exhaustive [canonical opcode field map](#canonical-opcode-field-map) in this document lists every defined opcode as its own row, and every group ends with one `reserved` row for its unused tail range.
@@ -1556,8 +1556,9 @@ separate approximate-equality opcode.
 [Text semantics](Semantics/Text.md#literal-recognition-from-text). Non-Text input
 writes `nothing`. It reads `XRegister` before writing the destination; source
 and destination may alias. `YRegister`, payload words, and flags are zero.
-Runtime parse limits can stop the handler, so this instruction is not removable
-as a dead write and must not be folded past runtime-limit checks.
+Recognition may start known Record constructors on the ordinary VM call stack.
+Their side effects must be preserved when the result is unused. Parsing limits
+remain protection limits, not additional optimizer-observable effects.
 
 | Hex | Opcode | UnitAndFlags | DestinationRegister | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -1623,7 +1624,9 @@ as a dead write and must not be folded past runtime-limit checks.
 | 0xDB | `EmitAfter` | WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged, `BU`=duration register | Accepts delayed dispatch; see result-bearing sends below. |
 | 0xDC | `PublishInstant` | WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged | Accepts immediate dispatch; see result-bearing sends below. |
 | 0xDD | `PublishAfter` | WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged, `BU`=duration register | Accepts delayed dispatch; see result-bearing sends below. |
-| 0xDE..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3 for future collection, iterator, pipeline, extension, or VM opcodes. |
+| 0xDE | `ConstructData` | - | result register | type-name Text index | argument-register list | `AU`=argument-label Text list | Constructs explicit built-in data. |
+| 0xDF | `SplitText` | - | result register | input register | delimiter register, zero in whitespace mode | `AU`=mode: 0 explicit separator, 1 whitespace | Produces a Text/Nothing List. |
+| 0xE0..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3 for future collection, iterator, pipeline, extension, or VM opcodes. |
 
 ## Side-Table Summary
 
@@ -1663,3 +1666,18 @@ callbacks return and must not retain a mutable register reference across them.
 Fold/reduce lower to ordinary iterator loops and accumulator registers. Their
 step expressions run in the normal VM execution stream and can pause/resume.
 No fold/reduce opcode or implicit per-element budget surcharge is introduced.
+
+### Explicit data instruction validation
+
+`ConstructData` uses a lowercase built-in type name, ordered argument registers,
+and a same-length label list (`_` for positional arguments). Type/arity/label
+validation follows the explicit constructor contract; unknown names or invalid
+shapes are InvalidOperand. Label lists may not duplicate named labels. Flags,
+unit, BU, CU and DU must be zero. Arguments are copied before assigning the
+result, so destination/source aliasing is valid. It never invokes a user Record
+constructor; `ParseLiteral` manages those calls after full recognition.
+
+`SplitText` reserves all flags/units and BU/CU/DU. AU is 0 or 1; mode 1 requires
+Y=0 and ignores that register. Its GESA final immediate displays AU. Mode 0
+requires a nonempty Text delimiter; Nothing is not a whitespace request.
+Neither instruction charges synthetic opcode work per item.

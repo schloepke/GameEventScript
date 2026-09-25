@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "70F454270A9D3CB99EC84FFA6A6F3DD6A1C30A6CFA60C90E46FA75CF8ED572FB",
-    "documentCount": 94,
-    "caseCount": 1597
+    "sha256": "882A371D19AC9D218713FA04D1EBCC8E32CCBA40E16F65AC85D444D3249713C6",
+    "documentCount": 96,
+    "caseCount": 1679
   },
   "cases": [
     {
@@ -152,6 +152,32 @@
     },
     {
       "id": "api.conformance-comparison/infinity-signs-differ-ulp",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/integral-range-normalizes-to-int64-exact",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.conformance-comparison/integral-range-normalizes-to-int64-ulp",
       "kind": "messageApi",
       "level": "atomic",
       "requires": {
@@ -412,32 +438,6 @@
     },
     {
       "id": "api.conformance-comparison/quantity-binary64-is-not-int64-ulp",
-      "kind": "messageApi",
-      "level": "atomic",
-      "requires": {
-        "core": [
-          "message-api"
-        ],
-        "optional": []
-      },
-      "status": "passed",
-      "code": "conformance.passed"
-    },
-    {
-      "id": "api.conformance-comparison/range-binary64-is-not-int64-exact",
-      "kind": "messageApi",
-      "level": "atomic",
-      "requires": {
-        "core": [
-          "message-api"
-        ],
-        "optional": []
-      },
-      "status": "passed",
-      "code": "conformance.passed"
-    },
-    {
-      "id": "api.conformance-comparison/range-binary64-is-not-int64-ulp",
       "kind": "messageApi",
       "level": "atomic",
       "requires": {
@@ -919,6 +919,539 @@
     },
     {
       "id": "api.messages/unlabeled-message-equality",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/bad-dice",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/bad-number",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/bad-record-name",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/bad-unit",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/binary64",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/boolean",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/depth-limit",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/dice",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/duplicate-json-field",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/duplicate-map-key",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/embedded-number-unit",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/extra-property",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/handler",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/handler-empty",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/infinity",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/integer-boundary",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/list",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/map",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/message",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/nan",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/negative-integer-boundary",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/nothing",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/number-percent-suffix",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/ordered-arguments",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/percentage",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/percentage-infinite",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/point",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/quantity",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/range",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/range-infinite",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/record",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/series",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/tag",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/text",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/trailing-json",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/unknown-series",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/unknown-value-kind",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/unpaired-surrogate",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/vector",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/write-from-value",
+      "kind": "messageApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "message-api"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "api.product-json/wrong-version",
       "kind": "messageApi",
       "level": "atomic",
       "requires": {
@@ -2981,6 +3514,21 @@
       "code": "conformance.passed"
     },
     {
+      "id": "compile.program-dumps/explicit-data-opcodes",
+      "kind": "bytecodeSnapshot",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": [
+          "bytecode-snapshot"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "compile.program-dumps/float-exponents",
       "kind": "programBinary",
       "level": "scenario",
@@ -4800,6 +5348,97 @@
       "code": "conformance.passed"
     },
     {
+      "id": "program.binary-format/data-forms",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/data-invalid-flags",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/data-invalid-label-list",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/data-invalid-reserved",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/data-invalid-type-index",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/data-mismatched-labels",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/data-unknown-constructor",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "program.binary-format/invalid-duplicate-strings",
       "kind": "programBinary",
       "level": "atomic",
@@ -4930,7 +5569,7 @@
       "code": "conformance.passed"
     },
     {
-      "id": "program.binary-format/invalid-reserved-opcode-de",
+      "id": "program.binary-format/invalid-reserved-opcode-e0",
       "kind": "programBinary",
       "level": "atomic",
       "requires": {
@@ -5126,6 +5765,58 @@
     },
     {
       "id": "program.binary-format/send-reserved-payload",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/split-invalid-mode",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/split-invalid-register",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/split-invalid-unit",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.binary-format/split-invalid-whitespace-register",
       "kind": "programBinary",
       "level": "atomic",
       "requires": {
@@ -19758,6 +20449,528 @@
     },
     {
       "id": "runtime.dice-literals/text-roundtrips",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/argumentless-message",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/complete-recognition-before-effects",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/constructor-effects-retained",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/container-wrappers",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/dynamic-constructor-budget-resume",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/explicit-split",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/external-json-snapshot",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/float-range-integral-normalization",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/handler-roundtrip",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/known-record-constructor",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/map-constructor-evaluation-order",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/message-roundtrip",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/nested-types",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/number-unit-constructors",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/primitive-wrappers",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/range-exact-boundary",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/range-fractional-roundtrip",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/record-data-bypasses-constructor",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/record-reconstruction-skips-effects",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/record-snapshot",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/series-data",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/source-data-forms",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/split-invalid",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/split-preserves-text",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/split-scalar-exact",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/split-unicode",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/split-whitespace",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/unknown-type-fallback",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.explicit-data/value-json-all-data",
       "kind": "scriptApi",
       "level": "atomic",
       "requires": {

@@ -178,6 +178,7 @@ private final class GesProgramDump {
         switch part {
         case .outboundMessage, .recordReference, .externalReference: return binding(i, part).map { bindLabels[$0] } ?? "Bind_none"
         case .localRegisterDelta, .diceCount, .componentCount, .fromImmediate: return "#" + String(i.signedWord1)
+        case .countImmediate where i.opcode == .splitText: return "#" + String(i.a)
         case .diceSideCount, .countImmediate, .toImmediate: return "#" + String(i.signedWord2)
         case .indexImmediate: return "#" + String(i.word1)
         case .stepImmediate: return "#" + String(Int16(bitPattern: i.a))

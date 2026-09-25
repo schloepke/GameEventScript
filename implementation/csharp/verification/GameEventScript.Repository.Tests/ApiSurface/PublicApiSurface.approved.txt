@@ -292,6 +292,8 @@ enum GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field EmitAfter = 219
   enum-field PublishInstant = 220
   enum-field PublishAfter = 221
+  enum-field ConstructData = 222
+  enum-field SplitText = 223
 enum GameEventScript.Api.GameEventScriptBytecodePatternKind
   enum-field CountAny = 0
   enum-field CountFace = 1
@@ -617,6 +619,14 @@ sealed class GameEventScript.Api.GameEventScriptMessageArguments
   property System.Collections.Generic.IEnumerable<System.String> Keys { get }
   property System.Collections.Generic.IReadOnlyList<System.String> SignatureLabels { get }
   property System.Int32 Count { get }
+sealed class GameEventScript.Api.GameEventScriptMessageFormatException
+  ctor GameEventScriptMessageFormatException(System.String code)
+  property System.String Code { get }
+static class GameEventScript.Api.GameEventScriptMessageJson
+  method static GameEventScript.Api.GameEventScriptMessage Deserialize(System.String json)
+  method static GameEventScript.Runtime.Values.GesValue DeserializeValue(System.String json)
+  method static System.String Serialize(GameEventScript.Api.GameEventScriptMessage message)
+  method static System.String SerializeValue(GameEventScript.Runtime.Values.GesValue value)
 sealed class GameEventScript.Api.GameEventScriptMessageSignature
   field static GameEventScript.Api.GameEventScriptMessageSignature Empty
   field static System.String UnlabeledParameterName
@@ -1230,9 +1240,11 @@ sealed class GameEventScript.Conformance.ConformanceMessageApiCase
   property GameEventScript.Conformance.ConformanceMessageSignatureDefinition CompareHandler { get }
   property GameEventScript.Conformance.ConformanceMessageSignatureDefinition CompareSignature { get }
   property System.Boolean ArgumentsWereMapping { get }
+  property System.Boolean RoundTripJson { get }
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Conformance.ConformanceValue> CreateArguments { get }
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Conformance.ConformanceValueEntry> UnorderedArguments { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
+  property System.String Json { get }
   property System.String SignatureName { get }
 sealed class GameEventScript.Conformance.ConformanceMessageApiExpectation
   property System.Boolean? ConformanceEquals { get }
@@ -1245,6 +1257,7 @@ sealed class GameEventScript.Conformance.ConformanceMessageApiExpectation
   property System.Boolean? SignatureHashEquals { get }
   property System.String CreatedMessageSignatureId { get }
   property System.String Error { get }
+  property System.String Json { get }
   property System.String MessageSignatureId { get }
   property System.String Name { get }
   property System.String SignatureId { get }
@@ -1672,3 +1685,47 @@ struct GameEventScript.Runtime.Values.GesValueSlice
   property GameEventScript.Runtime.Values.GesValue& Item { get }
   property System.Int32 Length { get }
   property System.Int32 Start { get }
+static class GameEventScript.SyntaxHighlighter.GameEventScriptAnsiRenderer
+  method static System.Int32? DefaultColor(GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxKind kind)
+  method static System.String Render(System.String source, System.Collections.Generic.IReadOnlyList<GameEventScript.SyntaxHighlighter.GameEventScriptHighlightSpan> spans, System.Func<GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxKind, System.Int32?> color)
+sealed class GameEventScript.SyntaxHighlighter.GameEventScriptHighlightResult
+  property GameEventScript.SyntaxHighlighter.GameEventScriptHighlightState NextState { get }
+  property System.Boolean IsComplete { get }
+  property System.Collections.Generic.IReadOnlyList<GameEventScript.SyntaxHighlighter.GameEventScriptHighlightSpan> Spans { get }
+sealed class GameEventScript.SyntaxHighlighter.GameEventScriptHighlightSpan
+  property GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxKind Kind { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> Scopes { get }
+  property System.Int32 Length { get }
+  property System.Int32 Start { get }
+sealed class GameEventScript.SyntaxHighlighter.GameEventScriptHighlightState
+  method System.Boolean Equals(GameEventScript.SyntaxHighlighter.GameEventScriptHighlightState other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  property GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxLanguage Language { get }
+sealed class GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxHighlighter
+  ctor GameEventScriptSyntaxHighlighter(GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxLanguage language, System.Int32 maxInputLength)
+  method GameEventScript.SyntaxHighlighter.GameEventScriptHighlightResult Highlight(System.String text)
+  method GameEventScript.SyntaxHighlighter.GameEventScriptHighlightResult HighlightLine(System.String text, GameEventScript.SyntaxHighlighter.GameEventScriptHighlightState state)
+  method GameEventScript.SyntaxHighlighter.GameEventScriptHighlightState CreateState()
+  property GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxLanguage Language { get }
+  property System.Int32 MaxInputLength { get }
+enum GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxKind
+  enum-field Plain = 0
+  enum-field Keyword = 1
+  enum-field Builtin = 2
+  enum-field Identifier = 3
+  enum-field Message = 4
+  enum-field Type = 5
+  enum-field Tag = 6
+  enum-field Constant = 7
+  enum-field Number = 8
+  enum-field String = 9
+  enum-field Comment = 10
+  enum-field Symbol = 11
+  enum-field Function = 12
+  enum-field Module = 13
+  enum-field Label = 14
+  enum-field Register = 15
+enum GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxLanguage
+  enum-field Ges = 0
+  enum-field Gesa = 1

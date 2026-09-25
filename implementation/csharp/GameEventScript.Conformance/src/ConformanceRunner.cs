@@ -449,12 +449,15 @@ public static class ConformanceRunner
                         mismatches: new[] { new ConformanceMismatch("/message/error", ConformanceRunnerCodes.AssertionMismatch, expected.Error, code) });
             }
             var signature = GameEventScriptMessageSignature.Create(definition.SignatureName, definition.Parameters);
-            var message = ConformanceRuntimeValueCodec.DecodeMessage(definition.Message);
+            var message = definition.Json is { } json ? GameEventScriptMessageJson.Deserialize(json) : ConformanceRuntimeValueCodec.DecodeMessage(definition.Message);
+            if (definition.RoundTripJson) message = GameEventScriptMessageJson.Deserialize(GameEventScriptMessageJson.Serialize(message));
+            if (expected.Json is not null) _ = GameEventScriptMessageJson.Serialize(message);
             if (expected.Error is not null)
                 return Result(
                     testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch,
                     mismatches: new[] { new ConformanceMismatch("/message/error", ConformanceRunnerCodes.AssertionMismatch, expected.Error, null) });
             var mismatches = new List<ConformanceMismatch>();
+            if (expected.Json is not null) CheckOptional(mismatches, "/message/json", expected.Json, GameEventScriptMessageJson.Serialize(message));
             CheckOptional(mismatches, "/message/name", expected.Name, message.Name);
             CheckOptional(mismatches, "/message/signatureId", expected.SignatureId, signature.SignatureId);
             CheckOptional(mismatches, "/message/messageSignatureId", expected.MessageSignatureId, message.SignatureId);
@@ -492,6 +495,12 @@ public static class ConformanceRunner
                 CheckOptional(mismatches, "/message/createdMessageSignatureId", expected.CreatedMessageSignatureId, created?.SignatureId ?? "<null>");
             }
             return mismatches.Count == 0 ? Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed) : Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: mismatches);
+        }
+        catch (GameEventScriptMessageFormatException exception)
+        {
+            return string.Equals(exception.Code, expected.Error, StringComparison.Ordinal)
+                ? Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed)
+                : Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: new[] { new ConformanceMismatch("/message/error", ConformanceRunnerCodes.AssertionMismatch, expected.Error, exception.Code) });
         }
         catch (ArgumentException exception)
         {

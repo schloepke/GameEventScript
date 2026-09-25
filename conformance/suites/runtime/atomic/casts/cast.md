@@ -2054,7 +2054,7 @@ steps:
           - name: "toText"
             value:
               type: ":Text"
-              value: "range[1 to 3 step 1]"
+              value: ":Range(from: 1, to: 3, step: 1)"
           - name: "toTag"
             value:
               type: ":Nothing"

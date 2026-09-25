@@ -16,7 +16,7 @@ esac
 
 # Check the entire release before the first upload. Never glob a directory that
 # may contain internal Conformance packages, tools or a different release.
-for package_id in GameEventScript.Runtime GameEventScript.Compiler GameEventScript.CSharpBridge; do
+for package_id in GameEventScript.Runtime GameEventScript.Compiler GameEventScript.CSharpBridge GameEventScript.SyntaxHighlighter; do
     for extension in nupkg snupkg; do
         if [ ! -f "$package_directory/$package_id.$release_version.$extension" ]; then
             echo "Missing release artifact: $package_id.$release_version.$extension" >&2
@@ -24,7 +24,7 @@ for package_id in GameEventScript.Runtime GameEventScript.Compiler GameEventScri
         fi
     done
 done
-for package_id in GameEventScript.Runtime GameEventScript.Compiler GameEventScript.CSharpBridge; do
+for package_id in GameEventScript.Runtime GameEventScript.Compiler GameEventScript.CSharpBridge GameEventScript.SyntaxHighlighter; do
     # dotnet also submits the matching .snupkg to NuGet's symbol server.
     dotnet nuget push "$package_directory/$package_id.$release_version.nupkg" \
         --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json

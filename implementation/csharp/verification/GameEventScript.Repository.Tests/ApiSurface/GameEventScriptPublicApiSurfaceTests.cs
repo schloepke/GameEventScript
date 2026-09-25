@@ -7,6 +7,7 @@ using System.Xml.Linq;
 using GameEventScript.Api;
 using GameEventScript.Conformance;
 using GameEventScript.CSharpBridge;
+using GameEventScript.SyntaxHighlighter;
 
 namespace GameEventScript.Tests.Native.ApiSurface;
 
@@ -62,6 +63,7 @@ public sealed class GameEventScriptPublicApiSurfaceTests
         Assert.IsTrue(bridge.GetExportedTypes().All(type => IsNamespace(type, "GameEventScript.CSharpBridge")));
         Assert.IsTrue(conformance.GetExportedTypes().All(type => IsNamespace(type, "GameEventScript.Conformance")));
 
+        AssertProductReferences(typeof(GameEventScriptSyntaxHighlighter).Assembly);
         AssertProductReferences(runtime);
         AssertProductReferences(compiler, "GameEventScript.Runtime");
         AssertProductReferences(bridge, "GameEventScript.Runtime");
@@ -274,5 +276,5 @@ public sealed class GameEventScriptPublicApiSurfaceTests
     }
 
     private static Assembly[] PublicAssemblies()
-        => [typeof(GameEventScriptProgram).Assembly, typeof(GameEventScriptBuilder).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly, typeof(ConformanceRunner).Assembly];
+        => [typeof(GameEventScriptProgram).Assembly, typeof(GameEventScriptBuilder).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly, typeof(ConformanceRunner).Assembly, typeof(GameEventScriptSyntaxHighlighter).Assembly];
 }

@@ -20,6 +20,8 @@ The fixed V1 extension registry contains:
 | `:nav.shortestTurn from: _ to: _` | two numeric angles | `((to - from + 540) mod 360) - 180` in degrees |
 | `value is :nav.isNorth` / `:nav.isNorth value` | one numeric angle | true when the angle wrapped to `[0,360)` is at most 45 or at least 315 |
 | `:test.vectorSum _` | one vector | `x + y + z` as Binary64 with the vector unit; otherwise `nothing` |
+| `:test.toJson _` | exactly one value | invokes the product value-envelope writer; stable codec failures become declared faults with the same code |
+| `:test.fromJson _` | exactly one Text value | invokes the product value-envelope reader; non-Text yields Nothing and stable codec failures become declared faults |
 | `:test.echo _` | exactly one value | the same value and value kind without conversion; otherwise `nothing` |
 | `:test.notify _` | exactly one value | emits `Effect(value: _)` locally and returns the same value without conversion |
 | `:test.truth()` | no values | `true` |

@@ -89,6 +89,17 @@ extension GesParser {
                 result = try combined(.member(result, identifier()), result)
             } else if match("[") {
                 newlines()
+                if match(":split") {
+                    newlines()
+                    try expect("on")
+                    newlines()
+                    let whitespace = match("whitespace")
+                    let delimiter = whitespace ? node(.literal(.nothing), previous) : try expression()
+                    newlines()
+                    try expect("]")
+                    result = try combined(.constructor(whitespace ? "__splitWhitespace" : "__split", whitespace ? [.init(label: "_", value: result)] : [.init(label: "_", value: result), .init(label: "_", value: delimiter)]), result)
+                    continue
+                }
                 let selection = try selector()
                 newlines()
                 try expect("]")
@@ -226,6 +237,56 @@ extension GesParser {
                 newlines()
                 try expect("]")
                 return node(.generated(type, name, sequence, range, condition, value), start)
+            }
+            if type == "series", current.syntaxText == "(", ["fibonacci", "factorial"].contains(peek().syntaxText) {
+                advance()
+                newlines()
+                let kind = advance()
+                var args: [GesArgument] = [.init(label: "_", value: node(.literal(.text(kind.text)), kind))]
+                if match(",") {
+                    repeat {
+                        newlines()
+                        args.append(try argument())
+                        newlines()
+                    } while match(",")
+                }
+                try expect(")")
+                return node(.constructor(type, args), start)
+            }
+            if type == "handler", current.syntaxText == "(", peek().kind == "message" {
+                advance()
+                newlines()
+                let name = advance()
+                try expect("(")
+                newlines()
+                var parameters: [GesParameter] = []
+                if current.syntaxText != ")" {
+                    repeat {
+                        newlines()
+                        let token = current
+                        let label = match("_") ? "_" : try identifier()
+                        parameters.append(.init(label: label, name: label == "_" ? "literal_" + String(parameters.count) : label, type: nil, location: location(token)))
+                        newlines()
+                    } while match(",")
+                }
+                try expect(")")
+                newlines()
+                try expect(")")
+                return node(.constructor(type, [.init(label: "_", value: node(.handler(name.text, parameters), name))]), start)
+            }
+            if type == "message", current.syntaxText == "(", peek().kind == "message" {
+                advance()
+                newlines()
+                let name = advance()
+                let message = node(.message(name.text, try arguments()), name)
+                var args: [GesArgument] = [.init(label: "_", value: message)]
+                if match("with") {
+                    var tags = [try expression()]
+                    while match(",") { tags.append(try expression()) }
+                    args.append(.init(label: "tags", value: node(.list(tags), start)))
+                }
+                try expect(")")
+                return node(.constructor(type, args), start)
             }
             return node(.constructor(type, try arguments()), start)
         }

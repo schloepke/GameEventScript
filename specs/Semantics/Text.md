@@ -197,14 +197,13 @@ are returned as Text and are not recursively parsed a second time.
 Recognized data literals are `nothing`, lowercase `true`/`false`, Number,
 Percentage, scalar Quantity, quoted Text, `#` Tag names following the source
 name grammar, Dice result literals, Vector/Point data forms, and recursively
-nested Lists/Maps. A Map recognizes bare `LowerName`
+nested Lists/Maps, and the explicit data forms below. A Map recognizes bare `LowerName`
 keys or quoted Text keys. Quoted keys follow the same single- or double-quoted
 Text rules as values, including doubled delimiters. Map key syntax inside Text
 therefore represents arbitrary keys even when they cannot be written as source
 field names. A Map permits key-only entries as `true` and resolves duplicate
 keys by decoded Text identity with the last value before sorting. Empty List and Map use `[]` and `[:]`. Trailing
-commas are invalid. Other value representations, general constructor expressions, and literal
-forms are not recognized. A non-Text operand produces `nothing`.
+commas are invalid. Arbitrary source expressions are not recognized. A non-Text operand produces `nothing`.
 
 Vector and Point recognition uses case-sensitive `:Vector(...)` and
 `:Point(...)` with the runtime whitespace rules below. These data forms have
@@ -240,8 +239,7 @@ notation, and must decode to positive Int32 integers; results are
 sorted in descending order and duplicates are retained. Commas separate rolls,
 never digit groups. Parsing does not draw random values. Invalid rolls or syntax
 fail recognition of the complete input, including an enclosing List or Map.
-Constructor expressions such as `:Dice([1, 2])` and the lowercase spelling
-`dice[2, 1]` are not recognized.
+The constructor form `:Dice([1, 2])` is also recognized; lowercase `dice[2, 1]` is not.
 
 Within the parse resource bounds, `parse (value as :Text)` reconstructs the same
 Dice value and kind for positive Int32 rolls. The guarantee also applies to Dice
@@ -257,8 +255,9 @@ while `parse "[1,003]"` yields the List `[1, 3]`.
 
 Independent scalar literals, Vector/Point data forms, stored Dice results, and
 recursively nested Lists/Maps are data.
-Literal recognition does not evaluate variables, expressions, calls, selectors,
-or random operations. Numeric decoding uses
+Literal recognition does not evaluate variables, arbitrary expressions, function calls,
+selectors or random operations. Explicit known Record construction is the controlled
+exception described below. Numeric decoding uses
 [Number semantics](Numbers.md#text-and-number-conversion), including its exact
 rounding and Percentage scaling rules. A `%` literal produces Percentage;
 an explicit `as :Number` cast instead reads its unitless ratio. Numeric output
@@ -294,6 +293,43 @@ Explicit `as :Number` and `as :Percentage` casts retain their own failure result
 of `nothing`; the Text fallback belongs to `parse`. Resource-limit handling is
 separate from literal-recognition failure and follows the fixed
 [Host runtime parse limits](../HostRuntime.md#literal-parsing-limits).
+
+### Explicit data forms
+
+The case-sensitive constructor forms in
+[Language](../Language.md#explicit-data-constructors) also accept literal arguments
+inside Text. This includes Number with an optional unit, Percentage, Boolean,
+Text, Tag, Nothing, List, Map, Dice, Range, built-in Series, Handler, Message and
+Record data. Existing literals remain accepted, and guessing/fallback behavior is
+unchanged. Explicit forms allow disambiguation such as `:Text("123")`.
+
+`as :Text` writes Range as `:Range(from: ..., to: ..., step: ...)`, Series as
+`:Series(fibonacci, offset: ...)` or `:Series(factorial, offset: ...)`, Handler as
+`:Handler(Done(value, _))`, Message as `:Message(Done(value: ...) with #ready)`,
+and Records as `:Record("TypeName", [field: value, ...])`. All nested Text values
+are quoted using the ordinary doubled-delimiter grammar, including message
+arguments and Record fields. Top-level Text still returns itself unchanged.
+Handler identity contains no executable callback; Series text contains no cursor
+or host state. These forms reconstruct the same data under the shared limits.
+
+In a running Program, `parse ':Hit(100)'` may resolve that Program's own declared
+Record constructor. Recognition first checks the complete input, including nested
+syntax and argument labels. A malformed suffix or nested value returns the original
+Text without executing any constructor. Unknown type constructors also preserve
+Text. No native/external constructor registry is consulted.
+
+After successful recognition, nested arguments are evaluated left to right,
+children before parents; map entries evaluate in authored order even when later
+entries replace the same key. Known constructors run as normal VM calls, with
+ordinary opcode budgets, frame suspension, call-depth guards, errors and side
+effects. `parse` can therefore not be discarded merely because its result is unused.
+An execution failure is not recognition failure and does not fall back to Text.
+`:Record("Hit", [...])` always reconstructs fields directly and bypasses the
+constructor, even when that Program declares Hit.
+
+External objects have no standalone source constructor form through `parse`.
+The explicit [product JSON export](../MessageFormat.md) projects their declared
+readable fields into Record data; it does not recreate native identity.
 
 ## Compiler and debug positions
 

@@ -8,11 +8,12 @@
 | `GameEventScriptRuntime` | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types | Swift standard library and platform math library |
 | `GameEventScriptCompiler` | Source lexer/parser, validation, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime |
 | [`GameEventScriptSwiftBridge`](GameEventScriptSwiftBridge/README.md) | Native closure adapters, typed value conversion, KeyPath/external-type bindings and an optional synchronized Host runner | Runtime; Foundation for the runner |
+| [`GameEventScriptSyntaxHighlighter`](GameEventScriptSyntaxHighlighter/README.md) | GES/GESA UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | Foundation |
 | `GameEventScriptConformance` | Shared Markdown parser, native compilation/execution, bounded fixture verification, result reports | Runtime and Compiler |
-| `GameEventScriptTool` / `ges` executable | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, Foundation and POSIX |
+| `GameEventScriptTool` / `ges` executable | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, SyntaxHighlighter, Foundation and POSIX |
 
 Runtime, Compiler and Conformance APIs are synchronous, fileless, and independent of a test framework.
-There are no external package dependencies. The `ges-conformance` executable
+The optional SwiftBridge macro target uses the official swift-syntax build dependency. The `ges-conformance` executable
 owns file discovery, input loading, process exit status, and report writing.
 Compiler depends only on Runtime; an embedding using Runtime does not acquire
 either Compiler or Conformance. SwiftBridge is an optional Runtime-only adapter
@@ -22,7 +23,7 @@ is the user-facing tool; `ges-conformance` is the corpus verification tool.
 ## Build and verify
 
 For application dependencies, use the repository-root SwiftPM package. It exposes
-Runtime, Compiler and SwiftBridge as three selectable library products with one
+Runtime, Compiler, SwiftBridge and SyntaxHighlighter as four selectable library products with one
 shared version. The packages below this directory remain local development entry
 points; CLI and Conformance are internal to the repository distribution.
 See the [package release guide](../../docs/guide/distribution/Packages.md) for
@@ -31,7 +32,7 @@ Xcode installation, tagged consumer verification and release preparation.
 ### Xcode workspace
 
 [`GameEventScript.xcworkspace`](GameEventScript.xcworkspace) opens Runtime,
-Compiler, SwiftBridge, Conformance and the CLI together. The workspace references the local
+Compiler, SwiftBridge, SyntaxHighlighter, Conformance and the CLI together. The workspace references the local
 SwiftPM packages directly; their `Package.swift` manifests remain the build configuration.
 There are no duplicate `.xcodeproj` targets or source lists to maintain.
 
@@ -48,7 +49,7 @@ are ignored by Git; the workspace and shared test scheme are tracked. After the
 first setup, the workspace can also be opened directly in Finder.
 
 Select **My Mac** and one of the `GameEventScriptRuntime`,
-`GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptConformance` or `GameEventScriptTool`
+`GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntaxHighlighter`, `GameEventScriptConformance` or `GameEventScriptTool`
 schemes to build with **Cmd+B**. The shared `GameEventScriptTool` scheme builds the
 `ges` executable: **Cmd+R** launches it with `--help`, **Cmd+U** runs its native CLI
 tests, and Profile uses the Release executable. Change CLI arguments under
@@ -76,9 +77,11 @@ xcodebuild -workspace implementation/swift/GameEventScript.xcworkspace \
 
 ### SwiftPM verification
 
-The CLI and Conformance packages require macOS 10.15.4 or newer for the
-executable adapters' throwing Foundation file-handle I/O. Runtime, Compiler and
-SwiftBridge do not inherit this package requirement.
+The root distribution and local SwiftBridge package explicitly require macOS
+10.15 to match the SwiftSyntax macro dependency. The CLI and Conformance packages
+require macOS 10.15.4 or newer for the executable adapters' throwing Foundation
+file-handle I/O. The standalone Runtime, Compiler and SyntaxHighlighter packages
+do not inherit these package requirements.
 
 All entry points are in the repository's `scripts` directory and can also be
 invoked by absolute path from another working directory:
@@ -151,10 +154,10 @@ python3 scripts/verify-swift-api.py --update
 
 Verified on 2026-09-23 with Swift 6.4 on macOS arm64, Release:
 
-- **1,597/1,597 behavior checks** from the original 94 Markdown documents pass
+- **1,679/1,679 behavior checks** from the original 96 Markdown documents pass
   with native Swift compilation, including 172 expected compilation failures,
-  15 bytecode constraints, three metadata cases, and all ten source-based GESA snapshots.
-- The ordinary hardware-independent report passes **1,566 cases** and skips
+  15 bytecode constraints, three metadata cases, and all eleven source-based GESA snapshots.
+- The ordinary hardware-independent report passes **1,648 cases** and skips
   **31 optional performance measurements**. The last calibrated performance run
   passed all 31 measured workloads.
 - The Swift 6.4/macOS 26/Apple M3 Max profile measures cumulative allocations and
@@ -162,7 +165,7 @@ Verified on 2026-09-23 with Swift 6.4 on macOS arm64, Release:
   See [Performance.md](Performance.md) for scope, references and reproduction.
 - All 60 shared binary cases pass, including canonical runtime-segment comparisons
   against Swift compiler output, malformed inputs, rewrites, fixture execution and four GESA snapshots of identical binary inputs.
-- Independent Runtime verification passes **1,322/1,322** cases with C# inputs.
+- Independent Runtime verification passes **1,363/1,363** cases with C# inputs.
 - Nineteen Conformance/adapter/bootstrap tests pass, including the Markdown bootstrap
   fixtures, compiler ownership/options and resource-limit failure paths.
 
@@ -282,7 +285,7 @@ packages can also be consumed by local path for development.
 The optional [SwiftBridge guide](GameEventScriptSwiftBridge/README.md) provides
 examples for closure subscriptions, ordered message arguments, strict native
 value conversion, extension registries, KeyPath-based external types and the
-synchronized Host runner. Its package depends only on Runtime; compiler catalogs
+synchronized Host runner. Its library uses Runtime plus an internal SwiftSyntax-based build-time macro target; compiler catalogs
 use Runtime's declarative interfaces. Existing portable protocols remain usable
 without any Bridge dependency.
 
@@ -303,3 +306,13 @@ also uses the active toolchain’s SwiftParser/SwiftSyntax modules to enforce
 declaration spacing without rewriting string contents. Its compiled helper is
 cached under `artifacts/swift/formatting`; it adds no package dependency. Both
 formatting and the helper’s regression controls run in Swift CI.
+
+## Explicit message JSON exchange
+
+The Runtime provides `GameEventScriptMessageJson` for optional product transport.
+Use `Serialize`/`Deserialize` in C#, or `serialize`/`deserialize` in Swift, for
+messages; the corresponding `SerializeValue`/`serializeValue` methods encode a
+standalone value. Decoding reconstructs immutable data and never runs Record or
+native constructors. External objects export as typed Record snapshots. Local
+Publish does not serialize; configure encoding explicitly at your I/O boundary.
+The [message format](../../specs/MessageFormat.md) defines the envelope and errors.

@@ -112,10 +112,28 @@ internal static class GameEventScriptVirtualMachine
                         vmState.GesVmPublishMessageValueWithTags(in vmState.Register(instruction.XRegister), vmState.Program.UInt16IndexLists.Resolve(instruction.ListIndex), true, context);
                         break;
 
+                    case ConstructData:
+                    {
+                        var registers = vmState.Program.UInt16IndexLists.Resolve(instruction.ListIndex);
+                        var names = vmState.Program.UInt16IndexLists.Resolve(instruction.AU);
+                        var arguments = new GesValue[registers.Length];
+                        var labels = new string[names.Length];
+                        for (var i = 0; i < arguments.Length; i++) arguments[i] = vmState.Register(registers[i]);
+                        for (var i = 0; i < labels.Length; i++) labels[i] = vmState.FetchStringByPointer(names[i]);
+                        var constructed = GesDataConstruction.Create(vmState.FetchStringByPointer(instruction.StringIndex), labels, arguments, vmState, context);
+                        vmState.SetValue(instruction.DestinationRegister, constructed);
+                        break;
+                    }
+                    case SplitText:
+                    {
+                        var split = GesDataConstruction.Split(vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), instruction.AU == 1);
+                        vmState.SetValue(instruction.DestinationRegister, split);
+                        break;
+                    }
                     case ParseLiteral:
                     {
-                        var parsed = GesLiteralParser.Parse(in vmState.Register(instruction.XRegister), context);
-                        vmState.SetValue(instruction.DestinationRegister, in parsed);
+                        var parsed = GesLiteralParser.Parse(in vmState.Register(instruction.XRegister), context, vmState);
+                        GesLiteralEvaluation.Start(parsed, vmState, context, instruction.DestinationRegister);
                         break;
                     }
                     case Cast:

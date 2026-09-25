@@ -13,9 +13,19 @@ permissions:
   contents: read
 
 jobs:
+  highlighter-linux:
+    runs-on: ubuntu-latest
+    container: swift:6.0
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Verify standalone Foundation highlighting on Linux
+        run: swift test --package-path implementation/swift/GameEventScriptSyntaxHighlighter --scratch-path artifacts/swift/syntaxhighlighter --disable-build-manifest-caching --configuration release
+
   verify:
     runs-on: macos-15
-    timeout-minutes: 20
+    # Clean distribution and local-package checks each build the SwiftSyntax macro plugin.
+    timeout-minutes: 60
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -57,12 +67,13 @@ jobs:
         run: python3 scripts/verify-swift-api.py
 
       - name: Upload full and compact conformance results
-        if: ${{ always() && (steps.conformance.outcome == 'success' || hashFiles('artifacts/swift/conformance-results/**', 'artifacts/swift/number-text-roundtrip/**') != '') }}
+        if: ${{ always() && (steps.conformance.outcome == 'success' || hashFiles('artifacts/swift/conformance-results/**', 'artifacts/swift/number-text-roundtrip/**', 'artifacts/swift/message-json-roundtrip/**') != '') }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: swift-conformance
           path: |
             artifacts/swift/conformance-results/
             artifacts/swift/number-text-roundtrip/
+            artifacts/swift/message-json-roundtrip/
           if-no-files-found: error
           retention-days: 14

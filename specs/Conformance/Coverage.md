@@ -125,3 +125,16 @@ semantics also has a portable case:
 These tests must not become required behavior for other language ports.
 The test-project structure and retention rule are documented in the
 [C# test README](../../implementation/csharp/verification/README.md).
+
+## Explicit data and product transport
+
+- `runtime.explicit-data/*` owns portable checks for constructor forms, Range
+  normalization, lazy Series, Record reconstruction versus constructor execution,
+  full recognition before side effects, opcode-budget resumption and text splitting.
+- `api.product-json/*` owns product JSON encoding/decoding, canonical numeric
+  payloads, ordered arguments, recursive values and stable format errors.
+- `program.binary-format/data-*`, `program.binary-format/split-*` and
+  `compile.program-dumps/explicit-data-opcodes` pin new instruction encoding,
+  operand validation and portable GESA output.
+- The [product JSON integration gate](../../conformance/cross-language/MessageJsonRoundtrip.md)
+  exchanges actual C# and Swift output using the same Markdown oracles.

@@ -13,6 +13,10 @@ callback forms, but it must preserve the responsibilities, state transitions,
 ordering, errors, and data described here. The public C# API snapshot is a
 regression tool for the C# binding and is not the portable API definition.
 
+The optional standalone presentation API is specified in
+[Syntax highlighting](SyntaxHighlighting.md). Its C# and Swift packages have no
+Runtime, Compiler, Bridge or Conformance dependency and are not part of VM execution.
+
 ## Scope and dependency direction
 
 The portable surface consists of three modules:
@@ -1070,7 +1074,9 @@ recorded separately in the cross-language CapabilityMatrix.
 
 #### Native Swift adapters
 
-The optional `GameEventScriptSwiftBridge` package depends only on Runtime.
+The optional `GameEventScriptSwiftBridge` library depends on Runtime and an internal
+compile-time macro target. Only that macro target depends on SwiftSyntax; the
+generated bindings have no SwiftSyntax runtime dependency.
 Compiler and Runtime must not acquire a Bridge dependency. Its native tests may
 use a separate compiler consumer, but the Bridge product has no Compiler or
 Conformance dependency. These adapters do not add portable Core capabilities.
@@ -1105,6 +1111,38 @@ the declarative transport data. Wrapped class roots preserve native identity;
 struct roots follow Swift value semantics. Unwrapping requires the exact binding
 descriptor that created the external value. Runtime field coercion and map
 materialization retain the external-value contract above.
+
+`@GesType` generates a throwing static `createGesType()` factory on a nongeneric
+struct or final class. Each invocation creates a distinct descriptor; callers
+retain and reuse it for registry construction, wrapping and unwrapping. The
+optional type name defaults to the Swift name. `@GesField` exposes only the
+annotated stored or computed instance property, using its name unless overridden.
+Fields require explicit Swift type annotations. Standard numeric types infer
+Number, Bool infers Boolean, String infers Text, Array infers List and Dictionary
+infers Map; Optional delegates to its wrapped type. Aliases, custom convertible
+types and GesValue require explicit `typeName`. Swift compiler type checking
+still requires the existing strict value-conversion conformances.
+
+`@GesField(unit:)` may instead declare a numeric quantity in meters, seconds or
+degrees. It cannot be combined with `typeName` or a nonnumeric field. Encoding
+attaches the explicit unit to a native numeric magnitude; constructor decoding
+checks the exact unit before stripping it and invoking strict native conversion.
+Nothing retains existing Optional/NaN semantics. No magnitude scaling, truncation
+or implicit reinterpretation of an already unit-bearing value occurs. These
+operations are also exposed by `GameEventScriptSwiftValue.encode(_:unit:)` and
+`decode(_:as:unit:)`; `.none` delegates to the ordinary strict conversion.
+
+`@GesConstruct` exposes a synchronous, nonfailable initializer or static factory
+returning the annotated type. Throwing callbacks preserve normal classification.
+Each parameter maps first by external label to an exposed field, otherwise by
+internal name to an annotated Swift property. Declaration order defines the
+callback's argument order. Defaults do not add overloads; unmarked constructors
+remain unavailable to scripts. Async, variadic, inout, ownership-qualified and
+generic constructors are rejected. Conditional `#if` field/constructor declarations
+require manual bindings. Annotation misuse is a Swift compile error;
+portable descriptor name/signature validation still occurs when the throwing
+factory executes. Manual descriptors remain available for foreign/generic types
+and throwing getters. Macro expansion adds no GES syntax or portable behavior.
 
 `GameEventScriptSwiftHostRunner` is an optional synchronized embedding adapter.
 It takes exclusive ownership through Swift 6 sending parameters and serializes
@@ -1188,3 +1226,19 @@ microseconds without pumping. `Waiting` / `waiting` extends execution results
 when only delayed work remains. The authoritative timing and lifecycle rules
 are in HostRuntime. C# and Swift automatic runners arm wake-ups outside Runtime,
 reschedule when new work arrives and cancel wake-ups when closed/disposed.
+
+## Explicit product JSON codec
+
+C# `GameEventScriptMessageJson.Serialize/Deserialize` and Swift
+`GameEventScriptMessageJson.serialize/deserialize` encode/decode messages;
+`SerializeValue/DeserializeValue` and `serializeValue/deserializeValue` handle
+standalone values. These Runtime-only APIs are synchronous, fileless and Host
+independent. They implement [MessageFormat](MessageFormat.md), including ordered
+arguments, numeric normalization, limits, data-only reconstruction and explicit
+external-to-Record export. Encoding may propagate external getter failures.
+Local message publication never implicitly invokes these APIs.
+
+`ConstructData` (0xDE) and `SplitText` (0xDF) extend the public opcode registry.
+Integral Binary64 range factory inputs normalize to the exact integer range model;
+see [Language](Language.md#range). API names that accept Binary64 describe their
+input representation, not a promise of unnormalized internal storage.

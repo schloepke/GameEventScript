@@ -11,21 +11,30 @@ struct GesLiteralParser {
     private let bytes: [UInt8]
     private var position = 0, items = 0
     private var limit: String?
+    private var nodes: [GesLiteralNode] = []
+    private var state: GesVmState?
 
-    static func parse(_ input: GesValue, context: GameEventScriptContext) -> GesValue {
-        guard input.kind == .text, let text = input.textValue else { return .nothing }
+    static func evaluate(_ input: GesValue, context: GameEventScriptContext, state: GesVmState, destination: Int) throws {
+        let (value, nodes) = parse(input, context: context, state: state)
+        if nodes.isEmpty { state.set(destination, value) } else { try GesLiteralEvaluation(value, nodes: nodes, state: state, context: context, destination: destination).run() }
+    }
+
+    static func parse(_ input: GesValue, context: GameEventScriptContext, state: GesVmState? = nil) -> (GesValue, [GesLiteralNode]) {
+        guard input.kind == .text, let text = input.textValue else { return (.nothing, []) }
         if text.unicodeScalars.count > 1_048_576 {
             context.budget.exhaust("MaxLiteralInputScalars", 1_048_576)
-            return .nothing
+            return (.nothing, [])
         }
         var parser = Self(bytes: Array(text.utf8))
+        parser.state = state
         let result = parser.value(depth: 0)
         parser.whitespace()
         if let limit = parser.limit {
             context.budget.exhaust(limit, limit == "MaxLiteralDepth" ? 64 : 65536)
-            return .nothing
+            return (.nothing, [])
         }
-        return parser.position == parser.bytes.count ? result ?? input : input
+        if parser.position == parser.bytes.count, let result { return (result, parser.nodes) }
+        return (input, [])
     }
 
     private mutating func value(depth: Int) -> GesValue? {
@@ -34,6 +43,11 @@ struct GesLiteralParser {
         if bytes[position] == 34 || bytes[position] == 39 { return quoted().map(GesValue.text) }
         if starts(":Vector") { return spatial(depth: depth, point: false) }
         if starts(":Point") { return spatial(depth: depth, point: true) }
+        if bytes[position] == 58 && !starts(":Dice[") {
+            let saved = position
+            if let result = typed(depth: depth) { return result }
+            position = saved
+        }
         let dice = starts(":Dice")
         if dice {
             position += 5
@@ -48,7 +62,7 @@ struct GesLiteralParser {
             return dice ? readDice() : collection(depth: depth + 1)
         }
         let start = position
-        while position < bytes.count && !Self.space(bytes[position]) && ![44, 93, 91].contains(bytes[position]) { position += 1 }
+        while position < bytes.count && !Self.space(bytes[position]) && ![44, 93, 91, 41].contains(bytes[position]) { position += 1 }
         if start == position { return nil }
         let token = String(decoding: bytes[start..<position], as: UTF8.self)
         switch token {
@@ -62,6 +76,136 @@ struct GesLiteralParser {
             return GesNames.plain(tag) ? try? .tag(tag) : nil
         }
         return TextNumberCast.read(token, percentage: token.hasSuffix("%"), allowGrouping: false)
+    }
+
+    private mutating func node(_ type: String, _ labels: [String], _ arguments: [GesValue], _ constructor: GameEventScriptBinding? = nil) -> GesValue {
+        let index = nodes.count
+        nodes.append(.init(type: type, labels: labels, arguments: arguments, constructor: constructor))
+        return .record(typeName: "@literal", entries: [.init(key: "id", value: .integer(Int64(index)))])
+    }
+
+    private mutating func name() -> String? {
+        let start = position
+        while position < bytes.count && (GesNames.lower(bytes[position]) || (65...90).contains(bytes[position]) || GesNames.digit(bytes[position]) || bytes[position] == 95) { position += 1 }
+        return start == position ? nil : String(decoding: bytes[start..<position], as: UTF8.self)
+    }
+
+    private mutating func typed(depth: Int) -> GesValue? {
+        if depth >= 64 {
+            limit = "MaxLiteralDepth"
+            return nil
+        }
+        position += 1
+        guard let name = name(), GesNames.type(name) else { return nil }
+        let type = name.lowercased()
+        let builtin = GesDataConstruction.types.contains(type) && name == type.prefix(1).uppercased() + type.dropFirst()
+        let constructor = builtin ? nil : state?.linked?.recordsByName[name]
+        if !builtin && constructor == nil { return nil }
+        whitespace()
+        guard consume(40) else { return nil }
+        whitespace()
+        if ["handler", "message"].contains(type), position < bytes.count, (65...90).contains(bytes[position]) || starts("initialization") || starts("undeliverable") { return messageForm(depth: depth + 1, handler: type == "handler") }
+        var labels: [String] = []
+        var args: [GesValue] = []
+        if !consume(41) {
+            while position < bytes.count {
+                if !item() { return nil }
+                let saved = position
+                var label = key()
+                whitespace()
+                if label == nil || !consume(58) {
+                    label = "_"
+                    position = saved
+                } else if !GesNames.plain(label!) || labels.contains(label!) {
+                    return nil
+                }
+                whitespace()
+                let argument: GesValue?
+                if type == "series", args.isEmpty, position < bytes.count, GesNames.lower(bytes[position]) {
+                    let valueStart = position
+                    let kind = self.name()
+                    if kind == "fibonacci" || kind == "factorial" {
+                        argument = .text(kind!)
+                    } else {
+                        position = valueStart
+                        argument = value(depth: depth + 1)
+                    }
+                } else {
+                    argument = value(depth: depth + 1)
+                }
+                guard let argument else { return nil }
+                labels.append(label!)
+                args.append(argument)
+                whitespace()
+                if consume(41) { break }
+                guard consume(44) else { return nil }
+                whitespace()
+                if position == bytes.count || bytes[position] == 41 { return nil }
+            }
+            if position == 0 || bytes[position - 1] != 41 { return nil }
+        }
+        if builtin && GesDataConstruction.positions(type, labels) == nil { return nil }
+        if let constructor, let state {
+            let allowed = constructor.argumentNames.map(state.text)
+            if labels.filter({ $0 == "_" }).count > allowed.filter({ $0 == "_" }).count || labels.contains(where: { $0 != "_" && !allowed.contains($0) }) { return nil }
+        }
+        return node(type, labels, args, constructor)
+    }
+
+    private mutating func messageForm(depth: Int, handler: Bool) -> GesValue? {
+        guard let name = name(), GesNames.message(name) else { return nil }
+        whitespace()
+        guard consume(40) else { return nil }
+        whitespace()
+        var labels: [String] = []
+        var args: [GesValue] = []
+        if !consume(41) {
+            while position < bytes.count {
+                if !item() { return nil }
+                if handler {
+                    guard let label = self.name(), label == "_" || GesNames.plain(label) else { return nil }
+                    if label != "_" && labels.contains(label) { return nil }
+                    labels.append(label)
+                } else {
+                    let saved = position
+                    var label = key()
+                    whitespace()
+                    if label == nil || !consume(58) {
+                        label = "_"
+                        position = saved
+                    } else if !GesNames.plain(label!) || labels.contains(label!) {
+                        return nil
+                    }
+                    guard let arg = value(depth: depth) else { return nil }
+                    labels.append(label!)
+                    args.append(arg)
+                }
+                whitespace()
+                if consume(41) { break }
+                guard consume(44) else { return nil }
+                whitespace()
+                if position == bytes.count || bytes[position] == 41 { return nil }
+            }
+        }
+        whitespace()
+        var result: GesValue
+        if handler {
+            guard let signature = try? GameEventScriptMessageSignature(name: name, parameters: labels) else { return nil }
+            result = .handler(signature)
+        } else {
+            result = node("@message:" + name, labels, args)
+        }
+        if !handler && starts("with") {
+            position += 4
+            var tags: [GesValue] = []
+            repeat {
+                guard let tag = value(depth: depth) else { return nil }
+                tags.append(tag)
+                whitespace()
+            } while consume(44)
+            result = node("message", ["_", "tags"], [result, .list(tags)])
+        }
+        return consume(41) ? result : nil
     }
 
     private mutating func spatial(depth: Int, point: Bool) -> GesValue? {
@@ -162,7 +306,7 @@ struct GesLiteralParser {
                 values.append(parsed)
             }
             whitespace()
-            if consume(93) { return isMap ? .map(entries) : .list(values) }
+            if consume(93) { return isMap ? node("@map", entries.map(\.key), entries.map(\.value)) : .list(values) }
             if !consume(44) { return nil }
             whitespace()
             if position == bytes.count || bytes[position] == 93 { return nil }

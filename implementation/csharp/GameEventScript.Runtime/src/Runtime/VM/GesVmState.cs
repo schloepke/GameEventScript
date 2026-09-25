@@ -32,6 +32,7 @@ internal class GesVmState
         internal ushort RegisterFrameStart;
         internal ushort RegisterFrameLength;
         internal bool NormalizeResultAsPredicate;
+        internal GesLiteralEvaluation? LiteralContinuation;
     }
 
     internal GesValue[] EmptyList { get; init; }
@@ -194,6 +195,7 @@ internal class GesVmState
     }
     internal void Reset()
     {
+        System.Array.Clear(CallStack, 0, CallStackPointer);
         InstructionPointer = 0;
         CallStackPointer = 0;
         RegisterFrameStart = 0;
@@ -260,12 +262,14 @@ internal class GesVmState
         }
 
         var callFrame = CallStack[--CallStackPointer];
+        CallStack[CallStackPointer] = default;
         ClearRegisterRange(RegisterFrameStart, RegisterFrameLength + StageLength);
         InstructionPointer = callFrame.InstructionPointer;
         RegisterFrameStart = callFrame.RegisterFrameStart;
         RegisterFrameLength = callFrame.RegisterFrameLength;
         StageLength = 0;
         if (callFrame.ResultRegisterIndex.HasValue) RegisterValues[callFrame.ResultRegisterIndex.Value + RegisterFrameStart].SetNothing();
+        callFrame.LiteralContinuation?.Resume(default);
     }
     internal void ReturnValue(ushort registerIndex)
     {
@@ -280,6 +284,7 @@ internal class GesVmState
         }
 
         var callFrame = CallStack[--CallStackPointer];
+        CallStack[CallStackPointer] = default;
         ClearRegisterRange(RegisterFrameStart, RegisterFrameLength + StageLength);
         InstructionPointer = callFrame.InstructionPointer;
         RegisterFrameStart = callFrame.RegisterFrameStart;
@@ -288,6 +293,7 @@ internal class GesVmState
         if (!callFrame.ResultRegisterIndex.HasValue) return;
         if (callFrame.NormalizeResultAsPredicate && result.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !result.IsNothing) result.SetNothing();
         RegisterValues[callFrame.ResultRegisterIndex.Value + RegisterFrameStart] = result;
+        callFrame.LiteralContinuation?.Resume(result);
     }
     internal GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer()
     {

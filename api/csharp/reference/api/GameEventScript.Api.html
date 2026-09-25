@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (fd2609345491) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (fd2609345491) ">
+      
+      
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Api">
+
+  <h1 id="GameEventScript_Api" data-uid="GameEventScript.Api" class="text-break">Namespace GameEventScript.Api</h1>
+  <div class="markdown level0 summary"></div>
+  <div class="markdown level0 conceptual"></div>
+  <div class="markdown level0 remarks"></div>
+
+    <h3 id="classes">
+Classes
+</h3>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptBinaryFormat.html">GameEventScriptBinaryFormat</a></dt>
+      <dd><p>Represents a game event script binary format.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptBuildMetadataSegment.html">GameEventScriptBuildMetadataSegment</a></dt>
+      <dd><p>Represents a game event script build metadata segment.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptBuilder.html">GameEventScriptBuilder</a></dt>
+      <dd><p>Compiles source text into immutable Programs using the optional GameEventScript.Compiler package.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptBytecodeInstructionUnits.html">GameEventScriptBytecodeInstructionUnits</a></dt>
+      <dd><p>Represents a game event script bytecode instruction units.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptCompileException.html">GameEventScriptCompileException</a></dt>
+      <dd><p>Represents an exception that occurs during the compilation process of a Game Event Script.
+This exception is specifically used to signal issues detected during the parsing or
+validation phase of script compilation.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptCompileOptions.html">GameEventScriptCompileOptions</a></dt>
+      <dd><p>Represents a game event script compile options.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptContext.html">GameEventScriptContext</a></dt>
+      <dd><p>Host-owned context shared by native and GameEventScript handlers.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptDebugSymbolsSegment.html">GameEventScriptDebugSymbolsSegment</a></dt>
+      <dd><p>Represents a game event script debug symbols segment.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptDiagnostic.html">GameEventScriptDiagnostic</a></dt>
+      <dd><p>Represents a game event script diagnostic.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptDiagnosticCodes.html">GameEventScriptDiagnosticCodes</a></dt>
+      <dd><p>Represents a game event script diagnostic codes.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptDynamicLinkException.html">GameEventScriptDynamicLinkException</a></dt>
+      <dd><p>Represents an exception thrown when a dynamic linking error occurs
+during the execution of a Game Event Script.
+This exception specifically indicates issues related to the binding or resolution
+of external references required for script execution.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptExtensionFaultException.html">GameEventScriptExtensionFaultException</a></dt>
+      <dd><p>A deliberate, portable runtime fault that an extension function, native handler, external-type
+constructor, or <a class="xref" href="GameEventScript.Api.IGameEventScriptExternalValue.html">IGameEventScriptExternalValue</a> implementation throws
+to report a defined failure. It ends the current handler with a diagnosable
+runtime error instead of silently evaluating to <code>nothing</code>; the host remains
+reusable for subsequently enqueued messages, as for any other runtime error.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptExtensionReference.html">GameEventScriptExtensionReference</a></dt>
+      <dd><p>Represents an immutable normalized extension name, function name, and ordered argument signature.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptExternalTypeCatalog.html">GameEventScriptExternalTypeCatalog</a></dt>
+      <dd><p>Represents a game event script external type catalog.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptExternalTypeConstructorDefinition.html">GameEventScriptExternalTypeConstructorDefinition</a></dt>
+      <dd><p>Represents a game event script external type constructor definition.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptExternalTypeConstructorReference.html">GameEventScriptExternalTypeConstructorReference</a></dt>
+      <dd><p>Represents an immutable normalized external type name and constructor argument signature.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptExternalTypeDefinition.html">GameEventScriptExternalTypeDefinition</a></dt>
+      <dd><p>Represents a game event script external type definition.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptExternalTypeFieldDefinition.html">GameEventScriptExternalTypeFieldDefinition</a></dt>
+      <dd><p>Represents a game event script external type field definition.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptExternalTypeParameterDefinition.html">GameEventScriptExternalTypeParameterDefinition</a></dt>
+      <dd><p>Represents a game event script external type parameter definition.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptFatalRuntimeException.html">GameEventScriptFatalRuntimeException</a></dt>
+      <dd><p>Represents a fatal runtime exception that occurs specifically during the execution
+of a Game Event Script. This exception is meant to signal critical issues that
+cannot be recovered from within the execution of a script's runtime logic.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptFloatRange.html">GameEventScriptFloatRange</a></dt>
+      <dd><p>Represents a game event script float range.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptHost.html">GameEventScriptHost</a></dt>
+      <dd><p>Serial message host for native handlers and optional GameEventScript programs.
+The portable core performs no synchronization and creates no worker threads.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptHostBuilder.html">GameEventScriptHostBuilder</a></dt>
+      <dd><p>Configures and creates independent serial <a class="xref" href="GameEventScript.Api.GameEventScriptHost.html">GameEventScriptHost</a> instances.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptInstance.html">GameEventScriptInstance</a></dt>
+      <dd><p>Represents one host-local loading of a reusable immutable program.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptIntegerRange.html">GameEventScriptIntegerRange</a></dt>
+      <dd><p>Represents a game event script integer range.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a></dt>
+      <dd><p>Represents a message used within the Game Event Script system.
+This message serves as a fundamental unit for communication, allowing for
+event-driven execution between components, scripts, and handlers.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptMessageArguments.html">GameEventScriptMessageArguments</a></dt>
+      <dd><p>Ordered message arguments. Argument names are part of the message signature
+and therefore preserve source order.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptMessageFormatException.html">GameEventScriptMessageFormatException</a></dt>
+      <dd><p>Invalid, unsupported, or over-limit portable message/value JSON.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptMessageJson.html">GameEventScriptMessageJson</a></dt>
+      <dd><p>Explicit, synchronous V1 product JSON transport. Local Publish never invokes this codec.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptMessageSignature.html">GameEventScriptMessageSignature</a></dt>
+      <dd><p>Represents a message signature used in GameEventScript to uniquely define the structure
+of a message, including its name and ordered parameter list. This class provides utilities
+to normalize, validate, and match message signatures accurately.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptOpaqueSection.html">GameEventScriptOpaqueSection</a></dt>
+      <dd><p>Represents a game event script opaque section.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptProgram.html">GameEventScriptProgram</a></dt>
+      <dd><p>Represents a game event script program.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptProgramDumper.html">GameEventScriptProgramDumper</a></dt>
+      <dd><p>Creates an assembler-style disassembly of a portable GameEventScript program.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptProgramFormatException.html">GameEventScriptProgramFormatException</a></dt>
+      <dd><p>Represents a game event script program format exception.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptProgramReadLimits.html">GameEventScriptProgramReadLimits</a></dt>
+      <dd><p>Represents a game event script program read limits.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptProgramReadOptions.html">GameEventScriptProgramReadOptions</a></dt>
+      <dd><p>Represents a game event script program read options.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptProgramReader.html">GameEventScriptProgramReader</a></dt>
+      <dd><p>Decodes bounded, portable <code>.gesb</code> V1 bytes into an immutable program.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptProgramValidator.html">GameEventScriptProgramValidator</a></dt>
+      <dd><p>Enforces the shared structural and semantic invariants required by the reader, writer, and host linker.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptProgramWriter.html">GameEventScriptProgramWriter</a></dt>
+      <dd><p>Writes immutable programs as canonical Little-Endian <code>.gesb</code> V1 byte images.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptRandomGenerator.html">GameEventScriptRandomGenerator</a></dt>
+      <dd><p>A sealed class that provides mechanisms for generating random numbers or values,
+either through a pseudo-random number generator or a predefined sequence of values.
+This class is useful for scenarios where deterministic or non-deterministic random
+value generation is required, especially in game event scripts.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptRuntimeLimits.html">GameEventScriptRuntimeLimits</a></dt>
+      <dd><p>Represents runtime execution limits for a game event script, providing control over various
+script execution parameters such as loop iterations, call stack depth, and allowed operations.
+This ensures that scripts execute within predefined boundaries to prevent excessive resource usage
+or infinite execution.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptSourceArchiveEntry.html">GameEventScriptSourceArchiveEntry</a></dt>
+      <dd><p>Represents a game event script source archive entry.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptSourceArchiveSegment.html">GameEventScriptSourceArchiveSegment</a></dt>
+      <dd><p>Represents a game event script source archive segment.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptSourceLocation.html">GameEventScriptSourceLocation</a></dt>
+      <dd><p>Represents a specific location in a source file or module for the GameEventScript compiler.
+This class is used to pinpoint the origin of a particular piece of code or error within a source context.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptSourceMapSegment.html">GameEventScriptSourceMapSegment</a></dt>
+      <dd><p>Represents a game event script source map segment.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptSourceMapSource.html">GameEventScriptSourceMapSource</a></dt>
+      <dd><p>Represents a game event script source map source.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptSubscription.html">GameEventScriptSubscription</a></dt>
+      <dd><p>Represents one host-local native message subscription.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesExtensionCall.html">GesExtensionCall</a></dt>
+      <dd><p>Represents a ges extension call.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesExternalTypeConstructorCall.html">GesExternalTypeConstructorCall</a></dt>
+      <dd><p>Represents a ges external type constructor call.</p>
+</dd>
+    </dl>
+    <h3 id="structs">
+Structs
+</h3>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptBindingSegment.html">GameEventScriptBindingSegment</a></dt>
+      <dd><p>Represents a game event script binding segment.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry.html">GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry</a></dt>
+      <dd><p>Represents a game event script binary bind entry.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptBytecodeInstruction.html">GameEventScriptBytecodeInstruction</a></dt>
+      <dd><p>Represents a game event script bytecode instruction.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptCodeSegment.html">GameEventScriptCodeSegment</a></dt>
+      <dd><p>Represents a game event script code segment.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptDebugSymbol.html">GameEventScriptDebugSymbol</a></dt>
+      <dd><p>Represents a game event script debug symbol.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptExecutionResult.html">GameEventScriptExecutionResult</a></dt>
+      <dd><p>Provides an allocation-free summary of one host pump.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptMessageArgument.html">GameEventScriptMessageArgument</a></dt>
+      <dd><p>One named value in an ordered message argument list.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptProgramMetadataSegment.html">GameEventScriptProgramMetadataSegment</a></dt>
+      <dd><p>Represents a game event script program metadata segment.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptPublishResult.html">GameEventScriptPublishResult</a></dt>
+      <dd><p>Describes the independent local and outbound outcomes of one publish operation without allocating.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptReadOnlyArray-1.html">GameEventScriptReadOnlyArray&lt;T&gt;</a></dt>
+      <dd><p>Immutable array view used by portable programs and other immutable API models.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptSourceMapEntry.html">GameEventScriptSourceMapEntry</a></dt>
+      <dd><p>Represents a game event script source map entry.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptStartResult.html">GameEventScriptStartResult</a></dt>
+      <dd><p>Describes completed initialization independently of queue idleness.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptStringConstantSegment.html">GameEventScriptStringConstantSegment</a></dt>
+      <dd><p>Represents a game event script string constant segment.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptStringConstantSegment.SliceEntry.html">GameEventScriptStringConstantSegment.SliceEntry</a></dt>
+      <dd><p>Represents a slice entry.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptUInt16IndexList.html">GameEventScriptUInt16IndexList</a></dt>
+      <dd><p>Represents an immutable slice of unsigned 16-bit indices.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptUInt16IndexListSegment.html">GameEventScriptUInt16IndexListSegment</a></dt>
+      <dd><p>Represents a game event script u int16 index list segment.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptUInt16IndexListSegment.SliceEntry.html">GameEventScriptUInt16IndexListSegment.SliceEntry</a></dt>
+      <dd><p>Represents a slice entry.</p>
+</dd>
+    </dl>
+    <h3 id="interfaces">
+Interfaces
+</h3>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.IGameEventScriptClock.html">IGameEventScriptClock</a></dt>
+      <dd><p>Supplies monotonic elapsed time to a serial host. Implementations must never move backwards.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.IGameEventScriptExtensionFunction.html">IGameEventScriptExtensionFunction</a></dt>
+      <dd><p>Defines the contract for i game event script extension function.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.IGameEventScriptExtensionRegistry.html">IGameEventScriptExtensionRegistry</a></dt>
+      <dd><p>Defines the contract for i game event script extension registry.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.IGameEventScriptExternalTypeCatalog.html">IGameEventScriptExternalTypeCatalog</a></dt>
+      <dd><p>Defines the contract for i game event script external type catalog.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.IGameEventScriptExternalTypeConstructor.html">IGameEventScriptExternalTypeConstructor</a></dt>
+      <dd><p>Defines the contract for i game event script external type constructor.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.IGameEventScriptExternalTypeRegistry.html">IGameEventScriptExternalTypeRegistry</a></dt>
+      <dd><p>Defines the contract for i game event script external type registry.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.IGameEventScriptExternalValue.html">IGameEventScriptExternalValue</a></dt>
+      <dd><p>Defines the contract for i game event script external value.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.IGameEventScriptNativeMessageHandler.html">IGameEventScriptNativeMessageHandler</a></dt>
+      <dd><p>Portable synchronous message handler invoked by a <a class="xref" href="GameEventScript.Api.GameEventScriptHost.html">GameEventScriptHost</a>.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.IGameEventScriptPublishSink.html">IGameEventScriptPublishSink</a></dt>
+      <dd><p>Receives synchronous outbound publications after the host has attempted local enqueue.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.IGameEventScriptRuntimeObserver.html">IGameEventScriptRuntimeObserver</a></dt>
+      <dd><p>Observes synchronous host behavior without participating in dispatch.
+Implementations must not throw and must not recursively pump the observed host.</p>
+</dd>
+    </dl>
+    <h3 id="enums">
+Enums
+</h3>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptBinaryBindKind.html">GameEventScriptBinaryBindKind</a></dt>
+      <dd><p>Defines the supported game event script binary bind kind values.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptBytecodeInstructionUnit.html">GameEventScriptBytecodeInstructionUnit</a></dt>
+      <dd><p>Defines the supported game event script bytecode instruction unit values.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptBytecodeOpCode.html">GameEventScriptBytecodeOpCode</a></dt>
+      <dd><p>Defines the supported game event script bytecode op code values.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptBytecodePatternKind.html">GameEventScriptBytecodePatternKind</a></dt>
+      <dd><p>Defines the supported game event script bytecode pattern kind values.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptBytecodeSeriesKind.html">GameEventScriptBytecodeSeriesKind</a></dt>
+      <dd><p>Defines the supported game event script bytecode series kind values.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptBytecodeTypeKind.html">GameEventScriptBytecodeTypeKind</a></dt>
+      <dd><p>Defines the supported game event script bytecode type kind values.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptDebugInfoOptions.html">GameEventScriptDebugInfoOptions</a></dt>
+      <dd><p>Defines the supported game event script debug info options values.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptDebugSymbolKind.html">GameEventScriptDebugSymbolKind</a></dt>
+      <dd><p>Defines the supported game event script debug symbol kind values.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptDiagnosticPhase.html">GameEventScriptDiagnosticPhase</a></dt>
+      <dd><p>Defines the supported game event script diagnostic phase values.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptExecutionState.html">GameEventScriptExecutionState</a></dt>
+      <dd><p>Identifies why a synchronous host pump returned.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptInstructionFlag.html">GameEventScriptInstructionFlag</a></dt>
+      <dd><p>Defines the supported game event script instruction flag values.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptProgramFormatErrorCode.html">GameEventScriptProgramFormatErrorCode</a></dt>
+      <dd><p>Defines the supported game event script program format error code values.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptProgramRetention.html">GameEventScriptProgramRetention</a></dt>
+      <dd><p>Defines the supported game event script program retention values.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptSectionFlags.html">GameEventScriptSectionFlags</a></dt>
+      <dd><p>Defines the supported game event script section flags values.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptSectionType.html">GameEventScriptSectionType</a></dt>
+      <dd><p>Defines the supported game event script section type values.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptStartState.html">GameEventScriptStartState</a></dt>
+      <dd><p>Identifies the outcome of host or instance initialization.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptSymbolKind.html">GameEventScriptSymbolKind</a></dt>
+      <dd><p>Defines the different kinds of symbols used within a Game Event Script.
+This enumeration is used to classify the functional or semantic roles
+of various components in a script, enabling the compiler and validation logic
+to process and verify them appropriately.</p>
+</dd>
+    </dl>
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (fd2609345491)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

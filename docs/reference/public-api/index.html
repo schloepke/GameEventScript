@@ -1,0 +1,1417 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-g5ptsecz"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Portable public API specification | Game Event Script</title><link rel="canonical" href="https://gameeventscript.org/docs/reference/public-api/"/><link rel="sitemap" href="/sitemap-index.xml"/><link rel="shortcut icon" href="/favicon-pixel-duo.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.3.5"/><meta name="generator" content="Starlight v0.42.4"/><meta property="og:title" content="Portable public API specification"/><meta property="og:type" content="article"/><meta property="og:url" content="https://gameeventscript.org/docs/reference/public-api/"/><meta property="og:locale" content="en"/><meta property="og:description" content="Portable public API specification — Game Event Script documentation."/><meta property="og:site_name" content="Game Event Script"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Portable public API specification — Game Event Script documentation."/><script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script><template id="theme-icons"><svg aria-hidden="true" class="light astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg><svg aria-hidden="true" class="dark astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg><svg aria-hidden="true" class="auto astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg></template><link rel="stylesheet" href="/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/_astro/common.CIp__BGE.css"><script type="module" src="/_astro/page.Dwipeu-R.js"></script></head><body class="astro-g5ptsecz"><a class="sl-skip-link astro-qb7clj6f" href="#_top">Skip to content</a><div class="page sl-flex astro-yntsjkba"><header class="header astro-yntsjkba"><div class="header astro-by6fddyj"><div class="title-wrapper sl-flex astro-by6fddyj"><a href="/" class="site-title sl-flex astro-6rvad3va"><img class="astro-6rvad3va" alt src="/_astro/mark.DsNbRX0k.svg" width="64" height="64"><span class="astro-6rvad3va" translate="no">Game Event Script</span></a></div><div class="sl-flex print:hidden astro-by6fddyj"><site-search class="astro-by6fddyj astro-b5kgnn7o" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-b5kgnn7o"><svg aria-hidden="true" class="astro-b5kgnn7o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block astro-b5kgnn7o" aria-hidden="true">Search</span><kbd class="sl-hidden md:sl-flex astro-b5kgnn7o" style="display: none;"><kbd class="astro-b5kgnn7o">Ctrl</kbd><kbd class="astro-b5kgnn7o">K</kbd></kbd></button><dialog style="padding:0" aria-label="Search" class="astro-b5kgnn7o"><div class="dialog-frame sl-flex astro-b5kgnn7o"><button data-close-modal class="sl-flex md:sl-hidden astro-b5kgnn7o">Cancel</button><div class="search-container astro-b5kgnn7o"><div id="starlight__search" class="astro-b5kgnn7o"></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/_astro/Search.astro_astro_type_script_index_0_lang.BuGLwjLu.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group astro-by6fddyj"><div class="sl-flex social-icons astro-by6fddyj"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script><script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div><aside class="ges-development-notice" aria-label="Documentation version" data-pagefind-ignore>Development documentation. Check the <a href="/docs/changelog/">changelog</a> when using a published package.</aside><script type="module">var e=document.querySelector(`.ges-development-notice`);if(e){let t=()=>document.documentElement.style.setProperty(`--ges-notice-height`,`${e.getBoundingClientRect().height}px`);t(),new ResizeObserver(t).observe(e)}</script></header><nav class="sidebar print:hidden astro-yntsjkba" aria-label="Main"><button popovertarget="starlight__sidebar" class="sl-menu-button sl-flex md:sl-hidden print:hidden astro-r2osgdlg"><svg aria-hidden="true" class="open-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg><svg aria-hidden="true" class="close-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg><span class="sr-only astro-r2osgdlg">Menu</span></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=matchMedia(`(min-width: 50em)`),t=()=>{this.popover=e.matches?null:`auto`};t(),e.addEventListener(`change`,()=>t()),this.addEventListener(`toggle`,({newState:e})=>this.trapFocus(e===`open`))}trapFocus(e){document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}};customElements.define(`sl-sidebar-pane`,e);</script><sl-sidebar-pane popover id="starlight__sidebar" class="sidebar-pane astro-yntsjkba"><div class="sidebar-content sl-flex astro-yntsjkba"><sl-sidebar-state-persist data-hash="1syr27k" class="astro-ipdry5cl"><script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script><ul class="top-level astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/" class="large astro-rmhv4bp6"><span class="astro-rmhv4bp6">Home</span></a></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Start here</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="0"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Documentation overview</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Learn the language</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in C#</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in Swift</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Tools</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="1"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Native Swift CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/editor-bundles/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">TextMate editor bundles</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Native integration</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="2"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/implementations/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/csharp-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# API reference</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/implementations/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/swift-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift API reference</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Language and host reference</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="3"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script language specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/text/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable text and Unicode semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/numbers/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable number semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/determinism/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable determinism semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/host-runtime/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Host runtime specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/public-api/" aria-current="page" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable public API specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/diagnostics/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable diagnostics specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/message-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Product message JSON V1</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/syntax-highlighting/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Syntax highlighting</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Program formats</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="4"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/program-model/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable program model specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/bytecode/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Bytecode specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/binary-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesb` binary format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/assembler-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesa` assembler format specification</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Conformance</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="5"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/markdown-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance Markdown format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/runner/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance runner specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/environment/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance environment specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/coverage/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable Conformance Coverage</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/cross-language-acceptance/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Cross-language conformance acceptance</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Packages and releases</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="6"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/distribution/packages/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Library packages and releases</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/distribution/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# distribution</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/changelog/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Changelog</span></a></li></ul></details></li></ul><script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist><div class="md:sl-hidden"><div class="mobile-preferences sl-flex astro-p4azlveh"><div class="social-icons astro-p4azlveh"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script></div></div></div></sl-sidebar-pane></nav><div class="main-frame astro-yntsjkba"><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-lrzkfocr"><aside class="right-sidebar-container print:hidden astro-lrzkfocr"><div class="right-sidebar astro-lrzkfocr"><div class="lg:sl-hidden astro-qok35upx"><mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-66cqc7ze"><nav aria-labelledby="starlight__on-this-page--mobile" class="astro-66cqc7ze"><details id="starlight__mobile-toc" class="astro-66cqc7ze"><summary id="starlight__on-this-page--mobile" class="sl-flex astro-66cqc7ze"><span class="toggle sl-flex astro-66cqc7ze">On this page<svg aria-hidden="true" class="caret astro-66cqc7ze astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current astro-66cqc7ze"></span></summary><div class="dropdown astro-66cqc7ze"><ul class="isMobile astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#scope-and-dependency-direction" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Scope and dependency direction</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#normative-conventions" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Normative conventions</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#names-used-by-this-specification" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Names used by this specification</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#nullability-and-invalid-arguments" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Nullability and invalid arguments</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#copy-and-reference-semantics" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Copy and reference semantics</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#synchronization-and-reentrancy" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Synchronization and reentrancy</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#allocation-contract" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Allocation contract</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#compiler-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Compiler API</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#compilerbuilder" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">CompilerBuilder</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#program-and-bytecode-data-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Program and bytecode data API</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#program" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Program</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#required-segment-views" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Required segment views</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#instruction-and-numeric-identifier-types" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Instruction and numeric identifier types</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#optional-program-data" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Optional program data</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#program-codec-validation-and-dump-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Program codec, validation, and dump API</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#programreader" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">ProgramReader</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#programwriter" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">ProgramWriter</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#programvalidator-and-programdumper" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">ProgramValidator and ProgramDumper</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#message-and-value-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Message and value API</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#messagesignature" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">MessageSignature</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#message-and-arguments" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Message and arguments</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#value" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Value</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#host-construction-and-lifecycle-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Host construction and lifecycle API</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#hostbuilder" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">HostBuilder</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#runtimelimits" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">RuntimeLimits</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#host" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Host</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#context-messaging-and-execution-results" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Context, messaging, and execution results</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#context" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Context</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#publishsink-and-publishresult" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">PublishSink and PublishResult</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#nativemessagehandler-and-runtimeobserver" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">NativeMessageHandler and RuntimeObserver</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#executionresult" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">ExecutionResult</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#random-generator-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Random generator API</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#extension-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Extension API</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#extensionregistry-and-references" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">ExtensionRegistry and references</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#extensioncall" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">ExtensionCall</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#external-type-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">External-type API</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#declarative-catalog" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Declarative catalog</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#runtime-bindings" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Runtime bindings</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#diagnostics-and-failure-transport" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Diagnostics and failure transport</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#conformance-parser-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Conformance parser API</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#parser-operation" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Parser operation</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#normalized-document-model" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Normalized document model</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#conformance-runner-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Conformance runner API</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#environment-and-callbacks" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Environment and callbacks</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#runner-operations" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Runner operations</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#results" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Results</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#conformance-writer-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Conformance writer API</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#language-binding-requirements" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Language-binding requirements</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#c-and-unity" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">C# and Unity</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#swift" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Swift</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#portable-language-mappings" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Portable language mappings</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#completeness-map" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Completeness map</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#monotonic-scheduling-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Monotonic scheduling API</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#explicit-product-json-codec" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Explicit product JSON codec</span></a></li></ul></div></details></nav></mobile-starlight-toc><script type="module" src="/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C3fM4Kra.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block astro-qok35upx"><div class="sl-container astro-qok35upx"><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul class="astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#scope-and-dependency-direction" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Scope and dependency direction</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#normative-conventions" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Normative conventions</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#names-used-by-this-specification" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Names used by this specification</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#nullability-and-invalid-arguments" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Nullability and invalid arguments</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#copy-and-reference-semantics" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Copy and reference semantics</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#synchronization-and-reentrancy" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Synchronization and reentrancy</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#allocation-contract" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Allocation contract</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#compiler-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Compiler API</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#compilerbuilder" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">CompilerBuilder</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#program-and-bytecode-data-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Program and bytecode data API</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#program" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Program</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#required-segment-views" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Required segment views</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#instruction-and-numeric-identifier-types" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Instruction and numeric identifier types</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#optional-program-data" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Optional program data</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#program-codec-validation-and-dump-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Program codec, validation, and dump API</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#programreader" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">ProgramReader</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#programwriter" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">ProgramWriter</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#programvalidator-and-programdumper" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">ProgramValidator and ProgramDumper</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#message-and-value-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Message and value API</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#messagesignature" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">MessageSignature</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#message-and-arguments" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Message and arguments</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#value" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Value</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#host-construction-and-lifecycle-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Host construction and lifecycle API</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#hostbuilder" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">HostBuilder</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#runtimelimits" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">RuntimeLimits</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#host" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Host</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#context-messaging-and-execution-results" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Context, messaging, and execution results</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#context" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Context</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#publishsink-and-publishresult" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">PublishSink and PublishResult</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#nativemessagehandler-and-runtimeobserver" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">NativeMessageHandler and RuntimeObserver</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#executionresult" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">ExecutionResult</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#random-generator-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Random generator API</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#extension-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Extension API</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#extensionregistry-and-references" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">ExtensionRegistry and references</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#extensioncall" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">ExtensionCall</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#external-type-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">External-type API</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#declarative-catalog" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Declarative catalog</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#runtime-bindings" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Runtime bindings</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#diagnostics-and-failure-transport" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Diagnostics and failure transport</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#conformance-parser-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Conformance parser API</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#parser-operation" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Parser operation</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#normalized-document-model" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Normalized document model</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#conformance-runner-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Conformance runner API</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#environment-and-callbacks" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Environment and callbacks</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#runner-operations" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Runner operations</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#results" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Results</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#conformance-writer-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Conformance writer API</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#language-binding-requirements" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Language-binding requirements</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#c-and-unity" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">C# and Unity</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#swift" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Swift</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#portable-language-mappings" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Portable language mappings</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#completeness-map" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Completeness map</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#monotonic-scheduling-api" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Monotonic scheduling API</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#explicit-product-json-codec" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Explicit product JSON codec</span></a></li></ul></nav></starlight-toc><script type="module" src="/_astro/TableOfContents.astro_astro_type_script_index_0_lang.BpJaGz7G.js"></script></div></div></div></aside><div class="main-pane astro-lrzkfocr"><main data-pagefind-body class="astro-g5ptsecz" lang="en" dir="ltr"><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><h1 id="_top" class="astro-bebwqqxs">Portable public API specification</h1></div></div><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><div class="sl-markdown-content"><!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<p class="ges-since"><strong>Since: 0.1.0</strong></p>
+<p>This document defines the normative language-neutral public API shared by the
+Swift, Kotlin, Go, Rust, C++, C#, and Unity implementations. It specifies concepts
+and observable behavior, not the spelling imposed by one language.</p>
+<p>The C# implementation is the current reference implementation. A port may use
+idiomatic constructors, optionals, result types, collection views, naming, and
+callback forms, but it must preserve the responsibilities, state transitions,
+ordering, errors, and data described here. The public C# API snapshot is a
+regression tool for the C# binding and is not the portable API definition.</p>
+<p>The optional standalone presentation API is specified in
+<a href="/docs/reference/syntax-highlighting/">Syntax highlighting</a>. Its C# and Swift packages have no
+Runtime, Compiler, Bridge or Conformance dependency and are not part of VM execution.</p>
+<h2 id="scope-and-dependency-direction">Scope and dependency direction</h2>
+<p>The portable surface consists of three modules:</p>
+<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">GameEventScript Runtime</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">values, messages, program, binary codec, validation, host, VM, literal parsing</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">GameEventScript Compiler</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">source builder, lexer, parser, validation, optimizer, bytecode generation</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">-&gt; depends only on GameEventScript Runtime</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">GameEventScript Conformance</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">Markdown parser, normalized test model, runner, results, reports, received output</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">-&gt; depends on GameEventScript Runtime and Compiler</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="GameEventScript Runtime  values, messages, program, binary codec, validation, host, VM, literal parsingGameEventScript Compiler  source builder, lexer, parser, validation, optimizer, bytecode generation  -> depends only on GameEventScript RuntimeGameEventScript Conformance  Markdown parser, normalized test model, runner, results, reports, received output  -> depends on GameEventScript Runtime and Compiler"><div></div></button></div></figure></div>
+<p>Runtime must load and execute precompiled Programs without a source compiler.
+Shared value semantics, text/number conversions, runtime literal parsing, Program
+validation, and declarative external-type definitions remain in Runtime. There
+is no additional shared Core module. Compiler uses these Runtime contracts;
+Runtime never references Compiler or Conformance. Compiler never references
+Conformance or language-specific adapters. All three portable modules remain
+synchronous and independent of filesystem, network, threads, and test frameworks.</p>
+<p>Conformance is delivered as the separate optional
+<code>GameEventScript.Conformance</code> package. Its public contract is independent
+of the reference test framework and filesystem adapters.</p>
+<p>The following documents own detailed behavior and are incorporated by reference:</p>
+<ul>
+<li><a href="/docs/reference/language/">Language</a> owns source-language syntax and evaluation.</li>
+<li><a href="/docs/reference/host-runtime/">Host runtime</a> owns dispatch, random boundaries, execution,
+and the host state machine.</li>
+<li><a href="/docs/reference/program-model/">Program model</a> owns immutable program data and permitted
+representation.</li>
+<li><a href="/docs/reference/bytecode/">Bytecode</a> and <a href="/docs/reference/binary-format/">Binary format</a> own numeric IDs,
+instructions, segments, validation, and <code>.gesb</code> encoding.</li>
+<li><a href="/docs/reference/diagnostics/">Diagnostics</a> owns stable diagnostic phases and codes.</li>
+<li><a href="/docs/reference/semantics/text/">Text</a>, <a href="/docs/reference/semantics/numbers/">numbers</a>, and
+<a href="/docs/reference/semantics/determinism/">determinism</a> own value-level portable semantics.</li>
+<li><a href="/docs/reference/conformance/markdown-format/">Conformance Markdown</a> and the
+<a href="/docs/reference/conformance/runner/">Conformance runner</a> own normalized test fields and
+execution details.</li>
+</ul>
+<p>C# reflection attributes, delegates, locks, threads, tasks, <code>System.Type</code>, and
+dictionary conveniences belong to <code>CSharpBridge</code>. They are public C# adapters,
+not portable Runtime or Compiler concepts. Other ports may provide equivalent
+conveniences, but conformance code and portable application code must not
+require them.</p>
+<h2 id="normative-conventions">Normative conventions</h2>
+<h3 id="names-used-by-this-specification">Names used by this specification</h3>
+<p>Type and operation names below are conceptual PascalCase names. They correspond
+closely to the C# reference API only to make cross-checking practical. Swift,
+Kotlin, Go, Rust, and C++ may use their normal naming and callable conventions.
+Removing a concept, changing its ownership, or changing its result is not an
+idiomatic mapping and is therefore not permitted.</p>
+<p><code>List&lt;T&gt;</code> means an ordered immutable view unless the operation is explicitly a
+builder input. <code>Bytes</code> means an ordered immutable byte sequence. <code>Optional&lt;T&gt;</code>
+means explicit absence, not a sentinel native object. Fixed-width integer names
+refer to their exact bit width.</p>
+<h3 id="nullability-and-invalid-arguments">Nullability and invalid arguments</h3>
+<ul>
+<li>Required object, string, callback, and sequence inputs must be present.</li>
+<li>Optional inputs are identified explicitly. An absent optional sequence has the
+same meaning as an empty sequence only where this document says so.</li>
+<li>Public output collections are never null. They are empty when no items exist.</li>
+<li>Collection elements that are not explicitly optional must not be null.</li>
+<li>Invalid caller arguments fail synchronously before observable state changes.
+Each language uses its idiomatic argument/precondition error.</li>
+<li>Script, decode, link, and runtime failures use structured GES diagnostics or
+format errors. Platform exception text and exception class names are never a
+portable comparison value.</li>
+<li>Portable identifiers use the grammar and normalization rules in
+<a href="/docs/reference/semantics/text/">Text</a>. Comparisons are ordinal and culture independent.</li>
+</ul>
+<h3 id="copy-and-reference-semantics">Copy and reference semantics</h3>
+<ul>
+<li>Immutable data objects copy mutable input sequences before returning from
+construction. Their public sequences are read-only views.</li>
+<li>Value records may be native value types or immutable reference objects. Their
+equality and hash behavior must follow portable content, never object identity.</li>
+<li><code>Program</code>, messages, signatures, definitions, diagnostics, and normalized
+conformance models may be shared for concurrent read access.</li>
+<li><code>Builder</code>, <code>Host</code>, <code>Context</code>, lifecycle handles, random generator, extension
+calls, and runner callbacks are identity-bearing reference objects.</li>
+<li>Returning a read-only view must not expose storage that a caller can mutate.</li>
+</ul>
+<h3 id="synchronization-and-reentrancy">Synchronization and reentrancy</h3>
+<ul>
+<li>Core operations are synchronous, threadless, and internally unsynchronized.</li>
+<li>Immutable values and programs permit concurrent reads. A builder, host,
+context, random generator, or active call object does not permit concurrent use.</li>
+<li>A host is serial but not thread-affine. A later call may run on another thread
+after an embedding-provided happens-before handoff.</li>
+<li>Host pumping is not reentrant: a callback must not call ExecuteFrame or
+RunToCompletion on the active Host. Synchronous Receive, Load, Subscribe,
+Detach, and Unsubscribe calls from a native callback are permitted and obey
+the enqueue-time snapshot rules; they must return before the callback returns.</li>
+<li>Observer and publish-sink callbacks run synchronously on the pumping caller.</li>
+<li>Conformance parser, runner, writers, resolver, provider, and sink are also
+synchronous. They start no tasks or threads.</li>
+</ul>
+<h3 id="allocation-contract">Allocation contract</h3>
+<p>The allocation contract applies to the warmed runtime hot path, not compilation,
+Markdown/YAML parsing, <code>.gesb</code> decoding, message construction, debug dumping, or
+report creation.</p>
+<p>After host warmup, queue dispatch, handler selection, execution-result creation,
+publish-result creation, VM stepping/resume, and random scope operations must not
+allocate heap objects by themselves. Value-style execution and publish results
+must therefore remain representable without heap allocation. User callbacks,
+extension implementations, emitted messages, and values may allocate.</p>
+<p>The dispatch guarantee applies equally to exact-signature and message-name
+handlers, with no observer or with observer callbacks that allocate nothing.
+Obtaining the dispatch signature for VM entry or observer callbacks is part of
+the runtime’s own dispatch work and must not allocate after warmup.</p>
+<h2 id="compiler-api">Compiler API</h2>
+<h3 id="compilerbuilder">CompilerBuilder</h3>
+<p><code>CompilerBuilder</code> is a mutable, single-caller configuration and source accumulator.
+It owns snapshots of all inputs needed after an operation returns.</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Create()</code></td>
+<td>Returns an empty builder with debug information set to <code>All</code>, program version <code>0</code>, and no external-type catalog.</td>
+</tr>
+<tr>
+<td><code>AddScript(text, sourceName?)</code></td>
+<td>Adds one logical source in call order. Text is required and must be valid Unicode. The optional source name is diagnostic/debug identity, not a path to open; absence uses the implementation’s stable unknown-source name. The builder retains its own source snapshot.</td>
+</tr>
+<tr>
+<td><code>WithDebugInfo(options)</code></td>
+<td>Replaces the debug emission mask. <code>None</code>, <code>DebugSymbols</code>, <code>SourceMap</code>, and <code>SourceArchive</code> are independent flags; <code>All</code> is their union.</td>
+</tr>
+<tr>
+<td><code>WithProgramVersion(version)</code></td>
+<td>Sets the exact unsigned 64-bit application program version; zero means development/unspecified.</td>
+</tr>
+<tr>
+<td><code>WithExternalTypeCatalog(catalog)</code></td>
+<td>Sets the immutable declarative catalog used for compile-time resolution. The catalog is required when configured and contains no runtime callbacks.</td>
+</tr>
+<tr>
+<td><code>Compile(options)</code></td>
+<td>Parses all added sources as one compilation, validates, optimizes, materializes an immutable Program, and validates that Program before returning it. Sources retain their AddScript order and source IDs.</td>
+</tr>
+</tbody>
+</table>
+<p><code>CompileOptions</code> is an immutable or snapshot-at-call value containing
+<code>DebugInfo</code> and <code>ProgramVersion</code>. Operation-local options override matching
+builder defaults. Ports may choose either builder setters or one options object,
+provided there is one unambiguous resolved configuration. Compilation never
+modifies an earlier Program.</p>
+<p>An empty builder produces the valid empty Program named <code>EmptyModule</code>.
+Malformed source fails with one or more structured diagnostics.
+The fixed source nesting limits in <a href="/docs/reference/language/#source-nesting-limits">Language</a>
+apply to every compilation. Exceeding them produces the Parse diagnostic
+<code>parse.sourceNestingExceeded</code> (<code>DiagnosticCodes.ParseSourceNestingExceeded</code> in
+C#), including source identity and location. CompileOptions cannot disable
+these limits.
+<code>CompileException</code> is the C# transport carrying an ordered,
+non-empty diagnostic list. A port may return a result union instead. Diagnostics
+remain the portable failure value.</p>
+<p>The C# compiler entry point is
+<code>GameEventScriptBuilder.Create().AddScript(text, sourceName).Compile(options)</code>.
+Host construction independently uses <code>GameEventScriptHost.CreateBuilder()</code>.</p>
+<h2 id="program-and-bytecode-data-api">Program and bytecode data API</h2>
+<h3 id="program">Program</h3>
+<p><code>Program</code> is the immutable, reusable, language-neutral parsed representation of
+one <code>.gesb</code> artifact. Only Compiler and ProgramReader create Programs publicly.
+There is no free-form public Program constructor.</p>
+<p>The Program exposes:</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FormatVersion</code></td>
+<td><code>.gesb</code> format version represented by the model.</td>
+</tr>
+<tr>
+<td><code>ModuleName</code>, <code>ProgramVersion</code></td>
+<td>Stable program identity and unsigned application version from ProgramMetadata.</td>
+</tr>
+<tr>
+<td><code>RequiredRegisterCount</code>, <code>RequiredCallStackDepth</code></td>
+<td>Maxima across executable handlers, verified by the validator.</td>
+</tr>
+<tr>
+<td><code>Metadata</code>, <code>StringConstants</code>, <code>UInt16IndexLists</code>, <code>Bindings</code>, <code>Code</code></td>
+<td>Exactly one required immutable runtime segment of each kind.</td>
+</tr>
+<tr>
+<td><code>DebugSymbols</code>, <code>SourceMap</code>, <code>SourceArchive</code>, <code>BuildMetadata</code></td>
+<td>Independent optional known segments. Absence is represented explicitly.</td>
+</tr>
+<tr>
+<td><code>OpaqueSections</code></td>
+<td>Immutable retained unknown optional sections in original relative order.</td>
+</tr>
+</tbody>
+</table>
+<p>All segment entry order, duplicate string constants, instruction bits, source
+bytes, and opaque payload bytes are meaningful immutable data. Resolving a
+string or index list returns a decoded value/view without mutating Program.
+Out-of-range access fails as an argument/index error for direct low-level API
+use; Reader, Writer, Validator, and Host must report structured format/link
+failures before such access can occur for untrusted input.</p>
+<h3 id="required-segment-views">Required segment views</h3>
+<p>The portable segment model contains these data records and operations:</p>
+<ul>
+<li><code>ProgramMetadataSegment</code>: module name, required register count, required call
+depth, and program version.</li>
+<li><code>StringConstantSegment</code>: immutable UTF-8 storage and slice records;
+<code>Resolve(index)</code> strictly decodes one string and <code>ResolveSize(index)</code> returns
+its byte length.</li>
+<li><code>UInt16IndexListSegment</code>: immutable <code>u16</code> storage and slice records;
+<code>Resolve(index)</code> returns one immutable indexed list view.</li>
+<li><code>BindingSegment</code>: ordered bindings containing kind, ID, name index, ordered
+argument-name indices, required/excluded tag indices, optional entry address,
+and per-handler resource requirements.</li>
+<li><code>CodeSegment</code>: ordered 16-byte logical instructions; <code>Count</code>/<code>Length</code> and
+indexed access do not expose mutable program storage.</li>
+</ul>
+<p><code>ReadOnlyArray&lt;T&gt;</code>, string slices, and <code>UInt16IndexList</code> are representation
+helpers for immutable ordered access. A port may use its native immutable list
+or slice type instead. <code>Count</code> and <code>Length</code> are aliases where both exist in C#;
+they must report the same value.</p>
+<p>An index into a resolved <code>UInt16IndexList</code> is zero-based relative to that list.
+Only <code>0 &lt;= index &lt; Length</code> is valid, irrespective of storage before or after the
+slice. An empty list has no valid index. Access outside these relative bounds
+fails as an argument/index error before applying the storage offset.</p>
+<h3 id="instruction-and-numeric-identifier-types">Instruction and numeric identifier types</h3>
+<p><code>BytecodeInstruction</code> exposes opcode, unit/flag byte, three <code>u16</code> words, and a
+<code>u64</code> payload with the semantic aliases specified by <a href="/docs/reference/bytecode/">Bytecode</a>.
+The aliases read and write the same logical words/bits. C# struct layout and
+native endianness do not define the binary format.</p>
+<p>The following enum-like types expose the fixed numeric IDs from the bytecode and
+binary specifications and must reject undefined values at validation boundaries:</p>
+<ul>
+<li><code>BytecodeOpCode</code>, <code>BytecodeTypeKind</code>, <code>BytecodeInstructionUnit</code>,
+<code>InstructionFlag</code>, <code>BytecodePatternKind</code>, and <code>BytecodeSeriesKind</code>;</li>
+<li><code>BinaryBindKind</code>, <code>SectionType</code>, <code>SectionFlags</code>, and
+<code>DebugSymbolKind</code>.</li>
+</ul>
+<p><code>BytecodeOpCode.ParseLiteral</code> exposes the portable <code>parse</code> operation at opcode
+<code>0xD9</code>, with operand and limit semantics owned by <a href="/docs/reference/bytecode/">Bytecode</a>.</p>
+<p><code>BytecodeInstructionUnits</code> supplies pure conversions between type names, units,
+and suffixes. Parse operations return absence for an unknown valid string;
+predicate operations never use locale; formatting returns canonical GES text.
+<code>BinaryFormat</code> exposes the fixed V1 magic bytes, format version, file-header
+size, and section-header size as named constants; their numeric values are owned
+by BinaryFormat.md.</p>
+<h3 id="optional-program-data">Optional program data</h3>
+<ul>
+<li><code>DebugSymbolsSegment</code> exposes ordered <code>DebugSymbol</code> records. Each record has
+kind, physical register ID, name, and half-open code range.</li>
+<li><code>SourceMapSegment</code> exposes ordered <code>SourceMapSource</code> and <code>SourceMapEntry</code>
+records. Hashes and line offsets are immutable bytes/integers; source and code
+ranges are half-open and use the units defined by the binary specification.</li>
+<li><code>SourceArchiveSegment</code> exposes ordered <code>SourceArchiveEntry</code> records.
+<code>ResolveText()</code> strictly decodes retained UTF-8 content.</li>
+<li><code>BuildMetadataSegment</code> exposes required non-empty compiler ID and compiler
+version when the optional segment exists. Runtime decisions must ignore them.</li>
+<li><code>OpaqueSection</code> exposes type, flags, version, original ordinal, and immutable
+raw payload. Only unknown optional sections may be represented this way.</li>
+</ul>
+<p>The public constructors of individual segment records are data helpers. They
+defensively copy their inputs but cannot assemble a Program and do not bypass
+Program validation.</p>
+<h2 id="program-codec-validation-and-dump-api">Program codec, validation, and dump API</h2>
+<h3 id="programreader">ProgramReader</h3>
+<p><code>ProgramReader.Read(bytes, options) -&gt; Program</code> consumes caller-provided bytes
+only. It performs overflow-safe bounded structural decoding followed by complete
+semantic validation. It retains no caller buffer. Success returns a fully valid
+immutable Program; failure returns/throws <code>ProgramFormatError</code> with a stable
+<code>ProgramFormatErrorCode</code> and optional byte offset, section type, and entry index.</p>
+<p><code>ProgramReadOptions</code> contains a required <code>ProgramReadLimits</code> snapshot and one
+retention mode:</p>
+<ul>
+<li><code>PreserveAll</code>: parse all supported known sections and retain unknown optional
+sections as opaque data;</li>
+<li><code>PreserveKnown</code>: parse supported known sections and discard unknown optional
+sections;</li>
+<li><code>RuntimeOnly</code>: materialize required runtime sections only.</li>
+</ul>
+<p><code>ProgramReadLimits</code> exposes maxima for file bytes, section count, source archive
+bytes, retained opaque bytes, instructions, bindings, strings, and index lists.
+All values are validated before allocation. The shared Default object is
+read-only by convention; a mutable language mapping must snapshot settings at
+the start of Read.</p>
+<h3 id="programwriter">ProgramWriter</h3>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GetEncodedSize(program)</code></td>
+<td>Fully validates Program and returns the exact canonical byte count with checked arithmetic.</td>
+</tr>
+<tr>
+<td><code>Write(program, destination)</code></td>
+<td>Fully validates before modifying destination, requires sufficient caller storage, writes canonical Little Endian <code>.gesb</code>, and returns bytes written.</td>
+</tr>
+<tr>
+<td><code>ToArray(program)</code></td>
+<td>Allocates exactly the required output byte array and delegates to canonical Write semantics.</td>
+</tr>
+</tbody>
+</table>
+<p>The writer reconstructs every known section from structured data. Only opaque
+payloads are copied raw. It performs no file or stream I/O.</p>
+<h3 id="programvalidator-and-programdumper">ProgramValidator and ProgramDumper</h3>
+<p><code>ProgramValidator.Validate(program)</code> is deterministic, side-effect free, and
+performs the same complete semantic checks used by Reader, Writer, and Host.Load.
+It does not link executable callbacks. Failure uses ProgramFormatError.</p>
+<p><code>ProgramDumper.Dump(program, includeInstructionAddresses = false)</code> returns
+canonical <code>.gesa</code> text for a valid Program. It uses embedded debug/source
+segments when available, performs no file I/O, and never changes Program. The
+dumper is not a trust boundary and does not replace explicit Program validation.
+Dump allocation is outside the runtime hot path.</p>
+<h2 id="message-and-value-api">Message and value API</h2>
+<h3 id="messagesignature">MessageSignature</h3>
+<p><code>MessageSignature</code> is immutable content identified by normalized message name
+plus ordered parameter labels. Tags and values are not part of a signature.</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Create(name, parameters)</code></td>
+<td>Normalizes and copies the name and ordered labels. An absent parameter sequence means empty. Repeated labels remain part of the signature; constructing actual MessageArguments later rejects duplicate named labels while repeated <code>_</code> labels remain permitted.</td>
+</tr>
+<tr>
+<td><code>NormalizeMessageName(name)</code></td>
+<td>Trims portable ASCII edge whitespace and validates the message-name grammar; absent input yields empty only for this normalization helper.</td>
+</tr>
+<tr>
+<td><code>NormalizeParameterName(name)</code></td>
+<td>Trims portable ASCII edge whitespace; absent/empty becomes <code>_</code>; otherwise validates a portable identifier.</td>
+</tr>
+<tr>
+<td><code>CreateSignatureId(name, parameters)</code></td>
+<td>Returns canonical <code>Name(label,...)</code> from normalized content.</td>
+</tr>
+<tr>
+<td><code>Matches(message)</code></td>
+<td>True exactly when normalized name and complete signature ID are equal ordinally. Message tags and values are ignored.</td>
+</tr>
+<tr>
+<td><code>CreateMessage(values)</code></td>
+<td>Binds values in parameter order. Returns absence when arity does not match or the signature is Empty.</td>
+</tr>
+<tr>
+<td><code>WithArguments(values...)</code></td>
+<td>Same binding, but invalid arity is a synchronous argument error.</td>
+</tr>
+</tbody>
+</table>
+<p>Signature equality and hashing use canonical signature content. <code>Empty</code> is a
+read-only sentinel and cannot create a message.
+Public parameter views cannot change the signature or any message created from
+it. Message factories snapshot caller-owned value collections; later changes to
+those collections cannot change an existing message.</p>
+<h3 id="message-and-arguments">Message and arguments</h3>
+<p><code>MessageArgument</code> is an immutable name/value pair. <code>MessageArguments</code> is an
+immutable ordered collection exposing Count, indexed argument access, indexed
+name/value access, and lookup by normalized named label. Lookup returns absence
+when not found. It never converts the collection to unordered semantics.</p>
+<p><code>Message.Create(name, arguments?, tags?)</code> validates and copies the logical
+inputs. Absent arguments/tags mean empty. <code>WithTags(tags)</code> returns a new Message
+whose normalized tag set is the stable merge of existing and supplied tags; it does not
+mutate the original. <code>HasTag(tag)</code> uses normalized ordinal matching.
+Public tag and argument-label views cannot modify a message, its signature, or
+any other message sharing its immutable data. This also applies after a message
+has been enqueued: its delivery tags and argument labels remain unchanged.</p>
+<p>Message equality compares signature, argument values in order, and normalized
+tags in order. Hashing must preserve the equal-values-have-equal-hash invariant.
+Human formatting is diagnostic only and must not be parsed as transport.</p>
+<h3 id="value">Value</h3>
+<p><code>Value</code> is the compact tagged GES runtime value. A language may map it to a
+struct or another compact representation. Public factory operations create:</p>
+<ul>
+<li>Nothing and Boolean;</li>
+<li>signed-64 Integer, Binary64 Float, Percentage, and numeric values with a unit;</li>
+<li>Text and Tag;</li>
+<li>Vector and Point;</li>
+<li>IntegerRange and FloatRange;</li>
+<li>Dice from ordered roll values;</li>
+<li>immutable List and Map;</li>
+<li>Handler signature and Message;</li>
+<li>immutable Record by type name and ordered fields;</li>
+<li>External values through the external-type boundary.</li>
+</ul>
+<p>Factory operations snapshot mutable arrays/maps before returning. The portable
+ordered map/record model must not derive order from platform dictionary
+iteration. C# dictionary factories belong to CSharpBridge and delegate to the
+portable ordered factories; their canonical ordering is governed by
+<a href="/docs/reference/semantics/determinism/">Determinism</a>.</p>
+<p><code>ValueKind</code>, <code>ValueUnit</code>, <code>HasValue</code>, <code>IsNothing</code>, <code>IsNumeric</code>, <code>HasUnit</code>,
+<code>Length</code>, <code>CustomTypeName</code>, coordinate/range/message/handler views, and typed
+read operations expose the active value. A typed <code>As...</code> operation on an
+incompatible kind follows the public value conversion contract and must never
+expose uninitialized native storage. <code>AsList</code> and <code>AsMap</code> return immutable
+views; <code>AsDice</code> returns an independent ordered copy in the C# mapping.</p>
+<p>Value equality is the strict structural equality in <a href="/docs/reference/semantics/determinism/">Determinism</a>,
+including numeric rules in <a href="/docs/reference/semantics/numbers/">Numbers</a>. Hashing must be
+consistent with this equality. <code>ToString</code> is nonnormative diagnostic formatting.</p>
+<p><code>ValueSlice</code>, <code>ValueArguments</code>, and <code>ValueMap</code> are read-only runtime views.
+They expose Length, indexed values, kind/unit checks, typed reads, and map key
+lookup. Indexes are zero-based at the API boundary. Invalid indexes fail as
+argument/index errors; VM opcodes must instead evaluate according to Language
+semantics. A borrowed read-only value reference must not outlive the callback or
+operation that supplied its backing storage.</p>
+<p><code>IntegerRange</code> and <code>FloatRange</code> are immutable triples <code>(from, to, step)</code>; they do
+not enumerate by themselves. Range termination and overflow behavior belong to
+the deterministic language semantics.</p>
+<h2 id="host-construction-and-lifecycle-api">Host construction and lifecycle API</h2>
+<h3 id="hostbuilder">HostBuilder</h3>
+<p><code>HostBuilder</code> is mutable and single-caller. Every <code>Build()</code> creates an independent
+Host and private random generator. Reusing a builder must not cause hosts to
+share queues, random state, runtime budgets, dispatch state, or VM state.
+Immutable configuration and configured registry, sink, or observer callback
+identities may be shared; the embedding then owns any synchronization and
+reentrancy requirements of those callbacks.</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>WithRuntimeLimits(limits)</code></td>
+<td>Replaces the required immutable limits configuration. A language with mutable option objects must snapshot all scalar values at Build.</td>
+</tr>
+<tr>
+<td><code>WithRandomSeed(seed)</code></td>
+<td>Selects the complete signed-64 deterministic seed and clears a prior entropy or sequence configuration.</td>
+</tr>
+<tr>
+<td><code>WithRandomEntropy(entropy)</code></td>
+<td>Folds a non-empty entropy byte span into the deterministic seed with the portable mixing function and clears a prior direct seed or sequence configuration.</td>
+</tr>
+<tr>
+<td><code>WithRandomSequence(values, fallbackSeed?)</code></td>
+<td>Copies a finite Binary64 start sequence, optionally selects a deterministic fallback seed, and clears a prior direct seed. Exhaustion continues with the private fallback generator.</td>
+</tr>
+<tr>
+<td><code>WithRegistry(registry)</code></td>
+<td>Selects the extension registry. Absence is represented by an empty registry, not null.</td>
+</tr>
+<tr>
+<td><code>WithExternalTypeRegistry(registry)</code></td>
+<td>Selects the runtime external-constructor registry.</td>
+</tr>
+<tr>
+<td><code>WithPublishSink(sink)</code></td>
+<td>Selects the single outbound sink. Not calling it means no sink.</td>
+</tr>
+<tr>
+<td><code>WithRuntimeObserver(observer)</code></td>
+<td>Selects the single observer. Not calling it means no observer.</td>
+</tr>
+<tr>
+<td><code>Build()</code></td>
+<td>Validates configuration and returns a new loading, native-capable Host with no loaded Program or subscription.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="runtimelimits">RuntimeLimits</h3>
+<p><code>RuntimeLimits</code> is a configuration snapshot with the following signed integer
+settings: processed events per RunToCompletion call, queued logical
+messages, execution steps per handler, register values, loop iterations, call
+depth, random scope depth, range items, generated collection items, dice count,
+and dice sides. The exact defaults are part of the public versioned API.</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th style="text-align: right">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MaxProcessedEventsPerRun</code></td>
+<td style="text-align: right">64</td>
+</tr>
+<tr>
+<td><code>MaxQueuedMessagesPerRun</code></td>
+<td style="text-align: right">0 (unlimited)</td>
+</tr>
+<tr>
+<td><code>MaxExecutionSteps</code></td>
+<td style="text-align: right">100,000</td>
+</tr>
+<tr>
+<td><code>MaxRegisterValues</code></td>
+<td style="text-align: right">512</td>
+</tr>
+<tr>
+<td><code>MaxLoopIterations</code></td>
+<td style="text-align: right">100,000</td>
+</tr>
+<tr>
+<td><code>MaxCallDepth</code></td>
+<td style="text-align: right">64</td>
+</tr>
+<tr>
+<td><code>MaxRandomScopeDepth</code></td>
+<td style="text-align: right">16</td>
+</tr>
+<tr>
+<td><code>MaxRangeItems</code></td>
+<td style="text-align: right">10,000</td>
+</tr>
+<tr>
+<td><code>MaxGeneratedCollectionItems</code></td>
+<td style="text-align: right">10,000</td>
+</tr>
+<tr>
+<td><code>MaxDiceCount</code></td>
+<td style="text-align: right">1,000</td>
+</tr>
+<tr>
+<td><code>MaxDiceSides</code></td>
+<td style="text-align: right">1,000,000</td>
+</tr>
+</tbody>
+</table>
+<p>A nonpositive value disables the processed-event, queue, execution-step, loop,
+range, generated-item, dice-count, or dice-side limit. A nonpositive register
+limit selects the portable default capacity of 512. Call depth is clamped to the
+encoded <code>u16</code> range for linking; zero permits only root handlers. Random scope
+depth alone must be in <code>0...65535</code> and is validated at Build. Host.Load checks
+static register/call requirements before registration. Dynamic limit exhaustion
+is a structured runtime-limit result/observation, not a thrown script exception.
+The counting rules and boundary behavior for loops and incrementally generated
+collections are defined in <a href="/docs/reference/host-runtime/#iterator-and-generated-collection-limits">Host runtime</a>.</p>
+<h3 id="host">Host</h3>
+<p>Host owns one serial execution domain. The complete state machine and snapshot
+rules are in <a href="/docs/reference/host-runtime/">Host runtime</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CreateBuilder()</code></td>
+<td>Returns a new HostBuilder.</td>
+</tr>
+<tr>
+<td><code>Load(program, priority = 0)</code></td>
+<td>Validates, links and atomically registers one instance with an initialization snapshot when present. During initial loading it joins the Start group; on a ready host it joins the ordinary FIFO.</td>
+</tr>
+<tr>
+<td><code>Start()</code></td>
+<td>Synchronously initializes the initial group without processing ordinary messages and returns StartResult. Repeated calls return the original result.</td>
+</tr>
+<tr>
+<td><code>IsReady</code></td>
+<td>True after successful initial Start; later instance failures and queued messages do not reset it.</td>
+</tr>
+<tr>
+<td><code>Subscribe(signature, handler, requiredTags?, excludedTags?, priority = 0)</code></td>
+<td>Adds one exact-signature native subscription and returns a Subscription. Inputs are copied/retained as immutable registration data.</td>
+</tr>
+<tr>
+<td><code>SubscribeMessageName(name, handler, requiredTags?, excludedTags?, priority = 0)</code></td>
+<td>Adds a native subscription matching every signature of that normalized message name.</td>
+</tr>
+<tr>
+<td><code>Receive(message)</code></td>
+<td>Captures current matching subscriptions and attempts to enqueue the logical message locally. Returns whether accepted. Before Start succeeds it returns false. It never pumps and never publishes outbound.</td>
+</tr>
+<tr>
+<td><code>ExecuteFrame(opcodeBudget)</code></td>
+<td>Synchronously pumps on the caller until the scheduler budget pauses script execution, the Host becomes idle, or a runtime limit/error ends the call. Budget must be positive and the host must be ready.</td>
+</tr>
+<tr>
+<td><code>RunToCompletion()</code></td>
+<td>Synchronously pumps until idle, only future messages remain, or a runtime limit/error terminates this pump call. The host must be ready. It creates no worker thread.</td>
+</tr>
+<tr>
+<td><code>IsIdle</code></td>
+<td>True only when no active message/handler and no queued logical message exists.</td>
+</tr>
+<tr>
+<td><code>PendingMessageCount</code></td>
+<td>Number of queued logical messages according to HostRuntime; it never counts handler invocations.</td>
+</tr>
+</tbody>
+</table>
+<p>Equal priority uses stable registration order. A logical message completes all
+captured handlers before the next logical message. Load/Subscribe/Detach/
+Unsubscribe changes affect snapshots captured afterward only.
+<code>Load</code> rejects insufficient initialization-queue capacity with
+<code>link.initializationQueueFull</code>. The full atomicity and retry contract is defined
+in <a href="/docs/reference/host-runtime/#loading-and-startup">Host runtime</a>.</p>
+<p><code>Instance</code> is a Host-owned lifecycle handle for one linked Program. <code>Program</code>
+is the original immutable object. <code>Detach()</code> returns true exactly once when it
+transitions attached to detached; later calls return false. <code>IsAttached</code> reports
+that transition. Detach never cancels handlers already captured by an enqueued
+message and never attaches to another Host.</p>
+<p><code>Subscription</code> is the equivalent native-handler lifecycle handle.
+<code>Unsubscribe()</code> returns true exactly once; later calls return false.
+<code>IsSubscribed</code> reports that transition. Both handle types retain host identity
+and a stable non-reused host-local registration ID, not a closure.</p>
+<p><code>StartResult</code> is an immutable value containing <code>State</code> (Ready, RuntimeError or
+RuntimeLimitReached) and optional structured <code>Diagnostic</code>. Ready does not imply
+an empty message queue. <code>Instance.StartResult</code> is absent while initialization is
+pending and retains its completed outcome after detachment or init failure.
+Init failure cancels captured recipients as specified by HostRuntime; ordinary
+Detach retains its existing captured-delivery semantics.</p>
+<p>StartResult includes ExecutedOpcodes, ProcessedMessages, EmittedMessages, and
+PublishedMessages for initialization work, using the same counter meanings as
+ExecutionResult. A host result covers its initial group; an instance result covers
+that instance. Repeated Start returns the original counters.</p>
+<h2 id="context-messaging-and-execution-results">Context, messaging, and execution results</h2>
+<h3 id="context">Context</h3>
+<p>Exactly one Context exists per Host. The Host passes the same identity to native
+handlers and extensions. Context exposes <code>Random</code>, <code>RuntimeLimits</code>, the extension
+registry, <code>IsIdle</code>, and <code>PendingMessageCount</code> as borrowed Host views.</p>
+<p><code>Emit(message)</code> attempts local enqueue and returns acceptance. Convenience
+overloads construct a message from name and ordered arguments. <code>Publish(message)</code>
+first attempts the identical local enqueue, then invokes the configured outbound
+sink once unless a random fault gate forbids delivery or initialization defers it. It returns PublishResult.</p>
+<p>Context has no independent queue, VM, or scheduler. It must not be used
+concurrently or retained for asynchronous calls after its callback. Emit and
+Publish do not recursively dispatch the new message.</p>
+<h3 id="publishsink-and-publishresult">PublishSink and PublishResult</h3>
+<p><code>PublishResult.OutboundDeferred</code> distinguishes initialization publication waiting
+for commitment from a sink call already attempted. Its complete ordering and
+failure semantics are owned by HostRuntime.</p>
+<p><code>PublishSink.Publish(message) -&gt; bool</code> is a synchronous, preferably nonblocking
+handoff. <code>true</code> means accepted by the next layer, not remotely delivered.</p>
+<p><code>PublishResult</code> is a value with:</p>
+<ul>
+<li><code>LocalAccepted</code>: local queue accepted the message;</li>
+<li><code>OutboundAttempted</code>: a configured sink was invoked;</li>
+<li><code>OutboundAccepted</code>: that invocation returned true;</li>
+<li><code>OutboundDeferred</code>: outbound delivery is waiting for successful initialization;</li>
+<li><code>AnyAccepted</code>: derived <code>LocalAccepted || OutboundAccepted || OutboundDeferred</code>.</li>
+</ul>
+<p>No sink produces attempted=false/accepted=false. Sink rejection is not an error.
+A sink exception becomes a runtime diagnostic and outbound rejection; it never
+rolls back successful local enqueue and does not escape the portable Host API.</p>
+<h3 id="nativemessagehandler-and-runtimeobserver">NativeMessageHandler and RuntimeObserver</h3>
+<p><code>NativeMessageHandler.Handle(message, context)</code> is one atomic trusted callback.
+It may Emit, Publish, and use Context.Random synchronously. An implementation
+failure becomes <code>runtime.nativeHandlerFailure</code>; it aborts that handler, restores
+runtime boundaries, and does not corrupt Host state.</p>
+<p>RuntimeObserver receives synchronous callbacks in exact dispatch order:</p>
+<ul>
+<li><code>MessageEmitted(message, accepted)</code> after each Emit attempt;</li>
+<li><code>MessagePublished(message, result)</code> after local/outbound Publish processing;</li>
+<li><code>DispatchStarted(message, dispatchSignatureId)</code> immediately before a handler;</li>
+<li><code>DispatchCompleted(message, dispatchSignatureId)</code> when the handler boundary closes, including cleanup after a handler failure or limit;</li>
+<li><code>RuntimeLimitReached(name, detail, limit)</code> for a limit stop;</li>
+<li><code>RuntimeError(diagnostic)</code> for a runtime diagnostic.</li>
+</ul>
+<p>An observer is observational only and has no return value. Observer callbacks
+must not throw. Throwing is an embedding-contract violation, is not converted to
+a GES diagnostic, and lies outside Host state/recovery guarantees. This differs
+deliberately from publish-sink exceptions, which the Host contains as specified
+above.</p>
+<h3 id="executionresult">ExecutionResult</h3>
+<p class="ges-since"><strong>Since: Unreleased — Waiting result</strong></p>
+<p><code>ExecutionResult</code> is an allocation-free value containing state, opcodes executed,
+logical messages processed, messages emitted, messages published, and an optional
+first diagnostic. Counters cover only the current pump call.</p>
+<p>The states are:</p>
+<ul>
+<li><code>Paused</code>: a script handler remains resumable because ExecuteFrame exhausted
+its scheduler opcode budget;</li>
+<li><code>Completed</code>: the pump reached idle without a stopping limit/error;</li>
+<li><code>Waiting</code>: no runnable work remains but delayed messages are pending; the caller may wait for <code>NextMessageDelay</code> and pump again;</li>
+<li><code>RuntimeLimitReached</code>: a configured safety limit stopped the pump;</li>
+<li><code>RuntimeError</code>: at least one runtime diagnostic occurred during the pump; the
+Host still completes the remaining captured dispatch work unless another
+stopping limit is reached.</li>
+</ul>
+<p>The Host remains reusable after a limit or runtime error as specified by
+HostRuntime. Native callbacks are atomic and do not consume scheduler opcodes.</p>
+<h2 id="random-generator-api">Random generator API</h2>
+<p><code>RandomGenerator</code> is mutable identity-owned state. <code>Create()</code> chooses a
+nondeterministic seed; <code>FromSeed(Int64)</code> uses the exact portable seed;
+<code>FromSequence(values)</code> copies a finite-length Binary64 sequence and continues
+with a private generator after exhaustion. The 32-bit seed overload is an exact widening
+convenience.</p>
+<p><code>FromEntropy(bytes)</code> folds a non-empty byte span into a deterministic seed with
+the portable, endian-neutral mixing function, so identical bytes reproduce a run
+across ports; it equals <code>FromSeed(SeedFromEntropy(bytes))</code>. <code>SeedFromEntropy(bytes)</code>
+exposes that fold so one derived seed can configure several generators or hosts.
+Acquiring default entropy for <code>Create()</code> and the seedless host builder is
+platform-specific and outside the deterministic contract. The exact mixing
+function and known-answer vectors are in <a href="/docs/reference/semantics/determinism/">Determinism</a>.</p>
+<p><code>NextInclusiveInteger(first, second)</code> samples uniformly over the inclusive
+signed-64 range after ordering the bounds. <code>NextFloat(first, second)</code> uses a
+<code>[0,1)</code> source and Binary64 scaling; final rounding may produce the upper bound.
+Equal and NaN bounds consume no stream value. Exact transitions and known-answer
+vectors are in <a href="/docs/reference/semantics/determinism/">Determinism</a>.</p>
+<p><code>Push(seed)</code> starts a child scope from that seed. <code>Push()</code> clones the current
+stream into a child scope. <code>Pop()</code> restores the parent stream. The Boolean result
+reports whether the requested transition was accepted. Host-owned generators
+add private runtime boundary and fault-gate behavior from HostRuntime. Runtime
+markers are deliberately not public API; only Host can fence callbacks.</p>
+<p>A RandomGenerator is not thread-safe. A Host never accepts a live generator from
+outside, preventing cross-Host random-state interference.</p>
+<h2 id="extension-api">Extension API</h2>
+<h3 id="extensionregistry-and-references">ExtensionRegistry and references</h3>
+<p><code>ExtensionReference</code> is immutable normalized <code>(extensionName, functionName, orderedArgumentLabels)</code> data with a canonical SignatureId. It copies labels;
+neither caller-owned input nor a returned collection view may change them.
+Collection adapters must not expose mutable backing storage, and label
+enumeration must remain consistent with SignatureId for the reference lifetime.</p>
+<p><code>ExtensionRegistry.Resolve(reference) -&gt; Optional&lt;ExtensionFunction&gt;</code> is called
+during Host.Load, not for each invocation. Absence causes a stable link failure.
+The registry must resolve equal references consistently during one Load and must
+not depend on culture or reflection in portable Core.</p>
+<p><code>ExtensionFunction.Invoke(call)</code> is a synchronous trusted callback. Host/VM
+establishes a random boundary before invoking it and restores that boundary
+after return, including imbalance and limit handling.</p>
+<h3 id="extensioncall">ExtensionCall</h3>
+<p>ExtensionCall is a reusable call-scoped mutable adapter. During Invoke it exposes
+borrowed ordered <code>Arguments</code>, Host <code>Context</code>, <code>Random</code>, and <code>RuntimeLimits</code>.
+Exactly one result may be selected through <code>SetNothing</code>, <code>SetValue</code>,
+<code>SetBoolean</code>, <code>SetInteger</code>, <code>SetFloat</code>, <code>SetPercentage</code>, <code>SetText</code>, or <code>SetTag</code>;
+the last setter call is the effective result. Omitting a result produces Nothing.</p>
+<p>The callback must not retain the call, arguments, Context, or borrowed values.
+Setters are invalid outside an active invocation. Implementations should reuse
+the adapter and must not allocate it per hot-path invocation after warmup.
+Invoke may throw <code>ExtensionFaultException</code> or an unanticipated exception; see
+“Diagnostics and failure transport” for the resulting contract.</p>
+<h2 id="external-type-api">External-type API</h2>
+<h3 id="declarative-catalog">Declarative catalog</h3>
+<p><code>ExternalTypeDefinition</code> is immutable normalized data containing a type name,
+ordered unique fields, and ordered unique constructor signatures.
+<code>ExternalTypeFieldDefinition</code> and <code>ExternalTypeParameterDefinition</code> each contain
+a normalized name and exactly one portable type description: builtin kind plus
+unit, or custom type name. <code>ExternalTypeConstructorDefinition</code> contains type name,
+ordered unique parameters, and derived SignatureId.</p>
+<p>A Vector or Point declaration without a unit constraint preserves the supplied
+spatial value’s unit. An explicit non-none unit overrides that unit without
+rescaling components. This applies equally to constructor arguments, direct
+field reads, and fields materialized by conversion to Map. A missing spatial
+unit constraint must never silently strip an existing unit.</p>
+<p>Construction copies sequences and rejects null entries, duplicate fields,
+duplicate constructor signatures, duplicate parameter labels, constructors for
+another type, and constructor parameters that are not declared fields.
+The resulting field, constructor, and parameter views must not expose mutable
+backing storage through collection adapters or auxiliary collection APIs.</p>
+<p><code>ExternalTypeCatalog.Types</code> is immutable declaration order.
+<code>Resolve(typeName)</code> normalizes and returns a definition or absence. Catalog
+construction rejects duplicate type names. The catalog contains no constructor,
+field accessor, delegate, reflection object, or host instance.
+Its public enumeration and name lookup must continue to describe the same
+definitions after construction; accessing a collection view cannot alter either.</p>
+<h3 id="runtime-bindings">Runtime bindings</h3>
+<p><code>ExternalTypeConstructorReference</code> is immutable normalized type name plus ordered
+argument labels and canonical SignatureId. It copies labels and exposes only
+immutable views, so caller mutations and collection adapters cannot change the
+reference or make its labels disagree with SignatureId. <code>CreateSignatureId</code> is
+a pure canonical formatter.</p>
+<p><code>ExternalTypeRegistry.Resolve(reference) -&gt; Optional&lt;ExternalTypeConstructor&gt;</code>
+runs during Host.Load. Absence or a returned constructor whose <code>Definition</code>
+does not exactly match the import causes a stable link failure.</p>
+<p><code>ExternalTypeConstructor.Invoke(call)</code> is synchronous. The call exposes borrowed
+ordered Arguments. <code>SetExternalValue(value)</code> accepts only the expected declared
+type; mismatch becomes a runtime diagnostic and Nothing. <code>SetNothing()</code> rejects
+construction without throwing a script exception. Omitting a result also yields
+Nothing. The call object and arguments must not be retained.</p>
+<p><code>ExternalValue.Definition</code> identifies the declarative type. <code>GetField(name)</code>
+returns a Value or absence. It must be synchronous and deterministic for an
+immutable logical external value during one handler. Platform object identity,
+reflection, and lifetime management are adapter responsibilities.</p>
+<h2 id="diagnostics-and-failure-transport">Diagnostics and failure transport</h2>
+<p><code>Diagnostic</code> is immutable structured data containing phase, stable ASCII code,
+human message, optional symbol and symbol kind, optional SourceLocation,
+optional program/handler identity, and optional technical details.
+<code>SourceLocation</code> contains optional source ID, source/module names, and one-based
+Unicode-scalar line/column bounds. Missing context is explicit absence.</p>
+<p>Diagnostic phases are Parse, Validate, Compile, Decode, Link, and Runtime.
+<code>SymbolKind</code> classifies unknown, type, predicate, function, handler, message,
+variable, and global definition. <code>DiagnosticCodes</code> exposes stable named constants;
+<code>Decode(formatErrorCode)</code> maps a <code>.gesb</code> format failure to its stable decode code.</p>
+<p><code>CompileException</code>, <code>DynamicLinkException</code>, <code>ProgramFormatException</code>, and the
+abstract fatal-runtime base are C# failure transports carrying diagnostics. A
+language may use thrown errors or result unions. Callers must be able to inspect
+the same structured portable fields without parsing text. Runtime diagnostics
+normally flow through Observer and ExecutionResult rather than escaping callbacks;
+the fatal-runtime base is for trusted native integration and does not define a
+script-visible exception mechanism.</p>
+<p><code>ExtensionFaultException</code> extends the fatal-runtime base. An extension function,
+external-type constructor, or <code>ExternalValue.GetField</code> implementation
+constructs and throws it to deliberately report a defined failure with a
+caller-chosen code, message, and optional symbol; the code must not use the
+reserved <code>runtime.</code> prefix owned by <code>DiagnosticCodes</code>. The C# constructor rejects
+null codes or messages, and empty or whitespace-only codes. An optional inner cause
+may be supplied; it is never part of the diagnostic’s normative phase, code, or
+message, only of its non-normative technical details. Any other exception from
+the same three boundaries is unanticipated and is reported instead with the
+matching <code>runtime.extensionCallFailed</code>, <code>runtime.externalConstructorFailed</code>, or
+<code>runtime.externalFieldAccessFailed</code> code. Both outcomes end only the current
+handler with a diagnosable runtime error; the host remains reusable, and neither
+outcome evaluates to Nothing.</p>
+<p>Native handlers may also use this failure transport; their unexpected exceptions
+use <code>runtime.nativeHandlerFailure</code>, as defined in <a href="/docs/reference/diagnostics/">Diagnostics</a>.</p>
+<p>C# Reflection adapters forward the original exception thrown by an attributed
+constructor, factory method, or property getter. Wrappers introduced by the
+Bridge’s own Reflection invocation must not change whether the callback reports
+a deliberate or unexpected fault. This guarantee does not unwrap exceptions
+originating inside application code: if a callback uses its own Reflection call
+and lets a <code>TargetInvocationException</code> escape, that wrapper is the unexpected
+exception reported at the callback boundary, even if its inner cause is an
+<code>ExtensionFaultException</code>. The cause remains available in technical details.</p>
+<h2 id="conformance-parser-api">Conformance parser API</h2>
+<h3 id="parser-operation">Parser operation</h3>
+<p><code>ConformanceMarkdownParser.Parse(utf8BytesOrText, limits?) -&gt; ConformanceDocument</code>
+is synchronous and fileless. Bytes are strict UTF-8. Text is treated as the same
+Unicode content and converted to the canonical parser model. The parser applies
+the complete Markdown structure, limited YAML, schema, cross-reference, and
+limit validation before returning.</p>
+<p>Success returns one fully validated immutable Document. Failure carries an
+ordered non-empty list of ConformanceDiagnostic values. <code>ConformanceParseException</code>
+is the C# transport only. Markdown tokens, YAML nodes, and parse trees are private
+implementation details and never appear in the public result.</p>
+<p><code>ConformanceParserLimits</code> contains maxima for document bytes, tests, YAML depth,
+YAML nodes, scalar bytes, sources/test, source bytes/test, steps/test, and hosts/test.
+Limits are checked before proportional allocation. The Default configuration is
+read-only by convention and is snapshotted at parse start.</p>
+<h3 id="normalized-document-model">Normalized document model</h3>
+<p><code>ConformanceDocument</code> owns immutable source identity, format version, suite ID,
+title, frontmatter range, and ordered Cases. <code>ConformanceSourceDocument</code> retains
+immutable original UTF-8 bytes, BOM presence, and detected line-ending style so
+a ReceivedWriter can preserve authoring bytes. <code>ConformanceSourceRange</code> is a
+value containing UTF-8 byte offset/length and one-based line/column bounds.
+Source bytes, nested sequences, and lookup maps expose no writable backing
+storage through their public collection views, including map key/value views.</p>
+<p><code>ConformanceCase</code> owns normalized identity (<code>Id</code>, <code>SuiteId</code>, <code>FullId</code>, title),
+kind, level, categories, tags, capability requirements, sources, steps, compile
+options, runtime/random/sink/external-registry settings, native handlers,
+deferred programs, host count, optional kind-specific input, expectations,
+assembler text, and exact source ranges needed for received output.</p>
+<p><code>ConformanceRandomConfiguration.Entropy</code> exposes a copied, read-only list of
+ordered bytes for entropy-based host configuration. It is empty when <code>Seed</code>
+or <code>Sequence</code> is selected. The input encoding and mutual-exclusion rules are
+owned by <a href="/docs/reference/conformance/markdown-format/">Conformance Markdown</a>.</p>
+<p>All nested case model types are immutable data projections of the fields defined
+by <a href="/docs/reference/conformance/markdown-format/">Conformance Markdown</a>:</p>
+<ul>
+<li>source/message/value data: <code>SourceInput</code>, <code>Message</code>, <code>Argument</code>, <code>Value</code>,
+<code>ValueEntry</code>, and <code>MessageSignatureDefinition</code>;</li>
+<li>execution data: <code>Step</code>, <code>PumpMode</code>, <code>NativeHandler</code>, <code>NativeEmit</code>,
+<code>NativeAction</code>, <code>NativeActionKind</code>, <code>RandomConfiguration</code>, <code>RuntimeLimits</code>,
+<code>PublishSinkMode</code>, and <code>ExternalTypeRegistryMode</code>;</li>
+<li>configuration: <code>CapabilityRequirements</code>, <code>CompileOptions</code>, and
+<code>ComparisonOptions</code> with exact/Ulp Binary64 comparison;</li>
+<li>kind-specific inputs: <code>BinaryFixture</code>, <code>MessageApiCase</code>, <code>ValueApiCase</code>,
+<code>ExternalTypeApiCase</code>, and <code>PerformanceWorkload</code>;</li>
+<li>expectations: <code>Expectation</code>, <code>StepExpectation</code>, <code>ChannelExpectation</code>,
+<code>ObservationExpectation</code>, <code>ObserverEventExpectation</code>, <code>ExpectedDiagnostic</code>,
+<code>RuntimeLimitExpectation</code>, <code>PublishResultExpectation</code>, <code>BinaryExpectation</code>,
+<code>OpcodeExpectation</code>, <code>CompileMetadataExpectation</code>, <code>ProgramResourceExpectation</code>,
+<code>HandlerResourceExpectation</code>, <code>MessageDefinitionExpectation</code>,
+<code>MessageApiExpectation</code>, <code>ValueApiExpectation</code>, <code>ExternalTypeApiExpectation</code>,
+<code>PerformanceExpectation</code>, <code>PerformanceProfile</code>, and <code>PerformanceMetric</code>.</li>
+</ul>
+<p><code>ConformanceNativeHandler.FaultCode</code> exposes the optional caller-chosen diagnostic
+code for a deliberate native-handler failure, or null when absent.
+<code>FaultProgramName</code> and <code>FaultHandlerName</code> expose the fixture’s supplied context
+before Host enrichment. Input constraints and execution order are owned by the
+Markdown format.</p>
+<p><code>ConformanceExpectedDiagnostic.ProgramNameSpecified</code> and <code>HandlerNameSpecified</code>
+distinguish an omitted context constraint from an explicit null expectation.
+When a flag is true, the corresponding nullable value must match exactly;
+otherwise that context field is unconstrained.</p>
+<p><code>ConformanceMessageApiCase.CompareConformanceMessage</code> and
+<code>ConformanceMessageApiExpectation.ConformanceEquals</code> expose the optional paired
+transport comparison input and result defined in the Markdown format. They
+exercise the same conformance comparison as runtime message expectations.</p>
+<p><code>ConformanceNativeAction.ExpectedError</code> exposes the optional structured link
+diagnostic expected from <code>loadProgram</code>. The Markdown format defines its
+exclusivity with <code>ExpectedResult</code> and the runner’s continuation behavior.</p>
+<p><code>ConformancePerformanceWorkload.ObserveRuntime</code> exposes the Boolean measurement
+observer selection, defaulting to true, defined by the Markdown format. It does
+not disable observations in the separate correctness execution. Platform
+allocation counters remain behind <code>PerformanceProvider</code>, outside the portable
+model and runner.
+The same collection immutability requirement covers parser diagnostics,
+resource bytes, environment capabilities, measurements, and runner reports.</p>
+<p>Enum-like model values have the closed sets specified by MarkdownFormat:
+<code>TestKind</code>, <code>TestLevel</code>, <code>PumpMode</code>, <code>PublishSinkMode</code>,
+<code>ExternalTypeRegistryMode</code>, <code>ObserverEventKind</code>, <code>NativeActionKind</code>,
+<code>BinaryOutcome</code>, and <code>Binary64ComparisonMode</code>. A parser rejects unknown V1
+values rather than materializing an unknown enum ordinal.</p>
+<p>Every model collection preserves author order unless its schema explicitly
+requires canonical sorting. Optional submodels are absent, not empty fabricated
+objects. Callers may retain and concurrently read a parsed Document.</p>
+<h2 id="conformance-runner-api">Conformance runner API</h2>
+<h3 id="environment-and-callbacks">Environment and callbacks</h3>
+<p><code>ConformanceRunnerEnvironment</code> is an immutable snapshot containing runner and
+implementation IDs/versions, sorted capability IDs, portable extension catalog/
+registry inputs, optional resource resolver, optional performance provider, and
+optional performance profile ID. Environment validation precedes case execution.</p>
+<p><code>ConformanceRunnerOptions</code> contains RunnerLimits plus flags controlling inclusion
+of successful assembler output and technical details. <code>RunnerLimits</code> bounds case
+count, frames per step, and resource bytes. Defaults are immutable/snapshotted.</p>
+<p><code>ResourceResolver.Resolve(resourceId, maximumByteCount) -&gt; ResourceResult</code> is the
+only external fixture byte boundary. ResourceResult is immutable status
+(<code>Found</code>, <code>NotFound</code>, <code>LimitExceeded</code>, or <code>Error</code>), bytes, and optional stable
+error code. Found bytes are copied/treated immutable and rechecked against the
+limit and SHA-256. The runner never interprets a path or URL.</p>
+<p><code>PerformanceProvider.Measure(case, profileId) -&gt; PerformanceMeasurement</code>
+returns ordered <code>MeasuredMetric(id, unit, canonicalValue)</code> values after ordinary
+correctness execution. It owns platform timing/allocation mechanics and must not
+mutate the case. <code>ResultSink.CaseCompleted(result)</code> is called once per completed
+case in execution order; its result is observational and does not replace the
+runner-owned immutable result.</p>
+<p>Resolver and performance-provider failures are caught at the case boundary and
+produce an Error result with a stable runner code. ResultSink is an outer
+reporting callback and must not throw; a sink exception is an embedding-contract
+violation and is not converted into another case result.</p>
+<h3 id="runner-operations">Runner operations</h3>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>RunCase(document, caseId, environment, options?, sink?)</code></td>
+<td>Resolves exactly one full or document-local case ID and executes no other case.</td>
+</tr>
+<tr>
+<td><code>RunDocument(document, environment, options?, sink?)</code></td>
+<td>Runs cases once in document order and returns one report.</td>
+</tr>
+<tr>
+<td><code>RunCorpus(documents, environment, options?, sink?)</code></td>
+<td>Preflights the complete caller-ordered corpus, rejects duplicate identities before execution, then runs each case once in document/case order.</td>
+</tr>
+</tbody>
+</table>
+<p>All operations are synchronous, threadless, fileless, and test-framework-free.
+Options and sink are optional; absence selects defaults/no notifications. Each
+case receives isolated mutable compiler/Host/random/observer state. The detailed
+execution algorithm and capability behavior are defined by
+<a href="/docs/reference/conformance/runner/">Conformance runner</a>.</p>
+<h3 id="results">Results</h3>
+<p><code>ConformanceCaseResult</code> is immutable and contains case/suite identity, title,
+kind, level, categories, tags, status, stable code, missing capabilities,
+mismatches, diagnostics, runtime-limit results, optional actual assembler,
+optional performance result, and optional technical details.</p>
+<p>Status is exactly <code>Passed</code>, <code>Failed</code>, <code>Skipped</code>, or <code>Error</code>:</p>
+<ul>
+<li>Failed means the implementation ran but did not meet an expectation.</li>
+<li>Error means invalid environment/model/resource or an unhandled implementation
+failure prevented a valid comparison.</li>
+<li>Skipped is permitted only for an absent declared optional capability.</li>
+</ul>
+<p><code>Mismatch</code> stores stable code/path, expected/actual canonical text, and optional
+structured result diagnostic. <code>ResultDiagnostic</code> is the report-safe projection
+of a Core diagnostic. <code>RuntimeLimitResult</code> stores limit name, detail, and value.
+<code>PerformanceResult</code> contains selected profile ID and ordered
+<code>PerformanceMetricResult</code> values <code>(id, unit, reference, measured, allowed, passed)</code>. Canonical numeric strings avoid locale and Binary64 parser differences.</p>
+<p><code>ConformanceRunReport</code> contains immutable runner/implementation identity,
+capabilities, optional performance profile, ordered case results, aggregate
+status, and RunSummary. Summary counts total/passed/failed/skipped/error exactly
+once and must equal the Cases collection. A framework adapter aggregates already
+returned case results; it must not rerun the corpus merely to write a report.</p>
+<h2 id="conformance-writer-api">Conformance writer API</h2>
+<p>All writers are pure with respect to their input models, perform no file I/O,
+use deterministic ordering, and either return Text/Bytes or write into
+caller-provided storage. <code>ToArray</code> output is UTF-8 with LF and no BOM unless the
+specific received-preservation rule says otherwise.</p>
+<table>
+<thead>
+<tr>
+<th>Writer</th>
+<th>Operations and contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ResultJsonWriter</code></td>
+<td><code>ToText(report)</code> / <code>ToArray(report)</code> emit the complete canonical machine-readable result with fixed property order.</td>
+</tr>
+<tr>
+<td><code>MarkdownReportWriter</code></td>
+<td><code>ToText(report)</code> emits the human-readable aggregate report and performance tables. It is informative, not runner input.</td>
+</tr>
+<tr>
+<td><code>ReceivedMarkdownWriter</code></td>
+<td><code>ToText(document, report)</code> / <code>ToArray(...)</code> return an approval candidate that replaces only eligible performance references and assembler payload ranges. It never writes or overwrites the source document.</td>
+</tr>
+<tr>
+<td><code>CrossLanguageResultJsonWriter</code></td>
+<td><code>Identify(documents)</code> returns CorpusIdentity; <code>ToText/ToArray(documents, report)</code> emit the compact canonical cross-language comparison artifact.</td>
+</tr>
+</tbody>
+</table>
+<p>Received output first verifies document/report identity, case presence, source
+ranges, non-overlap, and stale authored content. Failure returns a stable
+<code>ReceivedWriterCode</code> (<code>InvalidReport</code>, <code>MissingCase</code>, <code>MissingRange</code>,
+<code>OverlappingRange</code>, or <code>StaleRange</code>); the C# transport is
+<code>ConformanceReceivedWriteException</code>. A failed operation returns no partial
+candidate and never mutates document bytes.</p>
+<p><code>CorpusIdentity</code> contains Markdown format version, document count, case count,
+and SHA-256 of canonical corpus identity. <code>Identify</code> is deterministic for the
+caller-supplied ordered documents and never reads discovery paths.</p>
+<h2 id="language-binding-requirements">Language-binding requirements</h2>
+<h3 id="c-and-unity">C# and Unity</h3>
+<p><code>GameEventScript.Runtime</code> supplies Runtime. The optional
+<code>GameEventScript.Compiler</code> package supplies <code>GameEventScriptBuilder</code>,
+<code>GameEventScriptCompileOptions</code>, and <code>GameEventScriptCompileException</code> in the
+<code>GameEventScript.Api</code> namespace. Applications compile through
+<code>GameEventScriptBuilder.Create()</code>, construct hosts through
+<code>GameEventScriptHost.CreateBuilder()</code>, and load precompiled Programs through
+the Reader.</p>
+<p>Package and assembly identities use <code>GameEventScript.Runtime</code>,
+<code>GameEventScript.Compiler</code>, <code>GameEventScript.CSharpBridge</code>, and
+<code>GameEventScript.Conformance</code>. Their shared C# namespace root is
+<code>GameEventScript</code>; the module name does not add another namespace layer to
+the public <code>GameEventScript.Api</code> contracts. Public type names remain unchanged.</p>
+<p><code>GameEventScript.CSharpBridge</code> depends only on Runtime and must not pull in
+Compiler or Conformance, directly or transitively. It supplies:</p>
+<ul>
+<li><code>GameEventScriptCSharpValue.GesMap(entries)</code> and
+<code>GameEventScriptCSharpValue.GesRecord(typeName, fields)</code> snapshot dictionary
+entries and delegate to the portable ordered value factories. Null or empty
+dictionaries mean no entries; dictionary enumeration order does not determine
+the resulting canonical key order;</li>
+<li>tuple/dictionary message and Context conveniences;</li>
+<li>delegate native-handler adapters;</li>
+<li>reflection/attribute extension and external-type registries;</li>
+<li>an optional lock-based automatic Host runner with the ownership-transfer and
+scheduling rules in <a href="/docs/reference/host-runtime/#c-automatic-runner">HostRuntime</a>.</li>
+</ul>
+<p>Source-file reading belongs to the CLI or embedding. The compiler accepts
+<code>AddScript(text, sourceName)</code>; CSharpBridge has no compiler-builder extensions.</p>
+<p>These adapters must delegate to the portable semantics. Unity consumes the C#
+DLL and may choose main-thread/manual pumping instead of the automatic runner.</p>
+<h3 id="swift">Swift</h3>
+<p>The Swift mapping separates the <code>GameEventScriptRuntime</code>,
+<code>GameEventScriptCompiler</code>, and <code>GameEventScriptConformance</code> SwiftPM packages.
+Compiler depends only on Runtime; Conformance depends on both. Runtime has no
+dependency on Compiler, a test framework, or Conformance.</p>
+<p><code>GameEventScriptBuilder.addScript(_:sourceName:)</code> accepts source text and assigns
+an independent source ID to each addition, even when diagnostic names repeat.
+The builder supports <code>withDebugInfo</code>, <code>withProgramVersion</code>, and a declarative
+<code>withExternalTypeCatalog</code>. <code>compile(options:)</code> returns a reusable immutable
+Program; repeated compilation does not mutate earlier results. A supplied
+<code>GameEventScriptCompileOptions</code> overrides the builder’s options for that call.
+<code>GameEventScriptDebugInfoOptions</code> independently selects symbols, source maps,
+and source archives; <code>.all</code> is the default and <code>.none</code> omits all three. Unknown
+option bits are invalid public arguments. Source diagnostics are thrown as
+<code>GameEventScriptCompileError</code> with ordered <code>GameEventScriptDiagnostic</code> values.
+Compiler internals and the compiler-only Runtime SPI are not public embedding APIs.</p>
+<p>Runtime exposes <code>GesValue</code>, <code>GesUnit</code>, immutable range descriptors, messages,
+signatures, Program data and codecs, <code>GameEventScriptHost</code>, Context, lifecycle
+handles, random generators, diagnostics, and the extension/external-type
+protocols. <code>GameEventScriptHost.createBuilder()</code> provides the same mutable
+configuration workflow as C#, including seed, entropy, sequence, limits, observer,
+sink and registries. Every <code>build()</code> creates an independent Host. The direct
+initializer remains available. <code>GameEventScriptBuilder.create()</code> creates a
+compiler builder. <code>load</code>, <code>start</code>, <code>isReady</code>, <code>subscribe</code>, <code>receive</code>, <code>executeFrame</code>,
+and <code>runToCompletion</code> retain the host contracts above. The mutable VM is host-private.</p>
+<p>Program segments use <code>let</code> properties and native Array values with copy-on-write
+storage; callers cannot mutate a Program through a returned array. Int64,
+UInt64, UInt16, and Double retain their specified transport widths. Instructions
+expose numeric words and payload bits, independently of Swift enum memory layout.
+<code>GameEventScriptProgramReader.read</code>, <code>GameEventScriptProgramWriter.bytes</code>,
+<code>encodedSize</code>, <code>write(_:into:)</code>, <code>GameEventScriptProgramValidator.validate</code>, and
+<code>GameEventScriptProgramDumper.dump</code> are synchronous and accept/return memory.
+Reader options retain the three portable retention modes and bounded read limits.</p>
+<p>Invalid public construction uses structured <code>throws</code> errors. Signature message
+creation returns an optional for mismatched arity. Decode failures use
+<code>GameEventScriptProgramFormatError</code>; linking uses <code>GameEventScriptDynamicLinkError</code>;
+execution results carry <code>GameEventScriptDiagnostic</code>. Explicit callback faults use
+<code>GameEventScriptExtensionFault</code>; unexpected errors receive the owning runtime
+boundary’s stable classification. Call objects and borrowed argument views must
+not outlive their synchronous callback.</p>
+<p>Strict value equality and hashing preserve kind, unit, and Unicode-scalar
+identity. <code>materializedMap()</code> reads immutable Map/Record contents or lazily
+materializes declared external fields, propagating field failures. It does not
+perform a source-language cast. The random generator has seed, sequence, and
+entropy initializers; each Host constructs its own generator.</p>
+<p><code>ConformanceMarkdownParser</code> accepts bytes, <code>ConformanceRunner</code> compiles and
+executes supported cases natively in memory, and <code>ConformanceReportWriter</code>
+returns report text. The default <code>ConformanceEnvironment</code> advertises all Core
+capabilities and <code>bytecode-snapshot</code>. Measurement is opt-in: an environment
+advertising <code>performance</code> must supply <code>performanceProfile</code> and a
+<code>ConformancePerformanceProvider</code>. The provider returns <code>ConformanceMeasuredMetric</code>
+values with explicit IDs, finite nonnegative Binary64 measurements and units.
+The runner executes correctness first and validates the exact profile metric
+set, units and bounds. Results expose <code>ConformancePerformanceResult</code> with each
+metric’s measured, reference and allowed values; reports retain the profile ID.
+Unavailable profiles, missing/duplicate metrics and invalid readings are errors;
+values above the owning profile’s bounds are performance regression failures.
+<code>ConformanceResourceResolver.resolve(resourceID:maximumBytes:)</code> supplies binary
+fixtures as copied bytes or structured <code>notFound</code>, <code>limitExceeded</code>, or <code>error</code>
+results. The environment’s positive <code>maximumResourceBytes</code> defaults to 64 MiB.
+The runner independently checks the bound and declared SHA-256; failures use
+the resource error codes defined by the Conformance runner contract. Path
+interpretation belongs to the embedding, never the portable resolver interface.
+<code>ConformanceRuntimeRunner.runCase</code> additionally checks runtime scenarios from
+independently supplied <code>ConformanceRuntimeProgram</code> groups.
+<code>ConformanceProgramRunner</code> checks GESA snapshots and bounded binary fixtures.
+These Runtime-only entry points do not attribute the input compiler to Swift;
+performance scenarios verify behavior only and do not claim measurement profiles.
+The executable adapter owns filesystem access and keeps Runtime verification
+reports separate from strict full-port Conformance reports. Public declarations
+are recorded in <code>implementation/swift/api</code>; verified implementation coverage is
+recorded separately in the cross-language CapabilityMatrix.</p>
+<h4 id="native-swift-adapters">Native Swift adapters</h4>
+<p>The optional <code>GameEventScriptSwiftBridge</code> library depends on Runtime and an internal
+compile-time macro target. Only that macro target depends on SwiftSyntax; the
+generated bindings have no SwiftSyntax runtime dependency.
+Compiler and Runtime must not acquire a Bridge dependency. Its native tests may
+use a separate compiler consumer, but the Bridge product has no Compiler or
+Conformance dependency. These adapters do not add portable Core capabilities.</p>
+<p>Closure-based native handlers, publish sinks and extension functions delegate
+to the Runtime protocols. They preserve ordered signatures, tags, lifecycle,
+synchronous argument borrowing and the existing callback error classifications.
+Extension registries reject duplicate signatures and optionally resolve missing
+signatures through an explicit fallback registry. Dictionary message binding
+requires a known signature with exclusively named parameters and exactly one
+value for each normalized label. Ordered tuple inputs support positional labels.</p>
+<p><code>GameEventScriptSwiftValueConvertible</code> defines explicit native conversion.
+Built-in conformances cover Boolean, Text, signed and unsigned fixed-width Swift
+integers, Float/Double, Optional, Array, String-keyed Dictionary and GesValue.
+Native decoding checks kind and units, rejects fractional or out-of-range integer
+conversion and floating-point precision loss. These conversions do not invoke
+source-language casts. Native integer encoding and decoding are bounded by both
+Int64 and the requested Swift integer type. Floating-point encoding uses the portable value factory’s
+NaN, infinity, zero and integral-storage normalization. Nothing represents nil;
+GesValue conversion is identity. Collection conversions recurse and preserve
+canonical GES ordering. Dictionary decoding rejects distinct scalar keys that
+Swift String equality would merge; encoding preserves only keys present in the
+input dictionary. Native failures use <code>GameEventScriptSwiftConversionError</code>.</p>
+<p><code>GameEventScriptSwiftType&lt;Root&gt;</code> exposes only its declared KeyPath/getter fields
+and constructor closures. Constructor parameter labels refer to declared fields
+and inherit their type definitions. Call arguments follow the constructor’s
+declared parameter order. A type-erased binding supplies a validated compiler
+catalog and a separate executable constructor registry. Programs contain only
+the declarative transport data. Wrapped class roots preserve native identity;
+struct roots follow Swift value semantics. Unwrapping requires the exact binding
+descriptor that created the external value. Runtime field coercion and map
+materialization retain the external-value contract above.</p>
+<p class="ges-since"><strong>Since: Unreleased — Swift binding macros and unit conversion helpers</strong></p>
+<p><code>@GesType</code> generates a throwing static <code>createGesType()</code> factory on a nongeneric
+struct or final class. Each invocation creates a distinct descriptor; callers
+retain and reuse it for registry construction, wrapping and unwrapping. The
+optional type name defaults to the Swift name. <code>@GesField</code> exposes only the
+annotated stored or computed instance property, using its name unless overridden.
+Fields require explicit Swift type annotations. Standard numeric types infer
+Number, Bool infers Boolean, String infers Text, Array infers List and Dictionary
+infers Map; Optional delegates to its wrapped type. Aliases, custom convertible
+types and GesValue require explicit <code>typeName</code>. Swift compiler type checking
+still requires the existing strict value-conversion conformances.</p>
+<p><code>@GesField(unit:)</code> may instead declare a numeric quantity in meters, seconds or
+degrees. It cannot be combined with <code>typeName</code> or a nonnumeric field. Encoding
+attaches the explicit unit to a native numeric magnitude; constructor decoding
+checks the exact unit before stripping it and invoking strict native conversion.
+Nothing retains existing Optional/NaN semantics. No magnitude scaling, truncation
+or implicit reinterpretation of an already unit-bearing value occurs. These
+operations are also exposed by <code>GameEventScriptSwiftValue.encode(_:unit:)</code> and
+<code>decode(_:as:unit:)</code>; <code>.none</code> delegates to the ordinary strict conversion.</p>
+<p><code>@GesConstruct</code> exposes a synchronous, nonfailable initializer or static factory
+returning the annotated type. Throwing callbacks preserve normal classification.
+Each parameter maps first by external label to an exposed field, otherwise by
+internal name to an annotated Swift property. Declaration order defines the
+callback’s argument order. Defaults do not add overloads; unmarked constructors
+remain unavailable to scripts. Async, variadic, inout, ownership-qualified and
+generic constructors are rejected. Conditional <code>#if</code> field/constructor declarations
+require manual bindings. Annotation misuse is a Swift compile error;
+portable descriptor name/signature validation still occurs when the throwing
+factory executes. Manual descriptors remain available for foreign/generic types
+and throwing getters. Macro expansion adds no GES syntax or portable behavior.</p>
+<p><code>GameEventScriptSwiftHostRunner</code> is an optional synchronized embedding adapter.
+It takes exclusive ownership through Swift 6 sending parameters and serializes
+Host access and lifecycle operations with one recursive lock. Transferred Host,
+callback and external-value state must not be accessed outside that ownership
+domain. Its explicit <code>start()</code> runs the initial group synchronously. Accepted
+receives and later loads schedule work on a shared serial background dispatcher,
+as in the C# bridge. An already ready transferred Host schedules preexisting work;
+a loading Host waits for Start. Immutable Programs remain reusable without exclusive
+ownership transfer. Recursive receives only enqueue; recursive pumping fails.
+<code>runToCompletion()</code> can drain a ready Host synchronously under the same gate.
+Automatic pumps continue scheduling while ready queued work remains.
+<code>lastResult</code> is a synchronized snapshot of the most recent completed pump.
+<code>isReady</code> reports the startup barrier; a registration’s <code>startResult</code> reports its
+instance initialization. C# exposes the same outcome through runner.GetStartResult(instance).
+Runner-owned handles use stable registration IDs, retain their runner and detach
+idempotently under its lock. Closing rejects further work, detaches owned
+registrations and releases the Host; an already executing pump may finish.
+Blocking on another caller while inside a callback is outside this contract.</p>
+<h3 id="portable-language-mappings">Portable language mappings</h3>
+<p>Ports should prefer native immutable collection views, nullable/optional result
+types, and their standard error transport. They must retain:</p>
+<ul>
+<li>ordered message arguments and stable signature IDs;</li>
+<li>exact fixed-width integer/Binary64 values and <code>.gesb</code> IDs;</li>
+<li>one serial, non-thread-affine Host execution domain;</li>
+<li>synchronous callbacks and explicit outer synchronization;</li>
+<li>idempotent lifecycle handles and enqueue-time snapshots;</li>
+<li>separate declarative external catalogs and executable runtime registries;</li>
+<li>fileless byte/text codec and Conformance operations;</li>
+<li>identical diagnostics, result states, ordering, and canonical writer output.</li>
+</ul>
+<p>An actor, coroutine, executor, or mutex wrapper is an embedding adapter. It must
+not become hidden scheduling inside portable Host operations.</p>
+<h2 id="completeness-map">Completeness map</h2>
+<p>The following map assigns every exported C# reference type to exactly one
+conceptual public family and owning section. Every public constructor, method,
+property, field, and event inherits the assignment of its declaring type. The
+approved C# API snapshot fixes the concrete reference-binding spellings and
+members; reviewing a snapshot change therefore also requires reviewing the
+corresponding row below. Numeric enum members and individual normalized
+Conformance fields are owned by their linked format specifications rather than
+duplicated as a second source of truth here.</p>
+<table>
+<thead>
+<tr>
+<th>Public family</th>
+<th>Owning section</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Builder, CompileOptions, CompileException</td>
+<td>Compiler API</td>
+</tr>
+<tr>
+<td>Program, all segment/entry/view types, instruction and ID types</td>
+<td>Program and bytecode data API</td>
+</tr>
+<tr>
+<td>BinaryFormat constants, Reader, read options/limits/retention, Writer, Validator, format error, Dumper</td>
+<td>Program codec, validation, and dump API</td>
+</tr>
+<tr>
+<td>Message, MessageArgument(s), MessageSignature</td>
+<td>Message and value API</td>
+</tr>
+<tr>
+<td>Value, ValueSlice, ValueArguments, ValueMap, integer/float range</td>
+<td>Message and value API</td>
+</tr>
+<tr>
+<td>HostBuilder, RuntimeLimits, Host, StartResult/State, Instance, Subscription</td>
+<td>Host construction and lifecycle API</td>
+</tr>
+<tr>
+<td>Context, NativeMessageHandler, PublishSink/Result, Observer, ExecutionResult/State</td>
+<td>Context, messaging, and execution results</td>
+</tr>
+<tr>
+<td>RandomGenerator</td>
+<td>Random generator API</td>
+</tr>
+<tr>
+<td>ExtensionReference, ExtensionRegistry/Function, ExtensionCall</td>
+<td>Extension API</td>
+</tr>
+<tr>
+<td>External definitions/catalog, constructor reference/registry/call, ExternalValue</td>
+<td>External-type API</td>
+</tr>
+<tr>
+<td>Diagnostic, codes/phase/symbol/location and failure transports</td>
+<td>Diagnostics and failure transport</td>
+</tr>
+<tr>
+<td>Conformance parser, limits/diagnostics, Document/Case and normalized nested models</td>
+<td>Conformance parser API</td>
+</tr>
+<tr>
+<td>Environment/options/limits, resolver/provider/sink, Runner, results/report/summary</td>
+<td>Conformance runner API</td>
+</tr>
+<tr>
+<td>Result, Markdown, Received, and CrossLanguage writers plus CorpusIdentity</td>
+<td>Conformance writer API</td>
+</tr>
+<tr>
+<td>CSharpBridge reflection, delegate, dictionary, and automatic-runner adapters</td>
+<td>Language-binding requirements; non-portable</td>
+</tr>
+</tbody>
+</table>
+<p>The portable public API is limited to the families above. VM execution state,
+compiler trees, filesystem services, network clients, task schedulers, and
+reflection objects remain private or embedding-specific.</p>
+<h2 id="monotonic-scheduling-api">Monotonic scheduling API</h2>
+<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p>C# <code>IGameEventScriptClock.ElapsedMicroseconds</code> and Swift
+<code>GameEventScriptClock.elapsedMicroseconds</code> provide a borrowed monotonic Int64
+microsecond source. Host builders accept <code>WithClock</code> / <code>withClock</code>; absent an
+injected source, each host uses an independent origin on the system monotonic
+clock. A shared injected clock is read serially by its embedding.</p>
+<p>Host <code>NextMessageDelay</code> / <code>nextMessageDelay</code> returns optional remaining Int64
+microseconds without pumping. <code>Waiting</code> / <code>waiting</code> extends execution results
+when only delayed work remains. The authoritative timing and lifecycle rules
+are in HostRuntime. C# and Swift automatic runners arm wake-ups outside Runtime,
+reschedule when new work arrives and cancel wake-ups when closed/disposed.</p>
+<h2 id="explicit-product-json-codec">Explicit product JSON codec</h2>
+<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p>C# <code>GameEventScriptMessageJson.Serialize/Deserialize</code> and Swift
+<code>GameEventScriptMessageJson.serialize/deserialize</code> encode/decode messages;
+<code>SerializeValue/DeserializeValue</code> and <code>serializeValue/deserializeValue</code> handle
+standalone values. These Runtime-only APIs are synchronous, fileless and Host
+independent. They implement <a href="/docs/reference/message-format/">MessageFormat</a>, including ordered
+arguments, numeric normalization, limits, data-only reconstruction and explicit
+external-to-Record export. Encoding may propagate external getter failures.
+Local message publication never implicitly invokes these APIs.</p>
+<p><code>ConstructData</code> (0xDE) and <code>SplitText</code> (0xDF) extend the public opcode registry.
+Integral Binary64 range factory inputs normalize to the exact integer range model;
+see <a href="/docs/reference/language/#range">Language</a>. API names that accept Binary64 describe their
+input representation, not a promise of unnormalized internal storage.</p>
+</div><footer class="sl-flex astro-ddtxxk7k"><div class="meta sl-flex astro-ddtxxk7k"><a href="https://github.com/schloepke/GameEventScript/edit/main/specs/PublicApi.md" class="sl-flex print:hidden astro-qlekgd3o"><svg aria-hidden="true" class="astro-qlekgd3o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.2em;"><path d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-1.1-.22 1 1 0 0 0-.32.22l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8c.1-.1.17-.2.22-.33a1 1 0 0 0 0-.24v-.14l.07-.05ZM6.83 20H4v-2.83l9.93-9.93 2.83 2.83L6.83 20ZM18.17 8.66l-2.83-2.83 1.42-1.41 2.82 2.82-1.41 1.42Z"/></svg>Edit page</a></div><div class="pagination-links print:hidden astro-b5raizh3" dir="ltr"><a href="/docs/reference/host-runtime/" rel="prev" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span class="astro-b5raizh3">Previous<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Host runtime specification</span></span></a><a href="/docs/reference/diagnostics/" rel="next" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg><span class="astro-b5raizh3">Next<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Portable diagnostics specification</span></span></a></div></footer><script type="module" src="/_astro/DocsFooter.astro_astro_type_script_index_0_lang.CcG6r9Au.js"></script></div></div></main></div></div></div></div></body></html>

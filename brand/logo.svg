@@ -1,0 +1,23 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Game Event Script — Pixel-Duo</title>
+  <defs>
+    <linearGradient id="duo-blue" gradientUnits="userSpaceOnUse" x1="10" y1="8" x2="50" y2="35">
+      <stop stop-color="#4864d9" />
+      <stop offset="1" stop-color="#79a7ef" />
+    </linearGradient>
+    <linearGradient id="duo-teal" gradientUnits="userSpaceOnUse" x1="10" y1="8" x2="50" y2="35">
+      <stop stop-color="#2b99a6" />
+      <stop offset="1" stop-color="#78ccc1" />
+    </linearGradient>
+  </defs>
+  <g fill="url(#duo-blue)">
+    <path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34V37H10V41H6V30Z" />
+    <path data-detail="particles" d="M53 8H57V12H53ZM58 15H61V18H58Z" />
+  </g>
+  <g transform="rotate(180 32 32)" fill="url(#duo-teal)">
+    <path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34V37H10V41H6V30Z" />
+    <path data-detail="particles" d="M53 8H57V12H53ZM58 15H61V18H58Z" />
+  </g>
+</svg>

@@ -1,0 +1,525 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-g5ptsecz"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Portable number semantics | Game Event Script</title><link rel="canonical" href="https://gameeventscript.org/docs/reference/semantics/numbers/"/><link rel="sitemap" href="/sitemap-index.xml"/><link rel="shortcut icon" href="/favicon-pixel-duo.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.3.5"/><meta name="generator" content="Starlight v0.42.4"/><meta property="og:title" content="Portable number semantics"/><meta property="og:type" content="article"/><meta property="og:url" content="https://gameeventscript.org/docs/reference/semantics/numbers/"/><meta property="og:locale" content="en"/><meta property="og:description" content="Portable number semantics — Game Event Script documentation."/><meta property="og:site_name" content="Game Event Script"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Portable number semantics — Game Event Script documentation."/><script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script><template id="theme-icons"><svg aria-hidden="true" class="light astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg><svg aria-hidden="true" class="dark astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg><svg aria-hidden="true" class="auto astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg></template><link rel="stylesheet" href="/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/_astro/common.CIp__BGE.css"><script type="module" src="/_astro/page.Dwipeu-R.js"></script></head><body class="astro-g5ptsecz"><a class="sl-skip-link astro-qb7clj6f" href="#_top">Skip to content</a><div class="page sl-flex astro-yntsjkba"><header class="header astro-yntsjkba"><div class="header astro-by6fddyj"><div class="title-wrapper sl-flex astro-by6fddyj"><a href="/" class="site-title sl-flex astro-6rvad3va"><img class="astro-6rvad3va" alt src="/_astro/mark.DsNbRX0k.svg" width="64" height="64"><span class="astro-6rvad3va" translate="no">Game Event Script</span></a></div><div class="sl-flex print:hidden astro-by6fddyj"><site-search class="astro-by6fddyj astro-b5kgnn7o" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-b5kgnn7o"><svg aria-hidden="true" class="astro-b5kgnn7o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block astro-b5kgnn7o" aria-hidden="true">Search</span><kbd class="sl-hidden md:sl-flex astro-b5kgnn7o" style="display: none;"><kbd class="astro-b5kgnn7o">Ctrl</kbd><kbd class="astro-b5kgnn7o">K</kbd></kbd></button><dialog style="padding:0" aria-label="Search" class="astro-b5kgnn7o"><div class="dialog-frame sl-flex astro-b5kgnn7o"><button data-close-modal class="sl-flex md:sl-hidden astro-b5kgnn7o">Cancel</button><div class="search-container astro-b5kgnn7o"><div id="starlight__search" class="astro-b5kgnn7o"></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/_astro/Search.astro_astro_type_script_index_0_lang.BuGLwjLu.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group astro-by6fddyj"><div class="sl-flex social-icons astro-by6fddyj"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script><script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div><aside class="ges-development-notice" aria-label="Documentation version" data-pagefind-ignore>Development documentation. Check the <a href="/docs/changelog/">changelog</a> when using a published package.</aside><script type="module">var e=document.querySelector(`.ges-development-notice`);if(e){let t=()=>document.documentElement.style.setProperty(`--ges-notice-height`,`${e.getBoundingClientRect().height}px`);t(),new ResizeObserver(t).observe(e)}</script></header><nav class="sidebar print:hidden astro-yntsjkba" aria-label="Main"><button popovertarget="starlight__sidebar" class="sl-menu-button sl-flex md:sl-hidden print:hidden astro-r2osgdlg"><svg aria-hidden="true" class="open-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg><svg aria-hidden="true" class="close-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg><span class="sr-only astro-r2osgdlg">Menu</span></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=matchMedia(`(min-width: 50em)`),t=()=>{this.popover=e.matches?null:`auto`};t(),e.addEventListener(`change`,()=>t()),this.addEventListener(`toggle`,({newState:e})=>this.trapFocus(e===`open`))}trapFocus(e){document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}};customElements.define(`sl-sidebar-pane`,e);</script><sl-sidebar-pane popover id="starlight__sidebar" class="sidebar-pane astro-yntsjkba"><div class="sidebar-content sl-flex astro-yntsjkba"><sl-sidebar-state-persist data-hash="1syr27k" class="astro-ipdry5cl"><script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script><ul class="top-level astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/" class="large astro-rmhv4bp6"><span class="astro-rmhv4bp6">Home</span></a></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Start here</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="0"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Documentation overview</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Learn the language</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in C#</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in Swift</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Tools</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="1"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Native Swift CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/editor-bundles/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">TextMate editor bundles</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Native integration</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="2"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/implementations/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/csharp-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# API reference</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/implementations/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/swift-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift API reference</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Language and host reference</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="3"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script language specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/text/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable text and Unicode semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/numbers/" aria-current="page" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable number semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/determinism/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable determinism semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/host-runtime/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Host runtime specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/public-api/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable public API specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/diagnostics/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable diagnostics specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/message-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Product message JSON V1</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/syntax-highlighting/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Syntax highlighting</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Program formats</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="4"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/program-model/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable program model specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/bytecode/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Bytecode specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/binary-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesb` binary format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/assembler-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesa` assembler format specification</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Conformance</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="5"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/markdown-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance Markdown format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/runner/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance runner specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/environment/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance environment specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/coverage/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable Conformance Coverage</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/cross-language-acceptance/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Cross-language conformance acceptance</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Packages and releases</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="6"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/distribution/packages/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Library packages and releases</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/distribution/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# distribution</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/changelog/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Changelog</span></a></li></ul></details></li></ul><script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist><div class="md:sl-hidden"><div class="mobile-preferences sl-flex astro-p4azlveh"><div class="social-icons astro-p4azlveh"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script></div></div></div></sl-sidebar-pane></nav><div class="main-frame astro-yntsjkba"><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-lrzkfocr"><aside class="right-sidebar-container print:hidden astro-lrzkfocr"><div class="right-sidebar astro-lrzkfocr"><div class="lg:sl-hidden astro-qok35upx"><mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-66cqc7ze"><nav aria-labelledby="starlight__on-this-page--mobile" class="astro-66cqc7ze"><details id="starlight__mobile-toc" class="astro-66cqc7ze"><summary id="starlight__on-this-page--mobile" class="sl-flex astro-66cqc7ze"><span class="toggle sl-flex astro-66cqc7ze">On this page<svg aria-hidden="true" class="caret astro-66cqc7ze astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current astro-66cqc7ze"></span></summary><div class="dropdown astro-66cqc7ze"><ul class="isMobile astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#numeric-representations" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Numeric representations</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#integer-arithmetic-and-overflow" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Integer arithmetic and overflow</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#binary64-special-values" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Binary64 special values</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#conversion-and-rounding" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Conversion and rounding</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#text-and-number-conversion" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Text and number conversion</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#accepted-numeric-text" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Accepted numeric text</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#shared-conversion-and-source-token-boundaries" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Shared conversion and source token boundaries</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#numeric-value-and-suffix-interpretation" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Numeric value and suffix interpretation</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#conversion-to-percentage" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Conversion to Percentage</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#numeric-text-output-and-roundtrip" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Numeric text output and roundtrip</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#division-modulo-and-remainder" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Division, modulo, and remainder</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#comparisons" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Comparisons</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#transcendental-functions" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Transcendental functions</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#canonical-conformance-scalar-encoding" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Canonical conformance scalar encoding</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#port-requirements" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Port requirements</span></a></li></ul></div></details></nav></mobile-starlight-toc><script type="module" src="/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C3fM4Kra.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block astro-qok35upx"><div class="sl-container astro-qok35upx"><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul class="astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#numeric-representations" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Numeric representations</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#integer-arithmetic-and-overflow" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Integer arithmetic and overflow</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#binary64-special-values" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Binary64 special values</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#conversion-and-rounding" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Conversion and rounding</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#text-and-number-conversion" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Text and number conversion</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#accepted-numeric-text" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Accepted numeric text</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#shared-conversion-and-source-token-boundaries" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Shared conversion and source token boundaries</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#numeric-value-and-suffix-interpretation" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Numeric value and suffix interpretation</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#conversion-to-percentage" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Conversion to Percentage</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#numeric-text-output-and-roundtrip" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Numeric text output and roundtrip</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#division-modulo-and-remainder" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Division, modulo, and remainder</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#comparisons" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Comparisons</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#transcendental-functions" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Transcendental functions</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#canonical-conformance-scalar-encoding" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Canonical conformance scalar encoding</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#port-requirements" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Port requirements</span></a></li></ul></nav></starlight-toc><script type="module" src="/_astro/TableOfContents.astro_astro_type_script_index_0_lang.BpJaGz7G.js"></script></div></div></div></aside><div class="main-pane astro-lrzkfocr"><main data-pagefind-body class="astro-g5ptsecz" lang="en" dir="ltr"><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><h1 id="_top" class="astro-bebwqqxs">Portable number semantics</h1></div></div><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><div class="sl-markdown-content"><!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<p class="ges-since"><strong>Since: 0.1.0</strong></p>
+<p>This document is the normative numeric contract for Game Event Script compiler,
+runtime, <code>.gesb</code>, and portable Conformance implementations. Every language port
+must implement these results independently of its language’s
+default overflow, conversion, formatting, or math-library conventions.</p>
+<h2 id="numeric-representations">Numeric representations</h2>
+<ul>
+<li>Integer values are signed 64-bit integers in <code>[-2^63, 2^63 - 1]</code>.</li>
+<li>Fractional values use IEEE 754 binary64. <code>.gesb</code> stores their exact 64 bits in
+little-endian form; implementations must not serialize a host-language object
+layout.</li>
+<li>A finite binary64 result that is exactly integral and lies in the Int64 range
+is normally stored as an integer. The Int64 upper test is strictly <code>&lt; 2^63</code>,
+not <code>&lt;= (double)Int64.MaxValue</code>, because <code>Int64.MaxValue</code> rounds to <code>2^63</code> in
+binary64.</li>
+<li>Percentage values store their ratio as binary64. For example, <code>10%</code> stores
+<code>0.1</code>.</li>
+<li>Quantity units do not change the numeric representation.</li>
+</ul>
+<p>The integer/float storage distinction is not an arbitrary-precision promise.
+<code>is integer</code> also accepts finite, exactly integral binary64 values as described
+in the language specification.</p>
+<h2 id="integer-arithmetic-and-overflow">Integer arithmetic and overflow</h2>
+<p>Integer <code>+</code>, <code>-</code>, and <code>*</code> first compute an exact signed-64 result without using
+the host language’s ambient checked/unchecked behavior. If the mathematical
+result fits Int64, the result remains an integer. On overflow, both operands are
+converted to binary64 and the operation is repeated as binary64. This can lose
+integer precision, but it never wraps, traps, or invokes C++ signed-overflow
+undefined behavior.</p>
+<p>After binary64 fallback, normal value canonicalization still applies. Therefore
+an overflow approximation that rounds to an exactly integral in-range binary64
+value may be stored as an integer. This is a representation detail; all ports
+must produce the same numeric value. Unary negation and <code>abs</code> of <code>-2^63</code> likewise
+produce binary64 <code>2^63</code>.</p>
+<p>Compiler constant folding and VM execution must use the same helpers and yield
+the same result. In particular, operands above <code>2^53</code> must not be converted to
+binary64 before an exact in-range integer operation.</p>
+<h2 id="binary64-special-values">Binary64 special values</h2>
+<ul>
+<li>A scalar NaN is the internal marker for invalid mathematics or numeric
+conversion and canonicalizes to <code>nothing</code> at the value boundary. It is never
+an observable scalar number. A conversion implementation may instead report
+an invalid result directly; this has the same script-visible outcome.</li>
+<li>Positive and negative infinity are observable binary64 values. Operators use
+the explicit rules in the language and bytecode specifications; scalar <code>/</code>
+follows IEEE division, including division by zero.</li>
+<li>Every stored numeric zero is canonicalized to positive zero. This applies to
+scalar floats, percentages, vector/point components, and floating ranges.
+Consequently <code>-0</code> formats as <code>0</code> and compares equal to <code>0</code>.</li>
+<li>A vector or point with a NaN component is invalid and canonicalizes to
+<code>nothing</code>. Floating ranges already require finite bounds and step.</li>
+</ul>
+<h2 id="conversion-and-rounding">Conversion and rounding</h2>
+<p>An existing Int64 number cast with <code>as :Number</code> retains its exact value and
+quantity unit. The cast must not pass that value through Binary64, including
+when the result is used as a dynamic random seed. Compiler constant evaluation
+and runtime conversion use the same rules.</p>
+<p>Explicit text-to-Number conversion follows the text grammar and value rules in
+<a href="#text-and-number-conversion">Text and number conversion</a>. These rules apply
+equally to literals, named constants, and values received at runtime.</p>
+<p>Binary64-to-Int64 conversion first truncates toward zero and then saturates:</p>
+<table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NaN</td>
+<td><code>0</code> for low-level conversion helpers; observable NaN has already become <code>nothing</code></td>
+</tr>
+<tr>
+<td><code>+Infinity</code> or value <code>&gt;= 2^63</code></td>
+<td><code>Int64.MaxValue</code></td>
+</tr>
+<tr>
+<td><code>-Infinity</code> or value <code>&lt; -2^63</code></td>
+<td><code>Int64.MinValue</code></td>
+</tr>
+<tr>
+<td>otherwise</td>
+<td>truncation toward zero</td>
+</tr>
+</tbody>
+</table>
+<p>Integer-valued intrinsics use the following definitions and then the same
+saturating conversion:</p>
+<ul>
+<li><code>floor</code>: toward negative infinity.</li>
+<li><code>ceil</code>: toward positive infinity.</li>
+<li><code>truncate</code>: toward zero.</li>
+<li><code>round half even</code>: nearest; an exact half selects the even integer.</li>
+<li><code>round half up</code>: nearest; an exact half goes away from zero.</li>
+<li><code>round half down</code>: nearest; an exact half goes toward zero.</li>
+</ul>
+<p>These names describe the existing DSL semantics; they are not delegated to a
+host language’s similarly named default overload.</p>
+<h2 id="text-and-number-conversion">Text and number conversion</h2>
+<h3 id="accepted-numeric-text">Accepted numeric text</h3>
+<p>An explicit <code>as :Number</code> or <code>as :Percentage</code> cast consumes one complete numeric
+text token. It ignores ASCII space (<code>U+0020</code>) and tab (<code>U+0009</code>) before and after
+the token.
+No whitespace is allowed inside it. The grammar is:</p>
+<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">NumericText = Padding NumberToken Padding</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Padding     = { " " | "\t" }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">NumberToken = (Finite | Infinity | "NaN") [Suffix]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Finite      = [Sign] (Digits | GroupedDigits) ["." Digits] [Exponent]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Infinity    = [Sign] "Infinity"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Exponent    = ("e" | "E") [Sign] Digits</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Sign        = "+" | "-"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Digits      = Digit {["_"] Digit}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">GroupedDigits = FirstGroup "," ThreeDigits {"," ThreeDigits}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">FirstGroup  = Digit [Digit [Digit]]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ThreeDigits = Digit Digit Digit</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Digit       = "0".."9"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Suffix      = "m" | "s" | "°" | "%"</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="NumericText = Padding NumberToken PaddingPadding     = { &quot; &quot; | &quot;\t&quot; }NumberToken = (Finite | Infinity | &quot;NaN&quot;) [Suffix]Finite      = [Sign] (Digits | GroupedDigits) [&quot;.&quot; Digits] [Exponent]Infinity    = [Sign] &quot;Infinity&quot;Exponent    = (&quot;e&quot; | &quot;E&quot;) [Sign] DigitsSign        = &quot;+&quot; | &quot;-&quot;Digits      = Digit {[&quot;_&quot;] Digit}GroupedDigits = FirstGroup &quot;,&quot; ThreeDigits {&quot;,&quot; ThreeDigits}FirstGroup  = Digit [Digit [Digit]]ThreeDigits = Digit Digit DigitDigit       = &quot;0&quot;..&quot;9&quot;Suffix      = &quot;m&quot; | &quot;s&quot; | &quot;°&quot; | &quot;%&quot;"><div></div></button></div></figure></div>
+<p>All digits and signs are ASCII. Special tokens and suffixes are case-sensitive.
+Leading zeroes are allowed in the integer part and exponent. Both <code>e</code> and <code>E</code>,
+an explicit positive exponent sign, and exponent leading zeroes are accepted.
+Thus <code>1000</code>, <code>100.2</code>, <code>1.02e20</code>, <code>1e03</code>, and <code>1E+003</code> are valid inputs.</p>
+<p>Single underscores may separate adjacent digits, matching numeric source
+literals. They may occur in the integer part, fractional part, or text
+exponent, without imposing a group size. They may not lead, trail, repeat, or
+touch the decimal point, exponent marker, sign, or suffix. Thus <code>1_003.33</code>,
+<code>1_223.32</code>, <code>1000.2_5</code>, and <code>1e0_3</code> are valid.</p>
+<p>A comma is an invariant thousands separator in the integer part only. The
+first group has one to three digits; every subsequent group has exactly three.
+Thus <code>1,003.24</code> and <code>1,234,567.89</code> are valid, and <code>1,003</code> means <code>1003</code>, never
+<code>1.003</code>. Commas and underscores must not be combined in one numeric token.
+Commas are not allowed in the fractional part or exponent. Separator validation
+precedes removal; a parser must not simply discard all commas or underscores.</p>
+<p>Decimal commas, malformed grouping, hexadecimal notation, non-ASCII digits,
+trailing signs, multiple suffixes, unknown suffixes, and unconsumed characters
+are invalid. A decimal point requires digits on both sides. An exponent
+requires at least one digit. Examples of invalid input are <code>12,34</code>, <code>100,2</code>,
+<code>1__000</code>, <code>1_.25</code>, <code>1,_000</code>, <code>1,000.2_5</code>, <code>.5</code>, <code>1.</code>, <code>1e</code>, <code>1e+</code>, <code>1000-</code>,
+<code>10 m</code>, and <code>10ms</code>.</p>
+<p>Invalid input is a failed numeric conversion. An internal NaN or invalid-result
+marker is normalized to script-visible <code>nothing</code>, just as invalid mathematics
+is. Explicit <code>NaN</code> text has the same result. There is no observable scalar NaN
+and no script exception for a failed text cast.</p>
+<p>This grammar belongs to runtime text conversion. It does not extend numeric
+source literals, whose syntax is owned by <a href="/docs/reference/language/">Language</a>.</p>
+<h3 id="shared-conversion-and-source-token-boundaries">Shared conversion and source token boundaries</h3>
+<p>Compiler literal decoding and explicit text casts must use the same decimal
+value, precision, and rounding rules for corresponding numeric input. A shared
+numeric conversion core can serve both paths; token recognition and the target
+value kind remain responsibilities of the caller.</p>
+<p>The source lexer still applies the source-literal grammar before conversion.
+In particular, source commas separate arguments and list items: <code>[1,003]</code>
+contains two items, <code>1</code> and <code>3</code>, whereas <code>'1,003' as :Number</code> yields <code>1003</code>.
+Source underscores follow the common digit-separator rule. Text-only padding,
+signs, exponent notation, special-value spellings, and comma grouping do not
+implicitly become source-token syntax. Source signs and mathematical constants
+retain their expression-level meaning.</p>
+<p>A Percentage literal constructs a Percentage value; <code>as :Number</code> reads the
+numeric ratio as defined below. A common conversion core must preserve this
+distinction. Invalid source syntax remains a structured compiler diagnostic;
+the runtime cast’s <code>nothing</code> result must not silently replace a malformed source
+literal.</p>
+<h3 id="numeric-value-and-suffix-interpretation">Numeric value and suffix interpretation</h3>
+<p>For <code>as :Number</code>, the decimal significand and exponent denote one exact
+mathematical decimal value before conversion to GES storage:</p>
+<ul>
+<li>With no suffix, the result is a unitless Number.</li>
+<li>With <code>m</code>, <code>s</code>, or <code>°</code>, the result is a Number carrying that Quantity unit.
+The suffix neither rescales nor rounds the numeric value.</li>
+<li>With <code>%</code>, the mathematical decimal value is divided by exactly 100 before
+numeric conversion. The result of <code>as :Number</code> is the unitless ratio, not a
+Percentage value. This is the same numeric view as casting a Percentage to
+Number. The <code>%</code> suffix is responsible for the scaling.</li>
+</ul>
+<p>If the resulting exact mathematical value is an integer within signed Int64,
+it is parsed directly and exactly as Int64, irrespective of decimal or exponent
+notation. In particular, <code>9007199254740993</code>, <code>9007199254740993.0</code>, and
+<code>9007199254740993e0</code> must all retain that integer. Binary64 is not an intermediate
+representation for this case.</p>
+<p>All other finite decimal inputs are rounded once to the nearest Binary64 value,
+with exact halfway cases selecting the even significand. Normal GES numeric
+storage canonicalization then applies. Overflow yields signed infinity;
+underflow follows the same rounding rule through subnormal values to zero.
+Zero is canonicalized to positive zero. Parsing does not saturate at Int64
+bounds and does not use the runtime equality ULP tolerance.</p>
+<p>Percentage scaling is part of the exact decimal interpretation, before that
+single rounding step. Parsing a percentage by first rounding its displayed
+number to Binary64 and then dividing by 100 is permitted only if it produces
+the same required result. This also avoids intermediate overflow for a finite
+ratio whose percentage magnitude exceeds the Binary64 range.</p>
+<p><code>Infinity</code>, <code>+Infinity</code>, and <code>-Infinity</code> produce the corresponding signed
+Binary64 infinity. A Quantity suffix is retained; <code>%</code> leaves the infinity
+unitless. <code>NaN</code> produces <code>nothing</code> with or without a suffix.</p>
+<table>
+<thead>
+<tr>
+<th>Text input</th>
+<th>Result of <code>as :Number</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1000</code> or <code>1e03</code></td>
+<td>Int64 <code>1000</code></td>
+</tr>
+<tr>
+<td><code>1_003.33</code></td>
+<td>nearest Binary64 to decimal <code>1003.33</code></td>
+</tr>
+<tr>
+<td><code>1_223.32</code></td>
+<td>nearest Binary64 to decimal <code>1223.32</code></td>
+</tr>
+<tr>
+<td><code>1,003.24</code></td>
+<td>nearest Binary64 to decimal <code>1003.24</code></td>
+</tr>
+<tr>
+<td><code>100.2</code></td>
+<td>nearest Binary64 to decimal <code>100.2</code></td>
+</tr>
+<tr>
+<td><code>1.02e20</code></td>
+<td>nearest Binary64 to decimal <code>1.02e20</code></td>
+</tr>
+<tr>
+<td><code>1000.01</code> or <code>1.00001e03</code></td>
+<td>the same Binary64 value</td>
+</tr>
+<tr>
+<td><code>1.00001e02</code></td>
+<td>nearest Binary64 to decimal <code>100.001</code></td>
+</tr>
+<tr>
+<td><code>1e03m</code></td>
+<td>Int64 Quantity <code>1000m</code></td>
+</tr>
+<tr>
+<td><code>100.2s</code></td>
+<td>Binary64 Quantity with unit <code>s</code></td>
+</tr>
+<tr>
+<td><code>90°</code></td>
+<td>Int64 Quantity <code>90°</code></td>
+</tr>
+<tr>
+<td><code>10%</code> or <code>1e1%</code></td>
+<td>unitless Number with the same numeric value as <code>0.1</code></td>
+</tr>
+<tr>
+<td><code>100%</code></td>
+<td>unitless Int64 <code>1</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="conversion-to-percentage">Conversion to Percentage</h3>
+<p>For a numeric input, <code>as :Percentage</code> always interprets the finite, unitless
+numeric view as a ratio and stores that ratio as Binary64. It does not divide
+by 100 based on integer storage, integrality, sign, or magnitude. Ratios greater
+than one and negative ratios are valid; this cast does not clamp probabilities.
+An existing Percentage is preserved, including ratios outside <code>[-1, 1]</code>.
+Int64 inputs are converted to the nearest Binary64 ratio using ties to even.</p>
+<p>Text input uses the numeric text grammar and exact decimal interpretation above:</p>
+<ul>
+<li>A token without a suffix denotes the ratio directly, just like numeric input.</li>
+<li>A token with <code>%</code> denotes a percentage magnitude. Its exact decimal value is
+divided by 100 once, before rounding to the Binary64 ratio.</li>
+<li>A Quantity suffix is invalid for this target type.</li>
+</ul>
+<p>The parsed ratio is rounded once to Binary64 with ties to even, and zero is
+canonicalized to positive zero. A finite ratio produces a Percentage value.
+Quantity inputs, non-finite ratios, invalid numeric text, unsupported values,
+and <code>nothing</code> produce <code>nothing</code>. No branch reinterprets a parsed ratio as a
+percentage magnitude based on its value or storage kind.</p>
+<table>
+<thead>
+<tr>
+<th>Expression</th>
+<th>Percentage value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0.1 as :Percentage</code></td>
+<td><code>10%</code></td>
+</tr>
+<tr>
+<td><code>1 as :Percentage</code></td>
+<td><code>100%</code></td>
+</tr>
+<tr>
+<td><code>1.02 as :Percentage</code></td>
+<td><code>102%</code></td>
+</tr>
+<tr>
+<td><code>20 as :Percentage</code></td>
+<td><code>2000%</code></td>
+</tr>
+<tr>
+<td><code>(1 / 100) as :Percentage</code></td>
+<td><code>1%</code></td>
+</tr>
+<tr>
+<td><code>(20 / 100) as :Percentage</code></td>
+<td><code>20%</code></td>
+</tr>
+<tr>
+<td><code>'0.1' as :Percentage</code></td>
+<td><code>10%</code></td>
+</tr>
+<tr>
+<td><code>'20' as :Percentage</code></td>
+<td><code>2000%</code></td>
+</tr>
+<tr>
+<td><code>'10%' as :Percentage</code></td>
+<td><code>10%</code></td>
+</tr>
+<tr>
+<td><code>'102%' as :Percentage</code></td>
+<td><code>102%</code></td>
+</tr>
+<tr>
+<td><code>102% as :Percentage</code></td>
+<td><code>102%</code></td>
+</tr>
+</tbody>
+</table>
+<p>For every Percentage value <code>p</code>, each of the following must recover its exact
+stored Binary64 ratio and Percentage kind after zero canonicalization:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="ges"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">(</span><span style="--0:#C5E478;--1:#3B61B0">p</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:Number</span><span style="--0:#D6DEEB;--1:#403F53">) </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:Percentage</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">(</span><span style="--0:#C5E478;--1:#3B61B0">p</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:Text</span><span style="--0:#D6DEEB;--1:#403F53">) </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:Percentage</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">((</span><span style="--0:#C5E478;--1:#3B61B0">p</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:Text</span><span style="--0:#D6DEEB;--1:#403F53">) </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:Number</span><span style="--0:#D6DEEB;--1:#403F53">) </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:Percentage</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">((</span><span style="--0:#C5E478;--1:#3B61B0">p</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:Number</span><span style="--0:#D6DEEB;--1:#403F53">) </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:Text</span><span style="--0:#D6DEEB;--1:#403F53">) </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:Percentage</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="(p as :Number) as :Percentage(p as :Text) as :Percentage((p as :Text) as :Number) as :Percentage((p as :Number) as :Text) as :Percentage"><div></div></button></div></figure></div>
+<p>This includes zero, negative values, <code>100%</code>, values above <code>100%</code>, subnormal
+ratios, and very large finite ratios. These guarantees start with a Percentage,
+whose representation is Binary64. They do not imply lossless conversion of
+every arbitrary Int64 Number to Percentage and back when that integer cannot
+be represented exactly in Binary64.</p>
+<h3 id="numeric-text-output-and-roundtrip">Numeric text output and roundtrip</h3>
+<p>Numeric <code>as :Text</code> output is culture-independent and must be accepted by the
+numeric text grammar above. A formatter may choose decimal or exponential
+notation, <code>e</code> or <code>E</code>, exponent padding, and optional insignificant zeroes.
+The language does not require a shortest spelling or a particular threshold
+for switching notation. Output has no surrounding whitespace, comma grouping,
+or underscore separators. Numeric zero is written as <code>0</code>, followed by its suffix
+when present.
+Infinity is written as <code>Infinity</code> or <code>-Infinity</code>, with a Quantity suffix when
+present. An observable scalar NaN does not exist.</p>
+<p>For every unitless Number or scalar Quantity <code>n</code>, parsing its formatted text
+must recover its exact numeric value and unit after normal GES storage
+canonicalization. Int64 roundtrips preserve every bit. Binary64 roundtrips
+preserve every bit after zero and integral-storage canonicalization; approximate
+numeric equality is insufficient. This guarantee holds when one conforming
+implementation writes the text and another reads it.</p>
+<p>Quantity formatting appends its unit suffix. Percentage formatting appends <code>%</code>
+and expresses the stored ratio as a decimal percentage magnitude. Parsing
+that text with <code>as :Number</code> must recover the Percentage’s numeric ratio after
+normal Number canonicalization. This guarantee preserves the numeric meaning;
+<code>as :Number</code> does not preserve the Percentage runtime kind. A formatter must
+choose enough digits to satisfy this rule, including subnormal and very large
+finite ratios. Rounding an intermediate Binary64 product by 100 must not break
+the roundtrip. If the ratio’s Number view canonicalizes to Int64, the text must
+recover that exact integer, not a nearby decimal integer that would merely
+round to the same Binary64 bits.
+Parsing the same formatted text with <code>as :Percentage</code> restores the Percentage
+kind and exact ratio as defined in <a href="#conversion-to-percentage">Conversion to Percentage</a>.</p>
+<p>For example, <code>1000.01</code> and <code>1.00001e03</code> are both permitted output spellings for
+the same Number. Parsing <code>1e03</code> yields <code>1000</code>; its subsequent text may be <code>1000</code>
+or an equivalent exponent spelling. There is no guarantee of retaining the
+original input spelling or of producing an expanded decimal display.</p>
+<p>A fixed implementation and version must format the same canonical value
+consistently across compiler evaluation, VM execution, concatenation, and
+numeric components of nested value formatting. Formatting must not depend on
+ambient locale or call history. Different implementations or runtime versions
+may choose different permitted spellings. Text equality, ordering, length, and
+indexing continue to observe the actual text exactly; they do not compare the
+numeric meanings of differently spelled texts.</p>
+<p>The input grammar, separator validation, suffix interpretation, exact Int64
+selection, and Binary64 rounding above are language rules on every platform.
+A platform library’s accepted spellings, grouping rules, locale, or default
+numeric representation do not define GES behavior.</p>
+<p>The implementation may use its platform’s numeric library or a dedicated
+conversion algorithm for decimal/binary conversion. Either choice must enforce
+the complete input grammar, exact conversion and roundtrip rules, including
+input produced by another port. Recognizing a numeric token and converting its
+exact decimal value to storage are separate responsibilities; a shared literal
+scanner alone does not establish correctly rounded numeric conversion.
+The contract does not prescribe a parser or formatter implementation.</p>
+<h2 id="division-modulo-and-remainder">Division, modulo, and remainder</h2>
+<ul>
+<li><code>/</code> converts scalar operands to binary64 and performs IEEE binary64 division.
+<code>1 / 0</code> is <code>+Infinity</code>, <code>-1 / 0</code> is <code>-Infinity</code>, and <code>0 / 0</code> becomes <code>nothing</code>
+through NaN canonicalization.</li>
+<li><code>div</code> is floor division: <code>floor(a / b)</code>. Integer operands use exact integer
+quotient/remainder arithmetic so values above <code>2^53</code> do not lose precision.
+The exceptional integer case <code>Int64.MinValue div -1</code> produces binary64 <code>2^63</code>.</li>
+<li><code>rem</code> is the truncating remainder. A non-zero result has the sign of the left
+operand: <code>-7 rem 3 = -1</code>, <code>7 rem -3 = 1</code>.</li>
+<li><code>mod</code> is the floor-modulo companion of <code>div</code>. A non-zero result has the sign
+of the right operand: <code>-7 mod 3 = 2</code>, <code>7 mod -3 = -2</code>.</li>
+<li><code>mod</code> or <code>rem</code> by zero is invalid mathematics and becomes <code>nothing</code>.</li>
+<li><code>Int64.MinValue mod -1</code> and <code>Int64.MinValue rem -1</code> are exactly integer zero;
+they do not overflow. Integer <code>div</code> by zero uses the same infinity or
+<code>nothing</code> outcomes as <code>/</code> by zero.</li>
+<li>For binary64 operands, <code>rem</code> uses the IEEE/C <code>fmod</code>-style truncating remainder;
+<code>mod</code> adjusts a non-zero remainder once by the divisor to obtain its sign.</li>
+</ul>
+<h2 id="comparisons">Comparisons</h2>
+<p>Integer-only equality is exact. Whenever binary64 participates, runtime numeric
+equality uses distance in the ordered IEEE 754 representation and accepts at
+most two ULPs. NaN is never equal; infinities are equal only to the same signed
+infinity; positive and negative zero are equal.</p>
+<p>Ordering operators use ordinary IEEE comparisons after the language’s type and
+unit checks. They do not apply the equality ULP window.</p>
+<h2 id="transcendental-functions">Transcendental functions</h2>
+<p><code>sin</code>, <code>cos</code>, <code>tan</code>, inverse trigonometric functions, <code>atan2</code>, <code>ln</code>, <code>exp</code>, and
+non-integer <code>power</code> use the target platform’s IEEE binary64 math library after
+the DSL’s unit, domain, absence, and special-value checks. Exact bit identity
+between different correctly rounded or near-correctly-rounded math libraries is
+not required.</p>
+<p>Conformance expectations therefore compare finite binary64 results by ULP distance.
+The default is 4096 ULPs, allowing bounded cross-library differences. A test or individual step
+can set <code>maxFloatUlps</code>; <code>0</code> requires bit-exact finite results. NaN/nothing,
+infinities, kinds, units, integers, booleans, text, and structure remain exact.
+Runtime <code>=</code> is unaffected and always uses its two-ULP rule.</p>
+<h2 id="canonical-conformance-scalar-encoding">Canonical conformance scalar encoding</h2>
+<p>The YAML value schema described here is test interchange data and does not
+define a product wire-message format.</p>
+<ul>
+<li>Int64 and binary64 payloads are strings so YAML implementations cannot first
+round them through an implementation-defined numeric type.</li>
+<li>A finite binary64 is written as the shortest decimal that parses back to the
+same binary64 bits.</li>
+<li>Decimal point is <code>.</code>, exponent marker is lowercase <code>e</code>, a positive exponent
+has no <code>+</code>, and exponent leading zeroes are removed.</li>
+<li>Both signed zeroes write as <code>0</code>.</li>
+<li>Infinity writes as <code>Infinity</code> or <code>-Infinity</code>.</li>
+<li><code>NaN</code> is accepted in expected YAML as the spelling of invalid mathematics and
+decodes to <code>nothing</code>; it is not an observable scalar NaN value.</li>
+</ul>
+<p>These canonical spellings are the Conformance transport representation. They
+do not constrain the permitted numeric <code>as :Text</code> output spellings defined
+above. In particular, a <code>:Text</code> payload is ordinary exact text; the transport
+must not rewrite it merely because its contents resemble a number.</p>
+<p>Examples: <code>0</code>, <code>0.1</code>, <code>1e20</code>, <code>5e-324</code>, <code>Infinity</code>, <code>-Infinity</code>.</p>
+<h2 id="port-requirements">Port requirements</h2>
+<p>Each language port must have direct tests for:</p>
+<ul>
+<li>exact and overflowing Int64 add/subtract/multiply, including operands above
+<code>2^53</code>;</li>
+<li>the exclusive <code>2^63</code> conversion boundary and saturation;</li>
+<li>negative <code>div</code>, <code>mod</code>, and <code>rem</code> combinations;</li>
+<li>all midpoint rounding modes and infinities;</li>
+<li>ULP ordering across negative values, both zeroes, infinities, and NaN;</li>
+<li>decimal and exponent input, underscore separators, strict text-only comma
+grouping, exact Int64 text conversion, Binary64 halfway and range boundaries,
+Quantity suffixes, and exact Percentage scaling;</li>
+<li>matching source-literal and text-cast numeric conversion with source token
+boundaries and error handling preserved;</li>
+<li>ratio-based Percentage casts and exact Percentage/Number/Text roundtrips,
+including integers, negative values, and percentages at or above <code>100%</code>;</li>
+<li>numeric text roundtrip with permitted output spellings and special tokens;</li>
+<li>canonical Conformance scalar encoding and exponent normalization.</li>
+</ul>
+</div><footer class="sl-flex astro-ddtxxk7k"><div class="meta sl-flex astro-ddtxxk7k"><a href="https://github.com/schloepke/GameEventScript/edit/main/specs/Semantics/Numbers.md" class="sl-flex print:hidden astro-qlekgd3o"><svg aria-hidden="true" class="astro-qlekgd3o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.2em;"><path d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-1.1-.22 1 1 0 0 0-.32.22l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8c.1-.1.17-.2.22-.33a1 1 0 0 0 0-.24v-.14l.07-.05ZM6.83 20H4v-2.83l9.93-9.93 2.83 2.83L6.83 20ZM18.17 8.66l-2.83-2.83 1.42-1.41 2.82 2.82-1.41 1.42Z"/></svg>Edit page</a></div><div class="pagination-links print:hidden astro-b5raizh3" dir="ltr"><a href="/docs/reference/semantics/text/" rel="prev" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span class="astro-b5raizh3">Previous<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Portable text and Unicode semantics</span></span></a><a href="/docs/reference/semantics/determinism/" rel="next" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg><span class="astro-b5raizh3">Next<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Portable determinism semantics</span></span></a></div></footer><script type="module" src="/_astro/DocsFooter.astro_astro_type_script_index_0_lang.CcG6r9Au.js"></script></div></div></main></div></div></div></div></body></html>

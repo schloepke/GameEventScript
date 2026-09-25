@@ -1,0 +1,493 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-g5ptsecz"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>`.gesb` binary format specification | Game Event Script</title><link rel="canonical" href="https://gameeventscript.org/docs/reference/binary-format/"/><link rel="sitemap" href="/sitemap-index.xml"/><link rel="shortcut icon" href="/favicon-pixel-duo.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.3.5"/><meta name="generator" content="Starlight v0.42.4"/><meta property="og:title" content="`.gesb` binary format specification"/><meta property="og:type" content="article"/><meta property="og:url" content="https://gameeventscript.org/docs/reference/binary-format/"/><meta property="og:locale" content="en"/><meta property="og:description" content="`.gesb` binary format specification — Game Event Script documentation."/><meta property="og:site_name" content="Game Event Script"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="`.gesb` binary format specification — Game Event Script documentation."/><script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script><template id="theme-icons"><svg aria-hidden="true" class="light astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg><svg aria-hidden="true" class="dark astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg><svg aria-hidden="true" class="auto astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg></template><link rel="stylesheet" href="/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/_astro/common.CIp__BGE.css"><script type="module" src="/_astro/page.Dwipeu-R.js"></script></head><body class="astro-g5ptsecz"><a class="sl-skip-link astro-qb7clj6f" href="#_top">Skip to content</a><div class="page sl-flex astro-yntsjkba"><header class="header astro-yntsjkba"><div class="header astro-by6fddyj"><div class="title-wrapper sl-flex astro-by6fddyj"><a href="/" class="site-title sl-flex astro-6rvad3va"><img class="astro-6rvad3va" alt src="/_astro/mark.DsNbRX0k.svg" width="64" height="64"><span class="astro-6rvad3va" translate="no">Game Event Script</span></a></div><div class="sl-flex print:hidden astro-by6fddyj"><site-search class="astro-by6fddyj astro-b5kgnn7o" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-b5kgnn7o"><svg aria-hidden="true" class="astro-b5kgnn7o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block astro-b5kgnn7o" aria-hidden="true">Search</span><kbd class="sl-hidden md:sl-flex astro-b5kgnn7o" style="display: none;"><kbd class="astro-b5kgnn7o">Ctrl</kbd><kbd class="astro-b5kgnn7o">K</kbd></kbd></button><dialog style="padding:0" aria-label="Search" class="astro-b5kgnn7o"><div class="dialog-frame sl-flex astro-b5kgnn7o"><button data-close-modal class="sl-flex md:sl-hidden astro-b5kgnn7o">Cancel</button><div class="search-container astro-b5kgnn7o"><div id="starlight__search" class="astro-b5kgnn7o"></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/_astro/Search.astro_astro_type_script_index_0_lang.BuGLwjLu.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group astro-by6fddyj"><div class="sl-flex social-icons astro-by6fddyj"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script><script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div><aside class="ges-development-notice" aria-label="Documentation version" data-pagefind-ignore>Development documentation. Check the <a href="/docs/changelog/">changelog</a> when using a published package.</aside><script type="module">var e=document.querySelector(`.ges-development-notice`);if(e){let t=()=>document.documentElement.style.setProperty(`--ges-notice-height`,`${e.getBoundingClientRect().height}px`);t(),new ResizeObserver(t).observe(e)}</script></header><nav class="sidebar print:hidden astro-yntsjkba" aria-label="Main"><button popovertarget="starlight__sidebar" class="sl-menu-button sl-flex md:sl-hidden print:hidden astro-r2osgdlg"><svg aria-hidden="true" class="open-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg><svg aria-hidden="true" class="close-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg><span class="sr-only astro-r2osgdlg">Menu</span></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=matchMedia(`(min-width: 50em)`),t=()=>{this.popover=e.matches?null:`auto`};t(),e.addEventListener(`change`,()=>t()),this.addEventListener(`toggle`,({newState:e})=>this.trapFocus(e===`open`))}trapFocus(e){document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}};customElements.define(`sl-sidebar-pane`,e);</script><sl-sidebar-pane popover id="starlight__sidebar" class="sidebar-pane astro-yntsjkba"><div class="sidebar-content sl-flex astro-yntsjkba"><sl-sidebar-state-persist data-hash="1syr27k" class="astro-ipdry5cl"><script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script><ul class="top-level astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/" class="large astro-rmhv4bp6"><span class="astro-rmhv4bp6">Home</span></a></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Start here</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="0"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Documentation overview</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Learn the language</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in C#</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in Swift</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Tools</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="1"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Native Swift CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/editor-bundles/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">TextMate editor bundles</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Native integration</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="2"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/implementations/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/csharp-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# API reference</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/implementations/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/swift-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift API reference</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Language and host reference</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="3"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script language specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/text/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable text and Unicode semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/numbers/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable number semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/determinism/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable determinism semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/host-runtime/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Host runtime specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/public-api/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable public API specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/diagnostics/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable diagnostics specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/message-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Product message JSON V1</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/syntax-highlighting/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Syntax highlighting</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Program formats</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="4"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/program-model/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable program model specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/bytecode/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Bytecode specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/binary-format/" aria-current="page" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesb` binary format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/assembler-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesa` assembler format specification</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Conformance</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="5"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/markdown-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance Markdown format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/runner/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance runner specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/environment/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance environment specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/coverage/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable Conformance Coverage</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/cross-language-acceptance/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Cross-language conformance acceptance</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Packages and releases</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="6"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/distribution/packages/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Library packages and releases</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/distribution/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# distribution</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/changelog/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Changelog</span></a></li></ul></details></li></ul><script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist><div class="md:sl-hidden"><div class="mobile-preferences sl-flex astro-p4azlveh"><div class="social-icons astro-p4azlveh"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script></div></div></div></sl-sidebar-pane></nav><div class="main-frame astro-yntsjkba"><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-lrzkfocr"><aside class="right-sidebar-container print:hidden astro-lrzkfocr"><div class="right-sidebar astro-lrzkfocr"><div class="lg:sl-hidden astro-qok35upx"><mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-66cqc7ze"><nav aria-labelledby="starlight__on-this-page--mobile" class="astro-66cqc7ze"><details id="starlight__mobile-toc" class="astro-66cqc7ze"><summary id="starlight__on-this-page--mobile" class="sl-flex astro-66cqc7ze"><span class="toggle sl-flex astro-66cqc7ze">On this page<svg aria-hidden="true" class="caret astro-66cqc7ze astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current astro-66cqc7ze"></span></summary><div class="dropdown astro-66cqc7ze"><ul class="isMobile astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#integer-encoding-and-framing" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Integer encoding and framing</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#section-registry-and-canonical-order" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Section registry and canonical order</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#required-payloads" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Required payloads</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#debug-and-source-payloads" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Debug and source payloads</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#reading-retention-validation-and-writing" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Reading, retention, validation, and writing</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#deferred-v1-extensions" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Deferred V1 extensions</span></a></li></ul></div></details></nav></mobile-starlight-toc><script type="module" src="/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C3fM4Kra.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block astro-qok35upx"><div class="sl-container astro-qok35upx"><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul class="astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#integer-encoding-and-framing" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Integer encoding and framing</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#section-registry-and-canonical-order" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Section registry and canonical order</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#required-payloads" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Required payloads</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#debug-and-source-payloads" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Debug and source payloads</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#reading-retention-validation-and-writing" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Reading, retention, validation, and writing</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#deferred-v1-extensions" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Deferred V1 extensions</span></a></li></ul></nav></starlight-toc><script type="module" src="/_astro/TableOfContents.astro_astro_type_script_index_0_lang.BpJaGz7G.js"></script></div></div></div></aside><div class="main-pane astro-lrzkfocr"><main data-pagefind-body class="astro-g5ptsecz" lang="en" dir="ltr"><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><h1 id="_top" class="astro-bebwqqxs">`.gesb` binary format specification</h1></div></div><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><div class="sl-markdown-content"><!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<p class="ges-since"><strong>Since: 0.1.0</strong></p>
+<p>This document is the normative container specification for <code>GameEventScriptProgram</code>.
+Opcode semantics and operand shapes are normative in <a href="/docs/reference/bytecode/">Bytecode</a>.
+A program contains portable data only. Linking extensions,
+external types, delegates, runtime caches, registries, and VM state is exclusively a
+<code>GameEventScriptHost.Load</code> responsibility.</p>
+<h2 id="integer-encoding-and-framing">Integer encoding and framing</h2>
+<p>All multi-byte integers use little endian. Sections are contiguous and have no
+implicit padding or alignment.</p>
+<p>The file starts with this fixed 16-byte header:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right">Offset</th>
+<th style="text-align: right">Size</th>
+<th>Field</th>
+<th>V1 value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right">0</td>
+<td style="text-align: right">4</td>
+<td>Magic</td>
+<td>ASCII <code>GESB</code></td>
+</tr>
+<tr>
+<td style="text-align: right">4</td>
+<td style="text-align: right">2</td>
+<td>Version</td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td style="text-align: right">6</td>
+<td style="text-align: right">2</td>
+<td>Flags</td>
+<td><code>0</code>, reserved</td>
+</tr>
+<tr>
+<td style="text-align: right">8</td>
+<td style="text-align: right">4</td>
+<td>HeaderSize</td>
+<td><code>16</code></td>
+</tr>
+<tr>
+<td style="text-align: right">12</td>
+<td style="text-align: right">4</td>
+<td>FileSize</td>
+<td>exact total byte count</td>
+</tr>
+</tbody>
+</table>
+<p>Every following section starts with a 12-byte header:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right">Offset</th>
+<th style="text-align: right">Size</th>
+<th>Field</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right">0</td>
+<td style="text-align: right">2</td>
+<td>SectionType</td>
+</tr>
+<tr>
+<td style="text-align: right">2</td>
+<td style="text-align: right">2</td>
+<td>SectionFlags</td>
+</tr>
+<tr>
+<td style="text-align: right">4</td>
+<td style="text-align: right">2</td>
+<td>SectionVersion</td>
+</tr>
+<tr>
+<td style="text-align: right">6</td>
+<td style="text-align: right">2</td>
+<td>Reserved, zero</td>
+</tr>
+<tr>
+<td style="text-align: right">8</td>
+<td style="text-align: right">4</td>
+<td>PayloadLength</td>
+</tr>
+<tr>
+<td style="text-align: right">12</td>
+<td style="text-align: right">n</td>
+<td>Payload</td>
+</tr>
+</tbody>
+</table>
+<p><code>SectionFlags &amp; 0x0001</code> is <code>Required</code>. <code>SectionFlags &amp; 0x00F0</code> is the
+compression-codec field. Codec zero means uncompressed. V1 writers emit only codec
+zero for known sections. A loader rejects unsupported compression on a required
+section. It may preserve or skip an optional unsupported section according to its
+retention mode. All remaining flag bits are invalid in V1.</p>
+<h2 id="section-registry-and-canonical-order">Section registry and canonical order</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: right">ID</th>
+<th>Name</th>
+<th style="text-align: right">Cardinality</th>
+<th style="text-align: right">Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right"><code>0x0001</code></td>
+<td>ProgramMetadataSegment</td>
+<td style="text-align: right">exactly one</td>
+<td style="text-align: right">yes</td>
+</tr>
+<tr>
+<td style="text-align: right"><code>0x0002</code></td>
+<td>StringConstantSegment</td>
+<td style="text-align: right">exactly one</td>
+<td style="text-align: right">yes</td>
+</tr>
+<tr>
+<td style="text-align: right"><code>0x0003</code></td>
+<td>UInt16IndexListSegment</td>
+<td style="text-align: right">exactly one</td>
+<td style="text-align: right">yes</td>
+</tr>
+<tr>
+<td style="text-align: right"><code>0x0004</code></td>
+<td>BindingSegment</td>
+<td style="text-align: right">exactly one</td>
+<td style="text-align: right">yes</td>
+</tr>
+<tr>
+<td style="text-align: right"><code>0x0010</code></td>
+<td>CodeSegment</td>
+<td style="text-align: right">exactly one</td>
+<td style="text-align: right">yes</td>
+</tr>
+<tr>
+<td style="text-align: right"><code>0x0020</code></td>
+<td>DebugSymbolsSegment</td>
+<td style="text-align: right">zero or one</td>
+<td style="text-align: right">no</td>
+</tr>
+<tr>
+<td style="text-align: right"><code>0x0021</code></td>
+<td>SourceMapSegment</td>
+<td style="text-align: right">zero or one</td>
+<td style="text-align: right">no</td>
+</tr>
+<tr>
+<td style="text-align: right"><code>0x0022</code></td>
+<td>SourceArchiveSegment</td>
+<td style="text-align: right">zero or one</td>
+<td style="text-align: right">no</td>
+</tr>
+<tr>
+<td style="text-align: right"><code>0x0030</code></td>
+<td>BuildMetadataSegment</td>
+<td style="text-align: right">zero or one</td>
+<td style="text-align: right">no</td>
+</tr>
+<tr>
+<td style="text-align: right"><code>0x0040</code></td>
+<td>ReservedSignatureSegment</td>
+<td style="text-align: right">reserved</td>
+<td style="text-align: right">undefined</td>
+</tr>
+<tr>
+<td style="text-align: right"><code>0x0041</code>–<code>0x004F</code></td>
+<td>security sections</td>
+<td style="text-align: right">reserved</td>
+<td style="text-align: right">undefined</td>
+</tr>
+<tr>
+<td style="text-align: right"><code>0x8000</code>–<code>0xFFFD</code></td>
+<td>private/experimental</td>
+<td style="text-align: right">any</td>
+<td style="text-align: right">no</td>
+</tr>
+<tr>
+<td style="text-align: right"><code>0xFFFE</code></td>
+<td>NamedCustomSection</td>
+<td style="text-align: right">reserved</td>
+<td style="text-align: right">no</td>
+</tr>
+</tbody>
+</table>
+<p>Types <code>0x0000</code> and <code>0xFFFF</code> are invalid. V1 has one linear code address space and
+therefore exactly one CodeSegment. Multiple programs are combined by separate
+<code>Host.Load</code> calls, not by multiple code sections.</p>
+<p>The canonical writer emits the known sections in the table order above, followed by
+opaque optional sections in their original relative order. Known sections are always
+encoded from the parsed program model; their original raw bytes are not retained.</p>
+<h2 id="required-payloads">Required payloads</h2>
+<p>ProgramMetadataSegment version 1 has a fixed 16-byte payload:</p>
+<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ModuleNameStringIndex    u16</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">RequiredRegisterCount   u16</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">RequiredCallStackDepth  u16</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Reserved                u16 = 0</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ProgramVersion          u64</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="ModuleNameStringIndex    u16RequiredRegisterCount   u16RequiredCallStackDepth  u16Reserved                u16 = 0ProgramVersion          u64"><div></div></button></div></figure></div>
+<p><code>ProgramVersion</code> is always present. Zero means development or unspecified. The
+module name is a stable program identity and must exist in StringConstantSegment.</p>
+<p>StringConstantSegment:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">EntryCount u32</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">repeat EntryCount:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">ByteLength u32</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">Utf8Bytes  byte[ByteLength]</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="EntryCount u32repeat EntryCount:    ByteLength u32    Utf8Bytes  byte[ByteLength]"><div></div></button></div></figure></div>
+<p>UTF-8 is strict. Ordering and duplicates are semantic program data. At most 65,535
+entries are allowed because bytecode indexes are <code>u16</code>.</p>
+<p>UInt16IndexListSegment:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ListCount u32</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">repeat ListCount:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">ElementCount u32</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">Elements     u16[ElementCount]</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="ListCount u32repeat ListCount:    ElementCount u32    Elements     u16[ElementCount]"><div></div></button></div></figure></div>
+<p>At most 65,535 lists are allowed. Lists carry argument names, tags, register lists,
+message shapes, and similar indexed operands; their element interpretation depends
+on the referencing field or opcode.</p>
+<p>BindingSegment:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">EntryCount u32</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">repeat EntryCount:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">Kind                    u8</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">Flags                   u8 = 0</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">Id                      u16</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">NameStringIndex         u16</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">ArgumentNamesListIndex  u16</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">RequiredTagsListIndex   u16</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">ExcludedTagsListIndex   u16</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">EntryAddress            u16</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">RequiredRegisterCount   u16</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">RequiredCallStackDepth  u16</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">Reserved                u16 = 0</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="EntryCount u32repeat EntryCount:    Kind                    u8    Flags                   u8 = 0    Id                      u16    NameStringIndex         u16    ArgumentNamesListIndex  u16    RequiredTagsListIndex   u16    ExcludedTagsListIndex   u16    EntryAddress            u16    RequiredRegisterCount   u16    RequiredCallStackDepth  u16    Reserved                u16 = 0"><div></div></button></div></figure></div>
+<p><code>0xFFFF</code> is the missing ID/list/address sentinel. Executable binds require a valid
+entry address; non-executable binds use the sentinel. The program-level resource
+values equal the maxima of the handler metadata. IDs are globally unique per kind,
+except handler IDs, which are overload ordinals scoped to their message name.
+Function and predicate binding identity is the binding name plus its ordered
+argument-name list. Duplicate signatures are invalid. Function and predicate
+names may not overlap even when their argument-name lists differ; declared
+source types and local parameter names are not encoded identity components.</p>
+<p>Matching resource declarations alone do not establish validity. The independent
+code-derived bounds and frame/staging rules are defined in
+<a href="/docs/reference/bytecode/">Bytecode</a>. Underdeclarations and inconsistent resource states are
+reported as <code>InvalidResourceMetadata</code> by complete Program validation.</p>
+<p>CodeSegment:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">InstructionCount u32</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">repeat InstructionCount:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">OpCode       u8</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">UnitAndFlags u8</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">Word0        u16</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">Word1        u16</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">Word2        u16</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">Payload      u64</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="InstructionCount u32repeat InstructionCount:    OpCode       u8    UnitAndFlags u8    Word0        u16    Word1        u16    Word2        u16    Payload      u64"><div></div></button></div></figure></div>
+<p>Each instruction is exactly 16 encoded bytes. These fields, not CLR layout, define
+the file representation. Payload preserves integer bits, IEEE-754 binary64 bits, or
+four overlaid <code>u16</code> words. V1 permits at most 65,535 instructions.
+Opcode assignments and operand constraints are owned by <a href="/docs/reference/bytecode/">Bytecode</a>.
+The canonical <code>valid-parse-literal.gesb</code> fixture and its invalid operand/opcode
+variants exercise literal parsing in this same V1 instruction encoding; no
+additional section or executable parser state is serialized. The canonical
+<code>data-forms.gesb</code> fixture pins ConstructData and both SplitText modes; invalid
+variants verify flags, units, indexes, reserved words and mode validation.</p>
+<h2 id="debug-and-source-payloads">Debug and source payloads</h2>
+<p>DebugSymbolsSegment has its own name pool, followed by fixed symbol records:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">NameCount u32</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">repeat NameCount: ByteLength u32, Utf8Name byte[ByteLength]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">SymbolCount u32</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">repeat SymbolCount:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">SymbolKind u8          // 1 parameter, 2 local</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">Reserved u8 = 0</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">RegisterId u16</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">NameIndex u32</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">CodeStart u32</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">CodeLength u32</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="NameCount u32repeat NameCount: ByteLength u32, Utf8Name byte[ByteLength]SymbolCount u32repeat SymbolCount:    SymbolKind u8          // 1 parameter, 2 local    Reserved u8 = 0    RegisterId u16    NameIndex u32    CodeStart u32    CodeLength u32"><div></div></button></div></figure></div>
+<p>Only explicit script parameters and locals are named. IDs are physical registers
+after final allocation. Multiple non-overlapping ranges may later name the same
+physical register; compiler temporaries remain unnamed. Each symbol’s code range
+lies within one routine, and its register ID is below that routine’s maximum
+frame length. This also applies to unused routines whose frames exceed the
+Program’s handler resource bounds.</p>
+<p>SourceMapSegment uses stable source IDs assigned in <code>AddScript</code> order:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">SourceCount u32</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">repeat SourceCount:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">SourceNameLength u32, SourceName UTF-8</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">SourceByteLength u32</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">Sha256 byte[32]</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">LineCount u32</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">LineStartByteOffsets u32[LineCount]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">MappingCount u32</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">repeat MappingCount:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">CodeStart u32</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">CodeLength u32</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">SourceId u32</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">SourceStartByteOffset u32</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">SourceByteLength u32</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="SourceCount u32repeat SourceCount:    SourceNameLength u32, SourceName UTF-8    SourceByteLength u32    Sha256 byte[32]    LineCount u32    LineStartByteOffsets u32[LineCount]MappingCount u32repeat MappingCount:    CodeStart u32    CodeLength u32    SourceId u32    SourceStartByteOffset u32    SourceByteLength u32"><div></div></button></div></figure></div>
+<p>The source-table index is its stable <code>SourceId</code>; compiler inputs therefore receive
+IDs in <code>AddScript</code> order. All source offsets address uncompressed UTF-8 bytes. The
+first line offset is zero; subsequent offsets are strictly increasing UTF-8
+boundaries and may equal the source length for a final empty line. SourceMap is
+useful without an embedded source.</p>
+<p>SourceArchiveSegment is independent:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">SourceCount u32</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">repeat SourceCount:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">SourceId u32</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">SourceNameLength u32, SourceName UTF-8</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">ContentByteLength u32</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">    </span></span><span style="--0:#d6deeb;--1:#403f53">Utf8Content byte[ContentByteLength]</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="SourceCount u32repeat SourceCount:    SourceId u32    SourceNameLength u32, SourceName UTF-8    ContentByteLength u32    Utf8Content byte[ContentByteLength]"><div></div></button></div></figure></div>
+<p>Content is the exact logical compiler input encoded as UTF-8. Original BOM and file
+encoding are not preserved. If map and archive are both present, IDs, names, byte
+lengths, SHA-256 values, line boundaries, and UTF-8 validity must agree.</p>
+<p>BuildMetadataSegment contains exactly two required length-prefixed UTF-8 strings:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">CompilerIdLength u32, CompilerId UTF-8</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">CompilerVersionLength u32, CompilerVersion UTF-8</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="CompilerIdLength u32, CompilerId UTF-8CompilerVersionLength u32, CompilerVersion UTF-8"><div></div></button></div></figure></div>
+<p>The C# implementation emits compiler ID <code>steph.ges.compiler.csharp</code> and version
+<code>0.1.0</code>. Other ports use stable implementation IDs. Runtime behavior never depends
+on these values. Timestamps, host names, user names, absolute paths, and a separate
+language field are forbidden so identical inputs remain reproducible.</p>
+<h2 id="reading-retention-validation-and-writing">Reading, retention, validation, and writing</h2>
+<p><code>GameEventScriptProgramReader</code> accepts bytes only. <code>PreserveAll</code> parses known
+optional sections and retains unknown optional payloads as immutable opaque sections.
+<code>PreserveKnown</code> drops unknown optional sections. <code>RuntimeOnly</code> materializes only the
+five required runtime sections. Unknown required sections always fail. A known
+optional section with unsupported version or compression is opaque only under
+<code>PreserveAll</code>; otherwise it is skipped.</p>
+<p>The default reader limits are 64 MiB per file, 256 sections, 32 MiB of source archive,
+16 MiB of retained opaque payload, and 65,535 each for instructions, bindings,
+strings, and index lists. Bounds and arithmetic are checked before allocation.</p>
+<p>The compiler’s final materialization, reader, canonical writer, and <code>Host.Load</code>
+all invoke the shared program validator. It validates framing, UTF-8, table
+references, bind and opcode forms, code targets, the acyclic synchronous call
+graph, resource declarations, and debug/source ranges. Failures use
+<code>GameEventScriptProgramFormatException</code> with a stable error code and, where
+available, byte offset, section type, and entry index.</p>
+<p>Call-graph depth within the V1 data limits is not an additional format error.
+Validation of an acyclic graph must complete, and a cyclic graph must produce
+<code>CyclicCallGraph</code>, without terminating the embedding process through exhaustion
+of the native implementation stack. Host execution limits do not replace this
+validation at the reader boundary.</p>
+<p>The portable numeric error codes are fixed as follows:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right">Code</th>
+<th>Name</th>
+<th style="text-align: right">Code</th>
+<th>Name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right">1</td>
+<td>InvalidMagic</td>
+<td style="text-align: right">20</td>
+<td>InvalidUtf8</td>
+</tr>
+<tr>
+<td style="text-align: right">2</td>
+<td>UnsupportedFormatVersion</td>
+<td style="text-align: right">21</td>
+<td>TooManyEntries</td>
+</tr>
+<tr>
+<td style="text-align: right">3</td>
+<td>InvalidHeaderFlags</td>
+<td style="text-align: right">22</td>
+<td>InvalidStringIndex</td>
+</tr>
+<tr>
+<td style="text-align: right">4</td>
+<td>InvalidHeaderSize</td>
+<td style="text-align: right">23</td>
+<td>InvalidListIndex</td>
+</tr>
+<tr>
+<td style="text-align: right">5</td>
+<td>FileSizeMismatch</td>
+<td style="text-align: right">24</td>
+<td>InvalidBindingKind</td>
+</tr>
+<tr>
+<td style="text-align: right">6</td>
+<td>FileTooLarge</td>
+<td style="text-align: right">25</td>
+<td>DuplicateBindingId</td>
+</tr>
+<tr>
+<td style="text-align: right">7</td>
+<td>TooManySections</td>
+<td style="text-align: right">26</td>
+<td>InvalidEntryAddress</td>
+</tr>
+<tr>
+<td style="text-align: right">8</td>
+<td>TruncatedSectionHeader</td>
+<td style="text-align: right">27</td>
+<td>InvalidOpcode</td>
+</tr>
+<tr>
+<td style="text-align: right">9</td>
+<td>TruncatedSectionPayload</td>
+<td style="text-align: right">28</td>
+<td>InvalidOperand</td>
+</tr>
+<tr>
+<td style="text-align: right">10</td>
+<td>SectionTooLarge</td>
+<td style="text-align: right">29</td>
+<td>InvalidJumpAddress</td>
+</tr>
+<tr>
+<td style="text-align: right">11</td>
+<td>InvalidSectionType</td>
+<td style="text-align: right">30</td>
+<td>InvalidCallAddress</td>
+</tr>
+<tr>
+<td style="text-align: right">12</td>
+<td>InvalidSectionFlags</td>
+<td style="text-align: right">31</td>
+<td>CyclicCallGraph</td>
+</tr>
+<tr>
+<td style="text-align: right">13</td>
+<td>InvalidSectionReserved</td>
+<td style="text-align: right">32</td>
+<td>InvalidResourceMetadata</td>
+</tr>
+<tr>
+<td style="text-align: right">14</td>
+<td>UnsupportedSectionVersion</td>
+<td style="text-align: right">33</td>
+<td>InvalidDebugSymbol</td>
+</tr>
+<tr>
+<td style="text-align: right">15</td>
+<td>UnsupportedCompression</td>
+<td style="text-align: right">34</td>
+<td>InvalidSourceMap</td>
+</tr>
+<tr>
+<td style="text-align: right">16</td>
+<td>MissingRequiredSection</td>
+<td style="text-align: right">35</td>
+<td>InvalidSourceArchive</td>
+</tr>
+<tr>
+<td style="text-align: right">17</td>
+<td>DuplicateSection</td>
+<td style="text-align: right">36</td>
+<td>SourceMetadataMismatch</td>
+</tr>
+<tr>
+<td style="text-align: right">18</td>
+<td>UnknownRequiredSection</td>
+<td style="text-align: right">37</td>
+<td>ReaderLimitExceeded</td>
+</tr>
+<tr>
+<td style="text-align: right">19</td>
+<td>InvalidPayloadLength</td>
+<td style="text-align: right">38</td>
+<td>InvalidProgram</td>
+</tr>
+</tbody>
+</table>
+<p>The writer exposes size calculation, writing into a caller-provided span, and array
+creation. It emits file size from the encoded result; file size is not program state.
+For canonical uncompressed data, write/read/rewrite is byte stable. Semantic equality,
+not original byte identity, remains the product contract.</p>
+<h2 id="deferred-v1-extensions">Deferred V1 extensions</h2>
+<p>Compression codec bits and security section IDs are reserved only. V1 implements no
+compression, signatures, certificates, key registry, trust policy, rollback policy,
+or authenticity guarantee. Adding those features requires separate specifications.</p>
+</div><footer class="sl-flex astro-ddtxxk7k"><div class="meta sl-flex astro-ddtxxk7k"><a href="https://github.com/schloepke/GameEventScript/edit/main/specs/BinaryFormat.md" class="sl-flex print:hidden astro-qlekgd3o"><svg aria-hidden="true" class="astro-qlekgd3o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.2em;"><path d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-1.1-.22 1 1 0 0 0-.32.22l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8c.1-.1.17-.2.22-.33a1 1 0 0 0 0-.24v-.14l.07-.05ZM6.83 20H4v-2.83l9.93-9.93 2.83 2.83L6.83 20ZM18.17 8.66l-2.83-2.83 1.42-1.41 2.82 2.82-1.41 1.42Z"/></svg>Edit page</a></div><div class="pagination-links print:hidden astro-b5raizh3" dir="ltr"><a href="/docs/reference/bytecode/" rel="prev" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span class="astro-b5raizh3">Previous<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Bytecode specification</span></span></a><a href="/docs/reference/assembler-format/" rel="next" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg><span class="astro-b5raizh3">Next<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">`.gesa` assembler format specification</span></span></a></div></footer><script type="module" src="/_astro/DocsFooter.astro_astro_type_script_index_0_lang.CcG6r9Au.js"></script></div></div></main></div></div></div></div></body></html>

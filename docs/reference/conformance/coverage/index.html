@@ -1,0 +1,411 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-g5ptsecz"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Portable Conformance Coverage | Game Event Script</title><link rel="canonical" href="https://gameeventscript.org/docs/reference/conformance/coverage/"/><link rel="sitemap" href="/sitemap-index.xml"/><link rel="shortcut icon" href="/favicon-pixel-duo.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.3.5"/><meta name="generator" content="Starlight v0.42.4"/><meta property="og:title" content="Portable Conformance Coverage"/><meta property="og:type" content="article"/><meta property="og:url" content="https://gameeventscript.org/docs/reference/conformance/coverage/"/><meta property="og:locale" content="en"/><meta property="og:description" content="Portable Conformance Coverage — Game Event Script documentation."/><meta property="og:site_name" content="Game Event Script"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Portable Conformance Coverage — Game Event Script documentation."/><script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script><template id="theme-icons"><svg aria-hidden="true" class="light astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg><svg aria-hidden="true" class="dark astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg><svg aria-hidden="true" class="auto astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg></template><link rel="stylesheet" href="/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/_astro/common.CIp__BGE.css"><script type="module" src="/_astro/page.Dwipeu-R.js"></script></head><body class="astro-g5ptsecz"><a class="sl-skip-link astro-qb7clj6f" href="#_top">Skip to content</a><div class="page sl-flex astro-yntsjkba"><header class="header astro-yntsjkba"><div class="header astro-by6fddyj"><div class="title-wrapper sl-flex astro-by6fddyj"><a href="/" class="site-title sl-flex astro-6rvad3va"><img class="astro-6rvad3va" alt src="/_astro/mark.DsNbRX0k.svg" width="64" height="64"><span class="astro-6rvad3va" translate="no">Game Event Script</span></a></div><div class="sl-flex print:hidden astro-by6fddyj"><site-search class="astro-by6fddyj astro-b5kgnn7o" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-b5kgnn7o"><svg aria-hidden="true" class="astro-b5kgnn7o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block astro-b5kgnn7o" aria-hidden="true">Search</span><kbd class="sl-hidden md:sl-flex astro-b5kgnn7o" style="display: none;"><kbd class="astro-b5kgnn7o">Ctrl</kbd><kbd class="astro-b5kgnn7o">K</kbd></kbd></button><dialog style="padding:0" aria-label="Search" class="astro-b5kgnn7o"><div class="dialog-frame sl-flex astro-b5kgnn7o"><button data-close-modal class="sl-flex md:sl-hidden astro-b5kgnn7o">Cancel</button><div class="search-container astro-b5kgnn7o"><div id="starlight__search" class="astro-b5kgnn7o"></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/_astro/Search.astro_astro_type_script_index_0_lang.BuGLwjLu.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group astro-by6fddyj"><div class="sl-flex social-icons astro-by6fddyj"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script><script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div><aside class="ges-development-notice" aria-label="Documentation version" data-pagefind-ignore>Development documentation. Check the <a href="/docs/changelog/">changelog</a> when using a published package.</aside><script type="module">var e=document.querySelector(`.ges-development-notice`);if(e){let t=()=>document.documentElement.style.setProperty(`--ges-notice-height`,`${e.getBoundingClientRect().height}px`);t(),new ResizeObserver(t).observe(e)}</script></header><nav class="sidebar print:hidden astro-yntsjkba" aria-label="Main"><button popovertarget="starlight__sidebar" class="sl-menu-button sl-flex md:sl-hidden print:hidden astro-r2osgdlg"><svg aria-hidden="true" class="open-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg><svg aria-hidden="true" class="close-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg><span class="sr-only astro-r2osgdlg">Menu</span></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=matchMedia(`(min-width: 50em)`),t=()=>{this.popover=e.matches?null:`auto`};t(),e.addEventListener(`change`,()=>t()),this.addEventListener(`toggle`,({newState:e})=>this.trapFocus(e===`open`))}trapFocus(e){document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}};customElements.define(`sl-sidebar-pane`,e);</script><sl-sidebar-pane popover id="starlight__sidebar" class="sidebar-pane astro-yntsjkba"><div class="sidebar-content sl-flex astro-yntsjkba"><sl-sidebar-state-persist data-hash="1syr27k" class="astro-ipdry5cl"><script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script><ul class="top-level astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/" class="large astro-rmhv4bp6"><span class="astro-rmhv4bp6">Home</span></a></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Start here</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="0"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Documentation overview</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Learn the language</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in C#</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in Swift</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Tools</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="1"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Native Swift CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/editor-bundles/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">TextMate editor bundles</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Native integration</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="2"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/implementations/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/csharp-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# API reference</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/implementations/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/swift-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift API reference</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Language and host reference</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="3"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script language specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/text/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable text and Unicode semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/numbers/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable number semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/determinism/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable determinism semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/host-runtime/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Host runtime specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/public-api/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable public API specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/diagnostics/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable diagnostics specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/message-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Product message JSON V1</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/syntax-highlighting/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Syntax highlighting</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Program formats</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="4"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/program-model/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable program model specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/bytecode/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Bytecode specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/binary-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesb` binary format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/assembler-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesa` assembler format specification</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Conformance</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="5"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/markdown-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance Markdown format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/runner/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance runner specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/environment/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance environment specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/coverage/" aria-current="page" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable Conformance Coverage</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/cross-language-acceptance/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Cross-language conformance acceptance</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Packages and releases</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="6"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/distribution/packages/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Library packages and releases</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/distribution/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# distribution</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/changelog/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Changelog</span></a></li></ul></details></li></ul><script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist><div class="md:sl-hidden"><div class="mobile-preferences sl-flex astro-p4azlveh"><div class="social-icons astro-p4azlveh"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script></div></div></div></sl-sidebar-pane></nav><div class="main-frame astro-yntsjkba"><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-lrzkfocr"><aside class="right-sidebar-container print:hidden astro-lrzkfocr"><div class="right-sidebar astro-lrzkfocr"><div class="lg:sl-hidden astro-qok35upx"><mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-66cqc7ze"><nav aria-labelledby="starlight__on-this-page--mobile" class="astro-66cqc7ze"><details id="starlight__mobile-toc" class="astro-66cqc7ze"><summary id="starlight__on-this-page--mobile" class="sl-flex astro-66cqc7ze"><span class="toggle sl-flex astro-66cqc7ze">On this page<svg aria-hidden="true" class="caret astro-66cqc7ze astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current astro-66cqc7ze"></span></summary><div class="dropdown astro-66cqc7ze"><ul class="isMobile astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#portable-semantic-coverage" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Portable semantic coverage</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#intentionally-language-specific-coverage" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Intentionally language-specific coverage</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#explicit-data-and-product-transport" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Explicit data and product transport</span></a></li></ul></div></details></nav></mobile-starlight-toc><script type="module" src="/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C3fM4Kra.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block astro-qok35upx"><div class="sl-container astro-qok35upx"><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul class="astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#portable-semantic-coverage" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Portable semantic coverage</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#intentionally-language-specific-coverage" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Intentionally language-specific coverage</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#explicit-data-and-product-transport" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Explicit data and product transport</span></a></li></ul></nav></starlight-toc><script type="module" src="/_astro/TableOfContents.astro_astro_type_script_index_0_lang.BpJaGz7G.js"></script></div></div></div></aside><div class="main-pane astro-lrzkfocr"><main data-pagefind-body class="astro-g5ptsecz" lang="en" dir="ltr"><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><h1 id="_top" class="astro-bebwqqxs">Portable Conformance Coverage</h1></div></div><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><div class="sl-markdown-content"><!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<p>This is the normative coverage index from behavior to stable Conformance
+Markdown case IDs. Keep IDs stable. A language-specific test may be removed or
+reduced only after the behavior it protects has a passing portable case listed
+here. Add or update this matrix in the same change as new portable behavior.</p>
+<h2 id="portable-semantic-coverage">Portable semantic coverage</h2>
+<table>
+<thead>
+<tr>
+<th>Behavior</th>
+<th>Stable portable case IDs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Weighted choice predicates and weights cannot resolve each other’s sibling binding</td>
+<td><code>compile.build-errors/choose-sibling-scope-predicate</code>, <code>choose-sibling-scope-weight</code></td>
+</tr>
+<tr>
+<td>CreateMap returns Nothing for mismatched key/value counts without reading unstaged registers, clears staging, and permits subsequent valid construction</td>
+<td><code>program.binary-format/valid-map-stage-count-mismatch</code></td>
+</tr>
+<tr>
+<td>Stack-safe compiler resource analysis for deep acyclic calls within portable limits</td>
+<td><code>compile.deep-call-graph/ten-thousand-calls</code></td>
+</tr>
+<tr>
+<td>Enclosing selector bindings retain their value across nested projection/aggregation iterations, including fused projections and binary roundtrips</td>
+<td><code>runtime.atomic.iterator-core/nested-projection-capture</code>, <code>triple-projection-capture</code>, <code>nested-aggregation-capture</code>, <code>fused-projection-capture</code></td>
+</tr>
+<tr>
+<td>Duplicate typed local parameters are diagnosed independently of call/declaration order and source boundaries</td>
+<td><code>compile.build-errors/duplicate-typed-parameters-forward</code>, <code>duplicate-typed-parameters-backward</code>, <code>duplicate-typed-parameters-cross-source</code></td>
+</tr>
+<tr>
+<td>Choice counts accept the signed-immediate maximum and reject larger counts without truncation in deterministic, random, and weighted variants</td>
+<td><code>runtime.atomic.iterator-core/choose-maximum-count</code>; <code>compile.build-errors/choose-count-{first,random,weighted}-{32768,65537}</code></td>
+</tr>
+<tr>
+<td>Quoted text cannot substitute for grammar tokens; numeric constant signs reject nonnumeric literals</td>
+<td><code>compile.lexical-boundaries/quoted-be</code>, <code>quoted-parameter-open</code>, <code>quoted-infix</code>, <code>quoted-emit</code>, <code>negative-text-constant</code>, <code>negative-tag-constant</code>, <code>negative-boolean-constant</code>, <code>negative-nothing-constant</code>; positive controls: <code>negative-numeric-constants</code>, <code>keyword-text-values</code></td>
+</tr>
+<tr>
+<td>Expression bindings retain ancestor visibility in functions, generators, nested selectors, fields, tags, seeds, and weights; siblings may reuse names</td>
+<td><code>compile.lexical-boundaries/function-parameter-shadow</code>, <code>generated-local-shadow</code>, <code>nested-selector-shadow</code>, <code>nested-generator-shadow</code>, <code>record-field-shadow</code>, <code>message-tag-shadow</code>, <code>random-seed-shadow</code>, <code>nested-weight-shadow</code>, <code>sibling-selector-scopes</code></td>
+</tr>
+<tr>
+<td>List subtraction removes one matching Nothing element, with ordinary scalar propagation unchanged</td>
+<td><code>runtime.atomic.collection-nothing/literal</code>, <code>dynamic</code></td>
+</tr>
+<tr>
+<td>Unconstrained external Vector/Point declarations preserve constructor and getter units</td>
+<td><code>runtime.atomic.external-spatial-units/fields</code>, <code>map</code></td>
+</tr>
+<tr>
+<td>External constructor and field failures preserve stable diagnostics, abort only the current handler, and keep the Host reusable</td>
+<td><code>runtime.external-callback-failures/constructor-unexpected</code>, <code>constructor-declared-context</code>, <code>field-unexpected</code>, <code>field-declared-context</code></td>
+</tr>
+<tr>
+<td>Diagnostic context is filled only when absent and caller-supplied fields are preserved independently</td>
+<td><code>runtime.external-callback-failures/constructor-declared-context</code>, <code>field-declared-context</code>, <code>runtime.host-dispatch/native-declared-fault-context</code>, <code>native-supplied-fault-context</code></td>
+</tr>
+<tr>
+<td>Shared exact decimal decoding for compiler literals, constants, Number/Percentage casts, exponent/separator grammar, units, ties, underflow and overflow</td>
+<td><code>runtime.text-literal-conversion/numeric-text-grammar</code>, <code>invalid-number-text-and-fallback</code>, <code>exact-decimal-boundaries</code>, <code>compiler-literal-01</code> through <code>compiler-literal-07</code>, <code>percentage-literal-overflow</code></td>
+</tr>
+<tr>
+<td>Uniform Percentage ratios and exact numeric/Text/parse roundtrips without a fixed decimal spelling</td>
+<td><code>runtime.text-literal-conversion/uniform-percentage-ratios</code>, <code>percentage-exact-roundtrips</code>, <code>number-quantity-text-roundtrips</code>, <code>nested-data-roundtrips</code></td>
+</tr>
+<tr>
+<td>Complete literal recognition, unchanged original-Text fallback, quoted and nested Text, prefix precedence and independent truth casts</td>
+<td><code>runtime.text-literal-conversion/literal-recognition-and-exact-fallback</code>, <code>parse-non-text</code>, <code>root-and-nested-text-formatting</code>, <code>prefix-precedence</code>, <code>text-truth-view-stays-independent</code></td>
+</tr>
+<tr>
+<td>Deterministic Dice result literals, descending duplicate-preserving order, source and parsed text roundtrips, nested values, exact parse bounds, and unchanged random consumption</td>
+<td>all <code>runtime.dice-literals</code> cases, including <code>source-values</code>, <code>text-roundtrips</code>, <code>parse-valid</code>, <code>parse-invalid</code>, <code>depth-*</code>, <code>items-*</code>, <code>nested-items-*</code>, and <code>source-rejects-*</code></td>
+</tr>
+<tr>
+<td>Constructor-shaped Vector/Point text, positional and labeled numeric components, exact binary64/unit roundtrips, nested data, fallback, and shared depth/item bounds</td>
+<td>all <code>runtime.spatial-literals</code> cases: <code>vector-*</code> and <code>point-*</code></td>
+</tr>
+<tr>
+<td>Exact input-scalar, container-depth, aggregate-item and duplicate-key bounds, with handler recovery after exhaustion</td>
+<td>all <code>runtime.text-literal-conversion/parse-depth-*</code>, <code>parse-limit-recovery</code>, <code>input-*</code>, <code>items-*</code>, <code>duplicate-items-*</code>, and <code>nested-items-*</code> cases</td>
+</tr>
+<tr>
+<td>ParseLiteral canonical binary encoding, operand validation and reserved opcode rejection</td>
+<td><code>program.binary-format/valid-parse-literal</code>, all five <code>program.binary-format/invalid-parse-*</code> cases, <code>program.binary-format/invalid-reserved-opcode-da</code>, <code>compile.program-dumps/parse-literal</code></td>
+</tr>
+<tr>
+<td>Reader and canonical writer validate deep acyclic graphs and reject deep cycles within V1 limits without ending the embedding process</td>
+<td>all four <code>program.call-graph-depth</code> cases: shallow/deep valid chains and invalid cycles, with deep fixtures containing 21,845 routines and 65,535 instructions</td>
+</tr>
+<tr>
+<td>Exact folded and runtime <code>div</code>, <code>mod</code>, and <code>rem</code> above 2^53, with negative operands, Int64 limits, quantities, zero divisors, and binary roundtrip</td>
+<td>all 34 <code>runtime.numeric.integer-precision</code> cases</td>
+</tr>
+<tr>
+<td>Number cast Int64 and Quantity identity, including explicit dynamic random seeds and parent-stream restoration</td>
+<td><code>runtime.numeric.number-casts/identity-*</code>, <code>runtime.numeric.number-casts/random-seed-*</code>, each with <code>direct</code> and <code>binary</code> variants</td>
+</tr>
+<tr>
+<td>Folded and runtime text conversion of signed infinity, NaN, invalid text, and finite numbers</td>
+<td><code>runtime.numeric.number-casts/text-*</code>, each with <code>direct</code> and <code>binary</code> variants</td>
+</tr>
+<tr>
+<td>Conformance comparison rejects wrong numeric storage and infinite units, recursively, in exact and ULP modes</td>
+<td>all 48 <code>api.conformance-comparison</code> cases, including exact Int64 range fields, nested records/messages, NaN, duplicate keys, and positive tolerance controls</td>
+</tr>
+<tr>
+<td>Binary resources cover executable call depth, live caller frames, staging, record creation/casts, and each individual handler; control-flow joins require balanced frame/stage lengths</td>
+<td><code>program.binary-format/valid-direct-call</code>, <code>program.binary-format/valid-nested-call</code>, <code>program.binary-format/underdeclared-depth-direct-call</code>, <code>program.binary-format/underdeclared-depth-nested-call</code>, <code>program.binary-format/underdeclared-registers-direct-call</code>, <code>program.binary-format/underdeclared-registers-nested-call</code>, and all 13 <code>program.binary-format/*-resource-*</code> cases</td>
+</tr>
+<tr>
+<td>Exactly reaching the processed-message limit while draining all work emits no limit observation, for native/script handlers and completion/frame pumps</td>
+<td>the eight <code>runtime.host-observer/processed-limit-{script,native}-{completion,frame}-{1,2}</code> cases; below-limit control: <code>runtime.host-observer/processed-limit-below-script-completion</code>; stop/resume controls: <code>runtime.host-observer/emit-and-runtime-limit-order</code> and the three <code>runtime.host-observer/processed-limit-pending-*</code> cases</td>
+</tr>
+<tr>
+<td>Message normalization, signature construction and matching</td>
+<td><code>api.messages/case-0001</code> through <code>api.messages/case-0012</code>, <code>api.messages/signature-equality</code>, <code>api.messages/signature-create-message</code></td>
+</tr>
+<tr>
+<td>Signature, Message and Handler equality/hash contracts</td>
+<td><code>api.messages/signature-equality</code>, <code>api.messages/signature-parameter-inequality</code>, <code>api.messages/signature-arity-inequality</code>, <code>api.messages/message-equality</code>, <code>api.messages/message-argument-inequality</code>, <code>api.messages/message-tag-inequality</code>, <code>api.messages/unlabeled-message-equality</code>, <code>api.messages/handler-equality</code>, <code>api.messages/handler-inequality</code></td>
+</tr>
+<tr>
+<td>Explicit ordered arguments and rejection of unordered/duplicate forms</td>
+<td><code>api.messages/case-0001</code>, <code>api.messages/case-0004</code>, <code>api.messages/case-0005</code>, <code>api.messages/case-0006</code></td>
+</tr>
+<tr>
+<td>Public Value kinds, readers, flags and equality/hash</td>
+<td><code>api.values/primitives</code>, <code>api.values/measured-float</code>, <code>api.values/percentage</code>, <code>api.values/vector</code>, <code>api.values/point</code>, <code>api.values/text</code>, <code>api.values/tag-case-sensitive</code>, <code>api.values/nan-is-nothing</code></td>
+</tr>
+<tr>
+<td>Value container ordering, duplicate keys and defensive copies</td>
+<td><code>api.values/list-defensive-copy</code>, <code>api.values/dice-defensive-copy</code>, <code>api.values/map-ordering-and-copy</code>, <code>api.values/record</code></td>
+</tr>
+<tr>
+<td>Integer/float Range storage and Message values</td>
+<td><code>api.values/integer-range</code>, <code>api.values/float-range</code>, <code>api.values/message-value</code></td>
+</tr>
+<tr>
+<td>List, Map, Vector, Point, Dice and Range construction</td>
+<td><code>runtime.atomic.create-values/case-0002</code> through <code>runtime.atomic.create-values/case-0007</code></td>
+</tr>
+<tr>
+<td>Record and external-value construction</td>
+<td><code>runtime.atomic.custom-types/case-0001</code>, <code>runtime.atomic.custom-types/case-0003</code></td>
+</tr>
+<tr>
+<td>Collection/member/index semantics and canonical map-key spellings</td>
+<td><code>runtime.atomic.member-index-access/case-0008</code> through <code>runtime.atomic.member-index-access/case-0016</code>, <code>compile.syntax-errors/case-0042</code></td>
+</tr>
+<tr>
+<td>Random known-answer vectors, non-consuming bounds, valid nested streams, explicit dynamic-seed conversion, invalid-seed parent restoration, and cleanup after runtime limits</td>
+<td><code>runtime.atomic.random/case-0002</code> through <code>runtime.atomic.random/case-0007</code>, <code>runtime.random-dice-ranges/case-0005</code>, <code>runtime.random-dice-ranges/case-0018</code>, <code>compile.build-errors/case-0038</code>, <code>compile.build-errors/case-0039</code>, <code>compile.bytecode-lowering/case-0012</code></td>
+</tr>
+<tr>
+<td>Quantity application, checks, and unit removal through <code>:Quantity(none)</code></td>
+<td><code>runtime.types-and-values.numeric-and-units/case-0036</code></td>
+</tr>
+<tr>
+<td>Compiler handler/program resource metadata</td>
+<td><code>compile.binary-compiler/case-0001</code>, <code>api.messages/case-0007</code></td>
+</tr>
+<tr>
+<td>Direct recursive call rejection</td>
+<td><code>compile.build-errors/case-0001</code></td>
+</tr>
+<tr>
+<td>Callable overload identity by ordered labels, without type dispatch</td>
+<td><code>runtime.predicates-functions/case-0010</code>, <code>compile.build-errors/case-0049</code></td>
+</tr>
+<tr>
+<td>Predicate/function name separation and ambiguous predicate shorthand</td>
+<td><code>compile.build-errors/case-0021</code>, <code>compile.build-errors/case-0050</code></td>
+</tr>
+<tr>
+<td>No lexical shadowing, with sibling branch-name reuse</td>
+<td><code>compile.build-errors/case-0051</code> through <code>compile.build-errors/case-0053</code>, <code>runtime.control-flow/case-0013</code></td>
+</tr>
+<tr>
+<td>Indirect cyclic call graph rejection at the untrusted <code>.gesb</code> boundary</td>
+<td><code>program.binary-format/invalid-indirect-call-cycle</code></td>
+</tr>
+<tr>
+<td>Native-only Host</td>
+<td><code>runtime.host-lifecycle/native-only</code></td>
+</tr>
+<tr>
+<td>Same immutable Program in independent Hosts</td>
+<td><code>runtime.host-lifecycle/shared-program-multiple-hosts</code></td>
+</tr>
+<tr>
+<td>Multiple Programs and deterministic load order</td>
+<td><code>runtime.host-dispatch/case-0007</code></td>
+</tr>
+<tr>
+<td>VM reset between handlers/messages</td>
+<td><code>runtime.host-lifecycle/vm-reset-between-handlers</code></td>
+</tr>
+<tr>
+<td>Receive, local Emit and local-plus-outbound Publish</td>
+<td><code>runtime.atomic.external-access/case-0008</code>, <code>runtime.publish-tags/case-0001</code></td>
+</tr>
+<tr>
+<td>Publish with absent, accepting, rejecting and throwing sink</td>
+<td><code>runtime.host-observer/publish-without-sink</code>, <code>runtime.host-observer/publish-accepted</code>, <code>runtime.host-observer/publish-rejected</code>, <code>runtime.host-observer/publish-sink-exception</code></td>
+</tr>
+<tr>
+<td>Full Publish result</td>
+<td>the four <code>runtime.host-observer/publish-*</code> cases</td>
+</tr>
+<tr>
+<td>Ordered Emit/Publish/Dispatch/limit/diagnostic observer events</td>
+<td><code>runtime.host-observer/publish-sink-exception</code>, <code>runtime.host-observer/emit-and-runtime-limit-order</code></td>
+</tr>
+<tr>
+<td>Load/Detach/Subscribe/Unsubscribe during dispatch</td>
+<td><code>runtime.host-lifecycle/detach-unsubscribe-snapshot</code>, <code>runtime.host-lifecycle/load-subscribe-after-dispatch</code></td>
+</tr>
+<tr>
+<td>Idempotent Subscription/Instance handle results</td>
+<td><code>runtime.host-lifecycle/subscription-handle-state</code>, <code>runtime.host-lifecycle/instance-handle-state</code></td>
+</tr>
+<tr>
+<td>Enqueue-time subscription snapshot</td>
+<td><code>runtime.host-lifecycle/detach-unsubscribe-snapshot</code></td>
+</tr>
+<tr>
+<td>Initialization once per instance, initial Start barrier, failure cancellation and load/queue ordering</td>
+<td><code>runtime.host-startup/*</code>, <code>runtime.host-dispatch/case-0008</code>, <code>runtime.host-lifecycle/load-subscribe-after-dispatch</code>, <code>runtime.host-lifecycle/initialization-queue-order</code></td>
+</tr>
+<tr>
+<td>Loading while a handler is paused preserves VM state</td>
+<td><code>runtime.host-lifecycle/load-while-paused</code></td>
+</tr>
+<tr>
+<td>Native message-name matching</td>
+<td><code>runtime.host-lifecycle/native-message-name-subscription</code></td>
+</tr>
+<tr>
+<td>Native handlers are atomic under frame budgets</td>
+<td><code>runtime.host-lifecycle/native-handler-frame-atomicity</code></td>
+</tr>
+<tr>
+<td>Queue limits count logical messages and preserve observer order</td>
+<td><code>runtime.control-flow/case-0006</code>, <code>runtime.host-observer/queue-limit-observer-order</code></td>
+</tr>
+<tr>
+<td>Runtime limits reset per script handler</td>
+<td><code>runtime.host-lifecycle/runtime-limits-per-handler</code></td>
+</tr>
+<tr>
+<td>Pause/resume under frame budget</td>
+<td><code>runtime.host-dispatch/case-0009</code></td>
+</tr>
+<tr>
+<td>External types without Reflection</td>
+<td><code>runtime.atomic.custom-types/case-0003</code></td>
+</tr>
+<tr>
+<td>Missing and mismatched external runtime constructors</td>
+<td><code>compile.external-type-linking/missing-runtime-constructor</code>, <code>compile.external-type-linking/mismatched-runtime-constructor</code></td>
+</tr>
+<tr>
+<td>Portable external-type catalog duplicate rejection</td>
+<td><code>api.external-types/duplicate-type-name</code></td>
+</tr>
+<tr>
+<td>Canonical binding, message-name and embedded-source dumps</td>
+<td><code>compile.program-dumps/compact-bindings</code>, <code>compile.program-dumps/message-name-and-source</code></td>
+</tr>
+<tr>
+<td>Canonical GESA binary64 immediates: exponent spelling, decimal/scientific boundaries, exact significant digits, zero, subnormal/normal limits, infinity, Percentage ratios and staged operands</td>
+<td>Binary fixtures: <code>compile.program-dumps/float-exponents</code>, <code>float-notation-boundaries</code>, <code>float-extremes</code>, <code>float-staging</code>; native compiler: <code>float-source</code></td>
+</tr>
+<tr>
+<td>Fixed extension environment (<code>echo</code>, <code>fail</code>, <code>floor</code>, navigation)</td>
+<td><code>runtime.atomic.external-access/case-0010</code>, <code>runtime.atomic.control-flow/case-0002</code>, <code>runtime.extensions-sequences/case-0001</code></td>
+</tr>
+</tbody>
+</table>
+<p>The complete portable <code>.gesb</code> fixture manifest is
+<code>program.binary-format</code>, <code>program.call-graph-depth</code>, and the four binary-backed
+GESA cases in <code>compile.program-dumps</code>. It covers canonical and noncanonical valid Programs,
+opaque optional data, stable structural errors, stable semantic validation
+errors, bounded resource resolution, rewrite identity, runtime execution, and
+canonical dumps of identical Program data across implementations.</p>
+<p>Cross-language acceptance, corpus identity, shared parser bootstrap fixtures,
+and the compact C# reference result are defined in
+<a href="/docs/reference/conformance/cross-language-acceptance/">Cross-language acceptance</a>. The comparison is keyed exclusively by the
+stable IDs in this coverage index and the executable corpus.</p>
+<h2 id="intentionally-language-specific-coverage">Intentionally language-specific coverage</h2>
+<p>Shared allocation workloads live in all 16 <code>performance.low-allocation</code> cases.
+They pair exact and message-name dispatch, counting-observer off/on, completion
+with one handler and frames with two handlers, and 1000/2000 iterations. Their
+zero bound exercises the existing warmed allocation contract. Native adapters
+provide the measurements; a correctness-only corpus pass does not qualify an
+allocation profile. The C# managed-thread evidence does not qualify other heaps
+or other language runtimes.</p>
+<p>The ten <code>performance.text-conversion</code> cases pair N/2N dynamic Number/Percentage
+casts, numeric literal parsing, plain-Text fallback, and Percentage formatting
+followed by parsing. They require zero managed allocation for the reading paths
+and a separate bounded budget for formatting. These budgets are C# profile
+properties; their portable scripts and correctness expectations can be reused
+by other platforms with independently qualified budgets.</p>
+<p>The following tests remain implementation tests even when the underlying
+semantics also has a portable case:</p>
+<ul>
+<li>C# public API snapshots;</li>
+<li>Reflection, attributes and CLR conversion adapters;</li>
+<li>C# auto-runner synchronization and threading, including takeover of queued or
+paused work and disposal before the initial pump;</li>
+<li>internal builder/rewriter structure and optimizer pass tests;</li>
+<li>concrete C# struct layouts and defensive-array implementation checks;</li>
+<li>mutation attempts through C# collection interfaces on public message tags,
+signature parameters, and argument-label views;</li>
+<li>C# allocation measurements and platform/runtime benchmark profiles.</li>
+</ul>
+<p>These tests must not become required behavior for other language ports.
+The test-project structure and retention rule are documented in the
+<a href="https://github.com/schloepke/GameEventScript/blob/main/implementation/csharp/verification/README.md">C# test README</a>.</p>
+<h2 id="explicit-data-and-product-transport">Explicit data and product transport</h2>
+<ul>
+<li><code>runtime.explicit-data/*</code> owns portable checks for constructor forms, Range
+normalization, lazy Series, Record reconstruction versus constructor execution,
+full recognition before side effects, opcode-budget resumption and text splitting.</li>
+<li><code>api.product-json/*</code> owns product JSON encoding/decoding, canonical numeric
+payloads, ordered arguments, recursive values and stable format errors.</li>
+<li><code>program.binary-format/data-*</code>, <code>program.binary-format/split-*</code> and
+<code>compile.program-dumps/explicit-data-opcodes</code> pin new instruction encoding,
+operand validation and portable GESA output.</li>
+<li>The <a href="https://github.com/schloepke/GameEventScript/blob/main/conformance/cross-language/MessageJsonRoundtrip.md">product JSON integration gate</a>
+exchanges actual C# and Swift output using the same Markdown oracles.</li>
+</ul>
+</div><footer class="sl-flex astro-ddtxxk7k"><div class="meta sl-flex astro-ddtxxk7k"><a href="https://github.com/schloepke/GameEventScript/edit/main/specs/Conformance/Coverage.md" class="sl-flex print:hidden astro-qlekgd3o"><svg aria-hidden="true" class="astro-qlekgd3o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.2em;"><path d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-1.1-.22 1 1 0 0 0-.32.22l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8c.1-.1.17-.2.22-.33a1 1 0 0 0 0-.24v-.14l.07-.05ZM6.83 20H4v-2.83l9.93-9.93 2.83 2.83L6.83 20ZM18.17 8.66l-2.83-2.83 1.42-1.41 2.82 2.82-1.41 1.42Z"/></svg>Edit page</a></div><div class="pagination-links print:hidden astro-b5raizh3" dir="ltr"><a href="/docs/reference/conformance/environment/" rel="prev" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span class="astro-b5raizh3">Previous<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Conformance environment specification</span></span></a><a href="/docs/reference/conformance/cross-language-acceptance/" rel="next" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg><span class="astro-b5raizh3">Next<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Cross-language conformance acceptance</span></span></a></div></footer><script type="module" src="/_astro/DocsFooter.astro_astro_type_script_index_0_lang.CcG6r9Au.js"></script></div></div></main></div></div></div></div></body></html>

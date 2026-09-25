@@ -1,0 +1,1017 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-g5ptsecz"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Conformance Markdown format specification | Game Event Script</title><link rel="canonical" href="https://gameeventscript.org/docs/reference/conformance/markdown-format/"/><link rel="sitemap" href="/sitemap-index.xml"/><link rel="shortcut icon" href="/favicon-pixel-duo.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.3.5"/><meta name="generator" content="Starlight v0.42.4"/><meta property="og:title" content="Conformance Markdown format specification"/><meta property="og:type" content="article"/><meta property="og:url" content="https://gameeventscript.org/docs/reference/conformance/markdown-format/"/><meta property="og:locale" content="en"/><meta property="og:description" content="Conformance Markdown format specification — Game Event Script documentation."/><meta property="og:site_name" content="Game Event Script"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Conformance Markdown format specification — Game Event Script documentation."/><script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script><template id="theme-icons"><svg aria-hidden="true" class="light astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg><svg aria-hidden="true" class="dark astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg><svg aria-hidden="true" class="auto astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg></template><link rel="stylesheet" href="/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/_astro/common.CIp__BGE.css"><script type="module" src="/_astro/page.Dwipeu-R.js"></script></head><body class="astro-g5ptsecz"><a class="sl-skip-link astro-qb7clj6f" href="#_top">Skip to content</a><div class="page sl-flex astro-yntsjkba"><header class="header astro-yntsjkba"><div class="header astro-by6fddyj"><div class="title-wrapper sl-flex astro-by6fddyj"><a href="/" class="site-title sl-flex astro-6rvad3va"><img class="astro-6rvad3va" alt src="/_astro/mark.DsNbRX0k.svg" width="64" height="64"><span class="astro-6rvad3va" translate="no">Game Event Script</span></a></div><div class="sl-flex print:hidden astro-by6fddyj"><site-search class="astro-by6fddyj astro-b5kgnn7o" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-b5kgnn7o"><svg aria-hidden="true" class="astro-b5kgnn7o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block astro-b5kgnn7o" aria-hidden="true">Search</span><kbd class="sl-hidden md:sl-flex astro-b5kgnn7o" style="display: none;"><kbd class="astro-b5kgnn7o">Ctrl</kbd><kbd class="astro-b5kgnn7o">K</kbd></kbd></button><dialog style="padding:0" aria-label="Search" class="astro-b5kgnn7o"><div class="dialog-frame sl-flex astro-b5kgnn7o"><button data-close-modal class="sl-flex md:sl-hidden astro-b5kgnn7o">Cancel</button><div class="search-container astro-b5kgnn7o"><div id="starlight__search" class="astro-b5kgnn7o"></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/_astro/Search.astro_astro_type_script_index_0_lang.BuGLwjLu.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group astro-by6fddyj"><div class="sl-flex social-icons astro-by6fddyj"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script><script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div><aside class="ges-development-notice" aria-label="Documentation version" data-pagefind-ignore>Development documentation. Check the <a href="/docs/changelog/">changelog</a> when using a published package.</aside><script type="module">var e=document.querySelector(`.ges-development-notice`);if(e){let t=()=>document.documentElement.style.setProperty(`--ges-notice-height`,`${e.getBoundingClientRect().height}px`);t(),new ResizeObserver(t).observe(e)}</script></header><nav class="sidebar print:hidden astro-yntsjkba" aria-label="Main"><button popovertarget="starlight__sidebar" class="sl-menu-button sl-flex md:sl-hidden print:hidden astro-r2osgdlg"><svg aria-hidden="true" class="open-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg><svg aria-hidden="true" class="close-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg><span class="sr-only astro-r2osgdlg">Menu</span></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=matchMedia(`(min-width: 50em)`),t=()=>{this.popover=e.matches?null:`auto`};t(),e.addEventListener(`change`,()=>t()),this.addEventListener(`toggle`,({newState:e})=>this.trapFocus(e===`open`))}trapFocus(e){document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}};customElements.define(`sl-sidebar-pane`,e);</script><sl-sidebar-pane popover id="starlight__sidebar" class="sidebar-pane astro-yntsjkba"><div class="sidebar-content sl-flex astro-yntsjkba"><sl-sidebar-state-persist data-hash="1syr27k" class="astro-ipdry5cl"><script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script><ul class="top-level astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/" class="large astro-rmhv4bp6"><span class="astro-rmhv4bp6">Home</span></a></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Start here</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="0"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Documentation overview</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Learn the language</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in C#</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in Swift</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Tools</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="1"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Native Swift CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/editor-bundles/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">TextMate editor bundles</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Native integration</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="2"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/implementations/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/csharp-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# API reference</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/implementations/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/swift-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift API reference</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Language and host reference</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="3"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script language specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/text/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable text and Unicode semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/numbers/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable number semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/determinism/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable determinism semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/host-runtime/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Host runtime specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/public-api/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable public API specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/diagnostics/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable diagnostics specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/message-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Product message JSON V1</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/syntax-highlighting/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Syntax highlighting</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Program formats</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="4"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/program-model/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable program model specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/bytecode/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Bytecode specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/binary-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesb` binary format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/assembler-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesa` assembler format specification</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Conformance</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="5"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/markdown-format/" aria-current="page" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance Markdown format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/runner/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance runner specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/environment/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance environment specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/coverage/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable Conformance Coverage</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/cross-language-acceptance/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Cross-language conformance acceptance</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Packages and releases</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="6"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/distribution/packages/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Library packages and releases</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/distribution/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# distribution</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/changelog/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Changelog</span></a></li></ul></details></li></ul><script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist><div class="md:sl-hidden"><div class="mobile-preferences sl-flex astro-p4azlveh"><div class="social-icons astro-p4azlveh"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script></div></div></div></sl-sidebar-pane></nav><div class="main-frame astro-yntsjkba"><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-lrzkfocr"><aside class="right-sidebar-container print:hidden astro-lrzkfocr"><div class="right-sidebar astro-lrzkfocr"><div class="lg:sl-hidden astro-qok35upx"><mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-66cqc7ze"><nav aria-labelledby="starlight__on-this-page--mobile" class="astro-66cqc7ze"><details id="starlight__mobile-toc" class="astro-66cqc7ze"><summary id="starlight__on-this-page--mobile" class="sl-flex astro-66cqc7ze"><span class="toggle sl-flex astro-66cqc7ze">On this page<svg aria-hidden="true" class="caret astro-66cqc7ze astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current astro-66cqc7ze"></span></summary><div class="dropdown astro-66cqc7ze"><ul class="isMobile astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#encoding-and-logical-lines" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Encoding and logical lines</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#structural-markdown-profile" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Structural Markdown profile</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#canonical-human-readable-layout" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Canonical human-readable layout</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#frontmatter" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Frontmatter</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#test-boundaries" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Test boundaries</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#fixtures" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Fixtures</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#fenced-blocks" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Fenced blocks</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#portable-yaml-subset" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Portable YAML subset</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#supported-forms" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Supported forms</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#explicitly-unsupported-forms" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Explicitly unsupported forms</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#ids-suite-frontmatter-and-inheritance" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">IDs, suite frontmatter, and inheritance</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#case-metadata" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Case metadata</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#sources-and-programs" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Sources and programs</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#binary-fixture-manifest-entries" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Binary fixture manifest entries</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#declarative-native-handlers" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Declarative native handlers</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#ordered-steps" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Ordered steps</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#host-startup-observations" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Host startup observations</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#portable-message-and-value-shape" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Portable message and value shape</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#expectation-fields-by-test-kind" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Expectation fields by test kind</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#scriptapi" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">scriptApi</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#compileerror-and-loaderror" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">compileError and loadError</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#messageapi" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">messageApi</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#valueapi" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">valueApi</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#externaltypeapi" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">externalTypeApi</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#compilemetadata" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">compileMetadata</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#bytecode" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">bytecode</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#bytecodesnapshot" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">bytecodeSnapshot</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#programbinary" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">programBinary</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#performance" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">performance</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#normalized-immutable-document-model" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Normalized immutable document model</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#invalid-documents-and-versioning" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Invalid documents and versioning</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#minimal-example" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Minimal example</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#virtual-time-actions" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Virtual time actions</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#product-json-message-api-checks" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Product JSON message API checks</span></a></li></ul></li></ul></div></details></nav></mobile-starlight-toc><script type="module" src="/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C3fM4Kra.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block astro-qok35upx"><div class="sl-container astro-qok35upx"><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul class="astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#encoding-and-logical-lines" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Encoding and logical lines</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#structural-markdown-profile" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Structural Markdown profile</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#canonical-human-readable-layout" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Canonical human-readable layout</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#frontmatter" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Frontmatter</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#test-boundaries" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Test boundaries</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#fixtures" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Fixtures</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#fenced-blocks" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Fenced blocks</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#portable-yaml-subset" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Portable YAML subset</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#supported-forms" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Supported forms</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#explicitly-unsupported-forms" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Explicitly unsupported forms</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#ids-suite-frontmatter-and-inheritance" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">IDs, suite frontmatter, and inheritance</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#case-metadata" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Case metadata</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#sources-and-programs" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Sources and programs</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#binary-fixture-manifest-entries" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Binary fixture manifest entries</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#declarative-native-handlers" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Declarative native handlers</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#ordered-steps" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Ordered steps</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#host-startup-observations" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Host startup observations</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#portable-message-and-value-shape" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Portable message and value shape</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#expectation-fields-by-test-kind" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Expectation fields by test kind</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#scriptapi" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">scriptApi</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#compileerror-and-loaderror" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">compileError and loadError</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#messageapi" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">messageApi</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#valueapi" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">valueApi</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#externaltypeapi" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">externalTypeApi</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#compilemetadata" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">compileMetadata</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#bytecode" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">bytecode</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#bytecodesnapshot" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">bytecodeSnapshot</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#programbinary" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">programBinary</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#performance" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">performance</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#normalized-immutable-document-model" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Normalized immutable document model</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#invalid-documents-and-versioning" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Invalid documents and versioning</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#minimal-example" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Minimal example</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#virtual-time-actions" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Virtual time actions</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#product-json-message-api-checks" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Product JSON message API checks</span></a></li></ul></li></ul></nav></starlight-toc><script type="module" src="/_astro/TableOfContents.astro_astro_type_script_index_0_lang.BpJaGz7G.js"></script></div></div></div></aside><div class="main-pane astro-lrzkfocr"><main data-pagefind-body class="astro-g5ptsecz" lang="en" dir="ltr"><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><h1 id="_top" class="astro-bebwqqxs">Conformance Markdown format specification</h1></div></div><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><div class="sl-markdown-content"><!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<p>This document is the normative authoring-format specification for portable Game
+Event Script conformance suites. The key words <strong>must</strong>, <strong>must not</strong>,
+<strong>required</strong>, <strong>should</strong>, and <strong>may</strong> are to be interpreted as normative
+requirements.</p>
+<p>The format is intended to be implemented independently in C#, Swift, Kotlin,
+Go, Rust, C++, and other ports. It is deliberately a small structural Markdown
+scanner plus a strict YAML subset. It is not CommonMark plus full YAML.</p>
+<p>Conformance Markdown is test data. It is not the product message/wire format.</p>
+<h2 id="encoding-and-logical-lines">Encoding and logical lines</h2>
+<ul>
+<li>A document is strict UTF-8. An optional UTF-8 BOM is recognized only at byte
+offset zero and is not part of the document content. The same byte sequence
+elsewhere represents the ordinary Unicode scalar U+FEFF and is retained,
+including inside a GES source payload.</li>
+<li><code>LF</code>, <code>CRLF</code>, and <code>CR</code> are recognized as logical line endings. A parser
+interprets all three as <code>LF</code>; other Unicode line separators are ordinary text.</li>
+<li>Source ranges are offsets and lengths into the original UTF-8 byte sequence,
+excluding an optional BOM. This permits a received writer to preserve all
+unrelated bytes exactly.</li>
+<li>Line and column diagnostics are one-based Unicode-scalar positions. A tab is
+one scalar for column counting.</li>
+<li>Structural markers are recognized only at column zero and only outside a
+fenced block. Their ASCII spelling and case are exact.</li>
+<li>A document containing invalid UTF-8, an unclosed recognized fence, or a NUL
+byte is invalid.</li>
+</ul>
+<h2 id="structural-markdown-profile">Structural Markdown profile</h2>
+<p>Only the following Markdown structures carry V1 semantics:</p>
+<ul>
+<li>the YAML frontmatter at the beginning of the file;</li>
+<li>headings whose line starts exactly with <code>## Test: </code>;</li>
+<li>the reserved heading <code>## Fixtures</code> before the first test;</li>
+<li>the exact heading <code>### Steps</code> inside a test;</li>
+<li>fenced blocks with one of the recognized info strings below;</li>
+<li>the pipe table immediately following <code>### Steps</code>.</li>
+</ul>
+<p>All other headings, paragraphs, lists, block quotes, callouts, and code blocks
+are prose. They are retained by the source document but ignored by the parser.
+An unrecognized fenced block whose info string starts with <code>ges</code> inside a test
+is an error, because it is likely a misspelled semantic block.</p>
+<h3 id="canonical-human-readable-layout">Canonical human-readable layout</h3>
+<p>Normative suites in the checked-in corpus must use a single H1 display title
+immediately followed by this caution callout:</p>
+<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="markdown"><code><div class="ec-line"><div class="code"><span style="--0:#969BB7;--1:#5C6285">&gt; [</span><span style="--0:#D6DEEB;--0td:underline;--1:#403F53;--1td:underline">!CAUTION</span><span style="--0:#969BB7;--1:#5C6285">]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#969BB7;--1:#5C6285">&gt; </span><span style="--0:#C5E478;--1:#3B61B0">**</span><span style="--0:#C5E478;--0fw:bold;--1:#3B61B0;--1fw:bold">Executable Conformance Test Markdown</span><span style="--0:#C5E478;--1:#3B61B0">**</span></div></div><div class="ec-line"><div class="code"><span style="--0:#969BB7;--1:#5C6285">&gt;</span></div></div><div class="ec-line"><div class="code"><span style="--0:#969BB7;--1:#5C6285">&gt; </span><span style="--0:#D9F5DD;--1:#111111">-</span><span style="--0:#969BB7;--1:#5C6285"> This file controls executable conformance tests; it is not free-form documentation.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#969BB7;--1:#5C6285">&gt; </span><span style="--0:#D9F5DD;--1:#111111">-</span><span style="--0:#969BB7;--1:#5C6285"> Keep its structural elements in the form required by the Conformance Test Markdown syntax.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#969BB7;--1:#5C6285">&gt; </span><span style="--0:#D9F5DD;--1:#111111">-</span><span style="--0:#969BB7;--1:#5C6285"> Validate every edit with a conforming parser and runner.</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="> [!CAUTION]> **Executable Conformance Test Markdown**>> - This file controls executable conformance tests; it is not free-form documentation.> - Keep its structural elements in the form required by the Conformance Test Markdown syntax.> - Validate every edit with a conforming parser and runner."><div></div></button></div></figure></div>
+<p>A short suite-level explanation follows the callout. Every test must be
+preceded by a <code>---</code> thematic break, followed by its <code>## Test: </code> heading and a
+short prose explanation of the behavior under test. Semantic blocks use these
+H3 display headings:</p>
+<table>
+<thead>
+<tr>
+<th>Heading</th>
+<th>Content that follows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>### Case description</code></td>
+<td>the <code>gesBlock: case</code> YAML fence</td>
+</tr>
+<tr>
+<td><code>### Source code under test</code></td>
+<td>one or more <code>ges</code> source fences</td>
+</tr>
+<tr>
+<td><code>### Steps</code></td>
+<td>the executable Steps table</td>
+</tr>
+<tr>
+<td><code>### Expectation</code></td>
+<td>the <code>gesBlock: expect</code> YAML fence</td>
+</tr>
+<tr>
+<td><code>### Expected Game Event Script Assembler</code></td>
+<td>the <code>gesa</code> snapshot fence</td>
+</tr>
+</tbody>
+</table>
+<p>Except for the already semantic <code>### Steps</code> heading, these presentation
+elements remain nonsemantic in V1. A conforming parser must derive behavior from
+the semantic fences and Steps table rather than from prose or presentation
+headings.</p>
+<h3 id="frontmatter">Frontmatter</h3>
+<p>After the optional BOM, the first logical line must be exactly <code>---</code>. The next
+line that is exactly <code>---</code> closes the frontmatter. <code>...</code> is not a closing
+marker. The content between the markers is one YAML-subset mapping. No content
+may precede the opening marker.</p>
+<h3 id="test-boundaries">Test boundaries</h3>
+<p>A line of the form</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">## Test: Display title</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="## Test: Display title"><div></div></button></div></figure></div>
+<p>starts a test. The title is trimmed of surrounding ASCII space and tab and must
+not be empty. It is a display value only. It may change without changing test
+identity.</p>
+<p>The test continues up to, but does not include, the next <code>## Test: </code> heading or
+the end of the document. Other H2 headings do not end the test. A suite must
+contain at least one test.</p>
+<h3 id="fixtures">Fixtures</h3>
+<p><code>## Fixtures</code> may occur at most once and only before the first test. Everything
+from that heading to the first test is nonnormative documentation, including
+tables and recognized-looking code examples. A V1 parser must not materialize,
+resolve, substitute, or execute these values.</p>
+<p>A future matrix feature must use a new explicitly versioned construct. No later
+format version may silently reinterpret a V1 <code>## Fixtures</code> section as executable
+data.</p>
+<h3 id="fenced-blocks">Fenced blocks</h3>
+<p>A semantic fence inside a test starts with exactly three backticks at column
+zero, followed by one of these exact info strings, and ends with exactly three
+backticks at column zero:</p>
+<table>
+<thead>
+<tr>
+<th>Info string</th>
+<th>Meaning</th>
+<th>Cardinality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>yaml</code> with <code>gesBlock: case</code></td>
+<td>Case metadata and execution configuration</td>
+<td>exactly one per test</td>
+</tr>
+<tr>
+<td><code>ges</code></td>
+<td>One GES source input</td>
+<td>kind-dependent</td>
+</tr>
+<tr>
+<td><code>yaml</code> with <code>gesBlock: expect</code></td>
+<td>Structured expectations</td>
+<td>zero or one, kind-dependent</td>
+</tr>
+<tr>
+<td><code>gesa</code></td>
+<td>Expected Game Event Script Assembler dump</td>
+<td>exactly one for <code>bytecodeSnapshot</code>; optional for a valid <code>programBinary</code></td>
+</tr>
+</tbody>
+</table>
+<p>Opening or closing fences may not have trailing whitespace. Semantic fences may
+not be indented or nested. The payload is the sequence of logical content lines
+joined by <code>LF</code>; the structural line ending immediately before the closing fence
+is not part of the payload. An author can represent a terminal payload newline
+by leaving an additional empty content line before the closing fence.</p>
+<p>GES source and GESA payloads are passed on with logical <code>LF</code> line endings. Every
+exact <code>yaml</code> fence inside a test is semantic, uses the YAML subset below, and
+must contain exactly one root discriminator named <code>gesBlock</code>. Its value is
+exactly <code>case</code> or <code>expect</code>. Additional fence text such as <code>yaml ges-case</code> is not
+part of V1 and is rejected as an unknown semantic fence. YAML fences outside a
+test, including those under <code>## Fixtures</code>, remain ordinary documentation.</p>
+<h2 id="portable-yaml-subset">Portable YAML subset</h2>
+<p>The frontmatter, semantic <code>yaml</code> blocks, and YAML flow values all use the same
+restricted YAML 1.2-inspired profile.</p>
+<h3 id="supported-forms">Supported forms</h3>
+<ul>
+<li>one root mapping;</li>
+<li>block mappings and block sequences using exactly two spaces per indentation
+level;</li>
+<li>flow mappings <code>{ key: value }</code> and flow sequences <code>[value, value]</code> on one
+logical line;</li>
+<li>plain, single-quoted, and double-quoted scalar values;</li>
+<li>comments beginning with <code>#</code> outside quotes when <code>#</code> is the first non-space
+character or is preceded by whitespace;</li>
+<li>lowercase <code>null</code>, <code>true</code>, and <code>false</code>;</li>
+<li>signed base-10 integers with grammar <code>-?(0|[1-9][0-9]*)</code>;</li>
+<li>finite decimal values with JSON number grammar. A decimal token is retained
+losslessly until its schema field converts it to Int64, UInt64, or Binary64.</li>
+</ul>
+<p>Block mapping keys must be a plain token matching
+<code>[A-Za-z][A-Za-z0-9_.-]*</code> or a quoted string. Keys are case-sensitive. Duplicate
+keys are invalid after quoted-string decoding. Tabs are invalid in indentation.
+Trailing whitespace has no meaning.</p>
+<p>Double-quoted strings support the JSON escapes <code>\"</code>, <code>\\</code>, <code>\/</code>, <code>\b</code>, <code>\f</code>,
+<code>\n</code>, <code>\r</code>, <code>\t</code>, and <code>\uXXXX</code>; a valid surrogate pair represents one Unicode
+scalar and an unpaired surrogate is invalid. A single quote inside a
+single-quoted string is written as <code>''</code>. Plain strings must be quoted when they
+would otherwise be resolved as null, boolean, or number. Values beginning with
+<code>#</code>, <code>&amp;</code>, <code>*</code>, <code>!</code>, <code>%</code>, <code>@</code>, or a backtick must be quoted.</p>
+<h3 id="explicitly-unsupported-forms">Explicitly unsupported forms</h3>
+<p>Anchors, aliases, merge keys, tags, directives, block scalars (<code>|</code> and <code>&gt;</code>),
+complex keys, explicit <code>?</code> keys, multiple YAML documents, implicit dates,
+sexagesimal numbers, non-decimal integers, <code>.nan</code>, <code>.inf</code>, and implementation-
+specific scalar resolution are invalid. A parser must report them; it must not
+silently accept a larger host-library YAML dialect.</p>
+<p>Schema mappings are closed. An unknown property is an error unless this
+specification explicitly declares it open. Property names are always matched
+case-sensitively.</p>
+<p>The mappings keyed by declared IDs or canonical names are intentionally open:
+step expectations by Step ID, performance profiles by Profile ID, metrics by
+Metric ID, and opcode <code>counts</code>/<code>minimumCounts</code> by canonical opcode name. Their
+keys and values are still fully validated by the enclosing schema.</p>
+<h2 id="ids-suite-frontmatter-and-inheritance">IDs, suite frontmatter, and inheritance</h2>
+<p>An ID component matches:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*"><div></div></button></div></figure></div>
+<p><code>suiteId</code> and each case-local <code>id</code> use this grammar. The full case ID is
+<code>suiteId + "/" + case.id</code>. Suite IDs must be unique in a corpus and case IDs
+must be unique in a suite. IDs are never derived from a path, heading, title, or
+testframework method.</p>
+<p>The frontmatter root supports these fields:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>formatVersion</code></td>
+<td>integer</td>
+<td>yes</td>
+<td>must be <code>1</code></td>
+</tr>
+<tr>
+<td><code>suiteId</code></td>
+<td>string</td>
+<td>yes</td>
+<td>stable suite identity</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>string</td>
+<td>no</td>
+<td>display title; otherwise <code>suiteId</code></td>
+</tr>
+<tr>
+<td><code>kind</code></td>
+<td>test-kind string</td>
+<td>no</td>
+<td>default test kind</td>
+</tr>
+<tr>
+<td><code>level</code></td>
+<td><code>atomic</code> or <code>scenario</code></td>
+<td>no</td>
+<td>default level</td>
+</tr>
+<tr>
+<td><code>categories</code></td>
+<td>ID sequence</td>
+<td>no</td>
+<td>default runner/framework categories</td>
+</tr>
+<tr>
+<td><code>tags</code></td>
+<td>string sequence</td>
+<td>no</td>
+<td>default tags</td>
+</tr>
+<tr>
+<td><code>requires</code></td>
+<td>capability requirement</td>
+<td>no</td>
+<td>default capabilities</td>
+</tr>
+<tr>
+<td><code>compile</code></td>
+<td>compile options</td>
+<td>no</td>
+<td>default compile options</td>
+</tr>
+<tr>
+<td><code>runtimeLimits</code></td>
+<td>runtime-limit mapping</td>
+<td>no</td>
+<td>default runtime limits</td>
+</tr>
+<tr>
+<td><code>comparison</code></td>
+<td>comparison options</td>
+<td>no</td>
+<td>default value comparison</td>
+</tr>
+</tbody>
+</table>
+<p>The same defaultable fields may occur in the <code>gesBlock: case</code> mapping. Resolution
+follows these rules:</p>
+<ul>
+<li>a test scalar replaces the suite scalar;</li>
+<li><code>compile</code>, <code>runtimeLimits</code>, and <code>comparison</code> are overlaid by field, with test
+fields replacing fields of the same name;</li>
+<li>suite categories/tags followed by test categories/tags are concatenated and
+then de-duplicated by exact ordinal spelling while retaining first occurrence;</li>
+<li>core and optional capability lists are combined and de-duplicated in the same
+way;</li>
+<li>all other case fields are never inherited.</li>
+</ul>
+<p><code>level</code> must resolve to a value; it is never inferred from a directory. <code>kind</code>
+must also resolve to a supported value.</p>
+<p>A capability requirement has this shape:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">requires</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">core</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#ECC48D;--1:#3B61B0">compiler</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#3B61B0">host</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#3B61B0">vm</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#3B61B0">external-types</span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">optional</span><span style="--0:#D6DEEB;--1:#403F53">: []</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="requires:  core: [compiler, host, vm, external-types]  optional: []"><div></div></button></div></figure></div>
+<p>Core capabilities required by a test kind are added implicitly and cannot be
+downgraded to optional. Capability behavior is defined by
+<a href="/docs/reference/conformance/runner/">Runner</a>.</p>
+<h2 id="case-metadata">Case metadata</h2>
+<p>Every test contains exactly one <code>yaml</code> root mapping whose first-class
+discriminator is <code>gesBlock: case</code>. It supports:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gesBlock</code></td>
+<td><code>case</code></td>
+<td>yes</td>
+<td>identifies this YAML block as case metadata</td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td>ID</td>
+<td>yes</td>
+<td>stable local identity</td>
+</tr>
+<tr>
+<td><code>kind</code></td>
+<td>test-kind string</td>
+<td>inherited</td>
+<td>kind override</td>
+</tr>
+<tr>
+<td><code>level</code></td>
+<td>level string</td>
+<td>inherited</td>
+<td>level override</td>
+</tr>
+<tr>
+<td><code>categories</code></td>
+<td>ID sequence</td>
+<td>no</td>
+<td>additional categories</td>
+</tr>
+<tr>
+<td><code>tags</code></td>
+<td>string sequence</td>
+<td>no</td>
+<td>additional tags</td>
+</tr>
+<tr>
+<td><code>requires</code></td>
+<td>capability requirement</td>
+<td>no</td>
+<td>additional requirements</td>
+</tr>
+<tr>
+<td><code>compile</code></td>
+<td>mapping</td>
+<td>no</td>
+<td>compile options</td>
+</tr>
+<tr>
+<td><code>runtimeLimits</code></td>
+<td>mapping</td>
+<td>no</td>
+<td>host runtime-limit overrides</td>
+</tr>
+<tr>
+<td><code>comparison</code></td>
+<td>mapping</td>
+<td>no</td>
+<td>value comparison override</td>
+</tr>
+<tr>
+<td><code>sources</code></td>
+<td>source descriptor sequence</td>
+<td>conditional</td>
+<td>names and program grouping</td>
+</tr>
+<tr>
+<td><code>random</code></td>
+<td>mapping</td>
+<td>no</td>
+<td>deterministic random configuration</td>
+</tr>
+<tr>
+<td><code>publishSink</code></td>
+<td><code>accept</code>, <code>absent</code>, <code>reject</code>, or <code>throw</code></td>
+<td>no</td>
+<td>configured publish-sink behavior; default <code>accept</code></td>
+</tr>
+<tr>
+<td><code>externalTypeRegistry</code></td>
+<td><code>environment</code>, <code>absent</code>, or <code>mismatch</code></td>
+<td>no</td>
+<td>runtime registry used for External-Type link tests; default <code>environment</code></td>
+</tr>
+<tr>
+<td><code>hostCount</code></td>
+<td>positive integer</td>
+<td>no</td>
+<td>run the same compiled Programs and expectations independently in this many Hosts; default <code>1</code></td>
+</tr>
+<tr>
+<td><code>deferredPrograms</code></td>
+<td>ID sequence</td>
+<td>no</td>
+<td>source-program groups loaded only by a native host action</td>
+</tr>
+<tr>
+<td><code>nativeHandlers</code></td>
+<td>sequence</td>
+<td>no</td>
+<td>declarative portable native handlers</td>
+</tr>
+<tr>
+<td><code>stepActions</code></td>
+<td>mapping</td>
+<td>no</td>
+<td>ordered host actions performed immediately before a named step’s Receive</td>
+</tr>
+<tr>
+<td><code>messageApi</code></td>
+<td>mapping</td>
+<td><code>messageApi</code> only</td>
+<td>signature and message input</td>
+</tr>
+<tr>
+<td><code>valueApi</code></td>
+<td>mapping</td>
+<td><code>valueApi</code> only</td>
+<td>portable value construction, comparison and copy input</td>
+</tr>
+<tr>
+<td><code>externalTypeApi</code></td>
+<td>mapping</td>
+<td><code>externalTypeApi</code> only</td>
+<td>portable external-type catalog input</td>
+</tr>
+<tr>
+<td><code>binaryFixture</code></td>
+<td>mapping</td>
+<td><code>programBinary</code> only</td>
+<td>immutable <code>.gesb</code> fixture manifest entry</td>
+</tr>
+<tr>
+<td><code>performance</code></td>
+<td>mapping</td>
+<td><code>performance</code> only</td>
+<td>workload configuration</td>
+</tr>
+</tbody>
+</table>
+<p>Compile options are:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">compile</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">debugInfo</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#ECC48D;--1:#3B61B0">debugSymbols</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#3B61B0">sourceMap</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#3B61B0">sourceArchive</span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">binaryRoundTrip</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">false</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="compile:  debugInfo: [debugSymbols, sourceMap, sourceArchive]  binaryRoundTrip: false"><div></div></button></div></figure></div>
+<p><code>debugInfo</code> is a sequence containing each listed value at most once. An empty
+sequence means no debug segments. Its default is all three values.
+<code>binaryRoundTrip</code> defaults to <code>false</code>; when true, the compiled program is
+written as canonical <code>.gesb</code>, read again, and only then used by the test.
+Enabling it implicitly requires the core capability <code>program-binary</code>.</p>
+<p><code>runtimeLimits</code> uses the exact portable names <code>maxProcessedEventsPerRun</code>,
+<code>maxQueuedMessagesPerRun</code>, <code>maxExecutionSteps</code>, <code>maxRegisterValues</code>,
+<code>maxLoopIterations</code>, <code>maxCallDepth</code>, <code>maxRandomScopeDepth</code>, <code>maxRangeItems</code>,
+<code>maxGeneratedCollectionItems</code>, <code>maxDiceCount</code>, and <code>maxDiceSides</code>. Values are
+positive integers. Omitted fields use Core defaults.</p>
+<p><code>comparison</code> is:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">comparison</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">binary64</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">mode</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">exact</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="comparison:  binary64:    mode: exact"><div></div></button></div></figure></div>
+<p>or:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">comparison</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">binary64</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">mode</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">ulp</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">maxUlps</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">4096</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="comparison:  binary64:    mode: ulp    maxUlps: 4096"><div></div></button></div></figure></div>
+<p>Exact comparison is the default. ULP mode is allowed only where platform math
+or another documented operation requires it. Kind, unit, integer, text,
+boolean, tag, ordering, and structure remain exact in both modes.</p>
+<p><code>random</code> contains exactly one of <code>seed</code> (signed Int64), <code>sequence</code> (a
+non-empty sequence of canonical Binary64 strings), or <code>entropy</code> (a non-empty
+string of uppercase hexadecimal byte pairs without separators or a prefix).
+For example, <code>random: { entropy: "0001FF" }</code> supplies the three ordered bytes
+<code>00</code>, <code>01</code>, and <code>FF</code> to the host builder’s entropy configuration. The runner
+must exercise that configuration path instead of replacing the bytes with a
+precomputed seed. Seed derivation follows
+<a href="/docs/reference/semantics/determinism/#entropy-to-seed-mixing">Entropy-to-seed mixing</a>.
+Invalid entropy encodings and combined random configurations are rejected with
+<code>conformance.schema.invalidValue</code>.</p>
+<p>Tests that execute a random operation must supply deterministic random
+configuration. V1 test kinds do not support expectations based on
+nondeterministic behavior; fixed entropy input never acquires platform entropy.</p>
+<h3 id="sources-and-programs">Sources and programs</h3>
+<p>The order of <code>ges</code> fences is compiler input order. If <code>sources</code> is absent,
+exactly one <code>ges</code> fence is required and receives source name
+<code>&lt;suiteId&gt;.&lt;caseId&gt;.ges</code> and program ID <code>main</code>.</p>
+<p>If <code>sources</code> is present, it must contain exactly one descriptor per <code>ges</code> fence:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">sources</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">rules.ges</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">program</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">rules</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">helpers.ges</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">program</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">rules</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">opponent.ges</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">program</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">opponent</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="sources:  - name: rules.ges    program: rules  - name: helpers.ges    program: rules  - name: opponent.ges    program: opponent"><div></div></button></div></figure></div>
+<p><code>name</code> is a non-empty portable source name, not a path to open. <code>program</code> is an
+ID and defaults to <code>main</code>. Sources with the same program ID are added to one
+compiler builder in descriptor order. Programs are loaded into the host in the
+order their ID first occurs. Interleaving descriptors for different programs is
+valid but should be avoided for readability.</p>
+<p>No parser or runner opens a source path. For <code>programBinary</code>, source fences are
+provenance: they record the logical compiler input named by the manifest but are
+not compiled or substituted by the runner. External binary bytes use only the
+resource-resolver contract defined below.</p>
+<h3 id="binary-fixture-manifest-entries">Binary fixture manifest entries</h3>
+<p>Each <code>programBinary</code> test contains exactly one <code>binaryFixture</code> mapping:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">binaryFixture</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">id</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">gesb-v1-valid-runtime</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">resourceId</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">gesb-v1.valid-runtime</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">relativePath</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">GesbV1/valid-runtime.gesb</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">sha256</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">594808EB171F039AF2182A22360C39183CC4960412EF3D76B97E3632603EECF8</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">compilerId</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">steph.ges.compiler.csharp</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">compilerVersion</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">0.1.0</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">programVersion</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">42</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">compareCompiledRuntime</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">derivation</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">optional human-readable transformation description</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="binaryFixture:  id: gesb-v1-valid-runtime  resourceId: gesb-v1.valid-runtime  relativePath: GesbV1/valid-runtime.gesb  sha256: 594808EB171F039AF2182A22360C39183CC4960412EF3D76B97E3632603EECF8  compilerId: steph.ges.compiler.csharp  compilerVersion: 0.1.0  programVersion: 42  compareCompiledRuntime: true  derivation: optional human-readable transformation description"><div></div></button></div></figure></div>
+<p><code>id</code> and <code>resourceId</code> are stable portable IDs. <code>resourceId</code> is the only value
+given to the injected resolver. <code>relativePath</code> is packaging metadata using
+forward slashes; it must be relative, contain no empty, <code>.</code> or <code>..</code> component,
+and is never opened by the parser or runner. <code>sha256</code> is exactly 64 uppercase
+hexadecimal digits and identifies the complete resource bytes. Compiler ID and
+version, resolved <code>compile</code> options, source fences, and the required
+<code>programVersion</code> record reproducible provenance. <code>compareCompiledRuntime</code>
+defaults to false; when true it requires source and <code>compiler</code>, compiles exactly
+one source Program group with the recorded ProgramVersion, and compares only
+the canonical Required Runtime sections. BuildMetadata and optional debug/source
+sections therefore may differ between language compilers. <code>derivation</code> is used
+only when helpful to explain a deliberately altered fixture and is
+non-executable.</p>
+<h3 id="declarative-native-handlers">Declarative native handlers</h3>
+<p>The V1 shape preserves portable host-dispatch cases and supports a closed set of
+host-lifecycle actions:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">nativeHandlers</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">id</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">notify-handler</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">message</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Notify</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">parameters</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#ECC48D;--1:#3B61B0">playerId</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#3B61B0">count</span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">messageName</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">false</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">priority</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">0</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">initiallySubscribed</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">throw</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">false</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">actions</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">      </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">loadProgram</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">deferred-rules</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">      </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">subscribeHandler</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">late-handler</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">emit</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">      </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">ExternalSeen</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#7FDBCA;--1:#111111">forwardArguments</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="nativeHandlers:  - id: notify-handler    message: Notify    parameters: [playerId, count]    messageName: false    priority: 0    initiallySubscribed: true    throw: false    actions:      - loadProgram: deferred-rules      - subscribeHandler: late-handler    emit:      - name: ExternalSeen        forwardArguments: true"><div></div></button></div></figure></div>
+<p><code>message</code> is required. <code>messageName: true</code> selects name-only matching and then
+<code>parameters</code> must be empty; its default is false. <code>id</code> defaults to the stable metadata-order name
+<code>native-0001</code>, <code>native-0002</code>, and so on. <code>parameters</code> defaults to an empty
+ordered sequence, <code>priority</code> to zero, <code>initiallySubscribed</code> to true, <code>throw</code> to
+false, and <code>actions</code>/<code>emit</code> to empty. An emit entry requires <code>name</code> and exactly
+one of <code>forwardArguments: true</code> or an ordered <code>args</code> sequence.</p>
+<p>An optional <code>faultCode</code> string selects a deliberate native-handler runtime fault
+with that caller-chosen diagnostic code, for example <code>faultCode: test.nativeFault</code>.
+It is absent by default, must not be empty or whitespace-only, must not start
+with <code>runtime.</code>, and cannot accompany <code>throw: true</code>. Both failure modes abort
+before actions or emits: <code>throw: true</code> raises an unanticipated platform exception,
+while <code>faultCode</code> reports a deliberate diagnostic using the platform’s failure
+transport (<code>GameEventScriptExtensionFaultException</code> in C#). The Host supplies
+the active handler context as defined in <a href="/docs/reference/diagnostics/">Diagnostics</a>.</p>
+<p>With <code>faultCode</code>, an optional <code>faultContext</code> mapping accepts only <code>programName</code>
+and <code>handlerName</code>, each a string or null. An omitted or null field is absent in
+the diagnostic supplied by the native fixture; the Host then fills available
+context. Supplied strings must be preserved. <code>faultContext</code> without <code>faultCode</code>
+is invalid. This is portable diagnostic input, not an exception-class selector.</p>
+<p>Each action mapping contains exactly one of <code>loadProgram</code>, <code>detachProgram</code>,
+<code>subscribeHandler</code>, or <code>unsubscribeHandler</code>, plus an optional boolean
+<code>expectResult</code> or diagnostic <code>expectError</code>. Its operation value is an existing program
+or native-handler ID of the appropriate kind. Only a program listed in
+<code>deferredPrograms</code> may be a <code>loadProgram</code> target. Actions execute in metadata
+order before emits. <code>expectResult</code> compares the portable boolean operation
+result. Repeated detach/unsubscribe operations return false after the first
+state change; load/subscribe ensure the target is active and return true.</p>
+<p>Only <code>loadProgram</code> accepts <code>expectError</code>, which is mutually exclusive with
+<code>expectResult</code>. It uses the structured diagnostic fields described below,
+requires <code>phase: link</code> and a <code>code</code>, and may constrain context such as
+<code>programName</code>:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">stepActions</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">rejected</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">loadProgram</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">deferred-rules</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#111111">expectError</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#7FDBCA;--1:#111111">phase</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">link</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#7FDBCA;--1:#111111">code</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">link.initializationQueueFull</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#7FDBCA;--1:#111111">programName</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">rules</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="stepActions:  rejected:    - loadProgram: deferred-rules      expectError:        phase: link        code: link.initializationQueueFull        programName: rules"><div></div></button></div></figure></div>
+<p>The runner requires the load to fail with that diagnostic, handles the expected
+failure, and continues subsequent actions and steps. Successful loading or a
+different diagnostic fails the assertion. The diagnostic is an action result,
+not a RuntimeError observer callback. The same rules apply to actions inside a
+native handler. The set remains closed and declarative; arbitrary native code
+is not test data.</p>
+<p>A <code>scriptApi</code> case with at least one native handler may have no GES source and
+thereby defines a native-only Host. <code>hostCount</code> is bounded by the parser’s
+<code>MaxHostsPerTest</code>; every Host loads the same immutable compiled Program objects,
+but owns independent Context, queue, random generator and VM state. Expectations
+are compared independently for every Host. This option is intended for Program
+reuse and isolation tests, not performance measurement.</p>
+<p><code>publishSink</code> configures the fixed test sink. <code>absent</code> installs no sink;
+<code>accept</code> records the call and returns true; <code>reject</code> records the call and returns
+false; <code>throw</code> records the call and throws a platform exception which the Host
+must convert to the portable <code>runtime.publishSinkFailure</code> diagnostic. Outbound
+messages record calls handed to the sink, regardless of acceptance.</p>
+<p><code>externalTypeRegistry</code> leaves the runner environment’s registry unchanged for
+<code>environment</code>, installs no runtime registry for <code>absent</code>, and installs a fixed
+constructor with a deliberately different definition for <code>mismatch</code>. The
+compiler still uses the environment’s portable catalog in all three modes.</p>
+<p><code>stepActions</code> is a mapping from an existing Step ID to the same ordered,
+closed host-action sequence used by native handlers. These actions execute
+immediately before that step’s <code>Receive</code>. This makes enqueue/load ordering and
+changes while a VM is paused expressible without embedding test callbacks.</p>
+<h2 id="ordered-steps">Ordered steps</h2>
+<p>Runtime and performance tests express chronological input in exactly one table
+under an exact <code>### Steps</code> heading. After optional blank lines, its header and
+delimiter are exactly:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">| step | receive | pump | budget |</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">| --- | --- | --- | --- |</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="| step | receive | pump | budget || --- | --- | --- | --- |"><div></div></button></div></figure></div>
+<p>Each following nonblank pipe-table row has four cells:</p>
+<ul>
+<li><code>step</code> is an ID unique within the case;</li>
+<li><code>receive</code> is the exact incoming message name;</li>
+<li><code>pump</code> is <code>completion</code>, <code>frames</code>, <code>enqueue</code>, or <code>frame</code>;</li>
+<li><code>budget</code> is empty for <code>completion</code> and <code>enqueue</code>, and a positive UInt32 for
+<code>frames</code> and <code>frame</code>.</li>
+</ul>
+<p>Cells are trimmed of surrounding ASCII space and tab. Backslash escapes, inline
+Markdown, multiline cells, and additional columns are not supported. A table
+ends at the first blank or non-table line. At least one row is required whenever
+the test kind requires steps.</p>
+<p>For <code>completion</code>, the runner calls the synchronous run-to-completion operation
+once. For <code>frames</code>, it repeatedly executes frames of the specified budget until
+the host is idle or reports a runtime limit. The expectation records whether at
+least one frame returned <code>paused</code>. <code>enqueue</code> performs no pump after <code>Receive</code>.
+<code>frame</code> performs exactly one <code>ExecuteFrame(budget)</code> call and records whether
+that result was paused.</p>
+<p>The corresponding <code>yaml</code> block with <code>gesBlock: expect</code> keys its detailed input
+and outputs by step ID:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">gesBlock</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">expect</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">steps</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">add</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">input</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#111111">tags</span><span style="--0:#D6DEEB;--1:#403F53">: []</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#111111">args</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">        </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">value</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#111111">value</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">type</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">:Number.int64</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">value</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">7</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">accepted</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">local</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">      </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Done</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#7FDBCA;--1:#111111">args</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">          </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">result</span></div></div><div class="ec-line"><div class="code"><span class="indent">            </span><span style="--0:#7FDBCA;--1:#111111">value</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">type</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">:Number.int64</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">value</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">12</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">outbound</span><span style="--0:#D6DEEB;--1:#403F53">: []</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">paused</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">false</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">runtimeLimits</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#111111">include</span><span style="--0:#D6DEEB;--1:#403F53">: []</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#111111">exclude</span><span style="--0:#D6DEEB;--1:#403F53">: []</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">diagnostics</span><span style="--0:#D6DEEB;--1:#403F53">: []</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">trace</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">      </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">event</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">publish</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#7FDBCA;--1:#111111">message</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Remote</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#7FDBCA;--1:#111111">result</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">localAccepted</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">outboundAttempted</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">outboundAccepted</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">false</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">anyAccepted</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="gesBlock: expectsteps:  add:    input:      tags: []      args:        - name: value          value: { type: &quot;:Number.int64&quot;, value: &quot;7&quot; }    accepted: true    local:      - name: Done        args:          - name: result            value: { type: &quot;:Number.int64&quot;, value: &quot;12&quot; }    outbound: []    paused: false    runtimeLimits:      include: []      exclude: []    diagnostics: []    trace:      - event: publish        message: { name: Remote }        result: { localAccepted: true, outboundAttempted: true, outboundAccepted: false, anyAccepted: true }"><div></div></button></div></figure></div>
+<p><code>input.tags</code> and <code>input.args</code> default to empty. <code>accepted</code> defaults to true;
+<code>local</code>, <code>outbound</code>, runtime-limit lists, and diagnostics default to empty.
+<code>paused</code> is optional and is not compared when absent. A step expectation key
+must name a table row, and every table row may have at most one expectation
+entry. Message lists and argument lists are order-sensitive. <code>local</code> observes
+both Emit and the local half of Publish; <code>outbound</code> observes messages handed to
+the configured publish sink in call order.</p>
+<p>Each <code>runtimeLimits.include</code> or <code>.exclude</code> entry may constrain <code>name</code>,
+<code>detailContains</code>, and <code>limit</code>; at least one field is required. The explicit
+wildcard <code>{ any: true }</code> may be used alone, most commonly in <code>exclude</code>, to match
+every runtime-limit observation. Each diagnostics
+entry uses the portable diagnostic expectation shape from the error kinds
+below, except that <code>phase</code> and <code>code</code> remain required. Entries and observations
+are compared in order; exclusions must not occur anywhere in the observation
+sequence.</p>
+<p><code>trace</code> is optional. When absent, observer callback order is not compared. When
+present, including as <code>[]</code>, it is an exact ordered expectation over all observer
+callbacks in that channel interval. Supported event shapes are:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">trace</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">event</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">emit</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">message</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Local</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">accepted</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">event</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">publish</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">message</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Remote</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">result</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#111111">localAccepted</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#111111">outboundAttempted</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#111111">outboundAccepted</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">false</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#111111">anyAccepted</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">event</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">dispatchStarted</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">message</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Start</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">signatureId</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Start()</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">event</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">dispatchCompleted</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">message</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Start</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">signatureId</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Start()</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">event</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">runtimeLimit</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">runtimeLimit</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">MaxLoopIterations</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">limit</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">10</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">event</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">diagnostic</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">diagnostic</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">phase</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">runtime</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">code</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">runtime.publishSinkFailure</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="trace:  - event: emit    message: { name: Local }    accepted: true  - event: publish    message: { name: Remote }    result:      localAccepted: true      outboundAttempted: true      outboundAccepted: false      anyAccepted: true  - event: dispatchStarted    message: { name: Start }    signatureId: &quot;Start()&quot;  - event: dispatchCompleted    message: { name: Start }    signatureId: &quot;Start()&quot;  - event: runtimeLimit    runtimeLimit: { name: MaxLoopIterations, limit: 10 }  - event: diagnostic    diagnostic: { phase: runtime, code: runtime.publishSinkFailure }"><div></div></button></div></figure></div>
+<p>Emit requires the complete <code>accepted</code> flag. Publish trace assertions require the four final-delivery fields shown above; <code>outboundAccepted</code> implies
+<code>outboundAttempted</code>, and <code>anyAccepted</code> must equal <code>localAccepted OR outboundAccepted</code>. Dispatch events require the exact dispatched message and
+signature ID. Runtime-limit and diagnostic constraints use the same shapes as
+their standalone expectation lists. Message/value comparison uses the case’s
+ordinary Binary64 comparison mode.</p>
+<p>An optional top-level <code>initialization</code> expectation has <code>local</code>, <code>outbound</code>,
+<code>runtimeLimits</code>, <code>diagnostics</code>, and optional exact <code>trace</code> with the same meanings.
+It describes startup after all initial programs and native handlers are installed
+and before the first step. Absent channel, runtime-limit and diagnostic expectations
+are empty; absent trace and lifecycle fields make no corresponding assertion.</p>
+<h3 id="host-startup-observations">Host startup observations</h3>
+<p>For runtime cases, <code>initialization.pump</code> is <code>completion</code> by default: the runner
+calls Start and, on success, drains ordinary messages. <code>pump: start</code> compares
+immediately after Start without draining. A failed Start is never pumped; later
+step inputs are rejected and no script code is executed.</p>
+<p>Initialization and step expectations may contain <code>hostReady: true|false</code> and
+<code>programStarts</code>, a mapping from loaded program IDs to <code>pending</code>, <code>ready</code>,
+<code>runtimeError</code> or <code>runtimeLimitReached</code>. Missing handles fail the assertion.
+These assertions inspect the portable Host/Instance API. Init emit observations
+remain attempted emits, including discarded attempts; assert downstream handler
+output to prove delivery. Deferred publications are observed upon commitment.</p>
+<h2 id="portable-message-and-value-shape">Portable message and value shape</h2>
+<p>A message is:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Done</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">tags</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#ECC48D;--1:#3B61B0">combat</span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">args</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">result</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">value</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">type</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">:Number.int64</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">value</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">12</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="name: Donetags: [combat]args:  - name: result    value: { type: &quot;:Number.int64&quot;, value: &quot;12&quot; }"><div></div></button></div></figure></div>
+<p><code>name</code> is required; <code>tags</code> and <code>args</code> default to empty. Arguments are always an
+ordered sequence. A mapping keyed by argument name is invalid.</p>
+<p>Values use the existing portable conformance shape:</p>
+<table>
+<thead>
+<tr>
+<th><code>type</code></th>
+<th>Additional fields</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>:Nothing</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td><code>:Text</code>, <code>:Tag</code></td>
+<td><code>value</code> string</td>
+</tr>
+<tr>
+<td><code>:Boolean</code></td>
+<td><code>value</code> boolean</td>
+</tr>
+<tr>
+<td><code>:Number.int64</code></td>
+<td>canonical signed-Int64 <code>value</code> string</td>
+</tr>
+<tr>
+<td><code>:Number.binary64</code></td>
+<td>canonical Binary64 <code>value</code> string</td>
+</tr>
+<tr>
+<td><code>:Quantity.int64</code></td>
+<td>canonical signed-Int64 <code>value</code> string and required <code>unit</code></td>
+</tr>
+<tr>
+<td><code>:Quantity.binary64</code></td>
+<td>canonical Binary64 <code>value</code> string and required <code>unit</code></td>
+</tr>
+<tr>
+<td><code>:Percentage</code></td>
+<td>canonical Binary64 ratio <code>value</code> string</td>
+</tr>
+<tr>
+<td><code>:Vector</code>, <code>:Point</code></td>
+<td>Binary64 strings <code>x</code>, <code>y</code>, <code>z</code>; optional <code>unit</code></td>
+</tr>
+<tr>
+<td><code>:List</code></td>
+<td>ordered <code>items</code> value sequence</td>
+</tr>
+<tr>
+<td><code>:Map</code></td>
+<td><code>entries</code>, an ordered sequence of <code>{ key, value }</code></td>
+</tr>
+<tr>
+<td><code>:Dice</code></td>
+<td>ordered Int32 <code>rolls</code></td>
+</tr>
+<tr>
+<td><code>:Range.int64</code>, <code>:Range.binary64</code></td>
+<td>numeric strings <code>from</code>, <code>to</code>, <code>step</code>; the variant fixes all three storage kinds</td>
+</tr>
+<tr>
+<td><code>:Message</code></td>
+<td>nested <code>message</code></td>
+</tr>
+<tr>
+<td>any declared custom type</td>
+<td>ordered <code>entries</code> sequence</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>.int64</code> and <code>.binary64</code> suffixes are exact conformance transport variants,
+not GES source type names. Source uses <code>:Number</code>, <code>:Quantity(unit)</code>, and <code>:Range</code>.
+There is no separate <code>rangeKind</code> field.</p>
+<p>Numeric strings and special values follow <a href="/docs/reference/semantics/numbers/">Number semantics</a>.
+Message names, argument names, tags, units, and custom types follow the portable
+Core contracts. Map/record semantic comparison follows
+<a href="/docs/reference/semantics/determinism/">Determinism</a>. Duplicate construction keys use
+last-entry-wins semantics before scalar-ordinal key sorting.</p>
+<h2 id="expectation-fields-by-test-kind">Expectation fields by test kind</h2>
+<p>Supported V1 kinds are <code>scriptApi</code>, <code>compileError</code>, <code>loadError</code>, <code>messageApi</code>,
+<code>valueApi</code>, <code>externalTypeApi</code>, <code>compileMetadata</code>, <code>bytecode</code>, <code>performance</code>, and
+<code>bytecodeSnapshot</code>, and <code>programBinary</code>. A kind’s
+required core capabilities are additive to explicit <code>requires.core</code>.</p>
+<p>The presence of <code>nativeHandlers</code> implicitly requires <code>native-handlers</code>.
+<code>compile.binaryRoundTrip: true</code> implicitly requires <code>program-binary</code>. Source
+that uses an external type must explicitly require <code>external-types</code>; the runner
+does not infer capabilities by parsing GES source.</p>
+<h3 id="scriptapi"><code>scriptApi</code></h3>
+<p>The source-backed form requires <code>compiler</code>, <code>host</code>, <code>vm</code>, <code>observer</code>, and
+<code>publish-sink</code>; it requires at least one source and either a Steps table or an
+explicit <code>initialization</code> expectation. It uses the common step expectation
+shape above.</p>
+<p>The native-only form with no source instead requires only <code>host</code>, <code>observer</code>
+and the implicitly added <code>native-handlers</code> capability. It does not require a
+compiler, VM or publish sink because the closed V1 native actions can only emit
+locally. It still requires Steps or an explicit initialization expectation.</p>
+<h3 id="compileerror-and-loaderror"><code>compileError</code> and <code>loadError</code></h3>
+<p><code>compileError</code> requires <code>compiler</code>; <code>loadError</code> requires <code>compiler</code>, <code>host</code>, and
+<code>vm</code>. Each requires source and a <code>yaml</code> block with <code>gesBlock: expect</code> containing:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">gesBlock</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">expect</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">error</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">phase</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">validate</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">code</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">validate.missingCallable</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">symbol</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">missing</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">symbolKind</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">function</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">sourceName</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">sample.ges</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">line</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">3</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">column</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">7</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">endLine</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">3</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">endColumn</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">14</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">programName</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Sample</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">handlerName</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Start</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="gesBlock: expecterror:  phase: validate  code: validate.missingCallable  symbol: missing  symbolKind: function  sourceName: sample.ges  line: 3  column: 7  endLine: 3  endColumn: 14  programName: Sample  handlerName: Start"><div></div></button></div></figure></div>
+<p><code>phase</code> and <code>code</code> are required. Other fields are optional exact constraints.
+For <code>programName</code> and <code>handlerName</code>, an explicit YAML null requires that the
+observed context field be absent; omitting the key leaves that field unconstrained.
+Human-readable messages and technical details cannot be expectations. The
+diagnostic contract is <a href="/docs/reference/diagnostics/">Diagnostics</a>.</p>
+<h3 id="messageapi"><code>messageApi</code></h3>
+<p>Requires <code>message-api</code> and no GES source. The <code>gesBlock: case</code> mapping contains:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">gesBlock</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">case</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">messageApi</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">signature</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Start</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">parameters</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#ECC48D;--1:#3B61B0">a</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#3B61B0">b</span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">message</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Start</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">args</span><span style="--0:#D6DEEB;--1:#403F53">: []</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">compareSignature</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Start</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">parameters</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#ECC48D;--1:#3B61B0">a</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#3B61B0">b</span><span style="--0:#D6DEEB;--1:#403F53">] }</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">compareMessage</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Start</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">args</span><span style="--0:#D6DEEB;--1:#403F53">: [] }</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">compareConformanceMessage</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Start</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">args</span><span style="--0:#D6DEEB;--1:#403F53">: [] }</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">compareHandler</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Start</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">parameters</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#ECC48D;--1:#3B61B0">a</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#3B61B0">b</span><span style="--0:#D6DEEB;--1:#403F53">] }</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">createArguments</span><span style="--0:#D6DEEB;--1:#403F53">: []</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="gesBlock: casemessageApi:  signature:    name: Start    parameters: [a, b]  message:    name: Start    args: []  compareSignature: { name: Start, parameters: [a, b] }  compareMessage: { name: Start, args: [] }  compareConformanceMessage: { name: Start, args: [] }  compareHandler: { name: Start, parameters: [a, b] }  createArguments: []"><div></div></button></div></figure></div>
+<p>For the single negative shape test <code>args</code> may instead be a mapping. The mapping
+is retained as ordered source data in the normalized model, but it is never
+accepted as message arguments. This form is valid only when the expectation is
+exactly <code>error: invalidArgumentsShape</code>; every constructible message continues
+to require an ordered argument sequence.</p>
+<p>Its expectation contains at least one of:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">message</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Start</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">signatureId</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Start(a,b)</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">messageSignatureId</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Start()</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">matches</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">false</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">argumentCount</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">0</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">signatureEquals</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">signatureHashEquals</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">messageEquals</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">messageHashEquals</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">conformanceEquals</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">handlerEquals</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">handlerHashEquals</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">createdMessageSignatureId</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Start(a,b)</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">error</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">duplicateArgumentName</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="message:  name: Start  signatureId: &quot;Start(a,b)&quot;  messageSignatureId: &quot;Start()&quot;  matches: false  argumentCount: 0  signatureEquals: true  signatureHashEquals: true  messageEquals: true  messageHashEquals: true  conformanceEquals: true  handlerEquals: true  handlerHashEquals: true  createdMessageSignatureId: &quot;Start(a,b)&quot;  error: duplicateArgumentName"><div></div></button></div></figure></div>
+<p>If <code>error</code> is present, successful construction fails the case and the other
+fields must be absent. Message error codes are stable ASCII identifiers.</p>
+<p><code>compareConformanceMessage</code> and <code>message.conformanceEquals</code> must occur together.
+The former is an expected transport message; <code>messageApi.message</code> is constructed
+through the public API and supplies the actual message. The runner applies the
+same comparison operation used for runtime message expectations, under the
+case’s <code>comparison</code> options, and asserts its boolean result. The expected
+transport’s numeric storage variants and units remain exact, including inside
+containers and at infinity. A false expectation is a negative conformance
+comparison test, not a request to treat a failed case as passing. This pair is
+unavailable with an <code>error</code> expectation.</p>
+<h3 id="valueapi"><code>valueApi</code></h3>
+<p>Requires <code>value-api</code> and no GES source. <code>valueApi.value</code> is constructed through
+the portable public value API. Optional <code>equalTo</code> and <code>notEqualTo</code> values test
+semantic equality. <code>mutateSourceAfterCreate: true</code> mutates source arrays after
+construction to verify defensive storage.</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">valueApi</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">value</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">type</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">:List</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">items</span><span style="--0:#D6DEEB;--1:#403F53">: [{ </span><span style="--0:#7FDBCA;--1:#111111">type</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">:Number.int64</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">value</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">1</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> }]</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">equalTo</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">type</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">:List</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">items</span><span style="--0:#D6DEEB;--1:#403F53">: [{ </span><span style="--0:#7FDBCA;--1:#111111">type</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">:Number.int64</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">value</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">1</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> }]</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">mutateSourceAfterCreate</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="valueApi:  value:    type: &quot;:List&quot;    items: [{ type: &quot;:Number.int64&quot;, value: &quot;1&quot; }]  equalTo:    type: &quot;:List&quot;    items: [{ type: &quot;:Number.int64&quot;, value: &quot;1&quot; }]  mutateSourceAfterCreate: true"><div></div></button></div></figure></div>
+<p>The expectation requires <code>normalized</code> and may constrain flags, boolean
+conversion, length, custom type name, equality and the equal-value hash
+invariant.</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">value</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">normalized</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">type</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">:List</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">items</span><span style="--0:#D6DEEB;--1:#403F53">: [{ </span><span style="--0:#7FDBCA;--1:#111111">type</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">:Number.int64</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">value</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">1</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> }]</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">hasValue</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">length</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">equal</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">equalHash</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="value:  normalized:    type: &quot;:List&quot;    items: [{ type: &quot;:Number.int64&quot;, value: &quot;1&quot; }]  hasValue: true  length: 1  equal: true  equalHash: true"><div></div></button></div></figure></div>
+<h3 id="externaltypeapi"><code>externalTypeApi</code></h3>
+<p>Requires <code>external-types</code> and no GES source. V1 constructs a catalog from the
+ordered <code>typeNames</code> list. Its expectation contains either <code>typeCount</code> or the
+stable error <code>duplicateTypeName</code>.</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">externalTypeApi</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">typeNames</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#ECC48D;--1:#3B61B0">sample</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#3B61B0">sample</span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="externalTypeApi:  typeNames: [sample, sample]"><div></div></button></div></figure></div>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">externalType</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">error</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">duplicateTypeName</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="externalType:  error: duplicateTypeName"><div></div></button></div></figure></div>
+<h3 id="compilemetadata"><code>compileMetadata</code></h3>
+<p>Requires <code>compiler</code> and source. Its expectation contains one or more of:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">metadata</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">messageDefinitions</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Start</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#111111">count</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#111111">signatureIds</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Start(value)</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">programResources</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">requiredRegisterCount</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">7</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">requiredCallStackDepth</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">2</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">handlerResources</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Start</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#111111">signatureId</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Start(value)</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#111111">requiredRegisterCount</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">7</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#111111">requiredCallStackDepth</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">2</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="metadata:  messageDefinitions:    - name: Start      count: 1      signatureIds: [&quot;Start(value)&quot;]  programResources:    requiredRegisterCount: 7    requiredCallStackDepth: 2  handlerResources:    - name: Start      signatureId: &quot;Start(value)&quot;      requiredRegisterCount: 7      requiredCallStackDepth: 2"><div></div></button></div></figure></div>
+<p>Every present property is an exact constraint. Sequence order is significant
+where the underlying program contract defines order.</p>
+<h3 id="bytecode"><code>bytecode</code></h3>
+<p>Requires <code>compiler</code> and source. Its expectation is:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">opcodes</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">contains</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#ECC48D;--1:#3B61B0">Multiply</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#3B61B0">EmitMessage</span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">excludes</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#ECC48D;--1:#3B61B0">Move</span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">counts</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">RandomTake</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">minimumCounts</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">PropertyAccess</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">7</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="opcodes:  contains: [Multiply, EmitMessage]  excludes: [Move]  counts: { RandomTake: 1 }  minimumCounts: { PropertyAccess: 7 }"><div></div></button></div></figure></div>
+<p>At least one constraint is required. Opcode names are exact canonical names.
+<code>contains</code> means count greater than zero; <code>excludes</code> means zero.</p>
+<h3 id="bytecodesnapshot"><code>bytecodeSnapshot</code></h3>
+<p>Requires <code>compiler</code>, the optional capability <code>bytecode-snapshot</code>, and source. It
+has exactly one <code>gesa</code> block and no <code>gesBlock: expect</code> block. The compiler’s
+canonical dumper output and the block payload are normalized to logical <code>LF</code>
+and compared byte-for-byte as UTF-8. No whitespace, address, symbol,
+source-comment, or metadata field is ignored.</p>
+<h3 id="programbinary"><code>programBinary</code></h3>
+<p>Requires <code>program-binary</code>, one <code>binaryFixture</code> mapping, and one binary
+expectation. Source fences are optional provenance and are never compiled.
+<code>compile.binaryRoundTrip</code> is invalid because the input is already binary.</p>
+<p>A case with <code>binary.outcome: valid</code> may also contain one <code>gesa</code> block. This
+implicitly requires the optional capability <code>bytecode-snapshot</code>. After reading
+and validating the fixture, the runner compares its dump with the block using
+the same exact, LF-normalized UTF-8 comparison as <code>bytecodeSnapshot</code>. It never
+substitutes compiler output for the fixture. This form isolates portable dump
+formatting from legal differences in compiler optimization. Error outcomes
+cannot contain a <code>gesa</code> block.</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">binary</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">outcome</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">valid</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">rewriteByteExact</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">rewriteSha256</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">594808EB171F039AF2182A22360C39183CC4960412EF3D76B97E3632603EECF8</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">moduleName</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">BinaryFixture</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">requiredRegisterCount</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">3</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">requiredCallStackDepth</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">0</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">opaqueSectionCount</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">0</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="binary:  outcome: valid  rewriteByteExact: true  rewriteSha256: 594808EB171F039AF2182A22360C39183CC4960412EF3D76B97E3632603EECF8  moduleName: BinaryFixture  requiredRegisterCount: 3  requiredCallStackDepth: 0  opaqueSectionCount: 0"><div></div></button></div></figure></div>
+<p><code>outcome</code> is exactly <code>valid</code>, <code>readError</code>, or <code>validationError</code>. Read errors
+cover header, framing, section representation, strict UTF-8, and bounded table
+materialization (<code>GameEventScriptProgramFormatErrorCode</code> 1 through 21).
+Validation errors cover cross-reference, opcode/operand, call-graph, resource,
+and debug/source invariants (codes 22 through 38). Error outcomes require the
+canonical <code>errorCode</code> name and may constrain <code>byteOffset</code>, <code>sectionType</code>, and
+<code>entryIndex</code>; they reject all success fields.</p>
+<p>A valid outcome may constrain the fields above. <code>rewriteByteExact</code> compares the
+fixture with a fresh canonical writer result, while <code>rewriteSha256</code> identifies
+that result independently of whether the input order was canonical. The
+fixture’s <code>programVersion</code> is always compared. When BuildMetadata is present,
+its compiler identity is compared with the manifest; runtime behavior never
+depends on it.</p>
+<p>A valid case may contain Steps and ordinary step expectations. That form also
+requires <code>host</code>, <code>vm</code>, <code>observer</code>, and <code>publish-sink</code>; the parsed fixture Program
+is loaded and executed instead of compiling the provenance source. Error cases
+cannot contain Steps. Initialization expectations are valid only together with
+Steps.</p>
+<h3 id="performance"><code>performance</code></h3>
+<p>Requires the same core capabilities as <code>scriptApi</code> plus the optional capability
+<code>performance</code>. It uses ordinary sources, steps, and correctness expectations.
+Its case metadata additionally contains:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">performance</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">iterations</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1000</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">warmupIterations</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">10</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">compileWarmupIterations</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">3</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">observeRuntime</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">true</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="performance:  iterations: 1000  warmupIterations: 10  compileWarmupIterations: 3  observeRuntime: true"><div></div></button></div></figure></div>
+<p>All counts are non-negative UInt32 and <code>iterations</code> is positive.
+<code>observeRuntime</code> is an optional Boolean, defaulting to true. It controls only
+measured execution: true installs a counting runtime observer whose callbacks
+do not allocate; false installs no runtime observer. The separate correctness
+execution still observes the complete declared outputs and traces. A provider
+that cannot honor the requested observer configuration reports an error.
+The expectation adds profile-specific baselines:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="yaml"><code><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">performance</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">profiles</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">csharp-dotnet-release-macos-arm64</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#111111">metrics</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#7FDBCA;--1:#111111">run.per-invoke-elapsed</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#111111">reference</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">0.002669</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#111111">unit</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">ms</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#111111">toleranceRelative</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">0.20</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#111111">toleranceAbsolute</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">0.001</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#7FDBCA;--1:#111111">run.per-invoke-allocated</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#111111">reference</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">0.172</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#111111">maximum</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">0.172</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#111111">unit</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">KiB</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="performance:  profiles:    csharp-dotnet-release-macos-arm64:      metrics:        run.per-invoke-elapsed:          reference: 0.002669          unit: ms          toleranceRelative: 0.20          toleranceAbsolute: 0.001        run.per-invoke-allocated:          reference: 0.172          maximum: 0.172          unit: KiB"><div></div></button></div></figure></div>
+<p>Profile IDs use the normal ID grammar. Metric IDs use the same grammar with
+additional dot-separated components. V1 performance metrics are lower-is-better.
+Units are <code>ns</code>, <code>us</code>, <code>ms</code>, <code>s</code>, <code>B</code>, <code>KiB</code>, <code>count</code>, or those units followed
+by <code>/iteration</code>. One <code>KiB</code> is exactly 1024 bytes.</p>
+<p><code>reference</code> is required and is the value updated in received output. At least
+one of <code>maximum</code>, <code>toleranceRelative</code>, or <code>toleranceAbsolute</code> is required.
+Relative tolerance is a non-negative ratio, not a percentage. The permitted
+upper bound is the smallest supplied bound among <code>maximum</code>,
+<code>reference * (1 + toleranceRelative)</code>, and
+<code>reference + toleranceAbsolute</code>. A measured value at or below the bound passes;
+an improvement never fails. All values are finite non-negative Binary64 values.</p>
+<p>Workload and correctness are shared across ports. Profiles and their baselines
+may be language-, runtime-, configuration-, OS-, and architecture-specific.</p>
+<p>The <code>performance.low-allocation</code> suite exercises the warmed allocation contract
+owned by <a href="/docs/reference/public-api/#allocation-contract">Public API</a>. Its <code>run.allocated</code>
+metric counts cumulative allocated bytes across all measured iterations; a
+zero maximum allows no tolerance or rounding of a positive count to zero.
+Reusing inputs and avoiding new payloads isolates dispatch and VM work.
+Paired 1000/2000-iteration cases test recurring allocation, with completion,
+frame pause/resume, exact/message-name matching, and observer off/on.
+Measurement coverage is qualified separately from semantic correctness, as
+defined in <a href="/docs/reference/conformance/runner/#performance">Runner</a>. Nonzero payload-allocation budgets
+remain profile-specific and do not define portable object sizes.</p>
+<h2 id="normalized-immutable-document-model">Normalized immutable document model</h2>
+<p>Parsing and schema validation produce one immutable normalized document with:</p>
+<ul>
+<li>format version and one suite with resolved defaults;</li>
+<li>cases in document order, each with stable local and full ID, display title,
+resolved kind, level, categories, tags, capabilities, options, source inputs,
+steps, and typed expectations;</li>
+<li>messages and values in their explicit portable ordered forms;</li>
+<li>original UTF-8 source ranges for the frontmatter, every test, every semantic
+block, each performance <code>reference</code> scalar, and the <code>gesa</code> payload.</li>
+</ul>
+<p>The normalized model contains no Markdown AST, YAML AST, filesystem path,
+testframework object, executable delegate, or platform exception. All exposed
+collections are immutable snapshots. Parsers may retain the original document
+bytes only as an explicit immutable source-document value used for received
+output.</p>
+<h2 id="invalid-documents-and-versioning">Invalid documents and versioning</h2>
+<p>Structural, YAML, schema, duplicate-ID, cross-reference, and kind/cardinality
+violations are errors. The parser returns no executable partial document.
+Diagnostics have stable codes, original UTF-8 byte ranges, and line/column
+locations. At minimum, implementations distinguish:</p>
+<ul>
+<li><code>conformance.markdown.invalidUtf8</code>,
+<code>conformance.markdown.missingFrontmatter</code>,
+<code>conformance.markdown.unterminatedFrontmatter</code>,
+<code>conformance.markdown.invalidTestHeading</code>,
+<code>conformance.markdown.unterminatedFence</code>,
+<code>conformance.markdown.unknownSemanticFence</code>, and
+<code>conformance.markdown.invalidStepsTable</code>;</li>
+<li><code>conformance.yaml.syntax</code>, <code>conformance.yaml.unsupportedFeature</code>,
+<code>conformance.yaml.duplicateKey</code>, <code>conformance.yaml.invalidScalar</code>, and
+<code>conformance.yaml.limitExceeded</code>;</li>
+<li><code>conformance.schema.unknownField</code>, <code>conformance.schema.missingField</code>,
+<code>conformance.schema.invalidValue</code>, <code>conformance.schema.duplicateId</code>,
+<code>conformance.schema.unknownReference</code>,
+<code>conformance.schema.invalidCardinality</code>, <code>conformance.schema.unknownKind</code>,
+and <code>conformance.schema.unsupportedVersion</code>.</li>
+</ul>
+<p>Format version 1 is closed. A parser that does not support the declared version
+must reject the document. New fields or semantics require an explicitly
+documented compatible revision strategy or a new format version; they must not
+be inferred from prose.</p>
+<h2 id="minimal-example">Minimal example</h2>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="markdown"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">---</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">formatVersion</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">suiteId</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">runtime.math</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">title</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Runtime math</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">kind</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">scriptApi</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">level</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">atomic</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">categories</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#ECC48D;--1:#3B61B0">conformance</span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">tags</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#ECC48D;--1:#3B61B0">runtime</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#3B61B0">math</span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">requires</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">core</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#ECC48D;--1:#3B61B0">compiler</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#3B61B0">host</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#3B61B0">vm</span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">---</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#82B1FF;--1:#3B61B0"># Runtime math</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#82B1FF;--1:#3B61B0">## Test: Integer addition</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">```yaml</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">gesBlock</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">case</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">id</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">integer-add</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">```</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">```ges</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">on Start(value) {</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">let result be value + 5</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">emit Done(result: result)</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">```</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#82B1FF;--1:#3B61B0">### Steps</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">| step | receive | pump | budget |</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">| --- | --- | --- | --- |</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">| add | Start | completion | |</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">```yaml</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">gesBlock</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">expect</span></div></div><div class="ec-line"><div class="code"><span style="--0:#7FDBCA;--1:#111111">steps</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#111111">add</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">input</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#111111">args</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">        </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">value</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#111111">value</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">type</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">:Number.int64</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">value</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">7</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#111111">local</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">      </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">Done</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#7FDBCA;--1:#111111">args</span><span style="--0:#D6DEEB;--1:#403F53">:</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">          </span></span><span style="--0:#D6DEEB;--1:#403F53">- </span><span style="--0:#7FDBCA;--1:#111111">name</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#ECC48D;--1:#3B61B0">result</span></div></div><div class="ec-line"><div class="code"><span class="indent">            </span><span style="--0:#7FDBCA;--1:#111111">value</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#111111">type</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">:Number.int64</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#111111">value</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">12</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">```</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="---formatVersion: 1suiteId: runtime.mathtitle: Runtime mathkind: scriptApilevel: atomiccategories: [conformance]tags: [runtime, math]requires:  core: [compiler, host, vm]---# Runtime math## Test: Integer addition&#x60;&#x60;&#x60;yamlgesBlock: caseid: integer-add&#x60;&#x60;&#x60;&#x60;&#x60;&#x60;geson Start(value) {  let result be value + 5  emit Done(result: result)}&#x60;&#x60;&#x60;### Steps| step | receive | pump | budget || --- | --- | --- | --- || add | Start | completion | |&#x60;&#x60;&#x60;yamlgesBlock: expectsteps:  add:    input:      args:        - name: value          value: { type: &quot;:Number.int64&quot;, value: &quot;7&quot; }    local:      - name: Done        args:          - name: result            value: { type: &quot;:Number.int64&quot;, value: &quot;12&quot; }&#x60;&#x60;&#x60;"><div></div></button></div></figure></div>
+<h2 id="virtual-time-actions">Virtual time actions</h2>
+<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p>Runtime cases use a virtual microsecond clock initially at zero. A host action
+<code>advanceMicroseconds: "200000"</code> advances it without pumping; its argument is a
+canonical nonnegative Int64 decimal string. Overflow returns false without
+changing time. The action can appear in stepActions or native-handler actions
+and supports expectResult. Unlike lifecycle actions, its argument is a duration,
+not a program/subscription ID. Subsequent completion/frame steps release due work.</p>
+<p>Step expectations may include <code>waiting: true|false</code>, asserting whether the last
+pump returned Waiting. An enqueue-only step has no Waiting result. Frames stop
+on Waiting instead of spinning. Tests must assert downstream emissions or trace
+entries to distinguish acceptance from actual delayed delivery.</p>
+<h3 id="product-json-message-api-checks">Product JSON message API checks</h3>
+<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p><code>messageApi</code> optionally accepts <code>json</code> (a complete product message envelope) and
+<code>roundTripJson</code> (Boolean, default false). <code>json</code> replaces the ordinary message
+fixture before checks. <code>roundTripJson</code> serializes and deserializes the message
+before the existing signature, equality and structured message assertions.
+The existing signature and message metadata remain required. The expectation
+<code>message.json</code> optionally asserts the exact canonical serialized envelope;
+<code>message.error</code> can assert the stable <code>message.*</code> codec failures. This exercises
+the independent product codec, never the Conformance value transport.</p>
+</div><footer class="sl-flex astro-ddtxxk7k"><div class="meta sl-flex astro-ddtxxk7k"><a href="https://github.com/schloepke/GameEventScript/edit/main/specs/Conformance/MarkdownFormat.md" class="sl-flex print:hidden astro-qlekgd3o"><svg aria-hidden="true" class="astro-qlekgd3o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.2em;"><path d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-1.1-.22 1 1 0 0 0-.32.22l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8c.1-.1.17-.2.22-.33a1 1 0 0 0 0-.24v-.14l.07-.05ZM6.83 20H4v-2.83l9.93-9.93 2.83 2.83L6.83 20ZM18.17 8.66l-2.83-2.83 1.42-1.41 2.82 2.82-1.41 1.42Z"/></svg>Edit page</a></div><div class="pagination-links print:hidden astro-b5raizh3" dir="ltr"><a href="/docs/reference/assembler-format/" rel="prev" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span class="astro-b5raizh3">Previous<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">`.gesa` assembler format specification</span></span></a><a href="/docs/reference/conformance/runner/" rel="next" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg><span class="astro-b5raizh3">Next<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Conformance runner specification</span></span></a></div></footer><script type="module" src="/_astro/DocsFooter.astro_astro_type_script_index_0_lang.CcG6r9Au.js"></script></div></div></main></div></div></div></div></body></html>

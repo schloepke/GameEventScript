@@ -1,0 +1,480 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-g5ptsecz"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Portable determinism semantics | Game Event Script</title><link rel="canonical" href="https://gameeventscript.org/docs/reference/semantics/determinism/"/><link rel="sitemap" href="/sitemap-index.xml"/><link rel="shortcut icon" href="/favicon-pixel-duo.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.3.5"/><meta name="generator" content="Starlight v0.42.4"/><meta property="og:title" content="Portable determinism semantics"/><meta property="og:type" content="article"/><meta property="og:url" content="https://gameeventscript.org/docs/reference/semantics/determinism/"/><meta property="og:locale" content="en"/><meta property="og:description" content="Portable determinism semantics — Game Event Script documentation."/><meta property="og:site_name" content="Game Event Script"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Portable determinism semantics — Game Event Script documentation."/><script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script><template id="theme-icons"><svg aria-hidden="true" class="light astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg><svg aria-hidden="true" class="dark astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg><svg aria-hidden="true" class="auto astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg></template><link rel="stylesheet" href="/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/_astro/common.CIp__BGE.css"><script type="module" src="/_astro/page.Dwipeu-R.js"></script></head><body class="astro-g5ptsecz"><a class="sl-skip-link astro-qb7clj6f" href="#_top">Skip to content</a><div class="page sl-flex astro-yntsjkba"><header class="header astro-yntsjkba"><div class="header astro-by6fddyj"><div class="title-wrapper sl-flex astro-by6fddyj"><a href="/" class="site-title sl-flex astro-6rvad3va"><img class="astro-6rvad3va" alt src="/_astro/mark.DsNbRX0k.svg" width="64" height="64"><span class="astro-6rvad3va" translate="no">Game Event Script</span></a></div><div class="sl-flex print:hidden astro-by6fddyj"><site-search class="astro-by6fddyj astro-b5kgnn7o" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-b5kgnn7o"><svg aria-hidden="true" class="astro-b5kgnn7o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block astro-b5kgnn7o" aria-hidden="true">Search</span><kbd class="sl-hidden md:sl-flex astro-b5kgnn7o" style="display: none;"><kbd class="astro-b5kgnn7o">Ctrl</kbd><kbd class="astro-b5kgnn7o">K</kbd></kbd></button><dialog style="padding:0" aria-label="Search" class="astro-b5kgnn7o"><div class="dialog-frame sl-flex astro-b5kgnn7o"><button data-close-modal class="sl-flex md:sl-hidden astro-b5kgnn7o">Cancel</button><div class="search-container astro-b5kgnn7o"><div id="starlight__search" class="astro-b5kgnn7o"></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/_astro/Search.astro_astro_type_script_index_0_lang.BuGLwjLu.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group astro-by6fddyj"><div class="sl-flex social-icons astro-by6fddyj"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script><script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div><aside class="ges-development-notice" aria-label="Documentation version" data-pagefind-ignore>Development documentation. Check the <a href="/docs/changelog/">changelog</a> when using a published package.</aside><script type="module">var e=document.querySelector(`.ges-development-notice`);if(e){let t=()=>document.documentElement.style.setProperty(`--ges-notice-height`,`${e.getBoundingClientRect().height}px`);t(),new ResizeObserver(t).observe(e)}</script></header><nav class="sidebar print:hidden astro-yntsjkba" aria-label="Main"><button popovertarget="starlight__sidebar" class="sl-menu-button sl-flex md:sl-hidden print:hidden astro-r2osgdlg"><svg aria-hidden="true" class="open-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg><svg aria-hidden="true" class="close-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg><span class="sr-only astro-r2osgdlg">Menu</span></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=matchMedia(`(min-width: 50em)`),t=()=>{this.popover=e.matches?null:`auto`};t(),e.addEventListener(`change`,()=>t()),this.addEventListener(`toggle`,({newState:e})=>this.trapFocus(e===`open`))}trapFocus(e){document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}};customElements.define(`sl-sidebar-pane`,e);</script><sl-sidebar-pane popover id="starlight__sidebar" class="sidebar-pane astro-yntsjkba"><div class="sidebar-content sl-flex astro-yntsjkba"><sl-sidebar-state-persist data-hash="1syr27k" class="astro-ipdry5cl"><script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script><ul class="top-level astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/" class="large astro-rmhv4bp6"><span class="astro-rmhv4bp6">Home</span></a></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Start here</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="0"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Documentation overview</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Learn the language</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in C#</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in Swift</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Tools</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="1"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Native Swift CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/editor-bundles/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">TextMate editor bundles</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Native integration</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="2"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/implementations/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/csharp-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# API reference</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/implementations/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/swift-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift API reference</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Language and host reference</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="3"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script language specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/text/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable text and Unicode semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/numbers/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable number semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/determinism/" aria-current="page" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable determinism semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/host-runtime/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Host runtime specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/public-api/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable public API specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/diagnostics/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable diagnostics specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/message-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Product message JSON V1</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/syntax-highlighting/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Syntax highlighting</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Program formats</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="4"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/program-model/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable program model specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/bytecode/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Bytecode specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/binary-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesb` binary format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/assembler-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesa` assembler format specification</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Conformance</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="5"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/markdown-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance Markdown format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/runner/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance runner specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/environment/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance environment specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/coverage/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable Conformance Coverage</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/cross-language-acceptance/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Cross-language conformance acceptance</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Packages and releases</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="6"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/distribution/packages/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Library packages and releases</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/distribution/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# distribution</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/changelog/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Changelog</span></a></li></ul></details></li></ul><script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist><div class="md:sl-hidden"><div class="mobile-preferences sl-flex astro-p4azlveh"><div class="social-icons astro-p4azlveh"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script></div></div></div></sl-sidebar-pane></nav><div class="main-frame astro-yntsjkba"><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-lrzkfocr"><aside class="right-sidebar-container print:hidden astro-lrzkfocr"><div class="right-sidebar astro-lrzkfocr"><div class="lg:sl-hidden astro-qok35upx"><mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-66cqc7ze"><nav aria-labelledby="starlight__on-this-page--mobile" class="astro-66cqc7ze"><details id="starlight__mobile-toc" class="astro-66cqc7ze"><summary id="starlight__on-this-page--mobile" class="sl-flex astro-66cqc7ze"><span class="toggle sl-flex astro-66cqc7ze">On this page<svg aria-hidden="true" class="caret astro-66cqc7ze astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current astro-66cqc7ze"></span></summary><div class="dropdown astro-66cqc7ze"><ul class="isMobile astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#seeded-random-generator" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Seeded random generator</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#entropy-to-seed-mixing" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Entropy-to-seed mixing</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#seeded-random-scopes" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Seeded random scopes</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#equality" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Equality</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#ordering-and-stable-sorting" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Ordering and stable sorting</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#highestlowest-slicing" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Highest/lowest slicing</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#iteration-and-ranges" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Iteration and ranges</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#host-dispatch-order" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Host dispatch order</span></a></li></ul></div></details></nav></mobile-starlight-toc><script type="module" src="/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C3fM4Kra.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block astro-qok35upx"><div class="sl-container astro-qok35upx"><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul class="astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#seeded-random-generator" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Seeded random generator</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#entropy-to-seed-mixing" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Entropy-to-seed mixing</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#seeded-random-scopes" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Seeded random scopes</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#equality" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Equality</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#ordering-and-stable-sorting" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Ordering and stable sorting</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#highestlowest-slicing" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Highest/lowest slicing</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#iteration-and-ranges" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Iteration and ranges</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#host-dispatch-order" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Host dispatch order</span></a></li></ul></nav></starlight-toc><script type="module" src="/_astro/TableOfContents.astro_astro_type_script_index_0_lang.BpJaGz7G.js"></script></div></div></div></aside><div class="main-pane astro-lrzkfocr"><main data-pagefind-body class="astro-g5ptsecz" lang="en" dir="ltr"><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><h1 id="_top" class="astro-bebwqqxs">Portable determinism semantics</h1></div></div><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><div class="sl-markdown-content"><!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<p class="ges-since"><strong>Since: 0.1.0</strong></p>
+<p>This document defines the language-neutral deterministic behavior that every
+Game Event Script compiler and runtime port must reproduce. It complements
+<a href="/docs/reference/semantics/text/">Text semantics</a>, <a href="/docs/reference/semantics/numbers/">Number semantics</a>, <a href="/docs/reference/bytecode/">Bytecode</a>, and
+<a href="/docs/reference/host-runtime/">Host runtime</a>.</p>
+<p class="ges-since"><strong>Since: Unreleased — monotonic-clock observations for delayed dispatch</strong></p>
+<p>Determinism means that the same validated program, ordered inputs, host
+configuration, initial random seed, observed monotonic-clock readings, and runtime limits produce the same visible
+messages and values. Wall-clock time, thread scheduling, object identity,
+platform hash iteration, and the non-seeded <code>Create()</code> random source are not
+deterministic inputs. Delayed dispatch is reproducible when clock observations
+and pump boundaries are reproduced; see <a href="/docs/reference/host-runtime/#delayed-dispatch">Host runtime</a>.</p>
+<p>This cross-implementation guarantee is subject to the explicitly permitted
+numeric variation in <a href="/docs/reference/semantics/numbers/">Number semantics</a>, including math-library
+rounding and numeric text spellings. Numeric text output must be repeatable
+within a fixed implementation and version, but may differ across ports as
+defined by <a href="/docs/reference/semantics/numbers/#numeric-text-output-and-roundtrip">numeric text output</a>.
+Text operations still observe the actual spelling exactly. Consequently a
+script that compares formatted numbers to fixed strings, uses them as keys,
+or branches on their characters can also produce different subsequent results
+across ports. The numeric roundtrip guarantee does not make those strings equal.</p>
+<h2 id="seeded-random-generator">Seeded random generator</h2>
+<p><code>GameEventScriptRandomGenerator.FromSeed(Int64)</code> is a portable seeded stream.
+The signed seed is reinterpreted as its two’s-complement <code>UInt64</code> bit pattern.
+All operations in this section use wrapping unsigned 64-bit arithmetic.</p>
+<p>The four-word xoshiro state is initialized by four consecutive SplitMix64
+outputs. SplitMix64 adds <code>0x9E3779B97F4A7C15</code> before every output and applies:</p>
+<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">z = (z xor (z &gt;&gt; 30)) * 0xBF58476D1CE4E5B9</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">z = (z xor (z &gt;&gt; 27)) * 0x94D049BB133111EB</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">result = z xor (z &gt;&gt; 31)</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="z = (z xor (z >> 30)) * 0xBF58476D1CE4E5B9z = (z xor (z >> 27)) * 0x94D049BB133111EBresult = z xor (z >> 31)"><div></div></button></div></figure></div>
+<p>The raw generator is xoshiro256**. For state words <code>s0..s3</code>, one output is:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">result = rotateLeft(s1 * 5, 7) * 9</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">t = s1 &lt;&lt; 17</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">s2 = s2 xor s0</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">s3 = s3 xor s1</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">s1 = s1 xor s2</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">s0 = s0 xor s3</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">s2 = s2 xor t</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">s3 = rotateLeft(s3, 45)</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="result = rotateLeft(s1 * 5, 7) * 9t = s1 << 17s2 = s2 xor s0s3 = s3 xor s1s1 = s1 xor s2s0 = s0 xor s3s2 = s2 xor ts3 = rotateLeft(s3, 45)"><div></div></button></div></figure></div>
+<p>Known raw <code>UInt64</code> outputs, in generation order:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right">Seed</th>
+<th>Outputs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right"><code>0</code></td>
+<td><code>99EC5F36CB75F2B4</code>, <code>BF6E1F784956452A</code>, <code>1A5F849D4933E6E0</code>, <code>6AA594F1262D2D2C</code>, <code>BBA5AD4A1F842E59</code>, <code>FFEF8375D9EBCACA</code>, <code>6C160DEED2F54C98</code>, <code>8920AD648FC30A3F</code></td>
+</tr>
+<tr>
+<td style="text-align: right"><code>1</code></td>
+<td><code>B3F2AF6D0FC710C5</code>, <code>853B559647364CEA</code>, <code>92F89756082A4514</code>, <code>642E1C7BC266A3A7</code>, <code>B27A48E29A233673</code>, <code>24C123126FFDA722</code>, <code>123004EF8DF510E6</code>, <code>61954DCC47B1E89D</code></td>
+</tr>
+<tr>
+<td style="text-align: right"><code>-1</code></td>
+<td><code>8F5520D52A7EAD08</code>, <code>C476A018CAA1802D</code>, <code>81DE31C0D260469E</code>, <code>BF658D7E065F3C2F</code>, <code>913593FDA1BCA32A</code>, <code>BB535E93941BA525</code>, <code>5ECDA415C3C6DFDE</code>, <code>C487398FC9DE9AE2</code></td>
+</tr>
+<tr>
+<td style="text-align: right"><code>Int64.MinValue</code></td>
+<td><code>D01BFA9B44A998C3</code>, <code>797C6B72FF690D62</code>, <code>4576AF98398380B1</code>, <code>E5CE401830AAA16C</code>, <code>A5EECCC1D5D5EE1A</code>, <code>CD43606B62171D67</code>, <code>4205C135C5E32535</code>, <code>6D11E27BBF34F857</code></td>
+</tr>
+<tr>
+<td style="text-align: right"><code>Int64.MaxValue</code></td>
+<td><code>0E1C2B4B82E8C0C5</code>, <code>19167A27A6E0D81B</code>, <code>7B5F1A55D35896BD</code>, <code>0D19F02BF9005C90</code>, <code>0EEE111B5F85ACA0</code>, <code>BB969C534267CF4F</code>, <code>BAEC81932902A56E</code>, <code>134E81D9C55B497C</code></td>
+</tr>
+</tbody>
+</table>
+<p>Inclusive integer sampling first swaps reversed bounds. Equal bounds return that
+value without consuming the stream. Otherwise it computes the inclusive span
+modulo <code>2^64</code>. A zero span denotes the full <code>UInt64</code> range. For a non-zero span
+<code>b</code>, sampling uses unbiased rejection:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">threshold = (0 - b) mod b</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">repeat raw = nextUInt64 until raw &gt;= threshold</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">offset = raw mod b</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">result = minInclusive + offset</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="threshold = (0 - b) mod brepeat raw = nextUInt64 until raw >= thresholdoffset = raw mod bresult = minInclusive + offset"><div></div></button></div></figure></div>
+<p>For seed <code>0</code>, eight samples from <code>[-100, 100]</code> are:
+<code>16, -95, -9, -45, -76, 43, -62, -21</code>.</p>
+<p><code>NextFloat(firstBound, secondBound)</code> orders its two bounds and derives a unit
+value from the upper 53 bits:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">unit = (nextUInt64 &gt;&gt; 11) * 2^-53</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">result = min + (max - min) * unit</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="unit = (nextUInt64 >> 11) * 2^-53result = min + (max - min) * unit"><div></div></button></div></figure></div>
+<p>The seeded unit value lies in <code>[0, 1)</code>, but the final binary64 multiplication
+and addition can round the result to the upper bound. Consequently the public
+method is not named <code>NextInclusiveFloat</code> and callers must not infer the source
+interval from the possible rounded result values.</p>
+<p>Reversed bounds are swapped. Equal bounds return the first bound without
+consuming the stream; this also preserves the first bound’s signed-zero bit.
+A NaN bound returns NaN without consuming the stream. These no-consumption
+rules apply to seeded generators and to the <code>FromSequence</code> test adapter.</p>
+<p>For seed <code>0</code>, the first five <code>NextFloat(0, 1)</code> result bit patterns are
+<code>3FE33D8BE6D96EBE</code>, <code>3FE7EDC3EF092AC8</code>, <code>3FBA5F849D4933E0</code>,
+<code>3FDAA9653C498B4A</code>, and <code>3FE774B5A943F085</code>.</p>
+<p>For seed <code>0</code>, <code>NextFloat(1, 1.0000000000000002)</code> produces the upper-bound
+bit pattern <code>3FF0000000000001</code> through binary64 rounding even though the unit
+sample is less than one.</p>
+<p><code>Create()</code> intentionally chooses a non-deterministic seed and therefore has no
+cross-platform output contract. <code>FromSequence</code> is a test adapter: supplied
+values are copied, consumed in order, and clamped to requested non-collapsed
+bounds. After exhaustion it continues with its private generator. The public
+standalone factory and the seedless host default seed that fallback from the
+platform entropy source. Host configuration may provide an explicit fallback
+seed; Markdown conformance uses seed <code>0</code>, so an exhausted test sequence remains
+portable and reproducible.</p>
+<p>The portable core has two platform-specific default services: entropy acquisition
+and a monotonic clock. Each language port supplies native implementations. Default
+entropy never participates in the deterministic contract; Conformance cases pin
+an explicit seed, fixed entropy bytes, or a sequence with a deterministic fallback
+seed. Time-dependent execution additionally requires identical observed clock
+readings and pump calls for reproduction. Conformance supplies a controlled clock.
+The clock and delayed-delivery contract is owned by <a href="/docs/reference/host-runtime/">HostRuntime</a>.</p>
+<p>A host never accepts or retains an externally owned mutable generator. Its
+builder accepts a seed, entropy bytes, or immutable sequence values and
+constructs a private generator for every built host. Two hosts built from one
+builder therefore have independent state even when their initial streams are
+identical.</p>
+<h3 id="entropy-to-seed-mixing">Entropy-to-seed mixing</h3>
+<p><code>SeedFromEntropy</code> folds a non-empty byte span into a signed 64-bit seed. The
+fold is deterministic and endian-neutral: identical input bytes yield an
+identical seed on every platform, so a captured entropy blob reproduces a run
+across ports. Empty input is rejected. <code>FromEntropy(bytes)</code> is exactly
+<code>FromSeed(SeedFromEntropy(bytes))</code>, and the same seed may configure several
+generators or hosts.</p>
+<p>Let <code>mix(x)</code> be one SplitMix64 step over an unsigned 64-bit <code>x</code>: first
+<code>z = x + 0x9E3779B97F4A7C15</code>, then <code>z = (z XOR (z &gt;&gt; 30)) * 0xBF58476D1CE4E5B9</code>,
+then <code>z = (z XOR (z &gt;&gt; 27)) * 0x94D049BB133111EB</code>, then <code>z = z XOR (z &gt;&gt; 31)</code>;
+every operation wraps modulo 2^64. Starting from <code>state = 0x9E3779B97F4A7C15</code>,
+for each entropy byte <code>b</code> in order set <code>state = mix(state XOR b)</code>. The signed
+reinterpretation of the final <code>state</code> is the seed.</p>
+<table>
+<thead>
+<tr>
+<th>Input bytes (hex)</th>
+<th><code>SeedFromEntropy</code> (unsigned 64-bit)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>00</code></td>
+<td><code>0x6E789E6AA1B965F4</code></td>
+</tr>
+<tr>
+<td><code>0102030405060708</code></td>
+<td><code>0x1173D7AFB02D3CEC</code></td>
+</tr>
+<tr>
+<td><code>47616D654576656E74536372697074</code></td>
+<td><code>0x22BBD271B02CF303</code></td>
+</tr>
+<tr>
+<td><code>FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF</code></td>
+<td><code>0xF2AAB36F77725D29</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="seeded-random-scopes">Seeded random scopes</h2>
+<p><code>random with seed</code> requires the seed to be statically known as a unitless exact
+integer or explicitly converted with <code>as :Number</code>. A runtime seed value creates
+a newly seeded stream only when it is a unitless exact integer in the signed
+64-bit range.</p>
+<p>Every seeded-random construct first snapshots the complete active random state.
+If the runtime seed is valid, the active state is reset from that seed. If it is
+invalid, fractional, unit-bearing, or <code>nothing</code>, the active state remains an
+identical copy of its parent state and no diagnostic is reported. The body may
+consume any number of values from that copied state. Leaving the construct
+always restores the saved parent state exactly, so an invalid scoped seed can
+never advance or otherwise perturb its parent stream.</p>
+<p>Scopes may nest and the same snapshot/restore rule applies at every level. The
+random-state stack belongs to the host generator rather than the VM, allowing
+extensions to observe and explicitly create scopes on the same active stream.
+The host marks every native and script handler boundary, and every extension
+call adds a nested marker. Handler cleanup unwinds outstanding snapshots if a
+runtime limit or diagnostic prevents normal execution of a matching <code>RandomPop</code>.
+Script handler markers persist across frame pauses and are independent of the
+thread that executes a later frame.</p>
+<p><code>MaxRandomScopeDepth</code> limits simultaneously active regular scopes. The limit is
+exact: an implementation reserves one additional state exclusively as an
+overpush gate. The first rejected push saves the last valid stream in that gate,
+latches the runtime-limit fault, and makes all subsequent random work disposable
+until boundary release. Additional rejected pushes and their pops only maintain
+a suppressed nesting count and cannot touch valid parent states. Emit and
+Publish are rejected while the gate is active. Bytecode stops immediately;
+atomic native and extension callbacks are checked when they return. No exception
+is required or observable. Boundary release restores the valid stream, and the
+host remains usable for later handlers and messages.</p>
+<h2 id="equality">Equality</h2>
+<p>The script operators <code>=</code> and <code>&lt;&gt;</code> use script equality:</p>
+<ul>
+<li>If either operand is <code>nothing</code>, the result is <code>nothing</code>.</li>
+<li>Boolean, integer, float, percentage, and dice values have a numeric view.
+Different numeric kinds compare through that view, quantities require the
+same unit, and binary64 comparison follows <a href="/docs/reference/semantics/numbers/">Number semantics</a>.
+Top-level dice compare by the sum of their rolls.</li>
+<li>Text and tag are distinct kinds. Equal character content does not make a text
+equal to a tag.</li>
+<li>All other present cross-kind pairs are unequal. In particular, a map is not
+equal to a record, and records with different declared types are unequal.</li>
+<li>Vector and point require the same kind and unit. Handlers require the same
+signature. Series require the same signature and offset. Ranges require the
+same representation and bounds/step.</li>
+<li>Lists, maps, records, and message arguments use structural value equality for
+their nested values. Structural equality requires the same value kind and
+unit; it does not apply top-level numeric coercion or the two-ULP tolerance.
+Thus <code>10 = 1000%</code> and two dice with the same sum can be true at top level,
+while <code>[10] = [1000%]</code> and lists containing different roll sequences are
+false.</li>
+</ul>
+<p>Structural value equality is also used by membership, distinct, grouping keys,
+set-like collection operators, public value equality, and message argument
+equality. Finite Binary64 values compare exactly there; positive and negative
+zero are equal, equal-signed infinities are equal, and internal NaN values are
+never exposed as ordinary script values.</p>
+<h2 id="ordering-and-stable-sorting">Ordering and stable sorting</h2>
+<p>Text and map-key order is Unicode-scalar ordinal as defined by
+<a href="/docs/reference/semantics/text/">Text semantics</a>. Maps and map-backed records expose keys, values,
+entries, iteration, <code>first</code>, and <code>last</code> in ascending key order, independent of
+insertion order or hash-table behavior. Duplicate map construction keys use
+last-entry-wins before the final key sort.</p>
+<p><code>:sort</code> and <code>:order by</code> are stable in both ascending and descending direction.
+Items whose comparison keys are equal retain source order. Implementations may
+use any sorting algorithm only if it preserves this observable rule.</p>
+<p>Comparable numeric values require compatible units. Text and tags use scalar
+ordinal order. Boolean values order <code>false</code> before <code>true</code>; vector and point
+values use lexicographic <code>x</code>, then <code>y</code>, then <code>z</code> order when their kinds and units
+are compatible. Incompatible units or an invalid comparison make the sort
+result <code>nothing</code>. If both operands have numeric views, numeric comparison takes
+precedence over kind rank; this includes booleans and dice sums. Otherwise the
+portable heterogeneous rank is:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right">Rank</th>
+<th>Kinds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right">1</td>
+<td>integer, float, percentage</td>
+</tr>
+<tr>
+<td style="text-align: right">2</td>
+<td>text</td>
+</tr>
+<tr>
+<td style="text-align: right">3</td>
+<td>tag</td>
+</tr>
+<tr>
+<td style="text-align: right">4</td>
+<td>vector</td>
+</tr>
+<tr>
+<td style="text-align: right">5</td>
+<td>point</td>
+</tr>
+<tr>
+<td style="text-align: right">6</td>
+<td>boolean when the other value is not numeric-capable</td>
+</tr>
+<tr>
+<td style="text-align: right">8</td>
+<td>range, series, custom record, and otherwise unranked supported values</td>
+</tr>
+<tr>
+<td style="text-align: right">9</td>
+<td>message</td>
+</tr>
+<tr>
+<td style="text-align: right">10</td>
+<td>handler</td>
+</tr>
+<tr>
+<td style="text-align: right">11</td>
+<td>list</td>
+</tr>
+<tr>
+<td style="text-align: right">12</td>
+<td>map</td>
+</tr>
+<tr>
+<td style="text-align: right">13</td>
+<td>dice when the other value is not numeric-capable</td>
+</tr>
+</tbody>
+</table>
+<p>There is intentionally no rank 7 in the V1 contract. When same-rank supported
+values have no finer ordering, their comparison is equal and stable source
+order is retained.</p>
+<h3 id="highestlowest-slicing">Highest/lowest slicing</h3>
+<p><code>:take highest</code>, <code>:take lowest</code>, <code>:drop highest</code>, and <code>:drop lowest</code> use the
+same selection order for direct collections and iterator pipelines. This order
+is distinct from the sort order above. If both values have numeric views,
+compare units first (<code>none</code>, degrees, meters, seconds), then numeric values;
+Boolean and Dice participate through their numeric views. Otherwise use:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right">Rank</th>
+<th>Kinds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right">0</td>
+<td>nothing</td>
+</tr>
+<tr>
+<td style="text-align: right">1</td>
+<td>numeric-capable values and tags</td>
+</tr>
+<tr>
+<td style="text-align: right">2</td>
+<td>text</td>
+</tr>
+<tr>
+<td style="text-align: right">4</td>
+<td>vector</td>
+</tr>
+<tr>
+<td style="text-align: right">5</td>
+<td>point</td>
+</tr>
+<tr>
+<td style="text-align: right">7</td>
+<td>series</td>
+</tr>
+<tr>
+<td style="text-align: right">8</td>
+<td>range</td>
+</tr>
+<tr>
+<td style="text-align: right">9</td>
+<td>message</td>
+</tr>
+<tr>
+<td style="text-align: right">10</td>
+<td>handler</td>
+</tr>
+<tr>
+<td style="text-align: right">11</td>
+<td>list</td>
+</tr>
+<tr>
+<td style="text-align: right">12</td>
+<td>map and custom record/external values</td>
+</tr>
+</tbody>
+</table>
+<p>Within rank 1, a Tag follows Boolean, Number and Percentage but precedes Dice;
+numeric-to-numeric comparison still takes precedence. Within rank 12, a Map
+precedes a custom value. Text/Tag pairs of the same kind compare by Unicode
+scalars; vectors/points of the same kind compare units first, then coordinates
+lexicographically. Other same-rank pairs have no finer ordering.</p>
+<p>Equal candidates retain source order. <code>take highest/lowest</code> selects successive
+extrema in that stable order; <code>drop highest/lowest</code> removes those candidates and
+retains the original order of the remaining values. Dice results retain their
+canonical descending roll representation.</p>
+<h2 id="iteration-and-ranges">Iteration and ranges</h2>
+<p>Iteration order is never inherited from a platform hash container:</p>
+<ul>
+<li>lists retain list order;</li>
+<li>dice retain their stored roll order;</li>
+<li>text and tags yield Unicode scalars in text order;</li>
+<li>vector and point yield <code>x</code>, <code>y</code>, then <code>z</code>;</li>
+<li>maps and records yield values in ascending key order;</li>
+<li>transformed iterators retain source order unless an explicit ordering or
+random operation changes it.</li>
+</ul>
+<p>Ranges are inclusive. A zero step or a step whose direction cannot reach the
+end produces an empty range. Integer range length and term calculation must use
+overflow-safe unsigned-distance arithmetic; reaching <code>Int64.MaxValue</code> or
+<code>Int64.MinValue</code> must never wrap into additional items. A range iterator emits
+exactly its precomputed length and does not decide termination by incrementing
+past the final value.</p>
+<p>Floating ranges require finite bounds and a finite non-zero step. Their length
+is computed with Binary64 operations as
+<code>floor(distance / abs(step)) + 1</code>, saturated to <code>Int64.MaxValue</code>, after the same
+direction checks. Iterators emit exactly that precomputed count. This also
+prevents an infinite iterator when <code>current + step == current</code> at large
+magnitudes. Host runtime limits may reject a valid but excessive range before
+iteration.</p>
+<p>For a floating range, every element is computed from its zero-based index <code>i</code>:
+convert <code>i</code> to Binary64, multiply by <code>step</code>, then add <code>from</code>. Conversion,
+multiplication, and addition each round to nearest, ties to even. Multiplication
+and addition are separate operations; neither repeated addition nor a fused
+multiply-add defines the sequence. If rounding places the result beyond <code>to</code>
+in the step direction, clamp it to <code>to</code>. The precomputed count remains
+authoritative, so every in-range index has an element even at a rounded endpoint.
+Different indexes may produce the same value at large magnitudes.</p>
+<p>Index access, iteration, materialization, and collection operations on a given
+floating range use this same sequence, with ordinary numeric canonicalization.
+Membership is exact: a unitless Number is contained if and only if its value
+equals an element at one of the precomputed indexes. A nearby Binary64 value,
+a Quantity, a Percentage, and an Int64 value that only rounds to an element on
+conversion to Binary64 do not match. No tolerance or exactly integral division
+quotient defines membership. Empty ranges contain no values.</p>
+<p>Indexing remains one-based. Index zero, negative indexes, and indexes greater
+than the finite item count yield <code>nothing</code>. Empty iterator terminals return
+<code>nothing</code>, except boolean quantifiers: <code>any</code> is false and <code>all</code> is true for an
+empty source.</p>
+<h2 id="host-dispatch-order">Host dispatch order</h2>
+<p>The host captures an immutable subscription snapshot when a logical message is
+enqueued. Every captured handler for that message completes before the next
+logical message starts. Matching handlers run by descending priority, then by
+ascending registration order. Script handlers are registered in program bind
+order when <code>Load</code> runs; equally prioritized programs therefore follow host load
+order. Native subscriptions participate in the same ordering and have no
+special script/native precedence.</p>
+<p>Detach, unsubscribe, load, or subscribe during dispatch affects only messages
+whose snapshots are captured afterward. These rules are independent of frame
+budgeting and asynchronous adapters around the synchronous portable host.</p>
+<p class="ges-since"><strong>Since: Unreleased — integral Range normalization</strong></p>
+<p>Integral Range normalization follows <a href="/docs/reference/language/#range">Language</a>: endpoints and
+step exactly representable as Int64 select integer terms before the binary64 rule
+is considered, including ranges constructed through host APIs.</p>
+</div><footer class="sl-flex astro-ddtxxk7k"><div class="meta sl-flex astro-ddtxxk7k"><a href="https://github.com/schloepke/GameEventScript/edit/main/specs/Semantics/Determinism.md" class="sl-flex print:hidden astro-qlekgd3o"><svg aria-hidden="true" class="astro-qlekgd3o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.2em;"><path d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-1.1-.22 1 1 0 0 0-.32.22l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8c.1-.1.17-.2.22-.33a1 1 0 0 0 0-.24v-.14l.07-.05ZM6.83 20H4v-2.83l9.93-9.93 2.83 2.83L6.83 20ZM18.17 8.66l-2.83-2.83 1.42-1.41 2.82 2.82-1.41 1.42Z"/></svg>Edit page</a></div><div class="pagination-links print:hidden astro-b5raizh3" dir="ltr"><a href="/docs/reference/semantics/numbers/" rel="prev" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span class="astro-b5raizh3">Previous<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Portable number semantics</span></span></a><a href="/docs/reference/host-runtime/" rel="next" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg><span class="astro-b5raizh3">Next<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Host runtime specification</span></span></a></div></footer><script type="module" src="/_astro/DocsFooter.astro_astro_type_script_index_0_lang.CcG6r9Au.js"></script></div></div></main></div></div></div></div></body></html>

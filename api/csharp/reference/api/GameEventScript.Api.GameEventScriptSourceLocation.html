@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class GameEventScriptSourceLocation | Game Event Script C# API — Unreleased (fd2609345491) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class GameEventScriptSourceLocation | Game Event Script C# API — Unreleased (fd2609345491) ">
+      
+      <meta name="description" content="Represents a specific location in a source file or module for the GameEventScript compiler. This class is used to pinpoint the origin of a particular piece of code or error within a source context.">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Api.GameEventScriptSourceLocation">
+
+
+
+  <h1 id="GameEventScript_Api_GameEventScriptSourceLocation" data-uid="GameEventScript.Api.GameEventScriptSourceLocation" class="text-break">
+Class GameEventScriptSourceLocation  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.Api.html">Api</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Represents a specific location in a source file or module for the GameEventScript compiler.
+This class is used to pinpoint the origin of a particular piece of code or error within a source context.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public sealed record GameEventScriptSourceLocation : IEquatable&lt;GameEventScriptSourceLocation&gt;</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">GameEventScriptSourceLocation</span></div>
+    </dd>
+  </dl>
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.iequatable-1">IEquatable</a>&lt;<a class="xref" href="GameEventScript.Api.GameEventScriptSourceLocation.html">GameEventScriptSourceLocation</a>&gt;</div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="GameEventScript_Api_GameEventScriptSourceLocation__ctor_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.#ctor*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptSourceLocation__ctor_System_String_System_Nullable_System_Int32__System_Nullable_System_Int32__System_Nullable_System_Int32__System_Nullable_System_Int32__System_String_System_Nullable_System_UInt32__" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.#ctor(System.String,System.Nullable{System.Int32},System.Nullable{System.Int32},System.Nullable{System.Int32},System.Nullable{System.Int32},System.String,System.Nullable{System.UInt32})">
+  GameEventScriptSourceLocation(string, int?, int?, int?, int?, string, uint?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Represents a specific location in a source file or module for the GameEventScript compiler.
+This class is used to pinpoint the origin of a particular piece of code or error within a source context.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GameEventScriptSourceLocation(string SourceName, int? Line = null, int? Column = null, int? EndLine = null, int? EndColumn = null, string ModuleName = &quot;UnknownModule&quot;, uint? SourceId = null)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>SourceName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The name of the source file where the location resides.</p>
+</dd>
+    <dt><code>Line</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>?</dt>
+    <dd><p>The starting line number of the location. This value is optional and may be null if the line is not specified.</p>
+</dd>
+    <dt><code>Column</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>?</dt>
+    <dd><p>The starting column number of the location. This value is optional and may be null if the column is not specified.</p>
+</dd>
+    <dt><code>EndLine</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>?</dt>
+    <dd><p>The ending line number of the location. This value is optional and may be null if the range is not specified or is single-line.</p>
+</dd>
+    <dt><code>EndColumn</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>?</dt>
+    <dd><p>The ending column number of the location. This value is optional and may be null if the range is not specified or is single-line.</p>
+</dd>
+    <dt><code>ModuleName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The name of the GameEventScript module where the location resides. Defaults to &quot;UnknownModule&quot; if not explicitly provided.</p>
+</dd>
+    <dt><code>SourceId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a>?</dt>
+    <dd><p>The stable compiler-input identifier, when the location originated from a compiled source document.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="GameEventScript_Api_GameEventScriptSourceLocation_Column_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.Column*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptSourceLocation_Column" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.Column">
+  Column
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The starting column number of the location. This value is optional and may be null if the column is not specified.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int? Column { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptSourceLocation_EndColumn_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.EndColumn*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptSourceLocation_EndColumn" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.EndColumn">
+  EndColumn
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The ending column number of the location. This value is optional and may be null if the range is not specified or is single-line.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int? EndColumn { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptSourceLocation_EndLine_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.EndLine*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptSourceLocation_EndLine" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.EndLine">
+  EndLine
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The ending line number of the location. This value is optional and may be null if the range is not specified or is single-line.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int? EndLine { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptSourceLocation_Line_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.Line*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptSourceLocation_Line" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.Line">
+  Line
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The starting line number of the location. This value is optional and may be null if the line is not specified.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int? Line { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptSourceLocation_ModuleName_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.ModuleName*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptSourceLocation_ModuleName" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.ModuleName">
+  ModuleName
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The name of the GameEventScript module where the location resides. Defaults to &quot;UnknownModule&quot; if not explicitly provided.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string ModuleName { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptSourceLocation_SourceId_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.SourceId*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptSourceLocation_SourceId" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.SourceId">
+  SourceId
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The stable compiler-input identifier, when the location originated from a compiled source document.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public uint? SourceId { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptSourceLocation_SourceName_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.SourceName*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptSourceLocation_SourceName" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.SourceName">
+  SourceName
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The name of the source file where the location resides.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string SourceName { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="GameEventScript_Api_GameEventScriptSourceLocation_Deconstruct_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.Deconstruct*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptSourceLocation_Deconstruct_System_String__System_Nullable_System_Int32___System_Nullable_System_Int32___System_Nullable_System_Int32___System_Nullable_System_Int32___System_String__System_Nullable_System_UInt32___" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.Deconstruct(System.String@,System.Nullable{System.Int32}@,System.Nullable{System.Int32}@,System.Nullable{System.Int32}@,System.Nullable{System.Int32}@,System.String@,System.Nullable{System.UInt32}@)">
+  Deconstruct(out string, out int?, out int?, out int?, out int?, out string, out uint?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Deconstruct(out string SourceName, out int? Line, out int? Column, out int? EndLine, out int? EndColumn, out string ModuleName, out uint? SourceId)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>SourceName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+    <dt><code>Line</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>?</dt>
+    <dd></dd>
+    <dt><code>Column</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>?</dt>
+    <dd></dd>
+    <dt><code>EndLine</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>?</dt>
+    <dd></dd>
+    <dt><code>EndColumn</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>?</dt>
+    <dd></dd>
+    <dt><code>ModuleName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+    <dt><code>SourceId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptSourceLocation_Equals_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.Equals*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptSourceLocation_Equals_GameEventScript_Api_GameEventScriptSourceLocation_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.Equals(GameEventScript.Api.GameEventScriptSourceLocation)">
+  Equals(GameEventScriptSourceLocation?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Equals(GameEventScriptSourceLocation? other)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>other</code> <a class="xref" href="GameEventScript.Api.GameEventScriptSourceLocation.html">GameEventScriptSourceLocation</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptSourceLocation_Equals_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.Equals*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptSourceLocation_Equals_System_Object_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.Equals(System.Object)">
+  Equals(object?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override bool Equals(object? obj)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>obj</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptSourceLocation_GetHashCode_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.GetHashCode*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptSourceLocation_GetHashCode" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.GetHashCode">
+  GetHashCode()
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override int GetHashCode()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptSourceLocation_ToString_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.ToString*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptSourceLocation_ToString" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.ToString">
+  ToString()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Returns a string representation of the GameEventScriptSourceLocation object, including the module name,
+source name, and optionally, line and column information. If the location spans multiple
+lines or columns, the range is included.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override string ToString()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>A string describing the source location. The format includes the module name and source name
+followed by line and column information when available. If line and column ranges are
+present, they are represented appropriately in the output.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="operators">Operators
+</h2>
+
+
+  <a id="GameEventScript_Api_GameEventScriptSourceLocation_op_Equality_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.op_Equality*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptSourceLocation_op_Equality_GameEventScript_Api_GameEventScriptSourceLocation_GameEventScript_Api_GameEventScriptSourceLocation_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.op_Equality(GameEventScript.Api.GameEventScriptSourceLocation,GameEventScript.Api.GameEventScriptSourceLocation)">
+  operator ==(GameEventScriptSourceLocation?, GameEventScriptSourceLocation?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool operator ==(GameEventScriptSourceLocation? left, GameEventScriptSourceLocation? right)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>left</code> <a class="xref" href="GameEventScript.Api.GameEventScriptSourceLocation.html">GameEventScriptSourceLocation</a></dt>
+    <dd></dd>
+    <dt><code>right</code> <a class="xref" href="GameEventScript.Api.GameEventScriptSourceLocation.html">GameEventScriptSourceLocation</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptSourceLocation_op_Inequality_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.op_Inequality*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptSourceLocation_op_Inequality_GameEventScript_Api_GameEventScriptSourceLocation_GameEventScript_Api_GameEventScriptSourceLocation_" data-uid="GameEventScript.Api.GameEventScriptSourceLocation.op_Inequality(GameEventScript.Api.GameEventScriptSourceLocation,GameEventScript.Api.GameEventScriptSourceLocation)">
+  operator !=(GameEventScriptSourceLocation?, GameEventScriptSourceLocation?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool operator !=(GameEventScriptSourceLocation? left, GameEventScriptSourceLocation? right)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>left</code> <a class="xref" href="GameEventScript.Api.GameEventScriptSourceLocation.html">GameEventScriptSourceLocation</a></dt>
+    <dd></dd>
+    <dt><code>right</code> <a class="xref" href="GameEventScript.Api.GameEventScriptSourceLocation.html">GameEventScriptSourceLocation</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (fd2609345491)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

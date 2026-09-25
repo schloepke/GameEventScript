@@ -1,0 +1,527 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-g5ptsecz"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Host runtime specification | Game Event Script</title><link rel="canonical" href="https://gameeventscript.org/docs/reference/host-runtime/"/><link rel="sitemap" href="/sitemap-index.xml"/><link rel="shortcut icon" href="/favicon-pixel-duo.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.3.5"/><meta name="generator" content="Starlight v0.42.4"/><meta property="og:title" content="Host runtime specification"/><meta property="og:type" content="article"/><meta property="og:url" content="https://gameeventscript.org/docs/reference/host-runtime/"/><meta property="og:locale" content="en"/><meta property="og:description" content="Host runtime specification — Game Event Script documentation."/><meta property="og:site_name" content="Game Event Script"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Host runtime specification — Game Event Script documentation."/><script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script><template id="theme-icons"><svg aria-hidden="true" class="light astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg><svg aria-hidden="true" class="dark astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg><svg aria-hidden="true" class="auto astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg></template><link rel="stylesheet" href="/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/_astro/common.CIp__BGE.css"><script type="module" src="/_astro/page.Dwipeu-R.js"></script></head><body class="astro-g5ptsecz"><a class="sl-skip-link astro-qb7clj6f" href="#_top">Skip to content</a><div class="page sl-flex astro-yntsjkba"><header class="header astro-yntsjkba"><div class="header astro-by6fddyj"><div class="title-wrapper sl-flex astro-by6fddyj"><a href="/" class="site-title sl-flex astro-6rvad3va"><img class="astro-6rvad3va" alt src="/_astro/mark.DsNbRX0k.svg" width="64" height="64"><span class="astro-6rvad3va" translate="no">Game Event Script</span></a></div><div class="sl-flex print:hidden astro-by6fddyj"><site-search class="astro-by6fddyj astro-b5kgnn7o" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-b5kgnn7o"><svg aria-hidden="true" class="astro-b5kgnn7o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block astro-b5kgnn7o" aria-hidden="true">Search</span><kbd class="sl-hidden md:sl-flex astro-b5kgnn7o" style="display: none;"><kbd class="astro-b5kgnn7o">Ctrl</kbd><kbd class="astro-b5kgnn7o">K</kbd></kbd></button><dialog style="padding:0" aria-label="Search" class="astro-b5kgnn7o"><div class="dialog-frame sl-flex astro-b5kgnn7o"><button data-close-modal class="sl-flex md:sl-hidden astro-b5kgnn7o">Cancel</button><div class="search-container astro-b5kgnn7o"><div id="starlight__search" class="astro-b5kgnn7o"></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/_astro/Search.astro_astro_type_script_index_0_lang.BuGLwjLu.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group astro-by6fddyj"><div class="sl-flex social-icons astro-by6fddyj"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script><script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div><aside class="ges-development-notice" aria-label="Documentation version" data-pagefind-ignore>Development documentation. Check the <a href="/docs/changelog/">changelog</a> when using a published package.</aside><script type="module">var e=document.querySelector(`.ges-development-notice`);if(e){let t=()=>document.documentElement.style.setProperty(`--ges-notice-height`,`${e.getBoundingClientRect().height}px`);t(),new ResizeObserver(t).observe(e)}</script></header><nav class="sidebar print:hidden astro-yntsjkba" aria-label="Main"><button popovertarget="starlight__sidebar" class="sl-menu-button sl-flex md:sl-hidden print:hidden astro-r2osgdlg"><svg aria-hidden="true" class="open-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg><svg aria-hidden="true" class="close-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg><span class="sr-only astro-r2osgdlg">Menu</span></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=matchMedia(`(min-width: 50em)`),t=()=>{this.popover=e.matches?null:`auto`};t(),e.addEventListener(`change`,()=>t()),this.addEventListener(`toggle`,({newState:e})=>this.trapFocus(e===`open`))}trapFocus(e){document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}};customElements.define(`sl-sidebar-pane`,e);</script><sl-sidebar-pane popover id="starlight__sidebar" class="sidebar-pane astro-yntsjkba"><div class="sidebar-content sl-flex astro-yntsjkba"><sl-sidebar-state-persist data-hash="1syr27k" class="astro-ipdry5cl"><script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script><ul class="top-level astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/" class="large astro-rmhv4bp6"><span class="astro-rmhv4bp6">Home</span></a></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Start here</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="0"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Documentation overview</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Learn the language</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in C#</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in Swift</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Tools</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="1"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Native Swift CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/editor-bundles/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">TextMate editor bundles</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Native integration</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="2"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/implementations/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/csharp-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# API reference</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/implementations/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/swift-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift API reference</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Language and host reference</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="3"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script language specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/text/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable text and Unicode semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/numbers/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable number semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/determinism/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable determinism semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/host-runtime/" aria-current="page" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Host runtime specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/public-api/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable public API specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/diagnostics/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable diagnostics specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/message-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Product message JSON V1</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/syntax-highlighting/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Syntax highlighting</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Program formats</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="4"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/program-model/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable program model specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/bytecode/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Bytecode specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/binary-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesb` binary format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/assembler-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesa` assembler format specification</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Conformance</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="5"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/markdown-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance Markdown format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/runner/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance runner specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/environment/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance environment specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/coverage/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable Conformance Coverage</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/cross-language-acceptance/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Cross-language conformance acceptance</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Packages and releases</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="6"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/distribution/packages/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Library packages and releases</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/distribution/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# distribution</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/changelog/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Changelog</span></a></li></ul></details></li></ul><script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist><div class="md:sl-hidden"><div class="mobile-preferences sl-flex astro-p4azlveh"><div class="social-icons astro-p4azlveh"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script></div></div></div></sl-sidebar-pane></nav><div class="main-frame astro-yntsjkba"><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-lrzkfocr"><aside class="right-sidebar-container print:hidden astro-lrzkfocr"><div class="right-sidebar astro-lrzkfocr"><div class="lg:sl-hidden astro-qok35upx"><mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-66cqc7ze"><nav aria-labelledby="starlight__on-this-page--mobile" class="astro-66cqc7ze"><details id="starlight__mobile-toc" class="astro-66cqc7ze"><summary id="starlight__on-this-page--mobile" class="sl-flex astro-66cqc7ze"><span class="toggle sl-flex astro-66cqc7ze">On this page<svg aria-hidden="true" class="caret astro-66cqc7ze astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current astro-66cqc7ze"></span></summary><div class="dropdown astro-66cqc7ze"><ul class="isMobile astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#responsibilities" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Responsibilities</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#loading-and-startup" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Loading and startup</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#initial-group" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Initial group</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#later-instances" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Later instances</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#initialization-outputs" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Initialization outputs</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#random-ownership-boundaries-and-limits" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Random Ownership, Boundaries, and Limits</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#external-type-boundary" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">External Type Boundary</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#message-semantics" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Message Semantics</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#portable-state-machine" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Portable State Machine</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#literal-parsing-limits" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Literal parsing limits</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#iterator-and-generated-collection-limits" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Iterator and Generated-Collection Limits</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#c-automatic-runner" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">C# Automatic Runner</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#hot-path-rules" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Hot-Path Rules</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#conformance-porting-contract" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Conformance Porting Contract</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#delayed-dispatch" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Delayed dispatch</span></a></li></ul></div></details></nav></mobile-starlight-toc><script type="module" src="/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C3fM4Kra.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block astro-qok35upx"><div class="sl-container astro-qok35upx"><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul class="astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#responsibilities" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Responsibilities</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#loading-and-startup" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Loading and startup</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#initial-group" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Initial group</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#later-instances" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Later instances</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#initialization-outputs" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Initialization outputs</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#random-ownership-boundaries-and-limits" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Random Ownership, Boundaries, and Limits</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#external-type-boundary" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">External Type Boundary</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#message-semantics" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Message Semantics</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#portable-state-machine" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Portable State Machine</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#literal-parsing-limits" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Literal parsing limits</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#iterator-and-generated-collection-limits" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Iterator and Generated-Collection Limits</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#c-automatic-runner" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">C# Automatic Runner</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#hot-path-rules" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Hot-Path Rules</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#conformance-porting-contract" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Conformance Porting Contract</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#delayed-dispatch" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Delayed dispatch</span></a></li></ul></nav></starlight-toc><script type="module" src="/_astro/TableOfContents.astro_astro_type_script_index_0_lang.BpJaGz7G.js"></script></div></div></div></aside><div class="main-pane astro-lrzkfocr"><main data-pagefind-body class="astro-g5ptsecz" lang="en" dir="ltr"><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><h1 id="_top" class="astro-bebwqqxs">Host runtime specification</h1></div></div><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><div class="sl-markdown-content"><!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<p class="ges-since"><strong>Since: 0.1.0</strong></p>
+<p>This document defines the portable runtime boundary shared by
+Swift, Kotlin, Go, Rust, C++, C#, and Unity implementations. C# is the
+reference implementation. Language-specific threading and reflection
+must stay outside the portable core.</p>
+<h2 id="responsibilities">Responsibilities</h2>
+<p><code>GameEventScriptProgram</code> is the immutable parsed <code>.gesb</code> artifact. It contains
+portable runtime segments and optional debug/source/build/opaque segments, but
+no VM state, random generator, delegate, host binding, or queue. The normative
+container is defined by <a href="/docs/reference/binary-format/">Binary format</a>. A program may be loaded into multiple hosts at
+the same time. All public program segments copy their input and expose read-only views. Its
+resource metadata contains only portable integers: per-handler requirements in
+message-handler binds and their maxima in the program header model.</p>
+<p><code>GameEventScriptHost</code> is one autonomous serial execution unit. It owns the local
+message queue, exact- and name-subscription indexes, private random stream,
+runtime limits, observer, optional outbound sink, linked program instances, and
+at most one reusable <code>GesVmState</code>. A host may contain only native handlers and
+does not create a VM until the first program is loaded. Host construction accepts
+a seed, entropy bytes, or an immutable sequence configuration, never a live
+mutable generator; building two hosts from the same configuration creates two
+independent streams.</p>
+<p><code>GameEventScriptInstance</code> is one host-specific link of one program. <code>Load</code> is
+additive and returns an instance. Linking resolves extension and external-type
+references against that host. The host assigns a stable, non-reused registration
+ID. The instance retains only its host and ID for lifecycle operations; it does
+not retain a detach closure. <code>Detach</code> is idempotent and removes the instance from
+future dispatch snapshots. Before registering anything, loading rejects a cyclic
+synchronous call graph or requirements above <code>MaxRegisterValues</code> and
+<code>MaxCallDepth</code>. It then pre-warms the reusable register storage from the program
+maximum.</p>
+<p><code>GameEventScriptSubscription</code> represents one native registration. <code>Unsubscribe</code>
+uses the same host-owned registration-ID model, is idempotent, and affects future
+snapshots only. Registration IDs are host-local lifecycle identities and are not
+wire or program identities.</p>
+<p>Portable native handlers implement <code>IGameEventScriptNativeMessageHandler</code> and
+receive the message plus the host’s context through <code>Handle</code>. The Core stores the
+handler object directly and contains no <code>Action</code> delegate adapter. C# callers may
+use the <code>Action&lt;GameEventScriptMessage, GameEventScriptContext&gt;</code> convenience
+overloads in <code>CSharpBridge</code>; other ports provide their own language-idiomatic
+adapters without changing the Core contract.</p>
+<p>An extension function may throw <code>GameEventScriptExtensionFaultException</code> to
+deliberately report a defined failure, or throw any other exception
+unanticipated by the runtime; <a href="/docs/reference/diagnostics/">Diagnostics</a> owns the resulting
+stable codes and the shared “current handler only, host stays reusable, never
+<code>nothing</code>” contract shared with native handlers and the external-type boundary.</p>
+<p><code>GameEventScriptContext</code> is created once per host and passed to native handlers
+and extensions. It exposes the host random stream, limits, <code>Emit</code>, and <code>Publish</code>.
+Its random generator supports nested <code>Push()</code>, <code>Push(Int64)</code>, and <code>Pop()</code> scopes.
+It does not own a queue, VM, or scheduler. A context or its random generator must
+not be retained for asynchronous use after a native or extension callback.</p>
+<p><code>GameEventScriptVirtualMachine</code> is a stateless executor. <code>GesVmState</code> contains
+only the currently resumable execution: active linked program, instruction
+pointer, registers, frames, stages, and active message. Random state and its
+scope stack belong to the host-owned generator so extensions observe the same
+active scoped stream as bytecode. The host
+reuses this state serially for every script handler and fully resets it after
+completion or failure. VM pooling across hosts is not part of this architecture.</p>
+<p>All portable failures follow <a href="/docs/reference/diagnostics/">Diagnostics</a>. Ordinary runtime handler failures
+are reported to the observer, abort/reset only the failing handler, and leave the
+remaining immutable dispatch snapshot runnable. A pump result that observed a
+handler failure uses <code>RuntimeError</code> and carries its first diagnostic. Successful
+VM stepping, resume, and dispatch do not allocate diagnostic objects.</p>
+<h2 id="loading-and-startup">Loading and startup</h2>
+<p><code>Build()</code> creates a host in its initial loading phase. <code>IsReady</code> is false, even
+when <code>IsIdle</code> is true. Register native handlers and call <code>Load</code> for every initial
+Program before <code>Start</code>. <code>Receive</code> returns false before a successful Start;
+<code>ExecuteFrame</code> and <code>RunToCompletion</code> reject pumping a host that is not ready.</p>
+<p><code>Load</code> validates and links before committing registration. Validation, resource,
+link, and initialization-queue capacity failures leave registrations, queued
+messages, active execution and random state unchanged. An initialization snapshot
+reserves one queue slot under <code>MaxQueuedMessagesPerRun</code>; insufficient capacity
+raises <code>link.initializationQueueFull</code>. A Program without initialization needs no
+slot. Loading is available to embedding code and native message handlers.
+Reentrant loading during active script/extension execution or the initial Start
+is rejected; paused execution between frames does not prohibit host-side loading.
+Scripts and extension contexts have no loading API.</p>
+<p>The initial lifecycle is summarized below. The readiness barrier completes
+initializations before ordinary message dispatch begins.</p>
+<figure class="ges-diagram"><div class="ges-diagram-image" hidden></div><details open class="ges-diagram-source"><summary>Diagram source (Mermaid)</summary><pre><code>flowchart TD
+    accTitle: Initial host loading and startup
+    accDescr: Build creates a loading host. Register handlers and load initial programs, then Start runs their initialization in load order. Only complete group success makes the host ready. Failure discards the group and leaves the host permanently not ready.
+    Build["Build: loading host"] --&gt; Load["Register handlers and load programs"]
+    Load --&gt; Start["Start: initialize in load order"]
+    Start --&gt; Result{"All initializations succeed?"}
+    Result --&gt;|Yes| Ready["Ready: receive and pump messages"]
+    Result --&gt;|No| Failed["Group discarded; host remains not ready"]</code></pre></details></figure>
+<h3 id="initial-group">Initial group</h3>
+<p><code>Start()</code> runs only initialization snapshots, in Load order. Handlers inside one
+instance retain their declaration order. All initial registrations are already
+available when any initialization emits, so its enqueue-time snapshot can include
+another member of the group. No ordinary queued message is dispatched by Start.</p>
+<p>Every initialization uses the ordinary runtime safety limits. Exhaustion fails
+startup; the initial group never becomes partially ready. Successful Start marks
+the host ready and returns <code>StartResult.Ready</code>, while emitted messages may remain
+queued. StartResult also reports initialization opcode, completed-snapshot, emit,
+and publish counters; these exclude subsequent ordinary dispatch. A runtime fault or exhausted safety limit returns <code>RuntimeError</code> or
+<code>RuntimeLimitReached</code>, with a structured diagnostic. Failure removes the group’s
+registrations and discards all its queued outputs. The host remains not ready and
+cannot be started again. Repeating Start returns its original result without
+executing code. Reentrant Start and pump calls are rejected.</p>
+<h3 id="later-instances">Later instances</h3>
+<p>After Start, Load queues initialization at the normal FIFO position and returns
+an Instance with absent <code>StartResult</code>. No extra priority is assigned to init.
+The current logical message completes before the new initialization starts.
+A later initialization may pause across <code>ExecuteFrame</code> calls. Its instance cannot
+execute ordinary handlers until all its initialization handlers succeed. A later
+Program without initialization has an immediate Ready result.</p>
+<p>Success stores Ready on the instance and releases its buffered outputs. Failure
+stores RuntimeError or RuntimeLimitReached and its diagnostic, removes the
+instance’s registrations, discards its buffered outputs, and cancels every pending
+recipient entry belonging to that instance. Other recipients of the same logical
+message retain their order and still execute. Messages with no surviving recipient
+are removed without dispatch or undeliverable redistribution. This failure
+cancellation is stronger than ordinary Detach, which retains captured recipients.
+The host remains ready; the embedding decides whether to retry with a new Load.
+A new instance never inherits the previous instance’s captured deliveries.</p>
+<p>The instance’s immutable completed StartResult remains readable after removal.
+A startup safety limit is represented by <code>runtime.initializationLimitReached</code>;
+the regular runtime-limit observer also identifies the limit and bound. Runtime
+faults retain their original diagnostic code and context.</p>
+<h3 id="initialization-outputs">Initialization outputs</h3>
+<p>Init <code>Emit</code> captures recipients and reserves its FIFO position immediately.
+Local delivery waits until that instance succeeds. Queue limits include staged messages and queued initialization
+snapshots. Overflow of staged outputs exhausts the initialization. External
+Receive calls between paused init frames enter the ordinary queue independently
+and are not discarded as that init’s output. Observer emit notifications describe
+attempts; their existence is not proof of committed delivery.</p>
+<p>Init <code>Publish</code> also defers the external sink call: until the entire initial group
+succeeds, or until the individual later init succeeds. Its immediate result has
+<code>OutboundDeferred</code> when a sink exists, with OutboundAttempted/OutboundAccepted
+false. AnyAccepted includes deferred acceptance. The observer receives the final
+publish result on release; failed initializations never call the sink. Successful
+local acceptance during init is provisional. Sink rejection/failure at release
+retains ordinary publish semantics and does not undo successful initialization.
+Direct external effects performed by arbitrary native callbacks are not rolled
+back. Host readiness promises successful init, not completion of its emitted
+message chains.</p>
+<h2 id="random-ownership-boundaries-and-limits">Random Ownership, Boundaries, and Limits</h2>
+<p><code>MaxRandomScopeDepth</code> is the exact number of simultaneously active regular
+random scopes permitted in one host. Zero permits no nested scope. On first use,
+the generator allocates that many parent-state slots plus one reserved fault-gate slot;
+the gate does not reduce the configured usable depth. Runtime boundary markers
+are separate metadata and do not count as random scopes.</p>
+<p>The host marks the random scope depth when every native or script handler starts.
+An extension call adds a nested marker. A script marker remains active while its
+VM execution is paused between frames, and may therefore be released on a
+different thread from the one that created it. Markers and scope state are
+ordinary host-owned heap state; they never use thread-local, async-local, or
+native call-stack storage.</p>
+<p>The first push beyond <code>MaxRandomScopeDepth</code> copies the current valid stream into
+the reserved gate slot, latches a <code>MaxRandomScopeDepth</code> runtime-limit fault, and
+uses the current state only as disposable work until the active boundary returns.
+Further pushes increment only a suppressed-depth counter and matching pops
+decrement it; neither operation may reach the valid parent stack. Random draws
+after the fault cannot alter the saved stream. <code>Emit</code> and <code>Publish</code> attempted
+while the gate is active are observed as rejected, and Publish does not invoke
+the outbound sink.</p>
+<p>At boundary release the generator restores the gate state, unwinds every regular
+scope above the marker, and clears the gate. Bytecode observes a rejected push
+immediately and stops the current handler. An extension or native handler is an
+atomic trusted callback and cannot be preempted portably; the VM or host stops
+the handler as soon as that callback returns. No exception is part of this
+contract. The observer receives one runtime-limit event and the pump returns
+<code>RuntimeLimitReached</code>; the host remains reusable.</p>
+<p>A pop may not cross the innermost runtime marker. Crossing it is a runtime error.
+A callback that returns with otherwise balanced execution but leaves scopes open
+is also a runtime error, after the marker first restores the parent stream. If a
+different runtime limit already aborted a script body before its generated pops,
+marker cleanup is expected recovery and adds no second imbalance diagnostic.</p>
+<h2 id="external-type-boundary">External Type Boundary</h2>
+<p>External types use two deliberately separate inputs. Compilation receives an
+<code>IGameEventScriptExternalTypeCatalog</code> containing only declarative type, field,
+constructor, parameter, and signature data. It does not contain executable
+bindings. The resulting program stores only portable external-constructor import
+bindings; it never stores the catalog or its definitions.</p>
+<p>Host linking receives an <code>IGameEventScriptExternalTypeRegistry</code> that resolves a
+constructor import to an <code>IGameEventScriptExternalTypeConstructor</code>. A resolved
+constructor must report exactly the definition requested by the import. Runtime
+values cross the portable boundary as <code>IGameEventScriptExternalValue</code>, exposing
+their declarative definition and field values without exposing a platform host
+object.</p>
+<p>A constructor or a field accessor may likewise throw
+<code>GameEventScriptExtensionFaultException</code> or an unanticipated exception; see
+<a href="/docs/reference/diagnostics/">Diagnostics</a> for the resulting codes and contract.</p>
+<p>The C# bridge may implement both inputs with one convenience object. Its
+reflection metadata, attributes, CLR instances, field delegates, conversion,
+and constructor invocation remain entirely inside <code>CSharpBridge</code>. Portable JSON
+conformance uses a manual catalog, constructor registry, and value
+implementation and therefore does not depend on C# reflection.</p>
+<h2 id="message-semantics">Message Semantics</h2>
+<ul>
+<li>Message arguments are ordered <code>GameEventScriptMessageArgument</code> name/value
+pairs. Their order is part of <code>SignatureId</code>; neither Core construction nor
+conformance decoding derives it from a map’s iteration order.</li>
+<li>Named argument labels must be unique after portable normalization. Repeated
+<code>_</code> labels remain valid because they represent distinct positional arguments.</li>
+<li>C# tuple construction is a <code>CSharpBridge</code> convenience. Its dictionary adapter
+requires a known <code>GameEventScriptMessageSignature</code> and binds values in that
+signature’s declared order.</li>
+<li><code>Receive(message)</code> captures current subscription snapshots and queues the
+message locally. It never invokes the outbound sink.</li>
+<li><code>Emit(message)</code> does the same from a running handler.</li>
+<li><code>Publish(message)</code> first attempts the same local enqueue and then calls the
+host’s single synchronous <code>IGameEventScriptPublishSink</code>, if configured.</li>
+<li><code>GameEventScriptPublishResult</code> reports <code>LocalAccepted</code>, <code>OutboundAttempted</code>,
+<code>OutboundAccepted</code>, <code>OutboundDeferred</code>, and derived <code>AnyAccepted</code>. Sink rejection or exception
+never rolls back or corrupts local delivery. The observer sees the result.</li>
+<li>Queue limits count logical messages, not handler invocations.</li>
+<li>Each queued message owns immutable exact/name subscription snapshots and a
+cursor. Every matching handler finishes in priority/registration order before
+the next logical message starts.</li>
+<li>A detach, unsubscribe, subscribe, or load during dispatch does not modify
+already captured snapshots. It applies when a later message is enqueued.</li>
+<li><code>on initialization</code> is a special per-instance handler, never normal external
+input. The initial Start barrier and subsequent FIFO initialization follow
+<a href="#loading-and-startup">Loading and startup</a>.</li>
+</ul>
+<h2 id="portable-state-machine">Portable State Machine</h2>
+<p class="ges-since"><strong>Since: Unreleased — Waiting and delayed-work transitions</strong></p>
+<p>The following pump states apply after successful Start. Initial loading and the
+terminal startup-failure state are defined in <a href="#loading-and-startup">Loading and startup</a>.
+Here <code>Ready</code> means queued work, distinct from the public <code>IsReady</code> startup flag.</p>
+<figure class="ges-diagram"><div class="ges-diagram-image" hidden></div><details open class="ges-diagram-source"><summary>Diagram source (Mermaid)</summary><pre><code>stateDiagram-v2
+    accTitle: Portable host pump states
+    accDescr: Runnable snapshots move the idle host to Ready, and pumping starts Dispatching. Native handlers are atomic. Script handlers can pause and resume across frames, then return to Dispatching on completion or failure. After a message completes, the queue determines Ready, Waiting or Idle. Safety-limit stops are described in the transition table.
+    direction TB
+    Idle --&gt; Ready: Enqueue runnable work
+    Idle --&gt; Waiting: Only future work
+    Ready --&gt; Dispatching: Pump next snapshot
+    Dispatching --&gt; Dispatching: Native handler
+    Dispatching --&gt; ScriptRunning: Script handler
+    ScriptRunning --&gt; Paused: Frame budget exhausted
+    Paused --&gt; ScriptRunning: Resume in a later pump
+    ScriptRunning --&gt; Dispatching: Handler completes or fails
+    Dispatching --&gt; Ready: More runnable work
+    Dispatching --&gt; Waiting: Only future work remains
+    Dispatching --&gt; Idle: Queue empty
+    Waiting --&gt; Ready: Pump with due or runnable work</code></pre></details></figure>
+<p>The diagram is an overview; the transition rules include the following actions
+and results. <code>RuntimeError</code> and <code>RuntimeLimitReached</code> are pump results, not
+additional startup/readiness states.</p>
+<table>
+<thead>
+<tr>
+<th>State / event</th>
+<th>Action and next state</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Idle; Receive, Emit, Publish, or Load with late initialization</td>
+<td>Enqueue the captured snapshot. Runnable work leads to Ready; only future work leads to Waiting.</td>
+</tr>
+<tr>
+<td>Ready; pump</td>
+<td>Dequeue one logical message and enter Dispatching.</td>
+</tr>
+<tr>
+<td>Dispatching; next native handler</td>
+<td>Reset the per-handler safety budget and invoke atomically; remain Dispatching.</td>
+</tr>
+<tr>
+<td>Dispatching; next script handler</td>
+<td>Reset the per-handler safety budget; bind linked Program, entry and message to the host VM state; enter ScriptRunning.</td>
+</tr>
+<tr>
+<td>Dispatching; no remaining handler</td>
+<td>Complete the logical message. Continue in Ready when runnable work remains, Waiting when only timers remain, or Idle when the queue is empty.</td>
+</tr>
+<tr>
+<td>Waiting; caller pumps</td>
+<td>At or after NextMessageDelay, promote due messages behind runnable FIFO work and enter Ready. Remain Waiting if no work is runnable. Newly enqueued runnable work can be pumped before a future deadline.</td>
+</tr>
+<tr>
+<td>ScriptRunning; frame budget remains</td>
+<td>Execute opcodes synchronously; remain ScriptRunning or return to Dispatching.</td>
+</tr>
+<tr>
+<td>ScriptRunning; frame budget exhausted</td>
+<td>Enter Paused and retain the VM state. Resume that handler in a later pump.</td>
+</tr>
+<tr>
+<td>ScriptRunning; handler completes</td>
+<td>Fully reset VM state and return to Dispatching.</td>
+</tr>
+<tr>
+<td>ScriptRunning; handler fails</td>
+<td>Report the diagnostic, fully reset VM state and continue Dispatching; the pump result is RuntimeError.</td>
+</tr>
+<tr>
+<td>ScriptRunning; handler safety limit reached</td>
+<td>Reset VM state and stop the pump with RuntimeLimitReached.</td>
+</tr>
+</tbody>
+</table>
+<p><code>ExecuteFrame(opcodeBudget)</code> is a caller-thread scheduler slice. Its opcode
+budget is independent from safety limits and may pause only script bytecode;
+native handlers remain atomic. <code>RunToCompletion()</code> pumps synchronously until the
+host becomes idle, only future work remains, or a runtime limit stops the run. Core code starts no thread
+and performs no synchronization. A host is serial but not thread-affine: only
+one caller may access it at a time, while later frames may run on another thread
+when the embedding environment supplies the required happens-before handoff.</p>
+<p>The processed-message limit counts completed logical messages, after all of
+their captured handlers have finished. After completing the configured number,
+the pump reports <code>RuntimeLimitReached</code> and one corresponding observer event only
+if another logical message remains queued. That next message stays queued and
+is not started until a later pump call. If completing the last message drains
+the queue exactly at the limit, the pump returns <code>Completed</code> without a
+processed-message-limit observation, unless an independent error or limit
+determines the result. These rules apply to both <code>ExecuteFrame</code> and
+<code>RunToCompletion</code>, to native and script handlers, and to messages enqueued by
+handlers during the pump.</p>
+<h3 id="literal-parsing-limits">Literal parsing limits</h3>
+<p>Each <code>parse</code> invocation has fixed portable bounds, applied only while executing
+<code>ParseLiteral</code>: at most 1,048,576 input Unicode scalars (<code>MaxLiteralInputScalars</code>),
+64 nested List/Map/Dice/Vector/Point containers (<code>MaxLiteralDepth</code>), and 65,536
+total List items, Map entries, Dice rolls, and explicitly supplied Vector/Point
+components across the whole input (<code>MaxLiteralItems</code>). A Dice, Vector, or Point
+literal consumes one container level, including an empty form; its syntax does
+not imply an additional List. Omitted spatial components do not consume items.
+Duplicate Map keys
+still count as entries. Scalar roots do not consume an item or nesting slot.
+Exactly each bound is allowed; the next scalar, nested container, or item
+exceeds it. Input length is checked before recognition. Nesting and item bounds
+are checked incrementally before creating the next container or reading the
+next item; trailing syntax errors do not undo a limit already encountered.</p>
+<p>Exceeding a bound exhausts the current handler with the existing runtime-limit
+mechanism and the corresponding stable limit name and numeric bound. It does
+not return original Text as a recognition fallback or emit a partial value.
+Previously completed effects remain observable and subsequent queued messages
+can run normally. The counters are local to one parse invocation; programs
+without <code>parse</code> maintain no parsing state or counters.</p>
+<h3 id="iterator-and-generated-collection-limits">Iterator and Generated-Collection Limits</h3>
+<p><code>MaxLoopIterations</code> counts successful iterator advances across all loops and
+iterator-backed selectors in one handler. A present <code>nothing</code> item consumes one
+iteration, just like any other value. Exhaustion and non-iterable sources consume
+no iteration. Exactly the configured number of advances is allowed; attempting
+another successful advance stops the handler before its loop body or selector
+expression executes. Nested and sequential loops share this counter. Frame
+pauses retain it, and starting the next handler resets it.</p>
+<p><code>MaxGeneratedCollectionItems</code> bounds each collection incrementally materialized
+by generated lists and iterator-backed selectors. The limit applies to retained
+items, rather than the number of source items visited or a cumulative total
+across separate collections:</p>
+<ul>
+<li>List projections, filters, and generated lists count every appended result,
+including <code>nothing</code>.</li>
+<li>Map projections count distinct accepted keys. Replacing an existing key’s value
+does not grow the map; skipped empty or <code>nothing</code> keys do not count.</li>
+<li>Distinct-by projections count retained distinct keys, so discarded duplicates
+do not count again.</li>
+<li>Order-by projections count every buffered source item.</li>
+<li>Group-by projections limit both the number of groups in the result map and
+the number of items in each group’s list, independently.</li>
+</ul>
+<p>Exactly the configured collection size is allowed. Before an insertion would
+exceed it, the runtime rejects that insertion without growing the collection and
+stops the handler without returning a partial projection result. Previously
+completed effects remain observable. This is an incremental materialization
+limit, not a byte-allocation budget or a bound on existing input collections.</p>
+<p>For either limit, a nonpositive value disables that limit. An exceeded limit
+produces one structured runtime-limit observation for the failing handler and
+stops the pump with <code>RuntimeLimitReached</code>. Normal handler cleanup restores random
+boundaries and clears VM state. Remaining handlers and queued messages stay
+available for a later pump call.</p>
+<h2 id="c-automatic-runner">C# Automatic Runner</h2>
+<p>Both native bridge runners are optional. They take ownership without implicitly
+starting a loading host. Register handlers, load Programs, and call the runner’s
+synchronous Start; successful Start schedules remaining ordinary work. A runner
+wrapping an already ready host schedules its pending work immediately. Both
+runners serialize callbacks on a shared background dispatcher and expose readiness,
+the last execution result and synchronized instance startup results.</p>
+<p><code>CSharpBridge.GameEventScriptCSharpHostRunner</code> serializes access
+to one host with a C# lock and schedules at most one pump job for that host on a
+shared dispatcher. Concurrent <code>Receive</code>, <code>Load</code>, subscribe, detach, and
+unsubscribe calls go through the runner. Creating a runner immediately schedules
+one pump when its host is ready and already has pending work, including queued
+messages, late initialization, or a paused script handler. No later <code>Receive</code> or <code>Load</code> is
+required to start that work. An idle host waits for later accepted work.</p>
+<p>The initial scheduling uses the same serialization gate and outstanding-job
+guard as subsequent runner operations. The caller stops accessing the host
+directly when transferring ownership; pending callbacks may start before
+runner creation returns. Disposing the runner suppresses scheduled pumps that
+have not started, while preserving the host’s pending work.</p>
+<p>Swift, Kotlin, Go, Rust, C++, and Unity provide
+their own actor, executor, event-loop, or main-thread policy around the same
+synchronous core contract.</p>
+<h2 id="hot-path-rules">Hot-Path Rules</h2>
+<ul>
+<li>Script registrations store <code>GameEventScriptInstance + EntryAddress</code>; no
+per-invocation delegate closure, runner object, or invocation interface exists.</li>
+<li>The queue is a preallocated growing ring of logical message envelopes.</li>
+<li>Dispatch selection walks captured arrays without constructing handler lists.</li>
+<li>Handler registrations prepare their dispatch signature once and reuse it for
+VM entry, observer callbacks, and diagnostics.</li>
+<li>Execution and publish results are value types.</li>
+<li>Program loading prewarms VM register capacity. Later register growth is
+geometric and bounded by <code>MaxRegisterValues</code>.</li>
+<li>Synchronous script call graphs are acyclic. A root handler has call-stack depth
+zero; every nested call adds one entry.</li>
+<li>After warmup, queue dispatch, handler selection, frame-result creation, and VM
+resume must not allocate. Message creation, emitted value payloads, extension
+behavior, and Conformance Markdown/YAML decoding are measured separately.</li>
+<li>Random boundary and scope storage is initialized on first use and retained by
+the host. Push, Pop, marker creation, overpush gating, and frame resume allocate
+nothing after that warmup.</li>
+</ul>
+<h2 id="conformance-porting-contract">Conformance Porting Contract</h2>
+<p>Every implementation runs the Conformance Markdown cases through this sequence:</p>
+<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">source -&gt; GameEventScriptProgram -&gt; optional .gesb Write/Read -&gt; Host.Load -&gt; Host.Start</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">YAML step input -&gt; GameEventScriptMessage -&gt; Host.Receive</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Host.ExecuteFrame or Host.RunToCompletion -&gt; observed local/outbound messages</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="source -> GameEventScriptProgram -> optional .gesb Write/Read -> Host.Load -> Host.StartYAML step input -> GameEventScriptMessage -> Host.ReceiveHost.ExecuteFrame or Host.RunToCompletion -> observed local/outbound messages"><div></div></button></div></figure></div>
+<p>The same Markdown cases define ordering, tags, initialization, multiple programs,
+frame pause/resume, runtime limits, and Emit/Publish/Receive behavior for every
+language in the monorepo. Message <code>args</code> are always encoded as an ordered YAML
+sequence of mappings with <code>name</code> and <code>value</code> entries, including nested message
+values and expected local/outbound messages.</p>
+<h2 id="delayed-dispatch">Delayed dispatch</h2>
+<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p>Each Host borrows a monotonic clock reporting nonnegative whole microseconds.
+The default clock measures actual elapsed time; an embedding can supply a clock
+for deterministic simulation or testing. Clock reads never pump messages.</p>
+<p>A positive finite time quantity is converted to microseconds, rounded upward.
+Integer seconds are converted with checked integer arithmetic. Binary64 seconds
+are multiplied by 1,000,000 using binary64 arithmetic and rounded upward; the
+result must be smaller than 2^63. A negative input is invalid even if rounding
+would produce zero. The absolute deadline is clock time at acceptance plus the
+delay; overflow rejects the send. This is a minimum scheduling delay, not a
+real-time execution guarantee.</p>
+<p>Delayed entries capture the same recipient snapshot as instant enqueue. Newly
+registered recipients do not receive older entries. Ordinary detach retains its
+captured-delivery behavior. When deadlines become due, entries are appended to
+the runnable FIFO in deadline order; equal deadlines retain enqueue order.
+Promotion occurs between complete logical messages, never in the middle of an
+active or paused handler. Future entries do not block runnable messages.</p>
+<p>Publish delays both local delivery and the outbound sink invocation. A later sink
+rejection or failure cannot change the Boolean already returned to script.
+The existing sink diagnostic behavior remains applicable. Emit observations occur
+at acceptance; delayed publish observations occur when the publication is released.</p>
+<p>Init computes deadlines when the expression executes but cannot release its
+outputs before its initial group or later-instance initialization succeeds.
+Already due entries become eligible after that barrier. Initial-group failure
+clears all outputs; later-instance failure clears its staged outputs and removes
+captured deliveries to the failed instance without canceling independent outbound
+publication or other recipients. Accepted sends outlive ordinary sender detach.
+Delayed entries count towards the existing logical-message queue limit; promotion
+does not reserve a second slot.</p>
+<p><code>RunToCompletion</code> and <code>ExecuteFrame</code> never wait or advance the clock. <code>Waiting</code>
+means only future work remains, <code>Completed</code> means no work remains, and <code>Paused</code>
+retains its frame-budget meaning. Errors and limits retain precedence.
+<code>PendingMessageCount</code> includes delayed entries but excludes the active message;
+<code>IsIdle</code> is false while delayed entries remain. <code>NextMessageDelay</code> reports remaining
+whole microseconds, clamped to zero, or no value when there is no delayed entry.
+Bridges and command-line adapters own timers and serialize all Host access.</p>
+</div><footer class="sl-flex astro-ddtxxk7k"><div class="meta sl-flex astro-ddtxxk7k"><a href="https://github.com/schloepke/GameEventScript/edit/main/specs/HostRuntime.md" class="sl-flex print:hidden astro-qlekgd3o"><svg aria-hidden="true" class="astro-qlekgd3o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.2em;"><path d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-1.1-.22 1 1 0 0 0-.32.22l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8c.1-.1.17-.2.22-.33a1 1 0 0 0 0-.24v-.14l.07-.05ZM6.83 20H4v-2.83l9.93-9.93 2.83 2.83L6.83 20ZM18.17 8.66l-2.83-2.83 1.42-1.41 2.82 2.82-1.41 1.42Z"/></svg>Edit page</a></div><div class="pagination-links print:hidden astro-b5raizh3" dir="ltr"><a href="/docs/reference/semantics/determinism/" rel="prev" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span class="astro-b5raizh3">Previous<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Portable determinism semantics</span></span></a><a href="/docs/reference/public-api/" rel="next" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg><span class="astro-b5raizh3">Next<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Portable public API specification</span></span></a></div></footer><script type="module" src="/_astro/DocsFooter.astro_astro_type_script_index_0_lang.CcG6r9Au.js"></script></div></div></main></div></div></div></div></body></html>

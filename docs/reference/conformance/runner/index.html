@@ -1,0 +1,539 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-g5ptsecz"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Conformance runner specification | Game Event Script</title><link rel="canonical" href="https://gameeventscript.org/docs/reference/conformance/runner/"/><link rel="sitemap" href="/sitemap-index.xml"/><link rel="shortcut icon" href="/favicon-pixel-duo.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.3.5"/><meta name="generator" content="Starlight v0.42.4"/><meta property="og:title" content="Conformance runner specification"/><meta property="og:type" content="article"/><meta property="og:url" content="https://gameeventscript.org/docs/reference/conformance/runner/"/><meta property="og:locale" content="en"/><meta property="og:description" content="Conformance runner specification — Game Event Script documentation."/><meta property="og:site_name" content="Game Event Script"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Conformance runner specification — Game Event Script documentation."/><script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script><template id="theme-icons"><svg aria-hidden="true" class="light astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg><svg aria-hidden="true" class="dark astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg><svg aria-hidden="true" class="auto astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg></template><link rel="stylesheet" href="/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/_astro/common.CIp__BGE.css"><script type="module" src="/_astro/page.Dwipeu-R.js"></script></head><body class="astro-g5ptsecz"><a class="sl-skip-link astro-qb7clj6f" href="#_top">Skip to content</a><div class="page sl-flex astro-yntsjkba"><header class="header astro-yntsjkba"><div class="header astro-by6fddyj"><div class="title-wrapper sl-flex astro-by6fddyj"><a href="/" class="site-title sl-flex astro-6rvad3va"><img class="astro-6rvad3va" alt src="/_astro/mark.DsNbRX0k.svg" width="64" height="64"><span class="astro-6rvad3va" translate="no">Game Event Script</span></a></div><div class="sl-flex print:hidden astro-by6fddyj"><site-search class="astro-by6fddyj astro-b5kgnn7o" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-b5kgnn7o"><svg aria-hidden="true" class="astro-b5kgnn7o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block astro-b5kgnn7o" aria-hidden="true">Search</span><kbd class="sl-hidden md:sl-flex astro-b5kgnn7o" style="display: none;"><kbd class="astro-b5kgnn7o">Ctrl</kbd><kbd class="astro-b5kgnn7o">K</kbd></kbd></button><dialog style="padding:0" aria-label="Search" class="astro-b5kgnn7o"><div class="dialog-frame sl-flex astro-b5kgnn7o"><button data-close-modal class="sl-flex md:sl-hidden astro-b5kgnn7o">Cancel</button><div class="search-container astro-b5kgnn7o"><div id="starlight__search" class="astro-b5kgnn7o"></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/_astro/Search.astro_astro_type_script_index_0_lang.BuGLwjLu.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group astro-by6fddyj"><div class="sl-flex social-icons astro-by6fddyj"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script><script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div><aside class="ges-development-notice" aria-label="Documentation version" data-pagefind-ignore>Development documentation. Check the <a href="/docs/changelog/">changelog</a> when using a published package.</aside><script type="module">var e=document.querySelector(`.ges-development-notice`);if(e){let t=()=>document.documentElement.style.setProperty(`--ges-notice-height`,`${e.getBoundingClientRect().height}px`);t(),new ResizeObserver(t).observe(e)}</script></header><nav class="sidebar print:hidden astro-yntsjkba" aria-label="Main"><button popovertarget="starlight__sidebar" class="sl-menu-button sl-flex md:sl-hidden print:hidden astro-r2osgdlg"><svg aria-hidden="true" class="open-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg><svg aria-hidden="true" class="close-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg><span class="sr-only astro-r2osgdlg">Menu</span></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=matchMedia(`(min-width: 50em)`),t=()=>{this.popover=e.matches?null:`auto`};t(),e.addEventListener(`change`,()=>t()),this.addEventListener(`toggle`,({newState:e})=>this.trapFocus(e===`open`))}trapFocus(e){document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}};customElements.define(`sl-sidebar-pane`,e);</script><sl-sidebar-pane popover id="starlight__sidebar" class="sidebar-pane astro-yntsjkba"><div class="sidebar-content sl-flex astro-yntsjkba"><sl-sidebar-state-persist data-hash="1syr27k" class="astro-ipdry5cl"><script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script><ul class="top-level astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/" class="large astro-rmhv4bp6"><span class="astro-rmhv4bp6">Home</span></a></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Start here</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="0"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Documentation overview</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Learn the language</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in C#</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in Swift</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Tools</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="1"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Native Swift CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/editor-bundles/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">TextMate editor bundles</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Native integration</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="2"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/implementations/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/csharp-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# API reference</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/implementations/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/swift-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift API reference</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Language and host reference</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="3"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script language specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/text/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable text and Unicode semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/numbers/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable number semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/determinism/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable determinism semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/host-runtime/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Host runtime specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/public-api/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable public API specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/diagnostics/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable diagnostics specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/message-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Product message JSON V1</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/syntax-highlighting/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Syntax highlighting</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Program formats</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="4"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/program-model/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable program model specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/bytecode/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Bytecode specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/binary-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesb` binary format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/assembler-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesa` assembler format specification</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Conformance</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="5"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/markdown-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance Markdown format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/runner/" aria-current="page" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance runner specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/environment/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance environment specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/coverage/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable Conformance Coverage</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/cross-language-acceptance/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Cross-language conformance acceptance</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Packages and releases</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="6"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/distribution/packages/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Library packages and releases</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/distribution/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# distribution</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/changelog/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Changelog</span></a></li></ul></details></li></ul><script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist><div class="md:sl-hidden"><div class="mobile-preferences sl-flex astro-p4azlveh"><div class="social-icons astro-p4azlveh"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script></div></div></div></sl-sidebar-pane></nav><div class="main-frame astro-yntsjkba"><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-lrzkfocr"><aside class="right-sidebar-container print:hidden astro-lrzkfocr"><div class="right-sidebar astro-lrzkfocr"><div class="lg:sl-hidden astro-qok35upx"><mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-66cqc7ze"><nav aria-labelledby="starlight__on-this-page--mobile" class="astro-66cqc7ze"><details id="starlight__mobile-toc" class="astro-66cqc7ze"><summary id="starlight__on-this-page--mobile" class="sl-flex astro-66cqc7ze"><span class="toggle sl-flex astro-66cqc7ze">On this page<svg aria-hidden="true" class="caret astro-66cqc7ze astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current astro-66cqc7ze"></span></summary><div class="dropdown astro-66cqc7ze"><ul class="isMobile astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#inputs-and-operations" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Inputs and operations</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#conformance-environment" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Conformance environment</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#capabilities" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Capabilities</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#resource-resolver" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Resource resolver</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#preflight" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Preflight</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#common-execution-rules" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Common execution rules</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#kind-execution" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Kind execution</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#script-api" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Script API</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#compile-and-load-errors" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Compile and load errors</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#message-api" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Message API</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#value-api" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Value API</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#external-type-api" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">External type API</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#compile-metadata-and-bytecode-constraints" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Compile metadata and bytecode constraints</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#bytecode-snapshot" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Bytecode snapshot</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#program-binary" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Program binary</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#performance" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Performance</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#binary64-comparison" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Binary64 comparison</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#status-and-failure-classification" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Status and failure classification</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#case-result-model" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Case result model</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#aggregate-and-canonical-json-result" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Aggregate and canonical JSON result</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#cross-language-result-projection" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Cross-language result projection</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#human-readable-markdown-report" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Human-readable Markdown report</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#received-markdown" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Received Markdown</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#adapter-responsibilities" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Adapter responsibilities</span></a></li></ul></div></details></nav></mobile-starlight-toc><script type="module" src="/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C3fM4Kra.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block astro-qok35upx"><div class="sl-container astro-qok35upx"><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul class="astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#inputs-and-operations" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Inputs and operations</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#conformance-environment" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Conformance environment</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#capabilities" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Capabilities</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#resource-resolver" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Resource resolver</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#preflight" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Preflight</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#common-execution-rules" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Common execution rules</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#kind-execution" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Kind execution</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#script-api" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Script API</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#compile-and-load-errors" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Compile and load errors</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#message-api" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Message API</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#value-api" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Value API</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#external-type-api" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">External type API</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#compile-metadata-and-bytecode-constraints" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Compile metadata and bytecode constraints</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#bytecode-snapshot" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Bytecode snapshot</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#program-binary" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Program binary</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#performance" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Performance</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#binary64-comparison" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Binary64 comparison</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#status-and-failure-classification" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Status and failure classification</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#case-result-model" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Case result model</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#aggregate-and-canonical-json-result" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Aggregate and canonical JSON result</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#cross-language-result-projection" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Cross-language result projection</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#human-readable-markdown-report" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Human-readable Markdown report</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#received-markdown" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Received Markdown</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#adapter-responsibilities" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Adapter responsibilities</span></a></li></ul></nav></starlight-toc><script type="module" src="/_astro/TableOfContents.astro_astro_type_script_index_0_lang.BpJaGz7G.js"></script></div></div></div></aside><div class="main-pane astro-lrzkfocr"><main data-pagefind-body class="astro-g5ptsecz" lang="en" dir="ltr"><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><h1 id="_top" class="astro-bebwqqxs">Conformance runner specification</h1></div></div><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><div class="sl-markdown-content"><!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<p>This document defines the normative execution and result contract for the
+normalized test model in <a href="/docs/reference/conformance/markdown-format/">Markdown format</a>. The authoring parser and
+the runner are separate components: parsing never executes a script, and the
+runner never interprets Markdown or YAML.</p>
+<p>The runner API is synchronous, threadless, fileless, networkless, and independent
+of MSTest, XCTest, JUnit, or any other test framework.</p>
+<h2 id="inputs-and-operations">Inputs and operations</h2>
+<p>The runner consumes only fully validated immutable conformance documents and an
+explicit immutable environment. It exposes three conceptual operations:</p>
+<ul>
+<li><code>RunCase(document, caseId, environment)</code>;</li>
+<li><code>RunDocument(document, environment)</code>;</li>
+<li><code>RunCorpus(documents, environment)</code>.</li>
+</ul>
+<p><code>RunCase</code> does not execute other cases. <code>RunDocument</code> runs cases in document
+order. <code>RunCorpus</code> runs documents in caller-supplied order and cases in document
+order. The caller is responsible for deterministic discovery order; the runner
+rejects duplicate suite or full case IDs before executing any corpus case.</p>
+<p>Every case gets a newly constructed compiler/host/test environment unless its
+kind explicitly has no such component. No mutable state, host queue, random
+state, registry mutation, performance sample, or observer event crosses a case
+boundary. Implementations may cache immutable definitions that cannot affect
+observable behavior.</p>
+<h2 id="conformance-environment">Conformance environment</h2>
+<p>An environment contains:</p>
+<ul>
+<li>stable <code>runnerId</code> and <code>runnerVersion</code> strings;</li>
+<li>an implementation ID and implementation version;</li>
+<li>a set of supported capabilities;</li>
+<li>portable compiler, program reader/writer, host, VM, extension catalog/runtime
+registry, and message/value factories as required by the declared capabilities;</li>
+<li>declarative native-handler and publish-sink factories;</li>
+<li>an optional bounded resource resolver;</li>
+<li>an optional performance profile ID and performance measurement provider;</li>
+<li>explicit runner limits.</li>
+</ul>
+<p>The performance provider receives the fully normalized case and selected
+profile ID after the runner has completed the ordinary correctness execution.
+It returns an immutable set of canonical Binary64 metric strings with explicit
+units. Measurement mechanics remain implementation-specific; metric validation,
+bound calculation, classification, and result construction remain in the
+portable runner.</p>
+<p>An optional result sink is notified once for every completed case, in execution
+order. It does not participate in comparison and receives the same immutable
+case result that is retained by the aggregate report.</p>
+<p>The runner does not obtain defaults from process culture, current directory,
+environment variables, wall-clock time, locale, timezone, or ambient random
+state. Adapters may use such inputs to construct an explicit environment, but
+they are not hidden runner dependencies.</p>
+<h3 id="capabilities">Capabilities</h3>
+<p>Capability IDs use the authoring ID grammar. V1 defines these core IDs:</p>
+<ul>
+<li><code>compiler</code></li>
+<li><code>program-binary</code></li>
+<li><code>host</code></li>
+<li><code>vm</code></li>
+<li><code>message-api</code></li>
+<li><code>value-api</code></li>
+<li><code>external-types</code></li>
+<li><code>native-handlers</code></li>
+<li><code>publish-sink</code></li>
+<li><code>observer</code></li>
+</ul>
+<p>V1 defines these optional IDs:</p>
+<ul>
+<li><code>performance</code></li>
+<li><code>bytecode-snapshot</code></li>
+</ul>
+<p>Kinds add their required capabilities as specified by
+<a href="/docs/reference/conformance/markdown-format/">Markdown format</a>. If a required core capability is absent, the case is
+an <code>error</code> with code <code>conformance.runner.missingCoreCapability</code>; it is never a
+skip. If an explicitly optional capability is absent, the case is <code>skipped</code> with
+code <code>conformance.runner.missingOptionalCapability</code>. An unknown capability ID in
+a V1 document is a schema error.</p>
+<p>An environment must not advertise a capability and then skip cases requiring
+it. Incomplete language ports express honest capability sets; the aggregate
+report makes those omissions visible.</p>
+<h3 id="resource-resolver">Resource resolver</h3>
+<p>The optional resource resolver accepts a portable resource ID plus an explicit
+maximum byte count and returns immutable bytes or a structured error. It never
+receives an instruction to interpret a path or URL. The runner itself never
+opens a file, accesses a package resource, or performs network I/O.</p>
+<p>The resolver is not used for embedded <code>ges</code> or <code>gesa</code> blocks. <code>programBinary</code>
+passes only the declared <code>resourceId</code> and <code>MaxResourceBytes</code>. A resolver returns
+immutable bytes or the structured status <code>notFound</code>, <code>limitExceeded</code>, or
+<code>error</code>. The runner independently rejects oversized returned data and verifies
+the manifest SHA-256 before decoding it. Resource failures and integrity
+mismatches are test-environment errors, never expected format failures.</p>
+<h2 id="preflight">Preflight</h2>
+<p>Before executing the first selected case, the runner validates:</p>
+<ul>
+<li>the normalized model invariant and all IDs/references;</li>
+<li>duplicate IDs in the selected document/corpus;</li>
+<li>that the environment is internally complete for every advertised capability;</li>
+<li>runner limits and resource limits;</li>
+<li>the selected performance profile when performance cases are selected and the
+environment advertises the optional <code>performance</code> capability.</li>
+</ul>
+<p>An invalid authoring document should already have failed parsing. A forged or
+programmatically constructed invalid normalized model still produces <code>error</code>,
+not an implementation exception escaping the runner.</p>
+<h2 id="common-execution-rules">Common execution rules</h2>
+<ul>
+<li>Case setup, compilation, linking, initialization, steps, and comparison occur
+in that order where applicable.</li>
+<li>Programs are compiled and loaded in the order defined by their source
+descriptors. Native handlers are registered in metadata order.</li>
+<li>Programs listed in <code>deferredPrograms</code> are compiled during setup but are not
+loaded until their fixed native <code>loadProgram</code> action executes. Native
+lifecycle actions operate only on validated IDs and are idempotent.</li>
+<li>After setup, the runner calls Host.Start. Successful startup is followed by an
+ordinary run-to-completion pump unless <code>initialization.pump: start</code> is selected.
+Failed startup is never pumped. Later step receives are rejected on that host.
+Lifecycle observations can assert host readiness and individual StartResults.</li>
+<li>A runtime step first applies its optional ordered <code>stepActions</code>, then calls
+<code>Receive</code>, records its acceptance, and uses the table’s pump mode.
+<code>completion</code> makes one run-to-completion call. <code>frames</code> repeatedly calls
+<code>ExecuteFrame(budget)</code> until idle or runtime-limit state, <code>frame</code> calls it
+exactly once, and <code>enqueue</code> performs no pump. Frame modes record whether a
+result was paused. When an action declares <code>expectResult</code>, its boolean result
+is compared before <code>Receive</code>.</li>
+<li>A <code>loadProgram</code> action may declare <code>expectError</code> with a structured link
+diagnostic. The runner compares phase, code, and every specified context
+field, records the diagnostic in the case result, and continues after the
+handled failure. A successful load or mismatched diagnostic is an assertion
+failure. Expected action diagnostics do not become runtime observer events.
+Both error and boolean expectations are checked for <code>stepActions</code> and actions
+executed inside native handlers.</li>
+<li>Native handlers are atomic according to the portable Host contract.</li>
+<li>Local messages, outbound sink messages, runtime-limit observations, and
+runtime diagnostics are recorded and compared separately. When an expectation
+contains <code>trace</code>, every Emit, Publish, DispatchStarted, DispatchCompleted,
+RuntimeLimitReached, and RuntimeError callback is additionally compared as one
+exact ordered sequence.</li>
+<li>Any unhandled implementation exception is caught at the runner boundary and
+becomes an <code>error</code>. Its platform text may be included as nonnormative technical
+detail but never determines a pass.</li>
+</ul>
+<p>The runner uses no parallel execution internally. A testframework adapter may
+run independent cases concurrently only when it gives each case an independent
+environment and the implementation under test permits it. Performance cases
+must not be run concurrently unless their selected profile explicitly permits
+that measurement mode.</p>
+<h2 id="kind-execution">Kind execution</h2>
+<h3 id="script-api">Script API</h3>
+<p>For a source-backed case, the runner compiles each program once and optionally
+performs its requested <code>.gesb</code> roundtrip. A native-only case skips compilation
+and VM setup entirely. The runner creates the declared number of hosts with the declared runtime
+limits, links/loads non-deferred programs, registers initially enabled native
+handlers, pumps initialization, and executes the ordered steps. With
+<code>hostCount &gt; 1</code>, the identical immutable Program objects and the same expected
+scenario are used independently for every Host; outputs are never merged.</p>
+<p>An absent expected channel means the format-defined empty default, not “do not
+compare”. Message name, tags, argument order, argument names, value kinds,
+units, and non-Binary64 payloads compare exactly. Maps and records use their
+portable semantic equality contract.</p>
+<h3 id="compile-and-load-errors">Compile and load errors</h3>
+<p><code>compileError</code> passes only when compilation fails and at least one emitted
+diagnostic matches every present expectation field, including required phase
+and code. Successful compilation fails the case.</p>
+<p><code>loadError</code> first requires successful compilation and optional binary roundtrip.
+It passes only when <code>Host.Load</code> fails with a matching diagnostic and leaves the
+new host observably unchanged. A compile failure is an error in the test setup,
+not the expected load failure.</p>
+<p>Diagnostic message text, exception class names, stack traces, and technical
+details are never compared.</p>
+<h3 id="message-api">Message API</h3>
+<p>The runner constructs signatures and messages through public portable message
+APIs. When an error is expected, only its stable message error code is compared.
+Otherwise every present normalized property expectation is exact. Optional
+comparisons cover signature, message and handler equality plus the equal-value
+hash invariant; ordered values may also be bound through a signature.</p>
+<p>When <code>compareConformanceMessage</code> is supplied, the runner compares that transport
+expectation against the constructed actual message through the runtime-message
+conformance comparison operation. Its result must equal <code>conformanceEquals</code>.
+This operation uses case comparison options and tests the comparison contract
+itself; it must not be replaced by public message equality or by a separate
+comparison implementation used only for these tests.</p>
+<h3 id="value-api">Value API</h3>
+<p>The runner constructs a portable value, optionally mutates its source arrays,
+then compares its normalized representation, public flags/readers, equality and
+equal-value hash invariant. This kind does not compile or execute GES source.</p>
+<h3 id="external-type-api">External type API</h3>
+<p>The runner constructs the declared portable external-type catalog and compares
+its count or stable duplicate-name error. No Reflection or platform type is
+involved.</p>
+<h3 id="compile-metadata-and-bytecode-constraints">Compile metadata and bytecode constraints</h3>
+<p><code>compileMetadata</code> inspects only public portable program metadata. <code>bytecode</code>
+counts the final optimized instruction stream by canonical opcode name.
+Compiler-internal AST, lowering nodes, and native enum ordinal positions are not
+observable.</p>
+<h3 id="bytecode-snapshot">Bytecode snapshot</h3>
+<p><code>bytecodeSnapshot</code> compiles with the resolved options and produces the canonical
+Game Event Script Assembler dump. Expected and actual text are converted to
+strict UTF-8 with logical <code>LF</code> and compared byte-for-byte. A mismatch records
+both texts and the first differing UTF-8 byte offset.</p>
+<p>Build metadata that is intentionally implementation-specific must not appear in
+a cross-language snapshot, or the case must declare a capability/profile scope
+that makes it non-cross-language. Required runtime segments and canonical
+portable dump content remain comparable.</p>
+<h3 id="program-binary">Program binary</h3>
+<p><code>programBinary</code> resolves one bounded immutable <code>.gesb</code> resource, verifies its
+SHA-256, and calls the full Program reader. Structural read errors and semantic
+validation errors are classified by the stable format-error ranges specified
+in <a href="/docs/reference/conformance/markdown-format/">Markdown format</a> and compared without platform exception text.</p>
+<p>For a valid Program the runner compares manifest/build identity and all present
+metadata expectations, invokes the canonical writer, and compares requested
+byte equality and rewrite SHA-256. An optional <code>gesa</code> block additionally checks
+the parsed Program’s canonical dump using the exact comparison defined for
+bytecode snapshots. If Steps are present, it loads that parsed
+Program into a fresh Host and executes the ordinary initialization and step
+pipeline. Embedded source remains provenance and is never opened or compiled.
+The runner never interprets <code>relativePath</code>; packaging adapters map resource IDs
+to files, package resources, or caller-provided memory.</p>
+<h3 id="performance">Performance</h3>
+<p>A performance case first performs one ordinary correctness execution. A
+correctness mismatch is <code>failed</code> and no performance pass may hide it.</p>
+<p>The environment’s exact performance profile selects one expectation profile.
+If the environment advertises <code>performance</code> but no matching profile exists, the
+case is <code>error</code> with <code>conformance.runner.missingPerformanceProfile</code>; it is not a
+skip. Adapters that do not intend to benchmark omit the optional <code>performance</code>
+capability and receive a normal skip.</p>
+<p>Warmup samples are discarded. Measured samples use the workload counts from the
+case and the measurement provider’s explicitly documented scopes. Each measured
+metric must have exactly the declared unit. Bytes are converted to KiB by
+division by 1024, never 1000. Per-iteration metrics divide by the exact measured
+iteration count.</p>
+<p>For every metric, the permitted upper bound is calculated as defined by the
+authoring specification. A value equal to the bound passes. A lower value always
+passes. NaN, infinity, a negative measurement, missing metric, additional
+unexpected required metric, unit mismatch, or invalid iteration count is an
+error rather than a regression failure. A finite value above the bound is a
+<code>failed</code> result with code <code>conformance.performance.regression</code>.</p>
+<p>Performance values never affect non-performance cases and are not normative
+cross-platform equivalence values.</p>
+<p>For warmed zero-allocation workloads, input and observer creation, compilation,
+linking, initialization, and declared warmup are outside the measurement.
+The measured region includes input enqueueing and the declared pump mode;
+<code>frames</code> must perform the specified frame budget and resume until completion.
+Providers observe completed work and, when enabled, counting-observer callbacks
+without allocating in those callbacks. Unsupported modes are errors, never
+silently measured as another mode.</p>
+<p>Allocation evidence measures cumulative allocations, including objects freed
+during the interval; live-heap differences and RSS are not substitutes. Each
+sample must satisfy a zero bound. Aggregation uses the maximum allocated value,
+independently of elapsed-time selection. Positive escaping-allocation and
+nonallocating controls verify the measurement mechanism. A missing or inadequate
+counter cannot produce a zero-allocation pass.</p>
+<p>Native adapters record measurement provenance alongside the portable result:
+runtime and build SDK/compiler identity, versions, build configuration, OS and
+architecture, memory management, instrumentation, included/excluded scope,
+sample values and coverage gaps. Evidence qualifies only the declared scope;
+a managed-thread counter cannot certify native heaps or another runtime.
+Every port uses the shared workloads with its own suitable instrumentation.
+The test adapter’s correctness-only reference echo is explicitly not measured
+allocation evidence and must be identified as such in its human-readable report.</p>
+<h2 id="binary64-comparison">Binary64 comparison</h2>
+<p>Exact mode compares IEEE-754 Binary64 bits after the portable value
+canonicalization rules. Consequently stored zero is canonical positive zero and
+invalid scalar NaN is observable as <code>nothing</code>, not as a NaN payload.</p>
+<p>Expected values are compared directly in their declared transport variants.
+They must not pass through implementation value factories that can convert
+Binary64 to Int64 or otherwise change their declared type. The <code>NaN</code> spelling
+of invalid mathematics defined by <a href="/docs/reference/semantics/numbers/">Number semantics</a>
+remains an alias for <code>nothing</code>. Units remain exact even for infinities.
+Int64 range bounds and steps are compared as Int64 values without conversion to
+Binary64; Binary64 ranges require Binary64 storage for all three fields.</p>
+<p>ULP mode uses the ordered-bit distance algorithm from
+<a href="/docs/reference/semantics/numbers/">Number semantics</a> and the declared non-negative maximum. The mode
+applies recursively to finite Binary64 fields in floats, percentages, vectors,
+points, ranges, lists, maps, records, messages, and arguments. Infinities require
+the same sign. It never weakens type, unit, ordering, key, or count comparison.</p>
+<h2 id="status-and-failure-classification">Status and failure classification</h2>
+<p>Every selected valid case produces exactly one of:</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>passed</code></td>
+<td>execution and every expectation matched</td>
+</tr>
+<tr>
+<td><code>failed</code></td>
+<td>the implementation produced a valid observable result that did not match</td>
+</tr>
+<tr>
+<td><code>skipped</code></td>
+<td>one or more declared optional capabilities were absent</td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td>invalid environment/model, missing core support, or runner/implementation failure prevented a valid comparison</td>
+</tr>
+</tbody>
+</table>
+<p>A status has one of the following stable codes:</p>
+<ul>
+<li><code>conformance.passed</code>;</li>
+<li><code>conformance.assertion.mismatch</code>;</li>
+<li><code>conformance.runner.missingOptionalCapability</code>;</li>
+<li><code>conformance.runner.missingCoreCapability</code>,
+<code>conformance.runner.invalidEnvironment</code>, <code>conformance.runner.invalidModel</code>,
+<code>conformance.runner.unhandledException</code>, and
+<code>conformance.runner.missingPerformanceProfile</code>;</li>
+<li><code>conformance.compile.expectedError</code> and
+<code>conformance.load.expectedError</code>;</li>
+<li><code>conformance.performance.regression</code>;</li>
+<li><code>conformance.resource.unavailable</code>,
+<code>conformance.resource.limitExceeded</code>, and
+<code>conformance.resource.integrityMismatch</code>.</li>
+</ul>
+<p><code>failed</code> means the test reached its intended assertion boundary. Infrastructure
+or malformed-input problems are <code>error</code>. Adapters must preserve this distinction
+instead of mapping both to an assertion failure internally.</p>
+<p>The aggregate status is <code>error</code> if any case errored, otherwise <code>failed</code> if any
+case failed, otherwise <code>passed</code> if every selected case passed or skipped. A run
+containing only skipped cases has aggregate status <code>skipped</code>.</p>
+<h2 id="case-result-model">Case result model</h2>
+<p>Each immutable case result contains:</p>
+<ul>
+<li>full case ID, suite ID, local case ID, display title, kind, level, categories,
+and tags;</li>
+<li>status and stable code;</li>
+<li>missing optional capabilities for a skip;</li>
+<li>zero or more structured mismatches with a path, expected value, actual value,
+and optional diagnostic/source range;</li>
+<li>ordered portable diagnostics and runtime-limit observations when relevant;</li>
+<li>optional actual GESA text for snapshot mismatch/update;</li>
+<li>optional performance profile, measurements, references, and allowed bounds;</li>
+<li>optional nonnormative technical detail.</li>
+</ul>
+<p>Expected/actual values use the same portable message/value shapes as the
+authoring format. A mismatch path is a stable JSON-Pointer-like ASCII path such
+as <code>/steps/add/local/0/args/0/value</code>; it does not contain a translated display
+message.</p>
+<p>A mismatch has required string fields <code>path</code> and <code>code</code>, optional <code>expected</code>
+and <code>actual</code> portable nodes, and optional <code>diagnostic</code>. A result diagnostic uses
+required <code>phase</code>, <code>code</code>, and <code>message</code> plus the optional portable fields from
+<a href="/docs/reference/diagnostics/">Diagnostics</a>; <code>technicalDetails</code> may be emitted only as explicitly
+nonnormative detail. A performance result contains <code>profile</code> and a metric map;
+each metric contains canonical Binary64 strings <code>measured</code>, <code>reference</code>, and
+<code>allowed</code>, plus <code>unit</code> and a boolean <code>passed</code>. Missing capabilities are sorted
+ordinally. Null is used only for schema fields explicitly shown as nullable;
+absent optional diagnostic fields are omitted.</p>
+<h2 id="aggregate-and-canonical-json-result">Aggregate and canonical JSON result</h2>
+<p><code>RunDocument</code> and <code>RunCorpus</code> return an immutable report containing runner and
+implementation identity, the exact advertised capability set, aggregate counts,
+aggregate status, and ordered case results.</p>
+<p><code>ConformanceResults.json</code> is the normative machine result. Its top-level shape
+is:</p>
+<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"schemaVersion"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"runner"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"id"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">steph.ges.conformance.csharp</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"version"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">0.1.0</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">},</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"implementation"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"id"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">steph.ges.csharp</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"version"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">0.1.0</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">},</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"capabilities"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">compiler</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">host</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">vm</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">],</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"performanceProfile"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">null</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"status"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">passed</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"summary"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"total"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"passed"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"failed"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">0</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"skipped"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">0</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"error"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">0</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">},</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"cases"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"id"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">runtime.math/integer-add</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"suiteId"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">runtime.math</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"caseId"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">integer-add</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"title"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">Integer addition</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"kind"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">scriptApi</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"level"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">atomic</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"categories"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">conformance</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">],</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"tags"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">runtime</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">math</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">],</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"status"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">passed</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"code"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">conformance.passed</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"missingCapabilities"</span><span style="--0:#D6DEEB;--1:#403F53">: [],</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"mismatches"</span><span style="--0:#D6DEEB;--1:#403F53">: [],</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"diagnostics"</span><span style="--0:#D6DEEB;--1:#403F53">: [],</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"runtimeLimits"</span><span style="--0:#D6DEEB;--1:#403F53">: [],</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"actualAssembler"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">null</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"performance"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">null</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{  &quot;schemaVersion&quot;: 1,  &quot;runner&quot;: {    &quot;id&quot;: &quot;steph.ges.conformance.csharp&quot;,    &quot;version&quot;: &quot;0.1.0&quot;  },  &quot;implementation&quot;: {    &quot;id&quot;: &quot;steph.ges.csharp&quot;,    &quot;version&quot;: &quot;0.1.0&quot;  },  &quot;capabilities&quot;: [&quot;compiler&quot;, &quot;host&quot;, &quot;vm&quot;],  &quot;performanceProfile&quot;: null,  &quot;status&quot;: &quot;passed&quot;,  &quot;summary&quot;: {    &quot;total&quot;: 1,    &quot;passed&quot;: 1,    &quot;failed&quot;: 0,    &quot;skipped&quot;: 0,    &quot;error&quot;: 0  },  &quot;cases&quot;: [    {      &quot;id&quot;: &quot;runtime.math/integer-add&quot;,      &quot;suiteId&quot;: &quot;runtime.math&quot;,      &quot;caseId&quot;: &quot;integer-add&quot;,      &quot;title&quot;: &quot;Integer addition&quot;,      &quot;kind&quot;: &quot;scriptApi&quot;,      &quot;level&quot;: &quot;atomic&quot;,      &quot;categories&quot;: [&quot;conformance&quot;],      &quot;tags&quot;: [&quot;runtime&quot;, &quot;math&quot;],      &quot;status&quot;: &quot;passed&quot;,      &quot;code&quot;: &quot;conformance.passed&quot;,      &quot;missingCapabilities&quot;: [],      &quot;mismatches&quot;: [],      &quot;diagnostics&quot;: [],      &quot;runtimeLimits&quot;: [],      &quot;actualAssembler&quot;: null,      &quot;performance&quot;: null    }  ]}"><div></div></button></div></figure></div>
+<p>The writer emits strict UTF-8 JSON, no BOM, <code>LF</code>, two-space indentation, and a
+terminal <code>LF</code>. Object property order is the order shown by the V1 schema.
+Capabilities are sorted by Unicode-scalar ordinal order; cases retain execution
+order; tags and event sequences retain semantic order. Int64, UInt64, and
+Binary64 domain values use canonical strings so a JSON implementation cannot
+round them through its default number type. Summary counts are JSON integers.</p>
+<p>Every case object contains <code>runtimeLimits</code>, <code>actualAssembler</code>, and
+<code>performance</code> at the shown positions. Runtime-limit entries contain <code>name</code>,
+<code>detail</code>, and integer <code>limit</code>. <code>actualAssembler</code> is either the normalized GESA
+text or <code>null</code>. Performance is either <code>null</code> or an object containing <code>profile</code>
+and a <code>metrics</code> object keyed by metric ID; every metric contains, in order,
+<code>measured</code>, <code>reference</code>, <code>allowed</code>, <code>unit</code>, and <code>passed</code>. Optional mismatch and
+diagnostic fields are omitted when absent. Optional nonnormative
+<code>technicalDetails</code> is the final case property when explicitly requested from
+the runner.</p>
+<p>The normative result contains no timestamp, hostname, username, absolute path,
+wall-clock duration, process ID, random build ID, or stack trace. A tool may
+write such data to a separate nonnormative envelope.</p>
+<p>Result JSON is an execution/exchange format. It is not an alternative test
+authoring format and the runner does not read it as a suite.</p>
+<h2 id="cross-language-result-projection">Cross-language result projection</h2>
+<p>The full result intentionally contains implementation identity, diagnostics,
+assembler text, and profile-local performance data. Cross-language comparison
+therefore uses the additional compact artifact produced by
+<code>ConformanceCrossLanguageResultJsonWriter</code>.</p>
+<p>The writer consumes the complete parsed corpus plus a complete run report. It
+computes the exact corpus fingerprint, sorts cases by full stable ID, and emits
+only case identity, kind, level, Core/optional requirements, status, and stable
+code. It rejects partial, duplicate, additional, or metadata-inconsistent
+reports. It never reruns a case.</p>
+<p>The exact fingerprint algorithm, compact JSON schema, C# reference artifact,
+parser bootstrap process, capability policy, and acceptance comparison are
+normatively defined in <a href="/docs/reference/conformance/cross-language-acceptance/">Cross-language acceptance</a>.</p>
+<h2 id="human-readable-markdown-report">Human-readable Markdown report</h2>
+<p><code>ConformanceReport.md</code> is generated solely from the structured report. It
+contains, in order:</p>
+<ul>
+<li>runner/implementation identity and optional performance profile;</li>
+<li>aggregate status and Passed/Failed/Skipped/Error counts;</li>
+<li>advertised and missing capabilities;</li>
+<li>one summary row per case keyed by full stable ID;</li>
+<li>failure/error sections with structured mismatches and diagnostics;</li>
+<li>a performance table with measured, reference, allowed, and unit values.</li>
+</ul>
+<p>The Markdown report is informative. The structured report and canonical JSON
+define machine meaning; prose wording and table layout may evolve without a
+schema-version change.</p>
+<h2 id="received-markdown">Received Markdown</h2>
+<p>The received writer accepts the original immutable source document plus a
+structured run report. It may update only:</p>
+<ul>
+<li>the scalar token of a selected performance metric’s <code>reference</code>; and</li>
+<li>the payload range of the selected case’s <code>gesa</code> block.</li>
+</ul>
+<p>It uses the parser’s original UTF-8 source ranges. Every byte outside the
+replaced ranges is copied exactly, including prose, comments, whitespace,
+tables, line endings, BOM presence, tolerances, and maximum values. Replacements
+use the original document line-ending style where a style is unambiguous.</p>
+<p>Overlapping, missing, stale, or ambiguous ranges are an error. The received
+writer returns bytes/text to its caller and never overwrites a source file. A
+filesystem or testframework adapter may save <code>&lt;Suite&gt;.received.md</code> as an
+explicit approval candidate.</p>
+<p>The portable writer updates every performance measurement and actual assembler
+present in the selected report results for the source suite. A report may be a
+whole-corpus report, but matching full/local IDs, title, kind, level, performance
+profile, metric set, current reference, and unit must agree with the parsed source.
+It reports <code>conformance.received.invalidReport</code>,
+<code>conformance.received.missingCase</code>, <code>conformance.received.missingRange</code>,
+<code>conformance.received.staleRange</code>, or
+<code>conformance.received.overlappingRange</code> for incompatible reports, missing
+ranges, stale range contents, or overlaps. A mixed-line-ending source has no
+unambiguous document style; inserted multiline GESA then uses <code>LF</code> while all
+existing bytes remain untouched.</p>
+<h2 id="adapter-responsibilities">Adapter responsibilities</h2>
+<p>A CLI or testframework adapter may discover files, read bytes, provide fixture
+resources, choose a performance profile, and write result/report/received
+artifacts. It must:</p>
+<ul>
+<li>pass document bytes to the portable parser under explicit limits;</li>
+<li>expose every H2 case as an individually addressable test when the framework
+supports parameterized tests;</li>
+<li>preserve the runner’s stable full ID in display/output metadata;</li>
+<li>use the same runner path for individual and aggregate execution;</li>
+<li>avoid replacing skipped/error distinctions with framework-specific guesses;</li>
+<li>never modify the authored suite without a separate explicit approval action;</li>
+<li>emit a compact cross-language result for a complete corpus run and retain the
+full result as the diagnostic source;</li>
+<li>compare ports by full stable case ID and corpus fingerprint, never by native
+testframework names or discovery order.</li>
+</ul>
+<p>Framework assertions, reflection-based discovery, environment-variable lookup,
+and filesystem paths belong to adapters, not to the portable parser, normalized
+model, runner, result writers, or received writer.</p>
+<p>Adapters execute crash-sensitive cases under process isolation. Their documented
+selection must apply to individual and full-corpus runs, with every case executed
+exactly once. The shared <code>program.call-graph-depth</code> suite requires this isolation,
+including its shallow controls. Its semantic contract remains ordinary
+<code>programBinary</code> validation and canonical rewriting; no process or stack-setting
+fields are added to Markdown.</p>
+<p>The worker runs the existing parser and runner for exactly the requested full
+case ID. The adapter bounds wall time and captured output and validates one
+complete result against the case and input identities before incorporating it
+into the corpus report. Process termination, timeout, output overflow, and
+missing, malformed, duplicate, or unrelated results fail the case rather than
+passing or skipping it. A structured worker failure remains a failure. Native
+exit codes and requested thread-stack sizes are technical evidence, never
+binary expectations. Process control, timers, threads, and result transport
+remain native adapter responsibilities.</p>
+</div><footer class="sl-flex astro-ddtxxk7k"><div class="meta sl-flex astro-ddtxxk7k"><a href="https://github.com/schloepke/GameEventScript/edit/main/specs/Conformance/Runner.md" class="sl-flex print:hidden astro-qlekgd3o"><svg aria-hidden="true" class="astro-qlekgd3o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.2em;"><path d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-1.1-.22 1 1 0 0 0-.32.22l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8c.1-.1.17-.2.22-.33a1 1 0 0 0 0-.24v-.14l.07-.05ZM6.83 20H4v-2.83l9.93-9.93 2.83 2.83L6.83 20ZM18.17 8.66l-2.83-2.83 1.42-1.41 2.82 2.82-1.41 1.42Z"/></svg>Edit page</a></div><div class="pagination-links print:hidden astro-b5raizh3" dir="ltr"><a href="/docs/reference/conformance/markdown-format/" rel="prev" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span class="astro-b5raizh3">Previous<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Conformance Markdown format specification</span></span></a><a href="/docs/reference/conformance/environment/" rel="next" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg><span class="astro-b5raizh3">Next<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Conformance environment specification</span></span></a></div></footer><script type="module" src="/_astro/DocsFooter.astro_astro_type_script_index_0_lang.CcG6r9Au.js"></script></div></div></main></div></div></div></div></body></html>

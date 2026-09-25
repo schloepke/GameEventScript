@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class GameEventScriptRandomGenerator | Game Event Script C# API — Unreleased (fd2609345491) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class GameEventScriptRandomGenerator | Game Event Script C# API — Unreleased (fd2609345491) ">
+      
+      <meta name="description" content="A sealed class that provides mechanisms for generating random numbers or values, either through a pseudo-random number generator or a predefined sequence of values. This class is useful for scenarios where deterministic or non-deterministic random value generation is required, especially in game event scripts.">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Api.GameEventScriptRandomGenerator">
+
+
+
+  <h1 id="GameEventScript_Api_GameEventScriptRandomGenerator" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator" class="text-break">
+Class GameEventScriptRandomGenerator  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.Api.html">Api</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>A sealed class that provides mechanisms for generating random numbers or values,
+either through a pseudo-random number generator or a predefined sequence of values.
+This class is useful for scenarios where deterministic or non-deterministic random
+value generation is required, especially in game event scripts.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public sealed class GameEventScriptRandomGenerator</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">GameEventScriptRandomGenerator</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="GameEventScript_Api_GameEventScriptRandomGenerator_Create_" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.Create*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptRandomGenerator_Create" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.Create">
+  Create()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates and returns a new instance of <code>GameEventScriptRandomGenerator</code> using
+a default portable random generator for generating random values.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GameEventScriptRandomGenerator Create()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptRandomGenerator.html">GameEventScriptRandomGenerator</a></dt>
+    <dd><p>A new <code>GameEventScriptRandomGenerator</code> initialized with a default generator seed.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptRandomGenerator_FromEntropy_" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.FromEntropy*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptRandomGenerator_FromEntropy_System_ReadOnlySpan_System_Byte__" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.FromEntropy(System.ReadOnlySpan{System.Byte})">
+  FromEntropy(ReadOnlySpan&lt;byte&gt;)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Folds a non-empty span of entropy bytes into a deterministic seed with the
+portable, endian-neutral mixing function and returns a generator seeded
+from it. Identical input bytes produce an identical generator on every
+platform, so a captured entropy blob reproduces a run across language
+ports.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GameEventScriptRandomGenerator FromEntropy(ReadOnlySpan&lt;byte&gt; entropy)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>entropy</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>A non-empty span of entropy bytes. Supply at least eight bytes for a
+full-entropy seed.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptRandomGenerator.html">GameEventScriptRandomGenerator</a></dt>
+    <dd><p>A new deterministic <a class="xref" href="GameEventScript.Api.GameEventScriptRandomGenerator.html">GameEventScriptRandomGenerator</a> seeded
+from the mixed entropy.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p><code class="paramref">entropy</code> is empty.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptRandomGenerator_FromSeed_" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.FromSeed*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptRandomGenerator_FromSeed_System_Int32_" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.FromSeed(System.Int32)">
+  FromSeed(int)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates and returns a new instance of <code>GameEventScriptRandomGenerator</code>
+initialized with the specified deterministic seed.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GameEventScriptRandomGenerator FromSeed(int seed)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>seed</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The seed value used for deterministic random value generation.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptRandomGenerator.html">GameEventScriptRandomGenerator</a></dt>
+    <dd><p>A new <code>GameEventScriptRandomGenerator</code> initialized with the specified seed.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptRandomGenerator_FromSeed_" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.FromSeed*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptRandomGenerator_FromSeed_System_Int64_" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.FromSeed(System.Int64)">
+  FromSeed(long)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates and returns a new instance of <code>GameEventScriptRandomGenerator</code>
+initialized with the specified deterministic 64-bit seed.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GameEventScriptRandomGenerator FromSeed(long seed)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>seed</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The seed value used for deterministic random value generation.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptRandomGenerator.html">GameEventScriptRandomGenerator</a></dt>
+    <dd><p>A new <code>GameEventScriptRandomGenerator</code> initialized with the specified seed.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptRandomGenerator_FromSequence_" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.FromSequence*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptRandomGenerator_FromSequence_System_Double___" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.FromSequence(System.Double[])">
+  FromSequence(params double[])
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates and returns a new instance of <code>GameEventScriptRandomGenerator</code>
+initialized to generate random values from a predefined sequence.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GameEventScriptRandomGenerator FromSequence(params double[] values)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>values</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a>[]</dt>
+    <dd><p>An array of <code>double</code> values representing the predefined sequence
+of random numbers to be used by the generator.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptRandomGenerator.html">GameEventScriptRandomGenerator</a></dt>
+    <dd><p>A new <code>GameEventScriptRandomGenerator</code> initialized to use the specified
+sequence of random values.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptRandomGenerator_NextFloat_" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.NextFloat*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptRandomGenerator_NextFloat_System_Double_System_Double_" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.NextFloat(System.Double,System.Double)">
+  NextFloat(double, double)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Generates a binary64 value between two bounds.
+The generator draws a unit value from the half-open interval [0, 1) and
+scales it to the ordered bounds. Binary64 rounding may nevertheless
+produce the upper bound.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public double NextFloat(double firstBound, double secondBound)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>firstBound</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
+    <dd><p>The first accepted bound. Bounds are swapped when this value is greater
+than <code class="paramref">secondBound</code>.</p>
+</dd>
+    <dt><code>secondBound</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
+    <dd><p>The second accepted bound.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
+    <dd><p>A binary64 value between the ordered bounds. Equal bounds are returned
+and NaN bounds produce NaN; neither case consumes the random stream.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptRandomGenerator_NextInclusiveInteger_" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.NextInclusiveInteger*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptRandomGenerator_NextInclusiveInteger_System_Int64_System_Int64_" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.NextInclusiveInteger(System.Int64,System.Int64)">
+  NextInclusiveInteger(long, long)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Generates a random 64-bit signed integer between the specified minimum and maximum values, inclusive.
+This method ensures that the generated value falls within the provided range,
+swapping the bounds if the minimum value is greater than the maximum.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long NextInclusiveInteger(long minInclusive, long maxInclusive)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>minInclusive</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The inclusive lower bound of the random number to generate.
+If greater than <code class="paramref">maxInclusive</code>, the values are swapped.</p>
+</dd>
+    <dt><code>maxInclusive</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The inclusive upper bound of the random number to generate.
+If less than <code class="paramref">minInclusive</code>, the values are swapped.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>A random integer within the range defined by <code class="paramref">minInclusive</code> and <code class="paramref">maxInclusive</code>.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptRandomGenerator_Pop_" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.Pop*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptRandomGenerator_Pop" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.Pop">
+  Pop()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Leaves the most recently entered random scope and restores its parent
+stream.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Pop()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when a scope was left; otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a> when no scope can be left at the current runtime boundary.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptRandomGenerator_Push_" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.Push*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptRandomGenerator_Push" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.Push">
+  Push()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Saves the active random stream and starts a nested scope from an identical
+copy. Leaving the scope restores the saved parent stream.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Push()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when the scope was entered; otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a> when the configured scope limit was reached.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptRandomGenerator_Push_" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.Push*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptRandomGenerator_Push_System_Int64_" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.Push(System.Int64)">
+  Push(long)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Saves the active random stream and starts a nested deterministic stream
+initialized from <code class="paramref">seed</code>. Leaving the scope restores the
+saved parent stream.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Push(long seed)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>seed</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The signed 64-bit seed for the nested stream.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">true</a> when the scope was entered; otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/bool">false</a> when the configured scope limit was reached.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptRandomGenerator_SeedFromEntropy_" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.SeedFromEntropy*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptRandomGenerator_SeedFromEntropy_System_ReadOnlySpan_System_Byte__" data-uid="GameEventScript.Api.GameEventScriptRandomGenerator.SeedFromEntropy(System.ReadOnlySpan{System.Byte})">
+  SeedFromEntropy(ReadOnlySpan&lt;byte&gt;)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Folds a non-empty span of entropy bytes into a signed 64-bit seed with the
+portable mixing function defined by the Determinism specification. The fold
+is deterministic and endian-neutral, so identical input bytes yield an
+identical seed on every platform. Reuse the returned seed with
+<a class="xref" href="GameEventScript.Api.GameEventScriptRandomGenerator.html#GameEventScript_Api_GameEventScriptRandomGenerator_FromSeed_System_Int64_">FromSeed(long)</a> or
+<a class="xref" href="GameEventScript.Api.GameEventScriptHostBuilder.html#GameEventScript_Api_GameEventScriptHostBuilder_WithRandomSeed_System_Int64_">WithRandomSeed(long)</a> to configure
+several generators or hosts from one entropy acquisition.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static long SeedFromEntropy(ReadOnlySpan&lt;byte&gt; entropy)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>entropy</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>A non-empty span of entropy bytes.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The derived signed 64-bit seed.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p><code class="paramref">entropy</code> is empty.</p>
+</dd>
+  </dl>
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (fd2609345491)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

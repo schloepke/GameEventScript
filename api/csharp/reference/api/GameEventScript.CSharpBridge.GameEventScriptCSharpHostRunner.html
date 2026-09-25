@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class GameEventScriptCSharpHostRunner | Game Event Script C# API — Unreleased (fd2609345491) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class GameEventScriptCSharpHostRunner | Game Event Script C# API — Unreleased (fd2609345491) ">
+      
+      <meta name="description" content="Optional C# adapter that serializes host access and pumps accepted messages on a shared worker.">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner">
+
+
+
+  <h1 id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner" class="text-break">
+Class GameEventScriptCSharpHostRunner  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.CSharpBridge.html">CSharpBridge</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.CSharpBridge.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Optional C# adapter that serializes host access and pumps accepted messages on a shared worker.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public sealed class GameEventScriptCSharpHostRunner : IDisposable</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">GameEventScriptCSharpHostRunner</span></div>
+    </dd>
+  </dl>
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.idisposable">IDisposable</a></div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_IsIdle_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.IsIdle*"></a>
+
+  <h3 id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_IsIdle" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.IsIdle">
+  IsIdle
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether the owned host has no active or queued work.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsIdle { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_IsReady_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.IsReady*"></a>
+
+  <h3 id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_IsReady" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.IsReady">
+  IsReady
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether the owned host completed its shared initial start.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsReady { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_LastResult_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.LastResult*"></a>
+
+  <h3 id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_LastResult" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.LastResult">
+  LastResult
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the latest completed pump result, if any.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GameEventScriptExecutionResult? LastResult { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptExecutionResult.html">GameEventScriptExecutionResult</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Create_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.Create*"></a>
+
+  <h3 id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Create_GameEventScript_Api_GameEventScriptHost_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.Create(GameEventScript.Api.GameEventScriptHost)">
+  Create(GameEventScriptHost)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Wraps a host with serialized access and automatic pumping on the shared C# dispatcher.
+Schedules queued messages, later initialization, or paused execution when the host is ready.
+A loading host waits for an explicit call to Start.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GameEventScriptCSharpHostRunner Create(GameEventScriptHost host)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>host</code> <a class="xref" href="GameEventScript.Api.GameEventScriptHost.html">GameEventScriptHost</a></dt>
+    <dd><p>The host whose access becomes owned by the returned runner.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.html">GameEventScriptCSharpHostRunner</a></dt>
+    <dd><p>A runner using <span class="xref">GameEventScript.CSharpBridge.GameEventScriptCSharpDispatcher.Shared</span>.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Create_GameEventScript_Api_GameEventScriptHost__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Direct host access must stop when ownership is transferred. Pending callbacks may start before this method returns.</p>
+</div>
+
+
+
+
+  <a id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Detach_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.Detach*"></a>
+
+  <h3 id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Detach_GameEventScript_Api_GameEventScriptInstance_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.Detach(GameEventScript.Api.GameEventScriptInstance)">
+  Detach(GameEventScriptInstance)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Thread-safely detaches a loaded program instance.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Detach(GameEventScriptInstance instance)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>instance</code> <a class="xref" href="GameEventScript.Api.GameEventScriptInstance.html">GameEventScriptInstance</a></dt>
+    <dd><p>The instance handle to detach.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether this call performed the detach.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Dispose_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.Dispose*"></a>
+
+  <h3 id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Dispose" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.Dispose">
+  Dispose()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Prevents future runner operations and suppresses pending automatic pumps.
+The wrapped host and shared dispatcher are not disposed.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Dispose()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_GetStartResult_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.GetStartResult*"></a>
+
+  <h3 id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_GetStartResult_GameEventScript_Api_GameEventScriptInstance_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.GetStartResult(GameEventScript.Api.GameEventScriptInstance)">
+  GetStartResult(GameEventScriptInstance)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Reads an instance's completed initialization result under the runner gate.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GameEventScriptStartResult? GetStartResult(GameEventScriptInstance instance)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>instance</code> <a class="xref" href="GameEventScript.Api.GameEventScriptInstance.html">GameEventScriptInstance</a></dt>
+    <dd><p>The instance returned by Load.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptStartResult.html">GameEventScriptStartResult</a>?</dt>
+    <dd><p>The initialization result, or null while pending.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Load_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.Load*"></a>
+
+  <h3 id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Load_GameEventScript_Api_GameEventScriptProgram_System_Int32_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.Load(GameEventScript.Api.GameEventScriptProgram,System.Int32)">
+  Load(GameEventScriptProgram, int)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Thread-safely loads a program and schedules its initialization handlers, if present.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GameEventScriptInstance Load(GameEventScriptProgram program, int priority = 0)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>program</code> <a class="xref" href="GameEventScript.Api.GameEventScriptProgram.html">GameEventScriptProgram</a></dt>
+    <dd><p>The immutable portable program.</p>
+</dd>
+    <dt><code>priority</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The dispatch priority assigned to its handlers.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptInstance.html">GameEventScriptInstance</a></dt>
+    <dd><p>The host-local program instance.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Receive_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.Receive*"></a>
+
+  <h3 id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Receive_GameEventScript_Api_GameEventScriptMessage_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.Receive(GameEventScript.Api.GameEventScriptMessage)">
+  Receive(GameEventScriptMessage)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Thread-safely enqueues a message and schedules one pump job when accepted.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Receive(GameEventScriptMessage message)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>message</code> <a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a></dt>
+    <dd><p>The immutable message to receive locally.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether the underlying host accepted the message.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_RunToCompletion_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.RunToCompletion*"></a>
+
+  <h3 id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_RunToCompletion" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.RunToCompletion">
+  RunToCompletion()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Synchronously drains the ready host under the serialization gate.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GameEventScriptExecutionResult RunToCompletion()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptExecutionResult.html">GameEventScriptExecutionResult</a></dt>
+    <dd><p>The execution result.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Start_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.Start*"></a>
+
+  <h3 id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Start" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.Start">
+  Start()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Starts the initial program group synchronously, then schedules ordinary queued work on success.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GameEventScriptStartResult Start()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptStartResult.html">GameEventScriptStartResult</a></dt>
+    <dd><p>The initial group startup result.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Subscribe_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.Subscribe*"></a>
+
+  <h3 id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Subscribe_System_String_System_Collections_Generic_IReadOnlyCollection_System_String__System_Action_GameEventScript_Api_GameEventScriptMessage_GameEventScript_Api_GameEventScriptContext__System_Int32_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.Subscribe(System.String,System.Collections.Generic.IReadOnlyCollection{System.String},System.Action{GameEventScript.Api.GameEventScriptMessage,GameEventScript.Api.GameEventScriptContext},System.Int32)">
+  Subscribe(string, IReadOnlyCollection&lt;string&gt;, Action&lt;GameEventScriptMessage, GameEventScriptContext&gt;, int)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Thread-safely subscribes a C# delegate to an exact ordered message signature.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GameEventScriptSubscription Subscribe(string message, IReadOnlyCollection&lt;string&gt; parameterNames, Action&lt;GameEventScriptMessage, GameEventScriptContext&gt; handler, int priority = 0)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>message</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The message name.</p>
+</dd>
+    <dt><code>parameterNames</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlycollection-1">IReadOnlyCollection</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>&gt;</dt>
+    <dd><p>The ordered signature labels.</p>
+</dd>
+    <dt><code>handler</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.action-2">Action</a>&lt;<a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a>, <a class="xref" href="GameEventScript.Api.GameEventScriptContext.html">GameEventScriptContext</a>&gt;</dt>
+    <dd><p>The synchronous callback executed while the runner owns its serialization gate.</p>
+</dd>
+    <dt><code>priority</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The dispatch priority.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptSubscription.html">GameEventScriptSubscription</a></dt>
+    <dd><p>The host-local subscription.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Unsubscribe_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.Unsubscribe*"></a>
+
+  <h3 id="GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_Unsubscribe_GameEventScript_Api_GameEventScriptSubscription_" data-uid="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.Unsubscribe(GameEventScript.Api.GameEventScriptSubscription)">
+  Unsubscribe(GameEventScriptSubscription)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Thread-safely removes a native subscription.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Unsubscribe(GameEventScriptSubscription subscription)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>subscription</code> <a class="xref" href="GameEventScript.Api.GameEventScriptSubscription.html">GameEventScriptSubscription</a></dt>
+    <dd><p>The subscription handle to remove.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether this call performed the removal.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (fd2609345491)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

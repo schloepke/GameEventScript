@@ -1,0 +1,1815 @@
+{
+  "source_base_path": "/home/runner/work/GameEventScript/GameEventScript/artifacts/website/api-build/csharp",
+  "xrefmap": "xrefmap.yml",
+  "files": [
+    {
+      "type": "Resource",
+      "output": {
+        "resource": {
+          "relative_path": "index.json"
+        }
+      }
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptBinaryBindKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptBinaryBindKind.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptBinaryBindKind",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptBinaryBindKind.yml\" sourcestartlinenumber=\"1\">Defines the supported game event script binary bind kind values.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptBinaryFormat.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptBinaryFormat.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptBinaryFormat",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptBinaryFormat.yml\" sourcestartlinenumber=\"1\">Represents a game event script binary format.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry.yml\" sourcestartlinenumber=\"1\">Represents a game event script binary bind entry.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptBindingSegment.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptBindingSegment.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptBindingSegment",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptBindingSegment.yml\" sourcestartlinenumber=\"1\">Represents a game event script binding segment.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptBuildMetadataSegment.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptBuildMetadataSegment.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptBuildMetadataSegment",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptBuildMetadataSegment.yml\" sourcestartlinenumber=\"1\">Represents a game event script build metadata segment.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptBuilder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptBuilder.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptBuilder",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptBuilder.yml\" sourcestartlinenumber=\"1\">Compiles source text into immutable Programs using the optional GameEventScript.Compiler package.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptBytecodeInstruction.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptBytecodeInstruction.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptBytecodeInstruction",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptBytecodeInstruction.yml\" sourcestartlinenumber=\"1\">Represents a game event script bytecode instruction.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptBytecodeInstructionUnit.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptBytecodeInstructionUnit.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptBytecodeInstructionUnit",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptBytecodeInstructionUnit.yml\" sourcestartlinenumber=\"1\">Defines the supported game event script bytecode instruction unit values.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptBytecodeInstructionUnits.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptBytecodeInstructionUnits.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptBytecodeInstructionUnits",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptBytecodeInstructionUnits.yml\" sourcestartlinenumber=\"1\">Represents a game event script bytecode instruction units.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptBytecodeOpCode.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptBytecodeOpCode.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptBytecodeOpCode",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptBytecodeOpCode.yml\" sourcestartlinenumber=\"1\">Defines the supported game event script bytecode op code values.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptBytecodePatternKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptBytecodePatternKind.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptBytecodePatternKind",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptBytecodePatternKind.yml\" sourcestartlinenumber=\"1\">Defines the supported game event script bytecode pattern kind values.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptBytecodeSeriesKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptBytecodeSeriesKind.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptBytecodeSeriesKind",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptBytecodeSeriesKind.yml\" sourcestartlinenumber=\"1\">Defines the supported game event script bytecode series kind values.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptBytecodeTypeKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptBytecodeTypeKind.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptBytecodeTypeKind",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptBytecodeTypeKind.yml\" sourcestartlinenumber=\"1\">Defines the supported game event script bytecode type kind values.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptCodeSegment.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptCodeSegment.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptCodeSegment",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptCodeSegment.yml\" sourcestartlinenumber=\"1\">Represents a game event script code segment.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptCompileException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptCompileException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptCompileException",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptCompileException.yml\" sourcestartlinenumber=\"1\">Represents an exception that occurs during the compilation process of a Game Event Script.\nThis exception is specifically used to signal issues detected during the parsing or\nvalidation phase of script compilation.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptCompileOptions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptCompileOptions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptCompileOptions",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptCompileOptions.yml\" sourcestartlinenumber=\"1\">Represents a game event script compile options.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptContext.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptContext.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptContext",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptContext.yml\" sourcestartlinenumber=\"1\">Host-owned context shared by native and GameEventScript handlers.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptDebugInfoOptions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptDebugInfoOptions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptDebugInfoOptions",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptDebugInfoOptions.yml\" sourcestartlinenumber=\"1\">Defines the supported game event script debug info options values.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptDebugSymbol.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptDebugSymbol.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptDebugSymbol",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptDebugSymbol.yml\" sourcestartlinenumber=\"1\">Represents a game event script debug symbol.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptDebugSymbolKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptDebugSymbolKind.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptDebugSymbolKind",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptDebugSymbolKind.yml\" sourcestartlinenumber=\"1\">Defines the supported game event script debug symbol kind values.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptDebugSymbolsSegment.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptDebugSymbolsSegment.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptDebugSymbolsSegment",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptDebugSymbolsSegment.yml\" sourcestartlinenumber=\"1\">Represents a game event script debug symbols segment.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptDiagnostic.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptDiagnostic.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptDiagnostic",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptDiagnostic.yml\" sourcestartlinenumber=\"1\">Represents a game event script diagnostic.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptDiagnosticCodes.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptDiagnosticCodes.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptDiagnosticCodes",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptDiagnosticCodes.yml\" sourcestartlinenumber=\"1\">Represents a game event script diagnostic codes.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptDiagnosticPhase.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptDiagnosticPhase.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptDiagnosticPhase",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptDiagnosticPhase.yml\" sourcestartlinenumber=\"1\">Defines the supported game event script diagnostic phase values.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptDynamicLinkException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptDynamicLinkException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptDynamicLinkException",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptDynamicLinkException.yml\" sourcestartlinenumber=\"1\">Represents an exception thrown when a dynamic linking error occurs\nduring the execution of a Game Event Script.\nThis exception specifically indicates issues related to the binding or resolution\nof external references required for script execution.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptExecutionResult.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptExecutionResult.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptExecutionResult",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptExecutionResult.yml\" sourcestartlinenumber=\"1\">Provides an allocation-free summary of one host pump.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptExecutionState.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptExecutionState.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptExecutionState",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptExecutionState.yml\" sourcestartlinenumber=\"1\">Identifies why a synchronous host pump returned.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptExtensionFaultException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptExtensionFaultException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptExtensionFaultException",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptExtensionFaultException.yml\" sourcestartlinenumber=\"1\">A deliberate, portable runtime fault that an extension function, native handler, external-type\nconstructor, or <xref href=\"GameEventScript.Api.IGameEventScriptExternalValue\" data-throw-if-not-resolved=\"false\"></xref> implementation throws\nto report a defined failure. It ends the current handler with a diagnosable\nruntime error instead of silently evaluating to <code>nothing</code>; the host remains\nreusable for subsequently enqueued messages, as for any other runtime error.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptExtensionReference.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptExtensionReference.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptExtensionReference",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptExtensionReference.yml\" sourcestartlinenumber=\"1\">Represents an immutable normalized extension name, function name, and ordered argument signature.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptExternalTypeCatalog.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptExternalTypeCatalog.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptExternalTypeCatalog",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptExternalTypeCatalog.yml\" sourcestartlinenumber=\"1\">Represents a game event script external type catalog.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptExternalTypeConstructorDefinition.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptExternalTypeConstructorDefinition.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptExternalTypeConstructorDefinition",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptExternalTypeConstructorDefinition.yml\" sourcestartlinenumber=\"1\">Represents a game event script external type constructor definition.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptExternalTypeConstructorReference.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptExternalTypeConstructorReference.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptExternalTypeConstructorReference",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptExternalTypeConstructorReference.yml\" sourcestartlinenumber=\"1\">Represents an immutable normalized external type name and constructor argument signature.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptExternalTypeDefinition.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptExternalTypeDefinition.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptExternalTypeDefinition",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptExternalTypeDefinition.yml\" sourcestartlinenumber=\"1\">Represents a game event script external type definition.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptExternalTypeFieldDefinition.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptExternalTypeFieldDefinition.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptExternalTypeFieldDefinition",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptExternalTypeFieldDefinition.yml\" sourcestartlinenumber=\"1\">Represents a game event script external type field definition.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptExternalTypeParameterDefinition.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptExternalTypeParameterDefinition.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptExternalTypeParameterDefinition",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptExternalTypeParameterDefinition.yml\" sourcestartlinenumber=\"1\">Represents a game event script external type parameter definition.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptFatalRuntimeException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptFatalRuntimeException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptFatalRuntimeException",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptFatalRuntimeException.yml\" sourcestartlinenumber=\"1\">Represents a fatal runtime exception that occurs specifically during the execution\nof a Game Event Script. This exception is meant to signal critical issues that\ncannot be recovered from within the execution of a script's runtime logic.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptFloatRange.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptFloatRange.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptFloatRange",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptFloatRange.yml\" sourcestartlinenumber=\"1\">Represents a game event script float range.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptHost.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptHost.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptHost",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptHost.yml\" sourcestartlinenumber=\"1\">Serial message host for native handlers and optional GameEventScript programs.\nThe portable core performs no synchronization and creates no worker threads.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptHostBuilder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptHostBuilder.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptHostBuilder",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptHostBuilder.yml\" sourcestartlinenumber=\"1\">Configures and creates independent serial <xref href=\"GameEventScript.Api.GameEventScriptHost\" data-throw-if-not-resolved=\"false\"></xref> instances.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptInstance.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptInstance.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptInstance",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptInstance.yml\" sourcestartlinenumber=\"1\">Represents one host-local loading of a reusable immutable program.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptInstructionFlag.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptInstructionFlag.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptInstructionFlag",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptInstructionFlag.yml\" sourcestartlinenumber=\"1\">Defines the supported game event script instruction flag values.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptIntegerRange.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptIntegerRange.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptIntegerRange",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptIntegerRange.yml\" sourcestartlinenumber=\"1\">Represents a game event script integer range.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptMessage.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptMessage.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptMessage",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptMessage.yml\" sourcestartlinenumber=\"1\">Represents a message used within the Game Event Script system.\nThis message serves as a fundamental unit for communication, allowing for\nevent-driven execution between components, scripts, and handlers.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptMessageArgument.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptMessageArgument.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptMessageArgument",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptMessageArgument.yml\" sourcestartlinenumber=\"1\">One named value in an ordered message argument list.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptMessageArguments.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptMessageArguments.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptMessageArguments",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptMessageArguments.yml\" sourcestartlinenumber=\"1\">Ordered message arguments. Argument names are part of the message signature\nand therefore preserve source order.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptMessageFormatException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptMessageFormatException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptMessageFormatException",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptMessageFormatException.yml\" sourcestartlinenumber=\"1\">Invalid, unsupported, or over-limit portable message/value JSON.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptMessageJson.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptMessageJson.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptMessageJson",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptMessageJson.yml\" sourcestartlinenumber=\"1\">Explicit, synchronous V1 product JSON transport. Local Publish never invokes this codec.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptMessageSignature.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptMessageSignature.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptMessageSignature",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptMessageSignature.yml\" sourcestartlinenumber=\"1\">Represents a message signature used in GameEventScript to uniquely define the structure\nof a message, including its name and ordered parameter list. This class provides utilities\nto normalize, validate, and match message signatures accurately.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptOpaqueSection.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptOpaqueSection.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptOpaqueSection",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptOpaqueSection.yml\" sourcestartlinenumber=\"1\">Represents a game event script opaque section.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptProgram.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptProgram.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptProgram",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptProgram.yml\" sourcestartlinenumber=\"1\">Represents a game event script program.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptProgramDumper.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptProgramDumper.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptProgramDumper",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptProgramDumper.yml\" sourcestartlinenumber=\"1\">Creates an assembler-style disassembly of a portable GameEventScript program.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptProgramFormatErrorCode.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptProgramFormatErrorCode.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptProgramFormatErrorCode",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptProgramFormatErrorCode.yml\" sourcestartlinenumber=\"1\">Defines the supported game event script program format error code values.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptProgramFormatException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptProgramFormatException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptProgramFormatException",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptProgramFormatException.yml\" sourcestartlinenumber=\"1\">Represents a game event script program format exception.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptProgramMetadataSegment.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptProgramMetadataSegment.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptProgramMetadataSegment",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptProgramMetadataSegment.yml\" sourcestartlinenumber=\"1\">Represents a game event script program metadata segment.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptProgramReadLimits.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptProgramReadLimits.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptProgramReadLimits",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptProgramReadLimits.yml\" sourcestartlinenumber=\"1\">Represents a game event script program read limits.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptProgramReadOptions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptProgramReadOptions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptProgramReadOptions",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptProgramReadOptions.yml\" sourcestartlinenumber=\"1\">Represents a game event script program read options.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptProgramReader.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptProgramReader.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptProgramReader",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptProgramReader.yml\" sourcestartlinenumber=\"1\">Decodes bounded, portable <code>.gesb</code> V1 bytes into an immutable program.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptProgramRetention.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptProgramRetention.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptProgramRetention",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptProgramRetention.yml\" sourcestartlinenumber=\"1\">Defines the supported game event script program retention values.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptProgramValidator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptProgramValidator.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptProgramValidator",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptProgramValidator.yml\" sourcestartlinenumber=\"1\">Enforces the shared structural and semantic invariants required by the reader, writer, and host linker.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptProgramWriter.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptProgramWriter.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptProgramWriter",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptProgramWriter.yml\" sourcestartlinenumber=\"1\">Writes immutable programs as canonical Little-Endian <code>.gesb</code> V1 byte images.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptPublishResult.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptPublishResult.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptPublishResult",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptPublishResult.yml\" sourcestartlinenumber=\"1\">Describes the independent local and outbound outcomes of one publish operation without allocating.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptRandomGenerator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptRandomGenerator.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptRandomGenerator",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptRandomGenerator.yml\" sourcestartlinenumber=\"1\">A sealed class that provides mechanisms for generating random numbers or values,\neither through a pseudo-random number generator or a predefined sequence of values.\nThis class is useful for scenarios where deterministic or non-deterministic random\nvalue generation is required, especially in game event scripts.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptReadOnlyArray-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptReadOnlyArray-1.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptReadOnlyArray<T>",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptReadOnlyArray-1.yml\" sourcestartlinenumber=\"1\">Immutable array view used by portable programs and other immutable API models.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptRuntimeLimits.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptRuntimeLimits.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptRuntimeLimits",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptRuntimeLimits.yml\" sourcestartlinenumber=\"1\">Represents runtime execution limits for a game event script, providing control over various\nscript execution parameters such as loop iterations, call stack depth, and allowed operations.\nThis ensures that scripts execute within predefined boundaries to prevent excessive resource usage\nor infinite execution.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptSectionFlags.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptSectionFlags.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptSectionFlags",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptSectionFlags.yml\" sourcestartlinenumber=\"1\">Defines the supported game event script section flags values.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptSectionType.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptSectionType.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptSectionType",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptSectionType.yml\" sourcestartlinenumber=\"1\">Defines the supported game event script section type values.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptSourceArchiveEntry.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptSourceArchiveEntry.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptSourceArchiveEntry",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptSourceArchiveEntry.yml\" sourcestartlinenumber=\"1\">Represents a game event script source archive entry.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptSourceArchiveSegment.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptSourceArchiveSegment.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptSourceArchiveSegment",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptSourceArchiveSegment.yml\" sourcestartlinenumber=\"1\">Represents a game event script source archive segment.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptSourceLocation.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptSourceLocation.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptSourceLocation",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptSourceLocation.yml\" sourcestartlinenumber=\"1\">Represents a specific location in a source file or module for the GameEventScript compiler.\nThis class is used to pinpoint the origin of a particular piece of code or error within a source context.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptSourceMapEntry.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptSourceMapEntry.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptSourceMapEntry",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptSourceMapEntry.yml\" sourcestartlinenumber=\"1\">Represents a game event script source map entry.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptSourceMapSegment.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptSourceMapSegment.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptSourceMapSegment",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptSourceMapSegment.yml\" sourcestartlinenumber=\"1\">Represents a game event script source map segment.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptSourceMapSource.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptSourceMapSource.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptSourceMapSource",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptSourceMapSource.yml\" sourcestartlinenumber=\"1\">Represents a game event script source map source.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptStartResult.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptStartResult.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptStartResult",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptStartResult.yml\" sourcestartlinenumber=\"1\">Describes completed initialization independently of queue idleness.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptStartState.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptStartState.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptStartState",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptStartState.yml\" sourcestartlinenumber=\"1\">Identifies the outcome of host or instance initialization.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptStringConstantSegment.SliceEntry.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptStringConstantSegment.SliceEntry.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptStringConstantSegment.SliceEntry",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptStringConstantSegment.SliceEntry.yml\" sourcestartlinenumber=\"1\">Represents a slice entry.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptStringConstantSegment.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptStringConstantSegment.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptStringConstantSegment",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptStringConstantSegment.yml\" sourcestartlinenumber=\"1\">Represents a game event script string constant segment.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptSubscription.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptSubscription.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptSubscription",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptSubscription.yml\" sourcestartlinenumber=\"1\">Represents one host-local native message subscription.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptSymbolKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptSymbolKind.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptSymbolKind",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptSymbolKind.yml\" sourcestartlinenumber=\"1\">Defines the different kinds of symbols used within a Game Event Script.\nThis enumeration is used to classify the functional or semantic roles\nof various components in a script, enabling the compiler and validation logic\nto process and verify them appropriately.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptUInt16IndexList.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptUInt16IndexList.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptUInt16IndexList",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptUInt16IndexList.yml\" sourcestartlinenumber=\"1\">Represents an immutable slice of unsigned 16-bit indices.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptUInt16IndexListSegment.SliceEntry.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptUInt16IndexListSegment.SliceEntry.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptUInt16IndexListSegment.SliceEntry",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptUInt16IndexListSegment.SliceEntry.yml\" sourcestartlinenumber=\"1\">Represents a slice entry.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptUInt16IndexListSegment.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptUInt16IndexListSegment.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptUInt16IndexListSegment",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptUInt16IndexListSegment.yml\" sourcestartlinenumber=\"1\">Represents a game event script u int16 index list segment.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesExtensionCall.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesExtensionCall.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesExtensionCall",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesExtensionCall.yml\" sourcestartlinenumber=\"1\">Represents a ges extension call.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesExternalTypeConstructorCall.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesExternalTypeConstructorCall.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesExternalTypeConstructorCall",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesExternalTypeConstructorCall.yml\" sourcestartlinenumber=\"1\">Represents a ges external type constructor call.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.IGameEventScriptClock.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.IGameEventScriptClock.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.IGameEventScriptClock",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGameEventScriptClock.yml\" sourcestartlinenumber=\"1\">Supplies monotonic elapsed time to a serial host. Implementations must never move backwards.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.IGameEventScriptExtensionFunction.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.IGameEventScriptExtensionFunction.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.IGameEventScriptExtensionFunction",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGameEventScriptExtensionFunction.yml\" sourcestartlinenumber=\"1\">Defines the contract for i game event script extension function.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.IGameEventScriptExtensionRegistry.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.IGameEventScriptExtensionRegistry.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.IGameEventScriptExtensionRegistry",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGameEventScriptExtensionRegistry.yml\" sourcestartlinenumber=\"1\">Defines the contract for i game event script extension registry.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.IGameEventScriptExternalTypeCatalog.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.IGameEventScriptExternalTypeCatalog.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.IGameEventScriptExternalTypeCatalog",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGameEventScriptExternalTypeCatalog.yml\" sourcestartlinenumber=\"1\">Defines the contract for i game event script external type catalog.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.IGameEventScriptExternalTypeConstructor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.IGameEventScriptExternalTypeConstructor.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.IGameEventScriptExternalTypeConstructor",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGameEventScriptExternalTypeConstructor.yml\" sourcestartlinenumber=\"1\">Defines the contract for i game event script external type constructor.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.IGameEventScriptExternalTypeRegistry.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.IGameEventScriptExternalTypeRegistry.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.IGameEventScriptExternalTypeRegistry",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGameEventScriptExternalTypeRegistry.yml\" sourcestartlinenumber=\"1\">Defines the contract for i game event script external type registry.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.IGameEventScriptExternalValue.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.IGameEventScriptExternalValue.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.IGameEventScriptExternalValue",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGameEventScriptExternalValue.yml\" sourcestartlinenumber=\"1\">Defines the contract for i game event script external value.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.IGameEventScriptNativeMessageHandler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.IGameEventScriptNativeMessageHandler.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.IGameEventScriptNativeMessageHandler",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGameEventScriptNativeMessageHandler.yml\" sourcestartlinenumber=\"1\">Portable synchronous message handler invoked by a <xref href=\"GameEventScript.Api.GameEventScriptHost\" data-throw-if-not-resolved=\"false\"></xref>.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.IGameEventScriptPublishSink.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.IGameEventScriptPublishSink.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.IGameEventScriptPublishSink",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGameEventScriptPublishSink.yml\" sourcestartlinenumber=\"1\">Receives synchronous outbound publications after the host has attempted local enqueue.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.IGameEventScriptRuntimeObserver.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.IGameEventScriptRuntimeObserver.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.IGameEventScriptRuntimeObserver",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGameEventScriptRuntimeObserver.yml\" sourcestartlinenumber=\"1\">Observes synchronous host behavior without participating in dispatch.\nImplementations must not throw and must not recursively pump the observed host.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpContextExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpContextExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.CSharpBridge.GameEventScriptCSharpContextExtensions",
+      "Summary": "<p sourcefile=\"api/GameEventScript.CSharpBridge.GameEventScriptCSharpContextExtensions.yml\" sourcestartlinenumber=\"1\">Provides C# tuple and dictionary conveniences for context messaging.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder",
+      "Summary": "<p sourcefile=\"api/GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder.yml\" sourcestartlinenumber=\"1\">Represents a game event script c sharp extension registry builder.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.CSharpBridge.GameEventScriptCSharpExtensions",
+      "Summary": "<p sourcefile=\"api/GameEventScript.CSharpBridge.GameEventScriptCSharpExtensions.yml\" sourcestartlinenumber=\"1\">Represents a game event script c sharp extensions.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypeRegistry.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypeRegistry.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypeRegistry",
+      "Summary": "<p sourcefile=\"api/GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypeRegistry.yml\" sourcestartlinenumber=\"1\">Represents a game event script c sharp external type registry.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypes.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypes.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypes",
+      "Summary": "<p sourcefile=\"api/GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypes.yml\" sourcestartlinenumber=\"1\">Represents a game event script c sharp external types.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpHostExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpHostExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.CSharpBridge.GameEventScriptCSharpHostExtensions",
+      "Summary": "<p sourcefile=\"api/GameEventScript.CSharpBridge.GameEventScriptCSharpHostExtensions.yml\" sourcestartlinenumber=\"1\">Provides delegate-based and automatic-runner conveniences that intentionally remain outside the portable Core.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner",
+      "Summary": "<p sourcefile=\"api/GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.yml\" sourcestartlinenumber=\"1\">Optional C# adapter that serializes host access and pumps accepted messages on a shared worker.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpMessage.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpMessage.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.CSharpBridge.GameEventScriptCSharpMessage",
+      "Summary": "<p sourcefile=\"api/GameEventScript.CSharpBridge.GameEventScriptCSharpMessage.yml\" sourcestartlinenumber=\"1\">C#-specific message construction conveniences. Portable code uses ordered\n<xref href=\"GameEventScript.Api.GameEventScriptMessageArgument\" data-throw-if-not-resolved=\"false\"></xref> values directly.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpValue.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.CSharpBridge.GameEventScriptCSharpValue.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.CSharpBridge.GameEventScriptCSharpValue",
+      "Summary": "<p sourcefile=\"api/GameEventScript.CSharpBridge.GameEventScriptCSharpValue.yml\" sourcestartlinenumber=\"1\">Provides C# dictionary factories for portable immutable values.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.CSharpBridge.GesConstructAttribute.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.CSharpBridge.GesConstructAttribute.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.CSharpBridge.GesConstructAttribute",
+      "Summary": "<p sourcefile=\"api/GameEventScript.CSharpBridge.GesConstructAttribute.yml\" sourcestartlinenumber=\"1\">Represents a ges construct attribute.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.CSharpBridge.GesExtensionAttribute.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.CSharpBridge.GesExtensionAttribute.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.CSharpBridge.GesExtensionAttribute",
+      "Summary": "<p sourcefile=\"api/GameEventScript.CSharpBridge.GesExtensionAttribute.yml\" sourcestartlinenumber=\"1\">Represents a ges extension attribute.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.CSharpBridge.GesFieldAttribute.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.CSharpBridge.GesFieldAttribute.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.CSharpBridge.GesFieldAttribute",
+      "Summary": "<p sourcefile=\"api/GameEventScript.CSharpBridge.GesFieldAttribute.yml\" sourcestartlinenumber=\"1\">Represents a ges field attribute.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.CSharpBridge.GesFunctionAttribute.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.CSharpBridge.GesFunctionAttribute.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.CSharpBridge.GesFunctionAttribute",
+      "Summary": "<p sourcefile=\"api/GameEventScript.CSharpBridge.GesFunctionAttribute.yml\" sourcestartlinenumber=\"1\">Represents a ges function attribute.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.CSharpBridge.GesParamAttribute.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.CSharpBridge.GesParamAttribute.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.CSharpBridge.GesParamAttribute",
+      "Summary": "<p sourcefile=\"api/GameEventScript.CSharpBridge.GesParamAttribute.yml\" sourcestartlinenumber=\"1\">Represents a ges param attribute.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.CSharpBridge.GesTypeAttribute.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.CSharpBridge.GesTypeAttribute.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.CSharpBridge.GesTypeAttribute",
+      "Summary": "<p sourcefile=\"api/GameEventScript.CSharpBridge.GesTypeAttribute.yml\" sourcestartlinenumber=\"1\">Represents a ges type attribute.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.CSharpBridge.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.CSharpBridge.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.CSharpBridge",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Runtime.Values.GesValue.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Runtime.Values.GesValue.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Runtime.Values.GesValue",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Runtime.Values.GesValue.yml\" sourcestartlinenumber=\"1\">Represents a ges value.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Runtime.Values.GesValueArguments.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Runtime.Values.GesValueArguments.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Runtime.Values.GesValueArguments",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Runtime.Values.GesValueArguments.yml\" sourcestartlinenumber=\"1\">Represents a ges value arguments.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Runtime.Values.GesValueMap.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Runtime.Values.GesValueMap.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Runtime.Values.GesValueMap",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Runtime.Values.GesValueMap.yml\" sourcestartlinenumber=\"1\">Represents a ges value map.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Runtime.Values.GesValueSlice.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Runtime.Values.GesValueSlice.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Runtime.Values.GesValueSlice",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Runtime.Values.GesValueSlice.yml\" sourcestartlinenumber=\"1\">Represents a ges value slice.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Runtime.Values.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Runtime.Values.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Runtime.Values",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Runtime.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Runtime.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Runtime",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Runtime.yml\" sourcestartlinenumber=\"1\">Public APIs for the Game Event Script libraries.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.SyntaxHighlighter.GameEventScriptAnsiRenderer.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.SyntaxHighlighter.GameEventScriptAnsiRenderer.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.SyntaxHighlighter.GameEventScriptAnsiRenderer",
+      "Summary": "<p sourcefile=\"api/GameEventScript.SyntaxHighlighter.GameEventScriptAnsiRenderer.yml\" sourcestartlinenumber=\"1\">Optional pure string renderer. Terminal detection, NO_COLOR, console output and diagnostics belong to the embedding.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.SyntaxHighlighter.GameEventScriptHighlightResult.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.SyntaxHighlighter.GameEventScriptHighlightResult.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.SyntaxHighlighter.GameEventScriptHighlightResult",
+      "Summary": "<p sourcefile=\"api/GameEventScript.SyntaxHighlighter.GameEventScriptHighlightResult.yml\" sourcestartlinenumber=\"1\">A highlighting result. Failed resource bounds return no spans or usable continuation state.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.SyntaxHighlighter.GameEventScriptHighlightSpan.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.SyntaxHighlighter.GameEventScriptHighlightSpan.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.SyntaxHighlighter.GameEventScriptHighlightSpan",
+      "Summary": "<p sourcefile=\"api/GameEventScript.SyntaxHighlighter.GameEventScriptHighlightSpan.yml\" sourcestartlinenumber=\"1\">An immutable UTF-16 range with its category and outer-to-inner TextMate scope stack.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.SyntaxHighlighter.GameEventScriptHighlightState.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.SyntaxHighlighter.GameEventScriptHighlightState.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.SyntaxHighlighter.GameEventScriptHighlightState",
+      "Summary": "<p sourcefile=\"api/GameEventScript.SyntaxHighlighter.GameEventScriptHighlightState.yml\" sourcestartlinenumber=\"1\">An immutable, equatable line-boundary state. It is not a serializable editor document or compiler state.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxHighlighter.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxHighlighter.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxHighlighter",
+      "Summary": "<p sourcefile=\"api/GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxHighlighter.yml\" sourcestartlinenumber=\"1\">Reusable GES/GESA TextMate highlighting without a Compiler, Runtime, UI or terminal dependency.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxKind.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxKind",
+      "Summary": "<p sourcefile=\"api/GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxKind.yml\" sourcestartlinenumber=\"1\">Theme-independent categories derived from TextMate scopes; these are not compiler tokens.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxLanguage.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxLanguage.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxLanguage",
+      "Summary": "<p sourcefile=\"api/GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxLanguage.yml\" sourcestartlinenumber=\"1\">The bundled source or assembler grammar used for presentation.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.SyntaxHighlighter.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.SyntaxHighlighter.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.SyntaxHighlighter",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript",
+      "Summary": "<p sourcefile=\"api/GameEventScript.yml\" sourcestartlinenumber=\"1\">Public APIs for the Game Event Script libraries.</p>\n"
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "api/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/toc.html"
+        },
+        ".json": {
+          "relative_path": "api/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "assets/logo.svg",
+      "output": {
+        "resource": {
+          "relative_path": "assets/logo.svg"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "index.md",
+      "output": {
+        ".html": {
+          "relative_path": "index.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "toc.html"
+        },
+        ".json": {
+          "relative_path": "toc.json"
+        }
+      },
+      "version": ""
+    }
+  ],
+  "groups": [
+    {
+      "xrefmap": "xrefmap.yml"
+    }
+  ]
+}

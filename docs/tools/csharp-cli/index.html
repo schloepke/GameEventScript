@@ -1,0 +1,637 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-g5ptsecz"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Game Event Script CLI | Game Event Script</title><link rel="canonical" href="https://gameeventscript.org/docs/tools/csharp-cli/"/><link rel="sitemap" href="/sitemap-index.xml"/><link rel="shortcut icon" href="/favicon-pixel-duo.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.3.5"/><meta name="generator" content="Starlight v0.42.4"/><meta property="og:title" content="Game Event Script CLI"/><meta property="og:type" content="article"/><meta property="og:url" content="https://gameeventscript.org/docs/tools/csharp-cli/"/><meta property="og:locale" content="en"/><meta property="og:description" content="Game Event Script CLI — Game Event Script documentation."/><meta property="og:site_name" content="Game Event Script"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Game Event Script CLI — Game Event Script documentation."/><script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script><template id="theme-icons"><svg aria-hidden="true" class="light astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg><svg aria-hidden="true" class="dark astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg><svg aria-hidden="true" class="auto astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg></template><link rel="stylesheet" href="/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/_astro/common.CIp__BGE.css"><script type="module" src="/_astro/page.Dwipeu-R.js"></script></head><body class="astro-g5ptsecz"><a class="sl-skip-link astro-qb7clj6f" href="#_top">Skip to content</a><div class="page sl-flex astro-yntsjkba"><header class="header astro-yntsjkba"><div class="header astro-by6fddyj"><div class="title-wrapper sl-flex astro-by6fddyj"><a href="/" class="site-title sl-flex astro-6rvad3va"><img class="astro-6rvad3va" alt src="/_astro/mark.DsNbRX0k.svg" width="64" height="64"><span class="astro-6rvad3va" translate="no">Game Event Script</span></a></div><div class="sl-flex print:hidden astro-by6fddyj"><site-search class="astro-by6fddyj astro-b5kgnn7o" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-b5kgnn7o"><svg aria-hidden="true" class="astro-b5kgnn7o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block astro-b5kgnn7o" aria-hidden="true">Search</span><kbd class="sl-hidden md:sl-flex astro-b5kgnn7o" style="display: none;"><kbd class="astro-b5kgnn7o">Ctrl</kbd><kbd class="astro-b5kgnn7o">K</kbd></kbd></button><dialog style="padding:0" aria-label="Search" class="astro-b5kgnn7o"><div class="dialog-frame sl-flex astro-b5kgnn7o"><button data-close-modal class="sl-flex md:sl-hidden astro-b5kgnn7o">Cancel</button><div class="search-container astro-b5kgnn7o"><div id="starlight__search" class="astro-b5kgnn7o"></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/_astro/Search.astro_astro_type_script_index_0_lang.BuGLwjLu.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group astro-by6fddyj"><div class="sl-flex social-icons astro-by6fddyj"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script><script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div><aside class="ges-development-notice" aria-label="Documentation version" data-pagefind-ignore>Development documentation. Check the <a href="/docs/changelog/">changelog</a> when using a published package.</aside><script type="module">var e=document.querySelector(`.ges-development-notice`);if(e){let t=()=>document.documentElement.style.setProperty(`--ges-notice-height`,`${e.getBoundingClientRect().height}px`);t(),new ResizeObserver(t).observe(e)}</script></header><nav class="sidebar print:hidden astro-yntsjkba" aria-label="Main"><button popovertarget="starlight__sidebar" class="sl-menu-button sl-flex md:sl-hidden print:hidden astro-r2osgdlg"><svg aria-hidden="true" class="open-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg><svg aria-hidden="true" class="close-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg><span class="sr-only astro-r2osgdlg">Menu</span></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=matchMedia(`(min-width: 50em)`),t=()=>{this.popover=e.matches?null:`auto`};t(),e.addEventListener(`change`,()=>t()),this.addEventListener(`toggle`,({newState:e})=>this.trapFocus(e===`open`))}trapFocus(e){document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}};customElements.define(`sl-sidebar-pane`,e);</script><sl-sidebar-pane popover id="starlight__sidebar" class="sidebar-pane astro-yntsjkba"><div class="sidebar-content sl-flex astro-yntsjkba"><sl-sidebar-state-persist data-hash="1syr27k" class="astro-ipdry5cl"><script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script><ul class="top-level astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/" class="large astro-rmhv4bp6"><span class="astro-rmhv4bp6">Home</span></a></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Start here</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="0"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Documentation overview</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Learn the language</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in C#</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in Swift</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Tools</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="1"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-cli/" aria-current="page" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Native Swift CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/editor-bundles/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">TextMate editor bundles</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Native integration</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="2"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/implementations/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/csharp-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# API reference</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/implementations/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/swift-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift API reference</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Language and host reference</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="3"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script language specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/text/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable text and Unicode semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/numbers/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable number semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/determinism/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable determinism semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/host-runtime/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Host runtime specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/public-api/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable public API specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/diagnostics/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable diagnostics specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/message-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Product message JSON V1</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/syntax-highlighting/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Syntax highlighting</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Program formats</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="4"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/program-model/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable program model specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/bytecode/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Bytecode specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/binary-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesb` binary format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/assembler-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesa` assembler format specification</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Conformance</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="5"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/markdown-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance Markdown format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/runner/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance runner specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/environment/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance environment specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/coverage/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable Conformance Coverage</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/cross-language-acceptance/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Cross-language conformance acceptance</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Packages and releases</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="6"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/distribution/packages/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Library packages and releases</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/distribution/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# distribution</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/changelog/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Changelog</span></a></li></ul></details></li></ul><script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist><div class="md:sl-hidden"><div class="mobile-preferences sl-flex astro-p4azlveh"><div class="social-icons astro-p4azlveh"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script></div></div></div></sl-sidebar-pane></nav><div class="main-frame astro-yntsjkba"><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-lrzkfocr"><aside class="right-sidebar-container print:hidden astro-lrzkfocr"><div class="right-sidebar astro-lrzkfocr"><div class="lg:sl-hidden astro-qok35upx"><mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-66cqc7ze"><nav aria-labelledby="starlight__on-this-page--mobile" class="astro-66cqc7ze"><details id="starlight__mobile-toc" class="astro-66cqc7ze"><summary id="starlight__on-this-page--mobile" class="sl-flex astro-66cqc7ze"><span class="toggle sl-flex astro-66cqc7ze">On this page<svg aria-hidden="true" class="caret astro-66cqc7ze astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current astro-66cqc7ze"></span></summary><div class="dropdown astro-66cqc7ze"><ul class="isMobile astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#compile-scripts" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Compile scripts</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#check-sources" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Check sources</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#run-a-program" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Run a program</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#main-and-console-endpoints" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Main and console endpoints</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#color-output-and-editing" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Color output and editing</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#trigger-events-with-a-scenario" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Trigger events with a scenario</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#interactive-event-console" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Interactive event console</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#unloading-and-reloading-programs" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Unloading and reloading Programs</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#output-limits-and-host-configuration" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Output, limits, and host configuration</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#dump-a-binary" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Dump a binary</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#run-from-the-repository" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Run from the repository</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#install-or-update-from-the-repository" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Install or update from the repository</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#uninstall-from-the-repository" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Uninstall from the repository</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#pack-and-install-manually" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Pack and install manually</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#delayed-messages" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Delayed messages</span></a></li></ul></li></ul></div></details></nav></mobile-starlight-toc><script type="module" src="/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C3fM4Kra.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block astro-qok35upx"><div class="sl-container astro-qok35upx"><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul class="astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#compile-scripts" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Compile scripts</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#check-sources" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Check sources</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#run-a-program" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Run a program</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#main-and-console-endpoints" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Main and console endpoints</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#color-output-and-editing" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Color output and editing</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#trigger-events-with-a-scenario" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Trigger events with a scenario</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#interactive-event-console" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Interactive event console</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#unloading-and-reloading-programs" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Unloading and reloading Programs</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#output-limits-and-host-configuration" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Output, limits, and host configuration</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#dump-a-binary" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Dump a binary</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#run-from-the-repository" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Run from the repository</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#install-or-update-from-the-repository" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Install or update from the repository</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#uninstall-from-the-repository" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Uninstall from the repository</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#pack-and-install-manually" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Pack and install manually</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#delayed-messages" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Delayed messages</span></a></li></ul></li></ul></nav></starlight-toc><script type="module" src="/_astro/TableOfContents.astro_astro_type_script_index_0_lang.BpJaGz7G.js"></script></div></div></div></aside><div class="main-pane astro-lrzkfocr"><main data-pagefind-body class="astro-g5ptsecz" lang="en" dir="ltr"><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><h1 id="_top" class="astro-bebwqqxs">Game Event Script CLI</h1></div></div><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><div class="sl-markdown-content"><!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<p><code>GameEventScript.Tool</code> is a separate .NET console application packaged as
+a .NET tool with command name <code>dotnet-ges</code>, invoked as <code>dotnet ges</code>. It targets
+.NET 8 and references the portable Runtime, Compiler, and C# bridge. Terminal and filesystem integration
+belong to this application or the C# adapters; the libraries do not depend on
+the tool.</p>
+<p>The entry point supports <code>dotnet ges compile</code>, <code>dotnet ges check</code>,
+<code>dotnet ges run</code>, <code>dotnet ges dump</code>, <code>dotnet ges --help</code>, <code>dotnet ges -h</code>, and
+<code>dotnet ges --version</code>. <code>run --interactive</code> opens an event console. No arguments
+display help. The provisional tool package is not published.</p>
+<h2 id="compile-scripts">Compile scripts</h2>
+<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compile</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compile</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-o</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">artifacts/game.gesb</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compile</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--output</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">artifacts/game.gesb</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--no-debug</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compile</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">handlers.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">definitions.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-o</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">artifacts/game.gesb</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compile</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">scripts/*.ges</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-o</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">artifacts/game.gesb</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--verbose</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compile</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--quiet</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compile</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--help</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="dotnet ges compile game.gesdotnet ges compile game.ges -o artifacts/game.gesbdotnet ges compile game.ges --output artifacts/game.gesb --no-debugdotnet ges compile handlers.ges definitions.ges -o artifacts/game.gesbdotnet ges compile &quot;scripts/*.ges&quot; -o artifacts/game.gesb --verbosedotnet ges compile game.ges --quietdotnet ges compile --help"><div></div></button></div></figure></div>
+<p>The command compiles one or more UTF-8 source files together using the existing
+compiler and writes one canonical <code>.gesb</code> V1 file. An optional initial UTF-8 BOM is
+accepted; invalid UTF-8 is rejected. Paths are relative to the working directory.
+Each supplied source path is retained as its source name in diagnostics and
+debug metadata. All sources share one compilation: constants, functions, and
+other definitions can be referenced across files. The compiler’s existing
+module rules apply, including agreement of explicit module identifiers.</p>
+<p>Explicit inputs retain their argument order. A file-name wildcard such as
+<code>"scripts/*.ges"</code> or <code>"part?.ges"</code> expands at its argument position, with matches
+sorted using ordinal string comparison. Wildcards in directory components and
+recursive <code>**</code> patterns are rejected; unmatched patterns are errors. Quote a
+pattern to have the CLI expand it. If the shell expands it first, the CLI keeps
+the order supplied by the shell. Matching uses the platform’s file-name rules.
+Repeated normalized absolute paths are included once, retaining their first
+spelling and position; comparison ignores case on Windows. Symbolic-link aliases
+are not resolved for deduplication.</p>
+<p>For a single resolved input, omitting <code>-o</code> or <code>--output</code> uses the source path with
+its extension replaced by <code>.gesb</code>. Multiple inputs require an explicit output
+path. Output directories are created as needed. Output must differ from every
+input path. A successful compilation replaces an existing output
+file. Compilation and encoding finish before writing; a temporary file in the
+output directory is then moved into place, so compilation failures do not
+truncate an existing output.</p>
+<p>Debug symbols, source maps, and the source archive are included by default.
+<code>--no-debug</code> omits all three. Program version remains the compiler default <code>0</code>.
+External type catalogs are not configurable through this command yet.</p>
+<p>Options may appear before, between, or after source paths. Use <code>--</code> before a source
+name beginning with <code>-</code>, or prefix it with <code>./</code>. For output paths beginning with
+<code>-</code>, use <code>./</code> so they cannot be mistaken for an option.</p>
+<p>The default success summary on stdout includes the resolved source list, output
+path, module, number of handlers, file size in bytes, included debug sections,
+and elapsed time. The duration covers source expansion, reading, compilation,
+encoding, and writing; it excludes process startup and printing the report.</p>
+<p><code>--verbose</code> / <code>-v</code> additionally reports the binary format version, bytecode
+instruction count and size, required registers and call stack depth, message
+bindings, required extension signatures, and required external type signatures.
+Handler counts include exact-signature and message-name handlers. Outbound
+bindings describe compiled message signatures, not the number of runtime emits.
+All counts and dependencies come from the final optimized Program. Bytecode
+size counts the V1 instruction data at 16 bytes per instruction, excluding the
+section header and instruction-count field. Total file size includes all sections.</p>
+<p><code>--quiet</code> / <code>-q</code> suppresses success output but still reports errors. Quiet and
+verbose cannot be combined. Verbosity and timing do not change the output bytes.</p>
+<p>Compiler diagnostics go to stderr with their stable code and, when available,
+source path, line, and column, for example <code>game.ges(2,10): error parse.syntax: …</code>.
+File failures use <code>cli.io</code>, invalid UTF-8 uses <code>cli.invalidEncoding</code>, and compile
+argument errors use <code>cli.usage</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Exit code</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>Success, help, or version output</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td>Compilation, decoding, linking, runtime, runtime-limit, or file I/O failure</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td>Invalid command or arguments</td>
+</tr>
+<tr>
+<td><code>0</code>–<code>255</code></td>
+<td>For a completed <code>run</code>, the script-selected ErrorCode (default <code>0</code>), unless a CLI failure overrides it</td>
+</tr>
+</tbody>
+</table>
+<h2 id="check-sources">Check sources</h2>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">check</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">check</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">handlers.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">definitions.ges</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">check</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">scripts/*.ges</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--verbose</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">check</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--quiet</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">check</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--help</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="dotnet ges check game.gesdotnet ges check handlers.ges definitions.gesdotnet ges check &quot;scripts/*.ges&quot; --verbosedotnet ges check game.ges --quietdotnet ges check --help"><div></div></button></div></figure></div>
+<p><code>check</code> runs the same complete compiler pipeline as <code>compile</code>, including semantic
+validation, optimization, and Program validation. It does not encode or write a
+<code>.gesb</code> file, load a host, or execute initialization or other handlers. Existing
+files remain untouched. This command accepts source text, not <code>.gesb</code> input.</p>
+<p>Source ordering, wildcard expansion, deduplication, strict UTF-8 decoding, source
+names, and compiler diagnostics follow <code>compile</code>. Multiple sources do not need an
+output path. <code>--output</code> and <code>--no-debug</code> are not check options. The default success
+report lists sources, module, and elapsed time; <code>--verbose</code> adds the same Program
+details as <code>compile</code>, and <code>--quiet</code> suppresses success output.</p>
+<p>Checking verifies the source and Program contract; it does not establish that a
+particular host can satisfy extension imports or runtime resource requirements.
+Like <code>compile</code>, it has no configurable external-type catalog. Use <code>run</code> to also
+perform linking and execution in the CLI’s host.</p>
+<h2 id="run-a-program">Run a program</h2>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">handlers.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">definitions.ges</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--arg</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">hello</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--arg</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">world</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--seed</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">42</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--color</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--args</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">12</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">Hello</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">34</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--args</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">12</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">Hello</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">34</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--color</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--color</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">12</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">Hello</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">34</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">script1.gesb</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">script2.gesb</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">programs/*.gesb</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--arg</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">hello</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--scenario</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">scenario.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--seed</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">42</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">script1.gesb</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">script2.gesb</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--scenario</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">scenario.ges</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--interactive</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--color</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--interactive</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--color</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">script1.gesb</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">script2.gesb</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--interactive</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--verbose</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--max-messages</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">1000</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--max-steps</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">200000</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--help</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="dotnet ges run game.gesdotnet ges run handlers.ges definitions.gesdotnet ges run game.ges --arg hello --arg world --seed 42dotnet ges run --color game.ges --args 12 Hello 34dotnet ges run game.ges --args 12 Hello 34 --colordotnet ges run --color game.ges -- 12 Hello 34dotnet ges run script1.gesb script2.gesbdotnet ges run &quot;programs/*.gesb&quot; --arg hellodotnet ges run game.ges --scenario scenario.ges --seed 42dotnet ges run script1.gesb script2.gesb --scenario scenario.gesdotnet ges run --interactive --colordotnet ges run game.ges --interactive --colordotnet ges run script1.gesb script2.gesb --interactive --verbosedotnet ges run game.ges --max-messages 1000 --max-steps 200000dotnet ges run --help"><div></div></button></div></figure></div>
+<p><code>run</code> compiles one or more source files together in memory, or reads and validates
+one or more <code>.gesb</code> files. Each binary is loaded as an independent Program into
+one shared host in input order. The <code>.gesb</code> extension is recognized without regard
+to case; other input paths are treated as source text. Mixing binary and source
+inputs is a usage error. File-name wildcard expansion, ordering, and path
+deduplication follow <code>compile</code>, including for binaries. No binary is written and
+input files are not modified.</p>
+<p>All inputs are compiled/decoded and linked before any script runs. Every Program
+is loaded at normal priority; input order defines registration order and queued
+initialization order. Programs can therefore send messages to handlers from later
+inputs, including during initialization. Constants and functions are scoped to
+their compiled Program; binary composition does not merge compilation scopes.</p>
+<h3 id="main-and-console-endpoints">Main and console endpoints</h3>
+<p>By default, the CLI calls Host.Start for the complete initial group, then drains
+its queued ordinary messages and sends exactly one untagged <code>Main(args)</code> message.
+An initial failure prevents Main and discards that group’s queued outputs. All matching
+handlers in all loaded Programs receive that same logical message, in the host’s
+normal dispatch order. A helper Program need not declare Main. At least one
+handler must match: an exact <code>Main(args)</code> handler or a message-name Main handler,
+without required tags. Otherwise <code>cli.missingMain</code> is reported before any
+initialization executes. An <code>undeliverable</code> handler does not count as an entry
+point. No interactive fallback is started implicitly.</p>
+<p><code>args</code> is always a List of Text values, in command-line order. No implicit literal
+conversion is applied: <code>12</code>, <code>true</code>, and <code>[1, 2]</code> remain Text. Use <code>parse arg</code> or
+<code>arg as :Number</code> in the script when conversion is needed. Without arguments the
+List is empty. The three forms may be combined:</p>
+<table>
+<thead>
+<tr>
+<th>Form</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--arg &lt;text&gt;</code></td>
+<td>Append exactly one Text value, even if it looks like an option; repeat as needed</td>
+</tr>
+<tr>
+<td><code>--args &lt;text&gt; ...</code></td>
+<td>Append one or more Text values until the next option, then resume ordinary CLI parsing</td>
+</tr>
+<tr>
+<td><code>-- &lt;text&gt; ...</code></td>
+<td>Append all remaining tokens as Text values, without any further option or file interpretation</td>
+</tr>
+</tbody>
+</table>
+<p><code>--args</code> accepts negative values such as <code>-12</code>, <code>-.5</code>, and <code>-1e3</code> (without converting
+them), and a lone <code>-</code>. Other tokens beginning with a dash start option parsing;
+unknown options such as <code>--colro</code> are errors. Use <code>--arg --color</code> or <code>-- --color</code>
+to pass an option-looking value literally. After an option ends an <code>--args</code> group,
+use another <code>--args</code> to begin a new group. Empty strings are valid arguments when
+supplied as a shell argument (<code>""</code> or <code>''</code>); a bare <code>--args</code> with no values is an error.
+A trailing <code>--</code> with no values is allowed for Main.</p>
+<p>For <code>run</code>, <code>--</code> introduces Main arguments rather than program paths. Prefix a
+program path beginning with a dash with <code>./</code>, for example <code>./-game.ges</code>.
+All argument forms are available only in Main mode, not with <code>--scenario</code> or
+<code>--interactive</code>. <code>--help</code>/<code>-h</code> is also accepted among run options, but is forwarded
+as data after <code>--</code> or as the value of <code>--arg</code>.</p>
+<p>The CLI subscribes three native handlers before loading any Program:</p>
+<table>
+<thead>
+<tr>
+<th>Message</th>
+<th>CLI behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ConsoleOut(...)</code></td>
+<td>Concatenate all argument values in order without separators, followed by a newline, to stdout</td>
+</tr>
+<tr>
+<td><code>ConsoleErr(...)</code></td>
+<td>Write the same representation to stderr</td>
+</tr>
+<tr>
+<td><code>ErrorCode(code)</code></td>
+<td>Set the script’s final process exit code; does not terminate execution</td>
+</tr>
+</tbody>
+</table>
+<p>For example:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="ges"><code><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">on</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">Main</span><span style="--0:#D6DEEB;--1:#403F53">(</span><span style="--0:#C5E478;--1:#3B61B0">args</span><span style="--0:#D6DEEB;--1:#403F53">) {</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">emit</span><span style="--0:#D6DEEB;--1:#403F53"> ConsoleOut(</span><span style="--0:#ECC48D;--1:#984E4D">"Arguments: "</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#C5E478;--1:#3B61B0">args</span><span style="--0:#D6DEEB;--1:#403F53">)</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">emit</span><span style="--0:#D6DEEB;--1:#403F53"> ConsoleOut(</span><span style="--0:#ECC48D;--1:#984E4D">"Hello "</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#F78C6C;--1:#AA0982">12</span><span style="--0:#D6DEEB;--1:#403F53">)</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">emit</span><span style="--0:#D6DEEB;--1:#403F53"> ConsoleErr(</span><span style="--0:#ECC48D;--1:#984E4D">"Problem found: "</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#C5E478;--1:#3B61B0">#invalid</span><span style="--0:#D6DEEB;--1:#403F53">)</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">emit</span><span style="--1:#403F53"><span style="--0:#D6DEEB"> ErrorCode(</span><span style="--0:#D7DBE0">code</span><span style="--0:#D6DEEB">: </span></span><span style="--0:#F78C6C;--1:#AA0982">7</span><span style="--0:#D6DEEB;--1:#403F53">)</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="on Main(args) {    emit ConsoleOut(&quot;Arguments: &quot;, args)    emit ConsoleOut(&quot;Hello &quot;, 12)    emit ConsoleErr(&quot;Problem found: &quot;, #invalid)    emit ErrorCode(code: 7)}"><div></div></button></div></figure></div>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--arg</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">hello</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--arg</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">world</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#7FDBCA;--1:#096E72">&gt;</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">results.txt</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="dotnet ges run game.ges --arg hello --arg world > results.txt"><div></div></button></div></figure></div>
+<p>The file receives the ConsoleOut lines; ConsoleErr remains on stderr. Both console
+endpoints accept any number and kind of arguments. Argument labels are allowed
+and ignored for display; their values retain their order. With no arguments the
+endpoint writes an empty line. Neither endpoint inserts spaces or other separators
+between arguments; include these explicitly in Text values. For example,
+<code>ConsoleOut("f(", 12, ") = ", 24)</code> prints <code>f(12) = 24</code> followed by a newline.
+Root Text values remain unquoted; other values use
+the existing GES text representation. Text may contain newlines. This is
+human-readable output, not a framed serialization format.</p>
+<p><code>ErrorCode(7)</code> and <code>ErrorCode(code: 7)</code> are equivalent. Exactly one argument is
+required, unlabeled or labeled <code>code</code>. Its value must be a unitless Number with
+an integer value from <code>0</code> to <code>255</code>, or <code>nothing</code>. The default code is <code>0</code> (success);
+nonzero codes indicate script-defined failures. <code>nothing</code> resets it to <code>0</code>.
+Invalid arguments report <code>cli.errorCodeArgument</code> and make the run fail.
+The last <strong>delivered</strong> ErrorCode message wins, across all Programs and inputs.
+Setting a code does not cancel handlers, stop the queue, or exit an interactive
+session. Compile, decode, link, runtime, runtime-limit, interactive-input, and
+I/O failures always produce CLI failure code <code>1</code>, regardless of the script code.
+CLI usage errors still return <code>2</code>. Codes <code>1</code> and <code>2</code> selected by a script are also
+valid, so diagnostics distinguish them from CLI failures.</p>
+<p>These are ordinary message handlers, not new language syntax or reserved language
+names. They are available during initialization, Main, scenarios, and interactive
+input. FIFO delivery applies; publishing also reaches each native handler exactly
+once. ConsoleErr alone does not change the exit code, and tags do not implicitly
+set it. Use separate ConsoleErr and ErrorCode messages when reporting a failure.</p>
+<h3 id="color-output-and-editing">Color output and editing</h3>
+<p><code>--color</code> explicitly enables ANSI colors, including when output is redirected.
+Without it, output contains no CLI-added ANSI codes. An existing <code>NO_COLOR</code>
+environment variable disables colors even with this option.</p>
+<p>ConsoleOut leaves root Text untouched and colors Number/Percentage/Quantity
+values blue. Structured values receive syntax colors (for example, nested strings
+green and tags cyan). ConsoleErr colors its entire line red. In interactive mode,
+<code>--verbose</code> event traces (emit, publish, and dispatch) appear yellow with <code>--color</code>.
+Outside interactive mode, traces remain plain. Error diagnostics and status
+messages retain their plain representation.</p>
+<p>With <code>--interactive --color</code>, when stdin, stdout, and stderr are terminals, the
+line editor highlights input as it is typed. It supports cursor editing, session
+history with Up/Down, and Ctrl+N to insert a newline; Enter submits the entire input.
+The editor uses a tab width of four columns.
+Shift+Enter and Alt/Option+Enter also insert a newline if the terminal reports
+the modifier. Ghostty’s default Shift+Enter encoding is recognized without a
+custom keybinding. The editor decodes both the extended xterm and CSI-u forms
+of Shift/Alt+Enter. In Warp, configure Option as Meta to use Option+Enter.
+Some terminals send the same input for modified Enter as for ordinary Enter,
+which submits immediately. Use Ctrl+N in those terminals.
+Ctrl+C cancels the current input, and Ctrl+D on empty input exits. Prompts and
+rendered input use stderr. Redirected streams fall back to the normal line reader;
+script output can still be colored with <code>--color</code>.</p>
+<p>The CLI-only editor uses <a href="https://github.com/waf/PrettyPrompt/tree/v4.1.1">PrettyPrompt</a>.
+Highlighting uses the bundled GES and GESA TextMate grammars and tolerates incomplete input;
+compilation remains the authority for valid GES. Runtime and Compiler acquire no
+terminal dependencies. Dependency licenses and source links are included in
+<a href="https://github.com/schloepke/GameEventScript/blob/main/implementation/csharp/GameEventScript.Tool/THIRD-PARTY-NOTICES.md">THIRD-PARTY-NOTICES.md</a>.</p>
+<p>The process finishes when initialization and Main processing complete or a runtime
+boundary stops execution. <code>--scenario</code> and <code>--interactive</code> replace Main; they are
+mutually exclusive and cannot be combined with Main argument options.</p>
+<h3 id="trigger-events-with-a-scenario">Trigger events with a scenario</h3>
+<p>For example, <code>game.ges</code> can contain:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="ges"><code><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">module</span><span style="--0:#D6DEEB;--1:#403F53"> game</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">on</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">Start</span><span style="--0:#D6DEEB;--1:#403F53">(</span><span style="--0:#C5E478;--1:#3B61B0">value</span><span style="--0:#D6DEEB;--1:#403F53">) {</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">emit</span><span style="--1:#403F53"><span style="--0:#D6DEEB"> ConsoleOut(</span><span style="--0:#D7DBE0">value</span><span style="--0:#D6DEEB">: </span></span><span style="--0:#C5E478;--1:#3B61B0">value</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">+</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53">)</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="module gameon Start(value) {    emit ConsoleOut(value: value + 1)}"><div></div></button></div></figure></div>
+<p>Create <code>scenario.ges</code> using ordinary GES syntax:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="ges"><code><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">module</span><span style="--0:#D6DEEB;--1:#403F53"> scenario</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">on</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">initialization</span><span style="--0:#D6DEEB;--1:#403F53"> {</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">emit</span><span style="--1:#403F53"><span style="--0:#D6DEEB"> Start(</span><span style="--0:#D7DBE0">value</span><span style="--0:#D6DEEB">: </span></span><span style="--0:#F78C6C;--1:#AA0982">41</span><span style="--0:#D6DEEB;--1:#403F53">)</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="module scenarioon initialization {    emit Start(value: 41)}"><div></div></button></div></figure></div>
+<p>Run them with:</p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--scenario</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">scenario.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--seed</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">42</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="dotnet ges run game.ges --scenario scenario.ges --seed 42"><div></div></button></div></figure></div>
+<p>Stdout contains:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">42</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="42"><div></div></button></div></figure></div>
+<p>A completion summary is written to stderr. Use <code>--quiet</code> / <code>-q</code> to omit that
+summary while retaining ConsoleOut, ConsoleErr, and errors. <code>--verbose</code> / <code>-v</code>
+additionally traces emits, publishes, and handler entry on stderr. Quiet and
+verbose cannot be combined.</p>
+<p>The scenario is a separate Program, so it may use its own module, constants, and
+functions. Those definitions are not shared with the main compilation; Programs
+communicate through messages. Repeat <code>--scenario</code> to compile multiple scenario
+source files together into that one Program; file-name patterns and deduplication
+also apply within the scenario group. A scenario must be source text.</p>
+<p>The scenario is loaded after all input Programs, before execution starts. Its
+initialization is queued after theirs; later messages use the normal FIFO host
+queue and handler registration order. Scenario handlers can therefore observe
+messages emitted by any input Program’s initialization. Several emits inside a scenario
+handler enqueue several messages; they do not synchronously finish each message
+before the next emit. Scenarios can send subsequent events from response handlers
+when that sequencing is needed. Scenario events are ordinary GES emits, not
+separate native <code>Host.Receive</code> calls. No automatic Main message is sent in this mode.</p>
+<h3 id="interactive-event-console">Interactive event console</h3>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--interactive</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--color</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">game.ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--interactive</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--color</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">script1.gesb</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">script2.gesb</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--interactive</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--seed</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">42</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="dotnet ges run --interactive --colordotnet ges run game.ges --interactive --colordotnet ges run script1.gesb script2.gesb --interactive --seed 42"><div></div></button></div></figure></div>
+<p>Initial program files are optional in interactive mode. A session started with
+<code>dotnet ges run --interactive</code> can load them later with <code>:load</code>.</p>
+<p>After initialization drains, the CLI reads one line of ordinary GES handler-body
+statements at a time. For example:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ges&gt; :help</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ges&gt; :load "programs/game.gesb"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ges&gt; emit Start(value: 41)</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">42</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ges&gt; emit ConsoleOut(value: [1, 2, 3])</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">[1, 2, 3]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ges&gt; :quit</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="ges> :helpges> :load &quot;programs/game.gesb&quot;ges> emit Start(value: 41)42ges> emit ConsoleOut(value: [1, 2, 3])[1, 2, 3]ges> :quit"><div></div></button></div></figure></div>
+<p>Each line is compiled with the existing compiler inside a temporary
+<code>on initialization</code> handler, loaded into the same host, and pumped before the next
+line is read. The temporary Program is then detached. The main Programs and random
+generator persist; local variables and declarations from an input do not. Plain or redirected
+input must fit on one line, optionally using braces and semicolons. The colored
+terminal editor also accepts multiline input using Ctrl+N between lines and Enter
+to submit the complete input. For example, type <code>if true {</code>, press Ctrl+N, type
+<code>emit ConsoleOut("Hello")</code>, press Ctrl+N, type <code>}</code>, then press Enter. Additional
+handler declarations outside the generated initialization handler are rejected.
+Use <code>emit ConsoleOut(expression)</code> to display an expression result; a bare
+expression retains ordinary GES expression-statement semantics.</p>
+<p>Interactive commands are:</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>:help</code></td>
+<td>Show commands, message examples, Text conversion, editing keys, and session behavior</td>
+</tr>
+<tr>
+<td><code>:help load</code></td>
+<td>Show loading details and path examples</td>
+</tr>
+<tr>
+<td><code>:help list</code>, <code>:help handler</code>, <code>:help dump</code>, <code>:help source</code></td>
+<td>Show inspection behavior and program selection details</td>
+</tr>
+<tr>
+<td><code>:help unload</code>, <code>:help unloadAll</code>, <code>:help reload</code></td>
+<td>Show removal and fresh-host reload behavior</td>
+</tr>
+<tr>
+<td><code>:unload &lt;module|@ID&gt;</code></td>
+<td>Detach one persistent Program</td>
+</tr>
+<tr>
+<td><code>:unloadAll</code></td>
+<td>Detach all Programs, keeping native console handlers</td>
+</tr>
+<tr>
+<td><code>:reload</code></td>
+<td>Re-read active Programs and initialize them together on a fresh host</td>
+</tr>
+<tr>
+<td><code>:load &lt;file&gt;</code></td>
+<td>Add one <code>.ges</code> or <code>.gesb</code> Program and immediately pump its initialization</td>
+</tr>
+<tr>
+<td><code>:list</code></td>
+<td>List persistent program instances with their <code>@ID</code>, module, version, files, and registered script-handler count</td>
+</tr>
+<tr>
+<td><code>:handler</code></td>
+<td>List registered script and native handlers, their argument signatures, and required/excluded tags</td>
+</tr>
+<tr>
+<td><code>:dump &lt;module&gt;</code></td>
+<td>Show the GESA dump of the loaded Program with that exact module name</td>
+</tr>
+<tr>
+<td><code>:dump @&lt;ID&gt;</code></td>
+<td>Select a Program by session ID, including anonymous or duplicate modules</td>
+</tr>
+<tr>
+<td><code>:source &lt;module|@ID&gt;</code></td>
+<td>Show only embedded source documents, each with a filename heading</td>
+</tr>
+<tr>
+<td><code>:quit</code></td>
+<td>End the session; EOF also exits</td>
+</tr>
+</tbody>
+</table>
+<p>Help, prompts, and load/unload/reload reports go to stderr. Prompts and the introductory message
+appear only when stdin is a terminal; redirected UTF-8 input is accepted without
+prompts, including an optional initial BOM. <code>--quiet</code> suppresses load/unload/reload reports and
+the final summary, while explicitly requested help remains visible.</p>
+<p>Inspection output also goes to stderr and remains visible with <code>--quiet</code>.
+Help, lists, dumps, and source displays have a blank line before and after their output.
+For example:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ges&gt; :list</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Loaded programs (1):</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">@1  game.combat  version=0  handlers=2</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">      </span></span><span style="--0:#d6deeb;--1:#403f53">files: "game.gesb"</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ges&gt; :handler</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Registered handlers (5):</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">native  ConsoleOut(...) [name-only]</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">native  ConsoleErr(...) [name-only]</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">native  ErrorCode(...) [name-only]</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">@1  game.combat  Main(args) [signature]</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">@1  game.combat  Hit(damage) [signature] matching #enemy without #silent</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ges&gt; :dump game.combat</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ges&gt; :dump @1</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ges&gt; :source game.combat</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ges&gt; :source @1</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="ges> :listLoaded programs (1):  @1  game.combat  version=0  handlers=2      files: &quot;game.gesb&quot;ges> :handlerRegistered handlers (5):  native  ConsoleOut(...) [name-only]  native  ConsoleErr(...) [name-only]  native  ErrorCode(...) [name-only]  @1  game.combat  Main(args) [signature]  @1  game.combat  Hit(damage) [signature] matching #enemy without #silentges> :dump game.combatges> :dump @1ges> :source game.combatges> :source @1"><div></div></button></div></figure></div>
+<p>IDs are stable within a session and assigned in successful load order. Jointly
+compiled source files form one Program; each binary and each <code>:load</code> creates its
+own entry. Repeated loads are shown separately. Sources without a module
+declaration retain their compiler-generated <code>anonymous.*</code> module name and can
+also be selected by ID. A duplicate module name makes <code>:dump</code> or <code>:source</code>
+report the matching IDs instead of choosing one. Unknown modules and invalid
+arguments reject the command, allow further input, and make the final exit code 1.</p>
+<p><code>:handler</code> lists the native console subscriptions first, followed by script
+handlers in program-load and binding order. <code>[signature]</code> matches the displayed
+ordered argument labels, including <code>_</code> for unlabeled arguments; <code>(...) [name-only]</code>
+accepts any argument signature. The list excludes initialization handlers, which
+already ran once and are not registered for later messages, as well as functions,
+predicates, outbound message bindings, and detached temporary console inputs.</p>
+<p>These commands inspect the loaded session without executing handlers, pumping
+messages, or consuming random values. <code>:dump</code> uses the same GESA dumper as
+<code>dotnet ges dump</code> on the Program already in memory; it does not reload the file or need
+the original sources. Embedded source/debug information is included when present.</p>
+<p><code>:source</code> reads only the loaded Program’s source archive, in archive order. It shows
+the original source text, including comments, with a <code>// Source: "filename"</code> heading
+for each document. It does not show bytecode, bindings, or other dump segments.
+Without an embedded archive (for example, a binary compiled with <code>--no-debug</code>),
+it prints a notice and leaves the session successful. It never re-reads files or
+reconstructs source from bytecode.</p>
+<p>With <code>--color</code>, <code>:source</code> highlights GES, and <code>:dump</code> highlights GESA directives,
+opcodes, registers, and operands while using GES colors for embedded source blocks
+and source lines. Coloring also works with redirected output; <code>NO_COLOR</code> disables
+it. Terminal source/dump displays expand tabs to four-column stops before adding
+colors. Redirected output preserves the original tab characters; otherwise the
+displayed text is unchanged apart from ANSI color codes.</p>
+<p><code>:load</code> uses the entire remainder of its line as one file path, relative to the
+process working directory. Optional surrounding single/double quotes are removed;
+double that surrounding quote to represent it within the path. Backslashes are
+literal, so Windows paths do not require escape sequences. There is no shell
+expansion, wildcard expansion, or multiple-file form. To load combined source
+files, compile them together first and load their resulting <code>.gesb</code>.</p>
+<p>Sources use the same compiler and strict UTF-8 decoding as <code>run</code>; binaries use
+the complete Reader/validator. A load is additive: its handlers stay active for
+subsequent inputs, previously loaded Programs remain available, and loading the
+same file again adds another independent instance. Functions and constants remain
+scoped to their compiled Program. Initialization may send messages to the existing
+Programs, but <code>Main</code> is not automatically invoked. To invoke it explicitly:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="ges"><code><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">emit</span><span style="--1:#403F53"><span style="--0:#D6DEEB"> Main(</span><span style="--0:#D7DBE0">args</span><span style="--0:#D6DEEB">: [</span></span><span style="--0:#ECC48D;--1:#984E4D">"12"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#ECC48D;--1:#984E4D">"Hello"</span><span style="--0:#D6DEEB;--1:#403F53">])</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="emit Main(args: [&quot;12&quot;, &quot;Hello&quot;])"><div></div></button></div></figure></div>
+<p>A read, compile, decode, or link failure rejects the new load before its handlers
+are registered or initialization runs. Existing Programs remain usable. Invalid
+commands, syntax/link errors, and failed loads allow another input but make the
+session’s final exit code <code>1</code>. A runtime error, output failure, or runtime limit,
+including during loaded initialization, ends the session immediately after the
+pump returns; pending work is not resumed. No automatic replacement or unload is
+performed by <code>:load</code>.</p>
+<h3 id="unloading-and-reloading-programs">Unloading and reloading Programs</h3>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ges&gt; :unload game.combat</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ges&gt; :unload @2</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ges&gt; :reload</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ges&gt; :unloadAll</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="ges> :unload game.combatges> :unload @2ges> :reloadges> :unloadAll"><div></div></button></div></figure></div>
+<p><code>:unload &lt;module|@ID&gt;</code> detaches one Program and removes its inventory entry.
+Selection follows the same exact-module and <code>@ID</code> rules as <code>:dump</code>; a duplicate
+module name requires an ID. Its handlers no longer receive messages. <code>:unloadAll</code>
+detaches every persistent Program. Both leave ConsoleOut, ConsoleErr, and ErrorCode
+available, and preserve the host’s random state and script exit code. Removed IDs
+are never reused within the session, including after <code>:unloadAll</code> or <code>:reload</code>.
+Neither command deletes files.</p>
+<p><code>:reload</code> creates a fresh host and re-reads the original files of all <strong>currently
+active</strong> Programs in load order. Jointly compiled source files remain one group;
+separate binaries and additive loads remain separate instances. Each active <code>@ID</code>
+is preserved. The command does not rescan wildcard patterns, reload detached
+Programs, or call Main. All replacement Programs are linked before initialization
+starts, so initialization emits can reach the entire group. Initialization and its
+emitted messages are then pumped before the next console input.</p>
+<p>The replacement host uses the original limits and seed options. A fixed <code>--seed</code>
+restarts its sequence; without one, the new host obtains a fresh seed. The script
+exit code resets to zero, unless initialization sets it again. Console subscriptions
+are registered once on the new host. Use <code>:unloadAll</code> followed by <code>:reload</code> to start
+with an empty fresh host. Both commands accept no arguments.</p>
+<p>Read, compile, decode, or link failures during preparation leave the <strong>entire</strong>
+previous session active; no replacement initialization runs before preparation
+succeeds. Runtime errors, output failures, or limits during replacement execution
+end the session, as for <code>:load</code>. Rejected console inputs still make the final exit
+status <code>1</code>, even after a later successful reload. The final run summary accumulates
+execution counters across successful reloads.</p>
+<h3 id="output-limits-and-host-configuration">Output, limits, and host configuration</h3>
+<p>Only ConsoleOut values go to stdout. General event traces are shown on stderr with
+<code>--verbose</code>, retaining argument order and tags. <code>[not queued]</code> indicates an emit
+or publish had no local enqueue; that alone is not an error. No outbound sink is
+configured, so publications only reach local subscribers. Nothing is sent to an
+external service. Root Text arguments in verbose traces use JSON quoting/escaping;
+other values use the existing GES text representation. Trace rendering is distinct
+from ConsoleOut and ConsoleErr output and defines no portable serialization format.</p>
+<p><code>--seed</code> accepts a signed decimal Int64. The same seed and programs reproduce the
+host’s random sequence. Without it, the normal host seed generation applies.
+All Programs, the scenario, and interactive inputs share this host’s random generator.</p>
+<p>Runtime limits remain active. <code>--max-messages</code> sets <code>MaxProcessedEventsPerRun</code>
+(default 64) per pump, including initialization and native console messages.
+The initial Start phase, its subsequent ordinary-message drain, Main, and each
+interactive input are separate pumps; their message-processing limits reset
+independently. A scenario joins the initial Start group after the input Programs.
+The run summary includes work from both Start and ordinary pumping. <code>--max-steps</code> sets
+<code>MaxExecutionSteps</code> per handler (default 100,000). Both options require positive
+Int32 values; all other limits retain their Runtime defaults. Reaching a limit
+reports <code>cli.runtimeLimit</code> with the limit name and value and exits with code <code>1</code>.
+The CLI does not automatically resume past a safety boundary or drain a cyclic
+message chain indefinitely. Already printed events are not rolled back.</p>
+<p>Only the three native CLI handlers are registered; no custom extensions or
+external types are registered. Programs requiring unavailable imports fail during
+linking with the existing <code>link.*</code> diagnostic. Diagnostics go to stderr with stable
+codes and available source, Program, handler, symbol, or binary context. A runtime
+diagnostic makes the process fail even if the host subsequently becomes idle;
+normal host behavior may still execute sibling handlers before returning.</p>
+<h2 id="dump-a-binary">Dump a binary</h2>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">dump</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">artifacts/game.gesb</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">dump</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">artifacts/game.gesb</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--addresses</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">dump</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">artifacts/game.gesb</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-o</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">artifacts/game.gesa</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">dump</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">artifacts/game.gesb</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#7FDBCA;--1:#096E72">&gt;</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">artifacts/game.gesa</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">dump</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--help</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="dotnet ges dump artifacts/game.gesbdotnet ges dump artifacts/game.gesb --addressesdotnet ges dump artifacts/game.gesb -o artifacts/game.gesadotnet ges dump artifacts/game.gesb > artifacts/game.gesadotnet ges dump --help"><div></div></button></div></figure></div>
+<p>The command reads and fully validates one <code>.gesb</code> file with the existing Reader,
+then uses the portable ProgramDumper to produce the
+<a href="/docs/reference/assembler-format/">GESA representation</a>. It uses embedded
+debug information when present and also works with binaries compiled using
+<code>--no-debug</code>. Original source files, extension implementations, and host bindings
+are not needed. The binary is not executed or modified.</p>
+<p>Without <code>-o</code> or <code>--output</code>, stdout contains only GESA text, suitable for piping
+or redirection. <code>--addresses</code> adds the existing zero-based instruction address
+prefixes such as <code>@0000</code>; the default omits these prefixes. File and stdout
+output use UTF-8 without a BOM and retain the dumper’s line endings.
+When stdout is a terminal, tabs are displayed at four-column stops. Files and
+redirected stdout retain the original tab characters.</p>
+<p>An explicit output path creates parent directories as needed and replaces an
+existing file only after decoding and dump generation succeed, using the same
+temporary-file replacement as <code>compile</code>. It prints a short success message on
+stdout instead of the dump. Input and output paths must differ. Prefer <code>-o</code> when
+preserving a previous dump on failure matters: shell redirection truncates its
+destination before the tool starts.</p>
+<p>Options may appear before or after the binary path. Use <code>--</code> or a <code>./</code> prefix
+for input names beginning with <code>-</code>; use <code>./</code> for such output names. The command
+accepts one binary and does not expand wildcard patterns.</p>
+<p>Malformed or unsupported binaries return exit code <code>1</code> and report a stable
+<code>decode.*</code> code on stderr, with byte offset, section type, and entry index when
+provided by the Reader. File errors use <code>cli.io</code>, and invalid arguments use
+<code>cli.usage</code> with exit code <code>2</code>. Failed decoding produces no dump text.</p>
+<h2 id="run-from-the-repository">Run from the repository</h2>
+<p>From the repository root, using the SDK pinned in <code>global.json</code> and the .NET 8
+runtime:</p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--project</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">implementation/csharp/GameEventScript.Tool/src</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--configuration</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">Release</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--help</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="dotnet run --project implementation/csharp/GameEventScript.Tool/src --configuration Release -- --help"><div></div></button></div></figure></div>
+<h2 id="install-or-update-from-the-repository">Install or update from the repository</h2>
+<p>On macOS or Linux, run this from the repository root:</p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">./scripts/install-csharp-tool.sh</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--help</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="./scripts/install-csharp-tool.shdotnet ges --help"><div></div></button></div></figure></div>
+<p>Run the same script again after pulling or editing the source to update the
+installation. It builds the entire C# solution in Release configuration, then
+packages the tool and installs it for the current user. A build or packaging
+failure stops before installation. The script does not run the test suite.</p>
+<p>Each invocation creates a unique local prerelease version derived from the
+project version, without changing the project file. This ensures that repeated
+builds include the current source even when the project version is unchanged.
+The script deliberately replaces an installed version with the current checkout,
+including when the installed version is newer. Installation uses only the
+freshly built package directory; temporary packages are removed afterwards.</p>
+<p>An existing <code>StepH.GameEventScript.Tool</code> installation in the selected scope is
+replaced by <code>GameEventScript.Tool</code>. The script first builds and packs the new
+tool, then verifies it in a temporary installation before removing the old
+package. Subsequent invocations update the new package normally.</p>
+<p>The package installs the command <code>dotnet-ges</code>, which the .NET CLI resolves as
+<code>dotnet ges</code>. Updating an existing <code>GameEventScript.Tool</code> installation replaces
+its old <code>ges</code> command automatically; no manual uninstall is needed. The package
+ID stays <code>GameEventScript.Tool</code>. Direct invocation as <code>dotnet-ges</code> also works.</p>
+<p>The script can also be invoked by its absolute path from any working directory.
+To install or update in a separate directory instead of globally:</p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">./scripts/install-csharp-tool.sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--tool-path</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">./artifacts/csharp/tool/install</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">./artifacts/csharp/tool/install/dotnet-ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--version</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="./scripts/install-csharp-tool.sh --tool-path ./artifacts/csharp/tool/install./artifacts/csharp/tool/install/dotnet-ges --version"><div></div></button></div></figure></div>
+<p>Relative installation paths are resolved against the caller’s working directory.
+For global use, ensure that <code>$HOME/.dotnet/tools</code> is on <code>PATH</code>. With
+<code>--tool-path</code>, add that directory to <code>PATH</code> to use <code>dotnet ges</code>, or invoke
+<code>dotnet-ges</code> by its path as shown above.</p>
+<h2 id="uninstall-from-the-repository">Uninstall from the repository</h2>
+<p>Remove the global C# <code>dotnet ges</code> installation for the current user:</p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">./scripts/uninstall-csharp-tool.sh</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="./scripts/uninstall-csharp-tool.sh"><div></div></button></div></figure></div>
+<p>For an installation made with <code>--tool-path</code>, select the same directory:</p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">./scripts/uninstall-csharp-tool.sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--tool-path</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">./artifacts/csharp/tool/install</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="./scripts/uninstall-csharp-tool.sh --tool-path ./artifacts/csharp/tool/install"><div></div></button></div></figure></div>
+<p>Relative paths are resolved against the caller’s working directory, exactly as
+with the installer. The script removes <code>GameEventScript.Tool</code> and any remaining
+legacy <code>StepH.GameEventScript.Tool</code> from the selected scope. Other tools and the
+installation directory remain intact. An absent GES installation is a successful
+no-op; lookup or uninstall errors still fail. No build, package creation, or
+network download is required.</p>
+<h2 id="pack-and-install-manually">Pack and install manually</h2>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">pack</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">implementation/csharp/GameEventScript.Tool/src</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--configuration</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">Release</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">tool</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">install</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">GameEventScript.Tool</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--version</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">0.1.0</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--add-source</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">./artifacts/csharp/tool/packages</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--tool-path</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">./artifacts/csharp/tool/install</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">./artifacts/csharp/tool/install/dotnet-ges</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--help</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="dotnet pack implementation/csharp/GameEventScript.Tool/src --configuration Releasedotnet tool install GameEventScript.Tool --version 0.1.0 --add-source ./artifacts/csharp/tool/packages --tool-path ./artifacts/csharp/tool/install./artifacts/csharp/tool/install/dotnet-ges --help"><div></div></button></div></figure></div>
+<p>On Windows the installed command is <code>dotnet-ges.exe</code>. Build intermediates, binaries,
+and packages for this tool are written below <code>artifacts/csharp/tool</code>. This local
+tool package is separate from the four libraries produced by the existing
+library release and reproducibility scripts.</p>
+<p>For project-local use, install into a .NET tool manifest instead of supplying
+<code>--tool-path</code>. The invocation is then <code>dotnet ges --help</code> or
+<code>dotnet tool run dotnet-ges --help</code>. Global installations also support
+<code>dotnet ges --help</code> when the tool directory is on <code>PATH</code>.</p>
+<p>The tool is licensed under Apache-2.0; the package includes the full license.</p>
+<h3 id="delayed-messages">Delayed messages</h3>
+<p><code>run</code> waits for delayed messages and exits only when no work remains. Scripts
+that keep scheduling messages can run until interrupted with Ctrl+C. Runtime
+pumps themselves never sleep; the command-line adapter waits between pumps.</p>
+<p>The event console returns its prompt after current runnable work. While waiting
+for input it processes messages as they become due and restores the current
+input and cursor after terminal output. Delayed sends use monotonic time, with
+durations rounded upward to whole microseconds; actual dispatch also depends on
+when the host can pump.</p>
+</div><footer class="sl-flex astro-ddtxxk7k"><div class="meta sl-flex astro-ddtxxk7k"><a href="https://github.com/schloepke/GameEventScript/edit/main/implementation/csharp/GameEventScript.Tool/README.md" class="sl-flex print:hidden astro-qlekgd3o"><svg aria-hidden="true" class="astro-qlekgd3o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.2em;"><path d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-1.1-.22 1 1 0 0 0-.32.22l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8c.1-.1.17-.2.22-.33a1 1 0 0 0 0-.24v-.14l.07-.05ZM6.83 20H4v-2.83l9.93-9.93 2.83 2.83L6.83 20ZM18.17 8.66l-2.83-2.83 1.42-1.41 2.82 2.82-1.41 1.42Z"/></svg>Edit page</a></div><div class="pagination-links print:hidden astro-b5raizh3" dir="ltr"><a href="/docs/learn/swift/" rel="prev" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span class="astro-b5raizh3">Previous<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Embed in Swift</span></span></a><a href="/docs/tools/swift-cli/" rel="next" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg><span class="astro-b5raizh3">Next<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Native Swift CLI</span></span></a></div></footer><script type="module" src="/_astro/DocsFooter.astro_astro_type_script_index_0_lang.CcG6r9Au.js"></script></div></div></main></div></div></div></div></body></html>

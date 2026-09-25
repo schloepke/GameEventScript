@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class GameEventScriptMessage | Game Event Script C# API — Unreleased (fd2609345491) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class GameEventScriptMessage | Game Event Script C# API — Unreleased (fd2609345491) ">
+      
+      <meta name="description" content="Represents a message used within the Game Event Script system. This message serves as a fundamental unit for communication, allowing for event-driven execution between components, scripts, and handlers.">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Api.GameEventScriptMessage">
+
+
+
+  <h1 id="GameEventScript_Api_GameEventScriptMessage" data-uid="GameEventScript.Api.GameEventScriptMessage" class="text-break">
+Class GameEventScriptMessage  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.Api.html">Api</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Represents a message used within the Game Event Script system.
+This message serves as a fundamental unit for communication, allowing for
+event-driven execution between components, scripts, and handlers.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public sealed class GameEventScriptMessage : IEquatable&lt;GameEventScriptMessage&gt;</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">GameEventScriptMessage</span></div>
+    </dd>
+  </dl>
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.iequatable-1">IEquatable</a>&lt;<a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a>&gt;</div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+
+
+
+  <h2 id="GameEventScript_Api_GameEventScriptMessage_remarks">Remarks</h2>
+  <div class="markdown level0 remarks"><p>A GameEventScriptMessage encapsulates a message name and an optional set
+of named arguments. Additionally, it generates a unique signature ID for
+efficient message identification and dispatch during runtime.</p>
+</div>
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="GameEventScript_Api_GameEventScriptMessage_Arguments_" data-uid="GameEventScript.Api.GameEventScriptMessage.Arguments*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_Arguments" data-uid="GameEventScript.Api.GameEventScriptMessage.Arguments">
+  Arguments
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Represents the named arguments associated with a Game Event Script message.
+This property holds a collection of key-value pairs where keys are argument names
+and values are their corresponding data. It provides access to additional contextual
+information required to process the message during event-driven execution.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GameEventScriptMessageArguments Arguments { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptMessageArguments.html">GameEventScriptMessageArguments</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+  <h4 class="section" id="GameEventScript_Api_GameEventScriptMessage_Arguments_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>If no arguments are provided, this property defaults to an empty collection.
+The arguments are immutable and are used to construct the message's unique
+signature for identification and dispatch purposes.</p>
+</div>
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptMessage_Name_" data-uid="GameEventScript.Api.GameEventScriptMessage.Name*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_Name" data-uid="GameEventScript.Api.GameEventScriptMessage.Name">
+  Name
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the name of the message associated with the GameEventScriptMessage instance.
+This name serves as a key identifier for the message, which is normalized to ensure
+a consistent format and allow for accurate handling and comparison within the
+Game Event Script system.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string Name { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptMessage_SignatureId_" data-uid="GameEventScript.Api.GameEventScriptMessage.SignatureId*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_SignatureId" data-uid="GameEventScript.Api.GameEventScriptMessage.SignatureId">
+  SignatureId
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Represents a unique identifier for the signature of a <a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a>.
+The value is derived from the normalized name of the message and its associated arguments,
+allowing for precise matching and routing within the game event script system.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string SignatureId { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptMessage_Tags_" data-uid="GameEventScript.Api.GameEventScriptMessage.Tags*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_Tags" data-uid="GameEventScript.Api.GameEventScriptMessage.Tags">
+  Tags
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets an immutable view of the normalized delivery tags associated with this message. Tags do not affect the message signature.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IReadOnlyList&lt;string&gt; Tags { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="GameEventScript_Api_GameEventScriptMessage_Create_" data-uid="GameEventScript.Api.GameEventScriptMessage.Create*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_Create_System_String_" data-uid="GameEventScript.Api.GameEventScriptMessage.Create(System.String)">
+  Create(string)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a message without arguments.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GameEventScriptMessage Create(string name)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptMessage_Create_" data-uid="GameEventScript.Api.GameEventScriptMessage.Create*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_Create_System_String_System_Collections_Generic_IReadOnlyList_GameEventScript_Api_GameEventScriptMessageArgument__" data-uid="GameEventScript.Api.GameEventScriptMessage.Create(System.String,System.Collections.Generic.IReadOnlyList{GameEventScript.Api.GameEventScriptMessageArgument})">
+  Create(string, IReadOnlyList&lt;GameEventScriptMessageArgument&gt;?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a new instance of <a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a> using the specified name and arguments.
+This method facilitates the construction of a message containing the provided name and its associated
+arguments, allowing events to be parameterized and passed within the Game Event Script system.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GameEventScriptMessage Create(string name, IReadOnlyList&lt;GameEventScriptMessageArgument&gt;? arguments)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The name of the message. This is used to identify the message within the system.</p>
+</dd>
+    <dt><code>arguments</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="GameEventScript.Api.GameEventScriptMessageArgument.html">GameEventScriptMessageArgument</a>&gt;</dt>
+    <dd><p>The ordered argument pairs. Their order is part of the message signature.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a></dt>
+    <dd><p>Returns a <a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a> object encapsulating the specified name and arguments.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptMessage_Create_" data-uid="GameEventScript.Api.GameEventScriptMessage.Create*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_Create_System_String_System_Collections_Generic_IReadOnlyList_GameEventScript_Api_GameEventScriptMessageArgument__System_Collections_Generic_IEnumerable_System_String__" data-uid="GameEventScript.Api.GameEventScriptMessage.Create(System.String,System.Collections.Generic.IReadOnlyList{GameEventScript.Api.GameEventScriptMessageArgument},System.Collections.Generic.IEnumerable{System.String})">
+  Create(string, IReadOnlyList&lt;GameEventScriptMessageArgument&gt;?, IEnumerable&lt;string&gt;?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a new message with the provided arguments and delivery tags. Tags are metadata and are not part of the message signature.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GameEventScriptMessage Create(string name, IReadOnlyList&lt;GameEventScriptMessageArgument&gt;? arguments, IEnumerable&lt;string&gt;? tags)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The message name.</p>
+</dd>
+    <dt><code>arguments</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="GameEventScript.Api.GameEventScriptMessageArgument.html">GameEventScriptMessageArgument</a>&gt;</dt>
+    <dd><p>The ordered message arguments.</p>
+</dd>
+    <dt><code>tags</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1">IEnumerable</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>&gt;</dt>
+    <dd><p>Delivery tags associated with the message.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a></dt>
+    <dd><p>A new message instance.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptMessage_Equals_" data-uid="GameEventScript.Api.GameEventScriptMessage.Equals*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_Equals_GameEventScript_Api_GameEventScriptMessage_" data-uid="GameEventScript.Api.GameEventScriptMessage.Equals(GameEventScript.Api.GameEventScriptMessage)">
+  Equals(GameEventScriptMessage?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Equals(GameEventScriptMessage? other)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>other</code> <a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptMessage_Equals_" data-uid="GameEventScript.Api.GameEventScriptMessage.Equals*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_Equals_System_Object_" data-uid="GameEventScript.Api.GameEventScriptMessage.Equals(System.Object)">
+  Equals(object?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override bool Equals(object? obj)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>obj</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptMessage_GetHashCode_" data-uid="GameEventScript.Api.GameEventScriptMessage.GetHashCode*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_GetHashCode" data-uid="GameEventScript.Api.GameEventScriptMessage.GetHashCode">
+  GetHashCode()
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override int GetHashCode()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptMessage_HasTag_" data-uid="GameEventScript.Api.GameEventScriptMessage.HasTag*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_HasTag_System_String_" data-uid="GameEventScript.Api.GameEventScriptMessage.HasTag(System.String)">
+  HasTag(string)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Determines whether the message has the specified normalized delivery tag.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool HasTag(string tag)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>tag</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The normalized tag name or a tag literal using a leading '#'.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><code>true</code> when the tag is present; otherwise <code>false</code>.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptMessage_ToString_" data-uid="GameEventScript.Api.GameEventScriptMessage.ToString*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_ToString" data-uid="GameEventScript.Api.GameEventScriptMessage.ToString">
+  ToString()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Returns a string representation of the current GameEventScriptMessage instance.
+This representation includes the message name and, if present, its associated arguments.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override string ToString()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>A string that represents the current GameEventScriptMessage instance.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptMessage_WithTags_" data-uid="GameEventScript.Api.GameEventScriptMessage.WithTags*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_WithTags_System_Collections_Generic_IEnumerable_System_String__" data-uid="GameEventScript.Api.GameEventScriptMessage.WithTags(System.Collections.Generic.IEnumerable{System.String})">
+  WithTags(IEnumerable&lt;string&gt;?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a copy of this message with the provided delivery tags merged into the existing tag set.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GameEventScriptMessage WithTags(IEnumerable&lt;string&gt;? tags)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>tags</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1">IEnumerable</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>&gt;</dt>
+    <dd><p>The normalized tag names or tag literals using a leading '#'.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a></dt>
+    <dd><p>A message copy with the merged tags.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptMessage_WithTags_" data-uid="GameEventScript.Api.GameEventScriptMessage.WithTags*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_WithTags_System_String___" data-uid="GameEventScript.Api.GameEventScriptMessage.WithTags(System.String[])">
+  WithTags(params string[])
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a copy of this message with the provided delivery tags merged into the existing tag set.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GameEventScriptMessage WithTags(params string[] tags)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>tags</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>[]</dt>
+    <dd><p>The normalized tag names or tag literals using a leading '#'.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a></dt>
+    <dd><p>A message copy with the merged tags.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (fd2609345491)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -3,6 +3,8 @@
 
 # Syntax highlighting
 
+> **Since: Unreleased**
+
 This document owns the optional presentation API. Highlighting is tolerant lexical
 classification, not source validation or a replacement for Compiler diagnostics.
 It never executes source. Runtime, Compiler and native Bridges do not depend on it.

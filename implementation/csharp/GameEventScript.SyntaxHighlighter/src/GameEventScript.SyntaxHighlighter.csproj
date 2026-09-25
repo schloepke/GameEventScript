@@ -14,6 +14,7 @@
         <Description>TextMate-based GES and GESA syntax highlighting for editors and terminals. Independent of Runtime and Compiler.</Description>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageIcon>icon.png</PackageIcon>
         <RepositoryUrl>https://github.com/schloepke/GameEventScript</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <LangVersion>12</LangVersion>
@@ -26,6 +27,7 @@
 
     <ItemGroup>
         <None Include="../../../../LICENSE" Link="LICENSE" Pack="true" PackagePath="/" />
+        <None Include="../../../../website/brand/pixel-duo/nuget-icon.png" Link="icon.png" Pack="true" PackagePath="/icon.png" />
         <None Include="../../../../README.md" Link="README.md" Pack="true" PackagePath="/" />
     </ItemGroup>
 </Project>

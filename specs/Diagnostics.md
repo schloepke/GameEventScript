@@ -3,6 +3,8 @@
 
 # Portable diagnostics specification
 
+> **Since: 0.1.0**
+
 This document defines the language-neutral diagnostic contract shared by the
 compiler, `.gesb` decoder, dynamic linker, host, and VM.
 
@@ -62,7 +64,7 @@ Linking uses `link.requiredRegisterCountExceeded`,
 `link.invalidProgram`. `link.initializationQueueFull` rejects loading when the
 host cannot enqueue the instance's initialization snapshot. It carries the
 Program's module name in `programName`; its atomicity and retry rules are defined
-in [Host runtime](HostRuntime.md#program-load-atomicity).
+in [Host runtime](HostRuntime.md#loading-and-startup).
 
 Runtime uses these stable codes:
 

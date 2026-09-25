@@ -1,0 +1,95 @@
+/* Copyright 2026 Stephan Schlöpke */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+@import '../../brand/pixel-duo/tokens.css';
+
+:root {
+  --sl-color-accent-low: #243958;
+  --sl-color-accent: var(--ges-player-blue-end);
+  --sl-color-accent-high: var(--ges-link-on-dark);
+  --sl-color-bg: var(--sl-color-black);
+  --sl-color-bg-nav: #142641;
+  --sl-color-bg-sidebar: var(--sl-color-gray-6);
+  --sl-font: var(--ges-font-sans);
+  --sl-font-mono: var(--ges-font-mono);
+  --sl-content-width: 70rem;
+  --ges-toc-width: 17.5rem;
+  --ges-notice-height: 0rem;
+  --ges-docs-top: calc(var(--sl-nav-height) + var(--ges-notice-height));
+}
+:root:has(.ges-development-notice) { --ges-notice-height: 2.5rem; }
+:root[data-theme='light'] {
+  --sl-color-accent-low: #edf1ff;
+  --sl-color-accent: var(--ges-action-blue);
+  --sl-color-accent-high: var(--ges-action-blue);
+  --sl-color-bg: var(--ges-surface);
+  --sl-color-bg-nav: var(--ges-paper);
+  --sl-color-bg-sidebar: var(--ges-paper);
+}
+.site-title { font-weight: 750; letter-spacing: -.025em; }
+.site-title img { height: 2.5rem; }
+.ges-development-notice {
+  position: fixed;
+  inset-inline: 0;
+  top: var(--sl-nav-height);
+  margin: 0;
+  padding: .6rem 1rem;
+  border-bottom: 1px solid #08090b;
+  background: var(--sl-color-gray-6);
+  color: var(--sl-color-gray-2);
+  text-align: center;
+  font-size: .8rem;
+  font-weight: 400;
+  line-height: 1.5;
+  text-wrap: balance;
+}
+.ges-development-notice a { color: var(--sl-color-accent-high); text-underline-offset: .18em; }
+:root[data-theme='light'] .ges-development-notice { background: #edf0f5; color: var(--ges-muted); }
+.main-frame { padding-top: calc(var(--ges-docs-top) + var(--sl-mobile-toc-height)); }
+.sidebar-pane { inset-block-start: var(--ges-docs-top); }
+mobile-starlight-toc nav { top: var(--ges-docs-top); }
+mobile-starlight-toc .dropdown { max-height: calc(85dvh - var(--ges-docs-top) - var(--sl-mobile-toc-height)); }
+:root { scroll-padding-top: calc(var(--ges-docs-top) + var(--sl-mobile-toc-height) + 1.5rem); }
+.main-pane { min-width: 0; }
+.content-panel > .sl-container { margin-inline: auto; }
+@media (min-width: 72rem) {
+  .main-frame > .lg\:sl-flex { display: grid; grid-template-columns: minmax(0, 1fr); }
+  [data-has-toc] .main-frame > .lg\:sl-flex { grid-template-columns: minmax(0, 1fr) var(--ges-toc-width); }
+  [data-has-sidebar][data-has-toc] .main-pane, .main-pane { width: auto; --sl-content-margin-inline: auto; grid-column: 1; grid-row: 1; }
+  .right-sidebar-container { grid-column: 2; grid-row: 1; width: auto; min-width: 0; }
+  .right-sidebar {
+    position: sticky;
+    top: var(--ges-docs-top);
+    padding-top: 0;
+    width: 100%;
+    height: calc(100dvh - var(--ges-docs-top));
+  }
+  .right-sidebar-panel > .sl-container { width: auto; max-width: none; }
+}
+@media (max-width: 49.99rem) {
+  :root:has(.ges-development-notice) { --ges-notice-height: 4rem; }
+}
+@media print {
+  .ges-development-notice { position: static; }
+  .main-frame { padding-top: 0; }
+}
+.sl-markdown-content { line-height: 1.8; }
+.sl-markdown-content h2 { letter-spacing: -.025em; }
+:focus-visible { outline: 2px solid var(--ges-accent-on-dark); outline-offset: 3px; }
+:root[data-theme='light'] :focus-visible { outline-color: var(--ges-action-teal); }
+.ges-diagram { margin-block: 1.5rem; padding: 1.25rem; border: 1px solid var(--sl-color-hairline); border-radius: var(--ges-radius-card); background: var(--sl-color-bg); }
+.ges-diagram-image { overflow-x: auto; }
+.ges-diagram-image svg { display: block; margin-inline: auto; height: auto; }
+.ges-diagram-source { margin-top: .75rem; font-size: .85rem; }
+.ges-diagram-source summary { cursor: pointer; color: var(--sl-color-accent-high); }
+.ges-diagram-source pre { overflow-x: auto; padding: 1rem; }
+@media (max-width: 50rem) { .ges-diagram { padding: .75rem; } .ges-diagram-image svg { min-width: 32rem; } }
+
+/* Informative version notes stay quieter than normative prose and warnings. */
+.sl-markdown-content .ges-since {
+  margin-block: .65rem 1.25rem;
+  color: var(--sl-color-gray-2);
+  font-size: .8rem;
+  line-height: 1.5;
+}
+.sl-markdown-content .ges-since strong { font-weight: 500; }

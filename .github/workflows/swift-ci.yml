@@ -53,7 +53,7 @@ jobs:
       - name: Verify incremental Swift source discovery
         run: python3 scripts/test-swift-incremental.py
 
-      - name: Verify the public SwiftPM distribution
+      - name: Verify the public SwiftPM distribution and shared root tests
         run: python3 scripts/test-swift-package.py
 
       - name: Build packages and verify shared conformance

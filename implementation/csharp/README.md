@@ -3,6 +3,9 @@
 
 # C# implementation
 
+[Generated C# API reference](../../docs/guide/api/CSharp.md)
+
+
 The C# implementation is the reference implementation for the shared,
 language-neutral contracts. Runtime, Compiler, C# adapters and Conformance are
 separate libraries; the CLI is a separate application.

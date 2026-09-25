@@ -3,10 +3,14 @@
 
 # Portable determinism semantics
 
+> **Since: 0.1.0**
+
 This document defines the language-neutral deterministic behavior that every
 Game Event Script compiler and runtime port must reproduce. It complements
 [Text semantics](Text.md), [Number semantics](Numbers.md), [Bytecode](../Bytecode.md), and
 [Host runtime](../HostRuntime.md).
+
+> **Since: Unreleased — monotonic-clock observations for delayed dispatch**
 
 Determinism means that the same validated program, ordered inputs, host
 configuration, initial random seed, observed monotonic-clock readings, and runtime limits produce the same visible
@@ -348,6 +352,8 @@ special script/native precedence.
 Detach, unsubscribe, load, or subscribe during dispatch affects only messages
 whose snapshots are captured afterward. These rules are independent of frame
 budgeting and asynchronous adapters around the synchronous portable host.
+
+> **Since: Unreleased — integral Range normalization**
 
 Integral Range normalization follows [Language](../Language.md#range): endpoints and
 step exactly representable as Int64 select integer terms before the binary64 rule

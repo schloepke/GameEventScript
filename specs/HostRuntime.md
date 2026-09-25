@@ -3,6 +3,8 @@
 
 # Host runtime specification
 
+> **Since: 0.1.0**
+
 This document defines the portable runtime boundary shared by
 Swift, Kotlin, Go, Rust, C++, C#, and Unity implementations. C# is the
 reference implementation. Language-specific threading and reflection
@@ -91,6 +93,20 @@ slot. Loading is available to embedding code and native message handlers.
 Reentrant loading during active script/extension execution or the initial Start
 is rejected; paused execution between frames does not prohibit host-side loading.
 Scripts and extension contexts have no loading API.
+
+The initial lifecycle is summarized below. The readiness barrier completes
+initializations before ordinary message dispatch begins.
+
+```mermaid
+flowchart TD
+    accTitle: Initial host loading and startup
+    accDescr: Build creates a loading host. Register handlers and load initial programs, then Start runs their initialization in load order. Only complete group success makes the host ready. Failure discards the group and leaves the host permanently not ready.
+    Build["Build: loading host"] --> Load["Register handlers and load programs"]
+    Load --> Start["Start: initialize in load order"]
+    Start --> Result{"All initializations succeed?"}
+    Result -->|Yes| Ready["Ready: receive and pump messages"]
+    Result -->|No| Failed["Group discarded; host remains not ready"]
+```
 
 ### Initial group
 
@@ -246,61 +262,49 @@ implementation and therefore does not depend on C# reflection.
 
 ## Portable State Machine
 
+> **Since: Unreleased — Waiting and delayed-work transitions**
+
 The following pump states apply after successful Start. Initial loading and the
 terminal startup-failure state are defined in [Loading and startup](#loading-and-startup).
 Here `Ready` means queued work, distinct from the public `IsReady` startup flag.
 
-```text
-Idle
-  Receive / Emit / Publish / Load(late initialization)
-    -> enqueue message snapshot
-    -> Ready
-
-Ready
-  pump
-    -> dequeue one logical message
-    -> Dispatching
-
-Dispatching
-  next native handler
-    -> reset per-handler safety budget
-    -> invoke atomically
-    -> Dispatching
-
-  next script handler
-    -> reset per-handler safety budget
-    -> bind linked program + entry + message to the host VM state
-    -> ScriptRunning
-
-  no remaining handler
-    -> complete logical message
-    -> Ready when runnable work remains, Waiting when only timers remain, otherwise Idle
-
-Waiting
-  caller pumps at or after NextMessageDelay
-    -> promote due messages behind runnable FIFO work
-    -> Ready, or remain Waiting if no message is due
-
-ScriptRunning
-  ExecuteFrame budget remains
-    -> execute opcodes synchronously
-    -> ScriptRunning or Dispatching
-
-  ExecuteFrame budget exhausted
-    -> Paused (VM state is retained)
-
-  handler completes
-    -> fully reset VM state
-    -> Dispatching
-
-  handler fails
-    -> report diagnostic, fully reset VM state
-    -> continue Dispatching; pump result is RuntimeError
-
-  handler safety limit reached
-    -> reset VM state
-    -> RuntimeLimitReached
+```mermaid
+stateDiagram-v2
+    accTitle: Portable host pump states
+    accDescr: Runnable snapshots move the idle host to Ready, and pumping starts Dispatching. Native handlers are atomic. Script handlers can pause and resume across frames, then return to Dispatching on completion or failure. After a message completes, the queue determines Ready, Waiting or Idle. Safety-limit stops are described in the transition table.
+    direction TB
+    Idle --> Ready: Enqueue runnable work
+    Idle --> Waiting: Only future work
+    Ready --> Dispatching: Pump next snapshot
+    Dispatching --> Dispatching: Native handler
+    Dispatching --> ScriptRunning: Script handler
+    ScriptRunning --> Paused: Frame budget exhausted
+    Paused --> ScriptRunning: Resume in a later pump
+    ScriptRunning --> Dispatching: Handler completes or fails
+    Dispatching --> Ready: More runnable work
+    Dispatching --> Waiting: Only future work remains
+    Dispatching --> Idle: Queue empty
+    Waiting --> Ready: Pump with due or runnable work
 ```
+
+The diagram is an overview; the transition rules include the following actions
+and results. `RuntimeError` and `RuntimeLimitReached` are pump results, not
+additional startup/readiness states.
+
+| State / event | Action and next state |
+| --- | --- |
+| Idle; Receive, Emit, Publish, or Load with late initialization | Enqueue the captured snapshot. Runnable work leads to Ready; only future work leads to Waiting. |
+| Ready; pump | Dequeue one logical message and enter Dispatching. |
+| Dispatching; next native handler | Reset the per-handler safety budget and invoke atomically; remain Dispatching. |
+| Dispatching; next script handler | Reset the per-handler safety budget; bind linked Program, entry and message to the host VM state; enter ScriptRunning. |
+| Dispatching; no remaining handler | Complete the logical message. Continue in Ready when runnable work remains, Waiting when only timers remain, or Idle when the queue is empty. |
+| Waiting; caller pumps | At or after NextMessageDelay, promote due messages behind runnable FIFO work and enter Ready. Remain Waiting if no work is runnable. Newly enqueued runnable work can be pumped before a future deadline. |
+| ScriptRunning; frame budget remains | Execute opcodes synchronously; remain ScriptRunning or return to Dispatching. |
+| ScriptRunning; frame budget exhausted | Enter Paused and retain the VM state. Resume that handler in a later pump. |
+| ScriptRunning; handler completes | Fully reset VM state and return to Dispatching. |
+| ScriptRunning; handler fails | Report the diagnostic, fully reset VM state and continue Dispatching; the pump result is RuntimeError. |
+| ScriptRunning; handler safety limit reached | Reset VM state and stop the pump with RuntimeLimitReached. |
+
 
 `ExecuteFrame(opcodeBudget)` is a caller-thread scheduler slice. Its opcode
 budget is independent from safety limits and may pause only script bytecode;
@@ -445,6 +449,8 @@ sequence of mappings with `name` and `value` entries, including nested message
 values and expected local/outbound messages.
 
 ## Delayed dispatch
+
+> **Since: Unreleased**
 
 Each Host borrows a monotonic clock reporting nonnegative whole microseconds.
 The default clock measures actual elapsed time; an embedding can supply a clock

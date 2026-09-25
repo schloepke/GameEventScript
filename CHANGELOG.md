@@ -12,6 +12,28 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Pixel-Duo icons embedded in the NuGet library packages and local .NET CLI package.
+
+- Root SwiftPM test targets reuse native SwiftBridge, macro and highlighter tests,
+  making them discoverable by Swift Package Index and runnable with `swift test`.
+
+- Generated C# DocFX and Swift DocC API references in the documentation website,
+  with source identity checks, Swift Package Index metadata and compatibility badges.
+
+- Informative feature-version notes in specifications and guides, distinguishing
+  the published baseline from unreleased behavior.
+
+- Pixel-Duo website identity with a shared blue/teal palette, repository-owned
+  brand sources, and Mermaid diagrams for host startup and dispatch.
+
+- Downloadable TextMate JSON and classic XML editor bundles for GES/GESA in the
+  website's Tools section, generated from the canonical repository grammars.
+
+- English language, C# and Swift introductory guides, plus a static documentation
+  website with a landing page, local search and the existing normative references.
+- Website CI verifies pull requests and publishes successful main builds to a
+  separate `site` branch for pull-based deployment by existing webhosting.
+
 - Standalone C# and Swift SyntaxHighlighter libraries, shared with both CLIs,
   using canonical TextMate rules. They expose UTF-16 ranges, semantic categories,
   scope stacks, incremental line states and an optional ANSI renderer.

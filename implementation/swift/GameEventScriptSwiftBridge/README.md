@@ -22,6 +22,8 @@ Compiler product; a precompiled application needs only Runtime and Bridge.
 
 ## Annotation-based external types
 
+> **Since: Unreleased**
+
 Import `GameEventScriptSwiftBridge` and annotate the native data you want to expose:
 
 ```swift

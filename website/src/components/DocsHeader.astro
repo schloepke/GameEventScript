@@ -1,0 +1,19 @@
+---
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+import Header from '@astrojs/starlight/components/Header.astro';
+const { banner } = Astro.locals.starlightRoute.entry.data;
+---
+<Header />
+{banner && <aside class="ges-development-notice" aria-label="Documentation version" data-pagefind-ignore set:html={banner.content} />}
+
+<script>
+  // Keep every fixed navigation surface below the notice even when it wraps
+  // because of a narrow viewport, browser zoom or a larger user font size.
+  const notice = document.querySelector<HTMLElement>('.ges-development-notice');
+  if (notice) {
+    const measure = () => document.documentElement.style.setProperty('--ges-notice-height', `${notice.getBoundingClientRect().height}px`);
+    measure();
+    new ResizeObserver(measure).observe(notice);
+  }
+</script>

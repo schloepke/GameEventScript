@@ -3,6 +3,8 @@
 
 # Portable program model specification
 
+> **Since: 0.1.0**
+
 This document defines the language-neutral ownership and data contract of
 `GameEventScriptProgram`. [Binary format](BinaryFormat.md) defines the normative byte encoding;
 this document defines which information may exist in the parsed in-memory model.

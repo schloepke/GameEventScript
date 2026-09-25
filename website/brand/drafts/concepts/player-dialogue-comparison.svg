@@ -1,0 +1,65 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1196" height="924" viewBox="0 0 1196 924" role="img" aria-labelledby="title desc">
+<title id="title">Game Event Script — Pixel-Dialog und Spielerfarben</title><desc id="desc">Drei Pixel-Dialog-Varianten: ohne Augen, mit versetzten Augen und mit gerichteten Pupillen. Eine gemeinsame Blau-Türkis-Palette ergänzt die Entwürfe.</desc>
+<defs><linearGradient id="player-blue" gradientUnits="userSpaceOnUse" x1="10" y1="8" x2="50" y2="35"><stop stop-color="#4864d9"/><stop offset="1" stop-color="#79a7ef"/></linearGradient>
+<linearGradient id="player-teal" gradientUnits="userSpaceOnUse" x1="10" y1="8" x2="50" y2="35"><stop stop-color="#2b99a6"/><stop offset="1" stop-color="#78ccc1"/></linearGradient><mask id="face-holes" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64"><rect width="64" height="64" fill="white"/><ellipse cx="35" cy="15.6" rx="2.1" ry="2.65" fill="black"/><ellipse cx="42" cy="16.6" rx="1.85" ry="2.35" fill="black"/><ellipse cx="21" cy="48.0" rx="1.85" ry="2.35" fill="black"/><ellipse cx="28" cy="47.0" rx="2.1" ry="2.65" fill="black"/></mask><g id="pixel-duo-color"><g fill="url(#player-blue)"><path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34V37H10V41H6V30Z"/><path d="M53 8H57V12H53ZM58 15H61V18H58Z"/></g><g transform="rotate(180 32 32)" fill="url(#player-teal)"><path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34V37H10V41H6V30Z"/><path d="M53 8H57V12H53ZM58 15H61V18H58Z"/></g></g><g id="pixel-duo-mono"><g fill="currentColor"><path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34V37H10V41H6V30Z"/><path d="M53 8H57V12H53ZM58 15H61V18H58Z"/></g><g transform="rotate(180 32 32)" fill="currentColor"><path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34V37H10V41H6V30Z"/><path d="M53 8H57V12H53ZM58 15H61V18H58Z"/></g></g><g id="pixel-contact-color"><g mask="url(#face-holes)"><g fill="url(#player-blue)"><path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34V37H10V41H6V30Z"/><path d="M53 8H57V12H53ZM58 15H61V18H58Z"/></g><g transform="rotate(180 32 32)" fill="url(#player-teal)"><path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34V37H10V41H6V30Z"/><path d="M53 8H57V12H53ZM58 15H61V18H58Z"/></g></g></g><g id="pixel-contact-mono"><g mask="url(#face-holes)"><g fill="currentColor"><path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34V37H10V41H6V30Z"/><path d="M53 8H57V12H53ZM58 15H61V18H58Z"/></g><g transform="rotate(180 32 32)" fill="currentColor"><path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34V37H10V41H6V30Z"/><path d="M53 8H57V12H53ZM58 15H61V18H58Z"/></g></g></g><g id="pixel-buddies-color"><g fill="url(#player-blue)"><path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34V37H10V41H6V30Z"/><path d="M53 8H57V12H53ZM58 15H61V18H58Z"/></g><g transform="rotate(180 32 32)" fill="url(#player-teal)"><path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34V37H10V41H6V30Z"/><path d="M53 8H57V12H53ZM58 15H61V18H58Z"/></g><ellipse cx="35" cy="15.6" rx="2.1" ry="2.65" fill="#f7fbff"/><ellipse cx="35.55" cy="16.25" rx=".88" ry="1.2" fill="#18324d"/><ellipse cx="42" cy="16.6" rx="1.85" ry="2.35" fill="#f7fbff"/><ellipse cx="42.55" cy="17.25" rx=".88" ry="1.2" fill="#18324d"/><ellipse cx="21" cy="48.0" rx="1.85" ry="2.35" fill="#f7fbff"/><ellipse cx="20.45" cy="47.35" rx=".88" ry="1.2" fill="#18324d"/><ellipse cx="28" cy="47.0" rx="2.1" ry="2.65" fill="#f7fbff"/><ellipse cx="27.45" cy="46.35" rx=".88" ry="1.2" fill="#18324d"/></g><g id="pixel-buddies-mono"><g mask="url(#face-holes)"><g fill="currentColor"><path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34V37H10V41H6V30Z"/><path d="M53 8H57V12H53ZM58 15H61V18H58Z"/></g><g transform="rotate(180 32 32)" fill="currentColor"><path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34V37H10V41H6V30Z"/><path d="M53 8H57V12H53ZM58 15H61V18H58Z"/></g></g></g></defs><rect width="1196" height="924" fill="#f3f5fa"/>
+<g font-family="system-ui, sans-serif" fill="#10203c">
+<text x="36" y="40" font-size="12" letter-spacing="2" fill="#63728a">GAME EVENT SCRIPT / PIXEL-DIALOG</text>
+<text x="36" y="84" font-size="34" font-weight="750" letter-spacing="-.8">Zwei Spieler. Ein gemeinsamer Auftritt.</text>
+<text x="36" y="115" font-size="15" fill="#63728a">Blau und Türkis unterscheiden die Stimmen; die Augen sitzen näher an der sprechenden Seite.</text>
+<g transform="translate(36 0)">
+<rect y="144" width="360" height="505" rx="24" fill="white"/>
+<text x="24" y="180" font-size="12" letter-spacing="1.5" fill="#63728a">01 / PIXEL-DUO</text>
+<use href="#pixel-duo-color" transform="translate(84 204) scale(3)"/>
+<text x="180" y="423" text-anchor="middle" font-size="22" font-weight="750" letter-spacing="-.5">Game Event Script</text>
+<text x="180" y="453" text-anchor="middle" font-size="13" fill="#63728a">Die vertraute Silhouette.</text>
+<text x="180" y="474" text-anchor="middle" font-size="13" fill="#63728a">Jetzt mit zwei Spielerfarben.</text>
+<path d="M24 498H336" stroke="#edf0f5"/>
+<rect x="24" y="523" width="72" height="72" rx="16" fill="#10203c"/>
+<use href="#pixel-duo-color" transform="translate(28 527)"/>
+<use href="#pixel-duo-mono" transform="translate(123 539) scale(.625)" color="#10203c"/>
+<use href="#pixel-duo-color" transform="translate(193 543) scale(.5)"/>
+<use href="#pixel-duo-color" transform="translate(251 547) scale(.375)"/>
+<use href="#pixel-duo-mono" transform="translate(307 551) scale(.25)" color="#10203c"/>
+<g font-size="10" fill="#63728a" text-anchor="middle"><text x="60" y="619">Dunkel</text><text x="143" y="619">Einfarbig</text><text x="209" y="619">32 px</text><text x="263" y="619">24 px</text><text x="315" y="619">16 px</text></g></g><g transform="translate(418 0)">
+<rect y="144" width="360" height="505" rx="24" fill="white"/>
+<text x="24" y="180" font-size="12" letter-spacing="1.5" fill="#63728a">02 / BLICKKONTAKT</text>
+<use href="#pixel-contact-color" transform="translate(84 204) scale(3)"/>
+<text x="180" y="423" text-anchor="middle" font-size="22" font-weight="750" letter-spacing="-.5">Game Event Script</text>
+<text x="180" y="453" text-anchor="middle" font-size="13" fill="#63728a">Augen weiter vorn.</text>
+<text x="180" y="474" text-anchor="middle" font-size="13" fill="#63728a">Beide Gesichter bewusst gesetzt.</text>
+<path d="M24 498H336" stroke="#edf0f5"/>
+<rect x="24" y="523" width="72" height="72" rx="16" fill="#10203c"/>
+<use href="#pixel-contact-color" transform="translate(28 527)"/>
+<use href="#pixel-contact-mono" transform="translate(123 539) scale(.625)" color="#10203c"/>
+<use href="#pixel-contact-color" transform="translate(193 543) scale(.5)"/>
+<use href="#pixel-contact-color" transform="translate(251 547) scale(.375)"/>
+<use href="#pixel-contact-mono" transform="translate(307 551) scale(.25)" color="#10203c"/>
+<g font-size="10" fill="#63728a" text-anchor="middle"><text x="60" y="619">Dunkel</text><text x="143" y="619">Einfarbig</text><text x="209" y="619">32 px</text><text x="263" y="619">24 px</text><text x="315" y="619">16 px</text></g></g><g transform="translate(800 0)">
+<rect y="144" width="360" height="505" rx="24" fill="white"/>
+<text x="24" y="180" font-size="12" letter-spacing="1.5" fill="#63728a">03 / PIXEL-BUDDIES</text>
+<use href="#pixel-buddies-color" transform="translate(84 204) scale(3)"/>
+<text x="180" y="423" text-anchor="middle" font-size="22" font-weight="750" letter-spacing="-.5">Game Event Script</text>
+<text x="180" y="453" text-anchor="middle" font-size="13" fill="#63728a">Kleine Pupillen schaffen Blickkontakt.</text>
+<text x="180" y="474" text-anchor="middle" font-size="13" fill="#63728a">Der untere Spieler schaut nach oben.</text>
+<path d="M24 498H336" stroke="#edf0f5"/>
+<rect x="24" y="523" width="72" height="72" rx="16" fill="#10203c"/>
+<use href="#pixel-buddies-color" transform="translate(28 527)"/>
+<use href="#pixel-buddies-mono" transform="translate(123 539) scale(.625)" color="#10203c"/>
+<use href="#pixel-buddies-color" transform="translate(193 543) scale(.5)"/>
+<use href="#pixel-buddies-color" transform="translate(251 547) scale(.375)"/>
+<use href="#pixel-buddies-mono" transform="translate(307 551) scale(.25)" color="#10203c"/>
+<g font-size="10" fill="#63728a" text-anchor="middle"><text x="60" y="619">Dunkel</text><text x="143" y="619">Einfarbig</text><text x="209" y="619">32 px</text><text x="263" y="619">24 px</text><text x="315" y="619">16 px</text></g></g>
+<rect x="36" y="674" width="1124" height="185" rx="22" fill="white"/>
+<text x="60" y="707" font-size="12" letter-spacing="1.6" fill="#63728a">FARBIDEE FÜR DEN GESAMTEN AUFTRITT</text>
+<rect x="60" y="730" width="240" height="54" rx="12" fill="url(#palette-blue)"/>
+<rect x="324" y="730" width="240" height="54" rx="12" fill="url(#palette-teal)"/>
+<text x="60" y="809" font-size="14" font-weight="650">Spieler 1 · Blau</text><text x="60" y="834" font-size="12" fill="#63728a">#4864D9 → #79A7EF</text>
+<text x="324" y="809" font-size="14" font-weight="650">Spieler 2 · Türkis</text><text x="324" y="834" font-size="12" fill="#63728a">#2B99A6 → #78CCC1</text>
+<rect x="610" y="730" width="180" height="42" rx="9" fill="#4564d6"/><text x="700" y="756" font-size="14" text-anchor="middle" fill="white" font-weight="650">Get started</text>
+<rect x="812" y="730" width="180" height="42" rx="9" fill="#247f8b"/><text x="902" y="756" font-size="14" text-anchor="middle" fill="white" font-weight="650">Explore examples</text>
+<text x="610" y="805" font-size="13" fill="#63728a">Dunklere Vollfarben für Links und Bedienelemente.</text>
+<text x="610" y="828" font-size="13" fill="#63728a">Helle Verläufe für Logo, Akzente und Illustrationen.</text>
+<text x="36" y="895" font-size="13" fill="#63728a">Designvorschlag · Website-Logo und Website-Farben bleiben bis zur Auswahl unverändert.</text>
+</g><defs><linearGradient id="palette-blue"><stop stop-color="#4864d9"/><stop offset="1" stop-color="#79a7ef"/></linearGradient><linearGradient id="palette-teal"><stop stop-color="#2b99a6"/><stop offset="1" stop-color="#78ccc1"/></linearGradient></defs></svg>

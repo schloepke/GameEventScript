@@ -34,6 +34,9 @@ dotnet test GameEventScript.sln --filter "TestCategory!=Performance"
 
 ## Working rules
 
+- Before creating a new Git branch, ask the user unless they explicitly requested
+  that branch. Check for and use the user's existing task branch first; do not
+  create a separate branch automatically.
 - When the user explicitly asks for analysis only, do not modify files.
 - Before the first public 1.0 release, implement the current contract directly;
   add compatibility APIs only when the user explicitly requires them.
@@ -290,9 +293,13 @@ The root `Package.swift` is the public SwiftPM entry point with four library
 products: GameEventScriptRuntime, GameEventScriptCompiler,
 GameEventScriptSwiftBridge and GameEventScriptSyntaxHighlighter. They use existing sources and share a Git tag/version;
 local development packages remain separate. Do not expose CLI or Conformance in
-the root manifest. `python3 scripts/test-swift-package.py` checks tagged Git
-consumption, the product/dependency graph and Runtime-only builds in disposable
+the root manifest. Three root test targets reuse the existing SwiftBridge,
+bridge-macro and SyntaxHighlighter test directories; never duplicate their sources
+or add test products. `python3 scripts/test-swift-package.py` checks tagged Git
+consumption, the product/dependency graph, the root tests and Runtime-only builds in disposable
 repositories under artifacts, without changing this repository's tags.
+It also rejects test-only modules compiled by library consumers. Its isolated
+fixture includes the shared highlighting Markdown, without a Conformance dependency.
 
 Publication is manual and requires a matching version tag, verified NuGet and
 SwiftPM consumers, and the protected `nuget` environment. Preparing or checking
@@ -491,6 +498,43 @@ Swift installation and verification are documented in
 `implementation/swift/GameEventScriptTool/README.md`.
 
 ## Documentation and backlog
+
+The static English website lives in `website`; canonical learning material stays
+in `docs/guide` and normative references stay in `specs`. `npm ci` followed by
+`npm run build` in `website` imports those documents and checks generated links.
+Generate public C#/Swift API references first with
+`python3 scripts/build-api-docs.py --language csharp` and `--language swift`.
+Website preparation rejects missing/stale references using source revision and
+input hashes; its failure controls are `python3 scripts/test-api-docs.py`.
+Only Runtime, Compiler, Bridge and SyntaxHighlighter appear in DocFX/DocC output.
+Swift symbol extraction includes extension blocks; staging also checks public
+Bridge extension pages. Static asset copies and archives omit OS metadata, and
+both the final website check and publisher reject it; verify with
+`python3 scripts/test-website-assets.py`.
+`.spi.yml` points SPI to our self-hosted Swift reference.
+Output and generated Markdown belong under `artifacts/website`. The website is
+intended for existing static hosting at gameeventscript.org; builds never deploy.
+Pixel-Duo brand sources and exploratory designs live under `website/brand`.
+Only the selected logo and favicon belong in public output. Private brand
+boards and ZIPs export to `artifacts/website/brand`, never `dist` or `public`.
+Use Mermaid in canonical Markdown for state transitions and branching flows;
+retain precise conditions and exceptional cases in text or tables. Each diagram
+has an accessible title and description and a readable source fallback.
+The Website workflow publishes successful main builds to the independent `site`
+output branch; the hosting provider pulls that branch. `scripts/publish-website.py`
+uses normal fast-forward pushes and a separate Git index. Never merge `site`
+into source branches or populate it with repository sources. Its tests use local
+disposable remotes: `python3 scripts/test-publish-website.py`.
+`python3 scripts/test-guide-examples.py` verifies the introductory C#, Swift and
+GES examples against the checkout (`--language csharp` or `swift` selects one).
+Keep development documentation and unreleased functionality visibly distinguished
+from published packages. See `website/README.md` for preview and upload steps.
+Use `> **Since: 0.1.0**` or `> **Since: Unreleased**` as informative availability
+notes in owning specs and relevant explanations. Document-level notes establish
+a baseline; specific feature notes override it. Qualify mixed sections with
+` — feature name`. Mark the version of the currently described behavior, without
+preserving obsolete contracts or building a compatibility matrix. Verify release
+claims against tags; update applicable Unreleased notes during release preparation.
 
 Maintain `CHANGELOG.md` under `Unreleased` for user-visible features, fixes and
 breaking changes. At release preparation, move those entries into a versioned,

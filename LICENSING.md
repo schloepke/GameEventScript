@@ -82,6 +82,19 @@ dependencies in its binary distribution; their source links, license texts, and
 notices are included in its packaged
 [THIRD-PARTY-NOTICES.md](implementation/csharp/GameEventScript.Tool/THIRD-PARTY-NOTICES.md).
 
+The documentation website references npm packages rather than vendoring their
+sources. Its generated static distribution includes Vite's
+`third-party-licenses.md` and the separately copied `pagefind-licenses/` for
+the search assets. Retain those files when uploading the website. Authored
+JavaScript, TypeScript, CSS, Astro and SVG files use the equivalent source-comment
+headers; strict JSON lockfiles and manifests retain the documented exclusion.
+
+Generated API references additionally distribute DocFX and Swift-DocC-Render
+presentation assets. Their unaltered upstream license and notice texts are stored
+in `website/api/licenses` and copied to API output; these third-party texts must
+not receive project copyright headers. DocFX dependency notices from the pinned
+tool distribution accompany its reference too.
+
 When third-party material is added, its existing copyright and license notices
 must remain unchanged. Its redistribution terms must be reviewed, the material
 must not receive the Game Event Script header as if it were original work, and

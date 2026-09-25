@@ -3,6 +3,9 @@
 
 # Swift implementation
 
+[Generated Swift API reference](../../docs/guide/api/Swift.md)
+
+
 | SwiftPM package / import | Responsibility | Dependencies |
 | --- | --- | --- |
 | `GameEventScriptRuntime` | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types | Swift standard library and platform math library |
@@ -28,6 +31,12 @@ shared version. The packages below this directory remain local development entry
 points; CLI and Conformance are internal to the repository distribution.
 See the [package release guide](../../docs/guide/distribution/Packages.md) for
 Xcode installation, tagged consumer verification and release preparation.
+
+The root package also reuses the native SwiftBridge, bridge-macro and highlighter
+test targets. From the repository root, run
+`swift test --scratch-path artifacts/swift/root-tests --disable-build-manifest-caching --configuration release`.
+These tests are visible to SwiftPM and Swift Package Index without becoming
+library products. Full language/host Conformance remains in its separate package.
 
 ### Xcode workspace
 

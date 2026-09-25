@@ -3,6 +3,8 @@
 
 # Product message JSON V1
 
+> **Since: Unreleased**
+
 This document owns the optional, language-neutral product wire format. It is
 independent of the Conformance transport and of GESB. Encoding and decoding are
 explicit API operations; local Receive, Emit and Publish continue to forward

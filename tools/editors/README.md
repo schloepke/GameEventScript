@@ -1,7 +1,37 @@
 <!-- Copyright 2026 Stephan Schlöpke -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# GameEventScript Editor Support
+# TextMate editor bundles
+
+Download syntax highlighting for Game Event Script source (`.ges`) and assembler
+dumps (`.gesa`). Each ZIP includes both bundles, their installation notes and the
+Apache-2.0 license. These are syntax grammars, not a compiler or language server.
+
+## Downloads
+
+| Download | Grammar format | Use with |
+| --- | --- | --- |
+| [TextMate bundles — JSON](https://gameeventscript.org/downloads/GameEventScript-TextMate.zip) | `.tmLanguage.json` and `.tmPreferences.json` | Tooling that accepts JSON TextMate grammars |
+| [TextMate Classic bundles — XML](https://gameeventscript.org/downloads/GameEventScript-TextMate-Classic.zip) | `.tmLanguage` and `.tmPreferences` plist | CodeRunner 4 and importers that require classic plist bundles |
+
+The downloads are generated from the same repository revision as this website.
+They follow development syntax and are not pinned to a published library version.
+For an older version, use the bundles under `tools/editors` at the corresponding
+Git tag.
+
+## Installation
+
+1. Choose the format your editor supports and extract the ZIP.
+2. Import or copy `GameEventScript.tmbundle` and
+   `GameEventScriptAssembler.tmbundle` into the editor's bundle location.
+   Install both so assembler dumps can also highlight embedded source code.
+3. Reload the editor's bundles or restart it, then open a `.ges` or `.gesa` file.
+
+Use the editor's bundle/grammar import workflow; support for whole `.tmbundle`
+directories and raw grammar files varies by editor. Choose one format rather
+than installing both variants, which describe the same syntax and scopes.
+
+## Repository sources
 
 - `TextMate Classic/`: XML plist bundle for CodeRunner 4 and older
   TextMate-compatible importers.

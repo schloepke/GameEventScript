@@ -3,6 +3,8 @@
 
 # C# syntax highlighting
 
+> **Since: Unreleased**
+
 `GameEventScript.SyntaxHighlighter` is an optional .NET Standard 2.1 library for
 GES/GESA editors and terminals. It uses BCL Regex, with no third-party, Compiler,
 Runtime or UI dependency. It shares the canonical TextMate rules with the CLI

@@ -136,6 +136,7 @@ internal static class Program
 
         AssertBytesEqual(File.ReadAllBytes(Path.Combine(repositoryRoot, "LICENSE")), RequiredEntry(normalEntries, "LICENSE").Content, $"{package.Id} LICENSE");
         AssertBytesEqual(File.ReadAllBytes(Path.Combine(repositoryRoot, "README.md")), RequiredEntry(normalEntries, "README.md").Content, $"{package.Id} README");
+        AssertBytesEqual(File.ReadAllBytes(Path.Combine(repositoryRoot, "website/brand/pixel-duo/nuget-icon.png")), RequiredEntry(normalEntries, "icon.png").Content, $"{package.Id} icon");
 
         var libraryPrefix = "lib/netstandard2.1/" + package.Id;
         var assembly = RequiredEntry(normalEntries, libraryPrefix + ".dll").Content;
@@ -173,6 +174,7 @@ internal static class Program
         if (Value("version") != version) throw new InvalidDataException($"Unexpected version in manifest for '{package.Id}'.");
         if (requireDistributionMetadata && Value("license") != "Apache-2.0") throw new InvalidDataException($"Unexpected license in manifest for '{package.Id}'.");
         if (requireDistributionMetadata && Value("readme") != "README.md") throw new InvalidDataException($"Unexpected README in manifest for '{package.Id}'.");
+        if (requireDistributionMetadata && Value("icon") != "icon.png") throw new InvalidDataException($"Unexpected icon in manifest for '{package.Id}'.");
         var repository = metadata.Elements().Single(element => element.Name.LocalName == "repository");
         if (repository.Attribute("url")?.Value != "https://github.com/schloepke/GameEventScript" || repository.Attribute("type")?.Value != "git")
             throw new InvalidDataException($"Unexpected repository metadata in manifest for '{package.Id}'.");

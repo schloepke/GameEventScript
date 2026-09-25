@@ -3,6 +3,8 @@
 
 # Portable public API specification
 
+> **Since: 0.1.0**
+
 This document defines the normative language-neutral public API shared by the
 Swift, Kotlin, Go, Rust, C++, C#, and Unity implementations. It specifies concepts
 and observable behavior, not the spelling imposed by one language.
@@ -576,6 +578,8 @@ above.
 
 ### ExecutionResult
 
+> **Since: Unreleased — Waiting result**
+
 `ExecutionResult` is an allocation-free value containing state, opcodes executed,
 logical messages processed, messages emitted, messages published, and an optional
 first diagnostic. Counters cover only the current pump call.
@@ -1112,6 +1116,8 @@ struct roots follow Swift value semantics. Unwrapping requires the exact binding
 descriptor that created the external value. Runtime field coercion and map
 materialization retain the external-value contract above.
 
+> **Since: Unreleased — Swift binding macros and unit conversion helpers**
+
 `@GesType` generates a throwing static `createGesType()` factory on a nongeneric
 struct or final class. Each invocation creates a distinct descriptor; callers
 retain and reuse it for registry construction, wrapping and unwrapping. The
@@ -1215,6 +1221,8 @@ reflection objects remain private or embedding-specific.
 
 ## Monotonic scheduling API
 
+> **Since: Unreleased**
+
 C# `IGameEventScriptClock.ElapsedMicroseconds` and Swift
 `GameEventScriptClock.elapsedMicroseconds` provide a borrowed monotonic Int64
 microsecond source. Host builders accept `WithClock` / `withClock`; absent an
@@ -1228,6 +1236,8 @@ are in HostRuntime. C# and Swift automatic runners arm wake-ups outside Runtime,
 reschedule when new work arrives and cancel wake-ups when closed/disposed.
 
 ## Explicit product JSON codec
+
+> **Since: Unreleased**
 
 C# `GameEventScriptMessageJson.Serialize/Deserialize` and Swift
 `GameEventScriptMessageJson.serialize/deserialize` encode/decode messages;

@@ -17,6 +17,11 @@ import tempfile
 ROOT = Path(__file__).resolve().parent.parent
 MACROS = "GameEventScriptSwiftBridgeMacros"
 MODULES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptSyntaxHighlighter")
+TESTS = {
+    "GameEventScriptSwiftBridgeTests": ("GameEventScriptSwiftBridge", ["GameEventScriptSwiftBridge", "GameEventScriptRuntime"], []),
+    "GameEventScriptSwiftBridgeMacrosTests": ("GameEventScriptSwiftBridge", [MACROS], ["SwiftSyntaxMacros", "SwiftSyntaxMacrosTestSupport"]),
+    "GameEventScriptSyntaxHighlighterTests": ("GameEventScriptSyntaxHighlighter", ["GameEventScriptSyntaxHighlighter"], []),
+}
 
 
 def run(arguments, cwd, log):
@@ -44,6 +49,14 @@ def main():
         owner = "GameEventScriptSwiftBridge" if module == MACROS else module
         relative = Path("implementation/swift") / owner / "Sources" / module
         shutil.copytree(ROOT / relative, repository / relative)
+    for name, (owner, _, _) in TESTS.items():
+        relative = Path("implementation/swift") / owner / "Tests" / name
+        shutil.copytree(ROOT / relative, repository / relative)
+    # The highlighter's native test reads the canonical Markdown oracle. It does
+    # not depend on the Conformance library or a separate copy of expectations.
+    corpus = Path("conformance/highlighting/SyntaxHighlighting.md")
+    (repository / corpus).parent.mkdir(parents=True)
+    shutil.copy2(ROOT / corpus, repository / corpus)
 
     description = json.loads(subprocess.check_output([
         "swift", "package", "--package-path", str(repository),
@@ -57,8 +70,18 @@ def main():
     require_macos_minimum(bridge_description, "Local SwiftBridge package")
     products = {item["name"]: item for item in description["products"]}
     targets = {item["name"]: item for item in description["targets"]}
-    if set(products) - {MACROS} != set(MODULES) or set(targets) != {*MODULES, MACROS}:
-        raise RuntimeError("Distribution must contain four public libraries and one internal macro target.")
+    if set(products) - {MACROS} != set(MODULES) or set(targets) != {*MODULES, MACROS, *TESTS}:
+        raise RuntimeError("Distribution must contain four public libraries, one internal macro target and the three shared native test targets.")
+    for name, (owner, target_dependencies, product_dependencies) in TESTS.items():
+        target = targets[name]
+        expected_path = Path("implementation/swift") / owner / "Tests" / name
+        if target.get("type") != "test" or target["path"] != str(expected_path):
+            raise RuntimeError(f"{name} must reuse its owning module's native test sources.")
+        if set(target.get("target_dependencies", [])) != set(target_dependencies) or set(target.get("product_dependencies", [])) != set(product_dependencies):
+            raise RuntimeError(f"Unexpected test dependency graph for {name}")
+        authored = {str(path.relative_to(repository / expected_path)) for path in (repository / expected_path).rglob("*.swift")}
+        if set(target["sources"]) != authored:
+            raise RuntimeError(f"Distribution omits native test sources from {name}")
     dependencies = description.get("dependencies", [])
     if len(dependencies) != 1 or dependencies[0].get("identity") != "swift-syntax":
         raise RuntimeError("Only the official swift-syntax build dependency is permitted.")
@@ -108,6 +131,10 @@ let package = Package(name: "{consumer}",
         args = ["swift", "build", "--package-path", str(directory), "--scratch-path", str(scratch),
                 "--build-system", "native", "--disable-build-manifest-caching", "--configuration", "release"]
         run(args, directory, workspace / (consumer + ".log"))
+        for module in (*TESTS, "SwiftSyntaxMacrosTestSupport"):
+            objects = [path for directory in scratch.rglob(module + ".build") for path in directory.rglob("*.o")]
+            if list(scratch.rglob(module + ".swiftmodule")) or objects:
+                raise RuntimeError(f"Library consumption compiled test-only module {module}")
         if consumer == "RuntimeConsumer":
             for module in (*MODULES[1:], MACROS, "SwiftSyntax"):
                 # SwiftPM creates planning directories even for unused products;
@@ -122,7 +149,10 @@ let package = Package(name: "{consumer}",
             raise RuntimeError("Consumer did not resolve the tagged distribution.")
     for consumer in ("SwiftPMConsumer", "RuntimeConsumer"):
         run([str(binaries[consumer]), str(fixture)], workspace, workspace / (consumer + ".log"))
-    print(f"SwiftPM tagged distribution and Runtime-only consumption passed. Logs: {workspace}")
+    run(["swift", "test", "--package-path", str(repository), "--scratch-path", str(workspace / "root-tests"),
+         "--build-system", "native", "--disable-build-manifest-caching", "--configuration", "release"],
+        repository, workspace / "root-tests.log")
+    print(f"SwiftPM tagged distribution, shared root tests and Runtime-only consumption passed. Logs: {workspace}")
 
 
 if __name__ == "__main__":

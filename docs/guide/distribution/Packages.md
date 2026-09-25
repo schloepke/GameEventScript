@@ -6,6 +6,13 @@
 GES libraries share one release version and Git tag. There are no independently
 versioned Swift module repositories.
 
+> **Since: Unreleased — package icons**
+
+NuGet packages embed the Pixel-Duo logo as `icon.png`; no external image URL is
+required. The release package check verifies both the manifest reference and
+the embedded image against the checked-in brand asset. Existing published
+versions retain their original package contents; the icon ships with the next release.
+
 | Distribution | Public products |
 | --- | --- |
 | NuGet | `GameEventScript.Runtime`, `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, `GameEventScript.SyntaxHighlighter` |
@@ -22,6 +29,20 @@ installers remain available. Standalone CLI release downloads are tracked in
 The repository-root `Package.swift` is the public entry point. It declares four
 library products using the existing source directories; it does not depend on
 the sibling development packages, expose Conformance, or include the CLI.
+
+> **Since: Unreleased — root-package native tests**
+
+The root package also declares three test targets that reuse the existing
+SwiftBridge, bridge-macro and SyntaxHighlighter test sources. They are not
+library products and are not compiled when an application consumes the libraries.
+Run them from a repository checkout with:
+
+```sh
+swift test --scratch-path artifacts/swift/root-tests --disable-build-manifest-caching --configuration release
+```
+
+The highlighter tests read the shared Markdown fixture under
+`conformance/highlighting`; no Conformance library dependency is added.
 
 In Xcode, select **File → Add Package Dependencies**, enter
 `https://github.com/schloepke/GameEventScript.git`, select a published version,
@@ -73,14 +94,17 @@ The publication-selection tests substitute a fake `dotnet`; they never contact
 NuGet. They verify that stale, internal and tool packages cannot enter the upload
 list and that missing artifacts stop the entire upload before its first request.
 
-The SwiftPM check copies the current root manifest and library sources into an
+The SwiftPM check copies the current root manifest, library/test sources and
+required Markdown fixture into an
 isolated Git repository under `artifacts/swift-package`, creates a local test
 tag, and resolves that version from two independent consumers. It checks all
 four products, the dependency graph and the explicit macOS minimum in both macro
 manifests, compiles/serializes/executes a Program,
 and runs that Program with Runtime alone. It also rejects builds of Compiler or
-Bridge in the Runtime-only consumer. No tag or commit is added to the working
-repository, and no remote is contacted by this check.
+Bridge in the Runtime-only consumer and compilation of test targets/support in
+either consuming application. It executes the three root test targets in the
+isolated checkout. No tag or commit is added to the working repository and
+nothing is published; SwiftPM may fetch the official SwiftSyntax dependency.
 
 The manually dispatched **C# Release Candidate** workflow runs the C# tests and
 dry run, plus the SwiftPM consumer gate on macOS. With `publish=false`, it only
@@ -111,6 +135,10 @@ Neither a website/domain nor author-signing the NuGet archives is required by
 this workflow. Canonical packaging must precede any optional signing.
 
 ## Publish a shared version
+
+Update applicable `Since: Unreleased` notes in specifications and guides to the
+selected release version. Retain only the version of the currently described
+behavior; do not add previous definitions to the specification.
 
 Before the release preparation PR is merged, move the applicable `Unreleased`
 entries in [CHANGELOG.md](../../../CHANGELOG.md) into a section named for the

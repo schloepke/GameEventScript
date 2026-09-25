@@ -3,6 +3,8 @@
 
 # Portable number semantics
 
+> **Since: 0.1.0**
+
 This document is the normative numeric contract for Game Event Script compiler,
 runtime, `.gesb`, and portable Conformance implementations. Every language port
 must implement these results independently of its language's

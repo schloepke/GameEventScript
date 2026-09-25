@@ -1,0 +1,7 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#10203c"/>
+  <path d="M40 12H26L12 26V40L26 54H40L52 42V30H32V38H44L36 46H30L20 36V30L30 20H40Z" fill="#97c4ff"/>
+  <path d="M49 10L56 17L49 24L42 17Z" fill="#70e1cf"/>
+</svg>

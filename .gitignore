@@ -23,3 +23,7 @@ TestResults/
 
 # Library manifests pin external build dependencies; SwiftPM resolver state is generated.
 Package.resolved
+
+# Documentation website dependencies and local tool state
+website/node_modules/
+website/.astro/

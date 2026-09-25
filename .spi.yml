@@ -1,0 +1,6 @@
+# Copyright 2026 Stephan Schlöpke
+# SPDX-License-Identifier: Apache-2.0
+
+version: 1
+external_links:
+  documentation: https://gameeventscript.org/api/swift/

@@ -3,6 +3,8 @@
 
 # `.gesa` assembler format specification
 
+> **Since: 0.1.0**
+
 This document defines the current human-readable dump produced from a validated `GameEventScriptProgram`. It is normative for bytecode snapshot text, syntax highlighting, and diagnostic presentation.
 
 `.gesa` is not an executable transport format and has no reader in the portable API. Program transport uses [`.gesb`](BinaryFormat.md); instruction meaning and operand roles are defined by the [bytecode specification](Bytecode.md).

@@ -1,0 +1,24 @@
+/* Copyright 2026 Stephan Schlöpke */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+:root {
+  --ges-ink: #10203c;
+  --ges-muted: #53627b;
+  --ges-paper: #f3f5fa;
+  --ges-surface: #ffffff;
+  --ges-line: #e2e7f0;
+  --ges-player-blue-start: #4864d9;
+  --ges-player-blue-end: #79a7ef;
+  --ges-player-teal-start: #2b99a6;
+  --ges-player-teal-end: #78ccc1;
+  --ges-action-blue: #4564d6;
+  --ges-action-teal: #247f8b;
+  --ges-on-action: #ffffff;
+  --ges-on-dark: #edf3fc;
+  --ges-link-on-dark: #a9c3ff;
+  --ges-accent-on-dark: #91ded3;
+  --ges-font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --ges-font-mono: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  --ges-radius-control: 10px;
+  --ges-radius-card: 20px;
+}

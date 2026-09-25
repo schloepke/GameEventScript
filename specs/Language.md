@@ -3,6 +3,8 @@
 
 # Game Event Script language specification
 
+> **Since: 0.1.0**
+
 Game Event Script (GES) is an event-oriented scripting language for deterministic
 game logic. A source declares records, predicates, functions, and message
 handlers. Handler execution can enqueue local messages or publish messages to
@@ -417,6 +419,8 @@ nested iteration. This also applies when the binding holds the result of an
 earlier projection in a selector pipeline.
 
 ### `if`
+
+> **Since: Unreleased — conditional bindings and branch scopes**
 
 `if` runs the then-branch only when the condition is true. `nothing` is not true.
 `else` runs for every non-true condition.
@@ -922,6 +926,8 @@ are owned by [Text semantics](Semantics/Text.md#literal-recognition-from-text).
 
 ### Explicit data constructors
 
+> **Since: Unreleased**
+
 Existing literal forms remain valid. Built-in type constructors are additional
 source expressions and their data-only argument forms are recognized by `parse`.
 
@@ -959,6 +965,8 @@ Runtime recognition and execution from Text are owned by
 [Text semantics](Semantics/Text.md#explicit-data-forms).
 
 ### Text splitting
+
+> **Since: Unreleased**
 
 `text[:split on separator]` evaluates a nonempty Text separator and splits by
 exact scalar sequence. Empty pieces become `nothing`; nonempty pieces remain
@@ -1229,6 +1237,8 @@ let r be from 1 to 10
 let stepped be from 10 to 0 step -2
 let fractional be from 1.5 to 3.5 step 0.5
 ```
+
+> **Since: Unreleased — integral Range normalization**
 
 All three exactly integral, Int64-representable components normalize to an exact
 integer range, including inputs supplied through a Binary64 API. Otherwise finite
@@ -2097,6 +2107,8 @@ multiplication operator.
 
 ## Fold and reduce selectors
 
+> **Since: Unreleased**
+
 `source[:fold acc be seed, value => expression]` performs a left fold in the
 source's ordinary iterator order. Source and seed are evaluated exactly once,
 including the seed for an empty or invalid source. The seed is the initial
@@ -2117,6 +2129,8 @@ Only actually executed bytecode instructions consume opcode budget, using the
 same rules as other selectors. No synthetic cost equalization is performed.
 
 ## Result-bearing and delayed sends
+
+> **Since: Unreleased**
 
 `emit Message(...)` and `publish Message(...)` are also expressions. Their Boolean
 result means the host accepted the send, independent of recipient existence,

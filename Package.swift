@@ -31,5 +31,24 @@ let package = Package(
         .target(name: "GameEventScriptRuntime", path: "implementation/swift/GameEventScriptRuntime/Sources/GameEventScriptRuntime"),
         .target(name: "GameEventScriptCompiler", dependencies: ["GameEventScriptRuntime"], path: "implementation/swift/GameEventScriptCompiler/Sources/GameEventScriptCompiler"),
         .target(name: "GameEventScriptSwiftBridge", dependencies: ["GameEventScriptRuntime", "GameEventScriptSwiftBridgeMacros"], path: "implementation/swift/GameEventScriptSwiftBridge/Sources/GameEventScriptSwiftBridge"),
+        .testTarget(
+            name: "GameEventScriptSwiftBridgeTests",
+            dependencies: ["GameEventScriptSwiftBridge", "GameEventScriptRuntime"],
+            path: "implementation/swift/GameEventScriptSwiftBridge/Tests/GameEventScriptSwiftBridgeTests"
+        ),
+        .testTarget(
+            name: "GameEventScriptSwiftBridgeMacrosTests",
+            dependencies: [
+                "GameEventScriptSwiftBridgeMacros",
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+            ],
+            path: "implementation/swift/GameEventScriptSwiftBridge/Tests/GameEventScriptSwiftBridgeMacrosTests"
+        ),
+        .testTarget(
+            name: "GameEventScriptSyntaxHighlighterTests",
+            dependencies: ["GameEventScriptSyntaxHighlighter"],
+            path: "implementation/swift/GameEventScriptSyntaxHighlighter/Tests/GameEventScriptSyntaxHighlighterTests"
+        ),
     ]
 )

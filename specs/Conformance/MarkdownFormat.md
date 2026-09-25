@@ -1085,6 +1085,8 @@ steps:
 
 ## Virtual time actions
 
+> **Since: Unreleased**
+
 Runtime cases use a virtual microsecond clock initially at zero. A host action
 `advanceMicroseconds: "200000"` advances it without pumping; its argument is a
 canonical nonnegative Int64 decimal string. Overflow returns false without
@@ -1098,6 +1100,8 @@ on Waiting instead of spinning. Tests must assert downstream emissions or trace
 entries to distinguish acceptance from actual delayed delivery.
 
 ### Product JSON message API checks
+
+> **Since: Unreleased**
 
 `messageApi` optionally accepts `json` (a complete product message envelope) and
 `roundTripJson` (Boolean, default false). `json` replaces the ordinary message

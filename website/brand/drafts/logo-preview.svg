@@ -1,0 +1,36 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="600" viewBox="0 0 1000 600" role="img" aria-labelledby="title desc">
+<title id="title">Game Event Script logo concept</title>
+<desc id="desc">An angular G and a detached event diamond, shown on light and dark backgrounds, in monochrome and at small icon sizes.</desc>
+<defs>
+  <g id="mark"><path d="M40 12H26L12 26V40L26 54H40L52 42V30H32V38H44L36 46H30L20 36V30L30 20H40Z"/><path d="M49 10L56 17L49 24L42 17Z" fill="currentColor"/></g>
+  <g id="tile"><rect width="64" height="64" rx="14" fill="#10203c"/><use href="#mark" fill="#97c4ff" color="#70e1cf"/></g>
+</defs>
+<rect width="1000" height="600" fill="#f5f7fb"/>
+<g font-family="system-ui, sans-serif" fill="#10203c">
+<text x="48" y="55" font-size="13" letter-spacing="2">GAME EVENT SCRIPT / LOGO CONCEPT</text>
+<text x="48" y="101" font-size="30" font-weight="700">A G shaped by events.</text>
+<rect x="48" y="135" width="438" height="265" rx="18" fill="white"/>
+<rect x="510" y="135" width="442" height="265" rx="18" fill="#10203c"/>
+<use href="#mark" transform="translate(187 159) scale(2.5)" fill="#10203c" color="#247d8b"/>
+<use href="#mark" transform="translate(651 159) scale(2.5)" fill="#97c4ff" color="#70e1cf"/>
+<text x="267" y="364" text-anchor="middle" font-size="21" font-weight="700">Game Event Script</text>
+<text x="731" y="364" text-anchor="middle" font-size="21" font-weight="700" fill="#edf3fc">Game Event Script</text>
+<text x="48" y="446" font-size="12" letter-spacing="1.5" fill="#53617a">ONE COLOUR</text>
+<use href="#mark" transform="translate(48 463)" fill="#10203c" color="#10203c"/>
+<use href="#mark" transform="translate(133 479) scale(.5)" fill="#10203c" color="#10203c"/>
+<text x="270" y="446" font-size="12" letter-spacing="1.5" fill="#53617a">ICON SIZES</text>
+<use href="#tile" transform="translate(270 463)"/>
+<use href="#tile" transform="translate(358 479) scale(.5)"/>
+<use href="#tile" transform="translate(414 483) scale(.375)"/>
+<use href="#tile" transform="translate(462 487) scale(.25)"/>
+<text x="302" y="550" text-anchor="middle" font-size="11" fill="#53617a">64</text>
+<text x="374" y="550" text-anchor="middle" font-size="11" fill="#53617a">32</text>
+<text x="426" y="550" text-anchor="middle" font-size="11" fill="#53617a">24</text>
+<text x="470" y="550" text-anchor="middle" font-size="11" fill="#53617a">16</text>
+<text x="560" y="480" font-size="17" font-weight="650">G + event</text>
+<text x="560" y="509" font-size="15" fill="#53617a">Angular silhouette. One distinct signal.</text>
+<text x="560" y="535" font-size="15" fill="#53617a">Scalable vectors, including monochrome.</text>
+</g>
+</svg>

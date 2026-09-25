@@ -5,6 +5,8 @@
 
 [![NuGet](https://img.shields.io/nuget/v/GameEventScript.Runtime)](https://www.nuget.org/packages/GameEventScript.Runtime)
 [![GitHub release](https://img.shields.io/github/v/release/schloepke/GameEventScript)](https://github.com/schloepke/GameEventScript/releases/latest)
+[![Swift versions](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fschloepke%2FGameEventScript%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/schloepke/GameEventScript)
+[![Swift platforms](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fschloepke%2FGameEventScript%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/schloepke/GameEventScript)
 
 Game Event Script is a portable, deterministic scripting language and serial
 message host for game logic. C# and Swift implement the shared
@@ -12,13 +14,17 @@ language-neutral contracts, with C# as the reference implementation. Additional
 language implementations are tracked in [`BACKLOG.md`](BACKLOG.md).
 
 The canonical documentation starts at [Documentation](docs/README.md).
+Start with [Learn GES](docs/guide/Language.md), [C# embedding](docs/guide/CSharp.md)
+or [Swift embedding](docs/guide/Swift.md). The [documentation website](website/README.md)
+can be built locally for static hosting.
 Portable behavior is defined by the normative specifications and executable
 Markdown conformance corpus; the C# API is one language-specific mapping.
 
 ## Install and use
 
-The badges above show the latest non-prerelease NuGet package and GitHub release
-once published. See [release notes](https://github.com/schloepke/GameEventScript/releases)
+The release badges show the latest non-prerelease NuGet package and GitHub release.
+Swift Package Index badges report its observed Swift-version and platform build
+compatibility; they are not a substitute for our Conformance guarantees. See [release notes](https://github.com/schloepke/GameEventScript/releases)
 for published changes and migration guidance, and the [changelog](CHANGELOG.md)
 for changes planned for the next release. All libraries share the GES release version;
 language and API contracts may change during 0.x development.

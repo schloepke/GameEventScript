@@ -3,6 +3,8 @@
 
 # `.gesb` binary format specification
 
+> **Since: 0.1.0**
+
 This document is the normative container specification for `GameEventScriptProgram`.
 Opcode semantics and operand shapes are normative in [Bytecode](Bytecode.md).
 A program contains portable data only. Linking extensions,

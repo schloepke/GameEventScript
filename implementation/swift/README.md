@@ -3,6 +3,9 @@
 
 # Swift implementation
 
+[Generated Swift API reference](../../docs/guide/api/Swift.md)
+
+
 | SwiftPM package / import | Responsibility | Dependencies |
 | --- | --- | --- |
 | `GameEventScriptRuntime` | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types | Swift standard library and platform math library |
@@ -28,6 +31,12 @@ shared version. The packages below this directory remain local development entry
 points; CLI and Conformance are internal to the repository distribution.
 See the [package release guide](../../docs/guide/distribution/Packages.md) for
 Xcode installation, tagged consumer verification and release preparation.
+
+The root package also reuses the native SwiftBridge, bridge-macro and highlighter
+test targets. From the repository root, run
+`swift test --scratch-path artifacts/swift/root-tests --disable-build-manifest-caching --configuration release`.
+These tests are visible to SwiftPM and Swift Package Index without becoming
+library products. Full language/host Conformance remains in its separate package.
 
 ### Xcode workspace
 
@@ -123,6 +132,20 @@ building Compiler. Compiled objects and module caches remain incremental; no
 Clean is performed during installation. Use the same option for manual native
 SwiftPM builds after source-structure changes. The incremental CI test exercises
 these changes in disposable packages and verifies object reuse on an unchanged build.
+
+Swift CI skips native verification only when all changes are confined to the
+website, guides or the explicit root documentation allowlist. Specifications,
+Conformance cases, implementation files, scripts, manifests, workflows and unknown
+paths still require every check. Manual workflow runs always verify everything;
+the required `verify` check fails if change selection fails. Run
+`python3 scripts/test-ci-swift-scope.py` to exercise these selection rules.
+
+Local-package and API build directories are cached by OS, architecture, Swift/Xcode
+toolchain and build configuration. Tests and symbol extraction still execute on
+cache hits. The tagged distribution consumers, root distribution tests and
+incremental-build controls always use fresh isolated workspaces. The first run
+after a cache miss remains a full build; subsequent runs can reuse dependencies.
+Newer revisions cancel obsolete CI runs for the same branch or pull request.
 
 Use Swift 6.0 or newer. The complete verification script additionally uses .NET 10
 for independent cross-language binary inputs:

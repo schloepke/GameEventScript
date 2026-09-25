@@ -12,6 +12,16 @@ of the language specification.
 
 ## Normative specification
 
+Version notes such as **Since: 0.1.0** and **Since: Unreleased** are informative
+availability hints, not additional language rules or a compatibility matrix.
+A note below a document title identifies its baseline; a more specific feature
+note takes precedence. A qualified note applies only to the feature it names.
+The version refers to the behavior currently described, not necessarily the
+first appearance of a similarly named feature. When behavior changes, update
+the note to the new release rather than retaining old behavior here.
+**Unreleased** requires a matching development build. Release history and
+migration details belong in the [changelog](../CHANGELOG.md).
+
 Every contract area has exactly one owning document. Other documents link to that owner instead of restating its rules.
 
 | Contract area | Owning document | Responsibility | Status |
@@ -37,13 +47,29 @@ Every contract area has exactly one owning document. Other documents link to tha
 
 All specification documents in the table are normative.
 
+## Generated API references
+
+- [C# API reference](guide/api/CSharp.md): public assemblies and XML documentation.
+- [Swift API reference](guide/api/Swift.md): public symbol graphs and DocC documentation.
+
+These describe the development checkout and show their source revision. They
+complement the portable specification with concrete language APIs.
+
 ## Non-normative guides
+
+The [TextMate editor bundles](../tools/editors/README.md) provide downloadable
+JSON and classic XML grammars for `.ges` and `.gesa`, with installation guidance.
+
+Start with [Learn Game Event Script](guide/Language.md), then choose the
+[C# embedding guide](guide/CSharp.md) or [Swift embedding guide](guide/Swift.md).
 
 [Guide](guide/README.md) contains tutorials, explanations, and examples intended for learning. A guide may simplify presentation but must link to the owning specification for exact behavior.
 
 The [C# implementation guide](../implementation/csharp/README.md) describes the
 library boundaries, solution and toolchain, build/test commands, CLI lifecycle
 and Compiler/Runtime embedding. The
+[C# bridge guide](../implementation/csharp/GameEventScript.CSharpBridge/README.md)
+covers attribute-based external types, extension functions and native callbacks. The
 [C# CLI guide](../implementation/csharp/GameEventScript.Tool/README.md)
 documents `dotnet ges` and the interactive event console; the
 [C# distribution guide](guide/distribution/CSharp.md) covers local packages,

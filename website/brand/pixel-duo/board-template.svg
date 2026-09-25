@@ -1,0 +1,108 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1590" viewBox="0 0 1200 1590" role="img" aria-labelledby="board-title board-description">
+  <title id="board-title">Game Event Script — Pixel-Duo brand design</title>
+  <desc id="board-description">A complete visual identity: blue and teal conversation symbols, light and dark wordmarks, icon sizes, monochrome versions, colour palette, system typography, and website and code examples.</desc>
+  <defs>
+    <!-- BRAND_DEFINITIONS -->
+    <linearGradient id="swatch-blue"><stop stop-color="#4864d9"/><stop offset="1" stop-color="#79a7ef"/></linearGradient>
+    <linearGradient id="swatch-teal"><stop stop-color="#2b99a6"/><stop offset="1" stop-color="#78ccc1"/></linearGradient>
+  </defs>
+  <rect width="1200" height="1590" fill="#f3f5fa"/>
+  <g font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" fill="#10203c">
+    <text x="40" y="42" font-size="12" letter-spacing="2.4" fill="#53627b">GAME EVENT SCRIPT / VISUAL IDENTITY 01</text>
+    <text x="40" y="94" font-size="42" font-weight="750" letter-spacing="-1.3">A conversation. A world of possibilities.</text>
+    <text x="40" y="127" font-size="16" fill="#53627b">Pixel-Duo — two voices, shared motion, a little play.</text>
+
+    <!-- Primary brand applications. -->
+    <rect x="40" y="158" width="548" height="341" rx="24" fill="#ffffff"/>
+    <rect x="612" y="158" width="548" height="341" rx="24" fill="#10203c"/>
+    <text x="64" y="191" font-size="11" letter-spacing="1.8" fill="#53627b">ON LIGHT</text>
+    <text x="636" y="191" font-size="11" letter-spacing="1.8" fill="#a9bad5">ON DARK</text>
+    <use href="#mark" transform="translate(218 207) scale(3)"/>
+    <use href="#mark" transform="translate(790 207) scale(3)"/>
+    <text x="314" y="436" text-anchor="middle" font-size="29" font-weight="750" letter-spacing="-.8">Game Event Script</text>
+    <text x="886" y="436" text-anchor="middle" font-size="29" font-weight="750" letter-spacing="-.8" fill="#edf3fc">Game Event Script</text>
+    <text x="314" y="466" text-anchor="middle" font-size="13" fill="#53627b">Game rules, driven by events.</text>
+    <text x="886" y="466" text-anchor="middle" font-size="13" fill="#a9bad5">Game rules, driven by events.</text>
+
+    <!-- The same master supports a horizontal lockup and small uses. -->
+    <rect x="40" y="519" width="1120" height="142" rx="20" fill="#ffffff"/>
+    <text x="64" y="550" font-size="11" letter-spacing="1.7" fill="#53627b">HORIZONTAL WORDMARK</text>
+    <use href="#wordmark" transform="translate(64 567) scale(.82)"/>
+    <text x="530" y="550" font-size="11" letter-spacing="1.7" fill="#53627b">ICON SCALE</text>
+    <use href="#icon" transform="translate(530 570)"/>
+    <use href="#icon" transform="translate(617 586) scale(.5)"/>
+    <use href="#icon-small" transform="translate(673 590) scale(.375)"/>
+    <use href="#icon-small" transform="translate(721 594) scale(.25)"/>
+    <text x="791" y="550" font-size="11" letter-spacing="1.7" fill="#53627b">ONE COLOUR</text>
+    <use href="#mark-mono" transform="translate(795 570)"/>
+    <rect x="890" y="566" width="76" height="72" rx="14" fill="#10203c"/>
+    <use href="#mark-inverse" transform="translate(896 570)"/>
+    <text x="990" y="589" font-size="12" fill="#53627b">Small icons omit</text>
+    <text x="990" y="609" font-size="12" fill="#53627b">detached pixels.</text>
+    <g text-anchor="middle" font-size="10" fill="#53627b"><text x="562" y="648">64</text><text x="633" y="648">32</text><text x="685" y="648">24</text><text x="729" y="648">16</text></g>
+
+    <!-- Colour has both expressive and functional roles. -->
+    <text x="40" y="709" font-size="23" font-weight="750" letter-spacing="-.5">Two players. One palette.</text>
+    <text x="40" y="736" font-size="14" fill="#53627b">Related cool hues keep both voices distinct and the overall identity calm.</text>
+    <rect x="40" y="758" width="304" height="82" rx="16" fill="url(#swatch-blue)"/>
+    <rect x="364" y="758" width="304" height="82" rx="16" fill="url(#swatch-teal)"/>
+    <rect x="688" y="758" width="144" height="82" rx="16" fill="#10203c"/>
+    <rect x="852" y="758" width="144" height="82" rx="16" fill="#ffffff" stroke="#e2e7f0"/>
+    <rect x="1016" y="758" width="144" height="82" rx="16" fill="#f3f5fa" stroke="#d7deea"/>
+    <g font-size="14" font-weight="700"><text x="40" y="865">Player blue</text><text x="364" y="865">Player teal</text><text x="688" y="865">Ink</text><text x="852" y="865">Surface</text><text x="1016" y="865">Paper</text></g>
+    <g font-size="12" fill="#53627b"><text x="40" y="889">#4864D9 → #79A7EF</text><text x="364" y="889">#2B99A6 → #78CCC1</text><text x="688" y="889">#10203C</text><text x="852" y="889">#FFFFFF</text><text x="1016" y="889">#F3F5FA</text></g>
+    <rect x="40" y="912" width="1120" height="68" rx="14" fill="#ffffff"/>
+    <rect x="60" y="926" width="154" height="40" rx="10" fill="#4564d6"/>
+    <text x="137" y="952" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="650">Get started</text>
+    <rect x="230" y="926" width="164" height="40" rx="10" fill="#247f8b"/>
+    <text x="312" y="952" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="650">Explore examples</text>
+    <text x="420" y="941" font-size="12" fill="#53627b">Action colours: #4564D6 / #247F8B</text>
+    <text x="420" y="961" font-size="12" fill="#53627b">White-text contrast: 5.19:1 / 4.68:1</text>
+    <text x="833" y="941" font-size="12" fill="#53627b">Use solid colours for UI.</text>
+    <text x="833" y="961" font-size="12" fill="#53627b">Keep gradients in the artwork.</text>
+
+    <!-- Typography and brand character. -->
+    <rect x="40" y="1000" width="548" height="212" rx="20" fill="#ffffff"/>
+    <rect x="612" y="1000" width="548" height="212" rx="20" fill="#ffffff"/>
+    <text x="64" y="1033" font-size="11" letter-spacing="1.7" fill="#53627b">TYPOGRAPHY / SYSTEM SANS + MONO</text>
+    <text x="64" y="1080" font-size="34" font-weight="750" letter-spacing="-.8">Rules with personality.</text>
+    <text x="64" y="1115" font-size="16" fill="#53627b">Friendly words. Clear examples. Space to think.</text>
+    <text x="64" y="1150" font-family="ui-monospace, 'SFMono-Regular', Consolas, monospace" font-size="15" fill="#247f8b">receive → decide → emit</text>
+    <text x="64" y="1185" font-size="12" fill="#53627b">Headings 700–750 · Body 400–450 · Code in monospace</text>
+    <text x="636" y="1033" font-size="11" letter-spacing="1.7" fill="#53627b">SHAPE / MOTION / VOICE</text>
+    <text x="636" y="1075" font-size="20" font-weight="700">Fluid conversation. Crisp little pixels.</text>
+    <text x="636" y="1108" font-size="15" fill="#53627b">Soft cards and generous space frame the dialogue.</text>
+    <text x="636" y="1135" font-size="15" fill="#53627b">Pixel accents appear where something happens.</text>
+    <text x="636" y="1162" font-size="15" fill="#53627b">The tone is curious, practical and welcoming.</text>
+    <text x="636" y="1189" font-size="12" fill="#53627b">Clear space around the logo: at least 8 of its 64 units.</text>
+
+    <!-- Small branded product examples. -->
+    <rect x="40" y="1232" width="548" height="268" rx="20" fill="#ffffff"/>
+    <rect x="612" y="1232" width="548" height="268" rx="20" fill="#10203c"/>
+    <use href="#wordmark" transform="translate(62 1250) scale(.51)"/>
+    <text x="468" y="1279" font-size="12" fill="#4564d6">Read the docs</text>
+    <path d="M64 1306H564" stroke="#e2e7f0"/>
+    <text x="64" y="1352" font-size="29" font-weight="750" letter-spacing="-.7">Game rules,</text>
+    <text x="64" y="1388" font-size="29" font-weight="750" letter-spacing="-.7" fill="#4564d6">driven by events.</text>
+    <text x="64" y="1420" font-size="13" fill="#53627b">A small language for a lively world.</text>
+    <rect x="64" y="1440" width="149" height="38" rx="10" fill="#4564d6"/>
+    <text x="139" y="1464" font-size="12" text-anchor="middle" fill="#ffffff" font-weight="650">Write your first script</text>
+    <use href="#mark" transform="translate(425 1335) scale(1.65)"/>
+    <text x="638" y="1267" font-family="ui-monospace, 'SFMono-Regular', Consolas, monospace" font-size="12" fill="#a9bad5">battle.ges</text>
+    <rect x="1088" y="1255" width="8" height="8" fill="#79a7ef"/><rect x="1104" y="1255" width="8" height="8" fill="#78ccc1"/>
+    <path d="M636 1286H1136" stroke="#34435c"/>
+    <g font-family="ui-monospace, 'SFMono-Regular', Consolas, monospace" font-size="15" fill="#edf3fc">
+      <text x="638" y="1321"><tspan fill="#a9c3ff">on</tspan> Attack(base, bonus) {</text>
+      <text x="658" y="1354"><tspan fill="#a9c3ff">let</tspan> amount <tspan fill="#a9c3ff">be</tspan> base + bonus</text>
+      <text x="658" y="1387"><tspan fill="#91ded3">emit</tspan> Hit(amount: amount)</text>
+      <text x="638" y="1420">}</text>
+    </g>
+    <text x="638" y="1474" font-size="12" fill="#a9bad5">Messages connect the pieces.</text>
+
+    <text x="40" y="1540" font-size="12" fill="#53627b">PIXEL-DUO / BRAND DESIGN</text>
+    <text x="1160" y="1540" text-anchor="end" font-size="12" fill="#53627b">SVG masters · Colour tokens · Usage guide</text>
+    <text x="40" y="1566" font-size="11" fill="#53627b">© 2026 Stephan Schlöpke · Apache-2.0</text>
+  </g>
+</svg>

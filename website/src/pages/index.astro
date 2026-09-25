@@ -1,0 +1,158 @@
+---
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+import { Code } from '@astrojs/starlight/components';
+import '../../brand/pixel-duo/tokens.css';
+
+const example = `module battle
+
+on Attack(base, bonus) {
+    let amount be base + bonus
+    emit Hit(amount: amount)
+}`;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Game Event Script is a portable, event-driven scripting language for game logic. Write rules once and embed them in C# or Swift." />
+    <link rel="canonical" href="https://gameeventscript.org/" />
+    <link rel="icon" type="image/svg+xml" href="/favicon-pixel-duo.svg" />
+    <title>Game Event Script — Game rules, driven by events</title>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="header wrap">
+      <a class="brand" href="/" aria-label="Game Event Script home"><img src="/brand/logo.svg" width="44" height="44" alt="" />Game Event Script</a>
+      <nav aria-label="Main navigation">
+        <a href="/docs/learn/language/">Learn</a>
+        <a href="/docs/">Documentation</a>
+        <a href="https://github.com/schloepke/GameEventScript">GitHub <span aria-hidden="true">↗</span></a>
+      </nav>
+    </header>
+    <main id="main">
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">A language for event-driven game logic</p>
+          <h1 id="hero-title">Your game rules.<br /><span>One event<br class="wide-break" /> at a time.</span></h1>
+          <p class="lede">Write decisions in a small scripting language. Send messages from your game. Run the same rules in C# and Swift.</p>
+          <div class="actions"><a class="button" href="/docs/learn/language/">Write your first script <span aria-hidden="true">→</span></a><a class="text-link" href="/docs/">Explore the docs</a></div>
+          <p class="meta">Open source · Apache 2.0 · C# + Swift</p>
+        </div>
+        <div class="example">
+          <div class="example-head"><span class="file">battle.ges</span><span>01 / Receive. Decide. Emit.</span></div>
+          <Code code={example} lang="ges" />
+          <div class="message-trace" aria-label="Example message flow">
+            <div><span class="trace-label">Your application sends</span><code>Attack(base: 30, bonus: 12)</code></div>
+            <span class="trace-arrow" aria-hidden="true">↓</span>
+            <div><span class="trace-label">The script emits</span><code class="result">Hit(amount: 42)</code></div>
+          </div>
+          <p class="example-caption">You own the game world. The script describes the rule.</p>
+        </div>
+      </section>
+      <section class="principles wrap" aria-labelledby="principles-title">
+        <div class="section-intro"><p class="eyebrow">Small language. Clear boundaries.</p><h2 id="principles-title">Fits inside your game.</h2></div>
+        <div class="principle-grid">
+          <article><span class="index">01</span><h3>Messages connect the pieces</h3><p>Handlers react to named messages and emit new ones. Your application supplies native actions, data and the starting event.</p></article>
+          <article><span class="index">02</span><h3>State stays with you</h3><p>Script values are immutable. Your application owns persistent state and decides what scripts can see through explicit native bindings.</p></article>
+          <article><span class="index">03</span><h3>A shared contract</h3><p>C# and Swift implement the same language and portable program format, checked against a shared Markdown conformance corpus.</p></article>
+        </div>
+      </section>
+      <section class="embedding" aria-labelledby="embedding-title">
+        <div class="wrap">
+          <div class="section-intro"><p class="eyebrow">Bring GES into your application</p><h2 id="embedding-title">Choose your starting point.</h2><p>Both guides compile a rule, start a host and receive the same result.</p></div>
+          <div class="platforms">
+            <a class="platform" href="/docs/learn/csharp/"><div class="platform-top"><span class="platform-icon">C#</span><span class="package-type">NuGet</span></div><h3>Embed in C#</h3><p>Use .NET libraries, delegate callbacks and attribute-based native bindings.</p><code>GameEventScript.Runtime</code><span class="platform-link">Follow the C# guide <span aria-hidden="true">→</span></span></a>
+            <a class="platform" href="/docs/learn/swift/"><div class="platform-top"><span class="platform-icon">Sw</span><span class="package-type">Swift Package Manager</span></div><h3>Embed in Swift</h3><p>Add SwiftPM products, register closures and expose native data to scripts.</p><code>GameEventScriptRuntime</code><span class="platform-link">Follow the Swift guide <span aria-hidden="true">→</span></span></a>
+          </div>
+          <p class="release-note">GES is in 0.x development. These docs follow development; check the <a href="/docs/changelog/">changelog</a> against your installed release.</p>
+        </div>
+      </section>
+      <section class="workflow wrap" aria-labelledby="workflow-title">
+        <div><p class="eyebrow">From source to your game</p><h2 id="workflow-title">Compile where it makes sense.<br />Ship only what you need.</h2><p>Compile text in your application or during your content build. A product that runs precompiled programs can ship Runtime and optional native adapters without the Compiler.</p><a class="text-link" href="/docs/reference/host-runtime/">Understand the host lifecycle <span aria-hidden="true">→</span></a></div>
+        <ol class="pipeline"><li><span>01</span><div><strong>Write</strong><code>battle.ges</code></div></li><li><span>02</span><div><strong>Compile</strong><code>battle.gesb</code></div></li><li><span>03</span><div><strong>Load, start, send</strong><code>C# or Swift host</code></div></li></ol>
+      </section>
+      <section class="next wrap" aria-labelledby="next-title"><div><p class="eyebrow">Start with one message</p><h2 id="next-title">Make your first rule run.</h2></div><a class="button" href="/docs/learn/language/">Open the language guide <span aria-hidden="true">→</span></a></section>
+    </main>
+    <footer class="wrap"><p>© 2026 Stephan Schlöpke · Apache 2.0</p><nav aria-label="Footer"><a href="https://github.com/schloepke/GameEventScript/discussions">Discussions</a><a href="https://github.com/schloepke/GameEventScript/releases">Releases</a><a href="https://github.com/schloepke/GameEventScript/blob/main/LICENSE">License</a></nav></footer>
+  </body>
+</html>
+<style>
+  :global(*) { box-sizing: border-box; }
+  :global(html) { scroll-behavior: smooth; }
+  :global(body) { margin: 0; background: var(--ges-paper); color: var(--ges-ink); font: 1rem/1.65 var(--ges-font-sans); }
+  :global(a) { color: inherit; text-underline-offset: .2em; }
+  :global(a:focus-visible) { outline: 3px solid var(--ges-action-teal); outline-offset: 5px; }
+  .wrap { width: min(1200px, calc(100% - 5rem)); margin-inline: auto; }
+  .skip { position: absolute; left: 1rem; top: -5rem; background: white; padding: .75rem; z-index: 10; }
+  .skip:focus { top: .5rem; }
+  .header { display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding-block: 1.6rem; border-bottom: 1px solid #dce2ec; }
+  .brand { display: flex; align-items: center; gap: .7rem; text-decoration: none; font-weight: 750; letter-spacing: -.025em; font-size: 1.2rem; }
+  nav { display: flex; gap: 1.7rem; align-items: center; font-size: .9rem; }
+  nav a { text-decoration: none; }
+  nav a:hover, .text-link:hover { color: var(--ges-action-blue); text-decoration: underline; }
+  .hero { display: grid; grid-template-columns: 1fr 1.08fr; gap: 4rem; align-items: center; padding-block: 6.2rem 5.5rem; }
+  .eyebrow { margin: 0 0 1.25rem; color: var(--ges-action-teal); font: 650 .76rem/1.5 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
+  h1 { font-size: clamp(2.8rem, 4.4vw, 4.2rem); line-height: 1.07; letter-spacing: -.06em; margin: 0 0 1.7rem; font-weight: 760; }
+  h1 span { color: var(--ges-action-blue); }
+  .lede { max-width: 29rem; color: var(--ges-muted); font-size: 1.16rem; line-height: 1.75; margin-bottom: 2rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; }
+  .button { display: inline-flex; align-items: center; justify-content: center; gap: 1rem; background: var(--ges-action-blue); color: white; border-radius: var(--ges-radius-control); padding: .85rem 1.15rem; text-decoration: none; font-weight: 650; font-size: .93rem; }
+  .button:hover { background: #173e89; }
+  .text-link { color: var(--ges-action-teal); font-weight: 650; font-size: .93rem; text-decoration: none; }
+  .meta { color: var(--ges-muted); font-size: .83rem; margin-top: 1.75rem; }
+  .example { min-width: 0; background: var(--ges-ink); border: 1px solid #253858; border-radius: var(--ges-radius-card); color: #d7e5fc; box-shadow: 0 22px 50px -28px #17315466; overflow: hidden; }
+  .example-head { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 1.4rem; font-size: .75rem; border-bottom: 1px solid #2d3e5a; color: #aebed7; }
+  .example-head::after { content: ""; align-self: center; flex: 0 0 7px; height: 7px; background: var(--ges-player-blue-end); box-shadow: 12px 0 0 var(--ges-player-teal-end); margin-right: 12px; }
+  .message-trace code { color: var(--ges-link-on-dark); }
+  .message-trace code.result { color: var(--ges-accent-on-dark); }
+  .file { font-family: ui-monospace, monospace; color: #fff; }
+  .example :global(.expressive-code) { font-size: .82rem; margin: 0; }
+  .example :global(.expressive-code .frame) { border-radius: 0; }
+  .message-trace { margin: 1.2rem 1.4rem 0; padding: 1.1rem 1.2rem; border-left: 2px solid var(--ges-accent-on-dark); background: #172b49; }
+  .trace-label { display: block; color: #aebed7; font-size: .73rem; margin-bottom: .2rem; }
+  .message-trace code { font-size: .85rem; overflow-wrap: anywhere; }
+  .trace-arrow { color: var(--ges-accent-on-dark); display: block; margin: .35rem 0; }
+  .result { color: var(--ges-accent-on-dark); }
+  .example-caption { color: #aebed7; margin: 1rem 1.4rem 1.2rem; font-size: .75rem; }
+  h2 { font-size: clamp(1.9rem, 3vw, 2.5rem); line-height: 1.18; letter-spacing: -.045em; margin: 0; }
+  h3 { font-size: 1.18rem; letter-spacing: -.02em; line-height: 1.35; }
+  .section-intro .eyebrow { margin-bottom: .7rem; }
+  .section-intro > p:last-child:not(.eyebrow) { color: var(--ges-muted); }
+  .principles { padding-block: 2rem 5rem; }
+  .principle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.8rem; margin-top: 2.7rem; }
+  .principle-grid article { border-top: 1px solid #ccd6e6; padding-top: 1.3rem; }
+  .index { color: var(--ges-action-blue); font: .83rem ui-monospace, monospace; }
+  .principle-grid p { color: var(--ges-muted); font-size: .96rem; }
+  .embedding { background: #eaf0f7; padding-block: 4.5rem; border-block: 1px solid #dce2ec; }
+  .platforms { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2.3rem; }
+  .platform { display: block; padding: 2rem; background: white; border: 1px solid #cbd6e7; border-radius: var(--ges-radius-card); text-decoration: none; }
+  .platform:hover { border-color: var(--ges-action-blue); }
+  .platform-top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+  .platform-icon { font: 750 1.55rem ui-monospace, monospace; color: var(--ges-action-blue); }
+  .package-type { color: var(--ges-muted); font-size: .8rem; }
+  .platform h3 { font-size: 1.5rem; margin-bottom: .5rem; }
+  .platform p { color: var(--ges-muted); margin-top: 0; }
+  .platform code { display: block; color: var(--ges-muted); font-size: .86rem; overflow-wrap: anywhere; }
+  .platform-link { display: flex; justify-content: space-between; margin-top: 1.6rem; color: var(--ges-action-blue); font-weight: 650; font-size: .93rem; }
+  .release-note { font-size: .86rem; color: var(--ges-muted); margin: 1.7rem 0 0; }
+  .workflow { display: grid; grid-template-columns: 1.3fr 1fr; gap: 6rem; padding-block: 5.5rem; align-items: center; }
+  .workflow p:not(.eyebrow) { color: var(--ges-muted); max-width: 34rem; }
+  .pipeline { list-style: none; padding: 0; margin: 0; }
+  .pipeline li { position: relative; display: flex; align-items: center; gap: 1.5rem; padding: 1.3rem 0; border-bottom: 0; }
+  .pipeline li > span { font: .85rem var(--ges-font-mono); color: var(--ges-action-teal); background: #e5f4f1; padding: .6rem; border-radius: 8px; }
+  .pipeline li:not(:last-child)::after { content: "↓"; position: absolute; left: .82rem; bottom: -.8rem; color: var(--ges-action-teal); }
+  .pipeline strong, .pipeline code { display: block; }
+  .pipeline code { color: var(--ges-muted); font-size: .86rem; margin-top: .25rem; }
+  .next { display: flex; align-items: center; justify-content: space-between; gap: 2rem; background: #e5f4f1; padding: 2.5rem; border-radius: var(--ges-radius-card); }
+  .next .eyebrow { margin-bottom: .6rem; }
+  .next h2 { font-size: 2rem; }
+  footer { display: flex; align-items: center; justify-content: space-between; gap: 2rem; color: var(--ges-muted); padding-block: 2.5rem; font-size: .8rem; }
+  footer nav { font-size: .8rem; }
+  @media (min-width: 1450px) { .wide-break { display: none; } }
+  @media (max-width: 1000px) { .hero { gap: 2.3rem; } .wrap { width: calc(100% - 3rem); } .hero { padding-top: 4rem; } .workflow { gap: 3rem; } }
+  @media (max-width: 760px) { .header { align-items: flex-start; flex-direction: column; gap: 1rem; } .hero { grid-template-columns: 1fr; padding-block: 3rem; gap: 2.3rem; } .wide-break { display: none; } .lede { max-width: 36rem; } .principle-grid, .platforms, .workflow { grid-template-columns: 1fr; } .principle-grid { gap: 1.2rem; } .principles { padding-bottom: 3rem; } .embedding { padding-block: 3rem; } .platform { padding: 1.5rem; } .workflow { padding-block: 3rem; gap: 1.4rem; } .next, footer { flex-direction: column; align-items: flex-start; } .next { padding: 1.5rem; } }
+  @media (max-width: 400px) { .wrap { width: calc(100% - 2rem); } nav { gap: 1.1rem; } .example-head { flex-wrap: wrap; gap: .3rem; } }
+  @media (prefers-reduced-motion: reduce) { :global(html) { scroll-behavior: auto; } }
+</style>

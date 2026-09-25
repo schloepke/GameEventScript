@@ -3,6 +3,8 @@
 
 # Swift syntax highlighting
 
+> **Since: Unreleased**
+
 `GameEventScriptSyntaxHighlighter` is an optional SwiftPM library for GES and GESA
 editors and terminals. It uses Foundation, with no AppKit, UIKit, Compiler or
 Runtime dependency. Both CLI highlighting and this library use the canonical

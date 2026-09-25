@@ -3,6 +3,8 @@
 
 # Bytecode specification
 
+> **Since: 0.1.0**
+
 This document defines the portable bytecode shape for the
 `GameEventScriptProgram` container.
 The goal is a compact, portable, high-level bytecode for the GameEventScript DSL
@@ -1556,6 +1558,9 @@ separate approximate-equality opcode.
 [Text semantics](Semantics/Text.md#literal-recognition-from-text). Non-Text input
 writes `nothing`. It reads `XRegister` before writing the destination; source
 and destination may alias. `YRegister`, payload words, and flags are zero.
+
+> **Since: Unreleased — Record construction through ParseLiteral**
+
 Recognition may start known Record constructors on the ordinary VM call stack.
 Their side effects must be preserved when the result is unused. Parsing limits
 remain protection limits, not additional optimizer-observable effects.
@@ -1645,6 +1650,8 @@ terminal opcodes; there are no pipeline selector or pattern pools.
 
 ## Result-bearing send instructions
 
+> **Since: Unreleased**
+
 V1 adds `EmitInstant` (0xDA), `EmitAfter` (0xDB), `PublishInstant` (0xDC), and
 `PublishAfter` (0xDD). The existing eight send instructions retain their encoding
 and behavior. Unsupported opcode values must be rejected before execution.
@@ -1668,6 +1675,8 @@ step expressions run in the normal VM execution stream and can pause/resume.
 No fold/reduce opcode or implicit per-element budget surcharge is introduced.
 
 ### Explicit data instruction validation
+
+> **Since: Unreleased**
 
 `ConstructData` uses a lowercase built-in type name, ordered argument registers,
 and a same-length label list (`_` for positional arguments). Type/arity/label

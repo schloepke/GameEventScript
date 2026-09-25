@@ -3,6 +3,8 @@
 
 # Portable text and Unicode semantics
 
+> **Since: 0.1.0**
+
 This document is the normative cross-language contract for Game Event Script
 source text, names, text values, and source positions. Swift, Kotlin, Go, Rust,
 C++, C#, and other implementations must expose the same behavior even when
@@ -295,6 +297,8 @@ separate from literal-recognition failure and follows the fixed
 [Host runtime parse limits](../HostRuntime.md#literal-parsing-limits).
 
 ### Explicit data forms
+
+> **Since: Unreleased**
 
 The case-sensitive constructor forms in
 [Language](../Language.md#explicit-data-constructors) also accept literal arguments

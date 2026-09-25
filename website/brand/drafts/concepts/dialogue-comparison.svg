@@ -1,0 +1,41 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1140" height="780" viewBox="0 0 1140 780" role="img" aria-labelledby="title desc">
+<title id="title">Game Event Script — Dialog und Resonanz</title><desc id="desc">Zwei organische Logoentwürfe aus aufeinander antwortenden Formen. Farbig, einfarbig und in kleinen Größen.</desc>
+<defs><linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#514fe7"/><stop offset="1" stop-color="#27bcd4"/></linearGradient>
+<linearGradient id="violet" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#7760ec"/><stop offset="1" stop-color="#4288ed"/></linearGradient><g id="dialogue-color"><path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34L7 41Z" fill="url(#blue)"/><path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34L7 41Z" transform="rotate(180 32 32)" fill="url(#violet)"/></g><g id="dialogue-mono"><path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34L7 41Z"/><path d="M8 30C4 18 14 8 28 8C41 8 49 13 52 23C47 19 43 19 38 20C33 21 31 24 28 28C24 33 19 35 13 34L7 41Z" transform="rotate(180 32 32)"/></g><g id="resonance-color"><path d="M29 7C16 5 6 17 8 30C10 41 18 48 29 52C22 44 20 38 22 32C28 29 31 24 31 18C31 14 30 10 29 7Z" fill="url(#blue)"/><path d="M29 7C16 5 6 17 8 30C10 41 18 48 29 52C22 44 20 38 22 32C28 29 31 24 31 18C31 14 30 10 29 7Z" transform="rotate(180 32 32)" fill="url(#violet)"/></g><g id="resonance-mono"><path d="M29 7C16 5 6 17 8 30C10 41 18 48 29 52C22 44 20 38 22 32C28 29 31 24 31 18C31 14 30 10 29 7Z"/><path d="M29 7C16 5 6 17 8 30C10 41 18 48 29 52C22 44 20 38 22 32C28 29 31 24 31 18C31 14 30 10 29 7Z" transform="rotate(180 32 32)"/></g></defs><rect width="1140" height="780" fill="#f3f5fa"/>
+<g font-family="system-ui, sans-serif" fill="#10203c">
+<text x="40" y="43" font-size="12" letter-spacing="2" fill="#65728a">GAME EVENT SCRIPT / DIALOGSTUDIEN</text>
+<text x="40" y="91" font-size="36" font-weight="750" letter-spacing="-1">Ein Dialog, der Bewegung erzeugt.</text>
+<text x="40" y="123" font-size="16" fill="#65728a">Weiche Konturen, wechselnde Rollen und ein gemeinsamer Raum dazwischen.</text>
+<g transform="translate(40 0)">
+<rect y="156" width="526" height="548" rx="24" fill="white"/>
+<text x="28" y="195" font-size="12" fill="#65728a" letter-spacing="2">01 / DIALOG</text>
+<use href="#dialogue-color" transform="translate(167 222) scale(3)"/>
+<text x="263" y="455" text-anchor="middle" font-size="25" font-weight="700" letter-spacing="-.6">Game Event Script</text>
+<text x="263" y="486" text-anchor="middle" font-size="14" fill="#65728a">Zwei Stimmen. Eine fließende Bewegung.</text>
+<path d="M28 516H498" stroke="#edf0f5"/>
+<rect x="28" y="541" width="112" height="112" rx="20" fill="#10203c"/>
+<use href="#dialogue-color" transform="translate(44 557) scale(1.25)"/>
+<use href="#dialogue-mono" transform="translate(169 565)" fill="#10203c"/>
+<use href="#dialogue-color" transform="translate(269 579) scale(.5)"/>
+<use href="#dialogue-color" transform="translate(341 583) scale(.375)"/>
+<use href="#dialogue-mono" transform="translate(413 587) scale(.25)" fill="#10203c"/>
+<g fill="#65728a" font-size="11" text-anchor="middle"><text x="84" y="679">Dunkler Hintergrund</text><text x="201" y="657">Einfarbig</text><text x="285" y="657">32 px</text><text x="353" y="657">24 px</text><text x="421" y="657">16 px</text></g>
+</g><g transform="translate(590 0)">
+<rect y="156" width="526" height="548" rx="24" fill="white"/>
+<text x="28" y="195" font-size="12" fill="#65728a" letter-spacing="2">02 / RESONANZ</text>
+<use href="#resonance-color" transform="translate(167 222) scale(3)"/>
+<text x="263" y="455" text-anchor="middle" font-size="25" font-weight="700" letter-spacing="-.6">Game Event Script</text>
+<text x="263" y="486" text-anchor="middle" font-size="14" fill="#65728a">Ein Impuls wird aufgenommen und weitergetragen.</text>
+<path d="M28 516H498" stroke="#edf0f5"/>
+<rect x="28" y="541" width="112" height="112" rx="20" fill="#10203c"/>
+<use href="#resonance-color" transform="translate(44 557) scale(1.25)"/>
+<use href="#resonance-mono" transform="translate(169 565)" fill="#10203c"/>
+<use href="#resonance-color" transform="translate(269 579) scale(.5)"/>
+<use href="#resonance-color" transform="translate(341 583) scale(.375)"/>
+<use href="#resonance-mono" transform="translate(413 587) scale(.25)" fill="#10203c"/>
+<g fill="#65728a" font-size="11" text-anchor="middle"><text x="84" y="679">Dunkler Hintergrund</text><text x="201" y="657">Einfarbig</text><text x="285" y="657">32 px</text><text x="353" y="657">24 px</text><text x="421" y="657">16 px</text></g>
+</g>
+<text x="40" y="749" font-size="13" fill="#65728a">Entwürfe zur Diskussion · Das Website-Logo ist unverändert.</text>
+</g></svg>

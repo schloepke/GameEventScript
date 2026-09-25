@@ -1,0 +1,83 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1196" height="730" viewBox="0 0 1196 730" role="img" aria-labelledby="title desc">
+<title id="title">Drei Logoentwürfe für Game Event Script</title>
+<desc id="desc">Verzweigung, Staffel und Regelkern: drei geometrische Symbole ohne Buchstaben, jeweils groß, klein und einfarbig.</desc>
+<defs><g id="dispatch"><path d="M8 28H21L36 13H44V7H57V20H40L28 32L40 44H57V57H44V51H36L21 36H8Z"/></g><g id="relay"><path d="M8 12H38L48 22V32H36V25L33 22H18V34H8Z"/><path d="M56 52H26L16 42V32H28V39L31 42H46V30H56Z"/></g><g id="rule"><path fill-rule="evenodd" d="M22 8H42L56 22V42L42 56H22L8 42V22ZM25 18L18 25V39L25 46H39L46 39V25L39 18Z"/><path d="M2 27H24V37H2ZM40 27H62V37H40Z"/></g></defs>
+<rect width="1196" height="730" fill="#f5f7fb"/>
+<g font-family="system-ui, sans-serif" fill="#10203c">
+<text x="40" y="43" font-size="12" letter-spacing="2" fill="#526581">GAME EVENT SCRIPT / SYMBOLSTUDIEN</text>
+<text x="40" y="88" font-size="32" font-weight="750">Ein Zeichen für Ereignisse. Kein Buchstabe.</text>
+<text x="40" y="117" font-size="15" fill="#526581">Drei Richtungen — dieselbe Farbe und dieselben Größen für einen direkten Vergleich.</text>
+
+    <g transform="translate(40 0)">
+      <rect y="144" width="352" height="506" rx="20" fill="#fff" stroke="#e2e7ef"/>
+      <text x="24" y="180" font-size="12" letter-spacing="2" fill="#526581">01 / GAME EVENT SCRIPT</text>
+      <use href="#dispatch" transform="translate(94 206) scale(2.5)" fill="#10203c"/>
+      <text x="176" y="405" text-anchor="middle" font-size="24" font-weight="700">Verzweigung</text>
+      <text x="176" y="435" text-anchor="middle" font-size="13" fill="#526581">Ein Eingang. Zwei mögliche Ereignisse.</text>
+      <line x1="24" x2="328" y1="463" y2="463" stroke="#e2e7ef"/>
+      <rect x="24" y="490" width="64" height="64" rx="14" fill="#10203c"/>
+      <use href="#dispatch" transform="translate(24 490)" fill="#97c4ff"/>
+      <rect x="116" y="506" width="32" height="32" rx="7" fill="#10203c"/>
+      <use href="#dispatch" transform="translate(116 506) scale(.5)" fill="#97c4ff"/>
+      <rect x="177" y="510" width="24" height="24" rx="5" fill="#10203c"/>
+      <use href="#dispatch" transform="translate(177 510) scale(.375)" fill="#97c4ff"/>
+      <rect x="230" y="514" width="16" height="16" rx="3.5" fill="#10203c"/>
+      <use href="#dispatch" transform="translate(230 514) scale(.25)" fill="#97c4ff"/>
+      <use href="#dispatch" transform="translate(281 506) scale(.5)" fill="#10203c"/>
+      <g font-size="10" fill="#526581" text-anchor="middle">
+        <text x="56" y="577">64 px</text><text x="132" y="577">32 px</text>
+        <text x="189" y="577">24 px</text><text x="238" y="577">16 px</text>
+        <text x="297" y="577">1 Farbe</text>
+      </g>
+      <text x="176" y="622" text-anchor="middle" font-size="13" fill="#526581">Am nächsten am Event-Prinzip.</text>
+    </g>
+    <g transform="translate(412 0)">
+      <rect y="144" width="352" height="506" rx="20" fill="#fff" stroke="#e2e7ef"/>
+      <text x="24" y="180" font-size="12" letter-spacing="2" fill="#526581">02 / GAME EVENT SCRIPT</text>
+      <use href="#relay" transform="translate(94 206) scale(2.5)" fill="#10203c"/>
+      <text x="176" y="405" text-anchor="middle" font-size="24" font-weight="700">Staffel</text>
+      <text x="176" y="435" text-anchor="middle" font-size="13" fill="#526581">Eine Nachricht setzt die nächste in Gang.</text>
+      <line x1="24" x2="328" y1="463" y2="463" stroke="#e2e7ef"/>
+      <rect x="24" y="490" width="64" height="64" rx="14" fill="#10203c"/>
+      <use href="#relay" transform="translate(24 490)" fill="#97c4ff"/>
+      <rect x="116" y="506" width="32" height="32" rx="7" fill="#10203c"/>
+      <use href="#relay" transform="translate(116 506) scale(.5)" fill="#97c4ff"/>
+      <rect x="177" y="510" width="24" height="24" rx="5" fill="#10203c"/>
+      <use href="#relay" transform="translate(177 510) scale(.375)" fill="#97c4ff"/>
+      <rect x="230" y="514" width="16" height="16" rx="3.5" fill="#10203c"/>
+      <use href="#relay" transform="translate(230 514) scale(.25)" fill="#97c4ff"/>
+      <use href="#relay" transform="translate(281 506) scale(.5)" fill="#10203c"/>
+      <g font-size="10" fill="#526581" text-anchor="middle">
+        <text x="56" y="577">64 px</text><text x="132" y="577">32 px</text>
+        <text x="189" y="577">24 px</text><text x="238" y="577">16 px</text>
+        <text x="297" y="577">1 Farbe</text>
+      </g>
+      <text x="176" y="622" text-anchor="middle" font-size="13" fill="#526581">Kompakt, bewegt und ohne Pfeilspitze.</text>
+    </g>
+    <g transform="translate(784 0)">
+      <rect y="144" width="352" height="506" rx="20" fill="#fff" stroke="#e2e7ef"/>
+      <text x="24" y="180" font-size="12" letter-spacing="2" fill="#526581">03 / GAME EVENT SCRIPT</text>
+      <use href="#rule" transform="translate(94 206) scale(2.5)" fill="#10203c"/>
+      <text x="176" y="405" text-anchor="middle" font-size="24" font-weight="700">Regelkern</text>
+      <text x="176" y="435" text-anchor="middle" font-size="13" fill="#526581">Eine Regel verbindet Ein- und Ausgang.</text>
+      <line x1="24" x2="328" y1="463" y2="463" stroke="#e2e7ef"/>
+      <rect x="24" y="490" width="64" height="64" rx="14" fill="#10203c"/>
+      <use href="#rule" transform="translate(24 490)" fill="#97c4ff"/>
+      <rect x="116" y="506" width="32" height="32" rx="7" fill="#10203c"/>
+      <use href="#rule" transform="translate(116 506) scale(.5)" fill="#97c4ff"/>
+      <rect x="177" y="510" width="24" height="24" rx="5" fill="#10203c"/>
+      <use href="#rule" transform="translate(177 510) scale(.375)" fill="#97c4ff"/>
+      <rect x="230" y="514" width="16" height="16" rx="3.5" fill="#10203c"/>
+      <use href="#rule" transform="translate(230 514) scale(.25)" fill="#97c4ff"/>
+      <use href="#rule" transform="translate(281 506) scale(.5)" fill="#10203c"/>
+      <g font-size="10" fill="#526581" text-anchor="middle">
+        <text x="56" y="577">64 px</text><text x="132" y="577">32 px</text>
+        <text x="189" y="577">24 px</text><text x="238" y="577">16 px</text>
+        <text x="297" y="577">1 Farbe</text>
+      </g>
+      <text x="176" y="622" text-anchor="middle" font-size="13" fill="#526581">Ruhiger und stärker als Emblem.</text>
+    </g>
+<text x="40" y="697" font-size="13" fill="#526581">Entwürfe zur Auswahl · Das aktive Website-Logo bleibt unverändert.</text>
+</g></svg>

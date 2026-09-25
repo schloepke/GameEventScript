@@ -17,12 +17,14 @@
     </PropertyGroup>
 
     <ItemGroup Condition="'$(GesUseUnityDlls)' != 'true'">
+        <PackageReference Include="GameEventScript.SyntaxHighlighter" Version="$(GesPackageVersion)" />
         <PackageReference Include="GameEventScript.Runtime" Version="$(GesPackageVersion)" />
         <PackageReference Include="GameEventScript.Compiler" Version="$(GesPackageVersion)" />
         <PackageReference Include="GameEventScript.CSharpBridge" Version="$(GesPackageVersion)" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(GesUseUnityDlls)' == 'true'">
+        <Reference Include="GameEventScript.SyntaxHighlighter" HintPath="$(GesUnityDllDirectory)/../syntaxhighlighter/GameEventScript.SyntaxHighlighter.dll" Private="true" />
         <Reference Include="GameEventScript.Runtime" HintPath="$(GesUnityDllDirectory)/GameEventScript.Runtime.dll" Private="true" />
         <Reference Include="GameEventScript.CSharpBridge" HintPath="$(GesUnityDllDirectory)/GameEventScript.CSharpBridge.dll" Private="true" />
         <Reference Include="GameEventScript.Compiler" HintPath="$(GesCompilerDllDirectory)/GameEventScript.Compiler.dll" Private="true" />

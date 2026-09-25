@@ -11,6 +11,8 @@
 - C# adapters: `implementation/csharp/GameEventScript.CSharpBridge/src`.
 - Portable Conformance package:
   `implementation/csharp/GameEventScript.Conformance/src`.
+- Optional C# highlighter: `implementation/csharp/GameEventScript.SyntaxHighlighter`.
+- Optional Swift highlighter: `implementation/swift/GameEventScriptSyntaxHighlighter`.
 - C# CLI tool: `implementation/csharp/GameEventScript.Tool/src`.
 - C# native tests: each module’s `tests` directory; shared test support and
   repository/distribution gates: `implementation/csharp/verification`.
@@ -261,7 +263,7 @@ current C# implementation, not cross-platform benchmark claims.
 Verified baseline (Release, 2026-09-23):
 
 ```text
-2193/2193 non-performance test executions passed
+2196/2196 non-performance test executions passed
 32/32 allocation test executions passed, including the independent zero-allocation hot path
 1679 shared Markdown Conformance cases in 96 documents
 ```
@@ -277,16 +279,16 @@ are not included in these counts.
 
 ## Package distribution
 
-Public NuGet distribution consists only of Runtime, Compiler and CSharpBridge,
+Public NuGet distribution consists of Runtime, Compiler, CSharpBridge and SyntaxHighlighter,
 with one release version and canonical packages below
 `artifacts/csharp/packages/<version>`. Conformance is not packable. CLI NuGet
 packages are local installation artifacts only. DLL distribution also excludes
 Conformance. Keep the explicit upload allowlist in
 `scripts/publish-csharp-packages.sh`; its fake-client tests never publish.
 
-The root `Package.swift` is the public SwiftPM entry point with three library
-products: GameEventScriptRuntime, GameEventScriptCompiler and
-GameEventScriptSwiftBridge. They use existing sources and share a Git tag/version;
+The root `Package.swift` is the public SwiftPM entry point with four library
+products: GameEventScriptRuntime, GameEventScriptCompiler,
+GameEventScriptSwiftBridge and GameEventScriptSyntaxHighlighter. They use existing sources and share a Git tag/version;
 local development packages remain separate. Do not expose CLI or Conformance in
 the root manifest. `python3 scripts/test-swift-package.py` checks tagged Git
 consumption, the product/dependency graph and Runtime-only builds in disposable
@@ -386,11 +388,15 @@ Build products, symbol graphs, generated binary inputs and reports belong under
 ignored `artifacts`. Public Swift API changes update `specs/PublicApi.md` and
 `implementation/swift/api`. The separate `GameEventScriptTool` package implements
 the native Swift `ges` CLI; it depends on Runtime and Compiler, never Conformance.
-Foundation, filesystem/console I/O and POSIX terminal editing remain in that
-executable package. `scripts/test-swift-tool.sh` verifies CLI adapters and real
+Filesystem/console I/O and POSIX terminal editing remain in that
+executable package. The optional standalone SyntaxHighlighter uses Foundation
+Regex and has no Runtime/Compiler dependency. Both CLIs delegate highlighting
+to their platform highlighter package. UTF-16 spans, TextMate scopes and incremental
+states are specified in specs/SyntaxHighlighting.md and share Markdown cases under
+conformance/highlighting. `scripts/test-swift-tool.sh` verifies CLI adapters and real
 process/PTY behavior without .NET; the full Swift test script includes it.
 The GES/GESA grammars are embedded from the canonical TextMate files; refresh
-them with `scripts/sync-swift-cli-grammars.py` and verify with `--check`.
+them with `scripts/sync-highlighter-grammars.py` and verify with `--check`.
 `install-swift-tool.sh` builds and installs/updates `ges` in `$HOME/.local/bin`
 or a selected `--tool-path`; the matching uninstall script removes only its
 owned binary. The C# `dotnet ges` and Swift `ges` commands can coexist.

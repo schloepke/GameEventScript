@@ -13,6 +13,10 @@ callback forms, but it must preserve the responsibilities, state transitions,
 ordering, errors, and data described here. The public C# API snapshot is a
 regression tool for the C# binding and is not the portable API definition.
 
+The optional standalone presentation API is specified in
+[Syntax highlighting](SyntaxHighlighting.md). Its C# and Swift packages have no
+Runtime, Compiler, Bridge or Conformance dependency and are not part of VM execution.
+
 ## Scope and dependency direction
 
 The portable surface consists of three modules:

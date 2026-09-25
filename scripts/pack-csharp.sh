@@ -19,12 +19,14 @@ mkdir -p "$package_output"
 cd "$repository_root"
 dotnet restore GameEventScript.sln -p:NuGetAudit=false
 
-for package_id in GameEventScript.Runtime GameEventScript.Compiler GameEventScript.CSharpBridge; do
+for package_id in GameEventScript.Runtime GameEventScript.Compiler GameEventScript.CSharpBridge GameEventScript.SyntaxHighlighter; do
     rm -f "$package_output/$package_id.$release_version.nupkg" "$package_output/$package_id.$release_version.snupkg"
 done
 
 dotnet pack implementation/csharp/GameEventScript.Runtime/src/GameEventScript.Runtime.csproj --configuration Release --no-restore --output "$package_output" -p:Version="$release_version" -p:PackageVersion="$release_version"
 dotnet pack implementation/csharp/GameEventScript.Compiler/src/GameEventScript.Compiler.csproj --configuration Release --no-restore --output "$package_output" -p:Version="$release_version" -p:PackageVersion="$release_version"
 dotnet pack implementation/csharp/GameEventScript.CSharpBridge/src/GameEventScript.CSharpBridge.csproj --configuration Release --no-restore --output "$package_output" -p:Version="$release_version" -p:PackageVersion="$release_version"
+
+dotnet pack implementation/csharp/GameEventScript.SyntaxHighlighter/src/GameEventScript.SyntaxHighlighter.csproj --configuration Release --no-restore --output "$package_output" -p:Version="$release_version" -p:PackageVersion="$release_version"
 
 dotnet run --project implementation/csharp/verification/GameEventScript.PackageTool/GameEventScript.PackageTool.csproj --configuration Release --no-restore -- prepare "$package_output" "$release_version" "$repository_root"

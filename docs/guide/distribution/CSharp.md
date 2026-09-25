@@ -3,7 +3,7 @@
 
 # C# distribution
 
-The C# reference implementation publishes three independently consumable
+The C# reference implementation publishes four independently consumable
 packages under the `GameEventScript` product name:
 
 - `GameEventScript.Runtime` contains the portable Runtime, Program codec and
@@ -12,6 +12,9 @@ packages under the `GameEventScript` product name:
   and compilation options/errors and depends only on Runtime.
 - `GameEventScript.CSharpBridge` contains optional C# delegate, reflection,
   dictionary, and automatic-runner adapters and depends only on Runtime.
+
+- `GameEventScript.SyntaxHighlighter` contains optional GES/GESA editor ranges,
+  TextMate scopes, incremental states and ANSI rendering, with no GES dependency.
 
 Conformance remains an internal project for repository verification. The CLI is
 not published on NuGet; its local tool package is only an installation mechanism.
@@ -23,7 +26,7 @@ Source compilation additionally requires Compiler. The direct entry points are
 File reading belongs to the CLI or embedding, which supplies text through
 `AddScript(text, sourceName)`; the previous Bridge `AddFile` helper is removed.
 
-All three public libraries target `netstandard2.1`. Their NuGet packages contain the
+All four public libraries target `netstandard2.1`. Their NuGet packages contain the
 Apache-2.0 license, repository README, XML API documentation, deterministic
 assemblies, and separate portable-PDB symbol packages.
 
@@ -72,7 +75,10 @@ artifacts/csharp/
     GameEventScript.Compiler.<version>.snupkg
     GameEventScript.CSharpBridge.<version>.nupkg
     GameEventScript.CSharpBridge.<version>.snupkg
+    GameEventScript.SyntaxHighlighter.<version>.nupkg
+    GameEventScript.SyntaxHighlighter.<version>.snupkg
   dll/<version>/
+    syntaxhighlighter/ # Standalone highlighter DLL, PDB and XML
     runtime/
     compiler/
     unity/
@@ -125,5 +131,5 @@ follow-up work is tracked in `BACKLOG.md`.
 
 The [package release guide](Packages.md) describes owner configuration, Trusted
 Publishing and the shared Git-tag/version workflow. The upload script explicitly
-selects Runtime, Compiler and CSharpBridge at the requested version, including
+selects Runtime, Compiler, CSharpBridge and SyntaxHighlighter at the requested version, including
 their symbol packages. It never uploads every package found in a directory.

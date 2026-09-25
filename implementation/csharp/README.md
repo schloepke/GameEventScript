@@ -12,10 +12,11 @@ separate libraries; the CLI is a separate application.
 | [`GameEventScript.Runtime`](GameEventScript.Runtime) | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types | .NET Standard library |
 | [`GameEventScript.Compiler`](GameEventScript.Compiler) | Source lexer/parser, validation, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime |
 | [`GameEventScript.CSharpBridge`](GameEventScript.CSharpBridge) | Delegate adapters, Reflection/attribute bindings, CLR value conversion and optional automatic host pumping | Runtime |
+| [`GameEventScript.SyntaxHighlighter`](GameEventScript.SyntaxHighlighter/README.md) | GES/GESA UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | .NET Standard library |
 | [`GameEventScript.Conformance`](GameEventScript.Conformance/README.md) | Shared Markdown parser, compiler/runtime orchestration, fixture verification and result reports | Runtime and Compiler |
-| [`GameEventScript.Tool`](GameEventScript.Tool/README.md) / `dotnet ges` | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, CSharpBridge and PrettyPrompt |
+| [`GameEventScript.Tool`](GameEventScript.Tool/README.md) / `dotnet ges` | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, CSharpBridge, SyntaxHighlighter and PrettyPrompt |
 
-All four libraries target **.NET Standard 2.1** and use **C# 12**. Runtime,
+All five libraries target **.NET Standard 2.1** and use **C# 12**. Runtime,
 Compiler and Conformance are synchronous, fileless and independent of a test
 framework. CLR-specific adapters belong to CSharpBridge. Compiler and
 CSharpBridge each depend only on Runtime, so a product executing precompiled
@@ -76,7 +77,7 @@ checkout correctly when invoked by absolute path from another directory:
 | `./scripts/test-csharp-performance.sh` | Run Release allocation and elapsed-time gates; timing measurements require the matching calibrated profile |
 | `./scripts/install-csharp-tool.sh` | Build the solution and install/update the global `dotnet ges` CLI |
 | `./scripts/uninstall-csharp-tool.sh` | Remove the C# CLI installation; succeeds when already absent |
-| `./scripts/pack-csharp.sh 0.1.0-rc1` | Build canonical NuGet and symbol packages for the three public libraries |
+| `./scripts/pack-csharp.sh 0.1.0-rc1` | Build canonical NuGet and symbol packages for the four public libraries |
 | `./scripts/release-csharp-dry-run.sh 0.1.0-rc1` | Pack, stage DLL sets and verify artifact consumption without publishing |
 | `./scripts/verify-csharp-reproducibility.sh 0.1.0-rc1` | Build packages independently twice and verify byte-identical results |
 
@@ -257,7 +258,7 @@ ordering, execution limits and diagnostic behavior.
 
 ## Distribution
 
-Runtime, Compiler and CSharpBridge are packaged independently with a shared
+Runtime, Compiler, CSharpBridge and SyntaxHighlighter are packaged independently with a shared
 release version. Conformance stays internal; the CLI is not published on NuGet.
 Local packages are written to
 `artifacts/csharp/packages/<version>`; the release dry run also stages versioned DLL sets

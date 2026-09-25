@@ -9,6 +9,7 @@ import PackageDescription
 let package = Package(
     name: "GameEventScript",
     products: [
+        .library(name: "GameEventScriptSyntaxHighlighter", targets: ["GameEventScriptSyntaxHighlighter"]),
         .library(name: "GameEventScriptRuntime", targets: ["GameEventScriptRuntime"]),
         .library(name: "GameEventScriptCompiler", targets: ["GameEventScriptCompiler"]),
         .library(name: "GameEventScriptSwiftBridge", targets: ["GameEventScriptSwiftBridge"]),
@@ -25,6 +26,7 @@ let package = Package(
             ],
             path: "implementation/swift/GameEventScriptSwiftBridge/Sources/GameEventScriptSwiftBridgeMacros"
         ),
+        .target(name: "GameEventScriptSyntaxHighlighter", path: "implementation/swift/GameEventScriptSyntaxHighlighter/Sources/GameEventScriptSyntaxHighlighter"),
         .target(name: "GameEventScriptRuntime", path: "implementation/swift/GameEventScriptRuntime/Sources/GameEventScriptRuntime"),
         .target(name: "GameEventScriptCompiler", dependencies: ["GameEventScriptRuntime"], path: "implementation/swift/GameEventScriptCompiler/Sources/GameEventScriptCompiler"),
         .target(name: "GameEventScriptSwiftBridge", dependencies: ["GameEventScriptRuntime", "GameEventScriptSwiftBridgeMacros"], path: "implementation/swift/GameEventScriptSwiftBridge/Sources/GameEventScriptSwiftBridge"),

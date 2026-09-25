@@ -1,0 +1,10 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="../../verification/Tests.props" />
+    <ItemGroup>
+        <Compile Remove="../../verification/TestSupport/*.cs" />
+        <Compile Include="../../verification/TestSupport/TestRepositoryPaths.cs" Link="TestSupport/TestRepositoryPaths.cs" />
+        <ProjectReference Include="../src/GameEventScript.SyntaxHighlighter.csproj" />
+    </ItemGroup>
+</Project>

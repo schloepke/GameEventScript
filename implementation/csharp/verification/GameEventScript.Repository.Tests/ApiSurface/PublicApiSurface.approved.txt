@@ -1685,3 +1685,47 @@ struct GameEventScript.Runtime.Values.GesValueSlice
   property GameEventScript.Runtime.Values.GesValue& Item { get }
   property System.Int32 Length { get }
   property System.Int32 Start { get }
+static class GameEventScript.SyntaxHighlighter.GameEventScriptAnsiRenderer
+  method static System.Int32? DefaultColor(GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxKind kind)
+  method static System.String Render(System.String source, System.Collections.Generic.IReadOnlyList<GameEventScript.SyntaxHighlighter.GameEventScriptHighlightSpan> spans, System.Func<GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxKind, System.Int32?> color)
+sealed class GameEventScript.SyntaxHighlighter.GameEventScriptHighlightResult
+  property GameEventScript.SyntaxHighlighter.GameEventScriptHighlightState NextState { get }
+  property System.Boolean IsComplete { get }
+  property System.Collections.Generic.IReadOnlyList<GameEventScript.SyntaxHighlighter.GameEventScriptHighlightSpan> Spans { get }
+sealed class GameEventScript.SyntaxHighlighter.GameEventScriptHighlightSpan
+  property GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxKind Kind { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> Scopes { get }
+  property System.Int32 Length { get }
+  property System.Int32 Start { get }
+sealed class GameEventScript.SyntaxHighlighter.GameEventScriptHighlightState
+  method System.Boolean Equals(GameEventScript.SyntaxHighlighter.GameEventScriptHighlightState other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  property GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxLanguage Language { get }
+sealed class GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxHighlighter
+  ctor GameEventScriptSyntaxHighlighter(GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxLanguage language, System.Int32 maxInputLength)
+  method GameEventScript.SyntaxHighlighter.GameEventScriptHighlightResult Highlight(System.String text)
+  method GameEventScript.SyntaxHighlighter.GameEventScriptHighlightResult HighlightLine(System.String text, GameEventScript.SyntaxHighlighter.GameEventScriptHighlightState state)
+  method GameEventScript.SyntaxHighlighter.GameEventScriptHighlightState CreateState()
+  property GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxLanguage Language { get }
+  property System.Int32 MaxInputLength { get }
+enum GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxKind
+  enum-field Plain = 0
+  enum-field Keyword = 1
+  enum-field Builtin = 2
+  enum-field Identifier = 3
+  enum-field Message = 4
+  enum-field Type = 5
+  enum-field Tag = 6
+  enum-field Constant = 7
+  enum-field Number = 8
+  enum-field String = 9
+  enum-field Comment = 10
+  enum-field Symbol = 11
+  enum-field Function = 12
+  enum-field Module = 13
+  enum-field Label = 14
+  enum-field Register = 15
+enum GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxLanguage
+  enum-field Ges = 0
+  enum-field Gesa = 1

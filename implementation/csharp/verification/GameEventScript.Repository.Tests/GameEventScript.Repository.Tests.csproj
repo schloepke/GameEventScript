@@ -4,6 +4,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <Import Project="../Tests.props" />
     <ItemGroup>
+        <ProjectReference Include="../../GameEventScript.SyntaxHighlighter/src/GameEventScript.SyntaxHighlighter.csproj" />
         <ProjectReference Include="../../GameEventScript.Runtime/src/GameEventScript.Runtime.csproj" />
         <ProjectReference Include="../../GameEventScript.Compiler/src/GameEventScript.Compiler.csproj" />
         <ProjectReference Include="../../GameEventScript.CSharpBridge/src/GameEventScript.CSharpBridge.csproj" />

@@ -8,6 +8,10 @@ ges_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ges_package="$ges_root/implementation/swift/GameEventScriptConformance"
 ges_scratch="$ges_root/artifacts/swift/conformance"
 
+python3 "$ges_root/scripts/sync-highlighter-grammars.py" --check
+swift test --package-path "$ges_root/implementation/swift/GameEventScriptSyntaxHighlighter" \
+    --scratch-path "$ges_root/artifacts/swift/syntaxhighlighter" --build-system native --disable-build-manifest-caching --configuration release
+
 swift test --package-path "$ges_root/implementation/swift/GameEventScriptSwiftBridge" \
     --scratch-path "$ges_root/artifacts/swift/swiftbridge" --build-system native --disable-build-manifest-caching --configuration release
 "$ges_root/scripts/test-swift-tool.sh"

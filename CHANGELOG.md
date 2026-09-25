@@ -12,6 +12,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Standalone C# and Swift SyntaxHighlighter libraries, shared with both CLIs,
+  using canonical TextMate rules. They expose UTF-16 ranges, semantic categories,
+  scope stacks, incremental line states and an optional ANSI renderer.
+
 - SwiftBridge annotations `@GesType`, `@GesField` and `@GesConstruct` generate
   native bindings, with inferred field types and explicit numeric units.
 
@@ -59,6 +63,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   new opcodes require an updated Runtime; older validators reject them.
 
 ### Fixed
+
+- Swift highlighting preserves Unicode separators inside comments and GESA
+  source-line strings without misclassifying subsequent assembler instructions.
+- C# and Swift highlighting retain declaration keyword colors across line breaks
+  and while declarations are incomplete.
 
 - Swift CLI recognizes application-mode cursor keys used by Ghostty.
 - C# CLI retains command history when switching between the ordinary prompt

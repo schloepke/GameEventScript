@@ -51,6 +51,18 @@
     "keywords": {
       "patterns": [
         {
+          "match": "\\bmodule\\b",
+          "name": "keyword.control.module.gameeventscript"
+        },
+        {
+          "match": "\\bon\\b",
+          "name": "keyword.control.handler.gameeventscript"
+        },
+        {
+          "match": "\\b(?:let|record|function|predicate)\\b",
+          "name": "keyword.other.definition.gameeventscript"
+        },
+        {
           "match": "\\b(?:if|else|for|in|from|to|when|otherwise|matching|without|with)\\b",
           "name": "keyword.control.gameeventscript",
           "comment": "if headers and then bodies share a local scope; else has a sibling scope, with or without braces."
@@ -459,7 +471,8 @@
               "name": "constant.character.escape.quote.gameeventscript"
             }
           ],
-          "name": "string.quoted.single.gameeventscript"
+          "name": "string.quoted.single.gameeventscript",
+          "applyEndPatternLast": true
         },
         {
           "begin": "\"",
@@ -470,7 +483,8 @@
               "name": "constant.character.escape.quote.gameeventscript"
             }
           ],
-          "name": "string.quoted.double.gameeventscript"
+          "name": "string.quoted.double.gameeventscript",
+          "applyEndPatternLast": true
         }
       ]
     },

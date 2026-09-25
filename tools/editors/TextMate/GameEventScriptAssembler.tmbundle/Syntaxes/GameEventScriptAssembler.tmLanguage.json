@@ -80,6 +80,30 @@
           "name": "meta.embedded.source-line.gameeventscript.assembler",
           "patterns": [
             {
+              "begin": "'",
+              "end": "'|$",
+              "name": "string.quoted.single.gameeventscript",
+              "applyEndPatternLast": true,
+              "patterns": [
+                {
+                  "match": "''",
+                  "name": "constant.character.escape.quote.gameeventscript"
+                }
+              ]
+            },
+            {
+              "begin": "\"",
+              "end": "\"|$",
+              "name": "string.quoted.double.gameeventscript",
+              "applyEndPatternLast": true,
+              "patterns": [
+                {
+                  "match": "\"\"",
+                  "name": "constant.character.escape.quote.gameeventscript"
+                }
+              ]
+            },
+            {
               "include": "source.gameeventscript"
             }
           ]

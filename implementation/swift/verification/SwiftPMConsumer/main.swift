@@ -5,6 +5,7 @@ import Foundation
 import GameEventScriptCompiler
 import GameEventScriptRuntime
 import GameEventScriptSwiftBridge
+import GameEventScriptSyntaxHighlighter
 
 @GesType("ConsumerPoint")
 struct ConsumerPoint {
@@ -15,6 +16,8 @@ struct ConsumerPoint {
     init(value: Int) { self.value = value }
 }
 
+let highlighted = try GameEventScriptSyntaxHighlighter().highlight("emit Done(42)")
+precondition(highlighted.isComplete && highlighted.spans.contains { $0.kind == .number })
 let pointType = try ConsumerPoint.createGesType()
 let types = try GameEventScriptSwiftExternalTypeRegistry([pointType.binding])
 let program = try GameEventScriptBuilder.create().addScript("on Start(value) { emit Done(result: (parse value) + 1) }").compile()

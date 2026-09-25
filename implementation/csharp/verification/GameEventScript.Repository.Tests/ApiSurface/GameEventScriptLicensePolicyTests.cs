@@ -31,6 +31,7 @@ public sealed class GameEventScriptLicensePolicyTests
     {
         var projects = new[]
         {
+            (TestRepositoryPaths.SyntaxHighlighterProjectDirectory, "GameEventScript.SyntaxHighlighter", "TextMate-based GES and GESA syntax highlighting for editors and terminals. Independent of Runtime and Compiler."),
             (TestRepositoryPaths.LibraryProjectDirectory, "GameEventScript.Runtime", "Portable, deterministic Game Event Script runtime, serial message host, and Program binary codec. No source compiler dependency."),
             (TestRepositoryPaths.CompilerProjectDirectory, "GameEventScript.Compiler", "Portable Game Event Script source compiler. Depends on the separately consumable runtime."),
             (TestRepositoryPaths.CSharpBridgeProjectDirectory, "GameEventScript.CSharpBridge", "C# adapters for Game Event Script reflection, delegates, dictionaries, and automatic host execution.")

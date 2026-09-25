@@ -203,6 +203,44 @@
 					<key>patterns</key>
 					<array>
 						<dict>
+							<key>begin</key>
+							<string>'</string>
+							<key>end</key>
+							<string>'|$</string>
+							<key>name</key>
+							<string>string.quoted.single.gameeventscript</string>
+							<key>applyEndPatternLast</key>
+							<true/>
+							<key>patterns</key>
+							<array>
+								<dict>
+									<key>match</key>
+									<string>''</string>
+									<key>name</key>
+									<string>constant.character.escape.quote.gameeventscript</string>
+								</dict>
+							</array>
+						</dict>
+						<dict>
+							<key>begin</key>
+							<string>"</string>
+							<key>end</key>
+							<string>"|$</string>
+							<key>name</key>
+							<string>string.quoted.double.gameeventscript</string>
+							<key>applyEndPatternLast</key>
+							<true/>
+							<key>patterns</key>
+							<array>
+								<dict>
+									<key>match</key>
+									<string>""</string>
+									<key>name</key>
+									<string>constant.character.escape.quote.gameeventscript</string>
+								</dict>
+							</array>
+						</dict>
+						<dict>
 							<key>include</key>
 							<string>source.gameeventscript</string>
 						</dict>

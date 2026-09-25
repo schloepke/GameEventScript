@@ -10,6 +10,8 @@ namespace GameEventScript.Tests.Native.Tool;
 
 /// <summary>Verifies embedded-source inspection and CLI-only GES/GESA syntax coloring.</summary>
 [TestClass]
+// Color assertions must not compete with parallel process tests for the highlighter's wall-clock safety budget.
+[DoNotParallelize]
 public sealed class GameEventScriptConsoleSourceTests
 {
     private string _directory = null!;

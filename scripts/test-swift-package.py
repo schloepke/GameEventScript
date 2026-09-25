@@ -16,7 +16,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
 MACROS = "GameEventScriptSwiftBridgeMacros"
-MODULES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge")
+MODULES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptSyntaxHighlighter")
 
 
 def run(arguments, cwd, log):
@@ -46,7 +46,7 @@ def main():
     products = {item["name"]: item for item in description["products"]}
     targets = {item["name"]: item for item in description["targets"]}
     if set(products) - {MACROS} != set(MODULES) or set(targets) != {*MODULES, MACROS}:
-        raise RuntimeError("Distribution must contain three public libraries and one internal macro target.")
+        raise RuntimeError("Distribution must contain four public libraries and one internal macro target.")
     dependencies = description.get("dependencies", [])
     if len(dependencies) != 1 or dependencies[0].get("identity") != "swift-syntax":
         raise RuntimeError("Only the official swift-syntax build dependency is permitted.")
@@ -57,7 +57,7 @@ def main():
     for module in MODULES:
         if products[module]["type"] != {"library": ["automatic"]} or products[module]["targets"] != [module]:
             raise RuntimeError(f"Unexpected product definition for {module}")
-        expected = [] if module == "GameEventScriptRuntime" else ["GameEventScriptRuntime"]
+        expected = [] if module in ("GameEventScriptRuntime", "GameEventScriptSyntaxHighlighter") else ["GameEventScriptRuntime"]
         if module == "GameEventScriptSwiftBridge":
             expected.append(MACROS)
         if targets[module].get("target_dependencies", []) != expected:

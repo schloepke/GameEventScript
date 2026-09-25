@@ -32,11 +32,14 @@ implementation guides.
 | --- | --- | --- |
 | Execute precompiled `.gesb` programs | `GameEventScript.Runtime` | `GameEventScriptRuntime` |
 | Also compile GES source text | `GameEventScript.Compiler` | `GameEventScriptCompiler` |
+| Editor and terminal syntax highlighting | `GameEventScript.SyntaxHighlighter` | `GameEventScriptSyntaxHighlighter` |
 | Native callbacks and type adapters | `GameEventScript.CSharpBridge` | `GameEventScriptSwiftBridge` |
 
 Compiler and each native Bridge depend only on Runtime. Precompiled applications
 can omit Compiler; the native Bridge is optional. CLI and Conformance are not
-part of the public library packages.
+part of the public library packages. The optional highlighter has no GES library
+dependencies; see its [C#](implementation/csharp/GameEventScript.SyntaxHighlighter/README.md)
+and [Swift](implementation/swift/GameEventScriptSyntaxHighlighter/README.md) guides.
 
 ### C# / NuGet
 
@@ -247,7 +250,7 @@ Install or update the native Swift `ges` command with
 `./scripts/install-swift-tool.sh`; remove it with `./scripts/uninstall-swift-tool.sh`.
 Both accept `--tool-path DIRECTORY` and otherwise use `$HOME/.local/bin`.
 See the [Swift CLI guide](implementation/swift/GameEventScriptTool/README.md).
-The root `Package.swift` exposes Runtime, Compiler and SwiftBridge through one
+The root `Package.swift` exposes Runtime, Compiler, SwiftBridge and SyntaxHighlighter through one
 Git-based SwiftPM dependency. See the [Xcode installation instructions](docs/guide/distribution/Packages.md#swiftpm-and-xcode).
 Verify the distribution with `python3 scripts/test-swift-package.py`; no registry
 upload is required.

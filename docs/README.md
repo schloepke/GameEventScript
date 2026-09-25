@@ -17,6 +17,7 @@ Every contract area has exactly one owning document. Other documents link to tha
 | Contract area | Owning document | Responsibility | Status |
 | --- | --- | --- | --- |
 | Language | [Language](../specs/Language.md) | Lexical grammar, syntax, static semantics, and language constructs | Normative |
+| Syntax highlighting | [Highlighting](../specs/SyntaxHighlighting.md) | Optional editor/terminal ranges, TextMate scopes and incremental states | Normative |
 | Public API | [Public API](../specs/PublicApi.md) | Language-neutral API responsibilities and per-language mappings | Normative |
 | Product JSON | [Message format](../specs/MessageFormat.md) | Optional versioned message/value transport and external snapshots | Normative |
 | Host runtime | [Host runtime](../specs/HostRuntime.md) | Host lifecycle, dispatch, execution, context, and outbound behavior | Normative |

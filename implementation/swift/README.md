@@ -8,11 +8,12 @@
 | `GameEventScriptRuntime` | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types | Swift standard library and platform math library |
 | `GameEventScriptCompiler` | Source lexer/parser, validation, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime |
 | [`GameEventScriptSwiftBridge`](GameEventScriptSwiftBridge/README.md) | Native closure adapters, typed value conversion, KeyPath/external-type bindings and an optional synchronized Host runner | Runtime; Foundation for the runner |
+| [`GameEventScriptSyntaxHighlighter`](GameEventScriptSyntaxHighlighter/README.md) | GES/GESA UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | Foundation |
 | `GameEventScriptConformance` | Shared Markdown parser, native compilation/execution, bounded fixture verification, result reports | Runtime and Compiler |
-| `GameEventScriptTool` / `ges` executable | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, Foundation and POSIX |
+| `GameEventScriptTool` / `ges` executable | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, SyntaxHighlighter, Foundation and POSIX |
 
 Runtime, Compiler and Conformance APIs are synchronous, fileless, and independent of a test framework.
-There are no external package dependencies. The `ges-conformance` executable
+The optional SwiftBridge macro target uses the official swift-syntax build dependency. The `ges-conformance` executable
 owns file discovery, input loading, process exit status, and report writing.
 Compiler depends only on Runtime; an embedding using Runtime does not acquire
 either Compiler or Conformance. SwiftBridge is an optional Runtime-only adapter
@@ -22,7 +23,7 @@ is the user-facing tool; `ges-conformance` is the corpus verification tool.
 ## Build and verify
 
 For application dependencies, use the repository-root SwiftPM package. It exposes
-Runtime, Compiler and SwiftBridge as three selectable library products with one
+Runtime, Compiler, SwiftBridge and SyntaxHighlighter as four selectable library products with one
 shared version. The packages below this directory remain local development entry
 points; CLI and Conformance are internal to the repository distribution.
 See the [package release guide](../../docs/guide/distribution/Packages.md) for
@@ -31,7 +32,7 @@ Xcode installation, tagged consumer verification and release preparation.
 ### Xcode workspace
 
 [`GameEventScript.xcworkspace`](GameEventScript.xcworkspace) opens Runtime,
-Compiler, SwiftBridge, Conformance and the CLI together. The workspace references the local
+Compiler, SwiftBridge, SyntaxHighlighter, Conformance and the CLI together. The workspace references the local
 SwiftPM packages directly; their `Package.swift` manifests remain the build configuration.
 There are no duplicate `.xcodeproj` targets or source lists to maintain.
 
@@ -48,7 +49,7 @@ are ignored by Git; the workspace and shared test scheme are tracked. After the
 first setup, the workspace can also be opened directly in Finder.
 
 Select **My Mac** and one of the `GameEventScriptRuntime`,
-`GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptConformance` or `GameEventScriptTool`
+`GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntaxHighlighter`, `GameEventScriptConformance` or `GameEventScriptTool`
 schemes to build with **Cmd+B**. The shared `GameEventScriptTool` scheme builds the
 `ges` executable: **Cmd+R** launches it with `--help`, **Cmd+U** runs its native CLI
 tests, and Profile uses the Release executable. Change CLI arguments under

@@ -194,6 +194,11 @@ The Website workflow builds native references in separate .NET/Linux and
 Swift/macOS jobs. It downloads only artifacts from the same run, checks their
 commit and source-input fingerprint, and publishes the combined site through the
 existing `site` branch. Missing module output also fails the build.
+Swift API output and the assembled website travel between CI jobs as `.tar.gz`
+files. DocC symbol filenames contain colons, which GitHub's individual-file
+artifact uploader rejects; archiving preserves those names and their links.
+Extract the `website.tar.gz` artifact before a manual upload. Its contents have
+the same layout as `artifacts/website/dist/`.
 `python3 scripts/test-api-docs.py` exercises these failure controls without native
 toolchains. Generation and local builds never publish.
 

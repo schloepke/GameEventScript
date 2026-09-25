@@ -16,7 +16,7 @@ permissions:
 # also rejects stale main revisions, including manually rerun historical jobs.
 concurrency:
   group: website-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   ASTRO_TELEMETRY_DISABLED: '1'
@@ -50,10 +50,15 @@ jobs:
           persist-credentials: false
       - name: Generate public Swift API with DocC
         run: python3 scripts/build-api-docs.py --language swift
+      # DocC uses colons in symbol filenames, which upload-artifact rejects.
+      # Archive without renaming the files: DocC links depend on their names.
+      - name: Archive Swift API for transport
+        run: COPYFILE_DISABLE=1 tar -czf artifacts/website/api-swift.tar.gz -C artifacts/website/api/swift .
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: website-api-swift
-          path: artifacts/website/api/swift/
+          path: artifacts/website/api-swift.tar.gz
+          compression-level: 0
           if-no-files-found: error
           retention-days: 7
 
@@ -93,7 +98,11 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: website-api-swift
-          path: artifacts/website/api/swift/
+          path: artifacts/website/transport/
+      - name: Restore Swift API filenames
+        run: |
+          mkdir -p artifacts/website/api/swift
+          tar -xzf artifacts/website/transport/api-swift.tar.gz -C artifacts/website/api/swift
       - name: Verify API staging controls
         run: python3 scripts/test-api-docs.py
 
@@ -101,12 +110,16 @@ jobs:
         working-directory: website
         run: npm run build
 
+      # The assembled site also contains DocC's colon-bearing filenames.
+      - name: Archive verified static site
+        run: tar -czf artifacts/website/website.tar.gz -C artifacts/website/dist .
+
       - name: Upload verified static site
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: website
-          path: artifacts/website/dist/
-          include-hidden-files: true
+          path: artifacts/website/website.tar.gz
+          compression-level: 0
           if-no-files-found: error
           retention-days: 14
 
@@ -125,7 +138,12 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: website
-          path: artifacts/website/dist/
+          path: artifacts/website/transport/
+
+      - name: Restore verified static site
+        run: |
+          mkdir -p artifacts/website/dist
+          tar -xzf artifacts/website/transport/website.tar.gz -C artifacts/website/dist
 
       - name: Publish to the site branch
         env:

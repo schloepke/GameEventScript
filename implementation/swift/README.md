@@ -133,6 +133,20 @@ Clean is performed during installation. Use the same option for manual native
 SwiftPM builds after source-structure changes. The incremental CI test exercises
 these changes in disposable packages and verifies object reuse on an unchanged build.
 
+Swift CI skips native verification only when all changes are confined to the
+website, guides or the explicit root documentation allowlist. Specifications,
+Conformance cases, implementation files, scripts, manifests, workflows and unknown
+paths still require every check. Manual workflow runs always verify everything;
+the required `verify` check fails if change selection fails. Run
+`python3 scripts/test-ci-swift-scope.py` to exercise these selection rules.
+
+Local-package and API build directories are cached by OS, architecture, Swift/Xcode
+toolchain and build configuration. Tests and symbol extraction still execute on
+cache hits. The tagged distribution consumers, root distribution tests and
+incremental-build controls always use fresh isolated workspaces. The first run
+after a cache miss remains a full build; subsequent runs can reuse dependencies.
+Newer revisions cancel obsolete CI runs for the same branch or pull request.
+
 Use Swift 6.0 or newer. The complete verification script additionally uses .NET 10
 for independent cross-language binary inputs:
 

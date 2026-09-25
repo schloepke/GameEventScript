@@ -349,6 +349,13 @@ This regenerates build planning, not compiled objects. Keep the same option in
 new native SwiftPM entry points. `python3 scripts/test-swift-incremental.py`
 verifies source discovery and unchanged-build object reuse through the build script.
 Run `./scripts/test-swift.sh` and `python3 scripts/verify-swift-api.py`.
+Swift CI uses `scripts/ci-swift-scope.py` to skip native checks only for known
+website/guide-only changes; specs, corpus, scripts and unknown paths run all gates.
+The required `verify` check must remain present and fail on scope-selection errors.
+Manual runs always verify everything. Stable local/API SwiftPM build directories
+may be cached by toolchain and build configuration, but tests must still execute;
+tagged-consumer and incremental-build controls retain fresh isolated workspaces.
+Verify scope selection with `python3 scripts/test-ci-swift-scope.py`.
 The test script uses .NET 10 to export C#-compiled binary inputs below
 `artifacts/swift/runtime-fixtures`, then verifies Swift in Release against the
 original Markdown expectations. The manifest binds each input to its binary
@@ -507,6 +514,8 @@ Generate public C#/Swift API references first with
 Website preparation rejects missing/stale references using source revision and
 input hashes; its failure controls are `python3 scripts/test-api-docs.py`.
 Only Runtime, Compiler, Bridge and SyntaxHighlighter appear in DocFX/DocC output.
+Transport Swift API output and the final website between CI jobs as tar archives;
+DocC filenames contain colons rejected by GitHub's individual-file artifact upload.
 Swift symbol extraction includes extension blocks; staging also checks public
 Bridge extension pages. Static asset copies and archives omit OS metadata, and
 both the final website check and publisher reject it; verify with

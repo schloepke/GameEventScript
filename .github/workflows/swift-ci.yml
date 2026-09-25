@@ -12,8 +12,30 @@ on:
 permissions:
   contents: read
 
+# A newer revision supersedes older verification of the same branch/PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      swift: ${{ steps.scope.outputs.swift }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Verify CI change selection
+        run: python3 scripts/test-ci-swift-scope.py
+      - name: Select Swift verification scope
+        id: scope
+        run: python3 scripts/ci-swift-scope.py
+
   highlighter-linux:
+    needs: changes
+    if: needs.changes.outputs.swift == 'true'
     runs-on: ubuntu-latest
     container: swift:6.0
     steps:
@@ -23,51 +45,97 @@ jobs:
         run: swift test --package-path implementation/swift/GameEventScriptSyntaxHighlighter --scratch-path artifacts/swift/syntaxhighlighter --disable-build-manifest-caching --configuration release
 
   verify:
-    runs-on: macos-15
+    needs: changes
+    # Keep the required check present for documentation-only changes and fail if
+    # change selection fails. Only real Swift checks allocate a macOS runner.
+    if: ${{ !cancelled() }}
+    runs-on: ${{ needs.changes.outputs.swift == 'true' && 'macos-15' || 'ubuntu-latest' }}
     # Clean distribution and local-package checks each build the SwiftSyntax macro plugin.
     timeout-minutes: 60
     steps:
-      - name: Check out repository
+      - name: Require successful change selection
+        env:
+          SCOPE_RESULT: ${{ needs.changes.result }}
+          RUN_SWIFT: ${{ needs.changes.outputs.swift }}
+        run: |
+          test "$SCOPE_RESULT" = success
+          case "$RUN_SWIFT" in
+            true) echo "Running all Swift checks." ;;
+            false) echo "Only website/guide inputs changed; Swift checks are unchanged." ;;
+            *) echo "Missing Swift verification scope." >&2; exit 1 ;;
+          esac
+
+      - if: needs.changes.outputs.swift == 'true'
+        name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Verify repository cleanup safety
+      - if: needs.changes.outputs.swift == 'true'
+        name: Verify repository cleanup safety
         run: python3 scripts/test-clean.py
 
-      - name: Install reference compiler SDK
+      - if: needs.changes.outputs.swift == 'true'
+        name: Install reference compiler SDK
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 10.0.201
 
-      - name: Record Swift toolchain
-        run: swift --version
+      - if: needs.changes.outputs.swift == 'true'
+        name: Record Swift toolchain
+        id: toolchain
+        run: |
+          swift --version
+          identity=$( { swift --version; xcodebuild -version; xcrun --show-sdk-path; } | shasum -a 256 | cut -d ' ' -f 1)
+          echo "identity=$identity" >> "$GITHUB_OUTPUT"
 
-      - name: Verify Swift declaration spacing controls
+      # Cache stable local package builds, never test reports or the isolated
+      # tagged-consumer scratch directories. Every check still executes.
+      - if: needs.changes.outputs.swift == 'true'
+        name: Restore incremental Swift builds
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            artifacts/swift/swiftbridge
+            artifacts/swift/conformance
+            artifacts/swift/tool
+            artifacts/swift/syntaxhighlighter
+            artifacts/swift-api
+          key: swift-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.identity }}-${{ hashFiles('Package.swift', 'implementation/swift/**/Package.swift', 'implementation/swift/**/Package.resolved', 'scripts/test-swift*.sh', 'scripts/verify-swift-api.py') }}
+
+      - if: needs.changes.outputs.swift == 'true'
+        name: Verify Swift declaration spacing controls
         run: python3 scripts/test-swift-spacing.py
 
-      - name: Verify Swift formatting
+      - if: needs.changes.outputs.swift == 'true'
+        name: Verify Swift formatting
         run: ./scripts/format-swift.sh
 
-      - name: Verify direct Swift target dependencies
+      - if: needs.changes.outputs.swift == 'true'
+        name: Verify direct Swift target dependencies
         run: python3 scripts/verify-swift-dependencies.py
 
-      - name: Verify incremental Swift source discovery
+      - if: needs.changes.outputs.swift == 'true'
+        name: Verify incremental Swift source discovery
         run: python3 scripts/test-swift-incremental.py
 
-      - name: Verify the public SwiftPM distribution and shared root tests
+      - if: needs.changes.outputs.swift == 'true'
+        name: Verify the public SwiftPM distribution and shared root tests
         run: python3 scripts/test-swift-package.py
 
-      - name: Build packages and verify shared conformance
+      - if: needs.changes.outputs.swift == 'true'
+        name: Build packages and verify shared conformance
         id: conformance
         run: ./scripts/test-swift.sh
 
-      - name: Verify Swift documentation gate controls
+      - if: needs.changes.outputs.swift == 'true'
+        name: Verify Swift documentation gate controls
         run: python3 scripts/test-swift-api.py
 
-      - name: Verify Swift API surface and documentation
+      - if: needs.changes.outputs.swift == 'true'
+        name: Verify Swift API surface and documentation
         run: python3 scripts/verify-swift-api.py
 
       - name: Upload full and compact conformance results
-        if: ${{ always() && (steps.conformance.outcome == 'success' || hashFiles('artifacts/swift/conformance-results/**', 'artifacts/swift/number-text-roundtrip/**', 'artifacts/swift/message-json-roundtrip/**') != '') }}
+        if: ${{ always() && needs.changes.outputs.swift == 'true' && (steps.conformance.outcome == 'success' || hashFiles('artifacts/swift/conformance-results/**', 'artifacts/swift/number-text-roundtrip/**', 'artifacts/swift/message-json-roundtrip/**') != '') }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: swift-conformance

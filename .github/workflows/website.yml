@@ -148,4 +148,5 @@ jobs:
       - name: Publish to the site branch
         env:
           WEBSITE_SOURCE: ${{ github.sha }}
-        run: python3 scripts/publish-website.py --source "$WEBSITE_SOURCE"
+          WEBSITE_DEPLOY_WEBHOOK: ${{ secrets.WEBSITE_DEPLOY_WEBHOOK }}
+        run: python3 scripts/publish-website.py --source "$WEBSITE_SOURCE" --notify-host

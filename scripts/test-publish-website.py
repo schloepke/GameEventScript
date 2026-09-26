@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.dont_write_bytecode = True
@@ -52,11 +52,60 @@ class WebsitePublicationTests(unittest.TestCase):
         self.git(self.repository, "push", "origin", "main")
         return self.git(self.repository, "rev-parse", "HEAD")
 
-    def publish(self, source=None):
-        publisher.publish(self.repository, self.output, source or self.source)
+    def publish(self, source=None, webhook_url=None):
+        publisher.publish(self.repository, self.output, source or self.source, webhook_url)
 
     def site(self):
         return self.git(self.remote, "rev-parse", "refs/heads/site")
+
+    def test_webhook_runs_only_after_successful_changed_push(self):
+        url = "https://hosting.example.invalid/hook?token=test"
+        def notify(received):
+            self.assertEqual(url, received)
+            self.assertIn(self.source, self.git(self.remote, "show", "-s", "--format=%B", "site"))
+        with patch.object(publisher, "notify_host", side_effect=notify) as hook:
+            self.publish(webhook_url=url)
+            hook.assert_called_once_with(url)
+            hook.reset_mock()
+            self.source = self.advance_main()
+            self.publish(webhook_url=url)
+            self.advance_main()
+            (self.output / "index.html").write_text("stale build")
+            self.publish(webhook_url=url)
+            hook.assert_not_called()
+
+    def test_failed_push_does_not_call_webhook(self):
+        original = publisher.git
+        def reject(repository, *args, **kwargs):
+            if args[0] == "push":
+                raise RuntimeError("push failed")
+            return original(repository, *args, **kwargs)
+        with patch.object(publisher, "git", side_effect=reject), patch.object(publisher, "notify_host") as hook:
+            with self.assertRaisesRegex(RuntimeError, "push failed"):
+                self.publish(webhook_url="https://hosting.example.invalid/hook")
+            hook.assert_not_called()
+
+    def test_webhook_retries_without_disclosing_url(self):
+        url = "https://hosting.example.invalid/hook?token=secret"
+        response = MagicMock()
+        response.__enter__.return_value.status = 204
+        with patch.object(publisher.urllib.request, "build_opener") as build, patch.object(publisher.time, "sleep"):
+            build.return_value.open.side_effect = [publisher.urllib.error.URLError(url), response]
+            publisher.notify_host(url)
+            self.assertEqual(2, build.return_value.open.call_count)
+            build.return_value.open.assert_called_with(url, timeout=20)
+            self.assertIsNone(build.call_args.args[0].redirect_request(None, None, 302, "", {}, url))
+            build.return_value.open.side_effect = publisher.urllib.error.URLError(url)
+            build.return_value.open.reset_mock()
+            with self.assertRaises(RuntimeError) as failure:
+                publisher.notify_host(url)
+            self.assertNotIn("secret", str(failure.exception))
+            self.assertEqual(3, build.return_value.open.call_count)
+
+    def test_invalid_webhook_is_rejected_before_publication(self):
+        with self.assertRaises(ValueError):
+            self.publish(webhook_url="http://hosting.example.invalid/hook")
+        self.assertEqual("", self.git(self.remote, "for-each-ref", "refs/heads/site"))
 
     def test_initial_publication_is_an_independent_root_containing_only_output(self):
         self.publish()

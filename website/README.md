@@ -92,8 +92,10 @@ The `Website` GitHub Actions workflow builds and checks pull requests. After a
 push to `main`, it publishes the verified build to **`site`** in the same GitHub
 repository. A manual run on `main` can also publish; runs on other branches only
 build. The workflow uses GitHub's automatic `GITHUB_TOKEN` with `contents: write`
-only in the publication job. No personal access token or webhosting credentials
-need to be stored in GitHub.
+only in the publication job. The hosting provider still pulls from GitHub; no
+webhosting Git credentials are needed. Store its HTTPS pull-trigger URL as the
+repository Actions secret `WEBSITE_DEPLOY_WEBHOOK`. This capability URL can trigger
+deployment, so never commit it or include it in build output.
 
 The first successful publication creates `site` with an independent root commit.
 The branch contains only the contents of `artifacts/website/dist/`, with
@@ -111,7 +113,11 @@ For initial setup:
    branch. The branch root is the document root; no subdirectory is needed.
 3. Enable the provider's pull/update mechanism and HTTPS for gameeventscript.org.
    The provider's existing GitHub access remains configured on the hosting side.
-4. Verify the homepage, a nested `/docs/learn/csharp/` URL and site search.
+4. Set the repository Actions secret `WEBSITE_DEPLOY_WEBHOOK` to the provider's
+   HTTPS webhook URL (including its query token). The publication job requires it
+   before updating `site`; local publishing remains Git-only unless `--notify-host`
+   is supplied with that environment variable.
+5. Verify the homepage, a nested `/docs/learn/csharp/` URL and site search.
 
 Keep `site` outside rules requiring human pull requests or checks before every
 push: it is generated output written by Actions. Keep normal source protection
@@ -130,6 +136,15 @@ use disposable local Git repositories and never publish to GitHub:
 python3 scripts/test-publish-website.py
 python3 scripts/test-website-assets.py
 ```
+
+After a successful push of changed output, the publisher calls the webhook with
+an HTTPS GET request. Unchanged output, stale builds and failed pushes do not call
+it. Requests retain TLS certificate validation, reject redirects, time out after
+20 seconds and retry up to three times. Neither the URL nor response body is logged.
+A successful HTTP response confirms acceptance, not completion of deployment.
+If all attempts fail, the workflow fails while the published `site` commit remains
+available. Retry the pull from the hosting control panel; rerunning an unchanged
+build deliberately does not send another webhook.
 
 The hosting provider is responsible for applying a pulled revision to the live
 document root. If it supports atomic deployments, enable that feature. To roll

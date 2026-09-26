@@ -16,6 +16,10 @@ import re
 import subprocess
 import tempfile
 import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 
 sys.dont_write_bytecode = True
 from website_assets import validate_static_assets
@@ -33,7 +37,38 @@ def git(repository, *arguments, environment=None, input_text=None):
     return result.stdout.strip()
 
 
-def publish(repository, output, source):
+class NoRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def validate_webhook(url):
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
+        raise ValueError("WEBSITE_DEPLOY_WEBHOOK must be an HTTPS URL without user info or fragment.")
+
+
+def notify_host(url):
+    """Request a hosting pull without disclosing the capability URL or response."""
+    validate_webhook(url)
+    opener = urllib.request.build_opener(NoRedirects())
+    for attempt in range(3):
+        try:
+            with opener.open(url, timeout=20) as response:
+                if 200 <= response.status < 300:
+                    print("Hosting webhook accepted the update request.")
+                    return
+        except (urllib.error.URLError, OSError, ValueError):
+            pass
+        if attempt < 2:
+            time.sleep(2 * (attempt + 1))
+    raise RuntimeError("Website branch published, but the hosting webhook failed after three attempts. "
+                       "Retry the pull in the hosting control panel.") from None
+
+
+def publish(repository, output, source, webhook_url=None):
+    if webhook_url is not None:
+        validate_webhook(webhook_url)
     repository, output = repository.resolve(), output.resolve()
     source = git(repository, "rev-parse", "--verify", f"{source}^{{commit}}")
     for relative in ("index.html", "404.html", "docs/index.html", "pagefind/pagefind.js"):
@@ -84,6 +119,8 @@ def publish(repository, output, source):
     # No force: a concurrent update to site must fail rather than be overwritten.
     git(repository, "push", "origin", f"{commit}:refs/heads/site")
     print(f"Published {source[:12]} as site commit {commit[:12]}.")
+    if webhook_url is not None:
+        notify_host(webhook_url)
 
 
 if __name__ == "__main__":
@@ -91,5 +128,9 @@ if __name__ == "__main__":
     parser.add_argument("--repository", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, default=ROOT / "artifacts/website/dist")
     parser.add_argument("--source", required=True, help="Full source revision used to build the artifact")
+    parser.add_argument("--notify-host", action="store_true", help="After an update, call WEBSITE_DEPLOY_WEBHOOK from the environment")
     args = parser.parse_args()
-    publish(args.repository, args.output, args.source)
+    webhook_url = os.environ.get("WEBSITE_DEPLOY_WEBHOOK") if args.notify_host else None
+    if args.notify_host and not webhook_url:
+        parser.error("WEBSITE_DEPLOY_WEBHOOK is required with --notify-host")
+    publish(args.repository, args.output, args.source, webhook_url)

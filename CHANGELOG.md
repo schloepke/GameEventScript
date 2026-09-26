@@ -12,6 +12,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Website publication triggers the hosting pull webhook after changed output is
+  successfully pushed to `site`, with bounded retries and a secret-backed URL.
+
 - Standalone CLI release archives: C# for Windows, Linux and macOS; Swift for
   Linux and macOS; x64 and ARM64 for each. Downloads include runtime dependencies,
   license notices, release identity and checksums, with native relocation tests

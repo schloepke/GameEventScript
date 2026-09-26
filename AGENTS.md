@@ -544,7 +544,11 @@ retain precise conditions and exceptional cases in text or tables. Each diagram
 has an accessible title and description and a readable source fallback.
 The Website workflow publishes successful main builds to the independent `site`
 output branch; the hosting provider pulls that branch. `scripts/publish-website.py`
-uses normal fast-forward pushes and a separate Git index. Never merge `site`
+uses normal fast-forward pushes and a separate Git index. The publication job
+uses `--notify-host` and the `WEBSITE_DEPLOY_WEBHOOK` Actions secret to request a
+hosting pull only after a changed build is pushed successfully. Never log or
+commit this URL; local tests mock HTTP and must not contact the live webhook.
+Never merge `site`
 into source branches or populate it with repository sources. Its tests use local
 disposable remotes: `python3 scripts/test-publish-website.py`.
 `python3 scripts/test-guide-examples.py` verifies the introductory C#, Swift and

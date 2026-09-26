@@ -290,7 +290,7 @@ input. The initial Start barrier and subsequent FIFO initialization follow
 <a href="#loading-and-startup">Loading and startup</a>.</li>
 </ul>
 <h2 id="portable-state-machine">Portable State Machine</h2>
-<p class="ges-since"><strong>Since: Unreleased — Waiting and delayed-work transitions</strong></p>
+<p class="ges-since"><strong>Since: 0.2.0 — Waiting and delayed-work transitions</strong></p>
 <p>The following pump states apply after successful Start. Initial loading and the
 terminal startup-failure state are defined in <a href="#loading-and-startup">Loading and startup</a>.
 Here <code>Ready</code> means queued work, distinct from the public <code>IsReady</code> startup flag.</p>
@@ -488,7 +488,7 @@ language in the monorepo. Message <code>args</code> are always encoded as an ord
 sequence of mappings with <code>name</code> and <code>value</code> entries, including nested message
 values and expected local/outbound messages.</p>
 <h2 id="delayed-dispatch">Delayed dispatch</h2>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.2.0</strong></p>
 <p>Each Host borrows a monotonic clock reporting nonnegative whole microseconds.
 The default clock measures actual elapsed time; an embedding can supply a clock
 for deterministic simulation or testing. Clock reads never pump messages.</p>

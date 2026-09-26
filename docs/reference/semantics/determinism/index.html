@@ -77,7 +77,7 @@
 Game Event Script compiler and runtime port must reproduce. It complements
 <a href="/docs/reference/semantics/text/">Text semantics</a>, <a href="/docs/reference/semantics/numbers/">Number semantics</a>, <a href="/docs/reference/bytecode/">Bytecode</a>, and
 <a href="/docs/reference/host-runtime/">Host runtime</a>.</p>
-<p class="ges-since"><strong>Since: Unreleased — monotonic-clock observations for delayed dispatch</strong></p>
+<p class="ges-since"><strong>Since: 0.2.0 — monotonic-clock observations for delayed dispatch</strong></p>
 <p>Determinism means that the same validated program, ordered inputs, host
 configuration, initial random seed, observed monotonic-clock readings, and runtime limits produce the same visible
 messages and values. Wall-clock time, thread scheduling, object identity,
@@ -473,7 +473,7 @@ special script/native precedence.</p>
 <p>Detach, unsubscribe, load, or subscribe during dispatch affects only messages
 whose snapshots are captured afterward. These rules are independent of frame
 budgeting and asynchronous adapters around the synchronous portable host.</p>
-<p class="ges-since"><strong>Since: Unreleased — integral Range normalization</strong></p>
+<p class="ges-since"><strong>Since: 0.2.0 — integral Range normalization</strong></p>
 <p>Integral Range normalization follows <a href="/docs/reference/language/#range">Language</a>: endpoints and
 step exactly representable as Int64 select integer terms before the binary64 rule
 is considered, including ranges constructed through host APIs.</p>

@@ -759,7 +759,7 @@ a GES diagnostic, and lies outside Host state/recovery guarantees. This differs
 deliberately from publish-sink exceptions, which the Host contains as specified
 above.</p>
 <h3 id="executionresult">ExecutionResult</h3>
-<p class="ges-since"><strong>Since: Unreleased — Waiting result</strong></p>
+<p class="ges-since"><strong>Since: 0.2.0 — Waiting result</strong></p>
 <p><code>ExecutionResult</code> is an allocation-free value containing state, opcodes executed,
 logical messages processed, messages emitted, messages published, and an optional
 first diagnostic. Counters cover only the current pump call.</p>
@@ -1243,7 +1243,7 @@ the declarative transport data. Wrapped class roots preserve native identity;
 struct roots follow Swift value semantics. Unwrapping requires the exact binding
 descriptor that created the external value. Runtime field coercion and map
 materialization retain the external-value contract above.</p>
-<p class="ges-since"><strong>Since: Unreleased — Swift binding macros and unit conversion helpers</strong></p>
+<p class="ges-since"><strong>Since: 0.2.0 — Swift binding macros and unit conversion helpers</strong></p>
 <p><code>@GesType</code> generates a throwing static <code>createGesType()</code> factory on a nongeneric
 struct or final class. Each invocation creates a distinct descriptor; callers
 retain and reuse it for registry construction, wrapping and unwrapping. The
@@ -1389,7 +1389,7 @@ duplicated as a second source of truth here.</p>
 compiler trees, filesystem services, network clients, task schedulers, and
 reflection objects remain private or embedding-specific.</p>
 <h2 id="monotonic-scheduling-api">Monotonic scheduling API</h2>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.2.0</strong></p>
 <p>C# <code>IGameEventScriptClock.ElapsedMicroseconds</code> and Swift
 <code>GameEventScriptClock.elapsedMicroseconds</code> provide a borrowed monotonic Int64
 microsecond source. Host builders accept <code>WithClock</code> / <code>withClock</code>; absent an
@@ -1401,7 +1401,7 @@ when only delayed work remains. The authoritative timing and lifecycle rules
 are in HostRuntime. C# and Swift automatic runners arm wake-ups outside Runtime,
 reschedule when new work arrives and cancel wake-ups when closed/disposed.</p>
 <h2 id="explicit-product-json-codec">Explicit product JSON codec</h2>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.2.0</strong></p>
 <p>C# <code>GameEventScriptMessageJson.Serialize/Deserialize</code> and Swift
 <code>GameEventScriptMessageJson.serialize/deserialize</code> encode/decode messages;
 <code>SerializeValue/DeserializeValue</code> and <code>serializeValue/deserializeValue</code> handle

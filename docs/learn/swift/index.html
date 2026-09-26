@@ -76,8 +76,8 @@
 uses the same program and message flow as the <a href="/docs/learn/csharp/">C# guide</a>, so the two
 examples can be compared directly.</p>
 <p>This guide tracks the development checkout. Match the package tag to the
-documentation for your release. <strong>Unreleased</strong> features, including the new
-binding macros, are listed in the <a href="/docs/changelog/">changelog</a>.</p>
+documentation for your release. Binding macros require 0.2.0 or newer;
+versioned changes are listed in the <a href="/docs/changelog/">changelog</a>.</p>
 <h2 id="add-the-package">Add the package</h2>
 <p>Use Swift 6 or newer. In Xcode, choose <strong>File → Add Package Dependencies</strong> and
 enter <code>https://github.com/schloepke/GameEventScript.git</code>. This is a package
@@ -135,7 +135,7 @@ validate the program; they do not require Compiler.</p>
 contains multiple products, but a Runtime-only build does not compile the
 Compiler or bridge macros.</p>
 <h2 id="bind-native-data-with-annotations">Bind native data with annotations</h2>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.2.0</strong></p>
 <p>SwiftBridge macros generate explicit field descriptors:</p>
 <div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="swift"><code><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">@GesType</span><span style="--0:#D6DEEB;--1:#403F53">(</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">BotState</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">)</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">struct</span><span style="--0:#D6DEEB;--1:#403F53"> BotState {</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">@GesField</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> energy: </span><span style="--0:#C5E478;--1:#3B61B0">Double</span></div></div><div class="ec-line"><div class="code">
 </div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">@GesField</span><span style="--0:#D6DEEB;--1:#403F53">(unit</span><span style="--0:#C792EA;--1:#8844AE">:</span><span style="--0:#D6DEEB;--1:#403F53"> .</span><span style="--0:#C5E478;--1:#3B61B0">meter</span><span style="--0:#D6DEEB;--1:#403F53">)</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> distance: </span><span style="--0:#C5E478;--1:#3B61B0">Double</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code">
@@ -153,7 +153,7 @@ for complete binding examples and conversion guarantees.</p>
 <p>The portable host is synchronous and expects serialized access. It does not
 create threads or implicitly move callbacks to the main actor. Keep application
 UI work on the appropriate actor.</p>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.2.0</strong></p>
 <p>Future-only work returns <code>.waiting</code>. Consult <code>nextMessageDelay</code>
 and arrange a later pump, or use the optional synchronized Swift host runner.
 <code>runToCompletion()</code> does not sleep until delayed messages become due. The

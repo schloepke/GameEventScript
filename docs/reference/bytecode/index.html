@@ -2699,7 +2699,7 @@ separate approximate-equality opcode.</p>
 <a href="/docs/reference/semantics/text/#literal-recognition-from-text">Text semantics</a>. Non-Text input
 writes <code>nothing</code>. It reads <code>XRegister</code> before writing the destination; source
 and destination may alias. <code>YRegister</code>, payload words, and flags are zero.</p>
-<p class="ges-since"><strong>Since: Unreleased — Record construction through ParseLiteral</strong></p>
+<p class="ges-since"><strong>Since: 0.2.0 — Record construction through ParseLiteral</strong></p>
 <p>Recognition may start known Record constructors on the ordinary VM call stack.
 Their side effects must be preserved when the result is unused. Parsing limits
 remain protection limits, not additional optimizer-observable effects.</p>
@@ -3399,7 +3399,7 @@ directly from the instruction word. Record constructor code addresses live in
 Pipeline selectors are lowered into linear helper entries and fixed iterator or
 terminal opcodes; there are no pipeline selector or pattern pools.</p>
 <h2 id="result-bearing-send-instructions">Result-bearing send instructions</h2>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.2.0</strong></p>
 <p>V1 adds <code>EmitInstant</code> (0xDA), <code>EmitAfter</code> (0xDB), <code>PublishInstant</code> (0xDC), and
 <code>PublishAfter</code> (0xDD). The existing eight send instructions retain their encoding
 and behavior. Unsupported opcode values must be rejected before execution.</p>
@@ -3419,7 +3419,7 @@ callbacks return and must not retain a mutable register reference across them.</
 step expressions run in the normal VM execution stream and can pause/resume.
 No fold/reduce opcode or implicit per-element budget surcharge is introduced.</p>
 <h3 id="explicit-data-instruction-validation">Explicit data instruction validation</h3>
-<p class="ges-since"><strong>Since: Unreleased</strong></p>
+<p class="ges-since"><strong>Since: 0.2.0</strong></p>
 <p><code>ConstructData</code> uses a lowercase built-in type name, ordered argument registers,
 and a same-length label list (<code>_</code> for positional arguments). Type/arity/label
 validation follows the explicit constructor contract; unknown names or invalid

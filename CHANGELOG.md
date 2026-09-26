@@ -10,6 +10,14 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+No changes recorded yet.
+
+## [0.2.0] — 2026-09-26
+
+This development release expands the language, native integration and tooling.
+C# and Swift share the same release version. Compatibility may change during 0.x;
+see the migration notes below before upgrading from 0.1.0.
+
 ### Added
 
 - Website publication triggers the hosting pull webhook after changed output is
@@ -97,6 +105,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Fixed
 
+- Website deployment uses the POST method required by Plesk webhooks and reports
+  HTTP status or connection failure categories without exposing the webhook URL.
+
 - SwiftPM distribution and SwiftBridge explicitly declare macOS 10.15, matching
   SwiftSyntax's minimum and fixing dependency planning with Swift 6.1.
 - Swift highlighting preserves Unicode separators inside comments and GESA
@@ -107,3 +118,44 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - Swift CLI recognizes application-mode cursor keys used by Ghostty.
 - C# CLI retains command history when switching between the ordinary prompt
   and delayed-message input handling.
+
+### Migrating from 0.1.0
+
+- Upgrade all GES library packages used by an application together to 0.2.0.
+  SwiftPM consumers use the `0.2.0` tag. Syntax highlighting is an optional new
+  product; add it only to targets that use it.
+- Move bindings needed after an `if` outside its branches. Neither braced nor
+  unbraced branch bindings escape; conditional expressions with
+  `when ... otherwise ...` can initialize an outer binding.
+- Custom host pumps must handle `Waiting` / `.waiting` and resume when
+  `NextMessageDelay` / `nextMessageDelay` is due. `RunToCompletion()` /
+  `runToCompletion()` does not wait for future messages; bridge runners and CLI
+  batch execution handle this waiting for their callers.
+- Deploy the updated Runtime before using binaries containing the new data,
+  splitting or result-bearing send opcodes. The GESB format remains V1, but
+  0.1.0 validators reject instructions they do not support.
+- Update consumers that depend on the previous Text spelling of Records, Ranges,
+  Series, Handlers or Messages. These values now use explicit reconstructible
+  data forms; ordinary top-level Text remains unchanged. Integral Range inputs
+  normalize to exact integer arithmetic even when supplied as Binary64.
+- Product JSON is an explicit transport API. External values arrive as immutable
+  Record snapshots, not native objects; decoding does not invoke constructors or
+  restore host bindings. Local message delivery continues to use values directly.
+
+## [0.1.0] — 2026-09-21
+
+First public development release of the immutable, event-driven core.
+
+- Published Runtime, Compiler and native Bridge libraries for C# on NuGet and
+  Swift through one versioned SwiftPM package.
+- Verified C# and Swift against the shared Markdown Conformance corpus, including
+  portable GESB V1 program exchange and deterministic execution.
+- Included serial Hosts, explicit startup, multiple loaded programs, native
+  handlers, extensions and external types, with execution limits.
+- Provided source-installed development CLIs for compilation, validation,
+  execution, binary inspection and interactive use.
+- Documented installation and the pre-1.0 compatibility policy. Mutable Tables
+  and persistence were not part of the release.
+
+[0.2.0]: https://github.com/schloepke/GameEventScript/compare/0.1.0...0.2.0
+[0.1.0]: https://github.com/schloepke/GameEventScript/releases/tag/0.1.0

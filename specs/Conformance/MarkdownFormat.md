@@ -1085,7 +1085,7 @@ steps:
 
 ## Virtual time actions
 
-> **Since: Unreleased**
+> **Since: 0.2.0**
 
 Runtime cases use a virtual microsecond clock initially at zero. A host action
 `advanceMicroseconds: "200000"` advances it without pumping; its argument is a
@@ -1101,7 +1101,7 @@ entries to distinguish acceptance from actual delayed delivery.
 
 ### Product JSON message API checks
 
-> **Since: Unreleased**
+> **Since: 0.2.0**
 
 `messageApi` optionally accepts `json` (a complete product message envelope) and
 `roundTripJson` (Boolean, default false). `json` replaces the ordinary message

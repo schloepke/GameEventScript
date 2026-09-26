@@ -3,7 +3,7 @@
 
 # Product message JSON V1
 
-> **Since: Unreleased**
+> **Since: 0.2.0**
 
 This document owns the optional, language-neutral product wire format. It is
 independent of the Conformance transport and of GESB. Encoding and decoding are

@@ -8,8 +8,8 @@ uses the same program and message flow as the [C# guide](CSharp.md), so the two
 examples can be compared directly.
 
 This guide tracks the development checkout. Match the package tag to the
-documentation for your release. **Unreleased** features, including the new
-binding macros, are listed in the [changelog](../../CHANGELOG.md).
+documentation for your release. Binding macros require 0.2.0 or newer;
+versioned changes are listed in the [changelog](../../CHANGELOG.md).
 
 ## Add the package
 
@@ -142,7 +142,7 @@ Compiler or bridge macros.
 
 ## Bind native data with annotations
 
-> **Since: Unreleased**
+> **Since: 0.2.0**
 
 SwiftBridge macros generate explicit field descriptors:
 
@@ -178,7 +178,7 @@ The portable host is synchronous and expects serialized access. It does not
 create threads or implicitly move callbacks to the main actor. Keep application
 UI work on the appropriate actor.
 
-> **Since: Unreleased**
+> **Since: 0.2.0**
 
 Future-only work returns `.waiting`. Consult `nextMessageDelay`
 and arrange a later pump, or use the optional synchronized Swift host runner.

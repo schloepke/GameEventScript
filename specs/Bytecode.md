@@ -1559,7 +1559,7 @@ separate approximate-equality opcode.
 writes `nothing`. It reads `XRegister` before writing the destination; source
 and destination may alias. `YRegister`, payload words, and flags are zero.
 
-> **Since: Unreleased — Record construction through ParseLiteral**
+> **Since: 0.2.0 — Record construction through ParseLiteral**
 
 Recognition may start known Record constructors on the ordinary VM call stack.
 Their side effects must be preserved when the result is unused. Parsing limits
@@ -1650,7 +1650,7 @@ terminal opcodes; there are no pipeline selector or pattern pools.
 
 ## Result-bearing send instructions
 
-> **Since: Unreleased**
+> **Since: 0.2.0**
 
 V1 adds `EmitInstant` (0xDA), `EmitAfter` (0xDB), `PublishInstant` (0xDC), and
 `PublishAfter` (0xDD). The existing eight send instructions retain their encoding
@@ -1676,7 +1676,7 @@ No fold/reduce opcode or implicit per-element budget surcharge is introduced.
 
 ### Explicit data instruction validation
 
-> **Since: Unreleased**
+> **Since: 0.2.0**
 
 `ConstructData` uses a lowercase built-in type name, ordered argument registers,
 and a same-length label list (`_` for positional arguments). Type/arity/label

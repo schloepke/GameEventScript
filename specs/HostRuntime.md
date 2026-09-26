@@ -262,7 +262,7 @@ implementation and therefore does not depend on C# reflection.
 
 ## Portable State Machine
 
-> **Since: Unreleased — Waiting and delayed-work transitions**
+> **Since: 0.2.0 — Waiting and delayed-work transitions**
 
 The following pump states apply after successful Start. Initial loading and the
 terminal startup-failure state are defined in [Loading and startup](#loading-and-startup).
@@ -450,7 +450,7 @@ values and expected local/outbound messages.
 
 ## Delayed dispatch
 
-> **Since: Unreleased**
+> **Since: 0.2.0**
 
 Each Host borrows a monotonic clock reporting nonnegative whole microseconds.
 The default clock measures actual elapsed time; an embedding can supply a clock

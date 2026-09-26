@@ -578,7 +578,7 @@ above.
 
 ### ExecutionResult
 
-> **Since: Unreleased — Waiting result**
+> **Since: 0.2.0 — Waiting result**
 
 `ExecutionResult` is an allocation-free value containing state, opcodes executed,
 logical messages processed, messages emitted, messages published, and an optional
@@ -1116,7 +1116,7 @@ struct roots follow Swift value semantics. Unwrapping requires the exact binding
 descriptor that created the external value. Runtime field coercion and map
 materialization retain the external-value contract above.
 
-> **Since: Unreleased — Swift binding macros and unit conversion helpers**
+> **Since: 0.2.0 — Swift binding macros and unit conversion helpers**
 
 `@GesType` generates a throwing static `createGesType()` factory on a nongeneric
 struct or final class. Each invocation creates a distinct descriptor; callers
@@ -1221,7 +1221,7 @@ reflection objects remain private or embedding-specific.
 
 ## Monotonic scheduling API
 
-> **Since: Unreleased**
+> **Since: 0.2.0**
 
 C# `IGameEventScriptClock.ElapsedMicroseconds` and Swift
 `GameEventScriptClock.elapsedMicroseconds` provide a borrowed monotonic Int64
@@ -1237,7 +1237,7 @@ reschedule when new work arrives and cancel wake-ups when closed/disposed.
 
 ## Explicit product JSON codec
 
-> **Since: Unreleased**
+> **Since: 0.2.0**
 
 C# `GameEventScriptMessageJson.Serialize/Deserialize` and Swift
 `GameEventScriptMessageJson.serialize/deserialize` encode/decode messages;

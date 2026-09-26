@@ -6,12 +6,12 @@
 GES libraries share one release version and Git tag. There are no independently
 versioned Swift module repositories.
 
-> **Since: Unreleased — package icons**
+> **Since: 0.2.0 — package icons**
 
 NuGet packages embed the Pixel-Duo logo as `icon.png`; no external image URL is
 required. The release package check verifies both the manifest reference and
 the embedded image against the checked-in brand asset. Existing published
-versions retain their original package contents; the icon ships with the next release.
+versions retain their original package contents; icons are included starting with 0.2.0.
 
 | Distribution | Public products |
 | --- | --- |
@@ -31,7 +31,7 @@ The repository-root `Package.swift` is the public entry point. It declares four
 library products using the existing source directories; it does not depend on
 the sibling development packages, expose Conformance, or include the CLI.
 
-> **Since: Unreleased — root-package native tests**
+> **Since: 0.2.0 — root-package native tests**
 
 The root package also declares three test targets that reuse the existing
 SwiftBridge, bridge-macro and SyntaxHighlighter test sources. They are not

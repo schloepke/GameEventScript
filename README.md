@@ -3,8 +3,8 @@
 
 # Game Event Script
 
-[![NuGet](https://img.shields.io/nuget/v/GameEventScript.Runtime)](https://www.nuget.org/packages/GameEventScript.Runtime)
 [![GitHub release](https://img.shields.io/github/v/release/schloepke/GameEventScript)](https://github.com/schloepke/GameEventScript/releases/latest)
+[![NuGet](https://img.shields.io/nuget/v/GameEventScript.Runtime)](https://www.nuget.org/packages/GameEventScript.Runtime)
 [![Swift versions](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fschloepke%2FGameEventScript%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/schloepke/GameEventScript)
 [![Swift platforms](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fschloepke%2FGameEventScript%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/schloepke/GameEventScript)
 
@@ -231,8 +231,7 @@ The [package release guide](docs/guide/distribution/Packages.md) covers the thre
 public libraries per language, publisher setup and the shared version/tag flow.
 Conformance is internal; CLI tools are not published through NuGet or SwiftPM.
 [Standalone CLI downloads](docs/guide/distribution/Tools.md) provide the separate
-GitHub Releases installation path without a development SDK (available with the
-next release containing CLI assets).
+GitHub Releases installation path without a development SDK, starting with 0.2.0.
 
 ## Swift implementation
 

@@ -138,9 +138,10 @@ python3 scripts/test-website-assets.py
 ```
 
 After a successful push of changed output, the publisher calls the webhook with
-an HTTPS GET request. Unchanged output, stale builds and failed pushes do not call
-it. Requests retain TLS certificate validation, reject redirects, time out after
-20 seconds and retry up to three times. Neither the URL nor response body is logged.
+an HTTPS POST request with an empty body (Plesk rejects GET requests). Unchanged
+output, stale builds and failed pushes do not call it. Requests retain TLS certificate validation, reject redirects, time out after
+20 seconds and retry up to three times. Failures report the HTTP status or a
+TLS/timeout/connection category; neither the URL nor response body is logged.
 A successful HTTP response confirms acceptance, not completion of deployment.
 If all attempts fail, the workflow fails while the published `site` commit remains
 available. Retry the pull from the hosting control panel; rerunning an unchanged

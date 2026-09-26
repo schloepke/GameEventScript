@@ -298,7 +298,7 @@ separate from literal-recognition failure and follows the fixed
 
 ### Explicit data forms
 
-> **Since: Unreleased**
+> **Since: 0.2.0**
 
 The case-sensitive constructor forms in
 [Language](../Language.md#explicit-data-constructors) also accept literal arguments

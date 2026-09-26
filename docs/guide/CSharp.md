@@ -135,7 +135,7 @@ contain stable codes and source locations. Check startup and execution results;
 do not assume a returned result means all handlers succeeded. Record structured
 diagnostics rather than parsing English messages.
 
-> **Since: Unreleased**
+> **Since: 0.2.0**
 
 A queue containing only future messages returns `Waiting`.
 `RunToCompletion()` does not sleep. Use `NextMessageDelay` to arrange a later pump

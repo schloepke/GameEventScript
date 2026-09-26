@@ -5,6 +5,8 @@
 """Qualify website publication using disposable local Git remotes; never GitHub."""
 
 import importlib.util
+import io
+from contextlib import redirect_stderr
 from pathlib import Path
 import sys
 import tempfile
@@ -93,7 +95,11 @@ class WebsitePublicationTests(unittest.TestCase):
             build.return_value.open.side_effect = [publisher.urllib.error.URLError(url), response]
             publisher.notify_host(url)
             self.assertEqual(2, build.return_value.open.call_count)
-            build.return_value.open.assert_called_with(url, timeout=20)
+            request = build.return_value.open.call_args.args[0]
+            self.assertEqual("POST", request.get_method())
+            self.assertEqual(b"", request.data)
+            self.assertEqual(url, request.full_url)
+            self.assertEqual({"timeout": 20}, build.return_value.open.call_args.kwargs)
             self.assertIsNone(build.call_args.args[0].redirect_request(None, None, 302, "", {}, url))
             build.return_value.open.side_effect = publisher.urllib.error.URLError(url)
             build.return_value.open.reset_mock()
@@ -101,6 +107,24 @@ class WebsitePublicationTests(unittest.TestCase):
                 publisher.notify_host(url)
             self.assertNotIn("secret", str(failure.exception))
             self.assertEqual(3, build.return_value.open.call_count)
+
+    def test_webhook_error_logs_are_useful_without_secrets(self):
+        url = "https://hosting.example.invalid/hook?token=secret"
+        failures = [
+            (publisher.urllib.error.HTTPError(url, 404, "secret response", {}, None), "HTTP 404"),
+            (publisher.urllib.error.URLError(publisher.ssl.SSLError("secret certificate")), "TLS validation or handshake error"),
+            (publisher.urllib.error.URLError(TimeoutError(url)), "request timed out"),
+        ]
+        for error, category in failures:
+            with self.subTest(category=category), patch.object(publisher.urllib.request, "build_opener") as build, patch.object(publisher.time, "sleep"):
+                build.return_value.open.side_effect = error
+                output = io.StringIO()
+                with redirect_stderr(output), self.assertRaises(RuntimeError):
+                    publisher.notify_host(url)
+                self.assertIn(category, output.getvalue())
+                self.assertIn("attempt 3/3", output.getvalue())
+                self.assertNotIn("secret", output.getvalue())
+                self.assertNotIn("hosting.example.invalid", output.getvalue())
 
     def test_invalid_webhook_is_rejected_before_publication(self):
         with self.assertRaises(ValueError):

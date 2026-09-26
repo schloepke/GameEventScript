@@ -3,7 +3,7 @@
 
 # Syntax highlighting
 
-> **Since: Unreleased**
+> **Since: 0.2.0**
 
 This document owns the optional presentation API. Highlighting is tolerant lexical
 classification, not source validation or a replacement for Compiler diagnostics.

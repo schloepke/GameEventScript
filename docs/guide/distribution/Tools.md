@@ -3,11 +3,11 @@
 
 # Standalone CLI downloads
 
-> **Since: Unreleased — standalone CLI archives**
+> **Since: 0.2.0 — standalone CLI archives**
 
 Download the CLI from the assets of a [GameEventScript GitHub release](https://github.com/schloepke/GameEventScript/releases).
-The first release containing these assets is still being prepared; older releases
-may contain only the library packages. CLI downloads are separate from NuGet and
+Standalone archives are introduced with 0.2.0; older releases contain only the
+library packages. CLI downloads are separate from NuGet and
 SwiftPM library products. You do not need a development SDK to run them.
 
 ## Choose a download

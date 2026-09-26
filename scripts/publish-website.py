@@ -17,6 +17,7 @@ import subprocess
 import tempfile
 import sys
 import time
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -52,14 +53,26 @@ def notify_host(url):
     """Request a hosting pull without disclosing the capability URL or response."""
     validate_webhook(url)
     opener = urllib.request.build_opener(NoRedirects())
+    request = urllib.request.Request(url, data=b"", method="POST")
     for attempt in range(3):
         try:
-            with opener.open(url, timeout=20) as response:
+            with opener.open(request, timeout=20) as response:
                 if 200 <= response.status < 300:
                     print("Hosting webhook accepted the update request.")
                     return
-        except (urllib.error.URLError, OSError, ValueError):
-            pass
+                failure = f"HTTP {response.status}"
+        except urllib.error.HTTPError as error:
+            failure = f"HTTP {error.code}"
+            error.close()
+        except (urllib.error.URLError, OSError, ValueError) as error:
+            reason = error.reason if isinstance(error, urllib.error.URLError) else error
+            if isinstance(reason, ssl.SSLError):
+                failure = "TLS validation or handshake error"
+            elif isinstance(reason, TimeoutError):
+                failure = "request timed out"
+            else:
+                failure = "connection or request error"
+        print(f"Hosting webhook attempt {attempt + 1}/3 failed: {failure}.", file=sys.stderr)
         if attempt < 2:
             time.sleep(2 * (attempt + 1))
     raise RuntimeError("Website branch published, but the hosting webhook failed after three attempts. "

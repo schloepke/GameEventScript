@@ -133,7 +133,7 @@ arguments that look like numbers. Convert deliberately with `as :Number`, or use
 `parse` when you want literal recognition. Failed Number conversions yield
 `nothing`; see [Number semantics](../../specs/Semantics/Numbers.md) for exact rules.
 
-> **Since: Unreleased**
+> **Since: 0.2.0**
 
 Conditional bindings combine a presence check and a local name:
 
@@ -170,7 +170,7 @@ Use `for item in items { ... }` when each element should produce messages.
 Use maps for named data; keys are text, with tag access available as a convenience.
 Maps and lists, including nested values, are immutable.
 
-> **Since: Unreleased**
+> **Since: 0.2.0**
 
 `[:fold acc be seed, item => expression]` accumulates from an
 explicit seed; `[:reduce acc, item => expression]` uses the first element:
@@ -193,7 +193,7 @@ This prints `160, 60`. An empty fold returns its seed; an empty reduce returns
 boundary. Publishing does not automatically provide networking: your embedding
 supplies the sink and decides how messages reach other hosts.
 
-> **Since: Unreleased**
+> **Since: 0.2.0**
 
 Use a time quantity to delay a message:
 

@@ -135,7 +135,7 @@ let package = Package(name: "{consumer}",
 ''')
         scratch = workspace / (consumer + "-build")
         args = ["swift", "build", "--package-path", str(directory), "--scratch-path", str(scratch),
-                "--build-system", "native", "--disable-build-manifest-caching", "--configuration", "release"]
+                "--disable-build-manifest-caching", "--configuration", "release"]
         run(args, directory, workspace / (consumer + ".log"))
         for module in (*TESTS, "SwiftSyntaxMacrosTestSupport"):
             objects = [path for directory in scratch.rglob(module + ".build") for path in directory.rglob("*.o")]
@@ -156,7 +156,7 @@ let package = Package(name: "{consumer}",
     for consumer in ("SwiftPMConsumer", "RuntimeConsumer"):
         run([str(binaries[consumer]), str(fixture)], workspace, workspace / (consumer + ".log"))
     run(["swift", "test", "--package-path", str(repository), "--scratch-path", str(workspace / "root-tests"),
-         "--build-system", "native", "--disable-build-manifest-caching", "--configuration", "release"],
+         "--disable-build-manifest-caching", "--configuration", "release"],
         repository, workspace / "root-tests.log")
     print("SwiftPM tagged distribution, shared root tests and Runtime-only consumption passed.")
 

@@ -126,7 +126,7 @@ def swift(output, version):
     scratch = work / 'build'
     for path in scratch.rglob('*.symbols.json'):
         path.unlink()
-    options = ['--package-path', ROOT, '--scratch-path', scratch, '--build-system', 'native',
+    options = ['--package-path', ROOT, '--scratch-path', scratch,
                '--disable-build-manifest-caching']
     # SwiftPM also extracts synthesized test-runner modules when tests exist in
     # the root package. Build them first; only public library graphs are copied.
@@ -138,7 +138,7 @@ def swift(output, version):
         graphs = work / 'graphs' / module
         reset(graphs)
         for path in scratch.rglob('*.symbols.json'):
-            if path.name == module + '.symbols.json' or path.name.startswith(module + '@'):
+            if path.parent.name == "symbolgraph" and (path.name == module + '.symbols.json' or path.name.startswith(module + '@')):
                 shutil.copy2(path, graphs)
         if not (graphs / (module + '.symbols.json')).is_file():
             raise RuntimeError(f'Missing public symbol graph for {module}')

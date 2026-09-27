@@ -132,7 +132,9 @@ artifacts and Xcode's user state. Public SwiftPM consumption uses the root
 package and a published version tag. The CLI installer defaults to `$HOME/.local/bin` and supports `--tool-path DIRECTORY`;
 see the [CLI guide](GameEventScriptTool/README.md) for installation and updates.
 
-Build/test scripts regenerate the native SwiftPM build plan with
+Build/test scripts use the toolchain’s default build system (Swift Build with
+Swift 6.4), without changing the public packages’ minimum tool versions.
+They regenerate the SwiftPM build plan with
 `--disable-build-manifest-caching`. This ensures new, renamed or removed files in
 local dependency packages are discovered, including a new Runtime file while
 building Compiler. Compiled objects and module caches remain incremental; no
@@ -206,7 +208,7 @@ Run the strict native suite without .NET:
 
 ```bash
 swift run --package-path implementation/swift/GameEventScriptConformance \
-  --scratch-path artifacts/swift/conformance --build-system native --disable-build-manifest-caching -c release \
+  --scratch-path artifacts/swift/conformance --disable-build-manifest-caching -c release \
   ges-conformance --corpus conformance/suites \
   --fixtures conformance/fixtures/MarkdownV1 \
   --binary-fixtures conformance/fixtures \

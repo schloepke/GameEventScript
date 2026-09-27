@@ -54,24 +54,38 @@ def dump_graphs(swift, package):
         graph.unlink()
     options = [
         "--package-path", str(ROOT / "implementation" / "swift" / package),
-        "--scratch-path", str(scratch), "--build-system", "native", "--disable-build-manifest-caching",
-    ]
-    # SwiftPM's graph dumper also visits synthesized test-runner modules. Build
-    # them first so a fresh scratch directory works; none are included below.
-    commands = [
-        [swift, "build", *options, "--build-tests"],
-        [swift, "package", *options, "dump-symbol-graph", "--skip-synthesized-members", "--minimum-access-level", "public"],
+        "--scratch-path", str(scratch), "--disable-build-manifest-caching",
     ]
     log = ARTIFACTS / (package + ".log")
     print(f"Extracting {package} public symbols…", flush=True)
     with log.open("w", encoding="utf-8") as output:
-        for command in commands:
-            completed = subprocess.run(command, cwd=ROOT, stdout=output, stderr=subprocess.STDOUT, check=False)
-            if completed.returncode:
-                raise RuntimeError(f"Swift symbol extraction failed for {package}; see {log}")
+        completed = subprocess.run([swift, "build", *options, "--build-tests"], cwd=ROOT,
+                                   stdout=output, stderr=subprocess.STDOUT, check=False)
+        if completed.returncode:
+            raise RuntimeError(f"Swift build failed for {package}; see {log}")
+        binary_path = subprocess.check_output([swift, "build", *options, "--show-bin-path"], cwd=ROOT, text=True).strip()
+        target = json.loads(subprocess.check_output([swift, "-print-target-info"], text=True))["target"]["triple"]
+        export = scratch / "symbolgraph"
+        export.mkdir(exist_ok=True)
+        # Swift Build's dump-symbol-graph currently emits extension blocks even
+        # when explicitly asked to omit them. Invoke the same official extractor
+        # directly to preserve our existing member/conformance snapshot model.
+        extractor = (subprocess.check_output(["xcrun", "--find", "swift-symbolgraph-extract"], text=True).strip()
+                     if sys.platform == "darwin" else shutil.which("swift-symbolgraph-extract"))
+        if not extractor:
+            raise RuntimeError("swift-symbolgraph-extract must be available on PATH")
+        command = [extractor, "-module-name", package, "-I", binary_path, "-target", target,
+                   "-output-dir", str(export), "-skip-synthesized-members", "-minimum-access-level", "public"]
+        if sys.platform == "darwin":
+            sdk = subprocess.check_output(["xcrun", "--show-sdk-path"], text=True).strip()
+            command += ["-sdk", sdk]
+        completed = subprocess.run(command, cwd=ROOT, stdout=output, stderr=subprocess.STDOUT, check=False)
+        if completed.returncode:
+            raise RuntimeError(f"Swift symbol extraction failed for {package}; see {log}")
+    # Ignore intermediate graphs emitted by Swift Build with other options.
     paths = sorted(
-        path for path in scratch.rglob("*.symbols.json")
-        if path.name == package + ".symbols.json" or path.name.startswith(package + "@")
+        path for path in export.glob("*.symbols.json")
+        if (path.name == package + ".symbols.json" or path.name.startswith(package + "@"))
     )
     if not paths:
         raise RuntimeError(f"Swift produced no symbol graph for {package}; see {log}")

@@ -58,7 +58,7 @@ def swift(work, output, release, target, sdks):
     package = work / "source/implementation/swift/GameEventScriptTool"
     info = package / "Sources/GameEventScriptTool/ToolBuildInfo.swift"
     info.write_text(info.read_text().replace('"development"', json.dumps(release)))
-    options = ["--package-path", package, "--scratch-path", work / "build", "--build-system", "native",
+    options = ["--package-path", package, "--scratch-path", work / "build",
                "--disable-build-manifest-caching", "--configuration", "release", "--product", "ges"]
     if target.startswith("linux-"):
         if sdks is None:

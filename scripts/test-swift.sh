@@ -10,18 +10,18 @@ ges_scratch="$ges_root/artifacts/swift/conformance"
 
 python3 "$ges_root/scripts/sync-highlighter-grammars.py" --check
 swift test --package-path "$ges_root/implementation/swift/GameEventScriptSyntaxHighlighter" \
-    --scratch-path "$ges_root/artifacts/swift/syntaxhighlighter" --build-system native --disable-build-manifest-caching --configuration release
+    --scratch-path "$ges_root/artifacts/swift/syntaxhighlighter" --disable-build-manifest-caching --configuration release
 
 swift test --package-path "$ges_root/implementation/swift/GameEventScriptSwiftBridge" \
-    --scratch-path "$ges_root/artifacts/swift/swiftbridge" --build-system native --disable-build-manifest-caching --configuration release
+    --scratch-path "$ges_root/artifacts/swift/swiftbridge" --disable-build-manifest-caching --configuration release
 "$ges_root/scripts/test-swift-tool.sh"
 python3 "$ges_root/scripts/verify-swift-bytecode.py"
 dotnet run --project "$ges_root/implementation/csharp/GameEventScript.Conformance/fixture-exporter" \
     --configuration Release --artifacts-path "$ges_root/artifacts/swift/csharp-exporter" -- \
     "$ges_root/conformance/suites" "$ges_root/artifacts/swift/runtime-fixtures"
 
-swift test --package-path "$ges_package" --scratch-path "$ges_scratch" --build-system native --disable-build-manifest-caching --configuration release
-swift run --package-path "$ges_package" --scratch-path "$ges_scratch" --build-system native --disable-build-manifest-caching --configuration release --skip-build ges-conformance \
+swift test --package-path "$ges_package" --scratch-path "$ges_scratch" --disable-build-manifest-caching --configuration release
+swift run --package-path "$ges_package" --scratch-path "$ges_scratch" --disable-build-manifest-caching --configuration release --skip-build ges-conformance \
     --corpus "$ges_root/conformance/suites" \
     --fixtures "$ges_root/conformance/fixtures/MarkdownV1" \
     --output "$ges_root/artifacts/swift/conformance-results" \

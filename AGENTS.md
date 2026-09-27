@@ -355,12 +355,17 @@ documentation or attributes; none is added just inside an opening brace. The
 SwiftSyntax helper in `scripts/SwiftDeclarationSpacing.swift` enforces this in
 addition to swift-format. Swift CI requires both the formatting gate and its
 regression controls (`python3 scripts/test-swift-spacing.py`).
-Native SwiftPM build/test commands use `--disable-build-manifest-caching` to
+SwiftPM commands use the toolchain’s default build system; do not force the
+deprecated `native` backend. Public package minimum tool versions remain independent
+of the repository build toolchain. Build/test commands use `--disable-build-manifest-caching` to
 rediscover added, renamed and removed sources in local dependency packages.
 This regenerates build planning, not compiled objects. Keep the same option in
 new native SwiftPM entry points. `python3 scripts/test-swift-incremental.py`
 verifies source discovery and unchanged-build object reuse through the build script.
 Run `./scripts/test-swift.sh` and `python3 scripts/verify-swift-api.py`.
+The API snapshot gate invokes the official symbol-graph extractor directly with
+explicit options; Swift Build’s intermediate graphs are not snapshot inputs.
+DocC consumes only explicit `dump-symbol-graph` exports, including extension blocks.
 Swift CI uses `scripts/ci-swift-scope.py` to skip native checks only for known
 website/guide-only changes; specs, corpus, scripts and unknown paths run all gates.
 The required `verify` check must remain present and fail on scope-selection errors.

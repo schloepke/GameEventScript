@@ -8,6 +8,9 @@ import importlib.util
 from pathlib import Path
 import sys
 import unittest
+import tempfile
+from unittest.mock import patch
+from types import SimpleNamespace
 
 
 sys.dont_write_bytecode = True
@@ -56,6 +59,29 @@ class SwiftDocumentationTests(unittest.TestCase):
     def test_open_members_and_duplicate_graph_entries(self):
         member = symbol("overridable()", access="open")
         self.assertEqual(1, len(self.issues(member, member)))
+
+    def test_only_explicit_symbol_exports_are_loaded(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            def build(arguments, **kwargs):
+                if "-output-dir" in arguments:
+                    for folder, content in (
+                        ("symbolgraph", '{"export": true}'),
+                        ("out/Products/Debug/Example.symbolgraphs", '{"intermediate": true}'),
+                    ):
+                        path = root / "Example" / folder
+                        path.mkdir(parents=True, exist_ok=True)
+                        (path / "Example.symbols.json").write_text(content)
+                        (path / "Example@Swift.symbols.json").write_text(content)
+                return SimpleNamespace(returncode=0)
+
+            with (patch.object(API, "ARTIFACTS", root),
+                  patch.object(API.subprocess, "run", side_effect=build),
+                  patch.object(API.shutil, "which", return_value="swift-symbolgraph-extract"),
+                  patch.object(API.subprocess, "check_output", side_effect=lambda args, **kwargs:
+                               '{"target":{"triple":"arm64-apple-macosx26.0"}}' if "-print-target-info" in args else str(root))):
+                self.assertEqual([{"export": True}, {"export": True}], API.dump_graphs("swift", "Example"))
 
     def test_bytecode_documentation_does_not_change_numeric_registry(self):
         text = """

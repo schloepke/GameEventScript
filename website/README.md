@@ -219,7 +219,8 @@ the same layout as `artifacts/website/dist/`.
 toolchains. Generation and local builds never publish.
 
 `.spi.yml` uses Swift Package Index's `external_links.documentation` to point
-to our hosted Swift reference; SPI does not build a duplicate DocC site. The
+to our documentation entry page, which links learning guides, integration guides
+and API references; SPI does not build a duplicate DocC site. The
 root README's compatibility badges use the exact SPI-provided endpoints. The
 manifest was checked with the official SPI validator. Merge and site deployment
 are needed before the new reference links are publicly available.

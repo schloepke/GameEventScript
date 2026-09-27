@@ -6,6 +6,13 @@
 GES libraries share one release version and Git tag. There are no independently
 versioned Swift module repositories.
 
+The repository's release badges show the latest non-prerelease NuGet package
+and GitHub release. Swift Package Index badges report its observed Swift-version
+and platform build compatibility, not shared Conformance acceptance. Consult the
+[release notes](https://github.com/schloepke/GameEventScript/releases) for migration
+guidance and the [changelog](../../../CHANGELOG.md) for unreleased changes.
+Language and API contracts may change during 0.x development.
+
 > **Since: 0.2.0 — package icons**
 
 NuGet packages embed the Pixel-Duo logo as `icon.png`; no external image URL is
@@ -77,7 +84,8 @@ macOS target. This is a macOS deployment minimum, not an Apple-only restriction.
 The CLI/Conformance tools separately require macOS 10.15.4.
 
 There is no upload to Apple or a Swift registry in this flow. Publishing a Git
-version tag makes the root package available to SwiftPM. The individual packages
+version tag makes the root package available to SwiftPM; it does not itself
+create a GitHub release or publish NuGet packages. The individual packages
 under `implementation/swift` remain local development and verification entry points.
 
 ## Verify a release without publishing

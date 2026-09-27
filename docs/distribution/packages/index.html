@@ -74,6 +74,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <p>GES libraries share one release version and Git tag. There are no independently
 versioned Swift module repositories.</p>
+<p>The repository’s release badges show the latest non-prerelease NuGet package
+and GitHub release. Swift Package Index badges report its observed Swift-version
+and platform build compatibility, not shared Conformance acceptance. Consult the
+<a href="https://github.com/schloepke/GameEventScript/releases">release notes</a> for migration
+guidance and the <a href="/docs/changelog/">changelog</a> for unreleased changes.
+Language and API contracts may change during 0.x development.</p>
 <p class="ges-since"><strong>Since: 0.2.0 — package icons</strong></p>
 <p>NuGet packages embed the Pixel-Duo logo as <code>icon.png</code>; no external image URL is
 required. The release package check verifies both the manifest reference and
@@ -132,7 +138,8 @@ SwiftSyntax macro dependency. Consuming packages must declare this or a newer
 macOS target. This is a macOS deployment minimum, not an Apple-only restriction.
 The CLI/Conformance tools separately require macOS 10.15.4.</p>
 <p>There is no upload to Apple or a Swift registry in this flow. Publishing a Git
-version tag makes the root package available to SwiftPM. The individual packages
+version tag makes the root package available to SwiftPM; it does not itself
+create a GitHub release or publish NuGet packages. The individual packages
 under <code>implementation/swift</code> remain local development and verification entry points.</p>
 <h2 id="verify-a-release-without-publishing">Verify a release without publishing</h2>
 <div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">./scripts/release-csharp-dry-run.sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">0.1.0-rc1</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">./scripts/verify-csharp-reproducibility.sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">0.1.0-rc1</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">python3</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">scripts/test-publish-csharp-packages.py</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">python3</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">scripts/test-swift-package.py</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="./scripts/release-csharp-dry-run.sh 0.1.0-rc1./scripts/verify-csharp-reproducibility.sh 0.1.0-rc1python3 scripts/test-publish-csharp-packages.pypython3 scripts/test-swift-package.py"><div></div></button></div></figure></div>

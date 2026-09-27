@@ -78,7 +78,9 @@ documents `dotnet ges` and the interactive event console; the
 [C# distribution guide](guide/distribution/CSharp.md) covers local packages,
 DLL sets and release verification.
 The [package release guide](guide/distribution/Packages.md) describes the shared
-NuGet/SwiftPM release scope, Xcode consumption and publisher setup.
+NuGet/SwiftPM release scope, Xcode consumption and publisher setup. Its
+[version policy](guide/distribution/Packages.md#version-policy) defines release
+numbering before and after 1.0.
 The [changelog](../CHANGELOG.md) collects user-visible changes and migration
 guidance for the next release.
 

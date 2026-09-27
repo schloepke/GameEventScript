@@ -109,7 +109,11 @@ matters: `100 + 0.2` is ordinary addition and gives `100.2`.
 
 There is no mutable global script state. Each handler invocation has fresh local
 bindings. Keep persistent state in your application, or pass immutable data
-along in subsequent messages.
+along in subsequent messages. Native handlers and extensions can perform the
+required game-state changes; their side effects and persistence are owned by
+your application. Script immutability does not make these calls pure, and the
+runtime cannot roll back their external effects. See
+[state ownership](../../specs/Language.md#state-ownership).
 
 ## Missing values and decisions
 

@@ -12,43 +12,40 @@ record the resulting contract in the owning specification. Keep detailed design
 decisions in specifications or dedicated plans and keep only a concise pointer
 here.
 
-## Before the first public package release
-
-- Register or select a GES-specific domain and transferable publisher namespace;
-  `gameeventscript.org` is the current domain candidate. Align NuGet, Maven,
-  SwiftPM, GitHub and future organization ownership.
-- Confirm availability of the chosen `GameEventScript.*` C# package IDs and
-  finalize publisher identity, repository visibility and release signing before
-  enabling `NUGET_PUBLISH_ENABLED` or any other public registry publication.
-
 ## Bytecode and portable format
 
-- Redesign numeric and other constant pools together with immediate operands and
-  measure compact instruction layouts, including forms such as arithmetic with a
-  directly addressed constant. Start this work with the first Swift port rather
-  than optimizing the current C#-only representation for hypothetical consumers.
+- Before 1.0, evaluate and select the instruction format using measured C# and
+  Swift results: either retain fixed 16-byte instructions, optionally with
+  constant pools, or use an 8-byte base word with zero to three additional
+  8-byte payload words (8/16/24/32-byte instructions, with a two-bit payload
+  count). Evaluate constant pools and directly addressed constants alongside
+  both layouts. Compare execution time, runtime allocations, register pressure,
+  resident Program memory and encoded code size on representative workloads;
+  payload words are data, not separately budgeted opcodes. Implement and verify
+  the selected changes before 1.0, or explicitly retain the current layout with
+  the evidence and future binary compatibility implications recorded. Review
+  addressing, validation, public Program/codec APIs and fixtures as part of any
+  redesign. The format review is required for 1.0; a redesign is not predetermined.
+  Tracked as a 1.0.0 prerequisite in [issue #32](https://github.com/schloepke/GameEventScript/issues/32).
 - Stabilize the next bytecode and binary boundary with canonical fixtures before
   making it the input to additional runtimes.
-- During the first Swift port, allow an explicit, mechanically checked duplicate
-  opcode and format description long enough to expose the real commonalities and
-  language-specific differences. Based on that evidence, decide whether a
-  maintainable central tabular definition is beneficial; only then generate
-  checked-in language sources and documentation and add a CI drift gate. Normal
-  product and IDE builds must never require the generator.
+- Evaluate a central tabular opcode/format definition using the existing C# and
+  Swift descriptions and the mechanical `scripts/verify-swift-bytecode.py` gate.
+  If generation is beneficial, generate checked-in language sources and
+  documentation and verify their freshness in CI. Normal product and IDE builds
+  must never require the generator.
 - Specify and implement optional `.gesb` compression codecs separately; V1 only
   reserves the codec bits and emits known sections uncompressed.
 - Specify signatures, certificates or keys, trust policy and rollback behavior
   separately; V1 only reserves the security section range and provides no
   authenticity guarantee.
 
-## Language and state
+## Language
 
-- Define reconstruction of executable host-bound values and custom Series separately.
-  Portable literals and JSON reconstruct data; external snapshots become Records.
-- Design host-bound Tables as the explicit mutation model. Mutations should
-  enter a deterministic modification queue; snapshot visibility,
-  read-your-writes, commit boundaries, rollback, observation, persistence and
-  replication remain to be specified.
+- Reconstruction of executable host-bound values is deferred
+  and is not required for 1.0. Revisit only for a demonstrated application need;
+  portable literals and JSON already reconstruct data, and external snapshots
+  become Records. See the [language scope review](docs/guide/distribution/Packages.md#language-scope-review-for-10).
 
 ## Language ports and distribution
 
@@ -67,9 +64,9 @@ here.
   empty package scaffolds.
 - Consider a C runtime and optional thin C++ facade when gaming adoption or a
   later enterprise/embedded position justifies the native maintenance cost.
-- Define a portable standard-extension library only after its contracts and
-  shared Conformance cases exist; keep language-specific extensions with their
-  implementations until then.
+- A portable standard-extension library is not required for the 1.0 language
+  baseline. Define one only after its contracts and shared Conformance cases
+  exist; keep language-specific extensions with their implementations until then.
 
 ## Developer tooling
 
@@ -81,17 +78,24 @@ here.
 - Add Homebrew installation for the standalone CLI downloads and configure
   Developer ID signing/notarization and Windows Authenticode signing before
   promising platform-verified publisher identity.
+- Consider optional NuGet author signing when an independent publisher signature
+  is needed. Current publication uses Trusted Publishing and NuGet.org repository
+  signing; author signing is not a prerequisite for releases. It requires a
+  trusted code-signing certificate, secure signing infrastructure and verification
+  after reproducible package preparation.
 
 ## Unity and editor integration
 
-- Validate the staged C# DLL set in a real Unity project with the selected
-  scripting backend and API compatibility level, then add Compile- and
-  PlayMode-smoke tests to CI for the extracted Unity package.
+- Validate the separately staged C# DLL distribution in a real Unity project and
+  add Compile- and PlayMode-smoke tests when extracting a Unity package. Public
+  NuGet consumption has already been exercised in Battle Club on physical iOS
+  (IL2CPP) and Android devices; that does not verify the staged DLL import path.
 - Develop Unity editor integration, prepared MonoBehaviours and an installable
   Unity package in a real Unity project before extracting reusable integration
   sources into this monorepo.
-- Consider development-only hot reload as an embedding feature without moving
-  threading, filesystem or Unity dependencies into portable Core.
+- Consider reusable Unity editor hot-reload integration when extracting the
+  editor package. Existing CLI `:reload` and the consuming Swift application's
+  editor already reload programs through the existing host lifecycle. Keep file watching, threading and Unity dependencies in adapters.
 - After the Kotlin port is stable, build a dedicated IntelliJ plugin with native
   `.ges`/`.gesa` support beyond portable TextMate highlighting and `.region`
   folding. Keep the portable dump and TextMate bundles free of IntelliJ-specific
@@ -99,12 +103,12 @@ here.
 
 ## Performance and optimizer follow-ups
 
-- Treat the current performance and allocation tests as regression gates against
-  the established C# and Swift profiles. In a more mature multi-runtime state, design a
-  real benchmark system with representative multi-program workloads, separated
+- In a more mature multi-runtime state, design a benchmark system with
+  representative multi-program workloads, separated
   compile/load/message/VM measurements, native harnesses per language and a
   documented build-host/toolchain calibration index instead of comparing raw
-  timings from unrelated machines.
+  timings from unrelated machines. Existing C# and Swift profile measurements
+  remain implementation regression gates, not cross-platform performance promises.
 - Add bounded fuzzing for the `.gesb` reader and property-based Reader/Writer
   tests without weakening the existing canonical and malformed fixture corpus.
 - Improve CFG/liveness-based register allocation and reuse of non-overlapping

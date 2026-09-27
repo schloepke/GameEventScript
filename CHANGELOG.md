@@ -10,7 +10,27 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
-No changes recorded yet.
+### Added
+
+- Published the release version policy: compatible fixes in 0.x patches, features
+  and contract changes in 0.x minor releases with migration notes, and Semantic
+  Versioning for the declared compatibility surface from 1.0 onward.
+
+- Defined source and binary compatibility within major release lines from 1.0,
+  including message/conversion guarantees, recompilation exceptions for random
+  and opcode-budget consumption, and no guaranteed support for pre-1.0 binaries.
+
+- Recorded the current event-driven language as the 1.0 baseline after reviewing
+  remaining language work; host-bound reconstruction and a portable
+  standard-extension library are not required for that baseline.
+- Recorded the C# and Swift embedding API baseline and source-API compatibility
+  rules, including intentional native-language differences and API snapshot gates.
+
+### Changed
+
+- Clarified application ownership of state mutation and persistence, including
+  native handler and extension effects, external-value stability and failure
+  recovery. Existing runtime behavior is unchanged.
 
 ## [0.2.0] — 2026-09-26
 
@@ -157,8 +177,7 @@ First public development release of the immutable, event-driven core.
   handlers, extensions and external types, with execution limits.
 - Provided source-installed development CLIs for compilation, validation,
   execution, binary inspection and interactive use.
-- Documented installation and the pre-1.0 compatibility policy. Mutable Tables
-  and persistence were not part of the release.
+- Documented installation and the pre-1.0 compatibility policy.
 
 [0.2.0]: https://github.com/schloepke/GameEventScript/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/schloepke/GameEventScript/releases/tag/0.1.0

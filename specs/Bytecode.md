@@ -1350,7 +1350,9 @@ the later value.
 
 ## Format Invariants
 
-- New bytecode format changes must increment `FormatVersion`.
+- Incompatible instruction encoding/layout changes require a new `FormatVersion`;
+  additive opcode extensions and support for older binaries follow
+  [Binary format compatibility](BinaryFormat.md#release-and-format-compatibility).
 - Bytecode dumps are debug tooling output and are not a stable wire format.
 - Public bytecode must remain deterministic for the same script/options.
 - Host dynamic linking remains separate from compilation.

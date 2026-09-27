@@ -152,6 +152,7 @@ public sealed partial class GameEventScriptHost
             var message = GameEventScriptSystemEndpoints.CreateInitializationMessage();
             // No host callbacks occur between the capacity check and this initialization enqueue.
             var pending = new PendingMessage(message, Sort(initialization.ToArray()), [], instance);
+            _idleSinceMicroseconds = null;
             if (IsReady) _queue.Enqueue(pending);
             else _startupQueue.Enqueue(pending);
         }
@@ -275,7 +276,7 @@ public sealed partial class GameEventScriptHost
         if (_pumping) throw new InvalidOperationException("A host cannot be pumped recursively.");
         _pumping = true;
         try { return ExecuteFrameCore(opcodeBudget); }
-        finally { _pumping = false; }
+        finally { _pumping = false; UpdateIdleDuration(); }
     }
 
     private GameEventScriptExecutionResult ExecuteFrameCore(int opcodeBudget)
@@ -585,6 +586,7 @@ public sealed partial class GameEventScriptHost
         }
 
         _queue.Enqueue(message);
+        _idleSinceMicroseconds = null;
         return true;
     }
 

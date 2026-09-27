@@ -61,6 +61,9 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
     /// <summary>Gets whether the owned host has no active or queued work.</summary>
     public bool IsIdle { get { lock (_gate) return _host.IsIdle; } }
 
+    /// <summary>Gets the owned host's idle duration in whole microseconds under the runner gate, or null when not idle or after disposal. Reading never schedules work.</summary>
+    public long? IdleDurationMicroseconds { get { lock (_gate) return _disposed ? null : _host.IdleDurationMicroseconds; } }
+
     /// <summary>Gets the latest completed pump result, if any.</summary>
     public GameEventScriptExecutionResult? LastResult { get { lock (_gate) return _lastResult; } }
 

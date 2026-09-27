@@ -842,6 +842,11 @@ public static class ConformanceRunner
         {
             if (expected.HostReady is { } ready && ready != Host.IsReady)
                 AddMismatch(_mismatches, path + "/hostReady", ready ? "true" : "false", Host.IsReady ? "true" : "false");
+            if (expected.IdleDurationMicroseconds is { } idle)
+            {
+                var actualIdle = Host.IdleDurationMicroseconds?.ToString(CultureInfo.InvariantCulture) ?? "none";
+                if (idle != actualIdle) AddMismatch(_mismatches, path + "/idleDurationMicroseconds", idle, actualIdle);
+            }
             foreach (var pair in expected.ProgramStarts)
             {
                 var actual = "missing";

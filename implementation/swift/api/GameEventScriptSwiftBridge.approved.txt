@@ -119,6 +119,7 @@ symbol {"access":"public","declaration":"struct GameEventScriptSwiftPublishSink"
 symbol {"access":"public","declaration":"struct GameEventScriptSwiftRegistration","kind":"swift.struct","path":"GameEventScriptSwiftBridge.GameEventScriptSwiftRegistration"}
 symbol {"access":"public","declaration":"struct GameEventScriptSwiftTypeBinding","kind":"swift.struct","path":"GameEventScriptSwiftBridge.GameEventScriptSwiftTypeBinding"}
 symbol {"access":"public","declaration":"var binding: GameEventScriptSwiftTypeBinding { get }","kind":"swift.property","path":"GameEventScriptSwiftBridge.GameEventScriptSwiftType.binding"}
+symbol {"access":"public","declaration":"var idleDurationMicroseconds: Int64? { get }","kind":"swift.property","path":"GameEventScriptSwiftBridge.GameEventScriptSwiftHostRunner.idleDurationMicroseconds"}
 symbol {"access":"public","declaration":"var isAttached: Bool { get }","kind":"swift.property","path":"GameEventScriptSwiftBridge.GameEventScriptSwiftRegistration.isAttached"}
 symbol {"access":"public","declaration":"var isIdle: Bool { get }","kind":"swift.property","path":"GameEventScriptSwiftBridge.GameEventScriptSwiftHostRunner.isIdle"}
 symbol {"access":"public","declaration":"var isReady: Bool { get }","kind":"swift.property","path":"GameEventScriptSwiftBridge.GameEventScriptSwiftHostRunner.isReady"}

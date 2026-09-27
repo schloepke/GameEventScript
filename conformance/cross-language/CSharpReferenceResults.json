@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "882A371D19AC9D218713FA04D1EBCC8E32CCBA40E16F65AC85D444D3249713C6",
+    "sha256": "4541F2EBC9407D59A62B90176709A32A4C327BB80C8991EB6DBC34213146AE5D",
     "documentCount": 96,
-    "caseCount": 1679
+    "caseCount": 1683
   },
   "cases": [
     {
@@ -21417,6 +21417,72 @@
           "compiler",
           "host",
           "native-handlers",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-lifecycle/idle-duration-delayed",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-lifecycle/idle-duration-later-init",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-lifecycle/idle-duration-native",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "host",
+          "native-handlers",
+          "observer"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.host-lifecycle/idle-duration-paused",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
           "observer",
           "publish-sink",
           "vm"

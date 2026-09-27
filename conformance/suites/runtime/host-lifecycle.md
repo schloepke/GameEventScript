@@ -648,3 +648,230 @@ steps:
     accepted: false
     local: []
 ```
+
+---
+
+## Test: Idle duration tracks only accepted work
+
+This case verifies idle duration tracks only accepted work using the virtual monotonic clock.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: idle-duration-native
+nativeHandlers:
+  - id: ping
+    message: Ping
+stepActions:
+  observe:
+    - advanceMicroseconds: "10"
+  drain:
+    - advanceMicroseconds: "20"
+  again:
+    - advanceMicroseconds: "7"
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| observe | Unknown | enqueue | |
+| enqueue | Ping | enqueue | |
+| drain | Unknown | completion | |
+| again | Unknown | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  observe:
+    accepted: false
+    idleDurationMicroseconds: "10"
+  enqueue:
+    idleDurationMicroseconds: "none"
+  drain:
+    accepted: false
+    idleDurationMicroseconds: "0"
+  again:
+    accepted: false
+    idleDurationMicroseconds: "7"
+```
+
+---
+
+## Test: Paused handlers prevent idle duration
+
+This case verifies paused handlers prevent idle duration using the virtual monotonic clock.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: idle-duration-paused
+sources:
+  - name: idle-paused.ges
+stepActions:
+  observe:
+    - advanceMicroseconds: "100"
+  after:
+    - advanceMicroseconds: "12"
+```
+
+### Source code under test
+
+```ges
+on Work { let x be 10; emit Result() }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| begin | Work | frame | 1 |
+| observe | Unknown | enqueue | |
+| finish | Unknown | completion | |
+| after | Unknown | enqueue | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+initialization:
+  idleDurationMicroseconds: "0"
+steps:
+  begin:
+    paused: true
+    idleDurationMicroseconds: "none"
+  observe:
+    accepted: false
+    idleDurationMicroseconds: "none"
+  finish:
+    accepted: false
+    idleDurationMicroseconds: "0"
+    local: [{ name: Result }]
+  after:
+    accepted: false
+    idleDurationMicroseconds: "12"
+```
+
+---
+
+## Test: Delayed outputs prevent idle until pumped
+
+This case verifies delayed outputs prevent idle until pumped using the virtual monotonic clock.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: idle-duration-delayed
+sources:
+  - name: idle-delayed.ges
+publishSink: accept
+stepActions:
+  due:
+    - advanceMicroseconds: "1000000"
+  after:
+    - advanceMicroseconds: "25"
+```
+
+### Source code under test
+
+```ges
+on Work { emit after 1s Later(); publish after 1s Out() }
+on Later {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| begin | Work | completion | |
+| due | Unknown | enqueue | |
+| finish | Unknown | completion | |
+| after | Unknown | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+initialization:
+  idleDurationMicroseconds: "0"
+steps:
+  begin:
+    waiting: true
+    idleDurationMicroseconds: "none"
+    local: [{ name: Later }]
+  due:
+    accepted: false
+    idleDurationMicroseconds: "none"
+  finish:
+    accepted: false
+    idleDurationMicroseconds: "0"
+    local: [{ name: Out }]
+    outbound: [{ name: Out }]
+  after:
+    accepted: false
+    idleDurationMicroseconds: "25"
+```
+
+---
+
+## Test: Later initialization interrupts idle duration
+
+This case verifies later initialization interrupts idle duration using the virtual monotonic clock.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: idle-duration-later-init
+sources:
+  - name: idle-later.ges
+    program: later
+deferredPrograms: [later]
+stepActions:
+  load:
+    - advanceMicroseconds: "100"
+    - loadProgram: later
+  after:
+    - advanceMicroseconds: "30"
+```
+
+### Source code under test
+
+```ges
+module later
+on initialization { emit Hello() }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| load | Unknown | enqueue | |
+| finish | Unknown | completion | |
+| after | Unknown | enqueue | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+initialization:
+  idleDurationMicroseconds: "0"
+steps:
+  load:
+    accepted: false
+    programStarts: { later: pending }
+    idleDurationMicroseconds: "none"
+  finish:
+    accepted: false
+    programStarts: { later: ready }
+    idleDurationMicroseconds: "0"
+    local: [{ name: Hello }]
+  after:
+    accepted: false
+    idleDurationMicroseconds: "30"
+```

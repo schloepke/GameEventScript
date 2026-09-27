@@ -54,6 +54,10 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
     /// Whether the owned host successfully started; false after close.
     public var isReady: Bool { locked { host?.isReady ?? false } }
 
+    /// The owned host's idle duration in whole microseconds, read under the runner gate; nil when not idle or closed.
+    /// Reading never schedules work.
+    public var idleDurationMicroseconds: Int64? { locked { host?.idleDurationMicroseconds } }
+
     /// Starts the initial Program group under the gate, then schedules ordinary queued work on success.
     ///
     /// - Throws: An API error if the runner is closed or host startup preconditions fail.

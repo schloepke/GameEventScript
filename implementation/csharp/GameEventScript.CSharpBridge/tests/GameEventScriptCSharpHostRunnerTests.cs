@@ -10,6 +10,37 @@ namespace GameEventScript.Tests.Native.CSharpBridge;
 [DoNotParallelize]
 public sealed class GameEventScriptCSharpHostRunnerTests
 {
+    private sealed class FrozenClock : IGameEventScriptClock
+    {
+        public long ElapsedMicroseconds => 100;
+    }
+
+    /// <summary>Verifies readiness, callback and disposal semantics through the runner ownership gate.</summary>
+    [TestMethod]
+    public void IdleDurationIsAccessibleThroughTheRunner()
+    {
+        var host = GameEventScriptHost.CreateBuilder().WithClock(new FrozenClock()).Build();
+        Assert.IsNull(host.IdleDurationMicroseconds);
+        using var runner = host.RunAutomatically();
+        Assert.IsNull(runner.IdleDurationMicroseconds);
+        using var done = new ManualResetEventSlim(false);
+        long? callbackIdle = 42;
+        runner.Subscribe("Ping", [], (_, _) =>
+        {
+            callbackIdle = runner.IdleDurationMicroseconds;
+            done.Set();
+        });
+        runner.Start();
+        Assert.AreEqual(0L, runner.IdleDurationMicroseconds);
+        runner.Receive(GameEventScriptMessage.Create("Ping"));
+        Assert.IsTrue(done.Wait(TimeSpan.FromSeconds(5)));
+        runner.RunToCompletion();
+        Assert.IsNull(callbackIdle);
+        Assert.AreEqual(0L, runner.IdleDurationMicroseconds);
+        runner.Dispose();
+        Assert.IsNull(runner.IdleDurationMicroseconds);
+    }
+
     /// <summary>Verifies timer-driven resumption without another native Receive call.</summary>
     [TestMethod]
     public void AutomaticRunnerWakesForDelayedMessagesWithoutFurtherInput()

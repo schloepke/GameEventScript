@@ -983,6 +983,7 @@ symbol {"access":"public","declaration":"var floatValue: Double? { get }","kind"
 symbol {"access":"public","declaration":"var handlerName: String?","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptDiagnostic.handlerName"}
 symbol {"access":"public","declaration":"var hasUnit: Bool { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesValue.hasUnit"}
 symbol {"access":"public","declaration":"var hasValue: Bool { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesValue.hasValue"}
+symbol {"access":"public","declaration":"var idleDurationMicroseconds: Int64? { get }","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptHost.idleDurationMicroseconds"}
 symbol {"access":"public","declaration":"var integer: Int64 { get }","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptBytecodeInstruction.integer"}
 symbol {"access":"public","declaration":"var integerRangeValue: GesIntegerRange? { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesValue.integerRangeValue"}
 symbol {"access":"public","declaration":"var integerValue: Int64? { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesValue.integerValue"}

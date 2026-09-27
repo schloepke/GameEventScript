@@ -20,6 +20,9 @@ see the migration notes below before upgrading from 0.1.0.
 
 ### Added
 
+- Host idle-duration observations in C# and Swift, including synchronized Bridge
+  runner access, for application-defined inactivity recovery without host timers.
+
 - Website publication triggers the hosting pull webhook after changed output is
   successfully pushed to `site`, with bounded retries and a secret-backed URL.
 

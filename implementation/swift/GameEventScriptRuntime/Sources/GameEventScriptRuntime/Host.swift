@@ -37,6 +37,7 @@ public final class GameEventScriptHost {
     private var diagnostic: GameEventScriptDiagnostic?
     private var randomBoundary = 0
     private var pumping = false
+    private var idleSinceMicroseconds: Int64?
 
     /// Creates a loading, single-caller host with a private random stream. Load initial Programs and call `start()`
     /// before receiving messages.
@@ -71,6 +72,22 @@ public final class GameEventScriptHost {
     public var pendingMessageCount: Int { queue.count + startupQueue.count + delayed.count }
     /// Whether no dispatch is active and both message queues are empty; this does not imply readiness.
     public var isIdle: Bool { active == nil && pendingMessageCount == 0 }
+
+    /// Elapsed whole microseconds in the current ready, work-free phase, or nil before readiness or while work
+    /// is active, queued or delayed. Uses the host's monotonic clock; reading never pumps or schedules work.
+    /// Rejected messages do not reset the duration. Access requires the same serialization as other host operations.
+    public var idleDurationMicroseconds: Int64? {
+        guard isReady, !pumping, isIdle, let since = idleSinceMicroseconds else { return nil }
+        return max(0, elapsedMicroseconds - since)
+    }
+
+    private func updateIdleDuration() {
+        if isReady && isIdle {
+            if idleSinceMicroseconds == nil { idleSinceMicroseconds = elapsedMicroseconds }
+        } else {
+            idleSinceMicroseconds = nil
+        }
+    }
 
     /// Validates and links before atomically publishing registrations and initialization.
     /// Before `start()`, the instance joins the initial load group. On a ready host, its initialization enters
@@ -111,6 +128,7 @@ public final class GameEventScriptHost {
         instances[instance.registrationID] = instance
         if !initialization.isEmpty {
             let pending = GesPendingMessage(message: try GameEventScriptMessage(name: "initialization"), exact: initialization.sorted(by: GesSubscriptionEntry.precedes), names: [], initialization: instance)
+            idleSinceMicroseconds = nil
             if isReady { queue.enqueue(pending) } else { startupQueue.enqueue(pending) }
         } else if isReady {
             instance.startResult = .init(state: .ready)
@@ -163,7 +181,10 @@ public final class GameEventScriptHost {
         guard isReady else { throw GameEventScriptAPIError.invalidOperation("Start the host before processing messages") }
         guard !pumping else { throw GameEventScriptAPIError.invalidOperation("A host cannot be pumped recursively") }
         pumping = true
-        defer { pumping = false }
+        defer {
+            pumping = false
+            updateIdleDuration()
+        }
         return try executeFrameCore(opcodeBudget: opcodeBudget)
     }
 
@@ -328,6 +349,7 @@ public final class GameEventScriptHost {
             if delayed[mid].deadline <= entry.deadline { lo = mid + 1 } else { hi = mid }
         }
         delayed.insert(entry, at: lo)
+        idleSinceMicroseconds = nil
         if publish {
             published += 1
             if initializationInstance != nil { initializationPublishes += 1 }
@@ -432,6 +454,7 @@ public final class GameEventScriptHost {
             }
             return false
         }
+        idleSinceMicroseconds = nil
         queue.enqueue(GesPendingMessage(message: message, exact: exact, names: names, initializationOutputID: initializationOutput ? (initializationInstance?.registrationID ?? 0) : 0))
         return true
     }
@@ -679,6 +702,7 @@ extension GameEventScriptHost {
         defer {
             starting = false
             pumping = false
+            updateIdleDuration()
         }
         while startupQueue.count > 0 || active != nil {
             let execution = try executeFrameCore(opcodeBudget: Int(Int32.max))

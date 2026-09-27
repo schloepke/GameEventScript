@@ -1,0 +1,42 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+{
+  "cmd": [
+    "ges",
+    "check",
+    "$file"
+  ],
+  "selector": "source.gameeventscript - source.gameeventscript.assembler",
+  "working_dir": "$file_path",
+  "env": {
+    "NO_COLOR": "1"
+  },
+  "encoding": "utf-8",
+  "file_regex": "^(.*)\\(([0-9]+),([0-9]+)\\): (.*)$",
+  "variants": [
+    {
+      "name": "Compile",
+      "cmd": [
+        "ges",
+        "compile",
+        "$file"
+      ]
+    },
+    {
+      "name": "Run",
+      "cmd": [
+        "ges",
+        "run",
+        "$file"
+      ]
+    },
+    {
+      "name": "Dump",
+      "cmd": [
+        "ges",
+        "dump",
+        "${file_path}/${file_base_name}.gesb"
+      ]
+    }
+  ]
+}

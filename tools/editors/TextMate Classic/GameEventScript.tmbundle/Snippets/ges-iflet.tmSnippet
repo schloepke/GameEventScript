@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>name</key>
+	<string>Conditional binding</string>
+	<key>uuid</key>
+	<string>E6EFE8CA-7793-5092-B57A-3569DBE57741</string>
+	<key>scope</key>
+	<string>source.gameeventscript - source.gameeventscript.assembler - comment - string</string>
+	<key>tabTrigger</key>
+	<string>ges-iflet</string>
+	<key>content</key>
+	<string>if let ${1:value} be ${2:expression} {
+	$0
+}</string>
+</dict>
+</plist>

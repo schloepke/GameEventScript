@@ -1,0 +1,10 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<snippet>
+<content>on ${1:Main}(${2:args}) {
+	$0
+}</content>
+<tabTrigger>ges-on</tabTrigger>
+<scope>source.gameeventscript - source.gameeventscript.assembler - comment - string</scope>
+<description>Message handler</description>
+</snippet>

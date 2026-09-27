@@ -1,0 +1,8 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<snippet>
+<content>${1:items}[:fold ${2:acc} be ${3:0}, ${4:item} =&gt; ${5:acc + item}]$0</content>
+<tabTrigger>ges-fold</tabTrigger>
+<scope>source.gameeventscript - source.gameeventscript.assembler - comment - string</scope>
+<description>Fold collection</description>
+</snippet>

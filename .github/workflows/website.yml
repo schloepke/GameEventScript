@@ -82,6 +82,16 @@ jobs:
       - name: Verify publication with local test repositories
         run: python3 scripts/test-publish-website.py
 
+      - name: Install editor syntax verifier
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends bat
+
+      - name: Verify editor integrations
+        run: |
+          python3 scripts/sync-editor-bundles.py --check
+          python3 scripts/test-editor-bundles.py --require-bat
+
       - name: Verify static asset filtering and deployment checks
         run: python3 scripts/test-website-assets.py
 

@@ -1,0 +1,71 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+# CLI compute benchmark
+
+[`compute-benchmark.ges`](compute-benchmark.ges) is a finite workload that needs
+no arguments, native extensions, random seed or custom execution limits. Run
+the commands below from the repository root, using installed Release CLIs from
+the same source revision where possible.
+
+```sh
+ges run docs/guide/cli/compute-benchmark.ges
+dotnet ges run docs/guide/cli/compute-benchmark.ges
+```
+
+The script chains 48 compute messages. Each batch constructs 128 immutable
+Records, calculating each score through 16 accumulator iterations. It also
+exercises square roots, computed Record fields, filtering, sorting, projections,
+grouping, map lookups, fold/reduce, and formatting/parsing a report. About 1.89
+million opcodes execute across 6,144 candidate Records. The normal message and
+per-handler step limits are sufficient. There are no delays or per-item console
+writes.
+
+Every batch verifies its report roundtrip and grouping count. The final integer
+checksum is independently calculated from the score recurrence, excluding scores
+divisible by three and summing each batch's total, count, highest and lowest
+score. Floating-point square roots are exercised but excluded from the exact
+checksum. Successful output is:
+
+```text
+Benchmark OK: rounds=48, candidates=6144, checksum=2069276181
+```
+
+A failed assertion reports an error and exits with code 1. Keep Hyperfine's
+default failure handling enabled so failures cannot masquerade as fast runs.
+
+## Source-to-completion comparison
+
+```sh
+hyperfine -N --warmup 3 --runs 20 \
+  'dotnet ges run --quiet docs/guide/cli/compute-benchmark.ges' \
+  'ges run --quiet docs/guide/cli/compute-benchmark.ges'
+```
+
+This measures process startup, source reading, compilation, linking and execution.
+Different compiler builds may produce different instruction sequences even when
+the observable result is identical.
+
+## Same-bytecode comparison
+
+Compile once, then give both runtimes **the same binary**:
+
+```sh
+ges compile docs/guide/cli/compute-benchmark.ges \
+  -o artifacts/cli/compute-benchmark/workload.gesb
+
+hyperfine -N --warmup 3 --runs 20 \
+  'dotnet ges run --quiet artifacts/cli/compute-benchmark/workload.gesb' \
+  'ges run --quiet artifacts/cli/compute-benchmark/workload.gesb'
+```
+
+This removes compilation from the measurement, but still includes process startup,
+binary reading/validation, linking and final console output. `--quiet` suppresses
+CLI status reports; the script retains its single success line. `-N` avoids
+Hyperfine's extra shell. Each measured command starts a fresh process: warmups
+warm filesystem/OS caches, not the managed runtime inside later processes.
+
+This is a mixed CLI workload, not a pure VM benchmark or a cross-platform
+performance guarantee. Compare on the same machine under similar load, and
+record tool versions/build configuration. The repository's dedicated performance
+and allocation checks remain the regression gates.

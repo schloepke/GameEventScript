@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>name</key>
+	<string>Reduce collection</string>
+	<key>uuid</key>
+	<string>740126E3-84AA-5F09-BA76-8D485E2052E7</string>
+	<key>scope</key>
+	<string>source.gameeventscript - source.gameeventscript.assembler - comment - string</string>
+	<key>tabTrigger</key>
+	<string>ges-reduce</string>
+	<key>content</key>
+	<string>${1:items}[:reduce ${2:acc}, ${3:item} =&gt; ${4:acc + item}]$0</string>
+</dict>
+</plist>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>name</key>
+	<string>Delayed message</string>
+	<key>uuid</key>
+	<string>201BAE49-2C2B-5E4B-BF1D-6CFE064B66A6</string>
+	<key>scope</key>
+	<string>source.gameeventscript - source.gameeventscript.assembler - comment - string</string>
+	<key>tabTrigger</key>
+	<string>ges-after</string>
+	<key>content</key>
+	<string>emit after ${1:1s} ${2:Tick}(${3})$0</string>
+</dict>
+</plist>

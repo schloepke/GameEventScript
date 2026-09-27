@@ -12,6 +12,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Added generated GES/GESA Sublime Text and bat grammars, TextMate/Sublime CLI
+  actions, and shared syntax-only completions and snippets with website downloads.
+
 - Published the release version policy: compatible fixes in 0.x patches, features
   and contract changes in 0.x minor releases with migration notes, and Semantic
   Versioning for the declared compatibility surface from 1.0 onward.

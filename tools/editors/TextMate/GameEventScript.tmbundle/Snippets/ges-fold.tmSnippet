@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>name</key>
+	<string>Fold collection</string>
+	<key>uuid</key>
+	<string>0327B044-7C95-5450-B107-4D549F758941</string>
+	<key>scope</key>
+	<string>source.gameeventscript - source.gameeventscript.assembler - comment - string</string>
+	<key>tabTrigger</key>
+	<string>ges-fold</string>
+	<key>content</key>
+	<string>${1:items}[:fold ${2:acc} be ${3:0}, ${4:item} =&gt; ${5:acc + item}]$0</string>
+</dict>
+</plist>

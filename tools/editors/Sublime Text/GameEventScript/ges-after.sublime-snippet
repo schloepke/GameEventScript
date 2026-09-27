@@ -1,0 +1,8 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<snippet>
+<content>emit after ${1:1s} ${2:Tick}(${3})$0</content>
+<tabTrigger>ges-after</tabTrigger>
+<scope>source.gameeventscript - source.gameeventscript.assembler - comment - string</scope>
+<description>Delayed message</description>
+</snippet>

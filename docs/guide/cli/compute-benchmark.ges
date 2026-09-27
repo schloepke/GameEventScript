@@ -1,0 +1,59 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+// Run without arguments. Finite, deterministic work; no sleeps or random draws.
+module ges.cli.computebenchmark
+
+constant $rounds be 48
+constant $items be 128
+constant $expected be 2069276181
+
+function score(_ item as :Number, _ batch as :Number) be
+    :Range(1, 16)[:fold acc be item + batch, iteration =>
+        (acc * 33 + item * 17 + batch * 13 + iteration * 7) mod 1000003]
+
+record :Candidate as {
+    id: :Number,
+    score: :Number,
+    metric: :Number computed by sqrt (score + 1),
+    faction: :Text computed by "red" when id mod 2 = 0 otherwise "blue"
+}
+
+on Main(args) {
+    emit Compute(batch: 1, checksum: 0)
+}
+
+on Compute(batch, checksum) {
+    // Build immutable records through function calls and nested iterator loops.
+    let candidates be :Range(1, $items)[:select item =>
+        :Candidate(id: item, score: score(item, batch))]
+    let selected be candidates[:filter candidate where candidate.score mod 3 <> 0]
+    let ordered be selected[:order by candidate => candidate.score descending]
+    let scores be ordered[:select candidate => candidate.score]
+    let total be scores[:reduce acc, value => acc + value]
+
+    // Exercise grouping, map lookup, property access and another fold.
+    let factions be ordered[:group by candidate => candidate.faction]
+    let groupedCount be factions["red"][:count] + factions["blue"][:count]
+    let distanceSum be ordered[:fold acc be 0, candidate => acc + candidate.metric]
+    let report be [count: scores[:count], total: total,
+        highest: scores[:first], lowest: scores[:last]]
+
+    // Runtime literal parsing and formatting, without per-item console I/O.
+    let restored be parse (report as :Text)
+    if restored <> report or groupedCount <> report.count or distanceSum <= 0 {
+        emit ConsoleErr("Benchmark validation failed in batch ", batch)
+        emit ErrorCode(code: 1)
+    } else {
+        let nextChecksum be checksum + restored.total + restored.count + restored.highest + restored.lowest
+        if batch < $rounds {
+            emit Compute(batch: batch + 1, checksum: nextChecksum)
+        } else if nextChecksum = $expected {
+            emit ConsoleOut("Benchmark OK: rounds=", $rounds,
+                ", candidates=", $rounds * $items, ", checksum=", nextChecksum)
+        } else {
+            emit ConsoleErr("Benchmark checksum mismatch: ", nextChecksum,
+                "; expected ", $expected)
+            emit ErrorCode(code: 1)
+        }
+    }
+}

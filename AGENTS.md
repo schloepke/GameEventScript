@@ -591,3 +591,14 @@ behavior and define each rule in exactly one owning document.
 `BACKLOG.md` is the only list of deferred project work. Consult it when changing
 adjacent architecture, implement an entry only when the user makes it part of
 the current task, and remove the entry in the completing change.
+
+
+## Editor package generation
+
+`python3 scripts/sync-editor-bundles.py` derives Sublime GES/GESA grammars from
+canonical TextMate JSON and generates TextMate commands and both editors’ snippets.
+`tools/editors/support` owns completion data and adapter sources. Use `--check`
+and `python3 scripts/test-editor-bundles.py` to verify generated assets and adapters;
+installed bat/batcat adds isolated syntax-engine smoke tests. CLI actions require
+`ges` on the editor PATH. Completion is syntax-only, with no symbol inference or
+Language Server. Website downloads include the Sublime package for editors and bat.

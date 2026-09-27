@@ -17,6 +17,7 @@ OUTPUT = ROOT / "artifacts/website/public/downloads"
 VARIANTS = (
     ("TextMate", "GameEventScript-TextMate.zip"),
     ("TextMate Classic", "GameEventScript-TextMate-Classic.zip"),
+    ("Sublime Text", "GameEventScript-Sublime-Text.zip"),
 )
 
 
@@ -25,7 +26,8 @@ def package_bundles():
     for variant, filename in VARIANTS:
         source = ROOT / "tools/editors" / variant
         files = [("LICENSE", ROOT / "LICENSE")]
-        for bundle in ("GameEventScript.tmbundle", "GameEventScriptAssembler.tmbundle"):
+        directories = ("GameEventScript",) if variant == "Sublime Text" else ("GameEventScript.tmbundle", "GameEventScriptAssembler.tmbundle")
+        for bundle in directories:
             for file in sorted((source / bundle).rglob("*")):
                 if is_metadata(file.relative_to(source)):
                     continue

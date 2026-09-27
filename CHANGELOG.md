@@ -20,6 +20,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   including message/conversion guarantees, recompilation exceptions for random
   and opcode-budget consumption, and no guaranteed support for pre-1.0 binaries.
 
+- Recorded the current event-driven language as the 1.0 baseline after reviewing
+  remaining language work; host-bound reconstruction and a portable
+  standard-extension library are not required for that baseline.
+
 ### Changed
 
 - Clarified application ownership of state mutation and persistence, including

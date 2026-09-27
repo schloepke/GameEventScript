@@ -34,8 +34,10 @@ here.
 
 ## Language
 
-- Define reconstruction of executable host-bound values and custom Series separately.
-  Portable literals and JSON reconstruct data; external snapshots become Records.
+- Reconstruction of executable host-bound values is deferred
+  and is not required for 1.0. Revisit only for a demonstrated application need;
+  portable literals and JSON already reconstruct data, and external snapshots
+  become Records. See the [language scope review](docs/guide/distribution/Packages.md#language-scope-review-for-10).
 
 ## Language ports and distribution
 
@@ -54,9 +56,9 @@ here.
   empty package scaffolds.
 - Consider a C runtime and optional thin C++ facade when gaming adoption or a
   later enterprise/embedded position justifies the native maintenance cost.
-- Define a portable standard-extension library only after its contracts and
-  shared Conformance cases exist; keep language-specific extensions with their
-  implementations until then.
+- A portable standard-extension library is not required for the 1.0 language
+  baseline. Define one only after its contracts and shared Conformance cases
+  exist; keep language-specific extensions with their implementations until then.
 
 ## Developer tooling
 

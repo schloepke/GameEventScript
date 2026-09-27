@@ -68,8 +68,8 @@ A Record contains immutable typed field data. Decoding never resolves a Record
 definition and never invokes its constructor. External values are exported as
 Records using their declared type name and readable field snapshot, recursively.
 There is no External wire type and decoding does not recreate native identity.
-Getter failures propagate to the encoding caller. Host-defined executable
-Series are unsupported; only the two built-in data series can cross this boundary.
+Getter failures propagate to the encoding caller. Series transport supports
+only the two built-in data series and their offsets.
 
 Ranges remain lazy. Integral representable endpoints and steps normalize to
 exact Int64 ranges as defined by [Language](Language.md#range); other finite

@@ -71,9 +71,47 @@ The owning specifications define
 [source compatibility](../../../specs/Language.md#source-compatibility-across-releases),
 [recompilation and determinism](../../../specs/Semantics/Determinism.md#compatibility-and-recompilation),
 and [binary acceptance](../../../specs/BinaryFormat.md#release-and-format-compatibility).
-The concrete 1.0 language/API scope and any pre-1.0 bytecode redesign still need
-final review. These future guarantees do not freeze today's 0.x API; pre-1.0
+The language baseline is recorded in the [scope review](#language-scope-review-for-10).
+Public API finalization and any pre-1.0 bytecode redesign still need final review. These future guarantees do not freeze today's 0.x API; pre-1.0
 binaries have no guaranteed support in 1.0. Retain source for recompilation.
+
+### Language scope review for 1.0
+
+The current immutable, event-driven language is the 1.0 baseline. Reviewing the
+remaining language backlog against the owning specifications and the reported
+C# and Swift application integrations identified no additional language feature
+required for 1.0. This is a scope decision, not a declaration that all release
+verification, public API or bytecode work is complete.
+
+| Area | 1.0 baseline and review result |
+| --- | --- |
+| Expressions and control flow | Existing bindings, conditions, functions/predicates, iteration and collection selectors, including conditional bindings and fold/reduce. No missing construct has been identified as an integration blocker. |
+| Messaging | Existing emit/publish, delayed sends, ordered arguments and the documented host lifecycle. Applications supply entry messages and native integration. |
+| Portable data literals | Scalars, units/percentages, Vector/Point, stored Dice results, recursive Lists/Maps, Range, built-in Series, Handler signatures, Messages and Record data already have defined forms. No remaining portable data kind requires a new literal for this baseline. |
+| Text reconstruction | Existing `parse` recognition/fallback and Record-constructor rules remain as specified. Top-level Text is intentionally not an exact typed roundtrip; Handler data does not reconstruct executable code. |
+| Product transport | Existing JSON transports data and external Record snapshots. It does not reconstruct native object identity, callbacks or host bindings. |
+
+The literal and transport rules remain owned by
+[Language](../../../specs/Language.md), [Text](../../../specs/Semantics/Text.md)
+and [Message format](../../../specs/MessageFormat.md). Existing portable evidence
+is indexed by [Conformance coverage](../../../specs/Conformance/Coverage.md#explicit-data-and-product-transport),
+including C# ↔ Swift product JSON exchange. Application integration experience
+supports the scope choice but does not replace those executable contracts.
+
+Series are the built-in Fibonacci and factorial sequences, represented by their
+kind and offset. No native Series registration API is part of the language scope.
+Reconstruction of executable host-bound values is explicitly not required for 1.0. Applications install native bindings themselves; extensions
+can supply application-specific behavior through the existing boundary. A portable
+standard-extension library is also not required for the language baseline.
+Both topics remain deferred in [BACKLOG.md](../../../BACKLOG.md); there is no
+commitment to a particular later release.
+
+Additional language ports, the shared Conformance orchestrator, editor tooling,
+compression/signing and optimizer improvements are separate engineering topics,
+not missing language constructs. This review does not decide their release
+priority or close the independent constant-pool/instruction-layout decision.
+New application evidence may justify reopening the language scope before 1.0;
+otherwise no additional syntax or value kinds are required by this review.
 
 ### Mutation and persistence review for 1.0
 

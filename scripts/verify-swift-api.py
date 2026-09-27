@@ -45,6 +45,22 @@ def ordered_metadata(value):
     return value
 
 
+def module_search_arguments(binary_path):
+    """Support Swift Build products and the Modules directory of older SwiftPM."""
+    directory = Path(binary_path)
+    arguments = ["-I", str(directory)]
+    modules = directory / "Modules"
+    if modules.is_dir():
+        arguments += ["-I", str(modules)]
+    return arguments
+
+
+def command_failure(message, log, output):
+    """Expose the tool diagnostic in CI, where the local log may not be uploaded."""
+    output.flush()
+    return RuntimeError(f"{message}; see {log}\n{log.read_text(encoding='utf-8', errors='replace')[-12000:]}")
+
+
 def dump_graphs(swift, package):
     scratch = ARTIFACTS / package
     scratch.mkdir(parents=True, exist_ok=True)
@@ -62,7 +78,7 @@ def dump_graphs(swift, package):
         completed = subprocess.run([swift, "build", *options, "--build-tests"], cwd=ROOT,
                                    stdout=output, stderr=subprocess.STDOUT, check=False)
         if completed.returncode:
-            raise RuntimeError(f"Swift build failed for {package}; see {log}")
+            raise command_failure(f"Swift build failed for {package}", log, output)
         binary_path = subprocess.check_output([swift, "build", *options, "--show-bin-path"], cwd=ROOT, text=True).strip()
         target = json.loads(subprocess.check_output([swift, "-print-target-info"], text=True))["target"]["triple"]
         export = scratch / "symbolgraph"
@@ -74,14 +90,14 @@ def dump_graphs(swift, package):
                      if sys.platform == "darwin" else shutil.which("swift-symbolgraph-extract"))
         if not extractor:
             raise RuntimeError("swift-symbolgraph-extract must be available on PATH")
-        command = [extractor, "-module-name", package, "-I", binary_path, "-target", target,
+        command = [extractor, "-module-name", package, *module_search_arguments(binary_path), "-target", target,
                    "-output-dir", str(export), "-skip-synthesized-members", "-minimum-access-level", "public"]
         if sys.platform == "darwin":
             sdk = subprocess.check_output(["xcrun", "--show-sdk-path"], text=True).strip()
             command += ["-sdk", sdk]
         completed = subprocess.run(command, cwd=ROOT, stdout=output, stderr=subprocess.STDOUT, check=False)
         if completed.returncode:
-            raise RuntimeError(f"Swift symbol extraction failed for {package}; see {log}")
+            raise command_failure(f"Swift symbol extraction failed for {package}", log, output)
     # Ignore intermediate graphs emitted by Swift Build with other options.
     paths = sorted(
         path for path in export.glob("*.symbols.json")

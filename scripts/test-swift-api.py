@@ -60,6 +60,34 @@ class SwiftDocumentationTests(unittest.TestCase):
         member = symbol("overridable()", access="open")
         self.assertEqual(1, len(self.issues(member, member)))
 
+    def test_module_search_paths_support_both_build_layouts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.assertEqual(["-I", str(root)], API.module_search_arguments(root))
+            modules = root / "Modules"
+            modules.mkdir()
+            self.assertEqual(["-I", str(root), "-I", str(modules)], API.module_search_arguments(root))
+            (root / "Modules-tool").mkdir()
+            self.assertNotIn(str(root / "Modules-tool"), API.module_search_arguments(root))
+
+    def test_extractor_failure_exposes_tool_diagnostic(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            def build(arguments, **kwargs):
+                failed = "-output-dir" in arguments
+                if failed:
+                    kwargs["stdout"].write("error: missing required module Dependency\n")
+                return SimpleNamespace(returncode=1 if failed else 0)
+
+            with (patch.object(API, "ARTIFACTS", root),
+                  patch.object(API.subprocess, "run", side_effect=build),
+                  patch.object(API.shutil, "which", return_value="swift-symbolgraph-extract"),
+                  patch.object(API.subprocess, "check_output", side_effect=lambda args, **kwargs:
+                               '{"target":{"triple":"arm64-apple-macosx15.0"}}' if "-print-target-info" in args else str(root))):
+                with self.assertRaisesRegex(RuntimeError, "missing required module Dependency"):
+                    API.dump_graphs("swift", "Example")
+
     def test_only_explicit_symbol_exports_are_loaded(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

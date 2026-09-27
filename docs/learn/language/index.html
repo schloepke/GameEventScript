@@ -124,7 +124,11 @@ means <code>base + base * bonus</code>. The example therefore prints <code>Damag
 matters: <code>100 + 0.2</code> is ordinary addition and gives <code>100.2</code>.</p>
 <p>There is no mutable global script state. Each handler invocation has fresh local
 bindings. Keep persistent state in your application, or pass immutable data
-along in subsequent messages.</p>
+along in subsequent messages. Native handlers and extensions can perform the
+required game-state changes; their side effects and persistence are owned by
+your application. Script immutability does not make these calls pure, and the
+runtime cannot roll back their external effects. See
+<a href="/docs/reference/language/#state-ownership">state ownership</a>.</p>
 <h2 id="missing-values-and-decisions">Missing values and decisions</h2>
 <p>An invalid list index or a missing map field yields <code>nothing</code>. Check for a value
 before relying on it:</p>

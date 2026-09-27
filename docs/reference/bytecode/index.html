@@ -1175,7 +1175,9 @@ Map projections use VM-internal map builders in the same linear loop shape;
 the later value.</p>
 <h2 id="format-invariants">Format Invariants</h2>
 <ul>
-<li>New bytecode format changes must increment <code>FormatVersion</code>.</li>
+<li>Incompatible instruction encoding/layout changes require a new <code>FormatVersion</code>;
+additive opcode extensions and support for older binaries follow
+<a href="/docs/reference/binary-format/#release-and-format-compatibility">Binary format compatibility</a>.</li>
 <li>Bytecode dumps are debug tooling output and are not a stable wire format.</li>
 <li>Public bytecode must remain deterministic for the same script/options.</li>
 <li>Host dynamic linking remains separate from compilation.</li>

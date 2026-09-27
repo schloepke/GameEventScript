@@ -178,8 +178,8 @@ keys are rejected. Scalar-distinct Unicode keys remain distinct.</p>
 definition and never invokes its constructor. External values are exported as
 Records using their declared type name and readable field snapshot, recursively.
 There is no External wire type and decoding does not recreate native identity.
-Getter failures propagate to the encoding caller. Host-defined executable
-Series are unsupported; only the two built-in data series can cross this boundary.</p>
+Getter failures propagate to the encoding caller. Series transport supports
+only the two built-in data series and their offsets.</p>
 <p>Ranges remain lazy. Integral representable endpoints and steps normalize to
 exact Int64 ranges as defined by <a href="/docs/reference/language/#range">Language</a>; other finite
 ranges use the existing Binary64 term rule. Transport does not materialize terms.</p>

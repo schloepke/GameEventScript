@@ -14,11 +14,19 @@ here.
 
 ## Bytecode and portable format
 
-- Redesign numeric and other constant pools together with immediate operands and
-  measure compact instruction layouts, including forms such as arithmetic with a
-  directly addressed constant. Use the existing C# and Swift implementations to
-  compare portability and measured costs; decide before 1.0 whether to implement
-  the redesign or defer it with explicit binary compatibility implications.
+- Before 1.0, evaluate and select the instruction format using measured C# and
+  Swift results: either retain fixed 16-byte instructions, optionally with
+  constant pools, or use an 8-byte base word with zero to three additional
+  8-byte payload words (8/16/24/32-byte instructions, with a two-bit payload
+  count). Evaluate constant pools and directly addressed constants alongside
+  both layouts. Compare execution time, runtime allocations, register pressure,
+  resident Program memory and encoded code size on representative workloads;
+  payload words are data, not separately budgeted opcodes. Implement and verify
+  the selected changes before 1.0, or explicitly retain the current layout with
+  the evidence and future binary compatibility implications recorded. Review
+  addressing, validation, public Program/codec APIs and fixtures as part of any
+  redesign. The format review is required for 1.0; a redesign is not predetermined.
+  Tracked as a 1.0.0 prerequisite in [issue #32](https://github.com/schloepke/GameEventScript/issues/32).
 - Stabilize the next bytecode and binary boundary with canonical fixtures before
   making it the input to additional runtimes.
 - Evaluate a central tabular opcode/format definition using the existing C# and

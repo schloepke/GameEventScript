@@ -114,6 +114,10 @@ jobs:
         run: python3 scripts/verify-swift-dependencies.py
 
       - if: needs.changes.outputs.swift == 'true'
+        name: Verify temporary workspace cleanup
+        run: python3 scripts/test-verification-workspace.py
+
+      - if: needs.changes.outputs.swift == 'true'
         name: Verify incremental Swift source discovery
         run: python3 scripts/test-swift-incremental.py
 

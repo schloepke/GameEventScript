@@ -12,7 +12,11 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
-import tempfile
+import sys
+
+# Keep generated Python bytecode out of the source tree.
+sys.dont_write_bytecode = True
+from verification_workspace import verification_workspace
 
 ROOT = Path(__file__).resolve().parent.parent
 MACROS = "GameEventScriptSwiftBridgeMacros"
@@ -38,9 +42,11 @@ def require_macos_minimum(description, owner):
 
 
 def main():
-    artifacts = ROOT / "artifacts/swift-package"
-    artifacts.mkdir(parents=True, exist_ok=True)
-    workspace = Path(tempfile.mkdtemp(prefix="release consumer ", dir=artifacts))
+    with verification_workspace(ROOT / "artifacts/swift-package", 'release consumer ') as workspace:
+        verify(workspace)
+
+
+def verify(workspace):
     repository = workspace / "GameEventScript"
     repository.mkdir()
     for name in ("Package.swift", "LICENSE", "README.md"):
@@ -152,7 +158,7 @@ let package = Package(name: "{consumer}",
     run(["swift", "test", "--package-path", str(repository), "--scratch-path", str(workspace / "root-tests"),
          "--build-system", "native", "--disable-build-manifest-caching", "--configuration", "release"],
         repository, workspace / "root-tests.log")
-    print(f"SwiftPM tagged distribution, shared root tests and Runtime-only consumption passed. Logs: {workspace}")
+    print("SwiftPM tagged distribution, shared root tests and Runtime-only consumption passed.")
 
 
 if __name__ == "__main__":

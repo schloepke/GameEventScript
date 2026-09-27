@@ -75,6 +75,13 @@ the documented generated, strict-format, and binary exclusions.
 symlinked output directories and never traverses symlinks. Safety tests use
 `python3 scripts/test-clean.py` with disposable workspaces.
 
+Successful isolated Swift package, incremental-build and CLI process checks remove
+their temporary build trees and overwrite their top-level logs in `latest-logs`
+under the respective artifacts directory. Failed/interrupted workspaces remain
+for diagnosis; existing workspaces and reusable build caches are not pruned.
+Use `scripts/verification_workspace.py` for this lifecycle and verify it with
+`python3 scripts/test-verification-workspace.py`.
+
 Generated DLLs, NuGet packages, symbols, reports, and release candidates belong
 only below the ignored `artifacts` directory. The release dry run must never
 publish.

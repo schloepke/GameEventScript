@@ -117,6 +117,13 @@ invoked by absolute path from another working directory:
 | `python3 scripts/verify-swift-bytecode.py` | Verify the shared opcode/operand registry |
 | `./scripts/open-swift-xcode.sh` | Configure local build paths and open the Xcode workspace |
 
+Isolated package-consumer, incremental-build and CLI process checks delete their
+temporary build trees after success. The latest logs remain in `latest-logs` under
+`artifacts/swift-package`, `artifacts/swift-incremental-tests` and
+`artifacts/swift/tool-process-tests`, respectively. Failed or interrupted checks
+print and retain their workspace for diagnosis. Existing workspaces and reusable
+build caches are not automatically deleted.
+
 Build outputs use `artifacts/swift/runtime`, `compiler`, `swiftbridge`, `conformance` and `tool`;
 the Conformance directory is shared with the existing test scripts. Build and
 format scripts discover local packages from their manifests, so added packages

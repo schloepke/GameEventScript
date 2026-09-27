@@ -10,6 +10,17 @@ source text, names, text values, and source positions. Swift, Kotlin, Go, Rust,
 C++, C#, and other implementations must expose the same behavior even when
 their native string types use different indexing units.
 
+## Conversion compatibility
+
+Within a compatible release line from 1.0 onward, text conversion and literal
+parsing retain their defined input interpretation, resulting kinds/values and
+invalid-input or fallback behavior. New recognized forms must not reinterpret
+previously defined results, including inputs that previously fell back to Text.
+Existing canonical output rules and roundtrip guarantees remain in force.
+Numeric spelling follows the explicit freedoms in [Numbers](Numbers.md);
+compatibility does not additionally require identical numeric strings across
+implementations or versions. See [source compatibility](../Language.md#source-compatibility-across-releases).
+
 ## Unicode model and source input
 
 - A GES source is a sequence of Unicode scalar values. Unpaired UTF-16

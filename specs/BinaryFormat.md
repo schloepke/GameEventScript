@@ -11,6 +11,41 @@ A program contains portable data only. Linking extensions,
 external types, delegates, runtime caches, registries, and VM state is exclusively a
 `GameEventScriptHost.Load` responsibility.
 
+## Release and format compatibility
+
+Package release versions, the header's `FormatVersion`, section versions and the
+application-owned `ProgramVersion` are distinct identifiers. The following
+release guarantees apply independently of how many format versions a runtime
+implements.
+
+- Before 1.0, a minor release may change the instruction layout, constant pools
+  or binary contract incompatibly. Migration notes must identify the need to
+  recompile source. Retain source files; pre-1.0 binaries have no guaranteed
+  acceptance by 1.0 or later runtimes, even if particular files remain readable.
+- From 1.0 onward, a newer 1.x runtime must read and execute valid binaries
+  produced by earlier 1.x releases with their defined instruction semantics.
+  This rule applies analogously within later major release lines. Acceptance
+  does not bypass normal resource limits or required native bindings.
+- There is no forward-compatibility promise: an older runtime may reject binaries
+  using newer formats or instructions. Unsupported formats, required sections
+  and opcode/operand forms must be rejected before execution, never silently
+  interpreted as a different operation. Existing optional-section rules below
+  still apply.
+- An incompatible change to an existing instruction encoding, operand layout or
+  binary representation requires a new `FormatVersion`. New opcodes may extend
+  an otherwise unchanged format only if older validators reject unknown forms.
+  A new format version does not waive the requirement for newer runtimes to
+  retain readers/execution support for earlier binaries in the same major line.
+- Dropping the guaranteed support or changing the defined semantics of those
+  binaries requires a major release. Corrections of nonconforming behavior and
+  explicitly permitted numeric variation are governed by the owning semantics.
+
+The cross-version execution and random-stream guarantee is owned by
+[Determinism](Semantics/Determinism.md#compatibility-and-recompilation).
+Recompilation is governed separately by
+[Language](Language.md#source-compatibility-across-releases); identical source
+need not produce identical binary bytes.
+
 ## Integer encoding and framing
 
 All multi-byte integers use little endian. Sections are contiguous and have no

@@ -12,43 +12,30 @@ record the resulting contract in the owning specification. Keep detailed design
 decisions in specifications or dedicated plans and keep only a concise pointer
 here.
 
-## Before the first public package release
-
-- Register or select a GES-specific domain and transferable publisher namespace;
-  `gameeventscript.org` is the current domain candidate. Align NuGet, Maven,
-  SwiftPM, GitHub and future organization ownership.
-- Confirm availability of the chosen `GameEventScript.*` C# package IDs and
-  finalize publisher identity, repository visibility and release signing before
-  enabling `NUGET_PUBLISH_ENABLED` or any other public registry publication.
-
 ## Bytecode and portable format
 
 - Redesign numeric and other constant pools together with immediate operands and
   measure compact instruction layouts, including forms such as arithmetic with a
-  directly addressed constant. Start this work with the first Swift port rather
-  than optimizing the current C#-only representation for hypothetical consumers.
+  directly addressed constant. Use the existing C# and Swift implementations to
+  compare portability and measured costs; decide before 1.0 whether to implement
+  the redesign or defer it with explicit binary compatibility implications.
 - Stabilize the next bytecode and binary boundary with canonical fixtures before
   making it the input to additional runtimes.
-- During the first Swift port, allow an explicit, mechanically checked duplicate
-  opcode and format description long enough to expose the real commonalities and
-  language-specific differences. Based on that evidence, decide whether a
-  maintainable central tabular definition is beneficial; only then generate
-  checked-in language sources and documentation and add a CI drift gate. Normal
-  product and IDE builds must never require the generator.
+- Evaluate a central tabular opcode/format definition using the existing C# and
+  Swift descriptions and the mechanical `scripts/verify-swift-bytecode.py` gate.
+  If generation is beneficial, generate checked-in language sources and
+  documentation and verify their freshness in CI. Normal product and IDE builds
+  must never require the generator.
 - Specify and implement optional `.gesb` compression codecs separately; V1 only
   reserves the codec bits and emits known sections uncompressed.
 - Specify signatures, certificates or keys, trust policy and rollback behavior
   separately; V1 only reserves the security section range and provides no
   authenticity guarantee.
 
-## Language and state
+## Language
 
 - Define reconstruction of executable host-bound values and custom Series separately.
   Portable literals and JSON reconstruct data; external snapshots become Records.
-- Design host-bound Tables as the explicit mutation model. Mutations should
-  enter a deterministic modification queue; snapshot visibility,
-  read-your-writes, commit boundaries, rollback, observation, persistence and
-  replication remain to be specified.
 
 ## Language ports and distribution
 
@@ -81,17 +68,24 @@ here.
 - Add Homebrew installation for the standalone CLI downloads and configure
   Developer ID signing/notarization and Windows Authenticode signing before
   promising platform-verified publisher identity.
+- Consider optional NuGet author signing when an independent publisher signature
+  is needed. Current publication uses Trusted Publishing and NuGet.org repository
+  signing; author signing is not a prerequisite for releases. It requires a
+  trusted code-signing certificate, secure signing infrastructure and verification
+  after reproducible package preparation.
 
 ## Unity and editor integration
 
-- Validate the staged C# DLL set in a real Unity project with the selected
-  scripting backend and API compatibility level, then add Compile- and
-  PlayMode-smoke tests to CI for the extracted Unity package.
+- Validate the separately staged C# DLL distribution in a real Unity project and
+  add Compile- and PlayMode-smoke tests when extracting a Unity package. Public
+  NuGet consumption has already been exercised in Battle Club on physical iOS
+  (IL2CPP) and Android devices; that does not verify the staged DLL import path.
 - Develop Unity editor integration, prepared MonoBehaviours and an installable
   Unity package in a real Unity project before extracting reusable integration
   sources into this monorepo.
-- Consider development-only hot reload as an embedding feature without moving
-  threading, filesystem or Unity dependencies into portable Core.
+- Consider reusable Unity editor hot-reload integration when extracting the
+  editor package. Existing CLI `:reload` and the consuming Swift application's
+  editor already reload programs through the existing host lifecycle. Keep file watching, threading and Unity dependencies in adapters.
 - After the Kotlin port is stable, build a dedicated IntelliJ plugin with native
   `.ges`/`.gesa` support beyond portable TextMate highlighting and `.region`
   folding. Keep the portable dump and TextMate bundles free of IntelliJ-specific
@@ -99,12 +93,12 @@ here.
 
 ## Performance and optimizer follow-ups
 
-- Treat the current performance and allocation tests as regression gates against
-  the established C# and Swift profiles. In a more mature multi-runtime state, design a
-  real benchmark system with representative multi-program workloads, separated
+- In a more mature multi-runtime state, design a benchmark system with
+  representative multi-program workloads, separated
   compile/load/message/VM measurements, native harnesses per language and a
   documented build-host/toolchain calibration index instead of comparing raw
-  timings from unrelated machines.
+  timings from unrelated machines. Existing C# and Swift profile measurements
+  remain implementation regression gates, not cross-platform performance promises.
 - Add bounded fuzzing for the `.gesb` reader and property-based Reader/Writer
   tests without weakening the existing canonical and malformed fixture corpus.
 - Improve CFG/liveness-based register allocation and reuse of non-overlapping

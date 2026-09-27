@@ -65,8 +65,9 @@ Optional editor highlighting is available as `GameEventScript.SyntaxHighlighter`
 on NuGet and `GameEventScriptSyntaxHighlighter` through SwiftPM. Neither depends
 on the Runtime or Compiler.
 
-All libraries share one release version. **Language and API compatibility may
-change during 0.x development.** Keep your GES packages on the same version and
+All libraries share one release version. **During 0.x, patches contain compatible
+fixes; minor releases may change contracts.** See the
+[version policy](docs/guide/distribution/Packages.md#version-policy). Keep your GES packages on the same version and
 check the [release notes](https://github.com/schloepke/GameEventScript/releases)
 for migration guidance. The [changelog](CHANGELOG.md) also tracks unreleased work;
 the website identifies features that require a newer version.

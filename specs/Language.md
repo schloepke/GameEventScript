@@ -21,6 +21,8 @@ meaning and is specified separately in [Bytecode](Bytecode.md).
 
 ## Contents
 
+- Source compatibility across releases
+- State ownership
 - Program structure
 - Lexical rules
 - Messages and dispatch
@@ -32,6 +34,48 @@ meaning and is specified separately in [Bytecode](Bytecode.md).
 - Extensions
 - Static errors and execution limits
 - Normative grammar
+
+## Source compatibility across releases
+
+The following guarantees apply from release 1.0 onward, within one major release
+line. They do not freeze the current 0.x language. A later compatible compiler
+must continue to accept previously valid source under equivalent compiler options
+and native catalogs, preserving its defined meaning. Additions must not silently
+reinterpret existing valid source. Incompatible language changes require a major
+release under the [version policy](../docs/guide/distribution/Packages.md#version-policy).
+
+Compatibility preserves defined values, control flow and observable native effects,
+including calls whose results are unused. Message ordering is owned by
+[Host runtime](HostRuntime.md#compatibility-of-message-behavior), conversions by
+[Numbers](Semantics/Numbers.md#conversion-compatibility) and
+[Text](Semantics/Text.md#conversion-compatibility).
+
+Recompilation need not produce identical instructions, register allocation or
+binary bytes. Optimizations may change random consumption and executed opcode
+counts as qualified in [Determinism](Semantics/Determinism.md#compatibility-and-recompilation).
+Those exceptions do not authorize independently removing or reordering observable
+native effects or message operations. Implementations may correct behavior that
+violates the owning specification; such fixes are not permission to change the
+contract itself. Previously invalid source has no acceptance guarantee.
+
+## State ownership
+
+GES has immutable script bindings and data values, with no script-owned mutable
+store or persistence facility.
+
+The embedding application owns mutable game state and its persistence. Native
+message handlers and extensions may change that application state under the
+embedding's own contract. Script immutability does not imply that native calls
+are pure. External field access still obeys the per-handler logical-value
+stability required by the [External-type API](PublicApi.md#external-type-api);
+mutating application state does not relax that requirement. Such effects do not
+introduce assignment or mutable collections into GES.
+
+The runtime does not provide a transaction or rollback guarantee for application
+state changed by native callbacks. The embedding defines synchronization,
+failure recovery and persistence for that state while respecting the host's
+serial execution contract. Reproducibility remains subject to the inputs and
+native behavior required by [Determinism](Semantics/Determinism.md).
 
 ## Program Structure
 

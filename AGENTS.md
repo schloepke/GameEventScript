@@ -533,7 +533,7 @@ Swift symbol extraction includes extension blocks; staging also checks public
 Bridge extension pages. Static asset copies and archives omit OS metadata, and
 both the final website check and publisher reject it; verify with
 `python3 scripts/test-website-assets.py`.
-`.spi.yml` points SPI to our self-hosted Swift reference.
+`.spi.yml` points SPI to our self-hosted documentation entry page.
 Output and generated Markdown belong under `artifacts/website`. The website is
 intended for existing static hosting at gameeventscript.org; builds never deploy.
 Pixel-Duo brand sources and exploratory designs live under `website/brand`.

@@ -97,7 +97,7 @@ invoked by absolute path from another working directory:
 
 | Command | Purpose |
 | --- | --- |
-| `./scripts/clean.sh [--dry-run] [--artifacts-only]` | Remove repository build outputs; preview with `--dry-run` ([scope](../../README.md#clean-build-outputs)) |
+| `./scripts/clean.sh [--dry-run] [--artifacts-only]` | Remove repository build outputs; preview with `--dry-run` ([scope](../../docs/guide/README.md#clean-build-outputs)) |
 | `./scripts/build-swift.sh` | Build every SwiftPM package independently in Release; no .NET dependency |
 | `./scripts/build-swift.sh --configuration debug` | Build the same packages in Debug |
 | `./scripts/format-swift.sh` | Check 250-column formatting and one blank line around callable/type declarations |
@@ -300,7 +300,7 @@ Callbacks and argument borrows are synchronous and must not be retained.
 
 Public SwiftPM consumption uses one repository-root Git dependency after a
 version tag has been published; no Swift registry upload is required. See the
-[root quick start](../../README.md#swift--swiftpm-and-xcode). The individual
+[Swift embedding guide](../../docs/guide/Swift.md#add-the-package). The individual
 packages can also be consumed by local path for development.
 
 ## Native Swift integration

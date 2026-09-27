@@ -72,7 +72,9 @@ The owning specifications define
 [recompilation and determinism](../../../specs/Semantics/Determinism.md#compatibility-and-recompilation),
 and [binary acceptance](../../../specs/BinaryFormat.md#release-and-format-compatibility).
 The language baseline is recorded in the [scope review](#language-scope-review-for-10).
-Public API finalization and any pre-1.0 bytecode redesign still need final review. These future guarantees do not freeze today's 0.x API; pre-1.0
+The [API review](#public-api-review-for-10) records the selected embedding surface.
+The pre-1.0 bytecode redesign decision remains open and may require a follow-up
+review of public Program and codec types. These future guarantees do not freeze today's 0.x API; pre-1.0
 binaries have no guaranteed support in 1.0. Retain source for recompilation.
 
 ### Language scope review for 1.0
@@ -112,6 +114,44 @@ not missing language constructs. This review does not decide their release
 priority or close the independent constant-pool/instruction-layout decision.
 New application evidence may justify reopening the language scope before 1.0;
 otherwise no additional syntax or value kinds are required by this review.
+
+### Public API review for 1.0
+
+The current C# and Swift Runtime, Compiler and Bridge workflows form the selected
+embedding API baseline. Reported integrations cover Swift compilation/editor
+reload and external types, and Unity C# compilation and native handlers on iOS
+(IL2CPP) and Android. No integration blocker requiring a new public abstraction
+was reported. Runtime-only consumption is covered by automated distribution
+checks rather than a separate application trial. This is an API scope decision,
+not a claim of identical native spelling or a completed 1.0 release.
+
+| Reviewed workflow | C# | Swift | Decision |
+| --- | --- | --- | --- |
+| Compile source | `GameEventScriptBuilder.Create()` → `AddScript` → `Compile` | `GameEventScriptBuilder.create()` → `addScript` → `compile` | Keep source-in-memory builders, repeatable compilation and separate declarative external catalogs. |
+| Configure hosts | `GameEventScriptHost.CreateBuilder()` → `With…` → `Build` | `GameEventScriptHost.createBuilder()` → `with…` → `build` | Same configuration responsibilities, including clock, limits, randomness and registries; every build creates an independent host. |
+| Start and dispatch | `Load`, `Subscribe`, `Start`, `Receive`, `ExecuteFrame`, `RunToCompletion` | Corresponding lower-camel-case operations | Preserve the explicit initial loading phase, structured startup/execution results, later-instance results and delayed-work reporting. |
+| Precompiled programs | Runtime Reader/Writer/Validator/Dumper | Runtime Reader/Writer/Validator/Dumper | No Compiler or Bridge dependency is required for codecs or execution. |
+| Native integration | Interfaces, delegate adapters and reflection attributes | Protocols, closure adapters, macros and manual descriptors | Keep portable catalogs separate from executable registries; native conversions retain their strict guarantees. |
+| Automatic pumping | Runner methods serialize access to instance/subscription handles; `Dispose` ends use | `sending` ownership transfer and runner-owned registration handles; `close` ends use | Different handle shapes serve native concurrency conventions. Both expose startup status, serialized lifecycle and automatic wakeups. |
+| Diagnostics and values | Exceptions/results, readonly views and fixed-width numeric types | `throws`, optionals/results and copy-on-write values | Preserve structured codes, ordered arguments and immutable data semantics, rather than exception text or native representation. |
+
+Direct Swift initializers remain idiomatic alternatives to factories. Swift's
+`throws`, ownership annotations and registration wrapper do not require matching
+C# overloads. C# reflection attributes and Swift compile-time macros likewise
+need not share a mechanism; they describe equivalent native binding concepts.
+The API review does not add convenience methods solely to equalize spelling.
+
+The review uses the C# public surface/XML documentation and portable-boundary
+gates, the Swift symbol-graph/snapshot/documentation gate, and executable C#/Swift
+embedding and bridge examples. The current declared surfaces match their approved
+snapshots; no signature change or snapshot regeneration is needed for this review.
+
+The normative API compatibility rule is in
+[Public API](../../../specs/PublicApi.md#embedding-api-baseline-and-compatibility).
+Future constant-pool or instruction-layout changes remain a separate decision:
+if they alter public Program/codec types, update this baseline, both language
+mappings, native documentation and snapshots together before 1.0. No compatibility
+shim is required solely to preserve a pre-1.0 API.
 
 ### Mutation and persistence review for 1.0
 

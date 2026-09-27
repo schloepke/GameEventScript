@@ -44,9 +44,10 @@ Runtime never references Compiler or Conformance. Compiler never references
 Conformance or language-specific adapters. All three portable modules remain
 synchronous and independent of filesystem, network, threads, and test frameworks.
 
-Conformance is delivered as the separate optional
-`GameEventScript.Conformance` package. Its public contract is independent
-of the reference test framework and filesystem adapters.
+Conformance is a separate repository/development module, not a published NuGet
+library or root SwiftPM product. Its public contract is independent of the
+reference test framework and filesystem adapters; its exported development API
+does not enlarge the supported application package surface.
 
 The following documents own detailed behavior and are incorporated by reference:
 
@@ -69,6 +70,52 @@ dictionary conveniences belong to `CSharpBridge`. They are public C# adapters,
 not portable Runtime or Compiler concepts. Other ports may provide equivalent
 conveniences, but conformance code and portable application code must not
 require them.
+
+## Embedding API baseline and compatibility
+
+The reviewed application API baseline consists of Runtime, the optional Compiler
+and the native Bridge in each implementation. SyntaxHighlighter is a separate
+optional product with its own [contract](SyntaxHighlighting.md). CLI and
+Conformance are not application library products. Public implementation details
+must not be inferred from private types, compiler SPI or the shape of generated
+code.
+
+From 1.0 onward, compatible releases preserve the supported public source API:
+existing calls and implementations of public callback interfaces/protocols must
+remain valid under the declared platform/toolchain requirements. Signatures,
+argument labels/order, specified defaults, result interpretation, ownership,
+lifetime and error contracts are part of that surface. An addition is compatible
+only if existing conforming consumers continue to work; for example, requiring
+an extra callback implementation is not automatically compatible merely because
+it adds a member. Deprecation may guide migration but does not permit removal
+within a compatible major line.
+
+Native naming, value/reference representation and error transport may differ
+between languages as specified below; each published language binding retains
+its own source API compatibility. There is no requirement for identical symbol
+names across languages. Native object layout and compiler-generated ABI are not
+the portable binary interchange contract; `.gesb` compatibility is owned by
+[Binary format](BinaryFormat.md#release-and-format-compatibility).
+
+The existing compiler and host builder workflows are the selected baseline;
+no additional manager/facade or combined load-and-run operation is required.
+Programs remain reusable data. Host-specific bindings, execution and lifecycle
+handles remain separate from compilation. Existing native adapters provide
+callbacks and external type bindings without bringing Compiler into Runtime or
+Bridge consumers.
+
+The approved C# and Swift snapshots record each implementation's declared surface
+and are checked against freshly built APIs. XML documentation and authored Swift
+symbol documentation are checked alongside them. Snapshots detect signature drift;
+the normative contracts and shared Conformance govern behavior. Keeping a snapshot
+unchanged does not justify changing ownership, defaults or execution semantics.
+The review evidence and intentional language differences are summarized in the
+[API review](../docs/guide/distribution/Packages.md#public-api-review-for-10).
+
+This baseline does not turn a 0.x release into a stable 1.0 release. The
+[version policy](../docs/guide/distribution/Packages.md#version-policy) governs any
+subsequent pre-1.0 correction; required bytecode changes must be rechecked for
+impact on the public Program representation and codec APIs before 1.0.
 
 ## Normative conventions
 
@@ -432,6 +479,7 @@ reentrancy requirements of those callbacks.
 | `WithExternalTypeRegistry(registry)` | Selects the runtime external-constructor registry. |
 | `WithPublishSink(sink)` | Selects the single outbound sink. Not calling it means no sink. |
 | `WithRuntimeObserver(observer)` | Selects the single observer. Not calling it means no observer. |
+| `WithClock(clock)` | Selects the borrowed monotonic clock; omission uses the system clock. See [delayed-send scheduling](#monotonic-scheduling-api). |
 | `Build()` | Validates configuration and returns a new loading, native-capable Host with no loaded Program or subscription. |
 
 ### RuntimeLimits

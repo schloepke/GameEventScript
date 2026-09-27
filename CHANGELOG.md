@@ -23,6 +23,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - Recorded the current event-driven language as the 1.0 baseline after reviewing
   remaining language work; host-bound reconstruction and a portable
   standard-extension library are not required for that baseline.
+- Recorded the C# and Swift embedding API baseline and source-API compatibility
+  rules, including intentional native-language differences and API snapshot gates.
 
 ### Changed
 

@@ -10,6 +10,17 @@ runtime, `.gesb`, and portable Conformance implementations. Every language port
 must implement these results independently of its language's
 default overflow, conversion, formatting, or math-library conventions.
 
+## Conversion compatibility
+
+Within a compatible release line from 1.0 onward, numeric conversions preserve
+accepted input forms, units, value interpretation, rounding/overflow rules and
+specified invalid-input outcomes. A compatible update cannot silently change a
+conversion's meaning, such as interpreting a percentage as a different ratio.
+The numeric variation and text-spelling freedoms explicitly allowed by this
+specification remain allowed; compatibility does not turn them into bitwise or
+textual identity promises. See [source compatibility](../Language.md#source-compatibility-across-releases)
+and [recompilation](Determinism.md#compatibility-and-recompilation).
+
 ## Numeric representations
 
 - Integer values are signed 64-bit integers in `[-2^63, 2^63 - 1]`.

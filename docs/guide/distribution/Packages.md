@@ -11,7 +11,7 @@ and GitHub release. Swift Package Index badges report its observed Swift-version
 and platform build compatibility, not shared Conformance acceptance. Consult the
 [release notes](https://github.com/schloepke/GameEventScript/releases) for migration
 guidance and the [changelog](../../../CHANGELOG.md) for unreleased changes.
-Language and API contracts may change during 0.x development.
+See the [version policy](#version-policy) for compatible updates and contract changes.
 
 > **Since: 0.2.0 — package icons**
 
@@ -31,6 +31,178 @@ executables are not part of the public library package distribution; their local
 installers remain available. See [standalone CLI downloads](Tools.md) for
 installation and release verification. Deferred distribution work is tracked in
 [BACKLOG.md](../../../BACKLOG.md).
+
+## Version policy
+
+GES uses `MAJOR.MINOR.PATCH` release numbers. This section owns the release
+numbering policy; language, API and binary behavior remain defined by their
+owning specifications.
+
+### Before 1.0
+
+| Release | Allowed changes | Example |
+| --- | --- | --- |
+| Patch | Compatible corrections to the existing contract; no new language or API features and no incompatible contract changes | `0.2.0` → `0.2.1` |
+| Minor | New features, compatible improvements, or deliberate contract changes with migration guidance | `0.2.1` → `0.3.0` |
+
+A 0.x release is a usable development release, not automatically a release
+candidate for 1.0. There is no general compatibility guarantee between 0.x minor
+versions. Consumers should pin an exact version or constrain updates to the
+selected minor line and review migration notes before changing that line.
+
+A correction may change behavior that violated the documented contract. It must
+not silently redefine that contract under the label of a bug fix. If a fix
+requires an incompatible contract change, it belongs in the next minor release.
+Document observable corrections in the changelog, including any impact on users
+who relied on the incorrect behavior.
+
+### From 1.0 onward
+
+GES follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
+for its declared compatibility surface:
+
+| Release | Allowed changes | Example |
+| --- | --- | --- |
+| Patch | Backward-compatible fixes | `1.0.0` → `1.0.1` |
+| Minor | Backward-compatible additions and deprecations | `1.0.1` → `1.1.0` |
+| Major | Incompatible changes to the declared contracts | `1.1.0` → `2.0.0` |
+
+The owning specifications define
+[source compatibility](../../../specs/Language.md#source-compatibility-across-releases),
+[recompilation and determinism](../../../specs/Semantics/Determinism.md#compatibility-and-recompilation),
+and [binary acceptance](../../../specs/BinaryFormat.md#release-and-format-compatibility).
+The language baseline is recorded in the [scope review](#language-scope-review-for-10).
+The [API review](#public-api-review-for-10) records the selected embedding surface.
+The pre-1.0 bytecode redesign decision remains open and may require a follow-up
+review of public Program and codec types. These future guarantees do not freeze today's 0.x API; pre-1.0
+binaries have no guaranteed support in 1.0. Retain source for recompilation.
+
+### Language scope review for 1.0
+
+The current immutable, event-driven language is the 1.0 baseline. Reviewing the
+remaining language backlog against the owning specifications and the reported
+C# and Swift application integrations identified no additional language feature
+required for 1.0. This is a scope decision, not a declaration that all release
+verification, public API or bytecode work is complete.
+
+| Area | 1.0 baseline and review result |
+| --- | --- |
+| Expressions and control flow | Existing bindings, conditions, functions/predicates, iteration and collection selectors, including conditional bindings and fold/reduce. No missing construct has been identified as an integration blocker. |
+| Messaging | Existing emit/publish, delayed sends, ordered arguments and the documented host lifecycle. Applications supply entry messages and native integration. |
+| Portable data literals | Scalars, units/percentages, Vector/Point, stored Dice results, recursive Lists/Maps, Range, built-in Series, Handler signatures, Messages and Record data already have defined forms. No remaining portable data kind requires a new literal for this baseline. |
+| Text reconstruction | Existing `parse` recognition/fallback and Record-constructor rules remain as specified. Top-level Text is intentionally not an exact typed roundtrip; Handler data does not reconstruct executable code. |
+| Product transport | Existing JSON transports data and external Record snapshots. It does not reconstruct native object identity, callbacks or host bindings. |
+
+The literal and transport rules remain owned by
+[Language](../../../specs/Language.md), [Text](../../../specs/Semantics/Text.md)
+and [Message format](../../../specs/MessageFormat.md). Existing portable evidence
+is indexed by [Conformance coverage](../../../specs/Conformance/Coverage.md#explicit-data-and-product-transport),
+including C# ↔ Swift product JSON exchange. Application integration experience
+supports the scope choice but does not replace those executable contracts.
+
+Series are the built-in Fibonacci and factorial sequences, represented by their
+kind and offset. No native Series registration API is part of the language scope.
+Reconstruction of executable host-bound values is explicitly not required for 1.0. Applications install native bindings themselves; extensions
+can supply application-specific behavior through the existing boundary. A portable
+standard-extension library is also not required for the language baseline.
+Both topics remain deferred in [BACKLOG.md](../../../BACKLOG.md); there is no
+commitment to a particular later release.
+
+Additional language ports, the shared Conformance orchestrator, editor tooling,
+compression/signing and optimizer improvements are separate engineering topics,
+not missing language constructs. This review does not decide their release
+priority or close the independent constant-pool/instruction-layout decision.
+New application evidence may justify reopening the language scope before 1.0;
+otherwise no additional syntax or value kinds are required by this review.
+
+### Public API review for 1.0
+
+The current C# and Swift Runtime, Compiler and Bridge workflows form the selected
+embedding API baseline. Reported integrations cover Swift compilation/editor
+reload and external types, and Unity C# compilation and native handlers on iOS
+(IL2CPP) and Android. No integration blocker requiring a new public abstraction
+was reported. Runtime-only consumption is covered by automated distribution
+checks rather than a separate application trial. This is an API scope decision,
+not a claim of identical native spelling or a completed 1.0 release.
+
+| Reviewed workflow | C# | Swift | Decision |
+| --- | --- | --- | --- |
+| Compile source | `GameEventScriptBuilder.Create()` → `AddScript` → `Compile` | `GameEventScriptBuilder.create()` → `addScript` → `compile` | Keep source-in-memory builders, repeatable compilation and separate declarative external catalogs. |
+| Configure hosts | `GameEventScriptHost.CreateBuilder()` → `With…` → `Build` | `GameEventScriptHost.createBuilder()` → `with…` → `build` | Same configuration responsibilities, including clock, limits, randomness and registries; every build creates an independent host. |
+| Start and dispatch | `Load`, `Subscribe`, `Start`, `Receive`, `ExecuteFrame`, `RunToCompletion` | Corresponding lower-camel-case operations | Preserve the explicit initial loading phase, structured startup/execution results, later-instance results and delayed-work reporting. |
+| Precompiled programs | Runtime Reader/Writer/Validator/Dumper | Runtime Reader/Writer/Validator/Dumper | No Compiler or Bridge dependency is required for codecs or execution. |
+| Native integration | Interfaces, delegate adapters and reflection attributes | Protocols, closure adapters, macros and manual descriptors | Keep portable catalogs separate from executable registries; native conversions retain their strict guarantees. |
+| Automatic pumping | Runner methods serialize access to instance/subscription handles; `Dispose` ends use | `sending` ownership transfer and runner-owned registration handles; `close` ends use | Different handle shapes serve native concurrency conventions. Both expose startup status, serialized lifecycle and automatic wakeups. |
+| Diagnostics and values | Exceptions/results, readonly views and fixed-width numeric types | `throws`, optionals/results and copy-on-write values | Preserve structured codes, ordered arguments and immutable data semantics, rather than exception text or native representation. |
+
+Direct Swift initializers remain idiomatic alternatives to factories. Swift's
+`throws`, ownership annotations and registration wrapper do not require matching
+C# overloads. C# reflection attributes and Swift compile-time macros likewise
+need not share a mechanism; they describe equivalent native binding concepts.
+The API review does not add convenience methods solely to equalize spelling.
+
+The review uses the C# public surface/XML documentation and portable-boundary
+gates, the Swift symbol-graph/snapshot/documentation gate, and executable C#/Swift
+embedding and bridge examples. The current declared surfaces match their approved
+snapshots; no signature change or snapshot regeneration is needed for this review.
+
+The normative API compatibility rule is in
+[Public API](../../../specs/PublicApi.md#embedding-api-baseline-and-compatibility).
+Future constant-pool or instruction-layout changes remain a separate decision:
+if they alter public Program/codec types, update this baseline, both language
+mappings, native documentation and snapshots together before 1.0. No compatibility
+shim is required solely to preserve a pre-1.0 API.
+
+### Mutation and persistence review for 1.0
+
+The review found no known requirement for a breaking change arising from
+application-owned mutation and persistence. The existing native integration
+boundaries support this model. The owning rule is
+[state ownership](../../../specs/Language.md#state-ownership).
+This conclusion does not settle the separate source, API or binary compatibility
+reviews.
+
+| Boundary reviewed | Result and remaining responsibility |
+| --- | --- |
+| Immutable Program and script data | Application state stays outside the reusable Program and `.gesb`; no storage handles or persistence schema are added to them. |
+| Native handlers and extensions | Existing synchronous callbacks can perform game-state changes. The application defines their effects and error recovery. |
+| External values | Field access must preserve the logical-value stability required during a handler. An extension changing the game does not authorize changing the same exposed logical value underneath a running or paused handler. |
+| Startup and failures | Initialization stages GES outputs; it does not undo external effects already performed by callbacks. Applications needing all-or-nothing changes must provide their own staging or compensation. |
+| Frames and multiple hosts | Pausing a script does not create an application transaction. Separate hosts do not establish a global order over shared mutable application state; the embedding supplies synchronization and ordering. |
+| Persistence and replay | Product JSON transports data snapshots, not a saved VM or restored native binding. Application schema migration, recovery, duplicate-action handling and reproduction of native inputs remain application concerns. |
+
+The remaining risks are integration responsibilities: partially completed native
+operations, changing external observations, and concurrent access to shared game
+state. GES does not resolve them by adding mutable language state. Revisit this
+review if the project later proposes script-owned storage, transactional native
+calls, or persistence of live execution state.
+
+See [Host runtime](../../../specs/HostRuntime.md),
+[External-type API](../../../specs/PublicApi.md#external-type-api),
+[Determinism](../../../specs/Semantics/Determinism.md) and
+[Message format](../../../specs/MessageFormat.md) for the existing contracts.
+
+### Shared versions, formats and prereleases
+
+- Public library packages and CLI artifacts for a release use the same GES
+  version and source tag. Upgrade an application's GES libraries together.
+  A future language implementation joins the current release line; it does not
+  restart at 1.0 or imply that earlier versions existed for that implementation.
+- The package version, `.gesb` format version and application-owned
+  `ProgramVersion` are separate identifiers. A package release does not
+  automatically increment the binary format version. Binary compatibility and
+  rejection rules belong to [Binary format](../../../specs/BinaryFormat.md) and
+  [Bytecode](../../../specs/Bytecode.md), not to an inference from package numbers.
+- Prerelease suffixes such as `0.3.0-rc.1` identify candidates for the named
+  release. They are optional; a verified development release can be published
+  directly as `0.3.0`. Candidates precede the corresponding final version and
+  may change before that final release.
+- Published versions and tags are immutable. Corrections require a new version;
+  never replace an existing release's package contents or move its tag.
+- Record user-visible changes under `Unreleased`, then publish them with the
+  release. Contract changes require migration notes explaining the affected
+  behavior and the action consumers need to take. Documentation availability
+  notes describe the current behavior's release, not a full compatibility matrix.
 
 ## SwiftPM and Xcode
 
@@ -144,6 +316,8 @@ Neither a website/domain nor author-signing the NuGet archives is required by
 this workflow. Canonical packaging must precede any optional signing.
 
 ## Publish a shared version
+
+Select the release number using the [version policy](#version-policy).
 
 Update applicable `Since: Unreleased` notes in specifications and guides to the
 selected release version. Retain only the version of the currently described

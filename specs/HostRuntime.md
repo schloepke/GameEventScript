@@ -77,6 +77,28 @@ remaining immutable dispatch snapshot runnable. A pump result that observed a
 handler failure uses `RuntimeError` and carries its first diagnostic. Successful
 VM stepping, resume, and dispatch do not allocate diagnostic objects.
 
+Native callback atomicity means that the portable scheduler does not preempt a
+callback; it does not imply a transaction over application state. Initialization
+output staging and failure cleanup below cover host-managed registrations and
+outputs, not state already changed by native callbacks. Application-state
+ownership is defined in [Language](Language.md#state-ownership).
+
+## Compatibility of message behavior
+
+Within a compatible release line, the enqueue-time recipient snapshot, dispatch
+priority and registration order, FIFO rules, initialization barriers, delayed
+message tie-breaking, and specified failure/detach handling remain part of the
+observable language contract. A compiler or runtime update must not independently
+change them. This preserves the specified ordering guarantees, not wall-clock
+execution speed or ordering between independent hosts.
+
+For recompiled code, changed random results or opcode counts can affect subsequent
+messages and frame/limit outcomes under the exceptions in
+[Determinism](Semantics/Determinism.md#compatibility-and-recompilation). Delayed
+execution additionally depends on clock observations and embedding pump calls.
+A speed improvement alone is not a promise of identical real-time interleaving
+with external inputs. Native callbacks remain subject to the embedding's contract.
+
 ## Loading and startup
 
 `Build()` creates a host in its initial loading phase. `IsReady` is false, even

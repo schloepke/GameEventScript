@@ -29,6 +29,44 @@ script that compares formatted numbers to fixed strings, uses them as keys,
 or branches on their characters can also produce different subsequent results
 across ports. The numeric roundtrip guarantee does not make those strings equal.
 
+Native integration is part of the reproduction environment. Replaying a script
+that calls application code requires equivalent callback results, failures and
+host-visible effects, including observations of application-owned state. A fixed
+random seed alone cannot reproduce different external state or native behavior.
+External-value field reads must also obey the stability contract in the
+[External-type API](../PublicApi.md#external-type-api).
+
+## Compatibility and recompilation
+
+For the same valid compiled Program, a newer runtime in the same major release
+line from 1.0 onward must preserve the defined execution behavior, including the
+PRNG algorithm, seed derivation and random sampling rules. This requires the same
+ordered inputs, configuration, limits, observed clock readings, pump boundaries
+and native integration behavior. The explicitly permitted numeric variation
+above still applies. Binary acceptance is specified by
+[Binary format](../BinaryFormat.md#release-and-format-compatibility).
+
+Recompiling the same source with a different compiler version or optimization
+configuration is a different case: random draw count and ordering need not be
+preserved. The same seed can therefore produce different returned values, branches
+and subsequent messages in the newly compiled Program. Random consumption itself
+is not an optimizer-preserved side effect. Observable native calls and sends
+remain protected by [source compatibility](../Language.md#source-compatibility-across-releases).
+
+Executed opcode counts are likewise not a source-level compatibility promise.
+Optimized code may pause at different frame boundaries or reach a safety limit
+differently under the same numeric budget, affecting completion and which outputs
+are produced before a stop. No artificial instructions are required to preserve
+previous budget consumption. This exemption concerns recompilation; it does not
+permit a runtime to reinterpret an existing instruction's specified budget cost.
+
+In the absence of these influences, equivalent inputs and native behavior must
+produce the same defined results and message ordering after compatible
+recompilation, subject to the explicitly allowed numeric variation. For replay,
+retain the compiled artifact as well as its reproduction inputs; source and seed
+alone do not identify the execution. No compatibility guarantee spans a major
+version change or the unsupported pre-1.0 binaries described in Binary format.
+
 ## Seeded random generator
 
 `GameEventScriptRandomGenerator.FromSeed(Int64)` is a portable seeded stream.

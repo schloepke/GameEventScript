@@ -147,8 +147,13 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   a base name.
 - Lexical bindings cannot shadow visible ancestor bindings. Sibling scopes may
   independently reuse a name.
-- Script state is immutable. Mutable host-bound Tables are not part of the
-  current language.
+- Script state is immutable. Mutable Tables are not a planned language feature.
+  The embedding owns mutation and persistence, including effects performed by
+  native handlers and extensions; no automatic rollback of external effects is
+  promised. See `specs/Language.md#state-ownership`.
+- Series are limited to the built-in Fibonacci and factorial sequences. Custom
+  native Series bindings are not planned; do not add a registry or callback API
+  for them.
 - `:Dice[...]` is a deterministic literal of positive Int32 numeric rolls;
   `parse` recognizes the same data form and `as :Text` writes it in descending
   dice order. `:Dice(values)` remains a cast, and `roll dice NdM` draws random.

@@ -66,7 +66,8 @@ class SwiftDocumentationTests(unittest.TestCase):
             self.assertEqual(["-I", str(root)], API.module_search_arguments(root))
             modules = root / "Modules"
             modules.mkdir()
-            self.assertEqual(["-I", str(root), "-I", str(modules)], API.module_search_arguments(root))
+            self.assertEqual(["-I", str(modules)], API.module_search_arguments(root))
+            self.assertNotIn(str(root), API.module_search_arguments(root))
             (root / "Modules-tool").mkdir()
             self.assertNotIn(str(root / "Modules-tool"), API.module_search_arguments(root))
 

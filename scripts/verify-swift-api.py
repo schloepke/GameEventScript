@@ -48,11 +48,11 @@ def ordered_metadata(value):
 def module_search_arguments(binary_path):
     """Support Swift Build products and the Modules directory of older SwiftPM."""
     directory = Path(binary_path)
-    arguments = ["-I", str(directory)]
     modules = directory / "Modules"
-    if modules.is_dir():
-        arguments += ["-I", str(modules)]
-    return arguments
+    # Never expose the legacy build root to Clang's module discovery: it
+    # contains both Foo.build and Foo-tool.build with duplicate module maps.
+    # Swift Build instead places its Swift modules directly in Products/Debug.
+    return ["-I", str(modules if modules.is_dir() else directory)]
 
 
 def command_failure(message, log, output):

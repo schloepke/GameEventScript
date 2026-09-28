@@ -7,15 +7,22 @@
 from pathlib import Path
 import shutil
 import subprocess
-import tempfile
+import sys
+
+# Keep generated Python bytecode out of the source tree.
+sys.dont_write_bytecode = True
+from verification_workspace import verification_workspace
 
 ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS = ROOT / "artifacts/swift-incremental-tests"
 
 
 def main():
-    ARTIFACTS.mkdir(parents=True, exist_ok=True)
-    workspace = Path(tempfile.mkdtemp(prefix="source changes ", dir=ARTIFACTS))
+    with verification_workspace(ARTIFACTS, 'source changes ') as workspace:
+        verify(workspace)
+
+
+def verify(workspace):
     scripts = workspace / "scripts"
     scripts.mkdir()
     shutil.copy2(ROOT / "scripts/build-swift.sh", scripts / "build-swift.sh")
@@ -80,7 +87,7 @@ let package = Package(name: "GameEventScriptCompiler",
     builder.unlink()
     host.write_text('public enum Host { public static func value() -> Int { 3 } }\n')
     build("06-removed-source", 3)
-    print(f"Swift incremental source discovery and object reuse passed. Logs: {workspace}")
+    print("Swift incremental source discovery and object reuse passed.")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>name</key>
+	<string>Message handler</string>
+	<key>uuid</key>
+	<string>6718EA6A-0DCC-5672-90A8-4651D25C62A5</string>
+	<key>scope</key>
+	<string>source.gameeventscript - source.gameeventscript.assembler - comment - string</string>
+	<key>tabTrigger</key>
+	<string>ges-on</string>
+	<key>content</key>
+	<string>on ${1:Main}(${2:args}) {
+	$0
+}</string>
+</dict>
+</plist>

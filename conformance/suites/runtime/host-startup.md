@@ -137,6 +137,7 @@ gesBlock: expect
 initialization:
   pump: start
   hostReady: false
+  idleDurationMicroseconds: "none"
   programStarts: { a: runtimeError, b: runtimeError, c: runtimeError }
   local:
     - name: Kick
@@ -150,6 +151,7 @@ steps:
   rejected:
     accepted: false
     hostReady: false
+    idleDurationMicroseconds: "none"
 ```
 
 ---
@@ -324,6 +326,7 @@ on Kick { emit Delivered() }
 gesBlock: expect
 initialization:
   hostReady: false
+  idleDurationMicroseconds: "none"
   programStarts: { example: runtimeError }
   local:
     - name: Kick
@@ -366,6 +369,7 @@ on Kick { emit Delivered() }
 gesBlock: expect
 initialization:
   hostReady: false
+  idleDurationMicroseconds: "none"
   programStarts: { example: runtimeLimitReached }
   local:
     - name: Kick
@@ -704,6 +708,7 @@ on Leak { emit Bad() }
 gesBlock: expect
 initialization:
   hostReady: false
+  idleDurationMicroseconds: "none"
   programStarts: { main: runtimeError }
   local: [{ name: Leak }]
   diagnostics:
@@ -760,6 +765,7 @@ on Leak { emit Bad() }
 gesBlock: expect
 initialization:
   hostReady: false
+  idleDurationMicroseconds: "none"
   programStarts: { main: runtimeError }
   local: []
   diagnostics:

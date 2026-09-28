@@ -520,7 +520,7 @@ internal static class ConformanceSchemaBinder
         if (node is null)
             return new ConformanceStepExpectation(
                 new ConformanceMessage(receive, Array.Empty<string>(), Array.Empty<ConformanceArgument>()), true, Array.Empty<ConformanceMessage>(), Array.Empty<ConformanceMessage>(), null, EmptyObservations());
-        Closed(node, "input", "accepted", "local", "outbound", "paused", "waiting", "runtimeLimits", "diagnostics", "trace", "hostReady", "programStarts");
+        Closed(node, "input", "accepted", "local", "outbound", "paused", "waiting", "runtimeLimits", "diagnostics", "trace", "hostReady", "programStarts", "idleDurationMicroseconds");
         var inputNode = Optional(node, "input");
         var tags = new List<string>();
         IReadOnlyList<ConformanceArgument> args = Array.Empty<ConformanceArgument>();
@@ -612,7 +612,7 @@ internal static class ConformanceSchemaBinder
 
     private static ConformanceChannelExpectation BindChannel(YamlNode node)
     {
-        Closed(node, "local", "outbound", "runtimeLimits", "diagnostics", "trace", "hostReady", "programStarts", "pump");
+        Closed(node, "local", "outbound", "runtimeLimits", "diagnostics", "trace", "hostReady", "programStarts", "idleDurationMicroseconds", "pump");
         var pump = OptionalString(node, "pump") ?? "completion";
         if (pump is not ("start" or "completion")) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "Initialization pump must be start or completion.", node.Range);
         return new ConformanceChannelExpectation(BindMessages(Optional(node, "local")), BindMessages(Optional(node, "outbound")), BindObservations(node), pump == "completion");
@@ -650,7 +650,10 @@ internal static class ConformanceSchemaBinder
                 starts.Add(property.Name, value);
             }
         }
-        return new ConformanceObservationExpectation(included, excluded, diagnostics, traceNode is not null, BindTrace(traceNode), OptionalBoolean(node, "hostReady"), starts);
+        var idle = OptionalString(node, "idleDurationMicroseconds");
+        if (idle is not null && idle != "none" && (!long.TryParse(idle, NumberStyles.None, CultureInfo.InvariantCulture, out var duration) || duration < 0 || duration.ToString(CultureInfo.InvariantCulture) != idle))
+            throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "idleDurationMicroseconds must be 'none' or a canonical nonnegative Int64 string.", node.Range);
+        return new ConformanceObservationExpectation(included, excluded, diagnostics, traceNode is not null, BindTrace(traceNode), OptionalBoolean(node, "hostReady"), starts, idle);
     }
 
     private static IReadOnlyList<ConformanceObserverEventExpectation> BindTrace(YamlNode? node)

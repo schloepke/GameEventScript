@@ -1,0 +1,18 @@
+{
+  "_notice": "Copyright 2026 Stephan Schlöpke; SPDX-License-Identifier: Apache-2.0",
+  "contexts": [
+    {"pattern": "\\b(?:as|is)\\s+(:?)([A-Za-z]*)$", "group": "types", "typePrefix": true},
+    {"pattern": "\\[:([a-z]*)$", "group": "selectors"},
+    {"pattern": "(?<![:A-Za-z0-9]):([A-Z][A-Za-z]*|)$", "group": "types"}
+  ],
+  "types": ["Nothing", "Boolean", "Number", "Percentage", "Text", "Tag", "List", "Map", "Vector", "Point", "Dice", "Range", "Series", "Handler", "Message", "Record", "Quantity"],
+  "selectors": ["any", "all", "filter", "count", "take", "drop", "choose", "draw", "shuffle", "reverse", "sum", "average", "select", "fold", "reduce", "split", "contains", "sort", "first", "last", "single", "min", "max", "distinct", "group", "term", "keys", "values", "entries"],
+  "keywords": ["module", "constant", "on", "function", "predicate", "record", "let", "be", "if", "else", "for", "in", "emit", "publish", "after", "with", "without", "matching", "as", "is", "has", "value", "when", "otherwise", "and", "or", "xor", "not", "parse", "nothing", "true", "false", "from", "to", "step", "initialization", "undeliverable"],
+  "snippets": [
+    {"name": "Message handler", "trigger": "ges-on", "body": "on ${1:Main}(${2:args}) {\n\t$0\n}"},
+    {"name": "Conditional binding", "trigger": "ges-iflet", "body": "if let ${1:value} be ${2:expression} {\n\t$0\n}"},
+    {"name": "Fold collection", "trigger": "ges-fold", "body": "${1:items}[:fold ${2:acc} be ${3:0}, ${4:item} => ${5:acc + item}]$0"},
+    {"name": "Reduce collection", "trigger": "ges-reduce", "body": "${1:items}[:reduce ${2:acc}, ${3:item} => ${4:acc + item}]$0"},
+    {"name": "Delayed message", "trigger": "ges-after", "body": "emit after ${1:1s} ${2:Tick}(${3})$0"}
+  ]
+}

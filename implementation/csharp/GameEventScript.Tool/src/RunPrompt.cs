@@ -13,10 +13,10 @@ internal sealed class RunPrompt : IDisposable
     private readonly Prompt _prompt;
     private readonly RunHistory _history;
 
-    internal RunPrompt(RunHistory history)
+    internal RunPrompt(RunHistory history, bool color)
     {
         _history = history;
-        _prompt = new(callbacks: new Callbacks(history), console: new ErrorConsole(), configuration: Configuration());
+        _prompt = new(callbacks: new Callbacks(history, color), console: new ErrorConsole(), configuration: Configuration());
     }
 
     private static PromptConfiguration Configuration()
@@ -62,7 +62,7 @@ internal sealed class RunPrompt : IDisposable
         public override void Clear() => Console.Error.Write("\u001b[2J\u001b[H");
     }
 
-    private sealed class Callbacks(RunHistory history) : PromptCallbacks
+    private sealed class Callbacks(RunHistory history, bool color) : PromptCallbacks
     {
         /// <inheritdoc />
         protected override Task<(string Text, int Caret)> FormatInput(string text, int caret, KeyPress keyPress, CancellationToken cancellationToken)
@@ -78,6 +78,7 @@ internal sealed class RunPrompt : IDisposable
         /// <inheritdoc />
         protected override Task<IReadOnlyCollection<FormatSpan>> HighlightCallbackAsync(string text, CancellationToken cancellationToken)
         {
+            if (!color) return Task.FromResult<IReadOnlyCollection<FormatSpan>>(Array.Empty<FormatSpan>());
             IReadOnlyCollection<FormatSpan> spans = RunHighlighting.Highlight(text).Select(span => new FormatSpan(span.Start, span.Length, Color(span.Color))).ToArray();
             return Task.FromResult(spans);
         }

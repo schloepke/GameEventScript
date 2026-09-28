@@ -210,6 +210,10 @@ final class RuntimeScenario {
     func id(_ definition: ConformanceData, _ index: Int) -> String { definition["id"]?.stringValue ?? "native-" + String(repeating: "0", count: max(0, 4 - String(index + 1).count)) + String(index + 1) }
 
     func compare(_ expected: ConformanceData, path: String) throws {
+        if let idle = expected["idleDurationMicroseconds"]?.stringValue {
+            let actual = host.idleDurationMicroseconds.map(String.init) ?? "none"
+            if idle != actual { mismatch(path + "/idleDurationMicroseconds", idle, actual) }
+        }
         if let ready = expected["hostReady"]?.boolValue { check(path + "/hostReady", ready, host.isReady) }
         if case .object(let starts) = expected["programStarts"] {
             for entry in starts {

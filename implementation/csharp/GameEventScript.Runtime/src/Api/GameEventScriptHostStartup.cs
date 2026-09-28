@@ -77,6 +77,7 @@ public sealed partial class GameEventScriptHost
         {
             _starting = false;
             _pumping = false;
+            UpdateIdleDuration();
         }
     }
 

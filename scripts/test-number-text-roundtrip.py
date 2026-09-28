@@ -154,7 +154,7 @@ def main():
     if not args.skip_build:
         subprocess.run(["dotnet", "build", str(PROJECT), "--configuration", "Release", "--artifacts-path", str(EXPORT)], cwd=ROOT, check=True)
         subprocess.run(["swift", "build", "--package-path", str(PACKAGE), "--scratch-path", str(SCRATCH),
-                        "--build-system", "native", "--disable-build-manifest-caching", "--configuration", "release"], cwd=ROOT, check=True)
+                        "--disable-build-manifest-caching", "--configuration", "release"], cwd=ROOT, check=True)
     adapters = {
         "csharp": ["dotnet", str(ROOT / "artifacts/csharp/runtime-fixture-exporter/bin/release/GameEventScript.RuntimeFixtureExporter.dll")],
         "swift": [str(SCRATCH / "release/ges-conformance")],

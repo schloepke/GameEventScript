@@ -12,6 +12,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Added generated GES/GESA Sublime Text and bat grammars, TextMate/Sublime CLI
+  actions, and shared syntax-only completions and snippets with website downloads.
+
 - Published the release version policy: compatible fixes in 0.x patches, features
   and contract changes in 0.x minor releases with migration notes, and Semantic
   Versioning for the declared compatibility surface from 1.0 onward.
@@ -32,6 +35,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   native handler and extension effects, external-value stability and failure
   recovery. Existing runtime behavior is unchanged.
 
+### Fixed
+
+- Fixed C# CLI interactive history and cursor editing without `--color`; color
+  selection now affects highlighting only.
+
 ## [0.2.0] — 2026-09-26
 
 This development release expands the language, native integration and tooling.
@@ -39,6 +47,9 @@ C# and Swift share the same release version. Compatibility may change during 0.x
 see the migration notes below before upgrading from 0.1.0.
 
 ### Added
+
+- Host idle-duration observations in C# and Swift, including synchronized Bridge
+  runner access, for application-defined inactivity recovery without host timers.
 
 - Website publication triggers the hosting pull webhook after changed output is
   successfully pushed to `site`, with bounded retries and a secret-backed URL.

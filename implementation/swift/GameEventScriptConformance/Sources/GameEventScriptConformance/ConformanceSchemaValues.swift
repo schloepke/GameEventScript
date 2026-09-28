@@ -204,6 +204,12 @@ extension ConformanceSchema {
 
     static func validateObservations(_ node: Node) throws {
         try boolFields(node, ["hostReady"])
+        if let idle = node["idleDurationMicroseconds"] {
+            let value = try string(idle)
+            if value != "none" {
+                guard let duration = Int64(value), duration >= 0, String(duration) == value else { throw fail("invalidValue", "idleDurationMicroseconds requires 'none' or a canonical nonnegative Int64 string.", idle) }
+            }
+        }
         if let starts = node["programStarts"] {
             for property in try object(starts) {
                 try requireID(property.key, starts.range)
@@ -220,7 +226,7 @@ extension ConformanceSchema {
     }
 
     static func validateStepExpectation(_ node: Node) throws {
-        try closed(node, ["input", "accepted", "local", "outbound", "paused", "waiting", "runtimeLimits", "diagnostics", "trace", "hostReady", "programStarts"])
+        try closed(node, ["input", "accepted", "local", "outbound", "paused", "waiting", "runtimeLimits", "diagnostics", "trace", "hostReady", "programStarts", "idleDurationMicroseconds"])
         try boolFields(node, ["accepted", "paused", "waiting"])
         try validateObservations(node)
         if let input = node["input"] {
@@ -256,7 +262,7 @@ extension ConformanceSchema {
             if external["error"] != nil && external.entries!.count > 1 { throw fail("invalidValue", "Error expectations cannot constrain success.", external) }
         }
         if let initialization = node["initialization"] {
-            try closed(initialization, ["local", "outbound", "runtimeLimits", "diagnostics", "trace", "hostReady", "programStarts", "pump"])
+            try closed(initialization, ["local", "outbound", "runtimeLimits", "diagnostics", "trace", "hostReady", "programStarts", "idleDurationMicroseconds", "pump"])
             if let pump = initialization["pump"] { try choice(pump, ["start", "completion"]) }
             try validateObservations(initialization)
         }

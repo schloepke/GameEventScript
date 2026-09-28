@@ -948,7 +948,8 @@ public sealed class ConformanceObservationExpectation
         bool traceSpecified,
         IReadOnlyList<ConformanceObserverEventExpectation> trace,
         bool? hostReady = null,
-        IReadOnlyDictionary<string, string>? programStarts = null)
+        IReadOnlyDictionary<string, string>? programStarts = null,
+        string? idleDurationMicroseconds = null)
     {
         IncludedRuntimeLimits = ConformanceDocument.Copy(included);
         ExcludedRuntimeLimits = ConformanceDocument.Copy(excluded);
@@ -956,11 +957,14 @@ public sealed class ConformanceObservationExpectation
         TraceSpecified = traceSpecified;
         Trace = ConformanceDocument.Copy(trace);
         HostReady = hostReady;
+        IdleDurationMicroseconds = idleDurationMicroseconds;
         ProgramStarts = new ConformanceReadOnlyDictionary<string>(programStarts ?? new Dictionary<string, string>());
     }
 
     /// <summary>Gets the expected host readiness, or null when not asserted.</summary>
     public bool? HostReady { get; }
+    /// <summary>Gets the expected canonical nonnegative microsecond count, "none" for no idle phase, or null when not asserted.</summary>
+    public string? IdleDurationMicroseconds { get; }
     /// <summary>Gets expected per-program initialization outcomes: pending, ready, runtimeError, or runtimeLimitReached.</summary>
     public IReadOnlyDictionary<string, string> ProgramStarts { get; }
 

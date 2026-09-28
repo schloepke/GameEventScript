@@ -254,9 +254,11 @@ green and tags cyan). ConsoleErr colors its entire line red. In interactive mode
 Outside interactive mode, traces remain plain. Error diagnostics and status
 messages retain their plain representation.
 
-With `--interactive --color`, when stdin, stdout, and stderr are terminals, the
-line editor highlights input as it is typed. It supports cursor editing, session
+With `--interactive`, when stdin, stdout, and stderr are terminals, the
+line editor supports cursor editing and session
 history with Up/Down, and Ctrl+N to insert a newline; Enter submits the entire input.
+These editing features also work without colors. `--color` additionally enables
+live syntax highlighting; `NO_COLOR` disables colors without disabling editing.
 The editor uses a tab width of four columns.
 Shift+Enter and Alt/Option+Enter also insert a newline if the terminal reports
 the modifier. Ghostty's default Shift+Enter encoding is recognized without a

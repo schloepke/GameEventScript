@@ -623,6 +623,12 @@ These assertions inspect the portable Host/Instance API. Init emit observations
 remain attempted emits, including discarded attempts; assert downstream handler
 output to prove delivery. Deferred publications are observed upon commitment.
 
+Initialization and step observations may also assert `idleDurationMicroseconds`:
+a quoted canonical nonnegative Int64 string, or `"none"` when no idle phase exists.
+Omission makes no assertion. The virtual clock starts at zero and existing
+`advanceMicroseconds` actions advance it without pumping, enabling exact elapsed
+time assertions without wall-clock sleeps.
+
 ## Portable message and value shape
 
 A message is:

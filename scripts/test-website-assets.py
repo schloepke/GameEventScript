@@ -71,7 +71,8 @@ class WebsiteAssetTests(unittest.TestCase):
     def test_editor_downloads_exclude_metadata(self):
         (self.source / 'LICENSE').write_text('fixture license')
         for variant, _ in bundles.VARIANTS:
-            for name in ['GameEventScript.tmbundle', 'GameEventScriptAssembler.tmbundle']:
+            names = ['GameEventScript'] if variant == 'Sublime Text' else ['GameEventScript.tmbundle', 'GameEventScriptAssembler.tmbundle']
+            for name in names:
                 self.populate(self.source / 'tools/editors' / variant / name)
         output = self.root / 'downloads'
         with patch.object(bundles, 'ROOT', self.source), patch.object(bundles, 'OUTPUT', output):
@@ -80,7 +81,7 @@ class WebsiteAssetTests(unittest.TestCase):
             with ZipFile(archive) as package:
                 self.assertEqual({'LICENSE', *[
                     f'{bundle}/{name}'
-                    for bundle in ['GameEventScript.tmbundle', 'GameEventScriptAssembler.tmbundle']
+                    for bundle in (['GameEventScript'] if 'Sublime' in archive.name else ['GameEventScript.tmbundle', 'GameEventScriptAssembler.tmbundle'])
                     for name in ['index.html', '.well-known/security.txt']
                 ]}, set(package.namelist()))
 

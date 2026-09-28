@@ -9,6 +9,19 @@ namespace GameEventScript.Api;
 
 public sealed partial class GameEventScriptHost
 {
+    private long? _idleSinceMicroseconds;
+
+    /// <summary>Gets the elapsed whole microseconds in the current ready, work-free phase, or null before readiness or while work is active, queued or delayed.</summary>
+    /// <remarks>Uses the host's monotonic clock. Reading never pumps or schedules work. Rejected messages do not reset the duration; callers must serialize access as for other host operations.</remarks>
+    public long? IdleDurationMicroseconds => IsReady && !_pumping && IsIdle && _idleSinceMicroseconds is { } since
+        ? Math.Max(0, _clock.ElapsedMicroseconds - since) : null;
+
+    private void UpdateIdleDuration()
+    {
+        if (IsReady && IsIdle) _idleSinceMicroseconds ??= _clock.ElapsedMicroseconds;
+        else _idleSinceMicroseconds = null;
+    }
+
     private readonly IGameEventScriptClock _clock;
     private List<DelayedMessage>? _delayed;
 
@@ -57,6 +70,7 @@ public sealed partial class GameEventScriptHost
             else hi = mid;
         }
         _delayed.Insert(lo, delayed);
+        _idleSinceMicroseconds = null;
         if (publish)
         {
             _stepPublishedMessages++;

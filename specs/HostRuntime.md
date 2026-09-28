@@ -514,3 +514,30 @@ retains its frame-budget meaning. Errors and limits retain precedence.
 `IsIdle` is false while delayed entries remain. `NextMessageDelay` reports remaining
 whole microseconds, clamped to zero, or no value when there is no delayed entry.
 Bridges and command-line adapters own timers and serialize all Host access.
+
+## Idle duration observation
+
+> **Since: Unreleased**
+
+`IdleDurationMicroseconds` (Swift `idleDurationMicroseconds`) is an optional
+nonnegative Int64 count of whole microseconds in the current ready, work-free
+phase, measured with the Host's monotonic clock. It is absent before successful
+Start and during pumping, active or paused handler execution, queued ordinary
+messages or initialization, and delayed emits or publications. A deadline passing
+alone does not finish work: the delayed entry must still be pumped.
+
+The phase begins when successful Start or a pump returns with no active or
+pending work. Accepted queued work ends it immediately; a later work-free
+completion starts a new phase. Repeated observations, repeated Start, empty
+pumps, subscriptions, loads without initialization and rejected inputs do not
+restart an existing phase. A failed initial Start never establishes one. A
+runtime error on a ready host does not itself prohibit a new idle phase if the
+pump has actually left no active or pending work.
+
+Reading the property never pumps, sleeps or schedules a message. External work
+unknown to this Host does not affect the result. Embeddings choose their own
+idle timeout and recovery message, such as a bot's `Idle()` event. The existing
+`IsIdle` queue-emptiness observation remains unchanged and does not imply readiness.
+All raw Host access still requires a single serialized caller. Native automatic
+runners expose the duration under their gate and return no value after disposal
+or close; they do not introduce an idle timer or automatic recovery messages.

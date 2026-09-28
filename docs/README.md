@@ -60,7 +60,7 @@ complement the portable specification with concrete language APIs.
 The [standalone CLI downloads](guide/distribution/Tools.md) describe C# and Swift
 archives, installation, checksums and the manual release workflow.
 
-The [TextMate editor bundles](../tools/editors/README.md) provide downloadable
+The [Editor packages and syntax highlighting](../tools/editors/README.md) provide downloadable
 JSON and classic XML grammars for `.ges` and `.gesa`, with installation guidance.
 
 Start with [Learn Game Event Script](guide/Language.md), then choose the

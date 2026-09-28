@@ -25,6 +25,29 @@ final class RunnerTests: XCTestCase {
         }
     }
 
+    private struct FrozenClock: GameEventScriptClock {
+        var elapsedMicroseconds: Int64 { 100 }
+    }
+
+    func testIdleDurationThroughRunner() throws {
+        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost(clock: FrozenClock()))
+        defer { runner.close() }
+        XCTAssertNil(runner.idleDurationMicroseconds)
+        let done = expectation(description: "Native handler ran")
+        _ = try runner.subscribe(.init(name: "Ping")) { _, _ in
+            XCTAssertNil(runner.idleDurationMicroseconds)
+            done.fulfill()
+        }
+        _ = try runner.start()
+        XCTAssertEqual(runner.idleDurationMicroseconds, 0)
+        _ = try runner.receive(.init(name: "Ping"))
+        wait(for: [done], timeout: 5)
+        _ = try runner.runToCompletion()
+        XCTAssertEqual(runner.idleDurationMicroseconds, 0)
+        runner.close()
+        XCTAssertNil(runner.idleDurationMicroseconds)
+    }
+
     func testRunnerWaitsForExplicitStart() throws {
         let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.createBuilder().build())
         defer { runner.close() }

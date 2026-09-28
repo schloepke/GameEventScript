@@ -531,6 +531,7 @@ rules are in [Host runtime](HostRuntime.md).
 | `ExecuteFrame(opcodeBudget)` | Synchronously pumps on the caller until the scheduler budget pauses script execution, the Host becomes idle, or a runtime limit/error ends the call. Budget must be positive and the host must be ready. |
 | `RunToCompletion()` | Synchronously pumps until idle, only future messages remain, or a runtime limit/error terminates this pump call. The host must be ready. It creates no worker thread. |
 | `IsIdle` | True only when no active message/handler and no queued logical message exists. |
+| `IdleDurationMicroseconds` | Optional Int64 idle duration on a ready Host; see [idle observation](HostRuntime.md#idle-duration-observation). |
 | `PendingMessageCount` | Number of queued logical messages according to HostRuntime; it never counts handler invocations. |
 
 Equal priority uses stable registration order. A logical message completes all
@@ -1300,3 +1301,14 @@ Local message publication never implicitly invokes these APIs.
 Integral Binary64 range factory inputs normalize to the exact integer range model;
 see [Language](Language.md#range). API names that accept Binary64 describe their
 input representation, not a promise of unnormalized internal storage.
+
+## Idle duration API
+
+> **Since: Unreleased**
+
+C# Host and CSharpHostRunner expose `long? IdleDurationMicroseconds`; Swift Host
+and SwiftHostRunner expose `Int64? idleDurationMicroseconds`. These are read-only
+observations using the configured monotonic clock. Their lifecycle, reset and
+absence rules are owned by [Host Runtime](HostRuntime.md#idle-duration-observation).
+Runner reads are serialized through the ownership gate; a disposed/closed runner
+returns no value. Reading does not schedule work or produce notifications.

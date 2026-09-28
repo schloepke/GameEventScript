@@ -4,6 +4,7 @@
 """Validate tool release completeness and upload ordering using fake packages/SDK."""
 import json
 import os
+import runpy
 from pathlib import Path
 import subprocess
 import sys
@@ -96,6 +97,15 @@ class ToolReleaseTests(unittest.TestCase):
         result = subprocess.run([*command, "--publish"], env=env, capture_output=True)
         self.assertNotEqual(0, result.returncode)
         self.assertFalse(log.exists())
+
+
+class InstalledCommandTests(unittest.TestCase):
+    def test_sdk_shim_names(self):
+        name = runpy.run_path(str(ROOT / "scripts/pack-csharp-tool.py"))["installed_command_name"]
+        self.assertEqual(name(True, True), "dotnet-ges.cmd")
+        self.assertEqual(name(False, True), "dotnet-ges.exe")
+        self.assertEqual(name(True, False), "dotnet-ges")
+        self.assertEqual(name(False, False), "dotnet-ges")
 
 
 if __name__ == "__main__":

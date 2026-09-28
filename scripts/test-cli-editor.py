@@ -44,34 +44,41 @@ print("EDITOR_INPUT_OK", flush=True)
     cursor_replies = 0
     position = 0
 
+    def read(timeout):
+        nonlocal cursor_replies
+        if not select.select([fd], [], [], timeout)[0]:
+            return
+        try:
+            data = os.read(fd, 65536)
+        except OSError as error:
+            if error.errno != errno.EIO:
+                raise
+            return
+        transcript.extend(data)
+        requests = transcript.count(b"\x1b[6n")
+        while cursor_replies < requests:
+            os.write(fd, b"\x1b[1;1R")
+            cursor_replies += 1
+
     def expect(value):
-        nonlocal cursor_replies, position
+        nonlocal position
         deadline = time.monotonic() + 15
         while time.monotonic() < deadline:
             found = transcript.find(value, position)
             if found >= 0:
                 position = found + len(value)
                 return
-            if select.select([fd], [], [], 0.1)[0]:
-                try:
-                    data = os.read(fd, 65536)
-                except OSError as error:
-                    if error.errno != errno.EIO:
-                        raise
-                    break
-                if not data:
-                    break
-                transcript.extend(data)
-                requests = transcript.count(b"\x1b[6n")
-                while cursor_replies < requests:
-                    os.write(fd, b"\x1b[1;1R")
-                    cursor_replies += 1
+            read(0.1)
         raise AssertionError((value, bytes(transcript)))
 
     def submit(text):
         os.write(fd, text)
-        # PrettyPrompt treats a burst including Enter as pasted text.
-        time.sleep(0.25)
+        # Wait for input to be rendered, answering cursor-position requests even
+        # on slow CI runners. Enter must not join PrettyPrompt's paste burst.
+        expect(text)
+        deadline = time.monotonic() + 0.25
+        while time.monotonic() < deadline:
+            read(0.02)
         os.write(fd, b"\r")
 
     try:

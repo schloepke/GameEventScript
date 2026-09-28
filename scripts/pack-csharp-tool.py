@@ -21,6 +21,11 @@ def run(args, **kwargs):
     subprocess.run([str(a) for a in args], cwd=ROOT, check=True, **kwargs)
 
 
+def installed_command_name(native, windows):
+    # .NET SDK 10 installs native Windows tools through a batch shim.
+    return "dotnet-ges" + ((".cmd" if native else ".exe") if windows else "")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("version", type=version_checked)
@@ -56,7 +61,7 @@ def main():
         ET.ElementTree(config).write(config_path, encoding="utf-8", xml_declaration=True)
         env = dict(os.environ, NUGET_PACKAGES=str(work / "packages"))
         run(["dotnet", "tool", "install", package_id, "--version", args.version, "--tool-path", work / "tool", "--configfile", config_path, "--no-cache"], env=env)
-        binary = work / "tool" / ("dotnet-ges.exe" if os.name == "nt" else "dotnet-ges")
+        binary = work / "tool" / installed_command_name(native, os.name == "nt")
         run([sys.executable, ROOT / "scripts/test-cli-aot.py", binary, *([] if native else ["--managed"])], env=env)
         run([sys.executable, ROOT / "scripts/test-cli-editor.py", binary], env=env)
         if native and os.name != "nt":

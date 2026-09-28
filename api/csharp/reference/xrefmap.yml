@@ -4379,6 +4379,18 @@ references:
   commentId: Overload:GameEventScript.Api.GameEventScriptHost.ExecuteFrame
   fullName: GameEventScript.Api.GameEventScriptHost.ExecuteFrame
   nameWithType: GameEventScriptHost.ExecuteFrame
+- uid: GameEventScript.Api.GameEventScriptHost.IdleDurationMicroseconds
+  name: IdleDurationMicroseconds
+  href: api/GameEventScript.Api.GameEventScriptHost.html#GameEventScript_Api_GameEventScriptHost_IdleDurationMicroseconds
+  commentId: P:GameEventScript.Api.GameEventScriptHost.IdleDurationMicroseconds
+  fullName: GameEventScript.Api.GameEventScriptHost.IdleDurationMicroseconds
+  nameWithType: GameEventScriptHost.IdleDurationMicroseconds
+- uid: GameEventScript.Api.GameEventScriptHost.IdleDurationMicroseconds*
+  name: IdleDurationMicroseconds
+  href: api/GameEventScript.Api.GameEventScriptHost.html#GameEventScript_Api_GameEventScriptHost_IdleDurationMicroseconds_
+  commentId: Overload:GameEventScript.Api.GameEventScriptHost.IdleDurationMicroseconds
+  fullName: GameEventScript.Api.GameEventScriptHost.IdleDurationMicroseconds
+  nameWithType: GameEventScriptHost.IdleDurationMicroseconds
 - uid: GameEventScript.Api.GameEventScriptHost.IsIdle
   name: IsIdle
   href: api/GameEventScript.Api.GameEventScriptHost.html#GameEventScript_Api_GameEventScriptHost_IsIdle
@@ -9284,6 +9296,18 @@ references:
   commentId: Overload:GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.GetStartResult
   fullName: GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.GetStartResult
   nameWithType: GameEventScriptCSharpHostRunner.GetStartResult
+- uid: GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.IdleDurationMicroseconds
+  name: IdleDurationMicroseconds
+  href: api/GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.html#GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_IdleDurationMicroseconds
+  commentId: P:GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.IdleDurationMicroseconds
+  fullName: GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.IdleDurationMicroseconds
+  nameWithType: GameEventScriptCSharpHostRunner.IdleDurationMicroseconds
+- uid: GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.IdleDurationMicroseconds*
+  name: IdleDurationMicroseconds
+  href: api/GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.html#GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_IdleDurationMicroseconds_
+  commentId: Overload:GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.IdleDurationMicroseconds
+  fullName: GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.IdleDurationMicroseconds
+  nameWithType: GameEventScriptCSharpHostRunner.IdleDurationMicroseconds
 - uid: GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.IsIdle
   name: IsIdle
   href: api/GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.html#GameEventScript_CSharpBridge_GameEventScriptCSharpHostRunner_IsIdle

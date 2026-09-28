@@ -35,6 +35,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   native handler and extension effects, external-value stability and failure
   recovery. Existing runtime behavior is unchanged.
 
+### Fixed
+
+- Fixed C# CLI interactive history and cursor editing without `--color`; color
+  selection now affects highlighting only.
+
 ## [0.2.0] — 2026-09-26
 
 This development release expands the language, native integration and tooling.

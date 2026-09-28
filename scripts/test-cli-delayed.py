@@ -71,30 +71,29 @@ def terminal_test(color):
 
     try:
         until(b'ges> ')
-        if color:
-            submit(b'emit ConsoleOut("BEFORE")')
-            until(b'BEFORE\r\n')
-            until(b'ges> ')
-            submit(b'emit after 2s ConsoleOut("WAKE")')
-            until(b'ges> ')
-            # Navigate to an entry from before the timer and back to the draft.
-            os.write(master, b'emit ConsoleOut("DRAFT")\x1b[A\x1b[A')
-            submit(b'')
-            until(b'BEFORE\r\n')
-            until(b'ges> ')
-            submit(b'emit ConsoleOut("DRAFT")\x1b[A\x1b[B')
-            until(b'DRAFT\r\n')
-            until(b'ges> ')
-            submit(b'emit ConsoleOut("DURING")')
+        submit(b'emit ConsoleOut("BEFORE")')
+        until(b'BEFORE\r\n')
+        until(b'ges> ')
+        submit(b'emit after 2s ConsoleOut("WAKE")')
+        until(b'ges> ')
+        # Navigate to an entry from before the timer and back to the draft.
+        os.write(master, b'emit ConsoleOut("DRAFT")\x1b[A\x1b[A')
+        submit(b'')
+        until(b'BEFORE\r\n')
+        until(b'ges> ')
+        submit(b'emit ConsoleOut("DRAFT")\x1b[A\x1b[B')
+        until(b'DRAFT\r\n')
+        until(b'ges> ')
+        submit(b'emit ConsoleOut("DURING")')
+        until(b'DURING\r\n')
+        until(b'ges> ')
+        until(b'WAKE\r\n')
+        # First recall finishes the waiting reader; second uses the ordinary reader.
+        for _ in range(2):
+            submit(b'\x1b[A')
             until(b'DURING\r\n')
             until(b'ges> ')
-            until(b'WAKE\r\n')
-            # First recall finishes the waiting reader; second uses the ordinary reader.
-            for _ in range(2):
-                submit(b'\x1b[A')
-                until(b'DURING\r\n')
-                until(b'ges> ')
-        else:
+        if not color:
             submit(b'emit after 0.2s ConsoleOut("WAKE")')
             until(b'ges> ')
             os.write(master, b'emit ConsoleOut("PRESERVED")')

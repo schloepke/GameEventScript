@@ -14,7 +14,7 @@ internal static class RunConsole
         if (terminal) Console.Error.WriteLine("GES event console. Type :help for commands and examples, :load <file> to add a program, or :quit to exit.");
         using var input = new StreamReader(Console.OpenStandardInput(), new UTF8Encoding(false, true), detectEncodingFromByteOrderMarks: false);
         var history = new RunHistory();
-        using var prompt = color && terminal && !Console.IsOutputRedirected && !Console.IsErrorRedirected ? new RunPrompt(history) : null;
+        using var prompt = terminal && !Console.IsOutputRedirected && !Console.IsErrorRedirected ? new RunPrompt(history, color) : null;
         var success = true;
         var lineNumber = 0;
         while (true)

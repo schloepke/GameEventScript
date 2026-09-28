@@ -495,6 +495,7 @@ publish sink or custom extension/type registry is configured.
 
 `--color` opts into ANSI output and interactive input highlighting; `NO_COLOR`
 disables it. Interactive verbose event traces are yellow when color is enabled.
+Live editing and Up/Down history work with or without `--color`.
 Live editing requires terminal input/output streams; redirected input
 uses the plain line reader. Terminal editing and its dependencies belong only to
 the CLI. Highlighting reuses the embedded GES and GESA TextMate grammars. The editor uses Ctrl+N

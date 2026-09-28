@@ -129,12 +129,13 @@ Editing:
   The editor and terminal source/dump displays use a tab width of four columns.
   Delayed output is pumped while waiting for input; unfinished input is preserved.
   Enter submits. Plain/redirected input accepts one line (braces/semicolons allowed).
-  With --color and terminal streams: live syntax colors, cursor editing, Up/Down
+  With terminal streams: cursor editing, Up/Down
   history, Ctrl+N to insert a newline, Ctrl+C to cancel, Ctrl+D on empty input to quit.
   Shift+Enter and Alt/Option+Enter also insert a newline when the terminal reports
   their modifiers. Ghostty's default Shift+Enter is supported without remapping.
   In Warp, configure Option as Meta to use Option+Enter. If a terminal sends
   ordinary Enter for a modified key, use Ctrl+N instead.
+  --color additionally enables live syntax highlighting; editing works without it.
   --verbose shows emit/publish/dispatch traces; interactive color traces are yellow.
   --quiet hides completion/load/unload/reload reports. Help, prompts, and diagnostics use stderr.
 """;

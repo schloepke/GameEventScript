@@ -49,13 +49,13 @@ Event console:
   :help                 Show commands, examples, and session behavior.
   :help load            Explain loading a program into the current session.
   :load "extra.gesb"     Add one source or binary file and run its initialization.
-  :unload <module|@ID>  Detach one loaded program.
+  :unload <module|ID>  Detach one loaded program.
   :unloadAll            Detach all programs; keep native console handlers.
   :reload               Re-read active programs on a fresh host. Use :help reload for details.
-  :list                 List loaded programs/modules and their @IDs.
+  :list                 List loaded programs/modules and their IDs.
   :handler              List registered script and native handlers.
-  :dump <module|@ID>     Show a loaded program as GESA. Use :help dump for details.
-  :source <module|@ID>   Show only embedded sources. --color highlights source and dumps.
+  :dump <module|ID>     Show a loaded program as GESA. Use :help dump for details.
+  :source <module|ID>   Show current draft or embedded sources. --color highlights source and dumps.
   :quit                 End the session (or use EOF).
 
 ConsoleOut(...) writes to stdout; ConsoleErr(...) writes to stderr.
@@ -75,6 +75,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
             return 0;
         }
 
+        using var errorColors = new RunErrorColors();
         var inputs = new List<string>();
         var scenarios = new List<string>();
         var mainArguments = new List<GesValue>();
@@ -148,7 +149,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
                     else maxSteps = parsed;
                 }
             }
-            else if (argument == "--color") color = true;
+            else if (argument == "--color") { color = true; errorColors.Enabled = Environment.GetEnvironmentVariable("NO_COLOR") is null; }
             else if (argument == "--interactive") interactive = true;
             else if (argument is "-v" or "--verbose") verbose = true;
             else if (argument is "-q" or "--quiet") quiet = true;

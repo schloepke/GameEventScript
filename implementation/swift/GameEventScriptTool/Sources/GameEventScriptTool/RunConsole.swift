@@ -13,7 +13,11 @@ extension Tool {
         var lineNumber = 0
         while io.outputError == nil {
             if io.inputTerminal && prompt == nil { io.write("ges> ", toError: true) }
-            guard var line = try prompt?.readLine(session: session) ?? (prompt == nil ? session.readInput() : nil) else { return success }
+            guard var line = try prompt?.readLine(session: session) ?? (prompt == nil ? session.readInput() : nil) else {
+                if session.workspace.canQuit(io) { return success }
+                if io.inputTerminal { continue }
+                return false
+            }
             lineNumber += 1
             if lineNumber == 1 && line.hasPrefix("\u{feff}") { line.removeFirst() }
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -21,7 +25,11 @@ extension Tool {
             let end = trimmed.firstIndex(where: \.isWhitespace) ?? trimmed.endIndex
             let command = String(trimmed[..<end])
             let argument = String(trimmed[end...]).trimmingCharacters(in: .whitespacesAndNewlines)
-            if command == ":quit" && argument.isEmpty { return success }
+            if command == ":quit!" && argument.isEmpty { return success }
+            if command == ":quit" && argument.isEmpty {
+                if session.workspace.canQuit(io) { return success }
+                continue
+            }
             if command == ":help" {
                 if !consoleHelp(argument) { success = false }
                 continue
@@ -34,7 +42,7 @@ extension Tool {
                 session.inventory.registeredHandlers()
                 continue
             }
-            if ![":load", ":dump", ":source", ":unload", ":unloadAll", ":reload"].contains(command), command.hasPrefix(":"), command.dropFirst().allSatisfy({ $0 >= "a" && $0 <= "z" }) {
+            if ![":edit", ":save", ":load", ":dump", ":source", ":unload", ":unloadAll", ":reload"].contains(command), command.hasPrefix(":"), command.dropFirst().allSatisfy({ $0 >= "a" && $0 <= "z" }) {
                 io.line("error cli.consoleCommand: Unknown command or arguments '\(trimmed)'. Use :help.", toError: true)
                 success = false
                 continue
@@ -43,6 +51,14 @@ extension Tool {
             var path = "<interactive:\(lineNumber)>"
             do {
                 defer { instance?.detach() }
+                if command == ":edit" {
+                    guard try session.workspace.edit(session, argument) else { return false }
+                    continue
+                }
+                if command == ":save" {
+                    try session.workspace.save(session.inventory, argument, io: io)
+                    continue
+                }
                 if command == ":unload" {
                     try session.inventory.unload(argument)
                     if !options.quiet { io.line("Unloaded \(argument).", toError: true) }
@@ -51,6 +67,8 @@ extension Tool {
                 if command == ":unloadAll" || command == ":reload" {
                     guard argument.isEmpty else { throw ToolError.usage("\(command) accepts no arguments.") }
                     if command == ":unloadAll" {
+                        guard session.workspace.canQuit(io) else { continue }
+                        session.workspace.drafts.removeAll()
                         let count = session.inventory.unloadAll()
                         if !options.quiet { io.line("Unloaded \(count) programs. Native console handlers remain active.", toError: true) }
                     } else {
@@ -96,6 +114,7 @@ extension Tool {
         switch topic {
         case "": text = ToolHelp.console
         case "load", ":load": text = ToolHelp.load
+        case "edit", ":edit", "save", ":save", "quit", ":quit": text = ToolHelp.editing
         case "unload", ":unload", "unloadAll", ":unloadAll", "reload", ":reload": text = ToolHelp.lifecycle
         case "list", ":list", "handler", ":handler", "dump", ":dump", "source", ":source": text = ToolHelp.inspection
         default:

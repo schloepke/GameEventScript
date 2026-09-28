@@ -112,13 +112,13 @@ enum ToolHelp {
           :help                 Show commands, examples, and session behavior.
           :help load            Explain loading a program into the current session.
           :load "extra.gesb"     Add one source or binary file and run its initialization.
-          :unload <module|@ID>  Detach one loaded program.
+          :unload <module|ID>  Detach one loaded program.
           :unloadAll            Detach all programs; keep native console handlers.
           :reload               Re-read active programs on a fresh host. Use :help reload for details.
-          :list                 List loaded programs/modules and their @IDs.
+          :list                 List loaded programs/modules and their IDs.
           :handler              List registered script and native handlers.
-          :dump <module|@ID>     Show a loaded program as GESA. Use :help dump for details.
-          :source <module|@ID>   Show only embedded sources. --color highlights source and dumps.
+          :dump <module|ID>     Show a loaded program as GESA. Use :help dump for details.
+          :source <module|ID>   Show current draft or embedded sources. --color highlights source and dumps.
           :quit                 End the session (or use EOF).
 
         ConsoleOut(...) writes to stdout; ConsoleErr(...) writes to stderr.
@@ -137,14 +137,17 @@ enum ToolHelp {
           :help load            Show load behavior and path examples.
           :help dump            Show program/handler inspection and source/dump details.
           :load <file>          Add one .ges or .gesb program; run its initialization.
-          :unload <module|@ID>  Detach one loaded program.
+          :unload <module|ID>  Detach one loaded program.
           :unloadAll            Detach all programs; keep native console handlers.
           :reload               Re-read active programs on a fresh host. Use :help reload for details.
-          :list                 List loaded programs/modules and their @IDs.
+          :list                 List loaded programs/modules and their IDs.
           :handler              List registered script and native handlers.
-          :dump <module|@ID>    Show a loaded program as GESA, e.g. :dump game or :dump @1.
-          :source <module|@ID>  Show only embedded source files; --color highlights source and dumps.
-          :quit                 End the session. EOF also exits.
+          :dump <module|ID>    Show a loaded program as GESA, e.g. :dump game or :dump 1.
+          :source <module|ID>  Show current draft or embedded sources; --color highlights source and dumps.
+          :edit [ID]            Edit scratch 0 or a loaded source program. See :help edit.
+          :save [ID]            Save modified drafts; :save 0 "file.ges" saves scratch.
+          :quit                 End the session unless there are unsaved changes.
+          :quit!                Discard unsaved changes and end the session.
 
         Send messages and inspect values:
           emit Start(value: 41)
@@ -161,6 +164,9 @@ enum ToolHelp {
         separators and append a newline; include spaces in your Text values when needed.
         ErrorCode selects the final process status (0..255); nothing resets it to 0.
         These messages do not end a session.
+
+        Draft editing: :edit [ID], :save [ID], :save 0 "file.ges". See :help edit.
+        :quit protects unsaved changes; :quit! discards them.
 
         Session behavior:
           Loaded program handlers and the host's random state persist between inputs.
@@ -185,16 +191,16 @@ enum ToolHelp {
     static let lifecycle = #"""
         Manage loaded programs
 
-          :unload <module|@ID>  Detach one program, selected as with :dump.
+          :unload <module|ID>  Detach one program, selected as with :dump.
           :unloadAll           Detach every program; keep native console handlers.
           :reload              Re-read active programs and initialize them on a fresh host.
 
         Unloaded programs disappear from :list and :handler. Their IDs are never reused.
-        An ambiguous module name requires an @ID. Unloading preserves the host's random
+        An ambiguous module name requires an ID. Unloading preserves the host's random
         state and script exit code. Use :unloadAll followed by :reload for an empty fresh host.
 
         :reload reads the original files again, keeping load order, jointly compiled source
-        groups, and active @IDs. All programs are loaded before initialization is pumped.
+        groups, and active IDs. All programs are loaded before initialization is pumped.
         Main is not called. Unloaded programs are not restored. The host uses the original
         limits and seed options; a fixed --seed restarts its sequence. ErrorCode resets to
         zero unless initialization sets it again. Native console handlers are registered once.
@@ -228,20 +234,59 @@ enum ToolHelp {
         errors or limits during initialization end the session. Rejected inputs/load
         commands make the final exit code 1, even if later commands succeed.
         """#
+    static let editing = #"""
+        Edit source drafts without changing original files
+
+          :edit                 Create or reopen scratch 0 in the configured editor.
+          :edit 1               Edit a loaded source program; binaries are read-only.
+          :edit 1 2             Select source 2 of a jointly compiled program.
+          :source [ID|module]   Show the current draft, or embedded source if not edited.
+          :dump [ID|module]     Show the last successful compile, with a stale-draft notice.
+          :save                 Save all modified file-backed drafts.
+          :save 1               Save one program's modified source files.
+          :save 0 "file.ges"    Save scratch as a normal program with a fresh positive ID.
+          :quit                 Exit only if no unsaved changes remain.
+          :quit!                Discard unsaved changes and exit.
+
+        :source and :dump without a selector refer to scratch 0. A missing scratch is an
+        error; :edit creates one. A saved scratch becomes a normal program; the next
+        :edit creates a new scratch. Module names remain independent of scratch IDs.
+        :edit reads the editor's temporary file, compiles the draft, then restarts the
+        host using current memory sources/programs. Initializations run again; queued
+        messages are discarded and a configured random seed restarts. Preparation errors
+        keep the running host; initialization/runtime errors end the session. External
+        effects cannot be rolled back. Main is not called automatically.
+
+        Failed drafts remain editable and saveable. :list marks unsaved drafts with *
+        and drafts not successfully applied with [draft not applied]. :reload preserves
+        unsaved editor drafts; clean file-backed programs are reread from disk. Save refuses external
+        file changes and existing scratch destinations. Unload refuses unsaved drafts.
+        EOF with unsaved drafts reports a failure for redirected input; terminal EOF
+        keeps the prompt open. Use :quit! to discard explicitly.
+
+        Editor selection uses GES_EDITOR, then VISUAL, then EDITOR (blank values are skipped).
+        Without configuration, the default is nano on macOS/Linux and notepad.exe on Windows.
+        For a GES-only setting, use GES_EDITOR='code --wait' or GES_EDITOR=nano. Command
+        arguments support quoted paths, without shell expansion. GUI editors must wait
+        until the file closes. Message pumping pauses while the editor is open. Only
+        :save writes original files. Errors are red with --color unless NO_COLOR is set.
+        """#
+
     static let inspection = #"""
         Inspect the current session
 
           :list                 List loaded programs, module names, versions, files, and handler counts.
           :handler              List registered script and native handlers with signatures and tag filters.
           :dump <module>        Show the loaded program as GESA, using its exact module name.
-          :dump @1              Select a program by its session ID from :list.
-          :source <module|@ID>  Show only the program's embedded source files.
+          :dump 1              Select a program by its session ID from :list.
+          :source <module|ID>  Show current draft or embedded source; defaults to scratch 0.
 
-        Each successful persistent load receives a stable @ID. Jointly compiled sources
+        Numeric IDs select programs; the legacy @1 spelling is also accepted.
+        Each successful persistent load receives a stable ID. Jointly compiled sources
         are one program; each loaded binary or :load adds a separate program instance.
         Sources without a module declaration use the compiler's generated anonymous.*
-        name; @ID is a convenient alternative. If a module name occurs more than once,
-        :dump and :source require an @ID instead of choosing an instance implicitly.
+        name; ID is a convenient alternative. If a module name occurs more than once,
+        :dump and :source require an ID instead of choosing an instance implicitly.
 
         :source shows the original source text with a filename heading for each document.
         If the program has no source archive, it reports that without failing the session.

@@ -4,6 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import bnf from './syntax/bnf.mjs';
 
 const grammar = JSON.parse(readFileSync(new URL('../tools/editors/TextMate/GameEventScript.tmbundle/Syntaxes/GameEventScript.tmLanguage.json', import.meta.url)));
 const assembler = JSON.parse(readFileSync(new URL('../tools/editors/TextMate/GameEventScriptAssembler.tmbundle/Syntaxes/GameEventScriptAssembler.tmLanguage.json', import.meta.url)));
@@ -31,8 +32,8 @@ export default defineConfig({
     customCss: ['./src/styles/docs.css'],
     expressiveCode: {
       shiki: {
-        langs: [{ ...grammar, name: 'ges' }, { ...assembler, name: 'gesa' }],
-        langAlias: { eventscript: 'ges', bnf: 'text' },
+        langs: [{ ...grammar, name: 'ges' }, { ...assembler, name: 'gesa' }, bnf],
+        langAlias: { eventscript: 'ges' },
       },
     },
     sidebar: [

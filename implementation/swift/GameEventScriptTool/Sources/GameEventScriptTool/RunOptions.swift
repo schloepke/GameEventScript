@@ -97,6 +97,7 @@ struct RunOptions {
 extension Tool {
     func runPrograms(_ arguments: [String]) throws -> Int {
         var options = try RunOptions(arguments)
+        io.colorErrors = options.color && !io.noColor
         if options.help {
             io.line(ToolHelp.run)
             return 0

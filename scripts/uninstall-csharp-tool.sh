@@ -30,11 +30,18 @@ case "$#" in
     *) usage >&2; exit 2 ;;
 esac
 
+ges_destination="$HOME/.dotnet/tools"
+if [ "$1" = --tool-path ]; then ges_destination="$2"; fi
+if [ -e "$ges_destination/.ges-csharp-aot.sha256" ] || [ -L "$ges_destination/.ges-csharp-aot.sha256" ]; then
+    ges_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+    exec "$ges_root/scripts/csharp-aot-install.sh" remove "$ges_destination"
+fi
+
 # Do not mask lookup failures as an absent installation. Match package IDs,
 # never the command name, so unrelated tools in the same scope remain installed.
 ges_installed_tools=$(dotnet tool list "$@")
 ges_removed=false
-for ges_package in GameEventScript.Tool StepH.GameEventScript.Tool; do
+for ges_package in GameEventScript.Tool GameEventScript.Tool.Aot StepH.GameEventScript.Tool; do
     if printf '%s\n' "$ges_installed_tools" | awk -v package="$ges_package" \
         'tolower($1) == tolower(package) { found = 1 } END { exit !found }'; then
         dotnet tool uninstall "$ges_package" "$@"

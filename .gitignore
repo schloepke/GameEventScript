@@ -16,6 +16,8 @@ artifacts/
 bin/
 obj/
 TestResults/
+__pycache__/
+*.pyc
 *.nupkg
 *.snupkg
 .build/

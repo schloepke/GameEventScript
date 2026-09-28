@@ -8,28 +8,44 @@ final class RunSession {
     private(set) var host: GameEventScriptHost
     private(set) var observer: RunObserver
     private(set) var inventory: RunInventory
+    let workspace: RunWorkspace
     let io: ToolIO
     let options: RunOptions
     var messages = 0, opcodes = 0, emits = 0, publishes = 0
 
-    init(options: RunOptions, io: ToolIO, nextID: Int = 1) throws {
+    init(options: RunOptions, io: ToolIO, nextID: Int = 1, workspace: RunWorkspace? = nil) throws {
+        self.workspace = workspace ?? RunWorkspace()
         self.options = options
         self.io = io
         observer = RunObserver(io: io, options: options)
         host = try GameEventScriptHost(seed: options.seed, limits: options.limits, observer: observer)
-        inventory = RunInventory(host: host, io: io, nextID: nextID)
+        inventory = RunInventory(host: host, io: io, workspace: self.workspace, nextID: nextID)
         try observer.subscribe(inventory)
     }
 
-    func reload(activePath: inout String) throws -> Bool {
-        let replacement = try RunSession(options: options, io: io, nextID: inventory.nextID)
+    func reload(activePath: inout String, fromMemory: Bool = false) throws -> Bool {
+        let replacement = try RunSession(options: options, io: io, nextID: inventory.nextID, workspace: workspace)
+        var refreshed: [Int: RunWorkspace.Draft] = [:]
+
+        func prepare(_ draft: RunWorkspace.Draft) throws -> RunWorkspace.Draft {
+            if fromMemory || draft.id == 0 || draft.dirty { return draft }
+            let current = try draft.readFromDisk()
+            refreshed[draft.id] = current
+            return current
+        }
+
         // Link the complete group before initialization; preparation failures leave this session intact.
         for entry in inventory.active {
             activePath = entry.paths[0]
-            let program = try entry.paths.count == 1 ? ToolFiles.read(entry.paths[0]) : ToolFiles.compile(entry.paths)
+            let program = try workspace.drafts[entry.id].map { try prepare($0).compile() } ?? (fromMemory ? entry.instance.program : entry.paths.count == 1 ? ToolFiles.read(entry.paths[0]) : ToolFiles.compile(entry.paths))
             try replacement.inventory.load(program, paths: entry.paths, id: entry.id)
         }
+        for draft in workspace.drafts.values.sorted(by: { $0.id < $1.id }) where !inventory.active.contains(where: { $0.id == draft.id }) && (draft.id != 0 || draft.dirty) {
+            try replacement.inventory.load(prepare(draft).compile(), paths: draft.paths, id: draft.id)
+        }
         guard try replacement.pump() else { return false }
+        for (id, draft) in refreshed { workspace.drafts[id] = draft }
+        for draft in workspace.drafts.values where replacement.inventory.active.contains(where: { $0.id == draft.id }) { draft.applied = draft.text }
         inventory.unloadAll()
         host = replacement.host
         observer = replacement.observer

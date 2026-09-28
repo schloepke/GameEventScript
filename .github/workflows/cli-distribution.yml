@@ -19,7 +19,7 @@ on:
       version:
         description: Version embedded in the CLI downloads (without v prefix)
         required: true
-        default: 0.2.0-rc.1
+        default: 0.3.0
         type: string
       publish:
         description: Attach verified downloads to the matching existing GitHub release
@@ -61,10 +61,6 @@ jobs:
         include:
           - { implementation: csharp, target: win-x64, runner: windows-2022 }
           - { implementation: csharp, target: win-arm64, runner: windows-11-arm }
-          - { implementation: csharp, target: linux-x64, runner: ubuntu-22.04 }
-          - { implementation: csharp, target: linux-arm64, runner: ubuntu-22.04-arm }
-          - { implementation: csharp, target: osx-x64, runner: macos-15-intel }
-          - { implementation: csharp, target: osx-arm64, runner: macos-15 }
           - { implementation: swift, target: osx-x64, runner: macos-15-intel }
           - { implementation: swift, target: osx-arm64, runner: macos-15 }
     runs-on: ${{ matrix.runner }}
@@ -85,14 +81,6 @@ jobs:
         run: python3 scripts/package-cli.py '${{ matrix.implementation }}' "$CLI_VERSION" '${{ matrix.target }}'
       - name: Verify relocated archive on its native platform
         run: python3 scripts/verify-cli-archive.py '${{ matrix.implementation }}' "$CLI_VERSION" '${{ matrix.target }}' --directory "artifacts/cli/$CLI_VERSION"
-      - name: Verify Linux download without an installed SDK
-        if: startsWith(matrix.target, 'linux-')
-        run: |
-          docker run --rm -v "$PWD:/repo" -w /repo -e CLI_VERSION ubuntu:22.04 bash -euc '
-            apt-get update -qq
-            apt-get install -y -qq python3 binutils libicu70 libssl3 zlib1g libstdc++6 ca-certificates
-            python3 scripts/verify-cli-archive.py csharp "$CLI_VERSION" "${{ matrix.target }}" --directory "artifacts/cli/$CLI_VERSION"
-          '
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cli-${{ matrix.implementation }}-${{ matrix.target }}

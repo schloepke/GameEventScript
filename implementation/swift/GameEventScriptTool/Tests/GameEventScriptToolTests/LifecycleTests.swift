@@ -16,8 +16,8 @@ extension ToolTests {
         )
         XCTAssertEqual(result.code, 0, result.error)
         XCTAssertEqual(result.output, "two\ntwo\nnative\n")
-        XCTAssertTrue(result.error.contains("@3  one"))
-        XCTAssertTrue(result.error.contains("@4  two"))
+        XCTAssertTrue(result.error.contains("3  one"))
+        XCTAssertTrue(result.error.contains("4  two"))
         XCTAssertTrue(result.error.contains("Loaded programs (0):"))
         XCTAssertTrue(result.error.contains("Registered handlers (3):"))
     }
@@ -27,7 +27,7 @@ extension ToolTests {
         let result = run(["run", "--interactive", "-q"], input: [":load \(one)", ":load \(one)", ":unload one", ":unload @99", ":unload", ":unloadAll extra", ":reload extra", "emit Start"])
         XCTAssertEqual(result.code, 1)
         XCTAssertEqual(result.output, "one\none\n")
-        XCTAssertTrue(result.error.contains("@1, @2"))
+        XCTAssertTrue(result.error.contains("1, 2"))
         XCTAssertTrue(result.error.contains("cli.consoleCommand"))
     }
 
@@ -42,7 +42,7 @@ extension ToolTests {
         XCTAssertEqual(result.code, 0, result.error)
         XCTAssertEqual(result.output, "7\n12\n")
         XCTAssertTrue(result.error.contains("Loaded programs (1):"))
-        XCTAssertTrue(result.error.contains("@1  duo"))
+        XCTAssertTrue(result.error.contains("1  duo"))
     }
 
     func testReloadRereadsBinariesAndInitializesAsGroup() throws {
@@ -63,8 +63,8 @@ extension ToolTests {
         )
         XCTAssertEqual(result.code, 0, result.error)
         XCTAssertEqual(result.output, "init one\ninit two\nready\nchanged\ninit two\nready\n")
-        XCTAssertTrue(result.error.contains("@1  one"))
-        XCTAssertTrue(result.error.contains("@2  two"))
+        XCTAssertTrue(result.error.contains("1  one"))
+        XCTAssertTrue(result.error.contains("2  two"))
     }
 
     func testFailedReloadPreservesWholeSession() throws {
@@ -124,7 +124,7 @@ extension ToolTests {
     func testLifecycleHelpAndQuietStatus() {
         let result = run(["run", "--interactive", "-q"], input: [":help unload", ":help unloadAll", ":help reload", ":unloadAll", ":reload"])
         XCTAssertEqual(result.code, 0, result.error)
-        XCTAssertTrue(result.error.contains(":unload <module|@ID>"))
+        XCTAssertTrue(result.error.contains(":unload <module|ID>"))
         XCTAssertFalse(result.error.contains("Reloaded all"))
         XCTAssertFalse(result.error.contains("Unloaded 0"))
         let reported = run(["run", "--interactive"], input: [":unloadAll", ":reload"])

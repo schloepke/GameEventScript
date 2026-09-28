@@ -11,6 +11,17 @@ namespace GameEventScript.Tests.Native.Tool;
 public sealed class GameEventScriptCheckRunCommandTests
 {
     private string _directory = null!;
+    /// <summary>Ensures REPL diagnostics explain unknown types instead of repeating a diagnostic code.</summary>
+    [TestMethod]
+    public void InteractiveUnknownTypeHasReadableDiagnostic()
+    {
+        var result = ToolProcess.ExecuteWithInput(_directory, "let x be [1, 2, 3]; let y be :Data(input: x)\n:quit\n", "run", "--interactive", "--quiet");
+        Assert.AreEqual(1, result.ExitCode);
+        StringAssert.Contains(result.StandardError, "validate.invalidTypeConstructor");
+        StringAssert.Contains(result.StandardError, "Unknown type constructor ':Data'");
+        Assert.IsFalse(result.StandardError.Contains("validate.invalidTypeConstructor: validate.invalidTypeConstructor", StringComparison.Ordinal));
+    }
+
     private const string ProgramSource = "module game\non Start(value) { emit ConsoleOut(value: value + 1) }\n";
     private const string ScenarioSource = "module scenario\non initialization { emit Start(value: 41) }\n";
 

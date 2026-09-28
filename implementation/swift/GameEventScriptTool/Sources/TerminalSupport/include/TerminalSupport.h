@@ -11,4 +11,7 @@ void ges_terminal_end(void);
 int ges_terminal_read(int timeout_ms);
 int ges_terminal_columns(void);
 int ges_scalar_width(uint32_t scalar);
+/* Synchronously run an editor in the inherited foreground process group.
+ * Returns a POSIX error number, or zero with an exit/signal status. */
+int ges_terminal_run_editor(char *const argv[], int *exit_code);
 #endif

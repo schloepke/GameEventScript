@@ -12,10 +12,12 @@ internal sealed class RunSession
     private readonly bool _verbose, _color, _interactive;
     internal GameEventScriptHost Host { get; private set; }
     internal RunObserver Observer { get; private set; }
+    internal RunWorkspace Workspace { get; }
     internal RunInventory Inventory { get; private set; }
 
-    internal RunSession(long? seed, GameEventScriptRuntimeLimits limits, bool verbose, bool color, bool interactive, int nextId = 1)
+    internal RunSession(long? seed, GameEventScriptRuntimeLimits limits, bool verbose, bool color, bool interactive, int nextId = 1, RunWorkspace? workspace = null)
     {
+        Workspace = workspace ?? new RunWorkspace();
         _seed = seed;
         _limits = limits;
         _verbose = verbose;
@@ -25,23 +27,35 @@ internal sealed class RunSession
         var builder = GameEventScriptHost.CreateBuilder().WithRuntimeObserver(Observer).WithRuntimeLimits(limits);
         if (seed is { } configuredSeed) builder.WithRandomSeed(configuredSeed);
         Host = builder.Build();
-        Inventory = new RunInventory(Host, nextId);
+        Inventory = new RunInventory(Host, Workspace, nextId);
         Observer.SubscribeConsoleHandlers(Inventory);
     }
 
-    internal bool Reload(ref string? activePath)
+    internal bool Reload(ref string? activePath, bool fromMemory = false)
     {
-        var replacement = new RunSession(_seed, _limits, _verbose, _color, _interactive, Inventory.NextId);
+        var replacement = new RunSession(_seed, _limits, _verbose, _color, _interactive, Inventory.NextId, Workspace);
+        var refreshed = new Dictionary<int, RunWorkspace.Draft>();
+        RunWorkspace.Draft Prepare(RunWorkspace.Draft draft)
+        {
+            if (fromMemory || draft.Id == 0 || draft.Dirty) return draft;
+            var current = draft.ReadFromDisk();
+            refreshed.Add(draft.Id, current);
+            return current;
+        }
         // Link the entire group before initialization, preserving the old session on preparation failure.
         foreach (var entry in Inventory.ActivePrograms())
         {
             activePath = entry.Paths[0];
-            var program = entry.Paths.Length == 1
+            var program = Workspace.Drafts.TryGetValue(entry.Id, out var draft) ? Prepare(draft).Compile() : fromMemory ? entry.Instance.Program : entry.Paths.Length == 1
                 ? RunProgramFiles.ReadOne(activePath)
                 : RunProgramFiles.Compile(entry.Paths, ref activePath);
             replacement.Inventory.Load(program, entry.Paths, entry.Id);
         }
+        foreach (var draft in Workspace.Drafts.Values.Where(d => !Inventory.ActivePrograms().Any(e => e.Id == d.Id) && (d.Id != 0 || d.Dirty)))
+            replacement.Inventory.Load(Prepare(draft).Compile(), draft.Paths, draft.Id);
         if (!replacement.Pump()) return false;
+        foreach (var (id, draft) in refreshed) Workspace.Drafts[id] = draft;
+        foreach (var draft in Workspace.Drafts.Values.Where(d => replacement.Inventory.ActivePrograms().Any(e => e.Id == d.Id))) draft.Applied = [.. draft.Text];
         Inventory.UnloadAll();
         Host = replacement.Host;
         Observer = replacement.Observer;

@@ -61,6 +61,13 @@ with open(os.environ["GES_PUBLISH_TEST_LOG"], "a") as output:
                 self.assertFalse(self.log.exists())
                 path.touch()
 
+    def test_incomplete_tool_release_prevents_library_uploads(self):
+        result = subprocess.run(["sh", str(ROOT / "scripts/publish-csharp-packages.sh"),
+                                 str(self.directory), VERSION, str(self.directory / "missing-tools")],
+                                env=self.environment, capture_output=True, text=True, timeout=10)
+        self.assertNotEqual(0, result.returncode)
+        self.assertFalse(self.log.exists())
+
     def test_missing_credentials_prevent_any_upload(self):
         del self.environment["NUGET_API_KEY"]
         self.assertNotEqual(0, self.publish().returncode)

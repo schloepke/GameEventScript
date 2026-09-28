@@ -15,8 +15,9 @@ The [changelog](../../CHANGELOG.md) identifies changes since the last release.
 
 Install one CLI from a repository checkout. The C# installer needs the repository's
 .NET SDK and the .NET 8 runtime; the Swift installer needs Swift 6 or newer.
-These commands build and install the tool locally; the CLI is not a public NuGet
-library or a public SwiftPM product.
+These commands build and install the tool locally. For NuGet tool installation
+(since 0.3.0) and standalone downloads, see [CLI installation](distribution/Tools.md).
+The CLI is not a SwiftPM library product.
 
 ```sh
 # Choose one, from the repository root:

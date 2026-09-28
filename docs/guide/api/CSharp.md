@@ -3,7 +3,7 @@
 
 # C# API reference
 
-This generated reference describes the **Unreleased development checkout**.
+This generated reference describes the **documentation source checkout**.
 Each reference page shows the source commit. It may include APIs not available
 in the latest NuGet release; check the [changelog](../../../CHANGELOG.md) and
 [build identity](https://gameeventscript.org/api/csharp/build-info.json) when comparing packages.

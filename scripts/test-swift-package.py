@@ -35,10 +35,10 @@ def run(arguments, cwd, log):
         raise RuntimeError(f"Command failed: {arguments!r}\nSee {log}\n{log.read_text()[-8000:]}")
 
 
-def require_macos_minimum(description, owner):
+def require_macos_minimum(description, owner, minimum="10.15"):
     platforms = {item["name"]: item["version"] for item in description.get("platforms", [])}
-    if platforms.get("macos") != "10.15":
-        raise RuntimeError(f"{owner} must explicitly declare macOS 10.15 for its SwiftSyntax macro dependency.")
+    if platforms.get("macos") != minimum:
+        raise RuntimeError(f"{owner} must explicitly declare macOS {minimum}.")
 
 
 def main():
@@ -51,8 +51,8 @@ def verify(workspace):
     repository.mkdir()
     for name in ("Package.swift", "LICENSE", "README.md"):
         shutil.copy2(ROOT / name, repository / name)
-    for module in (*MODULES, MACROS):
-        owner = "GameEventScriptSwiftBridge" if module == MACROS else module
+    for module in (*MODULES, MACROS, "GameEventScriptTool", "TerminalSupport"):
+        owner = "GameEventScriptSwiftBridge" if module == MACROS else "GameEventScriptTool" if module == "TerminalSupport" else module
         relative = Path("implementation/swift") / owner / "Sources" / module
         shutil.copytree(ROOT / relative, repository / relative)
     for name, (owner, _, _) in TESTS.items():
@@ -68,7 +68,7 @@ def verify(workspace):
         "swift", "package", "--package-path", str(repository),
         "--scratch-path", str(workspace / "describe"), "describe", "--type", "json",
     ], text=True))
-    require_macos_minimum(description, "Root distribution")
+    require_macos_minimum(description, "Root distribution", "10.15.4")
     bridge_description = json.loads(subprocess.check_output([
         "swift", "package", "--package-path", str(ROOT / "implementation/swift/GameEventScriptSwiftBridge"),
         "--scratch-path", str(workspace / "bridge-describe"), "describe", "--type", "json",
@@ -76,8 +76,12 @@ def verify(workspace):
     require_macos_minimum(bridge_description, "Local SwiftBridge package")
     products = {item["name"]: item for item in description["products"]}
     targets = {item["name"]: item for item in description["targets"]}
-    if set(products) - {MACROS} != set(MODULES) or set(targets) != {*MODULES, MACROS, *TESTS}:
-        raise RuntimeError("Distribution must contain four public libraries, one internal macro target and the three shared native test targets.")
+    if set(products) - {MACROS} != {*MODULES, "ges"} or set(targets) != {*MODULES, MACROS, *TESTS, "GameEventScriptTool", "TerminalSupport"}:
+        raise RuntimeError("Distribution must contain four public libraries, the ges executable with terminal support, one internal macro target and three shared native test targets.")
+    if products["ges"]["type"] != {"executable": None} or products["ges"]["targets"] != ["GameEventScriptTool"]:
+        raise RuntimeError("The root package must expose ges as an executable product.")
+    if set(targets["GameEventScriptTool"].get("target_dependencies", [])) != {"GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSyntaxHighlighter", "TerminalSupport"}:
+        raise RuntimeError("Unexpected CLI dependency graph.")
     for name, (owner, target_dependencies, product_dependencies) in TESTS.items():
         target = targets[name]
         expected_path = Path("implementation/swift") / owner / "Tests" / name
@@ -129,7 +133,7 @@ def verify(workspace):
         (directory / "Package.swift").write_text(f'''// swift-tools-version: 6.0
 import PackageDescription
 let package = Package(name: "{consumer}",
-    platforms: [.macOS(.v10_15)],
+    platforms: [.macOS("10.15.4")],
     dependencies: [.package(url: {json.dumps(str(repository))}, exact: "0.1.0-package-test")],
     targets: [.executableTarget(name: "{consumer}", dependencies: [{dependencies}])])
 ''')
@@ -137,7 +141,7 @@ let package = Package(name: "{consumer}",
         args = ["swift", "build", "--package-path", str(directory), "--scratch-path", str(scratch),
                 "--disable-build-manifest-caching", "--configuration", "release"]
         run(args, directory, workspace / (consumer + ".log"))
-        for module in (*TESTS, "SwiftSyntaxMacrosTestSupport"):
+        for module in (*TESTS, "SwiftSyntaxMacrosTestSupport", "GameEventScriptTool", "TerminalSupport"):
             objects = [path for directory in scratch.rglob(module + ".build") for path in directory.rglob("*.o")]
             if list(scratch.rglob(module + ".swiftmodule")) or objects:
                 raise RuntimeError(f"Library consumption compiled test-only module {module}")
@@ -158,7 +162,9 @@ let package = Package(name: "{consumer}",
     run(["swift", "test", "--package-path", str(repository), "--scratch-path", str(workspace / "root-tests"),
          "--disable-build-manifest-caching", "--configuration", "release"],
         repository, workspace / "root-tests.log")
-    print("SwiftPM tagged distribution, shared root tests and Runtime-only consumption passed.")
+    run([str(workspace / "root-tests/release/ges"), "--help"], repository, workspace / "cli.log")
+    run([sys.executable, str(ROOT / "scripts/test-cli-editor.py"), str(workspace / "root-tests/release/ges")], repository, workspace / "cli.log")
+    print("SwiftPM tagged distribution, ges executable, shared root tests and Runtime-only consumption passed.")
 
 
 if __name__ == "__main__":

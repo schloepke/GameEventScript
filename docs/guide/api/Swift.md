@@ -3,7 +3,7 @@
 
 # Swift API reference
 
-These DocC references describe the **Unreleased development checkout**.
+These DocC references describe the **documentation source checkout**.
 Each reference shows the source commit. It may include APIs not available in
 the latest SwiftPM release; check the [changelog](../../../CHANGELOG.md) and
 [build identity](https://gameeventscript.org/api/swift/build-info.json) when comparing packages.

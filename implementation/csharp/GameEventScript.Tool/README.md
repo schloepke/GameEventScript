@@ -16,7 +16,58 @@ the tool.
 The entry point supports `dotnet ges compile`, `dotnet ges check`,
 `dotnet ges run`, `dotnet ges dump`, `dotnet ges --help`, `dotnet ges -h`, and
 `dotnet ges --version`. `run --interactive` opens an event console. No arguments
-display help. The provisional tool package is not published.
+display help. NuGet tools are available starting with 0.3.0.
+See [CLI installation](../../../docs/guide/distribution/Tools.md) for the portable
+`GameEventScript.Tool` and native `GameEventScript.Tool.Aot` packages.
+
+## Install locally as a native executable
+
+```sh
+./scripts/install-csharp-tool.sh --aot
+# Or select an installation directory:
+./scripts/install-csharp-tool.sh --aot --tool-path "$HOME/.local/bin"
+```
+
+This builds for the current macOS or Linux host (x64/ARM64; Linux requires a
+compatible glibc environment) and installs `dotnet-ges`. The default destination
+is `$HOME/.dotnet/tools`, matching the ordinary .NET tool installation. Add the
+selected directory to `PATH`. Invoke `dotnet-ges` directly without .NET, or
+`dotnet ges` when the .NET SDK is installed.
+
+Run the same command again to update. Without `--aot`, the script installs the
+ordinary .NET tool instead. Both directions prepare and check the replacement
+before removing the previous installation. Native ownership is tracked with a
+SHA-256 marker; modified or unrelated executables are not replaced. Do not run
+concurrent installations into the same directory.
+
+`./scripts/uninstall-csharp-tool.sh` detects either installation mode; pass the
+same `--tool-path` when using a custom directory. Removing a native installation
+does not require the .NET SDK. Native builds require the SDK and the platform's
+native AOT compiler/linker prerequisites. Windows installation through this shell
+script is not supported in AOT mode.
+
+## Native AOT verification
+
+Native publishing is opt-in and requires the .NET SDK and native AOT prerequisites
+for the target platform. From the repository root, for example on Apple Silicon:
+
+```sh
+dotnet publish implementation/csharp/GameEventScript.Tool/src/GameEventScript.Tool.csproj -c Release -r osx-arm64 -p:GesPublishAot=true -o artifacts/csharp/aot/osx-arm64
+python3 scripts/test-cli-aot.py artifacts/csharp/aot/osx-arm64/GameEventScript.Tool
+python3 scripts/test-cli-delayed.py artifacts/csharp/aot/osx-arm64/GameEventScript.Tool
+```
+
+`GesPublishAot` enables AOT only in the executable project and disables tool
+packing for that publish. Do not pass a global `PublishAot=true` to the project
+graph: the portable libraries target .NET Standard. Ordinary tool installation
+and archive distribution are unchanged. The resulting native executable needs
+no installed .NET runtime. Build and verify each target on a supported build host;
+a successful macOS ARM64 check does not verify Windows or Linux.
+
+The CLI uses generated JSON metadata and disables reflection-based JSON
+serialization in ordinary builds too, so process tests cover the same restriction.
+The AOT smoke check exercises compilation, binary loading/dumping, interactive
+inspection, escaped verbose text, delayed delivery and script exit codes.
 
 ## Compile scripts
 
@@ -378,15 +429,15 @@ Interactive commands are:
 | `:help load` | Show loading details and path examples |
 | `:help list`, `:help handler`, `:help dump`, `:help source` | Show inspection behavior and program selection details |
 | `:help unload`, `:help unloadAll`, `:help reload` | Show removal and fresh-host reload behavior |
-| `:unload <module\|@ID>` | Detach one persistent Program |
+| `:unload <module\|ID>` | Detach one persistent Program |
 | `:unloadAll` | Detach all Programs, keeping native console handlers |
 | `:reload` | Re-read active Programs and initialize them together on a fresh host |
 | `:load <file>` | Add one `.ges` or `.gesb` Program and immediately pump its initialization |
-| `:list` | List persistent program instances with their `@ID`, module, version, files, and registered script-handler count |
+| `:list` | List persistent program instances with their `ID`, module, version, files, and registered script-handler count |
 | `:handler` | List registered script and native handlers, their argument signatures, and required/excluded tags |
 | `:dump <module>` | Show the GESA dump of the loaded Program with that exact module name |
 | `:dump @<ID>` | Select a Program by session ID, including anonymous or duplicate modules |
-| `:source <module\|@ID>` | Show only embedded source documents, each with a filename heading |
+| `:source <module\|ID>` | Show only embedded source documents, each with a filename heading |
 | `:quit` | End the session; EOF also exits |
 
 Help, prompts, and load/unload/reload reports go to stderr. Prompts and the introductory message
@@ -402,7 +453,7 @@ For example:
 ges> :list
 
 Loaded programs (1):
-  @1  game.combat  version=0  handlers=2
+  1  game.combat  version=0  handlers=2
       files: "game.gesb"
 
 ges> :handler
@@ -411,13 +462,13 @@ Registered handlers (5):
   native  ConsoleOut(...) [name-only]
   native  ConsoleErr(...) [name-only]
   native  ErrorCode(...) [name-only]
-  @1  game.combat  Main(args) [signature]
-  @1  game.combat  Hit(damage) [signature] matching #enemy without #silent
+  1  game.combat  Main(args) [signature]
+  1  game.combat  Hit(damage) [signature] matching #enemy without #silent
 
 ges> :dump game.combat
-ges> :dump @1
+ges> :dump 1
 ges> :source game.combat
-ges> :source @1
+ges> :source 1
 ```
 
 IDs are stable within a session and assigned in successful load order. Jointly
@@ -484,13 +535,13 @@ performed by `:load`.
 
 ```text
 ges> :unload game.combat
-ges> :unload @2
+ges> :unload 2
 ges> :reload
 ges> :unloadAll
 ```
 
-`:unload <module|@ID>` detaches one Program and removes its inventory entry.
-Selection follows the same exact-module and `@ID` rules as `:dump`; a duplicate
+`:unload <module|ID>` detaches one Program and removes its inventory entry.
+Selection follows the same exact-module and `ID` rules as `:dump`; a duplicate
 module name requires an ID. Its handlers no longer receive messages. `:unloadAll`
 detaches every persistent Program. Both leave ConsoleOut, ConsoleErr, and ErrorCode
 available, and preserve the host's random state and script exit code. Removed IDs
@@ -499,7 +550,7 @@ Neither command deletes files.
 
 `:reload` creates a fresh host and re-reads the original files of all **currently
 active** Programs in load order. Jointly compiled source files remain one group;
-separate binaries and additive loads remain separate instances. Each active `@ID`
+separate binaries and additive loads remain separate instances. Each active `ID`
 is preserved. The command does not rescan wildcard patterns, reload detached
 Programs, or call Main. All replacement Programs are linked before initialization
 starts, so initialization emits can reach the entire group. Initialization and its
@@ -668,8 +719,8 @@ network download is required.
 ## Pack and install manually
 
 ```sh
-dotnet pack implementation/csharp/GameEventScript.Tool/src --configuration Release
-dotnet tool install GameEventScript.Tool --version 0.1.0 --add-source ./artifacts/csharp/tool/packages --tool-path ./artifacts/csharp/tool/install
+dotnet pack implementation/csharp/GameEventScript.Tool/src --configuration Release -p:Version=0.3.0
+dotnet tool install GameEventScript.Tool --version 0.3.0 --add-source ./artifacts/csharp/tool/packages --tool-path ./artifacts/csharp/tool/install
 ./artifacts/csharp/tool/install/dotnet-ges --help
 ```
 
@@ -696,3 +747,48 @@ for input it processes messages as they become due and restores the current
 input and cursor after terminal output. Delayed sends use monotonic time, with
 durations rounded upward to whole microseconds; actual dispatch also depends on
 when the host can pump.
+
+Program selectors accept a module name or a positive numeric session ID, such as
+`:source 1`, `:dump 1` and `:unload 1`. The legacy `@1` spelling remains accepted
+for compatibility. IDs remain stable across unloading and reloading; they are not
+positions in the current list.
+
+## External editing and scratch programs
+
+Edit source drafts without changing original files
+
+  :edit                 Create or reopen scratch 0 in the configured editor.
+  :edit 1               Edit a loaded source program; binaries are read-only.
+  :edit 1 2             Select source 2 of a jointly compiled program.
+  :source [ID|module]   Show the current draft, or embedded source if not edited.
+  :dump [ID|module]     Show the last successful compile, with a stale-draft notice.
+  :save                 Save all modified file-backed drafts.
+  :save 1               Save one program's modified source files.
+  :save 0 "file.ges"    Save scratch as a normal program with a fresh positive ID.
+  :quit                 Exit only if no unsaved changes remain.
+  :quit!                Discard unsaved changes and exit.
+
+:source and :dump without a selector refer to scratch 0. A missing scratch is an
+error; :edit creates one. A saved scratch becomes a normal program; the next
+:edit creates a new scratch. Module names remain independent of scratch IDs.
+:edit reads the editor's temporary file, compiles the draft, then restarts the
+host using current memory sources/programs. Initializations run again; queued
+messages are discarded and a configured random seed restarts. Preparation errors
+keep the running host; initialization/runtime errors end the session. External
+effects cannot be rolled back. Main is not called automatically.
+
+Failed drafts remain editable and saveable. :list marks unsaved drafts with *
+and drafts not successfully applied with [draft not applied]. :reload preserves
+unsaved editor drafts; clean file-backed programs are reread from disk. Save refuses external
+file changes and existing scratch destinations. Unload refuses unsaved drafts.
+EOF with unsaved drafts reports a failure for redirected input; terminal EOF
+keeps the prompt open. Use :quit! to discard explicitly.
+
+Editor selection uses GES_EDITOR, then VISUAL, then EDITOR (blank values are skipped).
+Without configuration, the default is nano on macOS/Linux and notepad.exe on Windows.
+For a GES-only setting, use GES_EDITOR='code --wait' or GES_EDITOR=nano. Command
+arguments support quoted paths, without shell expansion. GUI editors must wait
+until the file closes. Message pumping pauses while the editor is open. Only
+:save writes original files. Errors are red with --color unless NO_COLOR is set.
+
+Both interactive prompts indent continuation lines without adding `...` tokens.

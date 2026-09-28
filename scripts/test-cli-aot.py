@@ -45,7 +45,11 @@ def main():
         check("REPL", ["run", "--interactive", "-q"], 'emit ConsoleOut("REPL")\n:quit\n', stdout="REPL\n")
         check("list", ["run", str(source), "--interactive", "-q"], ":list\n:quit\n", stderr='main.ges"')
         check("source", ["run", str(source), "--interactive", "-q"], ":source aot.probe\n:quit\n", stderr="on Main(args)")
-        check("verbose text escaping", ["run", str(source), "--verbose", "--", 'Hello\n"World"'],
+        # Native Windows tools use an SDK-generated .cmd launcher, which cannot
+        # transport literal newlines in argv. Create the value in GES instead so
+        # every platform tests the same JSON escaping through the installed tool.
+        source.write_text('on Main(args) { emit ConsoleOut(\'Hello\n"World"\') }\n', encoding="utf-8")
+        check("verbose text escaping", ["run", str(source), "--verbose"],
               stdout='Hello\n"World"\n', stderr='Hello\\n\\u0022World\\u0022')
         source.write_text('on Main(args) { emit after 0.01s Tick() }\non Tick { emit ConsoleOut("delayed"); emit ErrorCode(7) }', encoding="utf-8")
         check("delayed delivery and exit code", ["run", str(source), "-q"], stdout="delayed\n", exit_code=7)

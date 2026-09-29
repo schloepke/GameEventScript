@@ -48,9 +48,13 @@ def main():
         # Native Windows tools use an SDK-generated .cmd launcher, which cannot
         # transport literal newlines in argv. Create the value in GES instead so
         # every platform tests the same JSON escaping through the installed tool.
-        source.write_text('on Main(args) { emit ConsoleOut(\'Hello\n"World"\') }\n', encoding="utf-8")
-        check("verbose text escaping", ["run", str(source), "--verbose"],
-              stdout='Hello\n"World"\n', stderr='Hello\\n\\u0022World\\u0022')
+        for label, newline, escaped in (("LF", "\n", "\\n"), ("CRLF", "\r\n", "\\r\\n")):
+            # write_text's default newline translation would silently turn LF
+            # into CRLF on Windows. The fixture must have identical bytes on all OSes.
+            fixture = 'on Main(args) { emit ConsoleOut(\'Hello' + newline + '"World"\') }\n'
+            source.write_bytes(fixture.encode("utf-8"))
+            check("verbose text escaping " + label, ["run", str(source), "--verbose"],
+                  stdout='Hello\n"World"\n', stderr='Hello' + escaped + '\\u0022World\\u0022')
         source.write_text('on Main(args) { emit after 0.01s Tick() }\non Tick { emit ConsoleOut("delayed"); emit ErrorCode(7) }', encoding="utf-8")
         check("delayed delivery and exit code", ["run", str(source), "-q"], stdout="delayed\n", exit_code=7)
 

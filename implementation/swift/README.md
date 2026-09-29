@@ -86,8 +86,8 @@ xcodebuild -workspace implementation/swift/GameEventScript.xcworkspace \
 
 ### SwiftPM verification
 
-The root distribution and local SwiftBridge package explicitly require macOS
-10.15 to match the SwiftSyntax macro dependency. The CLI and Conformance packages
+The local SwiftBridge package explicitly requires macOS 10.15 for SwiftSyntax.
+The root distribution (including `ges`), CLI and Conformance packages
 require macOS 10.15.4 or newer for the executable adapters' throwing Foundation
 file-handle I/O. The standalone Runtime, Compiler and SyntaxHighlighter packages
 do not inherit these package requirements.

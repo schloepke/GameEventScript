@@ -85,9 +85,16 @@ class DistributionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             identity("swift", self.release, "win-x64")
 
+    def test_release_uses_one_implementation_per_system(self):
+        self.assertEqual(("win-x64", "win-arm64"), TARGETS["csharp"])
+        self.assertEqual(("linux-x64", "linux-arm64", "osx-x64", "osx-arm64"), TARGETS["swift"])
+        for removed in ("linux-x64", "linux-arm64", "osx-x64", "osx-arm64"):
+            with self.assertRaises(ValueError):
+                archive_name("csharp", self.release, removed)
+
     def test_full_set_requires_every_target(self):
         self.populate()
-        self.assertEqual(10, len(verified_set(self.root, self.release, self.revision)))
+        self.assertEqual(6, len(verified_set(self.root, self.release, self.revision)))
         next(self.root.glob("*.zip")).unlink()
         with self.assertRaises(ValueError):
             verified_set(self.root, self.release, self.revision)
@@ -149,7 +156,7 @@ class DistributionTests(unittest.TestCase):
             collect.main()
             run.assert_not_called()
             output.assert_not_called()
-        self.assertEqual(10, len(next(self.root.glob("*SHA256SUMS.txt")).read_text().splitlines()))
+        self.assertEqual(6, len(next(self.root.glob("*SHA256SUMS.txt")).read_text().splitlines()))
 
     def test_publication_rejects_branch_and_existing_assets(self):
         self.populate()

@@ -90,7 +90,7 @@ internal sealed class RunObserver(bool verbose, bool color, bool interactive) : 
                 if (index > 0) text.Append(", ");
                 var value = message.Arguments[index];
                 text.Append(message.Arguments.NameAt(index)).Append(": ");
-                text.Append(message.Arguments.KindAt(index) == GameEventScriptBytecodeTypeKind.Text ? JsonSerializer.Serialize(value.AsText()) : value.ToString());
+                text.Append(message.Arguments.KindAt(index) == GameEventScriptBytecodeTypeKind.Text ? JsonSerializer.Serialize(value.AsText(), ToolJsonContext.Default.String) : value.ToString());
             }
             text.Append(')');
         }

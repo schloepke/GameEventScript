@@ -16,8 +16,8 @@ packages under the `GameEventScript` product name:
 - `GameEventScript.SyntaxHighlighter` contains optional GES/GESA editor ranges,
   TextMate scopes, incremental states and ANSI rendering, with no GES dependency.
 
-Conformance remains an internal project for repository verification. The CLI is
-not published on NuGet; its local tool package is only an installation mechanism.
+Conformance remains an internal project for repository verification. CLI NuGet
+tools (since 0.3.0) are separate from these library packages; see [CLI installation](Tools.md).
 
 For precompiled `.gesb` execution, reference Runtime and optionally CSharpBridge.
 Source compilation additionally requires Compiler. The direct entry points are

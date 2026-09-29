@@ -22,7 +22,12 @@ internal static class RunConsole
             var waiting = session.Host.NextMessageDelay is not null;
             if (terminal && prompt is null && !waiting) Console.Error.Write("ges> ");
             var line = waiting ? RunWaitingInput.Read(session, input, terminal && !Console.IsErrorRedirected, color, history) : prompt is null ? input.ReadLine() : prompt.ReadLine();
-            if (line is null) return success;
+            if (line is null)
+            {
+                if (session.Workspace.CanQuit()) return success;
+                if (terminal) continue;
+                return false;
+            }
             history.Add(line);
             lineNumber++;
             if (lineNumber == 1 && line.StartsWith('\uFEFF')) line = line[1..];
@@ -32,7 +37,12 @@ internal static class RunConsole
             while (separator < trimmed.Length && !char.IsWhiteSpace(trimmed[separator])) separator++;
             var command = trimmed[..separator];
             var commandArgument = trimmed[separator..].Trim();
-            if (command == ":quit" && commandArgument.Length == 0) return success;
+            if (command == ":quit!" && commandArgument.Length == 0) return success;
+            if (command == ":quit" && commandArgument.Length == 0)
+            {
+                if (session.Workspace.CanQuit()) return success;
+                continue;
+            }
             if (command == ":help")
             {
                 if (!RunConsoleHelp.Write(commandArgument)) success = false;
@@ -48,7 +58,7 @@ internal static class RunConsole
                 session.Inventory.WriteHandlers();
                 continue;
             }
-            if (command is not (":load" or ":dump" or ":source" or ":unload" or ":unloadAll" or ":reload") && command.StartsWith(':') && command.AsSpan(1).IndexOfAnyExceptInRange('a', 'z') < 0)
+            if (command is not (":edit" or ":save" or ":load" or ":dump" or ":source" or ":unload" or ":unloadAll" or ":reload") && command.StartsWith(':') && command.AsSpan(1).IndexOfAnyExceptInRange('a', 'z') < 0)
             {
                 Console.Error.WriteLine($"error cli.consoleCommand: Unknown command or arguments '{trimmed}'. Use :help.");
                 success = false;
@@ -59,6 +69,12 @@ internal static class RunConsole
             string? activePath = null;
             try
             {
+                if (command == ":edit")
+                {
+                    if (!session.Workspace.Edit(session, commandArgument)) return false;
+                    continue;
+                }
+                if (command == ":save") { session.Workspace.Save(session.Inventory, commandArgument); continue; }
                 if (command == ":unload")
                 {
                     session.Inventory.Unload(commandArgument);
@@ -70,6 +86,8 @@ internal static class RunConsole
                     if (commandArgument.Length != 0) throw new ArgumentException($"{command} accepts no arguments.");
                     if (command == ":unloadAll")
                     {
+                        if (!session.Workspace.CanQuit()) continue;
+                        session.Workspace.Drafts.Clear();
                         var count = session.Inventory.UnloadAll();
                         if (!quiet) Console.Error.WriteLine($"Unloaded {count} programs. Native console handlers remain active.");
                     }

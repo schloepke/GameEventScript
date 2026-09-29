@@ -517,7 +517,7 @@ Bridges and command-line adapters own timers and serialize all Host access.
 
 ## Idle duration observation
 
-> **Since: Unreleased**
+> **Since: 0.3.0**
 
 `IdleDurationMicroseconds` (Swift `idleDurationMicroseconds`) is an optional
 nonnegative Int64 count of whole microseconds in the current ready, work-free

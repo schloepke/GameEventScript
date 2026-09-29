@@ -165,7 +165,7 @@ final class TerminalPrompt {
             let columns = max(10, Int(ges_terminal_columns()))
             io.write("\r" + (previousRow > 0 ? "\u{1b}[\(previousRow)A" : "") + "\u{1b}[J", toError: true)
             let visible = TextDisplay.expandTabs(String(text))
-            let colored = (color ? highlighting.render(visible) : visible).replacingOccurrences(of: "\n", with: "\n ... ")
+            let colored = (color ? highlighting.render(visible) : visible).replacingOccurrences(of: "\n", with: "\n     ")
             io.write("ges> " + colored, toError: true)
             let end = position(text[...], columns: columns)
             let caret = position(text[..<cursor], columns: columns)

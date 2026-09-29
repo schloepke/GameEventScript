@@ -8,8 +8,9 @@ import PackageDescription
 // One versioned distribution; the local packages remain independent development entry points.
 let package = Package(
     name: "GameEventScript",
-    platforms: [.macOS(.v10_15)],
+    platforms: [.macOS("10.15.4")],
     products: [
+        .executable(name: "ges", targets: ["GameEventScriptTool"]),
         .library(name: "GameEventScriptSyntaxHighlighter", targets: ["GameEventScriptSyntaxHighlighter"]),
         .library(name: "GameEventScriptRuntime", targets: ["GameEventScriptRuntime"]),
         .library(name: "GameEventScriptCompiler", targets: ["GameEventScriptCompiler"]),
@@ -17,6 +18,12 @@ let package = Package(
     ],
     dependencies: [.package(url: "https://github.com/swiftlang/swift-syntax.git", exact: "600.0.1")],
     targets: [
+        .target(name: "TerminalSupport", path: "implementation/swift/GameEventScriptTool/Sources/TerminalSupport"),
+        .executableTarget(
+            name: "GameEventScriptTool",
+            dependencies: ["GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSyntaxHighlighter", "TerminalSupport"],
+            path: "implementation/swift/GameEventScriptTool/Sources/GameEventScriptTool"
+        ),
         .macro(
             name: "GameEventScriptSwiftBridgeMacros",
             dependencies: [

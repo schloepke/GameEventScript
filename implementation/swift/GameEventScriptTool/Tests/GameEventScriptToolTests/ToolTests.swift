@@ -9,6 +9,47 @@ import XCTest
 @testable import GameEventScriptTool
 
 final class ToolTests: XCTestCase {
+    func testInteractiveUnknownTypeHasReadableDiagnostic() {
+        let result = run(["run", "--interactive", "-q"], input: ["let x be [1, 2, 3]; let y be :Data(input: x)", ":quit"])
+        XCTAssertEqual(result.code, 1)
+        XCTAssertTrue(result.error.contains("validate.invalidTypeConstructor: Unknown type ':Data' in this program."), result.error)
+        XCTAssertFalse(result.error.contains("program=,"), result.error)
+    }
+
+    func testCompilerErrorsExplainTheirCause() throws {
+        let cases = [
+            ("on Main(args) { let x be 1; let x be 2 }", "validate.duplicateVariable", "declared more than once"),
+            ("on Main(args) { emit ConsoleOut(missing) }", "compile.unresolvedSymbol", "Unknown symbol"),
+            ("on Main(args) { emit after 10 Tick() }", "validate.invalidTypeConstructor", "requires a time quantity"),
+            ("record :Data as { input: :List }\non Main(args) { let y be :Data(wrong: []) }", "validate.invalidTypeConstructor", "argument count and labels"),
+        ]
+        for (index, entry) in cases.enumerated() {
+            let path = try file("diagnostic\(index).ges", entry.0)
+            let result = run(["check", path])
+            XCTAssertEqual(result.code, 1, result.error)
+            XCTAssertTrue(result.error.contains(entry.1), result.error)
+            XCTAssertTrue(result.error.contains(entry.2), result.error)
+            XCTAssertFalse(result.error.contains("\(entry.1): \(entry.1)"), result.error)
+        }
+    }
+
+    func testNumericProgramSelectorsAndLegacyAliases() throws {
+        let source = try file("numeric.ges", "module inspect.selection\non Start { emit ConsoleOut('active') }")
+        for selector in ["1", "@1"] {
+            let result = run(["run", source, "--interactive", "-q"], input: [":list", ":source \(selector)", ":dump \(selector)", ":unload \(selector)", ":list", ":quit"])
+            XCTAssertEqual(result.code, 0, result.error)
+            XCTAssertTrue(result.error.contains("  1  inspect.selection"))
+            XCTAssertTrue(result.error.contains("on Start"))
+            XCTAssertTrue(result.error.contains(".segment code"))
+            XCTAssertTrue(result.error.contains("Loaded programs (0):"))
+        }
+        for selector in ["0", "999999999999999999999999999999"] {
+            let result = run(["run", source, "--interactive", "-q"], input: [":unload \(selector)", "emit Start", ":quit"])
+            XCTAssertEqual(result.code, 1)
+            XCTAssertEqual(result.output, "active\n")
+        }
+    }
+
     var directory: URL!
 
     override func setUpWithError() throws {
@@ -254,10 +295,10 @@ final class ToolTests: XCTestCase {
         XCTAssertEqual(result.code, 1)
         XCTAssertEqual(result.output, "1\n1\n")
         XCTAssertTrue(result.error.contains("Loaded programs (2):"))
-        XCTAssertTrue(result.error.contains("@1  cli.same"))
-        XCTAssertTrue(result.error.contains("@2  cli.same"))
+        XCTAssertTrue(result.error.contains("1  cli.same"))
+        XCTAssertTrue(result.error.contains("2  cli.same"))
         XCTAssertTrue(result.error.contains("more than once"))
-        XCTAssertFalse(result.error.contains("@3  "))
+        XCTAssertFalse(result.error.contains("3  "))
     }
 
     func testSourcePreservesCRLFWithoutExtraBlankLines() throws {

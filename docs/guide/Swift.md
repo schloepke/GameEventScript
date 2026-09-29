@@ -32,7 +32,7 @@ import PackageDescription
 
 let package = Package(
     name: "GesExample",
-    platforms: [.macOS(.v10_15)],
+    platforms: [.macOS("10.15.4")],
     dependencies: [
         .package(url: "https://github.com/schloepke/GameEventScript.git", exact: "<release-version>")
     ],
@@ -46,8 +46,8 @@ let package = Package(
 )
 ```
 
-The current root package declares macOS 10.15 to satisfy its SwiftSyntax build
-dependency. This is a macOS deployment minimum, not a restriction to Apple
+The current root package declares macOS 10.15.4 to cover the optional CLI
+product’s Foundation I/O as well as its SwiftSyntax build dependency. This is a macOS deployment minimum, not a restriction to Apple
 platforms; platform acceptance is recorded in the
 [implementation guide](../../implementation/swift/README.md).
 

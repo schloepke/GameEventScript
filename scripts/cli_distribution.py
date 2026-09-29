@@ -13,7 +13,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
 TARGETS = {
-    "csharp": ("win-x64", "win-arm64", "linux-x64", "linux-arm64", "osx-x64", "osx-arm64"),
+    "csharp": ("win-x64", "win-arm64"),
     "swift": ("linux-x64", "linux-arm64", "osx-x64", "osx-arm64"),
 }
 

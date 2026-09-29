@@ -3,9 +3,15 @@
 
 # Native Swift CLI
 
-For prebuilt downloads without a development SDK, see
-[standalone CLI distribution](../../../docs/guide/distribution/Tools.md).
-The instructions below build and install from a repository checkout.
+Install the published CLI on macOS 15+ or Linux (ARM64/x64) through Homebrew:
+
+```sh
+brew install schloepke/gameeventscript/ges
+```
+
+See [CLI installation and downloads](../../../docs/guide/distribution/Tools.md)
+for updates, uninstalling and direct release archives. No Swift SDK is needed
+for these installations. The build instructions below use a repository checkout.
 
 `GameEventScriptTool` is a separate SwiftPM executable package. It installs `ges`
 and depends on the local Runtime and Compiler packages, Foundation, and a small
@@ -102,8 +108,8 @@ Compilation/check reports and ordinary dumps go to stdout.
 ## Event console
 
 Use `:help`, `:help load`, `:help reload` and `:help dump` for details. The console supports
-`:load <file>`, `:list`, `:handler`, `:dump <module|@ID>`, `:source <module|@ID>`
-as well as `:unload <module|@ID>`, `:unloadAll`, `:reload` and `:quit`. Successful loads retain their handlers and receive stable session
+`:load <file>`, `:list`, `:handler`, `:dump <module|ID>`, `:source <module|ID>`
+as well as `:unload <module|ID>`, `:unloadAll`, `:reload` and `:quit`. Successful loads retain their handlers and receive stable session
 IDs. Each ordinary input executes in a temporary initialization handler and is
 then detached; local variables/functions do not persist. Use `:load` for
 persistent handler declarations. Recoverable compile/link/load errors leave the
@@ -180,3 +186,51 @@ for input it processes messages as they become due and restores the current
 input and cursor after terminal output. Delayed sends use monotonic time, with
 durations rounded upward to whole microseconds; actual dispatch also depends on
 when the host can pump.
+
+Program selectors accept a module name or a positive numeric session ID, such as
+`:source 1`, `:dump 1` and `:unload 1`. The legacy `@1` spelling remains accepted
+for compatibility. IDs remain stable across unloading and reloading; they are not
+positions in the current list.
+
+## External editing and scratch programs
+
+Edit source drafts without changing original files
+
+  :edit                 Create or reopen scratch 0 in the configured editor.
+  :edit 1               Edit a loaded source program; binaries are read-only.
+  :edit 1 2             Select source 2 of a jointly compiled program.
+  :source [ID|module]   Show the current draft, or embedded source if not edited.
+  :dump [ID|module]     Show the last successful compile, with a stale-draft notice.
+  :save                 Save all modified file-backed drafts.
+  :save 1               Save one program's modified source files.
+  :save 0 "file.ges"    Save scratch as a normal program with a fresh positive ID.
+  :quit                 Exit only if no unsaved changes remain.
+  :quit!                Discard unsaved changes and exit.
+
+:source and :dump without a selector refer to scratch 0. A missing scratch is an
+error; :edit creates one. A saved scratch becomes a normal program; the next
+:edit creates a new scratch. Module names remain independent of scratch IDs.
+:edit reads the editor's temporary file, compiles the draft, then restarts the
+host using current memory sources/programs. Initializations run again; queued
+messages are discarded and a configured random seed restarts. Preparation errors
+keep the running host; initialization/runtime errors end the session. External
+effects cannot be rolled back. Main is not called automatically.
+
+Failed drafts remain editable and saveable. :list marks unsaved drafts with *
+and drafts not successfully applied with [draft not applied]. :reload preserves
+unsaved editor drafts; clean file-backed programs are reread from disk. Save refuses external
+file changes and existing scratch destinations. Unload refuses unsaved drafts.
+EOF with unsaved drafts reports a failure for redirected input; terminal EOF
+keeps the prompt open. Use :quit! to discard explicitly.
+
+Editor selection uses GES_EDITOR, then VISUAL, then EDITOR (blank values are skipped).
+Without configuration, the default is nano on macOS/Linux and notepad.exe on Windows.
+For a GES-only setting, use GES_EDITOR='code --wait' or GES_EDITOR=nano. Command
+arguments support quoted paths, without shell expansion. GUI editors must wait
+until the file closes. Message pumping pauses while the editor is open. Only
+:save writes original files. Errors are red with --color unless NO_COLOR is set.
+
+Both interactive prompts indent continuation lines without adding `...` tokens.
+
+The public root SwiftPM package also exposes `ges` from 0.3.0. See
+[SwiftPM source builds and Homebrew installation](../../../docs/guide/distribution/Tools.md).

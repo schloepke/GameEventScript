@@ -8,6 +8,8 @@
         <AssemblyName>GameEventScript.Tool</AssemblyName>
         <RootNamespace>GameEventScript.Tool</RootNamespace>
         <PackageId>GameEventScript.Tool</PackageId>
+        <PackageId Condition="'$(GesPackAotTool)' == 'true'">GameEventScript.Tool.Aot</PackageId>
+        <ToolPackageRuntimeIdentifiers Condition="'$(GesPackAotTool)' == 'true'">win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</ToolPackageRuntimeIdentifiers>
         <Version>0.1.0</Version>
         <Authors>Stephan Schlöpke</Authors>
         <Copyright>Copyright 2026 Stephan Schlöpke</Copyright>
@@ -17,7 +19,10 @@
         <PackageIcon>icon.png</PackageIcon>
         <RepositoryUrl>https://github.com/schloepke/GameEventScript</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
-        <PackAsTool>true</PackAsTool>
+        <PackAsTool Condition="'$(GesPublishAot)' != 'true'">true</PackAsTool>
+        <PackAsTool Condition="'$(GesPublishAot)' == 'true'">false</PackAsTool>
+        <PublishAot Condition="'$(GesPublishAot)' == 'true' or '$(GesPackAotTool)' == 'true'">true</PublishAot>
+        <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
         <ToolCommandName>dotnet-ges</ToolCommandName>
         <PackageOutputPath>$(MSBuildProjectDirectory)/../../../../artifacts/csharp/tool/packages</PackageOutputPath>
         <LangVersion>12</LangVersion>

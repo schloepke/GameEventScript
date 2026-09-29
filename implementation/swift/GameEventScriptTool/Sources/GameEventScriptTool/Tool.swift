@@ -11,6 +11,7 @@ final class Tool {
     init(io: ToolIO) { self.io = io }
 
     func run(_ arguments: [String]) -> Int {
+        io.colorErrors = false
         guard let command = arguments.first else {
             io.line(ToolHelp.overview)
             return 0

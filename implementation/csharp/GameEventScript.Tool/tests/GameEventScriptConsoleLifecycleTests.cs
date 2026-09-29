@@ -35,8 +35,8 @@ public sealed class GameEventScriptConsoleLifecycleTests
         var result = ToolProcess.ExecuteWithInput(_directory, input, "run", "--interactive", "--quiet");
         Assert.AreEqual(0, result.ExitCode, result.StandardError);
         Assert.AreEqual(Lines("two", "two", "native"), result.StandardOutput);
-        StringAssert.Contains(result.StandardError, "@3  one");
-        StringAssert.Contains(result.StandardError, "@4  two");
+        StringAssert.Contains(result.StandardError, "3  one");
+        StringAssert.Contains(result.StandardError, "4  two");
         StringAssert.Contains(result.StandardError, "Loaded programs (0):");
         StringAssert.Contains(result.StandardError, "Registered handlers (3):");
     }
@@ -50,7 +50,7 @@ public sealed class GameEventScriptConsoleLifecycleTests
         var result = ToolProcess.ExecuteWithInput(_directory, input, "run", "--interactive", "--quiet");
         Assert.AreEqual(1, result.ExitCode, result.StandardError);
         Assert.AreEqual(Lines("one", "one"), result.StandardOutput);
-        StringAssert.Contains(result.StandardError, "@1, @2");
+        StringAssert.Contains(result.StandardError, "1, 2");
         StringAssert.Contains(result.StandardError, "cli.consoleCommand");
     }
 
@@ -63,8 +63,8 @@ public sealed class GameEventScriptConsoleLifecycleTests
         var result = ToolProcess.ExecuteWithInput(_directory, ":reload\n:list\n", "run", "--interactive", "--quiet", "one.gesb", "two.gesb");
         Assert.AreEqual(0, result.ExitCode, result.StandardError);
         Assert.AreEqual(Lines("init one", "init two", "ready", "init one", "init two", "ready"), result.StandardOutput);
-        StringAssert.Contains(result.StandardError, "@1  one");
-        StringAssert.Contains(result.StandardError, "@2  two");
+        StringAssert.Contains(result.StandardError, "1  one");
+        StringAssert.Contains(result.StandardError, "2  two");
     }
 
     /// <summary>Verifies reload rereads a source group and preserves program identity while replacing the host.</summary>
@@ -188,7 +188,7 @@ public sealed class GameEventScriptConsoleLifecycleTests
     {
         var result = ToolProcess.ExecuteWithInput(_directory, ":help unload\n:help unloadAll\n:help reload\n:unloadAll\n:reload\n", "run", "--interactive", "--quiet");
         Assert.AreEqual(0, result.ExitCode, result.StandardError);
-        StringAssert.Contains(result.StandardError, ":unload <module|@ID>");
+        StringAssert.Contains(result.StandardError, ":unload <module|ID>");
         StringAssert.Contains(result.StandardError, ":reload");
         Assert.IsFalse(result.StandardError.Contains("Reloaded all", StringComparison.Ordinal));
         Assert.IsFalse(result.StandardError.Contains("Unloaded 0", StringComparison.Ordinal));

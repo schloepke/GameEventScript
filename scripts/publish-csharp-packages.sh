@@ -3,12 +3,16 @@
 # SPDX-License-Identifier: Apache-2.0
 set -eu
 
-if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <verified-package-directory> <version>" >&2
+if [ "$#" -ne 2 ] && [ "$#" -ne 3 ]; then
+    echo "Usage: $0 <verified-package-directory> <version> [verified-tool-directory]" >&2
     exit 2
 fi
 package_directory=$1
 release_version=$2
+repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+if [ "$#" -eq 3 ]; then
+    python3 "$repository_root/scripts/publish-csharp-tools.py" "$3" "$release_version"
+fi
 case "$release_version" in
     ''|.*|*[!0-9A-Za-z.-]*) echo "Invalid package version: $release_version" >&2; exit 2 ;;
 esac
@@ -29,3 +33,7 @@ for package_id in GameEventScript.Runtime GameEventScript.Compiler GameEventScri
     dotnet nuget push "$package_directory/$package_id.$release_version.nupkg" \
         --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
 done
+
+if [ "$#" -eq 3 ]; then
+    python3 "$repository_root/scripts/publish-csharp-tools.py" "$3" "$release_version" --publish
+fi

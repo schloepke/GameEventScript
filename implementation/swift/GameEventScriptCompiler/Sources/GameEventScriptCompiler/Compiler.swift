@@ -130,8 +130,34 @@ final class GesCompiler {
 
     func signature(_ name: String, _ labels: [String]) -> String { name + "(" + labels.joined(separator: ",") + ")" }
 
-    func error(_ code: String, _ location: GameEventScriptSourceLocation, symbol: String? = nil, kind: GameEventScriptSymbolKind = .unknown, phase: GameEventScriptDiagnosticPhase = .validate) -> GameEventScriptCompileError {
-        compileError(phase, code, code, location, symbol: symbol, kind: kind)
+    func error(_ code: String, _ location: GameEventScriptSourceLocation, symbol: String? = nil, kind: GameEventScriptSymbolKind = .unknown, phase: GameEventScriptDiagnosticPhase = .validate, message: String? = nil) -> GameEventScriptCompileError {
+        compileError(phase, code, message ?? diagnosticMessage(code, symbol: symbol), location, symbol: symbol, kind: kind)
+    }
+
+    private func diagnosticMessage(_ code: String, symbol: String?) -> String {
+        let name = symbol.map { "'\($0)'" } ?? "this expression"
+        switch code {
+        case "validate.duplicateConstant": return "Constant \(name) is already declared."
+        case "validate.duplicateType": return "Type \(name) is already declared."
+        case "validate.duplicateFunction": return "Function \(name) already has an overload with these argument labels."
+        case "validate.duplicatePredicate": return "Predicate \(name) already has an overload with these argument labels."
+        case "validate.duplicateVariable": return "Binding \(name) is declared more than once in this scope."
+        case "validate.shadowedVariable": return "Binding \(name) would shadow a binding in an enclosing scope. Use a different name."
+        case "validate.duplicateDefinitionParameter", "validate.duplicateHandlerParameter": return "The parameter list for \(name) contains a duplicate name or label."
+        case "validate.duplicatePublishArgument": return "Message or call \(name) contains a repeated argument label."
+        case "validate.invalidIdentifierCase": return "Identifier \(name) does not follow the naming rules for this declaration."
+        case "validate.invalidMessageCase": return "Invalid handler declaration \(name). Check its name and parameter form."
+        case "validate.invalidPredicate": return "Predicate \(name) must produce a Boolean value or nothing."
+        case "validate.invalidTypeConstructor": return "Invalid arguments for type constructor \(name). Check the argument count and labels."
+        case "validate.predicateFunctionConflict": return "A function and a predicate cannot share the name \(name)."
+        case "validate.missingCallable": return "No function or predicate matches \(name). Check the name and argument labels."
+        case "validate.wrongFunctionArity", "validate.wrongPredicateArity", "compile.invalidArity": return "The arguments for \(name) do not match its declared parameters."
+        case "compile.unresolvedSymbol": return "Unknown symbol \(name). Declare it in this program before using it."
+        case "compile.cyclicCallGraph": return "The call graph contains a cycle involving \(name). Recursive calls are not supported."
+        case "compile.numericLimitExceeded": return "Compilation exceeds a numeric limit of the program format near \(name). Reduce the program size or complexity."
+        case "compile.unsupportedConstruct": return "The compiler cannot generate code for \(name)."
+        default: return "Compilation failed near \(name). See the diagnostic code for the failure category."
+        }
     }
 
     func compile() throws -> GameEventScriptProgram {

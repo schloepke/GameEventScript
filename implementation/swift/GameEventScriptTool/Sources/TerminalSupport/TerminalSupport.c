@@ -7,6 +7,10 @@
 #include <locale.h>
 #include <poll.h>
 #include <signal.h>
+#include <spawn.h>
+#include <sys/wait.h>
+
+extern char **environ;
 #include <stdlib.h>
 #include <sys/ioctl.h>
 #include <termios.h>
@@ -71,3 +75,49 @@ int ges_terminal_columns(void) {
     return ioctl(STDERR_FILENO, TIOCGWINSZ, &size) == 0 && size.ws_col > 0 ? size.ws_col : 80;
 }
 int ges_scalar_width(uint32_t scalar) { return wcwidth((wchar_t)scalar); }
+
+/* Foundation Process may put children in a background process group on Darwin.
+ * Editors instead inherit our foreground group and restored terminal. Ignore
+ * interrupt/quit in the waiting parent, but restore their defaults in the child. */
+int ges_terminal_run_editor(char *const argv[], int *exit_code) {
+    posix_spawnattr_t attributes;
+    int error = posix_spawnattr_init(&attributes);
+    if (error) return error;
+    sigset_t defaults;
+    sigemptyset(&defaults);
+    sigaddset(&defaults, SIGINT);
+    sigaddset(&defaults, SIGQUIT);
+    error = posix_spawnattr_setsigdefault(&attributes, &defaults);
+    if (!error) error = posix_spawnattr_setflags(&attributes, POSIX_SPAWN_SETSIGDEF);
+    if (error) {
+        posix_spawnattr_destroy(&attributes);
+        return error;
+    }
+    struct sigaction ignore = {0}, old_int, old_quit;
+    ignore.sa_handler = SIG_IGN;
+    sigemptyset(&ignore.sa_mask);
+    if (sigaction(SIGINT, &ignore, &old_int) < 0) {
+        error = errno;
+        posix_spawnattr_destroy(&attributes);
+        return error;
+    }
+    if (sigaction(SIGQUIT, &ignore, &old_quit) < 0) {
+        error = errno;
+        sigaction(SIGINT, &old_int, NULL);
+        posix_spawnattr_destroy(&attributes);
+        return error;
+    }
+    pid_t child;
+    error = posix_spawnp(&child, argv[0], NULL, &attributes, argv, environ);
+    posix_spawnattr_destroy(&attributes);
+    if (!error) {
+        int status;
+        pid_t result;
+        do { result = waitpid(child, &status, 0); } while (result < 0 && errno == EINTR);
+        if (result < 0) error = errno;
+        else *exit_code = WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
+    }
+    sigaction(SIGQUIT, &old_quit, NULL);
+    sigaction(SIGINT, &old_int, NULL);
+    return error;
+}

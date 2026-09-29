@@ -23,12 +23,14 @@ versions retain their original package contents; icons are included starting wit
 | Distribution | Public products |
 | --- | --- |
 | NuGet | `GameEventScript.Runtime`, `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, `GameEventScript.SyntaxHighlighter` |
-| SwiftPM | `GameEventScriptRuntime`, `GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntaxHighlighter` |
+| NuGet tools (since 0.3.0) | `GameEventScript.Tool`, `GameEventScript.Tool.Aot` (plus RID implementation packages) |
+| SwiftPM libraries | `GameEventScriptRuntime`, `GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntaxHighlighter` |
+
+SwiftPM also exposes the `ges` executable starting with 0.3.0.
 
 Compiler and each native Bridge depend on their Runtime. An application can use
-Runtime alone. SyntaxHighlighter is optional and depends on no other GES module. Conformance stays in the repository for development and CI. CLI
-executables are not part of the public library package distribution; their local
-installers remain available. See [standalone CLI downloads](Tools.md) for
+Runtime alone. SyntaxHighlighter is optional and depends on no other GES module. Conformance stays in the repository for development and CI. The SwiftPM CLI product is optional and is not compiled when consuming only the libraries.
+Homebrew and local installers remain available. See [standalone CLI downloads](Tools.md) for
 installation and release verification. Deferred distribution work is tracked in
 [BACKLOG.md](../../../BACKLOG.md).
 
@@ -232,7 +234,7 @@ but a Runtime-only dependency does not build or link Compiler or SwiftBridge.
 For a consuming Swift package, after the corresponding version has been released:
 
 ```swift
-platforms: [.macOS(.v10_15)],
+platforms: [.macOS("10.15.4")],
 dependencies: [
     .package(url: "https://github.com/schloepke/GameEventScript.git", from: "0.1.0")
 ],
@@ -249,9 +251,8 @@ These version numbers are examples, not a claim that they have been published.
 Use `import GameEventScriptRuntime` and optionally the Compiler/SwiftBridge imports.
 
 Swift 6.0 or newer is required. macOS is the currently CI-verified platform;
-other platform support must be verified before being advertised. The root library
-and local SwiftBridge manifests explicitly require macOS 10.15 to match their
-SwiftSyntax macro dependency. Consuming packages must declare this or a newer
+other platform support must be verified before being advertised. The root package requires macOS 10.15.4 for CLI Foundation I/O; the local
+SwiftBridge package requires macOS 10.15 for its SwiftSyntax macro dependency. Consuming packages must declare this or a newer
 macOS target. This is a macOS deployment minimum, not an Apple-only restriction.
 The CLI/Conformance tools separately require macOS 10.15.4.
 
@@ -272,8 +273,9 @@ python3 scripts/test-swift-package.py
 The C# dry run creates four canonical NuGet packages, matching symbols and DLL
 sets, then compiles and executes independent consumers. See [C# distribution](CSharp.md).
 The publication-selection tests substitute a fake `dotnet`; they never contact
-NuGet. They verify that stale, internal and tool packages cannot enter the upload
-list and that missing artifacts stop the entire upload before its first request.
+NuGet. They verify that stale/internal packages cannot enter the upload list
+and that missing artifacts stop the entire upload before its first request.
+Tool packages have a separate explicit allowlist and complete-set validation.
 
 The SwiftPM check copies the current root manifest, library/test sources and
 required Markdown fixture into an
@@ -288,7 +290,7 @@ isolated checkout. No tag or commit is added to the working repository and
 nothing is published; SwiftPM may fetch the official SwiftSyntax dependency.
 
 The manually dispatched **C# Release Candidate** workflow runs the C# tests and
-dry run, plus the SwiftPM consumer gate on macOS. With `publish=false`, it only
+dry run, the portable and six native NuGet tool checks, plus the SwiftPM consumer gate on macOS. With `publish=false`, it only
 uploads GitHub workflow artifacts. Their access follows repository visibility.
 Ordinary PR CI also verifies packaging, consumers and publication selection.
 

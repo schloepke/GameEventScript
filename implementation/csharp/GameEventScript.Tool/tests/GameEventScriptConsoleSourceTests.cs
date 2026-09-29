@@ -66,7 +66,7 @@ public sealed class GameEventScriptConsoleSourceTests
         var result = Interactive(":source stripped\nemit Start\n:quit\n", "game.gesb");
         Assert.AreEqual(0, result.ExitCode, result.StandardError);
         Assert.AreEqual(Lines("42"), result.StandardOutput);
-        StringAssert.Contains(result.StandardError, "No embedded sources available for @1 (stripped)");
+        StringAssert.Contains(result.StandardError, "No embedded sources available for 1 (stripped)");
         Assert.IsFalse(result.StandardError.Contains("on Start", StringComparison.Ordinal));
     }
 
@@ -80,7 +80,7 @@ public sealed class GameEventScriptConsoleSourceTests
         var result = Interactive(":load second.ges\n:source repeat\n:source @2\nemit First\nemit Second\n:quit\n", "first.ges");
         Assert.AreEqual(1, result.ExitCode, result.StandardError);
         Assert.AreEqual(Lines("first", "second"), result.StandardOutput);
-        StringAssert.Contains(result.StandardError, "Use :source with one of: @1, @2");
+        StringAssert.Contains(result.StandardError, "Use :source with one of: 1, 2");
         StringAssert.Contains(result.StandardError, second);
         Assert.IsFalse(result.StandardError.Contains("on First", StringComparison.Ordinal));
     }

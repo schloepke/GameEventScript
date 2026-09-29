@@ -1304,7 +1304,7 @@ input representation, not a promise of unnormalized internal storage.
 
 ## Idle duration API
 
-> **Since: Unreleased**
+> **Since: 0.3.0**
 
 C# Host and CSharpHostRunner expose `long? IdleDurationMicroseconds`; Swift Host
 and SwiftHostRunner expose `Int64? idleDurationMicroseconds`. These are read-only

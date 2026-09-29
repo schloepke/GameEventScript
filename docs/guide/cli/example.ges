@@ -1,5 +1,11 @@
 module ges.cli.example
 
+record :Data as {
+	input: :List, 
+	sum: :Number computed by input[:sum], 
+	average: :Number computed by input[:average]
+}
+
 function double(_ x as :Number) be x + x
 
 on Main(args) {

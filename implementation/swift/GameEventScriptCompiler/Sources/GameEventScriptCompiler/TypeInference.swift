@@ -71,6 +71,6 @@ extension GesCompiler {
             }
         }
 
-        if !explicit(expression) { throw error("validate.invalidTypeConstructor", expression.location, symbol: "Number", kind: .type) }
+        if !explicit(expression) { throw error("validate.invalidTypeConstructor", expression.location, symbol: "Number", kind: .type, message: "A dynamically typed random seed requires an explicit as :Number conversion.") }
     }
 }

@@ -297,15 +297,20 @@ are not included in these counts.
 Public NuGet distribution consists of Runtime, Compiler, CSharpBridge and SyntaxHighlighter,
 with one release version and canonical packages below
 `artifacts/csharp/packages/<version>`. Conformance is not packable. CLI NuGet
-packages are local installation artifacts only. DLL distribution also excludes
+packages are `GameEventScript.Tool` and `GameEventScript.Tool.Aot` plus six RID
+implementation packages. `pack-csharp-tool.py` builds and consumes them locally;
+`csharp_tool_packages.py` owns the release allowlist. The C# Release Candidate
+workflow requires all native package checks before publication; upload native
+dependencies before the AOT pointer. Never publish from preparation/PR jobs. DLL distribution also excludes
 Conformance. Keep the explicit upload allowlist in
 `scripts/publish-csharp-packages.sh`; its fake-client tests never publish.
 
 The root `Package.swift` is the public SwiftPM entry point with four library
 products: GameEventScriptRuntime, GameEventScriptCompiler,
 GameEventScriptSwiftBridge and GameEventScriptSyntaxHighlighter. They use existing sources and share a Git tag/version;
-local development packages remain separate. Do not expose CLI or Conformance in
-the root manifest. Three root test targets reuse the existing SwiftBridge,
+local development packages remain separate. The root manifest also exposes the `ges`
+executable using the existing CLI and TerminalSupport sources; Conformance remains internal.
+The root package requires macOS 10.15.4 for CLI Foundation I/O. Three root test targets reuse the existing SwiftBridge,
 bridge-macro and SyntaxHighlighter test directories; never duplicate their sources
 or add test products. `python3 scripts/test-swift-package.py` checks tagged Git
 consumption, the product/dependency graph, the root tests and Runtime-only builds in disposable
@@ -459,7 +464,10 @@ or callback state must not be accessed outside the transferred ownership domain.
 
 Standalone CLI downloads are built by `scripts/package-cli.py`, verified by
 `scripts/verify-cli-archive.py` and collected by `scripts/collect-cli-release.py`.
-C# archives include the .NET runtime and use `dotnet-ges`; Swift archives use `ges`.
+C# archives target Windows only, include the .NET runtime and use `dotnet-ges`.
+Swift archives target macOS/Linux and use `ges`. NuGet tools retain all six RIDs.
+The Homebrew tap schloepke/homebrew-gameeventscript selects the four Swift archives;
+update its formula version, URLs and hashes separately after release publication.
 Windows C# uses ZIP; macOS/Linux use tar.gz. Both architectures are independently
 verified. Swift Linux uses the pinned Swift 6.4.0 Static SDK; maintain its license
 texts under `tools/distribution/licenses` together with SDK upgrades. Swift release
@@ -508,18 +516,18 @@ and its Program detached. Local bindings do not persist between inputs.
 Program and runs its initialization without calling Main. Failed read/compile/
 decode/link operations preserve the existing session; runtime errors or limits
 end it. An interactive session may start without initial program files.
-`:list` lists persistent loaded Programs with stable CLI-local @IDs. `:handler`
+`:list` lists persistent loaded Programs with stable CLI-local IDs. `:handler`
 lists registered script and native handlers, excluding completed initialization
-and detached temporary inputs. `:dump <module|@ID>` uses the loaded Program's GESA
-dump; `:source <module|@ID>` shows only embedded source documents, with a successful
+and detached temporary inputs. `:dump <module|ID>` uses the loaded Program's GESA
+dump; `:source <module|ID>` shows only embedded source documents, with a successful
 notice if no source archive is present. Both support syntax colors via `--color`.
 The editor and terminal source/dump displays use four-column tab stops. Tab
 expansion is presentation-only; redirected output and saved GESA retain tabs.
-Duplicate/anonymous modules can be selected by @ID. These inspection commands
+Duplicate/anonymous modules can be selected by ID. These inspection commands
 write to stderr without executing handlers or re-reading files. Their inventory
 belongs to the CLI and records only successful persistent loads/subscriptions.
 
-`:unload <module|@ID>` detaches one Program; `:unloadAll` detaches all Programs.
+`:unload <module|ID>` detaches one Program; `:unloadAll` detaches all Programs.
 Native console handlers, random state and script exit code remain. `:reload`
 re-reads active Programs in their original source groups/load order on a fresh
 host, preserving active IDs and never reusing detached IDs. It initializes the
@@ -603,3 +611,18 @@ and `python3 scripts/test-editor-bundles.py` to verify generated assets and adap
 installed bat/batcat adds isolated syntax-engine smoke tests. CLI actions require
 `ges` on the editor PATH. Completion is syntax-only, with no symbol inference or
 Language Server. Website downloads include the Sublime package for editors and bat.
+
+
+CLI editor drafts live in `RunWorkspace`, outside the portable Host. `:edit`
+opens scratch ID 0; positive IDs select loaded source programs, with an optional
+one-based source index for joint compilations. GES_EDITOR, then VISUAL, then EDITOR selects the editor (blank values are skipped);
+the default is nano on macOS/Linux and notepad.exe on Windows. The editor edits a temporary
+file; only `:save` writes originals, checking external changes first. A successful
+edit rebuilds the host from in-memory drafts and existing unedited Programs;
+compile/link failure preserves the host and failed draft. Scratch save assigns a
+fresh positive ID. Explicit `:reload` rereads clean file-backed drafts and preserves
+unsaved drafts; preparation failure leaves both the host and draft baselines unchanged.
+Clearing an applied scratch replaces its old program and handlers. `:source`/`:dump` default to scratch, with a stale-dump notice.
+`:quit`/terminal EOF protects dirty drafts; `:quit!` discards explicitly. Redirected
+EOF with dirty drafts fails. The process-level regression runner is
+`python3 scripts/test-cli-editor.py <executable> [prefix arguments ...]`.

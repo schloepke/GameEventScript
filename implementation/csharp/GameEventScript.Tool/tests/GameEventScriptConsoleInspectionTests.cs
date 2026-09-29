@@ -13,6 +13,22 @@ public sealed class GameEventScriptConsoleInspectionTests
 {
     private string _directory = null!;
 
+    /// <summary>Checks numeric selectors and their legacy aliases across inspection and unloading.</summary>
+    /// <param name="selector">The supported spelling of program ID one.</param>
+    [TestMethod]
+    [DataRow("1")]
+    [DataRow("@1")]
+    public void NumericProgramSelectorsSupportInspectionAndUnload(string selector)
+    {
+        File.WriteAllText(Path.Combine(_directory, "program.ges"), "module inspect.selection\non Start { emit ConsoleOut('active') }");
+        var result = Interactive($":list\n:source {selector}\n:dump {selector}\n:unload {selector}\n:list\n:quit\n", "program.ges");
+        Assert.AreEqual(0, result.ExitCode, result.StandardError);
+        StringAssert.Contains(result.StandardError, "  1  inspect.selection");
+        StringAssert.Contains(result.StandardError, "on Start");
+        StringAssert.Contains(result.StandardError, ".segment code");
+        StringAssert.Contains(result.StandardError, "Loaded programs (0):");
+    }
+
     /// <summary>Creates an isolated CLI workspace.</summary>
     [TestInitialize]
     public void CreateWorkspace()
@@ -58,7 +74,7 @@ on undeliverable as rejected { emit ConsoleOut(rejected) }
         Assert.AreEqual(0, result.ExitCode, result.StandardError);
         Assert.AreEqual(Lines("initialized", "42"), result.StandardOutput);
         StringAssert.Contains(result.StandardError, "Loaded programs (1):");
-        StringAssert.Contains(result.StandardError, "@1  inspect.demo");
+        StringAssert.Contains(result.StandardError, "1  inspect.demo");
         StringAssert.Contains(result.StandardError, "handlers=4");
         StringAssert.Contains(result.StandardError, "first.ges");
         StringAssert.Contains(result.StandardError, "second.ges");
@@ -85,11 +101,11 @@ on undeliverable as rejected { emit ConsoleOut(rejected) }
         Assert.AreEqual(0, result.ExitCode, result.StandardError);
         Assert.AreEqual(Lines("Grüße 😀"), result.StandardOutput);
         StringAssert.Contains(result.StandardError, "Loaded programs (2):");
-        var firstIndex = result.StandardError.IndexOf("@1  first", StringComparison.Ordinal);
-        var secondIndex = result.StandardError.IndexOf("@2  second", StringComparison.Ordinal);
+        var firstIndex = result.StandardError.IndexOf("1  first", StringComparison.Ordinal);
+        var secondIndex = result.StandardError.IndexOf("2  second", StringComparison.Ordinal);
         Assert.IsTrue(firstIndex >= 0 && secondIndex > firstIndex);
-        StringAssert.Contains(result.StandardError, "@1  first  First() [signature]");
-        StringAssert.Contains(result.StandardError, "@2  second  Second() [signature]");
+        StringAssert.Contains(result.StandardError, "1  first  First() [signature]");
+        StringAssert.Contains(result.StandardError, "2  second  Second() [signature]");
         StringAssert.Contains(result.StandardError, Environment.NewLine + second.Dump() + Environment.NewLine);
         Assert.IsFalse(result.StandardError.Contains(".module \"first\"", StringComparison.Ordinal));
         Assert.HasCount(2, Directory.GetFiles(_directory));
@@ -123,12 +139,12 @@ on undeliverable as rejected { emit ConsoleOut(rejected) }
         Assert.AreEqual(1, result.ExitCode, result.StandardError);
         Assert.AreEqual(Lines("initial", "repeat", "repeat"), result.StandardOutput);
         StringAssert.Contains(result.StandardError, "Loaded programs (3):");
-        StringAssert.Contains(result.StandardError, "@1  anonymous.");
-        StringAssert.Contains(result.StandardError, "@2  repeat");
-        StringAssert.Contains(result.StandardError, "@3  repeat");
+        StringAssert.Contains(result.StandardError, "1  anonymous.");
+        StringAssert.Contains(result.StandardError, "2  repeat");
+        StringAssert.Contains(result.StandardError, "3  repeat");
         StringAssert.Contains(result.StandardError, "Registered handlers (6):");
         StringAssert.Contains(result.StandardError, "cli.consoleCommand");
-        StringAssert.Contains(result.StandardError, "@2, @3");
+        StringAssert.Contains(result.StandardError, "2, 3");
         Assert.HasCount(1, Regex.Matches(result.StandardError, "\\.module \"repeat\""));
     }
 
@@ -142,9 +158,9 @@ on undeliverable as rejected { emit ConsoleOut(rejected) }
         Assert.AreEqual(1, result.ExitCode, result.StandardError);
         Assert.AreEqual(Lines("42"), result.StandardOutput);
         StringAssert.Contains(result.StandardError, "Loaded programs (1):");
-        StringAssert.Contains(result.StandardError, "@1  good");
+        StringAssert.Contains(result.StandardError, "1  good");
         StringAssert.Contains(result.StandardError, "Registered handlers (4):");
-        Assert.IsFalse(result.StandardError.Contains("@2", StringComparison.Ordinal));
+        Assert.IsFalse(result.StandardError.Contains("  2  ", StringComparison.Ordinal));
     }
 
     /// <summary>Verifies malformed inspection commands fail recoverably and never execute script code.</summary>
@@ -155,6 +171,8 @@ on undeliverable as rejected { emit ConsoleOut(rejected) }
     [DataRow(":dump")]
     [DataRow(":dump missing")]
     [DataRow(":dump @0")]
+    [DataRow(":dump 0")]
+    [DataRow(":dump 999999999999999999999999999999")]
     [DataRow(":dump @invalid")]
     [DataRow(":dump @999999999999999")]
     [DataRow(":dump @1")]

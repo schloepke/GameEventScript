@@ -13,6 +13,7 @@ final class ToolIO {
     let inputTerminal: Bool
     let outputTerminal: Bool
     let errorTerminal: Bool
+    var colorErrors = false
     let noColor: Bool
     private(set) var outputError: (any Error)?
 
@@ -40,12 +41,15 @@ final class ToolIO {
         do { try (toError ? error : output)(text) } catch { outputError = error }
     }
 
-    func line(_ text: String = "", toError: Bool = false) { write(text + "\n", toError: toError) }
+    func line(_ text: String = "", toError: Bool = false) {
+        let isDiagnostic = text.hasPrefix("error ") || text.contains(": error ")
+        write((toError && colorErrors && !noColor && isDiagnostic ? Highlighting.paint(text, 31) : text) + "\n", toError: toError)
+    }
 
     func diagnostic(_ diagnostic: GameEventScriptDiagnostic, fallback: String) {
         var prefix = diagnostic.sourceLocation?.sourceName ?? fallback
         if let line = diagnostic.sourceLocation?.line { prefix += "(\(line),\(diagnostic.sourceLocation?.column ?? 1))" }
-        let context = [diagnostic.programName.map { "program=" + $0 }, diagnostic.handlerName.map { "handler=" + $0 }, diagnostic.symbol.map { "symbol=" + $0 }].compactMap { $0 }
+        let context = [diagnostic.programName.flatMap { $0.isEmpty ? nil : "program=" + $0 }, diagnostic.handlerName.map { "handler=" + $0 }, diagnostic.symbol.map { "symbol=" + $0 }].compactMap { $0 }
         let suffix = context.isEmpty ? "" : " [" + context.joined(separator: ", ") + "]"
         line("\(prefix): error \(diagnostic.code): \(diagnostic.message)\(suffix)", toError: true)
     }

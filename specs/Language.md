@@ -429,6 +429,51 @@ grammar, empty tags are omitted, and later duplicates are omitted while retainin
 first occurrence order. Applying `with` to an existing message replaces that
 message's tags with the normalized clause result.
 
+#### Result-Bearing and Delayed Sends
+
+> **Since: 0.2.0**
+
+`emit Message(...)` and `publish Message(...)` are also expressions. Their Boolean
+result means the host accepted the send, independent of recipient existence,
+handler success, or publish-sink acceptance. A statement discards the result.
+Unused results never make sends removable side effects. Ordinary expression
+short-circuiting can prevent a send from being evaluated. In result-bearing sends,
+an indirect message operand and each `with` operand use unary precedence; binary
+operators following them apply to the send result. Parenthesize a compound
+message or tag expression, for example `emit (primary default fallback)` or
+`emit Ping() with (tags | extraTags)`. This applies to delayed sends as well.
+Legacy immediate statement sends retain their full-expression operands.
+
+`emit after duration Message(...) with tags` and the corresponding `publish`
+form add a delay. Duration is evaluated first, then additional tags and message
+arguments using the existing send argument order; each is evaluated once. The
+message and tags are captured immediately. Duration must be a numeric Quantity(s),
+not a unitless number or another unit. Unit-preserving computations such as
+`abs (-0.2s)` are valid durations; a numeric result must not be assumed unitless
+when its unit is unknown. Statically established wrong types produce
+`validate.invalidTypeConstructor`; dynamically invalid values, nothing, negative
+values, nonfinite values or unrepresentable delays produce false without sending.
+Zero seconds uses the instant send path. Timing, rounding, delivery snapshots and
+initialization staging are defined in HostRuntime. Emit/publish do not become
+synchronous handler calls. A result-bearing send also returns false when its
+message operand is not a Message or its tag clause cannot be normalized.
+
+```ges
+emit after 0.2s Fire(power: 100%) with #cannon
+publish after 5s Ready(unit: unit) with #team
+
+let accepted be emit after 1s Retry(attempt: 2)
+if publish Report(value: 42) {
+  emit Log("Report accepted for sending")
+}
+```
+
+The first two statements schedule local delivery and publication, respectively.
+The publication reaches the outbound sink only when due. The Boolean check in
+the last example confirms acceptance, not successful delivery. Use a time
+quantity such as `0.2s`; `emit after 10 Fire()` is invalid because `10` has no
+time unit.
+
 ### `let`
 
 `let` creates an immutable local binding:
@@ -1480,6 +1525,41 @@ counts all finite items, `items[:sum]` is equivalent to
 `min`/`max` and `highest`/`lowest` return the winning source item, selected by
 the projection.
 
+### Fold and Reduce Selectors
+
+> **Since: 0.2.0**
+
+`source[:fold acc be seed, value => expression]` performs a left fold in the
+source's ordinary iterator order. Source and seed are evaluated exactly once,
+including the seed for an empty or invalid source. The seed is the initial
+accumulator; the step runs once per element. Empty sources return the seed.
+
+`source[:reduce acc, value => expression]` uses the first element as the initial
+accumulator and evaluates the step for each remaining element. Empty sources
+return nothing; a single element is returned unchanged without evaluating the
+step. Both operations accept the existing finite iterator sources used by
+projection selectors; an invalid iterator source produces nothing.
+
+The accumulator and element names are distinct, cannot shadow visible bindings,
+and are visible only in the step. The step is an ordinary expression, including
+`when ... otherwise ...`; its result replaces the internal accumulator, even if
+nothing. This does not add mutable script bindings or implicit early termination.
+The operation does not materialize its source or construct an output collection.
+Only actually executed bytecode instructions consume opcode budget, using the
+same rules as other selectors. No synthetic cost equalization is performed.
+
+```ges
+let scores be [10, 20, 30]
+let total be scores[:fold acc be 100, value => acc + value] // 160
+let sum be scores[:reduce acc, value => acc + value]       // 60
+let seedOnly be [][:fold acc be 100, value => acc + value] // 100
+let noResult be [][:reduce acc, value => acc + value]     // nothing
+
+let readings be [10, nothing, 20]
+let validTotal be readings[:fold acc be 0, value =>
+  acc + value when value has value otherwise acc]         // 30
+```
+
 ### First, Last, and Single
 
 ```ges
@@ -1831,7 +1911,7 @@ record :Super as {
   zValue: :Number computed by xValue * yValue + 10%
 }
 
-let rec be :super(10, yValue: 10)
+let rec be :Super(10, yValue: 10)
 ```
 
 Record values are immutable, expose fields through member access, participate in
@@ -2003,12 +2083,17 @@ handler_tag_filter ::= ('matching' | 'without') TAG_LITERAL (',' TAG_LITERAL)*
 statement_separator ::= NL | ';'
 
 statement ::= emit_statement | publish_statement | let_statement | if_statement | for_statement | seeded_random_statement | expression_statement
-emit_statement ::= 'emit' message_expression [tag_clause]
-publish_statement ::= 'publish' message_expression [tag_clause]
+emit_statement ::= 'emit' (message_expression [tag_clause] | delayed_send)
+publish_statement ::= 'publish' (message_expression [tag_clause] | delayed_send)
 message_expression ::= MESSAGE_NAME [parenthesized_arguments] | expression
 tag_clause ::= 'with' expression (',' expression)*
+send_expression ::= ('emit' | 'publish') (send_message_expression [send_tag_clause] | delayed_send)
+delayed_send ::= 'after' expression send_message_expression [send_tag_clause]
+send_message_expression ::= MESSAGE_NAME [parenthesized_arguments] | unary_expression
+send_tag_clause ::= 'with' unary_expression (',' unary_expression)*
 let_statement ::= 'let' VARIABLE_NAME 'be' expression
-if_statement ::= 'if' expression statement_body ['else' statement_body]
+if_statement ::= 'if' if_check (';' if_check)* [';'] statement_body ['else' statement_body]
+if_check ::= expression | 'let' VARIABLE_NAME 'be' expression
 for_statement ::= 'for' VARIABLE_NAME ('in' expression | range_source) statement_body
 seeded_random_statement ::= 'random' 'with' expression statement_body
 expression_statement ::= expression
@@ -2059,7 +2144,7 @@ postfix_suffix ::= '.' LOWER_NAME | '[' collection_selector ']'
 primary_expression ::= literal | CONSTANT_REFERENCE | call_expression | uppercase_call_expression |
                        type_constructor_expression | VARIABLE_NAME |
                        '(' expression ')' | bracket_literal | generated_list_expression |
-                       range_expression | random_expression | seeded_random_expression | dice_expression
+                       range_expression | random_expression | seeded_random_expression | dice_expression | send_expression
 call_expression ::= LOWER_NAME parenthesized_arguments
 uppercase_call_expression ::= MESSAGE_NAME parenthesized_arguments
 type_constructor_expression ::= (built_in_type_tag | custom_type_tag) parenthesized_arguments
@@ -2094,7 +2179,7 @@ structured_selector ::= quantified_selector | pattern_selector | take_selector |
                         shuffle_selector | reverse_selector | edge_selector | filter_selector |
                         sum_selector | average_selector | extrema_selector | projection_selector |
                         map_selector | contains_selector | distinct_selector | group_selector |
-                        sort_selector | order_selector | ':keys' | ':values' | ':entries'
+                        sort_selector | order_selector | fold_selector | reduce_selector | split_selector | ':keys' | ':values' | ':entries'
 quantified_selector ::= (':any' | ':all') VARIABLE_NAME 'where' expression
 pattern_selector ::= ':has' (object_pattern | dice_pattern)
 take_selector ::= ':take' (slice | dice_pattern)
@@ -2117,6 +2202,9 @@ distinct_selector ::= ':distinct' ['by' VARIABLE_NAME projection_arrow expressio
 group_selector ::= ':group' 'by' VARIABLE_NAME projection_arrow expression
 sort_selector ::= ':sort' sort_direction
 order_selector ::= ':order' 'by' VARIABLE_NAME projection_arrow expression sort_direction
+fold_selector ::= ':fold' VARIABLE_NAME 'be' expression ',' VARIABLE_NAME projection_arrow expression
+reduce_selector ::= ':reduce' VARIABLE_NAME ',' VARIABLE_NAME projection_arrow expression
+split_selector ::= ':split' 'on' ('whitespace' | expression)
 projection_arrow ::= '=>' | '↦'
 sort_direction ::= 'ascending' | 'descending'
 slice ::= ('first' | 'last' | 'highest' | 'lowest') POSITIVE_INTEGER
@@ -2148,55 +2236,3 @@ Adjacent `NUMBER VARIABLE_NAME` tokens without whitespace are also accepted as
 implicit multiplication. This applies only to numeric literals followed by an
 identifier or math constant; ordinary expressions require an explicit
 multiplication operator.
-
-## Fold and reduce selectors
-
-> **Since: 0.2.0**
-
-`source[:fold acc be seed, value => expression]` performs a left fold in the
-source's ordinary iterator order. Source and seed are evaluated exactly once,
-including the seed for an empty or invalid source. The seed is the initial
-accumulator; the step runs once per element. Empty sources return the seed.
-
-`source[:reduce acc, value => expression]` uses the first element as the initial
-accumulator and evaluates the step for each remaining element. Empty sources
-return nothing; a single element is returned unchanged without evaluating the
-step. Both operations accept the existing finite iterator sources used by
-projection selectors; an invalid iterator source produces nothing.
-
-The accumulator and element names are distinct, cannot shadow visible bindings,
-and are visible only in the step. The step is an ordinary expression, including
-`when ... otherwise ...`; its result replaces the internal accumulator, even if
-nothing. This does not add mutable script bindings or implicit early termination.
-The operation does not materialize its source or construct an output collection.
-Only actually executed bytecode instructions consume opcode budget, using the
-same rules as other selectors. No synthetic cost equalization is performed.
-
-## Result-bearing and delayed sends
-
-> **Since: 0.2.0**
-
-`emit Message(...)` and `publish Message(...)` are also expressions. Their Boolean
-result means the host accepted the send, independent of recipient existence,
-handler success, or publish-sink acceptance. A statement discards the result.
-Unused results never make sends removable side effects. Ordinary expression
-short-circuiting can prevent a send from being evaluated. In result-bearing sends,
-an indirect message operand and each `with` operand use unary precedence; binary
-operators following them apply to the send result. Parenthesize a compound
-message or tag expression, for example `emit (primary default fallback)` or
-`emit Ping() with (tags | extraTags)`. This applies to delayed sends as well.
-Legacy immediate statement sends retain their full-expression operands.
-
-`emit after duration Message(...) with tags` and the corresponding `publish`
-form add a delay. Duration is evaluated first, then additional tags and message
-arguments using the existing send argument order; each is evaluated once. The
-message and tags are captured immediately. Duration must be a numeric Quantity(s),
-not a unitless number or another unit. Unit-preserving computations such as
-`abs (-0.2s)` are valid durations; a numeric result must not be assumed unitless
-when its unit is unknown. Statically established wrong types produce
-`validate.invalidTypeConstructor`; dynamically invalid values, nothing, negative
-values, nonfinite values or unrepresentable delays produce false without sending.
-Zero seconds uses the instant send path. Timing, rounding, delivery snapshots and
-initialization staging are defined in HostRuntime. Emit/publish do not become
-synchronous handler calls. A result-bearing send also returns false when its
-message operand is not a Message or its tag clause cannot be normalized.

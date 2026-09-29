@@ -10,7 +10,39 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+## [0.3.0] — 2026-09-29
+
+This release adds CLI editing, portable and native AOT NuGet tools, and Host
+idle-duration observations in C# and Swift.
+
 ### Added
+
+- Exposed the `ges` executable in the root SwiftPM package alongside the libraries.
+  Homebrew and standalone downloads remain available. The root package now requires
+  macOS 10.15.4 to cover CLI Foundation I/O.
+
+- Host idle-duration observations in C# and Swift, including synchronized Bridge
+  runner access, for application-defined inactivity recovery without host timers.
+
+- Added Homebrew installation through `schloepke/gameeventscript/ges`. New standalone
+  CLI releases provide C# for Windows and Swift for macOS/Linux; NuGet tools remain
+  available across platforms. Previously published downloads remain available.
+
+- Added external-editor REPL drafts with `:edit`, scratch ID `0`, explicit `:save`,
+  conflict checks, in-memory reloads and unsaved-change protection on `:quit`.
+  Clearing scratch removes its previous handlers. Explicit `:reload` refreshes
+  clean file-backed drafts from disk while preserving unsaved edits.
+  Editor selection supports GES_EDITOR before VISUAL/EDITOR, with nano (macOS/Linux)
+  or notepad.exe (Windows) as the default.
+  Terminal editors inherit the foreground terminal in Swift as well as .NET;
+  `:help` lists editing, saving and forced exit directly.
+
+- Added NuGet release preparation for the portable `GameEventScript.Tool` and
+  native `GameEventScript.Tool.Aot` CLI, with verified Windows/macOS/Linux
+  x64 and ARM64 package jobs and explicit manual publication.
+
+- Added `--aot` to the local C# CLI installer for native macOS/Linux builds,
+  including updates, switching installation modes and native uninstallation.
 
 - Added generated GES/GESA Sublime Text and bat grammars, TextMate/Sublime CLI
   actions, and shared syntax-only completions and snippets with website downloads.
@@ -31,14 +63,43 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Changed
 
+- Both CLI multiline prompts use plain continuation indentation. Run diagnostics
+  appear in red with `--color`, respecting `NO_COLOR`.
+
+- CLI program selectors now use plain numeric IDs (`:source 1`, `:dump 1`,
+  `:unload 1`). The previous `@1` spelling remains a compatibility alias.
+
 - Clarified application ownership of state mutation and persistence, including
   native handler and extension effects, external-value stability and failure
   recovery. Existing runtime behavior is unchanged.
 
 ### Fixed
 
+- Swift compiler diagnostics now explain validation and compilation failures
+  instead of repeating their diagnostic codes, including unknown REPL types.
+
+- Fixed native AOT C# CLI crashes when listing programs, showing source archives
+  or tracing text arguments, using generated JSON serialization metadata.
+
 - Fixed C# CLI interactive history and cursor editing without `--color`; color
   selection now affects highlighting only.
+
+### Migrating from 0.2.0
+
+- SwiftPM consumers on macOS must declare macOS 10.15.4 or newer when using the
+  root package, which now also exposes the optional `ges` executable.
+
+- Upgrade the GES library packages together to 0.3.0; SwiftPM consumers use the
+  `0.3.0` tag. Idle-duration observations require this version or newer.
+- NuGet CLI installations can use either `GameEventScript.Tool` or
+  `GameEventScript.Tool.Aot`. Uninstall one before switching to the other because
+  both provide `dotnet-ges`. Native tool installation requires .NET SDK 10+.
+- New standalone C# archives target Windows. On macOS/Linux, use the Swift CLI
+  through Homebrew or release downloads, or install a C# NuGet tool.
+- REPL edits stay in memory until `:save`. Explicit `:reload` refreshes clean
+  sources from disk and preserves unsaved drafts; rebuilding the session reruns
+  initialization and clears queued work. Numeric selectors replace `@ID` in
+  examples, while the old spelling remains accepted.
 
 ## [0.2.0] — 2026-09-26
 
@@ -47,9 +108,6 @@ C# and Swift share the same release version. Compatibility may change during 0.x
 see the migration notes below before upgrading from 0.1.0.
 
 ### Added
-
-- Host idle-duration observations in C# and Swift, including synchronized Bridge
-  runner access, for application-defined inactivity recovery without host timers.
 
 - Website publication triggers the hosting pull webhook after changed output is
   successfully pushed to `site`, with bounded retries and a secret-backed URL.
@@ -187,5 +245,6 @@ First public development release of the immutable, event-driven core.
   execution, binary inspection and interactive use.
 - Documented installation and the pre-1.0 compatibility policy.
 
+[0.3.0]: https://github.com/schloepke/GameEventScript/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/schloepke/GameEventScript/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/schloepke/GameEventScript/releases/tag/0.1.0

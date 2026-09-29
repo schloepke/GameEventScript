@@ -23,7 +23,17 @@ extension GesCompiler {
             }
         }
         for module in modules where !module.name.isEmpty {
-            if moduleName.isEmpty { moduleName = module.name } else if moduleName != module.name { throw error("validate.invalidIdentifierCase", module.location, symbol: module.name, kind: .globalDefinition) }
+            if moduleName.isEmpty {
+                moduleName = module.name
+            } else if moduleName != module.name {
+                throw error(
+                    "validate.invalidIdentifierCase",
+                    module.location,
+                    symbol: module.name,
+                    kind: .globalDefinition,
+                    message: "All source files compiled together must declare the same module name; expected '\(moduleName)', found '\(module.name)'."
+                )
+            }
         }
         // A body may infer the return type of a later definition, including in another source.
         // Validate every parameter scope before inference constructs any parameter dictionary.
@@ -72,7 +82,9 @@ extension GesCompiler {
             || records[type] != nil || catalog?.types.contains { $0.name == type } == true
     }
 
-    func validateType(_ type: String, _ location: GameEventScriptSourceLocation) throws { if !knownType(type) { throw error("validate.invalidTypeConstructor", location, symbol: type, kind: .type) } }
+    func validateType(_ type: String, _ location: GameEventScriptSourceLocation) throws {
+        if !knownType(type) { throw error("validate.invalidTypeConstructor", location, symbol: type, kind: .type, message: "Unknown type ':\(type)' in this program.") }
+    }
 
     func validateStatements(_ statements: [GesStatement], _ initial: Set<String>, _ ancestors: Set<String>, _ initialTypes: [String: String] = [:]) throws {
         var names = initial
@@ -141,7 +153,9 @@ extension GesCompiler {
         case .send(_, let message, let tags, let delay):
             if let delay {
                 let type = infer(delay, types)
-                if !["unknown", "other", "nothing", "quantity:s", "quantity:second"].contains(type) { throw error("validate.invalidTypeConstructor", delay.location, symbol: "Quantity(s)", kind: .type) }
+                if !["unknown", "other", "nothing", "quantity:s", "quantity:second"].contains(type) {
+                    throw error("validate.invalidTypeConstructor", delay.location, symbol: "Quantity(s)", kind: .type, message: "Send delay requires a time quantity, for example 0.2s.")
+                }
             }
             children = (delay.map { [$0] } ?? []) + [message] + tags
         case .unary(_, let a), .member(let a, _), .predicate(let a, _): children = [a]

@@ -1,0 +1,89 @@
+# Copyright 2026 Stephan Schlöpke
+# SPDX-License-Identifier: Apache-2.0
+name: C# Tool Packages
+
+on:
+  pull_request:
+    paths:
+      - 'implementation/csharp/**'
+      - 'scripts/*csharp*'
+      - 'scripts/*cli*'
+      - '.github/workflows/csharp-tool-packages.yml'
+      - '.github/workflows/csharp-release-candidate.yml'
+      - 'Directory.Build.props'
+      - 'global.json'
+      - 'LICENSE'
+      - 'website/brand/pixel-duo/nuget-icon.png'
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  TOOL_VERSION: ${{ inputs.version || format('0.0.0-ci.{0}', github.run_number) }}
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: portable, runner: ubuntu-22.04 }
+          - { target: win-x64, runner: windows-2022 }
+          - { target: win-arm64, runner: windows-11-arm }
+          - { target: linux-x64, runner: ubuntu-22.04 }
+          - { target: linux-arm64, runner: ubuntu-22.04-arm }
+          - { target: osx-x64, runner: macos-15-intel }
+          - { target: osx-arm64, runner: macos-15 }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.201
+      - name: Install Linux native compiler prerequisites
+        if: startsWith(matrix.target, 'linux-')
+        run: sudo apt-get update -qq && sudo apt-get install -y clang zlib1g-dev
+      - name: Verify package controls
+        if: matrix.target == 'portable'
+        run: python3 scripts/test-csharp-tool-packages.py
+      - name: Build and consume the tool from an isolated local feed
+        run: python3 scripts/pack-csharp-tool.py "$TOOL_VERSION" '${{ matrix.target }}'
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: csharp-tool-${{ matrix.target }}
+          path: artifacts/csharp/tool-packages/${{ env.TOOL_VERSION }}/${{ matrix.target }}/*.nupkg
+          if-no-files-found: error
+          retention-days: 14
+
+  verify:
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: csharp-tool-*
+          merge-multiple: true
+          path: artifacts/csharp/tool-release
+      - name: Verify the complete release without publishing
+        run: python3 scripts/publish-csharp-tools.py artifacts/csharp/tool-release "$TOOL_VERSION"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: csharp-tools-release
+          path: artifacts/csharp/tool-release/*.nupkg
+          if-no-files-found: error
+          retention-days: 14

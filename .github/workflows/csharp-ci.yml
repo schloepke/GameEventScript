@@ -38,7 +38,10 @@ jobs:
         run: python3 scripts/sync-highlighter-grammars.py --check
 
       - name: Verify publication package selection
-        run: python3 scripts/test-publish-csharp-packages.py
+        run: |
+          python3 scripts/test-publish-csharp-packages.py
+          python3 scripts/test-csharp-tool-packages.py
+          python3 scripts/test-csharp-tool-install.py
 
       - name: Install pinned .NET SDK and test runtime
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
@@ -58,6 +61,9 @@ jobs:
 
       - name: Verify delayed CLI input and output
         run: python3 scripts/test-cli-delayed.py dotnet artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll
+
+      - name: Verify CLI editor and save sessions
+        run: python3 scripts/test-cli-editor.py dotnet artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll
 
       - name: Run non-performance tests
         run: dotnet test GameEventScript.sln --configuration Release --no-restore --filter "TestCategory!=Performance"

@@ -262,7 +262,9 @@ ordering, execution limits and diagnostic behavior.
 ## Distribution
 
 Runtime, Compiler, CSharpBridge and SyntaxHighlighter are packaged independently with a shared
-release version. Conformance stays internal; the CLI is not published on NuGet.
+release version. Conformance stays internal. NuGet CLI tools (since 0.3.0) are
+packaged separately as `GameEventScript.Tool` and `GameEventScript.Tool.Aot`;
+see [CLI installation](../../docs/guide/distribution/Tools.md).
 Local packages are written to
 `artifacts/csharp/packages/<version>`; the release dry run also stages versioned DLL sets
 below `artifacts/csharp/dll/<version>` for Runtime, Compiler and Unity adapters.

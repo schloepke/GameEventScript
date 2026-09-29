@@ -1,7 +1,7 @@
 <!-- Copyright 2026 Stephan Schlöpke -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# Standalone CLI downloads
+# CLI installation and downloads
 
 > **Since: 0.2.0 — standalone CLI archives**
 
@@ -10,6 +10,74 @@ Standalone archives are introduced with 0.2.0; older releases contain only the
 library packages. CLI downloads are separate from NuGet and
 SwiftPM library products. You do not need a development SDK to run them.
 
+## Install through Homebrew (macOS and Linux)
+
+The [official project tap](https://github.com/schloepke/homebrew-gameeventscript)
+installs the native Swift CLI for macOS 15+ or Linux on ARM64/x64:
+
+```sh
+brew install schloepke/gameeventscript/ges
+ges --version
+
+# Update or remove:
+brew update
+brew upgrade ges
+brew uninstall ges
+```
+
+Homebrew must already be installed; no Swift toolchain or .NET installation is
+needed. The formula selects a published release archive and verifies its SHA-256.
+If you previously installed `ges` manually, use `which -a ges` to check which
+installation your PATH selects. The tap does not remove other installations.
+
+## Build with SwiftPM
+
+> **Since: 0.3.0 — public SwiftPM executable**
+
+The root package exposes `ges` alongside the four libraries. With a compatible
+Swift toolchain installed, clone the release and build/run the CLI:
+
+```sh
+git clone --branch 0.3.0 --depth 1 https://github.com/schloepke/GameEventScript.git
+cd GameEventScript
+swift run --scratch-path artifacts/swift/public-cli --disable-build-manifest-caching --configuration release ges --help
+```
+
+This compiles from source; it does not download a prebuilt executable. Library
+consumers do not need to build the CLI. Homebrew remains the recommended installation
+for macOS/Linux users who want a prebuilt tool without a Swift toolchain.
+
+## Install through NuGet
+
+> **Since: 0.3.0 — NuGet CLI tools**
+
+Starting with 0.3.0, choose one of these packages:
+
+```sh
+# Portable .NET tool (requires the .NET 8 runtime):
+dotnet tool install --global GameEventScript.Tool
+
+# Native AOT tool (.NET SDK 10+ required for installation):
+dotnet tool install --global GameEventScript.Tool.Aot
+```
+
+Both install the command `dotnet-ges`; use `dotnet ges` or invoke `dotnet-ges`
+directly. The AOT executable needs no .NET runtime after installation. Its package
+selects Windows, macOS or glibc-based Linux for x64/ARM64 automatically. Linux
+binaries are built on Ubuntu 22.04; musl/Alpine is not an AOT target. The portable
+package is the alternative for environments without a matching native package.
+
+Update the selected package with `dotnet tool update --global PACKAGE_ID`.
+They are alternatives: before switching, uninstall the old package with
+`dotnet tool uninstall --global PACKAGE_ID`, then install the other. Use
+`--tool-path DIRECTORY` instead of `--global` for a custom installation directory.
+The GES version is shared with the libraries. Releases before 0.3.0 do not
+include these packages.
+
+AOT package installation requires the .NET 10 tool protocol. Native execution is
+independent of that SDK; the `dotnet ges` convenience spelling still needs the
+`dotnet` launcher. Swift downloads remain available separately.
+
 ## Choose a download
 
 Replace `VERSION` with the selected release version, without a leading `v`.
@@ -17,18 +85,18 @@ Replace `VERSION` with the selected release version, without a leading `v`.
 | Implementation | System | Architectures | Archive | Command |
 | --- | --- | --- | --- | --- |
 | C# | Windows | x64, ARM64 | `ges-csharp-VERSION-win-ARCH.zip` | `dotnet-ges.exe` |
-| C# | Linux with glibc | x64, ARM64 | `ges-csharp-VERSION-linux-ARCH.tar.gz` | `dotnet-ges` |
-| C# | macOS | Intel x64, Apple Silicon ARM64 | `ges-csharp-VERSION-osx-ARCH.tar.gz` | `dotnet-ges` |
 | Swift | Linux | x64, ARM64 | `ges-swift-VERSION-linux-ARCH.tar.gz` | `ges` |
 | Swift | macOS 15 or newer | Intel x64, Apple Silicon ARM64 | `ges-swift-VERSION-osx-ARCH.tar.gz` | `ges` |
 
-The C# download includes the .NET 8 runtime. No separate .NET installation is
-required when invoking `dotnet-ges` directly. If the .NET SDK is already installed
-and the archive's `bin` directory is on `PATH`, `dotnet ges` also resolves this
-command. Keep every file in `bin` together: the executable alone is not sufficient.
-Linux C# builds use Ubuntu 22.04 and require the normal .NET 8 native dependencies,
-including glibc, libstdc++, OpenSSL, ICU and zlib. Alpine/musl is not a C# target.
-macOS C# builds require macOS 12 or newer; Windows builds target Windows 10/11.
+Starting with 0.3.0, releases provide C# archives for Windows and Swift archives for macOS/Linux.
+Release 0.2.0 also contains C# macOS/Linux archives; those historical downloads
+remain available. The NuGet tools continue to support all three operating systems.
+
+The Windows C# download includes the .NET 8 runtime and targets Windows 10/11.
+No separate .NET installation is required when invoking `dotnet-ges.exe`
+directly. If the .NET SDK is already installed and the archive's `bin` directory
+is on `PATH`, `dotnet ges` also resolves this command. Keep every file in `bin`
+together: the executable alone is not sufficient.
 
 The Swift Linux download is statically linked using the official Static Linux
 SDK, including the Swift runtime and Foundation. It does not require a Swift
@@ -82,13 +150,14 @@ and binary format; see the C# and Swift CLI guides in the documentation website.
 
 ## Maintainer build and verification
 
-From the repository root, prepare one native target without publishing:
+From the repository root, prepare a target on its matching native system without publishing
+(the C# example runs on Windows, the Swift example on macOS ARM64):
 
 ```sh
-python3 scripts/package-cli.py csharp 0.2.0-rc.1 osx-arm64
-python3 scripts/verify-cli-archive.py csharp 0.2.0-rc.1 osx-arm64 --directory artifacts/cli/0.2.0-rc.1
-python3 scripts/package-cli.py swift 0.2.0-rc.1 osx-arm64
-python3 scripts/verify-cli-archive.py swift 0.2.0-rc.1 osx-arm64 --directory artifacts/cli/0.2.0-rc.1
+python3 scripts/package-cli.py csharp 0.3.0 win-x64
+python3 scripts/verify-cli-archive.py csharp 0.3.0 win-x64 --directory artifacts/cli/0.3.0
+python3 scripts/package-cli.py swift 0.3.0 osx-arm64
+python3 scripts/verify-cli-archive.py swift 0.3.0 osx-arm64 --directory artifacts/cli/0.3.0
 ```
 
 For Linux Swift builds, install the pinned Static Linux SDK from the workflow
@@ -121,5 +190,43 @@ only the complete verified set from that run, and attaches archives plus the
 combined checksum file to the existing release. It never changes the release
 text, creates a release automatically or overwrites an existing download.
 
-Homebrew installation and platform signing/notarization remain separate follow-up
-work. No CLI executable is added to the root SwiftPM products or public NuGet feed.
+After publishing the Swift archives, update `Formula/ges.rb` in the
+[Homebrew tap](https://github.com/schloepke/homebrew-gameeventscript) with the
+release version, four download URLs and their published SHA-256 values.
+Merge the tap update after its four-platform installation tests pass; `brew update`
+then makes the release available to users. This is currently a separate manual
+step, not performed by the CLI Distribution workflow.
+
+Platform signing/notarization remains separate follow-up work. No CLI executable is added to the root SwiftPM products. NuGet tool
+publication uses the separate C# release process below.
+
+## Prepare and publish NuGet tools
+
+The **C# Tool Packages** workflow checks affected pull requests and is reused by
+**C# Release Candidate**. It builds the portable package plus six AOT targets on
+native runners. Each job installs its package from an isolated local NuGet feed
+and runs process checks; macOS/Linux AOT jobs also run real terminal checks.
+The local feed exclusively supplies GES packages; Microsoft SDK shim dependencies
+may be downloaded from NuGet.org.
+
+For local dry runs, run these from a compatible build host:
+
+```sh
+python3 scripts/pack-csharp-tool.py 0.0.0-local.1 portable
+python3 scripts/pack-csharp-tool.py 0.0.0-local.1 osx-arm64
+```
+
+Output is under `artifacts/csharp/tool-packages/VERSION/TARGET`. The release set
+contains `GameEventScript.Tool`, `GameEventScript.Tool.Aot`, and six
+`GameEventScript.Tool.Aot.RID` implementation packages. The latter are internal
+installation dependencies; users install the top-level package. All eight must
+have the same version. Conformance is never included.
+
+Use **C# Release Candidate** on the matching tag with `publish=false` to prepare
+and verify the complete set. Enable `publish` only when ready. The existing
+protected `nuget` environment, `NUGET_PUBLISH_ENABLED` variable, and Trusted
+Publishing policy for `csharp-release-candidate.yml` govern publication. The
+policy's `GameEventScript.*` scope must cover both tool IDs and all RID packages.
+The workflow validates the full library/tool set before the first upload, publishes
+native dependencies before the AOT pointer, and never publishes from PRs.
+Preparing packages does not publish or create a release.

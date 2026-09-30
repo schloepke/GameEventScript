@@ -124,11 +124,11 @@ U16_6:				.u16 [8, 8, 8, 8, 8, 8]
 U16_7:				.u16 [8, 8, 8, 8]
 Args_8:				.registers [r13, r14]
 Keys_9:				.texts [T_count, T_total, T_highest, T_lowest] // "count", "total", "highest", "lowest"
-Args_10:			.registers [r14, r0]
-Args_11:			.registers [r14]
-Args_12:			.registers [r13, r12]
-Args_13:			.registers [r14, r13, r18, r15, r16, r12]
-Args_14:			.registers [r14, r12, r13, r18]
+Args_10:			.registers [r13, r0]
+Args_11:			.registers [r13]
+Args_12:			.registers [r18, r12]
+Args_13:			.registers [r13, r18, r15, r14, r16, r12]
+Args_14:			.registers [r13, r12, r18, r15]
 Args_15:			.registers [r1, r2]
 Keys_16:			.texts [T_id, T_score, T_metric, T_faction] // "id", "score", "metric", "faction"
 Args_17:			.registers [r2, r3]
@@ -165,11 +165,7 @@ Compute:			 // handler Compute(batch, checksum)
 
 .source-line "compute-benchmark.ges" 26 |     let candidates be :Range(1, $items)[:select item => :Candidate(id: item, score: score(item, batch))]
 					LoadInteger r13, #1
-
-.source-line "compute-benchmark.ges" 7 | constant $items be 128
 					LoadInteger r14, #128
-
-.source-line "compute-benchmark.ges" 26 |     let candidates be :Range(1, $items)[:select item => :Candidate(id: item, score: score(item, batch))]
 					ConstructData r15, T_range, Args_8, Names_4 // "range", "_", "_"
 					IteratorCreateOrJump r13, r15, Compute_18
 					ListBuilderCreate r15
@@ -206,183 +202,171 @@ Compute_33:			LoadNothing r3(selected)
 
 .source-line "compute-benchmark.ges" 28 |     let ordered be selected[:order by candidate => candidate.score descending]
 Compute_34:			CheckType r13, r3(selected), List
-					JumpIfTrue r13, Compute_37
-					Jump Compute_46
-Compute_37:			IteratorCreateOrJump r13, r3(selected), Compute_46
+					JumpIfFalse r13, Compute_45
+					IteratorCreateOrJump r13, r3(selected), Compute_45
 					OrderBuilderCreate r15
-Compute_39:			IteratorNext r14, r13, Compute_43
+Compute_38:			IteratorNext r14, r13, Compute_42
 					MemberAccess r18, T_score, r14 // "score"
 					OrderBuilderAdd r15, r18, r14
-					Jump Compute_39
-Compute_43:			IteratorClose r13
+					Jump Compute_38
+Compute_42:			IteratorClose r13
 					OrderBuilderFinishDescending r4(ordered), r15
-					Jump Compute_47
-Compute_46:			LoadNothing r4(ordered)
+					Jump Compute_46
+Compute_45:			LoadNothing r4(ordered)
 
 .source-line "compute-benchmark.ges" 29 |     let scores be ordered[:select candidate => candidate.score]
-Compute_47:			IteratorCreateOrJump r13, r4(ordered), Compute_56
+Compute_46:			IteratorCreateOrJump r13, r4(ordered), Compute_55
 					ListBuilderCreate r15
-Compute_49:			IteratorNext r14, r13, Compute_53
+Compute_48:			IteratorNext r14, r13, Compute_52
 					MemberAccess r18, T_score, r14 // "score"
 					ListBuilderAdd r15, r18
-					Jump Compute_49
-Compute_53:			IteratorClose r13
+					Jump Compute_48
+Compute_52:			IteratorClose r13
 					ListBuilderFinish r5(scores), r15
-					Jump Compute_57
-Compute_56:			LoadNothing r5(scores)
+					Jump Compute_56
+Compute_55:			LoadNothing r5(scores)
 
 .source-line "compute-benchmark.ges" 30 |     let total be scores[:reduce acc, value => acc + value]
-Compute_57:			LoadNothing r13
-					IteratorCreateOrJump r15, r5(scores), Compute_67
-					IteratorNext r13, r15, Compute_64
-Compute_60:			IteratorNext r14, r15, Compute_64
+Compute_56:			LoadNothing r13
+					IteratorCreateOrJump r15, r5(scores), Compute_66
+					IteratorNext r13, r15, Compute_63
+Compute_59:			IteratorNext r14, r15, Compute_63
 					Add r18, r13, r14
 					Move r13, r18
-					Jump Compute_60
-Compute_64:			IteratorClose r15
+					Jump Compute_59
+Compute_63:			IteratorClose r15
 					Move r6(total), r13
-					Jump Compute_68
-Compute_67:			LoadNothing r6(total)
+					Jump Compute_67
+Compute_66:			LoadNothing r6(total)
 
 .source-line "compute-benchmark.ges" 33 |     let factions be ordered[:group by candidate => candidate.faction]
-Compute_68:			CheckType r13, r4(ordered), List
-					JumpIfTrue r13, Compute_75
+Compute_67:			CheckType r13, r4(ordered), List
+					JumpIfTrue r13, Compute_73
 					CheckType r13, r4(ordered), Map
-					JumpIfTrue r13, Compute_75
+					JumpIfTrue r13, Compute_73
 					CheckType r13, r4(ordered), Custom
-					JumpIfTrue r13, Compute_75
-					Jump Compute_84
-Compute_75:			IteratorCreateOrJump r13, r4(ordered), Compute_84
+					JumpIfFalse r13, Compute_82
+Compute_73:			IteratorCreateOrJump r13, r4(ordered), Compute_82
 					GroupBuilderCreate r15
-Compute_77:			IteratorNext r14, r13, Compute_81
+Compute_75:			IteratorNext r14, r13, Compute_79
 					MemberAccess r18, T_faction, r14 // "faction"
 					GroupBuilderAdd r15, r18, r14
-					Jump Compute_77
-Compute_81:			IteratorClose r13
+					Jump Compute_75
+Compute_79:			IteratorClose r13
 					GroupBuilderFinish r7(factions), r15
-					Jump Compute_85
-Compute_84:			LoadNothing r7(factions)
+					Jump Compute_83
+Compute_82:			LoadNothing r7(factions)
 
 .source-line "compute-benchmark.ges" 34 |     let groupedCount be factions["red"][:count] + factions["blue"][:count]
-Compute_85:			LoadText r13, T_red // "red"
-					PropertyAccess r15, r13, r7(factions)
-					Count r13, r15
-					LoadText r15, T_blue // "blue"
-					PropertyAccess r14, r15, r7(factions)
-					Count r15, r14
-					Add r8(groupedCount), r13, r15
+Compute_83:			MemberAccess r13, T_red, r7(factions) // "red"
+					Count r15, r13
+					MemberAccess r13, T_blue, r7(factions) // "blue"
+					Count r14, r13
+					Add r8(groupedCount), r15, r14
 
 .source-line "compute-benchmark.ges" 35 |     let distanceSum be ordered[:fold acc be 0, candidate => acc + candidate.metric]
-					LoadInteger r13, #0
-					IteratorCreateOrJump r14, r4(ordered), Compute_102
-Compute_94:			IteratorNext r15, r14, Compute_99
-					MemberAccess r18, T_metric, r15 // "metric"
-					Add r15, r13, r18
-					Move r13, r15
-					Jump Compute_94
-Compute_99:			IteratorClose r14
-					Move r9(distanceSum), r13
-					Jump Compute_103
-Compute_102:		LoadNothing r9(distanceSum)
+					LoadInteger r15, #0
+					IteratorCreateOrJump r13, r4(ordered), Compute_98
+Compute_90:			IteratorNext r14, r13, Compute_95
+					MemberAccess r18, T_metric, r14 // "metric"
+					Add r14, r15, r18
+					Move r15, r14
+					Jump Compute_90
+Compute_95:			IteratorClose r13
+					Move r9(distanceSum), r15
+					Jump Compute_99
+Compute_98:			LoadNothing r9(distanceSum)
 
 .source-line "compute-benchmark.ges" 36 |     let report be [count: scores[:count], total: total, highest: scores[:first], lowest: scores[:last]]
-Compute_103:		Count r13, r5(scores)
-					First r14, r5(scores)
+Compute_99:			Count r15, r5(scores)
+					First r13, r5(scores)
 					Last r18, r5(scores)
-					StageRegister r13
+					StageRegister r15
 					StageRegister r6(total)
-					StageRegister r14
+					StageRegister r13
 					StageRegister r18
 					CreateMap r10(report), Keys_9 // "count", "total", "highest", "lowest"
 
 .source-line "compute-benchmark.ges" 39 |     let restored be parse (report as :Text)
-					Cast r13, r10(report), Text
-					ParseLiteral r11(restored), r13
+					Cast r15, r10(report), Text
+					ParseLiteral r11(restored), r15
 
 .source-line "compute-benchmark.ges" 40 |     if restored <> report or groupedCount <> report.count or distanceSum <= 0 {
-					NotEqual r13, r11(restored), r10(report)
-					JumpIfTrue r13, Compute_119
-					MemberAccess r14, T_count, r10(report) // "count"
-					NotEqual r18, r8(groupedCount), r14
-					Or r14, r13, r18
-					Jump Compute_120
-Compute_119:		LoadTrue r14
-Compute_120:		JumpIfTrue r14, Compute_125
-					LoadInteger r13, #0
-					LessOrEqual r18, r9(distanceSum), r13
-					Or r13, r14, r18
-					Jump Compute_126
-Compute_125:		LoadTrue r13
-Compute_126:		JumpIfNotTrue r13, Compute_132
+					NotEqual r15, r11(restored), r10(report)
+					Or r13, r15, r15
+					JumpIfTrue r15, Compute_115
+					MemberAccess r18, T_count, r10(report) // "count"
+					NotEqual r14, r8(groupedCount), r18
+					Or r13, r15, r14
+Compute_115:		Or r15, r13, r13
+					JumpIfTrue r13, Compute_120
+					LoadInteger r18, #0
+					LessOrEqual r14, r9(distanceSum), r18
+					Or r15, r13, r14
+Compute_120:		JumpIfNotTrue r15, Compute_126
 
 .source-line "compute-benchmark.ges" 41 |         emit ConsoleErr("Benchmark validation failed in batch ", batch)
-					LoadText r14, T_Benchmark_validation_failed_in_batch_ // "Benchmark validation failed in batch "
+					LoadText r13, T_Benchmark_validation_failed_in_batch_ // "Benchmark validation failed in batch "
 					EmitMessage Outbound_ConsoleErr, Args_10 // "ConsoleErr(_, _)"
 
 .source-line "compute-benchmark.ges" 42 |         emit ErrorCode(code: 1)
-					LoadInteger r14, #1
+					LoadInteger r13, #1
 					EmitMessage Outbound_ErrorCode, Args_11 // "ErrorCode(code)"
-					Jump Compute_163
+
+.source-line "compute-benchmark.ges" 40 |     if restored <> report or groupedCount <> report.count or distanceSum <= 0 {
+					Jump Compute_157
 
 .source-line "compute-benchmark.ges" 44 |         let nextChecksum be checksum + restored.total + restored.count + restored.highest + restored.lowest
-Compute_132:		MemberAccess r14, T_total, r11(restored) // "total"
-					Add r18, r1(checksum), r14
-					MemberAccess r14, T_count, r11(restored) // "count"
-					Add r13, r18, r14
-					MemberAccess r18, T_highest, r11(restored) // "highest"
-					Add r14, r13, r18
-					MemberAccess r13, T_lowest, r11(restored) // "lowest"
-					Add r12(nextChecksum), r14, r13
-
-.source-line "compute-benchmark.ges" 6 | constant $rounds be 48
-					LoadInteger r14, #48
+Compute_126:		MemberAccess r13, T_total, r11(restored) // "total"
+					Add r15, r1(checksum), r13
+					MemberAccess r13, T_count, r11(restored) // "count"
+					Add r18, r15, r13
+					MemberAccess r15, T_highest, r11(restored) // "highest"
+					Add r13, r18, r15
+					MemberAccess r18, T_lowest, r11(restored) // "lowest"
+					Add r12(nextChecksum), r13, r18
 
 .source-line "compute-benchmark.ges" 45 |         if batch < $rounds {
-					Less r13, r0(batch), r14
-					JumpIfNotTrue r13, Compute_147
+					LoadInteger r13, #48
+					Less r18, r0(batch), r13
+					JumpIfNotTrue r18, Compute_141
 
 .source-line "compute-benchmark.ges" 46 |             emit Compute(batch: batch + 1, checksum: nextChecksum)
-					LoadInteger r14, #1
-					Add r13, r0(batch), r14
+					LoadInteger r13, #1
+					Add r18, r0(batch), r13
 					EmitMessage Outbound_Compute, Args_12 // "Compute(batch, checksum)"
-					Jump Compute_163
 
-.source-line "compute-benchmark.ges" 8 | constant $expected be 2069276181
-Compute_147:		LoadInteger r14, #2069276181
+.source-line "compute-benchmark.ges" 45 |         if batch < $rounds {
+					Jump Compute_157
 
 .source-line "compute-benchmark.ges" 47 |         } else if nextChecksum = $expected {
-					Equal r13, r12(nextChecksum), r14
-					JumpIfNotTrue r13, Compute_157
+Compute_141:		LoadInteger r13, #2069276181
+					Equal r18, r12(nextChecksum), r13
+					JumpIfNotTrue r18, Compute_151
 
 .source-line "compute-benchmark.ges" 48 |             emit ConsoleOut("Benchmark OK: rounds=", $rounds, ", candidates=", $rounds * $items, ", checksum=", nextChecksum)
-					LoadText r14, T_Benchmark_OK__rounds_ // "Benchmark OK: rounds="
-
-.source-line "compute-benchmark.ges" 6 | constant $rounds be 48
-					LoadInteger r13, #48
-
-.source-line "compute-benchmark.ges" 48 |             emit ConsoleOut("Benchmark OK: rounds=", $rounds, ", candidates=", $rounds * $items, ", checksum=", nextChecksum)
-					LoadText r18, T___candidates_ // ", candidates="
-					LoadInteger r15, #6144
+					LoadText r13, T_Benchmark_OK__rounds_ // "Benchmark OK: rounds="
+					LoadInteger r18, #48
+					LoadText r15, T___candidates_ // ", candidates="
+					LoadInteger r14, #6144
 					LoadText r16, T___checksum_ // ", checksum="
 					EmitMessage Outbound_ConsoleOut, Args_13 // "ConsoleOut(_, _, _, _, _, _)"
-					Jump Compute_163
+
+.source-line "compute-benchmark.ges" 47 |         } else if nextChecksum = $expected {
+					Jump Compute_157
 
 .source-line "compute-benchmark.ges" 50 |             emit ConsoleErr("Benchmark checksum mismatch: ", nextChecksum, "; expected ", $expected)
-Compute_157:		LoadText r14, T_Benchmark_checksum_mismatch__ // "Benchmark checksum mismatch: "
-					LoadText r13, T___expected_ // "; expected "
-
-.source-line "compute-benchmark.ges" 8 | constant $expected be 2069276181
-					LoadInteger r18, #2069276181
-
-.source-line "compute-benchmark.ges" 50 |             emit ConsoleErr("Benchmark checksum mismatch: ", nextChecksum, "; expected ", $expected)
+Compute_151:		LoadText r13, T_Benchmark_checksum_mismatch__ // "Benchmark checksum mismatch: "
+					LoadText r18, T___expected_ // "; expected "
+					LoadInteger r15, #2069276181
 					EmitMessage Outbound_ConsoleErr_2, Args_14 // "ConsoleErr(_, _, _, _)"
 
 .source-line "compute-benchmark.ges" 51 |             emit ErrorCode(code: 1)
-					LoadInteger r14, #1
+					LoadInteger r13, #1
 					EmitMessage Outbound_ErrorCode, Args_11 // "ErrorCode(code)"
 
 .source-line "compute-benchmark.ges" 24 | on Compute(batch, checksum) {
-Compute_163:		ReturnVoid
+Compute_157:		ReturnVoid
 
 .source-line "compute-benchmark.ges" 20 | on Main(args) {
 Main:				 // handler Main(args)
@@ -418,11 +402,11 @@ record_Candidate:	 // record Candidate(id, score)
 					Modulo r4, r0(id), r5
 					LoadInteger r5, #0
 					Equal r6, r4, r5
-					JumpIfNotTrue r6, record_Candidate_184
+					JumpIfNotTrue r6, record_Candidate_178
 					LoadText r4, T_red // "red"
-					Jump record_Candidate_185
-record_Candidate_184:	LoadText r4, T_blue // "blue"
-record_Candidate_185:	Cast r3(faction), r4, Text
+					Jump record_Candidate_179
+record_Candidate_178:	LoadText r4, T_blue // "blue"
+record_Candidate_179:	Cast r3(faction), r4, Text
 
 .source-line "compute-benchmark.ges" 13 | record :Candidate as {
 					StageRegister r0(id)
@@ -444,8 +428,8 @@ function_score:		 // function score(_, _)
 					LoadInteger r3, #16
 					ConstructData r4, T_range, Args_17, Names_4 // "range", "_", "_"
 					Add r2, r0(_), r1(_)
-					IteratorCreateOrJump r3, r4, function_score_219
-function_score_201:	IteratorNext r4, r3, function_score_216
+					IteratorCreateOrJump r3, r4, function_score_213
+function_score_195:	IteratorNext r4, r3, function_score_210
 					LoadInteger r5, #33
 					Multiply r6, r2, r5
 					LoadInteger r5, #17
@@ -459,14 +443,14 @@ function_score_201:	IteratorNext r4, r3, function_score_216
 					Add r4, r6, r7
 					LoadInteger r6, #1000003
 					Modulo r2, r4, r6
-					Jump function_score_201
-function_score_216:	IteratorClose r3
+					Jump function_score_195
+function_score_210:	IteratorClose r3
 					Move r3, r2
-					Jump function_score_220
-function_score_219:	LoadNothing r3
+					Jump function_score_214
+function_score_213:	LoadNothing r3
 
 .source-line "compute-benchmark.ges" 10 | function score(_ item as :Number, _ batch as :Number) be
-function_score_220:	ReturnValue r3
+function_score_214:	ReturnValue r3
 
 .region-end "Code"
 // -------------------------------------------------------------------------------

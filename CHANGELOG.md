@@ -10,6 +10,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+### Performance
+
+- Reduce Swift VM register-access and value-copy overhead for integer arithmetic,
+  retaining overflow, unit and allocation guarantees with runtime access checks enabled.
+
 ### Fixed
 
 - Align Swift compiler code generation with C# for constant Text-key access,

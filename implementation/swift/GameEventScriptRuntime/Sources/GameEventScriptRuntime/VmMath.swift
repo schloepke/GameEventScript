@@ -103,6 +103,7 @@ enum GesMath {
     }
 
     static func add(_ a: GesValue, _ b: GesValue, subtract: Bool = false) -> GesValue {
+        if let av = a.integerValue, let bv = b.integerValue { return integerArithmetic(subtract ? .subtract : .add, av, bv, a.unit, b.unit) }
         if a.isNothing || (b.isNothing && !(subtract && a.kind == .list)) { return .nothing }
         if !subtract && (a.kind == .text || b.kind == .text) { return .text(a.toText + b.toText) }
         if subtract && a.kind == .list && b.kind == .map { return .nothing }
@@ -148,10 +149,6 @@ enum GesMath {
             return .float(subtract ? a.asNumber - delta : a.asNumber + delta, unit: a.unit)
         }
         if a.unit != b.unit { return .nothing }
-        if let av = a.integerValue, let bv = b.integerValue {
-            let (result, overflow) = subtract ? av.subtractingReportingOverflow(bv) : av.addingReportingOverflow(bv)
-            if !overflow { return .integer(result, unit: a.unit) }
-        }
         return .float(subtract ? a.asNumber - b.asNumber : a.asNumber + b.asNumber, unit: a.unit)
     }
 
@@ -168,7 +165,40 @@ enum GesMath {
         }
     }
 
+    // Scalar inputs avoid copying full value storage through integer operations.
+    // This helper is pure and is also used while the VM borrows its register buffer.
+    static func integerArithmetic(_ op: GameEventScriptBytecodeOpCode, _ a: Int64, _ b: Int64, _ leftUnit: GesUnit, _ rightUnit: GesUnit) -> GesValue {
+        switch op {
+        case .add, .subtract:
+            guard leftUnit == rightUnit else { return .nothing }
+            let (result, overflow) = op == .subtract ? a.subtractingReportingOverflow(b) : a.addingReportingOverflow(b)
+            return overflow ? .float(op == .subtract ? Double(a) - Double(b) : Double(a) + Double(b), unit: leftUnit) : .integer(result, unit: leftUnit)
+        case .multiply:
+            guard leftUnit == .none || rightUnit == .none else { return .nothing }
+            let unit = leftUnit == .none ? rightUnit : leftUnit
+            let (result, overflow) = a.multipliedReportingOverflow(by: b)
+            return overflow ? .float(Double(a) * Double(b), unit: unit) : .integer(result, unit: unit)
+        case .divide, .integerDivide:
+            guard rightUnit == .none || leftUnit == rightUnit else { return .nothing }
+            let unit: GesUnit = rightUnit == .none ? leftUnit : .none
+            if op == .integerDivide, b != 0, !(a == .min && b == -1) {
+                var result = a / b
+                if a % b != 0 && (a < 0) != (b < 0) { result -= 1 }
+                return .integer(result, unit: unit)
+            }
+            let result = Double(a) / Double(b)
+            return .float(op == .integerDivide ? result.rounded(.down) : result, unit: unit)
+        case .modulo, .remainder:
+            guard leftUnit == rightUnit, b != 0 else { return .nothing }
+            var result = a == .min && b == -1 ? 0 : a % b
+            if op == .modulo && result != 0 && (result < 0) != (b < 0) { result += b }
+            return .integer(result, unit: leftUnit)
+        default: return .nothing
+        }
+    }
+
     static func arithmetic(_ op: GameEventScriptBytecodeOpCode, _ a: GesValue, _ b: GesValue) -> GesValue {
+        if op != .power, let av = a.integerValue, let bv = b.integerValue { return integerArithmetic(op, av, bv, a.unit, b.unit) }
         if a.isNothing || b.isNothing { return .nothing }
         if op == .power {
             if b.hasUnit || a.asNumber.isNaN || b.asNumber.isNaN || (a.hasUnit && b.asNumber != 0 && b.asNumber != 1) { return .nothing }
@@ -192,23 +222,6 @@ enum GesMath {
             }
             if op == .divide && a.kind == .vector && b.asNumber.isFinite && b.asNumber != 0 { return .vector(x: a.x / b.asNumber, y: a.y / b.asNumber, z: a.z / b.asNumber, unit: unit) }
             return .nothing
-        }
-        if let av = a.integerValue, let bv = b.integerValue {
-            if op == .multiply {
-                let (result, overflow) = av.multipliedReportingOverflow(by: bv)
-                if !overflow { return .integer(result, unit: unit) }
-            }
-            if op == .integerDivide && bv != 0 && !(av == .min && bv == -1) {
-                var quotient = av / bv
-                if av % bv != 0 && (av < 0) != (bv < 0) { quotient -= 1 }
-                return .integer(quotient, unit: unit)
-            }
-            if op == .modulo || op == .remainder {
-                if bv == 0 { return .nothing }
-                var remainder = av == .min && bv == -1 ? 0 : av % bv
-                if op == .modulo && remainder != 0 && (remainder < 0) != (bv < 0) { remainder += bv }
-                return .integer(remainder, unit: unit)
-            }
         }
         let x = a.asNumber
         let y = b.asNumber

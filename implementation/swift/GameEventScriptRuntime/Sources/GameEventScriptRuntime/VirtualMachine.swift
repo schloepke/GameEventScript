@@ -17,6 +17,15 @@ enum GameEventScriptVirtualMachine {
     }
 
     static func runSlice(_ state: GesVmState, context: GameEventScriptContext, budget: Int) -> Int {
+        if let profiler = state.linked?.profiler {
+            return executeSlice(state, context: context, budget: budget, instrumentation: ActiveInstrumentation(profiler: profiler))
+        }
+        return executeSlice(state, context: context, budget: budget, instrumentation: NoInstrumentation())
+    }
+
+    // Specialize the shared loop so the disabled path has no existential call or optional check per opcode.
+    @inline(__always)
+    private static func executeSlice<Instrumentation: VmInstrumentation>(_ state: GesVmState, context: GameEventScriptContext, budget: Int, instrumentation: Instrumentation) -> Int {
         var executed = 0
         let reserved = context.budget.reserve(budget)
         do {
@@ -27,10 +36,12 @@ enum GameEventScriptVirtualMachine {
                 }
                 let instruction = state.program.code[state.ip]
                 state.ip += 1
+                instrumentation.instructionStarting(state.ip - 1)
                 try execute(instruction, state, context)
                 executed += 1
             }
         } catch let fault as GameEventScriptExtensionFault { state.fail(fault.diagnostic) } catch let fault as GesRuntimeError { state.fail(fault.diagnostic) } catch { state.fail("runtime.unhandledFailure", error: error) }
+        instrumentation.finishSlice()
         context.budget.complete(executed: executed, reserved: reserved, processing: state.processing)
         return executed
     }
@@ -310,4 +321,24 @@ enum GameEventScriptVirtualMachine {
         }
         if [.publishMessage, .publishMessageWithTags, .publishMessageValue, .publishMessageValueWithTags].contains(i.opcode) { c.publish(message) } else { c.emit(message) }
     }
+}
+
+private protocol VmInstrumentation {
+    func instructionStarting(_ address: Int)
+
+    func finishSlice()
+}
+
+private struct NoInstrumentation: VmInstrumentation {
+    @inline(__always) func instructionStarting(_ address: Int) {}
+
+    @inline(__always) func finishSlice() {}
+}
+
+private struct ActiveInstrumentation: VmInstrumentation {
+    let profiler: any GameEventScriptProgramProfiler
+
+    @inline(__always) func instructionStarting(_ address: Int) { profiler.instructionStarting(address) }
+
+    @inline(__always) func finishSlice() { profiler.finishSlice() }
 }

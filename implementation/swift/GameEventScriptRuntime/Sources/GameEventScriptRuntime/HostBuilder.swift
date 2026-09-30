@@ -3,6 +3,15 @@
 
 /// Mutable single-caller configuration. Each build creates an independent Host and private random stream.
 public final class GameEventScriptHostBuilder {
+    private var profiler: (any GameEventScriptProfiler)?
+
+    /// Sets optional synchronous opcode instrumentation. Returns this builder. The factory is shared across builds;
+    /// callbacks must not reenter a host and access across hosts must be serialized by the caller.
+    @discardableResult public func withProfiler(_ value: any GameEventScriptProfiler) -> Self {
+        profiler = value
+        return self
+    }
+
     private var clock: (any GameEventScriptClock)?
 
     /// Borrows a monotonic microsecond clock for subsequently built hosts. Returns this builder.
@@ -79,5 +88,5 @@ public final class GameEventScriptHostBuilder {
     /// `start()`.
     ///
     /// - Throws: An API error for invalid host configuration.
-    public func build() throws -> GameEventScriptHost { try .init(seed: seed, sequence: sequence, limits: limits, observer: observer, extensions: extensions, externalTypes: externalTypes, publishSink: sink, clock: clock) }
+    public func build() throws -> GameEventScriptHost { try .init(seed: seed, sequence: sequence, limits: limits, observer: observer, extensions: extensions, externalTypes: externalTypes, publishSink: sink, clock: clock, profiler: profiler) }
 }

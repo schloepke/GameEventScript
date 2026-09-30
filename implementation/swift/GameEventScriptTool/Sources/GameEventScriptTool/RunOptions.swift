@@ -6,6 +6,7 @@ import GameEventScriptRuntime
 
 struct RunOptions {
     var inputs: [String] = [], scenarios: [String] = [], arguments: [GesValue] = []
+    var profilePath: String?
     var seed: Int64?
     var limits = GameEventScriptRuntimeLimits()
     var verbose = false, quiet = false, interactive = false, color = false, help = false
@@ -43,12 +44,15 @@ struct RunOptions {
                 help = true
                 return
             }
-            if ["--scenario", "--arg", "--seed", "--max-messages", "--max-steps"].contains(argument) {
+            if ["--scenario", "--arg", "--seed", "--max-messages", "--max-steps", "--profile"].contains(argument) {
                 guard index + 1 < args.count else { throw ToolError.usage("Specify a value after \(argument).") }
                 if !["--scenario", "--arg"].contains(argument), !supplied.insert(argument).inserted { throw ToolError.usage("Specify \(argument) only once.") }
                 index += 1
                 let value = args[index]
-                if argument == "--scenario" {
+                if argument == "--profile" {
+                    guard !value.hasPrefix("-"), value.lowercased().hasSuffix(".md") else { throw ToolError.usage("--profile requires a Markdown path ending in .md.") }
+                    profilePath = value
+                } else if argument == "--scenario" {
                     guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !value.hasPrefix("-") else { throw ToolError.usage("Specify a scenario path; prefix a path starting with '-' with './'.") }
                     scenarios.append(value)
                 } else if argument == "--arg" {
@@ -77,6 +81,7 @@ struct RunOptions {
             }
         }
         guard !inputs.isEmpty || interactive else { throw ToolError.usage("Specify source files or .gesb files to run.") }
+        guard !(interactive && profilePath != nil) else { throw ToolError.usage("--profile is available only for batch/scenario runs.") }
         guard !(verbose && quiet) else { throw ToolError.usage("--verbose and --quiet cannot be combined.") }
         guard !(interactive && !scenarios.isEmpty) else { throw ToolError.usage("--interactive and --scenario cannot be combined.") }
         guard !(suppliedArguments && (interactive || !scenarios.isEmpty)) else { throw ToolError.usage("--arg, --args, and -- are available only when running Main.") }
@@ -119,7 +124,34 @@ extension Tool {
         let scenarios = try ToolFiles.expand(options.scenarios)
         let scenario = scenarios.isEmpty ? nil : try ToolFiles.compile(scenarios)
         options.color = options.color && !io.noColor
-        let session = try RunSession(options: options, io: io)
+        if let profilePath = options.profilePath {
+            let output = URL(fileURLWithPath: try ToolFiles.fullPath(profilePath)).resolvingSymlinksInPath().path
+            for path in paths + scenarios where URL(fileURLWithPath: path).standardizedFileURL.resolvingSymlinksInPath().path == output {
+                throw ToolError.usage("The profile output must not replace an input file.")
+            }
+        }
+        let profiler = options.profilePath == nil ? nil : RunProfiler()
+        let result: Int
+        do {
+            result = try executePrograms(options, paths: paths, binaries: binaries, programs: programs, scenarios: scenarios, scenario: scenario, profiler: profiler)
+        } catch {
+            if let profiler, let path = options.profilePath { try profiler.write(path) }
+            throw error
+        }
+        if let profiler, let path = options.profilePath { try profiler.write(path) }
+        return result
+    }
+
+    private func executePrograms(
+        _ options: RunOptions,
+        paths: [String],
+        binaries: Int,
+        programs: [GameEventScriptProgram],
+        scenarios: [String],
+        scenario: GameEventScriptProgram?,
+        profiler: RunProfiler?
+    ) throws -> Int {
+        let session = try RunSession(options: options, io: io, profiler: profiler)
         for (index, program) in programs.enumerated() { try session.inventory.load(program, paths: binaries > 0 ? [paths[index]] : paths) }
         if let scenario { try session.inventory.load(scenario, paths: scenarios) }
         let main = scenario == nil && !options.interactive
@@ -139,6 +171,7 @@ extension Tool {
             guard try runConsole(session, options: options) else { return 1 }
         }
         if !options.quiet { session.summary() }
+        profiler?.outcome = "Completed (script exit code \(session.observer.exitCode))"
         return session.observer.exitCode
     }
 

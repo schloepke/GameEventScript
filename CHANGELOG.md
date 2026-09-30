@@ -10,6 +10,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+### Added
+
+- Optional opcode instrumentation for C# and Swift Hosts, with per-instance
+  instruction boundaries and slice completion callbacks.
+- `run --profile report.md` in both CLIs writes Markdown opcode, source-line and
+  instruction reports, including partial results on runtime failures.
+
 ### Performance
 
 - Reduce Swift VM register-access and value-copy overhead for integer arithmetic,

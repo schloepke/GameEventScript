@@ -4,6 +4,7 @@
 /// Autonomous serial event host. Pumping is synchronous; embedding code serializes access.
 public final class GameEventScriptHost {
     private let random: GameEventScriptRandomGenerator
+    private let profiler: (any GameEventScriptProfiler)?
     private let observer: (any GameEventScriptRuntimeObserver)?
     private let extensions: (any GameEventScriptExtensionRegistry)?
     private let externalTypes: (any GameEventScriptExternalTypeRegistry)?
@@ -51,11 +52,13 @@ public final class GameEventScriptHost {
         extensions: (any GameEventScriptExtensionRegistry)? = nil,
         externalTypes: (any GameEventScriptExternalTypeRegistry)? = nil,
         publishSink: (any GameEventScriptPublishSink)? = nil,
-        clock: (any GameEventScriptClock)? = nil
+        clock: (any GameEventScriptClock)? = nil,
+        profiler: (any GameEventScriptProfiler)? = nil
     ) throws {
         guard (0...65535).contains(limits.maxRandomScopeDepth) else { throw GameEventScriptAPIError.invalidArgument("Invalid random scope depth") }
         self.limits = limits
         self.observer = observer
+        self.profiler = profiler
         self.extensions = extensions
         self.externalTypes = externalTypes
         sink = publishSink
@@ -108,7 +111,9 @@ public final class GameEventScriptHost {
         if queueFull && linked.handlers.contains(where: { $0.signature.name == "initialization" }) { throw GameEventScriptDynamicLinkError(code: "link.initializationQueueFull", program: program.moduleName) }
         if vm == nil { vm = GesVmState(maxRegisters: registers, maxCallDepth: depth) }
         vm!.prepareCapacity(Int(program.requiredRegisterCount))
-        let instance = GameEventScriptInstance(host: self, id: try registrationID(), linked: linked)
+        let id = try registrationID()
+        linked.profiler = profiler?.createProgramProfiler(program)
+        let instance = GameEventScriptInstance(host: self, id: id, linked: linked)
         var initialization: [GesSubscriptionEntry] = []
         for handler in linked.handlers {
             let entry = GesSubscriptionEntry(

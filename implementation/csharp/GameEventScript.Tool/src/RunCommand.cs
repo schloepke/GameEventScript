@@ -33,6 +33,7 @@ Output and execution:
   --color               Enable ANSI colors and live input highlighting (unless NO_COLOR is set).
   -v, --verbose         Trace emit, publish, and dispatch on stderr; yellow in colored interactive mode.
   -q, --quiet           Hide completion/load/unload/reload reports; console output and errors remain visible.
+  --profile <report.md> Write an opcode/source-line Markdown profile (batch/scenario only).
   --seed <integer>      Signed 64-bit random seed. Omit for a fresh host seed.
   --max-messages <n>    Maximum processed messages per pump/input (default: 64).
   --max-steps <n>       Maximum execution steps per handler (default: 100000).
@@ -80,6 +81,8 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
         var scenarios = new List<string>();
         var mainArguments = new List<GesValue>();
         var suppliedOptions = new HashSet<string>(StringComparer.Ordinal);
+        string? profilePath = null;
+        RunProfiler? profiler = null;
         long? seed = null;
         var maxMessages = GameEventScriptRuntimeLimits.Default.MaxProcessedEventsPerRun;
         var maxSteps = GameEventScriptRuntimeLimits.Default.MaxExecutionSteps;
@@ -122,12 +125,18 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
                 Console.WriteLine(HelpText);
                 return 0;
             }
-            else if (argument is "--scenario" or "--arg" or "--seed" or "--max-messages" or "--max-steps")
+            else if (argument is "--scenario" or "--arg" or "--seed" or "--max-messages" or "--max-steps" or "--profile")
             {
                 if (index + 1 == arguments.Length) return UsageError($"Specify a value after {argument}.");
                 if (argument is not ("--scenario" or "--arg") && !suppliedOptions.Add(argument)) return UsageError($"Specify {argument} only once.");
                 var value = arguments[++index];
-                if (argument == "--scenario")
+                if (argument == "--profile")
+                {
+                    if (string.IsNullOrWhiteSpace(value) || value.StartsWith('-') || !value.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+                        return UsageError("--profile requires a Markdown path ending in .md.");
+                    profilePath = value;
+                }
+                else if (argument == "--scenario")
                 {
                     if (string.IsNullOrWhiteSpace(value) || value.StartsWith('-')) return UsageError("Specify a scenario path; prefix a path starting with '-' with './'.");
                     scenarios.Add(value);
@@ -162,6 +171,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
         }
 
         if (inputs.Count == 0 && !interactive) return UsageError("Specify source files or .gesb files to run.");
+        if (interactive && profilePath is not null) return UsageError("--profile is available only for batch/scenario runs.");
         if (verbose && quiet) return UsageError("--verbose and --quiet cannot be combined.");
         if (interactive && scenarios.Count > 0) return UsageError("--interactive and --scenario cannot be combined.");
         if (mainArgumentsSpecified && (interactive || scenarios.Count > 0)) return UsageError("--arg, --args, and -- are available only when running Main.");
@@ -185,34 +195,49 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
 
             IReadOnlyList<string> scenarioPaths = scenarios.Count == 0 ? [] : CompileSources.Expand(scenarios);
             var scenario = scenarioPaths.Count == 0 ? null : RunProgramFiles.Compile(scenarioPaths, ref activePath);
-            color = color && !PrettyPrompt.PromptConfiguration.HasUserOptedOutFromColor;
-            var session = new RunSession(seed, new GameEventScriptRuntimeLimits { MaxProcessedEventsPerRun = maxMessages, MaxExecutionSteps = maxSteps }, verbose, color, interactive);
-            for (var index = 0; index < programs.Count; index++) session.Inventory.Load(programs[index], binaryCount > 0 ? [paths[index]] : paths);
-            if (scenario is not null) session.Inventory.Load(scenario, scenarioPaths);
-            var runMain = scenario is null && !interactive;
-            if (runMain && !programs.Any(HasMainHandler))
+            if (profilePath is not null)
             {
-                Console.Error.WriteLine("error cli.missingMain: No handler matches Main(args). Add 'on Main(args)', use --scenario, or use --interactive.");
-                return 1;
+                profilePath = Path.GetFullPath(profilePath);
+                if (paths.Concat(scenarioPaths).Any(path => string.Equals(Path.GetFullPath(path), profilePath, StringComparison.OrdinalIgnoreCase)))
+                    return UsageError("The profile output must not replace an input file.");
+                profiler = new RunProfiler();
             }
-            if (!session.Pump()) return 1;
-            if (runMain)
+            try
             {
-                var message = GameEventScriptMessage.Create("Main", [new GameEventScriptMessageArgument("args", GesValue.GesList(mainArguments.ToArray()))]);
-                if (!session.Host.Receive(message))
+                color = color && !PrettyPrompt.PromptConfiguration.HasUserOptedOutFromColor;
+                var session = new RunSession(seed, new GameEventScriptRuntimeLimits { MaxProcessedEventsPerRun = maxMessages, MaxExecutionSteps = maxSteps }, verbose, color, interactive, profiler: profiler);
+                for (var index = 0; index < programs.Count; index++) session.Inventory.Load(programs[index], binaryCount > 0 ? [paths[index]] : paths);
+                if (scenario is not null) session.Inventory.Load(scenario, scenarioPaths);
+                var runMain = scenario is null && !interactive;
+                if (runMain && !programs.Any(HasMainHandler))
                 {
-                    Console.Error.WriteLine("error cli.mainRejected: The host rejected Main(args).");
+                    Console.Error.WriteLine("error cli.missingMain: No handler matches Main(args). Add 'on Main(args)', use --scenario, or use --interactive.");
                     return 1;
                 }
                 if (!session.Pump()) return 1;
+                if (runMain)
+                {
+                    var message = GameEventScriptMessage.Create("Main", [new GameEventScriptMessageArgument("args", GesValue.GesList(mainArguments.ToArray()))]);
+                    if (!session.Host.Receive(message))
+                    {
+                        Console.Error.WriteLine("error cli.mainRejected: The host rejected Main(args).");
+                        return 1;
+                    }
+                    if (!session.Pump()) return 1;
+                }
+                else if (interactive)
+                {
+                    activePath = "<stdin>";
+                    if (!RunConsole.Run(session, color, quiet)) return 1;
+                }
+                if (!quiet) session.WriteSummary();
+                if (profiler is not null) profiler.Outcome = $"Completed (script exit code {session.Observer.ScriptExitCode})";
+                return session.Observer.ScriptExitCode;
             }
-            else if (interactive)
+            finally
             {
-                activePath = "<stdin>";
-                if (!RunConsole.Run(session, color, quiet)) return 1;
+                if (profiler is not null) profiler.Write(profilePath!);
             }
-            if (!quiet) session.WriteSummary();
-            return session.Observer.ScriptExitCode;
         }
         catch (GameEventScriptCompileException exception)
         {

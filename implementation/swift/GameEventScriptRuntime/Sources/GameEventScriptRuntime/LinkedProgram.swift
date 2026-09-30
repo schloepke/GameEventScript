@@ -10,6 +10,7 @@ final class GesLinkedProgram {
         let excludedTags: [String]
     }
 
+    var profiler: (any GameEventScriptProgramProfiler)?
     let program: GameEventScriptProgram
     var handlers: [Handler] = []
     var records: [UInt16: GameEventScriptBinding] = [:]

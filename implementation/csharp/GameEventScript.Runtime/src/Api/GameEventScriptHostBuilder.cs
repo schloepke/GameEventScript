@@ -16,6 +16,17 @@ public sealed class GameEventScriptHostBuilder
     private double[]? _randomSequence;
     private long? _randomSequenceFallbackSeed;
     private IGameEventScriptRuntimeObserver? _observer;
+    private IGameEventScriptProfiler? _profiler;
+
+    /// <summary>Configures optional synchronous opcode instrumentation for subsequently built hosts.</summary>
+    /// <param name="profiler">Factory for independent per-instance instrumentation. Callbacks must not throw or reenter a host.</param>
+    /// <returns>This builder. The factory is shared; access across hosts must be serialized by the caller.</returns>
+    public GameEventScriptHostBuilder WithProfiler(IGameEventScriptProfiler profiler)
+    {
+        _profiler = profiler ?? throw new ArgumentNullException(nameof(profiler));
+        return this;
+    }
+
     private IGameEventScriptExtensionRegistry _extensionRegistry = GameEventScriptEmptyExtensionRegistry.Instance;
     private IGameEventScriptExternalTypeRegistry _externalTypeRegistry = GameEventScriptEmptyExternalTypeRegistry.Instance;
     private GameEventScriptRuntimeLimits _limits = GameEventScriptRuntimeLimits.Default;
@@ -151,6 +162,6 @@ public sealed class GameEventScriptHostBuilder
         else
             random = GameEventScriptRandomGenerator.CreateForHost(maxRandomScopeDepth);
 
-        return new GameEventScriptHost(random, _observer, _extensionRegistry, _externalTypeRegistry, _limits, _publishSink, _clock);
+        return new GameEventScriptHost(random, _observer, _extensionRegistry, _externalTypeRegistry, _limits, _publishSink, _clock, _profiler);
     }
 }

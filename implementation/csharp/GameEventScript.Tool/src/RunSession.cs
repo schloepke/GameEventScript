@@ -15,7 +15,7 @@ internal sealed class RunSession
     internal RunWorkspace Workspace { get; }
     internal RunInventory Inventory { get; private set; }
 
-    internal RunSession(long? seed, GameEventScriptRuntimeLimits limits, bool verbose, bool color, bool interactive, int nextId = 1, RunWorkspace? workspace = null)
+    internal RunSession(long? seed, GameEventScriptRuntimeLimits limits, bool verbose, bool color, bool interactive, int nextId = 1, RunWorkspace? workspace = null, IGameEventScriptProfiler? profiler = null)
     {
         Workspace = workspace ?? new RunWorkspace();
         _seed = seed;
@@ -25,6 +25,7 @@ internal sealed class RunSession
         _interactive = interactive;
         Observer = new RunObserver(verbose, color, interactive);
         var builder = GameEventScriptHost.CreateBuilder().WithRuntimeObserver(Observer).WithRuntimeLimits(limits);
+        if (profiler is not null) builder.WithProfiler(profiler);
         if (seed is { } configuredSeed) builder.WithRandomSeed(configuredSeed);
         Host = builder.Build();
         Inventory = new RunInventory(Host, Workspace, nextId);

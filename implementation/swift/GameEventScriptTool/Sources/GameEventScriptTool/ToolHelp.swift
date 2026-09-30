@@ -96,6 +96,7 @@ enum ToolHelp {
           --color               Enable ANSI colors and live input highlighting (unless NO_COLOR is set).
           -v, --verbose         Trace emit, publish, and dispatch on stderr; yellow in colored interactive mode.
           -q, --quiet           Hide completion/load/unload/reload reports; console output and errors remain visible.
+          --profile <report.md> Write an opcode/source-line Markdown profile (batch/scenario only).
           --seed <integer>      Signed 64-bit random seed. Omit for a fresh host seed.
           --max-messages <n>    Maximum processed messages per pump/input (default: 64).
           --max-steps <n>       Maximum execution steps per handler (default: 100000).

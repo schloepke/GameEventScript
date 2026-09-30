@@ -1,0 +1,44 @@
+<!doctype html>
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mau Mau · GES Card Lab</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header><a href="https://gameeventscript.org/">← Game Event Script</a><p class="eyebrow">GES CARD LAB · PLAYABLE EXAMPLE</p><h1>One game. Your rules.</h1>
+      <p>Mau Mau with 32 cards. Match suit or rank; drawing ends your turn. 8: skip. 7: draw two and skip (no stacking).</p>
+    <p>First load: about 63 MB. Runs locally; edits are not saved. <a href="https://github.com/schloepke/GameEventScript/tree/main/examples/card-game">View the source</a>.</p></header>
+    <section class="toolbar" aria-label="Game controls">
+      <label>Seed <input id="seed" type="number" value="42" min="-2147483648" max="2147483647"></label>
+      <button id="restart" disabled>New game</button><button id="stop" class="secondary">Stop</button>
+      <button id="show-error" class="secondary" hidden>Error details</button>
+      <span id="status" role="status" aria-live="polite">Loading GES rules …</span>
+    </section>
+    <section id="board" aria-label="Game board"></section>
+    <section id="choices" class="toolbar" aria-label="Available actions"></section>
+    <details><summary>Edit the game rules in GES</summary>
+      <p>Code is checked while you edit. “New game” applies your changes. Two players take turns using this browser.</p>
+      <button id="check-source" class="secondary" type="button">Check code</button>
+      <div class="source-editor" id="source-editor">
+        <pre id="source-colors" aria-hidden="true"></pre>
+        <textarea id="source" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="GES game rules" aria-describedby="highlight-status"></textarea>
+      </div>
+      <p id="highlight-status" class="editor-status" role="status">Loading compiler and syntax highlighting …</p>
+      <ul id="diagnostics" aria-label="Compiler diagnostics"></ul>
+    </details>
+    <footer>Swift and GES run as WebAssembly in a worker. No game server. Local hot-seat play: hands are not securely hidden from the other player. <a href="licenses/LICENSE">License</a> · <a href="licenses/THIRD-PARTY-NOTICES.txt">Third-party notices</a></footer>
+  </main>
+  <dialog id="error-dialog" aria-labelledby="error-title" aria-describedby="error-help">
+    <h2 id="error-title">The game could not continue</h2>
+    <p id="error-help">Check the error and adjust the rules if needed. Choose “New game” to restart.</p>
+    <pre id="error-message" tabindex="0" aria-label="Full error message"></pre>
+    <form method="dialog"><button autofocus>Close</button></form>
+  </dialog>
+  <script type="module" src="app.mjs"></script>
+</body>
+</html>

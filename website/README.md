@@ -228,3 +228,20 @@ are needed before the new reference links are publicly available.
 Third-party API renderer licenses and notices are retained below each API
 reference. Source copies live under `website/api/licenses`; retain upstream
 notices unchanged.
+
+## Playable card-game example
+
+The homepage links to `/examples/card-game/`. Its source remains in
+`examples/card-game`; generated Wasm and browser assets stay in
+`artifacts/card-game/web`. Before building or previewing the site, run:
+
+```sh
+python3 examples/card-game/scripts/setup-wasm.py
+python3 examples/card-game/scripts/build.py wasm
+```
+
+This currently requires macOS for the pinned Swift.org toolchain bootstrap.
+Website CI builds and tests the example in a separate macOS job. Website
+preparation rejects missing, modified or stale game output using source and
+asset hashes. The landing page itself never downloads the 63 MB Wasm module.
+The deployment includes the game and its third-party license notices.

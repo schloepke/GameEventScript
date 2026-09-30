@@ -103,6 +103,20 @@ here.
 
 ## Performance and optimizer follow-ups
 
+- Investigate the Swift/C# execution-time gap observed with release 0.3.0 on
+  the same machine and the same precompiled `compute-benchmark.gesb`. User
+  measurements with `hyperfine -w 10 -r 100` reported mean elapsed times of
+  76.5 ms for locally built Swift, 86.8 ms for the Homebrew Swift binary, and
+  33.9 ms for the directly invoked .NET AOT CLI (`dotnet-ges`). These are
+  end-to-end observations, not isolated VM timings or general language claims.
+  Separate startup, loading/validation and execution using native harnesses
+  that load once and execute repeatedly; verify matching results and executed
+  opcode counts. Profile Swift dispatch, register access, value copies, ARC and
+  temporary allocations against C# before selecting optimizations. Record exact
+  hardware, toolchains and build flags; investigate local/CI Swift build
+  differences separately. Preserve language semantics and shared Conformance,
+  and qualify improvements with the existing performance/allocation gates.
+  Deferred analysis only; no optimization or toolchain migration is scheduled.
 - In a more mature multi-runtime state, design a benchmark system with
   representative multi-program workloads, separated
   compile/load/message/VM measurements, native harnesses per language and a

@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "4541F2EBC9407D59A62B90176709A32A4C327BB80C8991EB6DBC34213146AE5D",
+    "sha256": "394467849CB8E4A0F8EA0047F676179DE6BAFA5F828CA9AEB687D5230B7C188C",
     "documentCount": 96,
-    "caseCount": 1683
+    "caseCount": 1684
   },
   "cases": [
     {
@@ -3606,6 +3606,21 @@
     },
     {
       "id": "compile.program-dumps/message-name-and-source",
+      "kind": "bytecodeSnapshot",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": [
+          "bytecode-snapshot"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.program-dumps/optimized-access-and-branches",
       "kind": "bytecodeSnapshot",
       "level": "scenario",
       "requires": {

@@ -310,7 +310,21 @@ final class GesCompiler {
                     instruction = .init(opcode: instruction.opcode, unitAndFlags: instruction.unitAndFlags, word0: instruction.word0, word1: instruction.word1, word2: UInt16(offset + Int(instruction.word2)), payload: instruction.payload)
                 }
                 code.append(instruction)
-                if options.debugInfo.contains(.sourceMap), let span = sourceSpan(r.locations[i], address: offset + i) { spans.append(span) }
+                if options.debugInfo.contains(.sourceMap), let span = sourceSpan(r.locations[i], address: offset + i) {
+                    if let previous = spans.last, previous.codeStart + previous.codeLength == span.codeStart, previous.sourceID == span.sourceID,
+                        previous.sourceStartByteOffset == span.sourceStartByteOffset, previous.sourceByteLength == span.sourceByteLength
+                    {
+                        spans[spans.count - 1] = .init(
+                            codeStart: previous.codeStart,
+                            codeLength: previous.codeLength + span.codeLength,
+                            sourceID: previous.sourceID,
+                            sourceStartByteOffset: previous.sourceStartByteOffset,
+                            sourceByteLength: previous.sourceByteLength
+                        )
+                    } else {
+                        spans.append(span)
+                    }
+                }
             }
             let kind: GameEventScriptBinaryBindKind = d.kind == "handler" ? .messageHandler : d.kind == "messageNameHandler" ? .messageNameHandler : d.kind == "function" ? .function : d.kind == "predicate" ? .predicate : .record
             let id: Int

@@ -10,6 +10,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+### Fixed
+
+- Align Swift compiler code generation with C# for constant Text-key access,
+  collection guard branches, and short-circuit expressions. Compact adjacent
+  source mappings and attribute inlined constants to their use sites.
+
 ## [0.3.0] — 2026-09-29
 
 This release adds CLI editing, portable and native AOT NuGet tools, and Host

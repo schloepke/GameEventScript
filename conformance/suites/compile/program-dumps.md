@@ -1194,3 +1194,164 @@ Start:				 // handler Start(value)
 // -------------------------------------------------------------------------------
 
 ```
+
+---
+
+## Test: constant keys branch inversions and short circuit expressions use compact code
+
+This snapshot covers constant Text keys, collection type guards, nested short-circuit
+expressions, and source attribution at constant use sites.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: optimized-access-and-branches
+```
+
+### Source code under test
+
+```ges
+module parity
+constant $limit be 7
+on Start(items, a, b) {
+    let sorted be items[:order by item => item descending]
+    let grouped be sorted[:group by item => item]
+    let value be grouped["red"][:count]
+    if a or b or value > $limit { emit Done(value) }
+}
+```
+
+### Expected Game Event Script Assembler
+
+```gesa
+// -------------------------------------------------------------------------------
+//  Module: parity
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "parity"
+.program-version 0
+
+// -------------------------------------------------------------------------------
+.region "Source: compile.program-dumps.optimized-access-and-branches.ges"
+
+.segment source "compile.program-dumps.optimized-access-and-branches.ges"
+
+module parity
+constant $limit be 7
+on Start(items, a, b) {
+    let sorted be items[:order by item => item descending]
+    let grouped be sorted[:group by item => item]
+    let value be grouped["red"][:count]
+    if a or b or value > $limit { emit Done(value) }
+}
+
+.region-end "Source: compile.program-dumps.optimized-access-and-branches.ges"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Text"
+
+.segment text
+
+T_items:			.text "items"
+T_a:				.text "a"
+T_b:				.text "b"
+T_Start:			.text "Start"
+T_4:				.text "_"
+T_Done:				.text "Done"
+T_red:				.text "red"
+T_parity:			.text "parity"
+
+.region-end "Text"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Lists"
+
+.segment lists
+
+U16_0:				.u16 [0, 1, 2]
+U16_1:				.u16 []
+U16_2:				.u16 [4]
+Args_3:				.registers [r5]
+
+.region-end "Lists"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Bindings"
+
+.segment bind
+
+Handler_Start:		.bind MessageHandler id=0 name=T_Start args=[T_items, T_a, T_b] entry=Start // "Start(items, a, b)"
+Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_4] // "Done(_)"
+
+.region-end "Bindings"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Code"
+
+.segment code
+
+.source-line "compile.program-dumps.optimized-access-and-branches.ges" 3 | on Start(items, a, b) {
+Start:				 // handler Start(items, a, b)
+					RegisterLocals #7
+
+.source-line "compile.program-dumps.optimized-access-and-branches.ges" 4 |     let sorted be items[:order by item => item descending]
+					CheckType r6, r0(items), List
+					JumpIfFalse r6, Start_11
+					IteratorCreateOrJump r6, r0(items), Start_11
+					OrderBuilderCreate r7
+Start_5:			IteratorNext r8, r6, Start_8
+					OrderBuilderAdd r7, r8, r8
+					Jump Start_5
+Start_8:			IteratorClose r6
+					OrderBuilderFinishDescending r3(sorted), r7
+					Jump Start_12
+Start_11:			LoadNothing r3(sorted)
+
+.source-line "compile.program-dumps.optimized-access-and-branches.ges" 5 |     let grouped be sorted[:group by item => item]
+Start_12:			CheckType r6, r3(sorted), List
+					JumpIfTrue r6, Start_18
+					CheckType r6, r3(sorted), Map
+					JumpIfTrue r6, Start_18
+					CheckType r6, r3(sorted), Custom
+					JumpIfFalse r6, Start_26
+Start_18:			IteratorCreateOrJump r6, r3(sorted), Start_26
+					GroupBuilderCreate r7
+Start_20:			IteratorNext r8, r6, Start_23
+					GroupBuilderAdd r7, r8, r8
+					Jump Start_20
+Start_23:			IteratorClose r6
+					GroupBuilderFinish r4(grouped), r7
+					Jump Start_27
+Start_26:			LoadNothing r4(grouped)
+
+.source-line "compile.program-dumps.optimized-access-and-branches.ges" 6 |     let value be grouped["red"][:count]
+Start_27:			MemberAccess r6, T_red, r4(grouped) // "red"
+					Count r5(value), r6
+
+.source-line "compile.program-dumps.optimized-access-and-branches.ges" 7 |     if a or b or value > $limit { emit Done(value) }
+					Or r6, r1(a), r1(a)
+					JumpIfTrue r1(a), Start_32
+					Or r6, r1(a), r2(b)
+Start_32:			Or r7, r6, r6
+					JumpIfTrue r6, Start_37
+					LoadInteger r8, #7
+					Greater r9, r5(value), r8
+					Or r7, r6, r9
+Start_37:			JumpIfNotTrue r7, Start_39
+					EmitMessage Outbound_Done, Args_3 // "Done(_)"
+
+.source-line "compile.program-dumps.optimized-access-and-branches.ges" 3 | on Start(items, a, b) {
+Start_39:			ReturnVoid
+
+.region-end "Code"
+// -------------------------------------------------------------------------------
+
+```

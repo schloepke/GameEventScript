@@ -23,7 +23,7 @@ extension GesCompiler {
             let index = s.expressions[0]
             if case .literal(let v) = index.kind, let n = v.integerValue, (0...65535).contains(n) {
                 r.emit(.indexAccess, d, Int(n), input)
-            } else if case .literal(let v) = index.kind, v.kind == .tag, let tag = v.textValue {
+            } else if case .literal(let v) = index.kind, v.kind == .tag || v.kind == .text, let tag = v.textValue {
                 r.emit(.memberAccess, d, text(tag), input)
             } else {
                 r.emit(.propertyAccess, d, try expression(index, r, scope), input)

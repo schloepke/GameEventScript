@@ -47,6 +47,24 @@ extension GesCompiler {
                     removed.insert(index)
                 }
             }
+            // Fold a conditional skip over an unconditional jump into its inverse.
+            // A separately targeted jump must remain an entry point.
+            for index in routine.code.indices where index + 1 < routine.code.count {
+                let branch = routine.code[index]
+                let jump = routine.code[index + 1]
+                let inverse: Op? = branch.opcode == .jumpIfTrue ? .jumpIfFalse : branch.opcode == .jumpIfFalse || branch.opcode == .jumpIfNotTrue ? .jumpIfTrue : nil
+                if let inverse, Int(branch.word2) == index + 2, jump.opcode == .jump, !targets.contains(index + 1) {
+                    routine.code[index] = .init(
+                        opcode: inverse,
+                        unitAndFlags: branch.unitAndFlags,
+                        word0: branch.word0,
+                        word1: branch.word1,
+                        word2: jump.word2,
+                        payload: branch.payload
+                    )
+                    removed.insert(index + 1)
+                }
+            }
             for index in routine.code.indices where branches.contains(routine.code[index].opcode) {
                 let instruction = routine.code[index]
                 var target = Int(instruction.word2)

@@ -40,6 +40,8 @@ enum GameEventScriptVirtualMachine {
         let x = Int(i.word1)
         let y = Int(i.word2)
         switch i.opcode {
+        case .add, .subtract, .multiply, .divide, .integerDivide, .modulo, .remainder:
+            if !s.setIntegerArithmeticResult(i) { s.set(d, try GesMath.execute(i, s, c)) }
         case .nop: break
         case .registerLocals: s.modifyLocals(Int(i.signedWord1))
         case .jump: s.ip = y

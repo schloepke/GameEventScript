@@ -63,6 +63,21 @@ final class GesVmState {
 
     func setSlot(_ index: Int, _ value: Slot) { registers[frameStart + index] = value }
 
+    // Borrow register storage only for pure integer arithmetic. Both operands are
+    // captured before writing the result, including when the destination aliases
+    // either operand. No callback, frame change or storage growth can occur here.
+    func setIntegerArithmeticResult(_ instruction: GameEventScriptBytecodeInstruction) -> Bool {
+        let start = frameStart
+        return registers.withUnsafeMutableBufferPointer { slots in
+            let a = slots[start + Int(instruction.word1)].value
+            let b = slots[start + Int(instruction.word2)].value
+            guard let av = a.integerValue, let bv = b.integerValue else { return false }
+            let result = GesMath.integerArithmetic(instruction.opcode, av, bv, a.unit, b.unit)
+            slots[start + Int(instruction.word0)] = .value(result)
+            return true
+        }
+    }
+
     func staged(_ index: Int) -> GesValue { registers[frameStart + frameLength + index].value }
 
     func stage(_ value: GesValue) {

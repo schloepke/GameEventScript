@@ -42,6 +42,7 @@ extension GesCompiler {
                     branches.append(r.emit(.jumpIfNotTrue, 0, reg))
                 }
                 try statements(yes, r, child)
+                r.location = statement.location
                 let end = r.emit(.jump)
                 for branch in branches { r.patch(branch, target: r.code.count) }
                 try statements(no, r, GesScope(scope))
@@ -128,7 +129,7 @@ extension GesCompiler {
         }
         if case .constant(let name) = e.kind {
             guard let value = constants[name] else { throw error("compile.unresolvedSymbol", e.location, symbol: name, phase: .compile) }
-            return try expression(value, r, scope, destination: destination)
+            return try expression(GesExpression(value.kind, e.location, depth: value.depth), r, scope, destination: destination)
         }
         let d = destination ?? r.temporary()
         if let value = scalarConstant(e), [.nothing, .boolean, .integer, .float, .percentage, .text, .tag].contains(value.kind) {
@@ -157,7 +158,9 @@ extension GesCompiler {
             }
         case .binary(let op, let left, let right):
             let a = try expression(left, r, scope)
-            let short = ["or", "and", "->"].contains(op) ? r.emit(op == "or" ? .jumpIfTrue : .jumpIfFalse, 0, a) : nil
+            let shortOpcode: Op? = op == "or" ? .or : op == "and" ? .and : op == "->" ? .implies : nil
+            if let shortOpcode { r.emit(shortOpcode, d, a, a) }
+            let short = shortOpcode != nil ? r.emit(op == "or" ? .jumpIfTrue : .jumpIfFalse, 0, a) : nil
             let b = try expression(right, r, scope)
             let mapping: [String: Op] = [
                 "+": .add, "-": .subtract, "*": .multiply, "/": .divide, "^": .power, "div": .integerDivide, "mod": .modulo, "rem": .remainder, "=": .equal, "<>": .notEqual, "<": .less, ">": .greater, "<=": .lessOrEqual, ">=": .greaterOrEqual,
@@ -167,12 +170,7 @@ extension GesCompiler {
                 r.emit(opcode, d, a, b)
                 if op == "not in" { r.emit(.not, d, d) }
             }
-            if let short {
-                let end = r.emit(.jump)
-                r.patch(short, target: r.code.count)
-                r.emit(op == "and" ? .loadFalse : .loadTrue, d)
-                r.patch(end, target: r.code.count)
-            }
+            if let short { r.patch(short, target: r.code.count) }
         case .cast(let value, let type): try cast(d, expression(value, r, scope), type, r)
         case .check(let value, let type): try cast(d, expression(value, r, scope), type, r, check: true)
         case .call(let name, let arguments):

@@ -16,6 +16,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   instruction boundaries and slice completion callbacks.
 - `run --profile report.md` in both CLIs writes Markdown opcode, source-line and
   instruction reports, including partial results on runtime failures.
+- Add a playable browser card-game example with editable GES rules, linked from
+  the website homepage alongside Homebrew and .NET CLI installation.
 
 ### Performance
 

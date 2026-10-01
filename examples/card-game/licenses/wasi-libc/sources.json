@@ -1,0 +1,8 @@
+{
+  "LICENSE": "https://raw.githubusercontent.com/WebAssembly/wasi-libc/06513b9ae0c1b14ca3010924939c007ed27628a1/LICENSE",
+  "LICENSE-APACHE-LLVM": "https://raw.githubusercontent.com/WebAssembly/wasi-libc/06513b9ae0c1b14ca3010924939c007ed27628a1/LICENSE-APACHE-LLVM",
+  "LICENSE-APACHE": "https://raw.githubusercontent.com/WebAssembly/wasi-libc/06513b9ae0c1b14ca3010924939c007ed27628a1/LICENSE-APACHE",
+  "LICENSE-MIT": "https://raw.githubusercontent.com/WebAssembly/wasi-libc/06513b9ae0c1b14ca3010924939c007ed27628a1/LICENSE-MIT",
+  "libc-bottom-half/cloudlibc/LICENSE": "https://raw.githubusercontent.com/WebAssembly/wasi-libc/06513b9ae0c1b14ca3010924939c007ed27628a1/libc-bottom-half/cloudlibc/LICENSE",
+  "libc-top-half/musl/COPYRIGHT": "https://raw.githubusercontent.com/WebAssembly/wasi-libc/06513b9ae0c1b14ca3010924939c007ed27628a1/libc-top-half/musl/COPYRIGHT"
+}

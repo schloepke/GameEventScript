@@ -107,3 +107,8 @@ SDK SBOM and the unmodified upstream license texts under
 `tools/distribution/licenses`; the source inventory is documented there. These
 third-party texts must not receive project copyright headers. Update that inventory
 and verify applicable notices whenever the pinned SDK changes.
+
+The browser card-game distribution includes Swift/Wasm runtime notices under
+`licenses/` and the browser WASI shim notices under `vendor/`. The unchanged
+wasi-libc notice set is retained in `examples/card-game/licenses/wasi-libc`;
+its source URLs are recorded alongside it. Retain these in website deployments.

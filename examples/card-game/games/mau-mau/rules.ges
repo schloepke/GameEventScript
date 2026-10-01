@@ -1,0 +1,98 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+module examples.maumau
+
+function hand(player) be 'hand' + (player as :Text)
+function fits(card, top) be card.properties.suit = top.properties.suit or card.properties.rank = top.properties.rank
+function playable(player) be (:board.cards(zone: hand(player: player)))[:filter item where fits(card: item, top: :board.top(zone: 'discard'))]
+function drawable() be (:board.cards(zone: 'draw'))[:count] > 0 or (:board.cards(zone: 'discard'))[:count] > 1
+
+on Setup(players) {
+    emit CreateZone(zone: 'draw', owner: nothing, visibility: 'hidden')
+    emit CreateZone(zone: 'discard', owner: nothing, visibility: 'top')
+    for player in players {
+        emit CreateZone(zone: hand(player: player), owner: player, visibility: 'owner')
+    }
+    for suit in ['clubs', 'spades', 'hearts', 'diamonds'] {
+        for rank in ['7', '8', '9', '10', 'J', 'Q', 'K', 'A'] {
+            emit CreateCard(zone: 'draw', properties: [suit: suit, rank: rank])
+        }
+    }
+    emit Shuffle(zone: 'draw')
+    for player in players {
+        emit Take(source: 'draw', destination: hand(player: player), count: 5)
+    }
+    emit Take(source: 'draw', destination: 'discard', count: 1)
+    emit BeginTurn(player: 0)
+}
+
+on PlayerRoundStart(player) {
+    let plays be playable(player: player)[:select item => [kind: 'play', card: item.id]]
+    if drawable() {
+        emit Allowed(player: player, actions: plays + [kind: 'draw'])
+    } else {
+        // No draw or recycle is possible. End a blocked game instead of cycling forever.
+        let blocked be (:board.players())[:all candidate where playable(player: candidate)[:count] = 0]
+        if blocked {
+            emit Finish(winner: nothing)
+        } else {
+            if plays[:count] = 0 {
+                emit Allowed(player: player, actions: [[kind: 'pass']])
+            } else {
+                emit Allowed(player: player, actions: plays)
+            }
+        }
+    }
+}
+
+on ActionRequested(request, player, action, card) {
+    if player = :board.current() {
+        if action = 'play' {
+            let candidate be :board.card(id: card)
+            if (:board.cards(zone: hand(player: player)))[:any item where item.id = card] and fits(card: candidate, top: :board.top(zone: 'discard')) {
+                emit MoveCard(request: request, card: card, source: hand(player: player), destination: 'discard')
+            } else {
+                emit Reject(request: request, reason: 'Choose a card from your hand with matching suit or rank.')
+            }
+        } else {
+            if action = 'draw' and drawable() {
+                emit DrawCard(request: request, source: 'draw', destination: hand(player: player), recycle: 'discard', keep: 1)
+            } else {
+                if action = 'pass' and not drawable() and playable(player: player)[:count] = 0 {
+                    emit Complete(request: request)
+                } else {
+                    emit Reject(request: request, reason: 'That action is not available.')
+                }
+            }
+        }
+    } else {
+        emit Reject(request: request, reason: 'It is not your turn.')
+    }
+}
+
+on ActionCompleted(request, player, action) {
+    if (:board.cards(zone: hand(player: player)))[:count] = 0 {
+        emit Finish(winner: player)
+    } else {
+        let next be (player + 1) mod :board.playercount()
+        let afterNext be (player + 2) mod :board.playercount()
+        let top be :board.top(zone: 'discard')
+        // Only a newly played card triggers its effect; drawing never triggers the top card again.
+        if action = 'play' and top.properties.rank = '8' {
+            emit Notice(text: '8: The next player skips a turn.')
+            emit BeginTurn(player: afterNext)
+        } else {
+            if action = 'play' and top.properties.rank = '7' {
+                // If fewer cards exist, draw as many as possible. No stacking of sevens.
+                let available be (:board.cards(zone: 'draw'))[:count] + (:board.cards(zone: 'discard'))[:count] - 1
+                let amount be min of 2 and available
+                emit DrawCards(source: 'draw', destination: hand(player: next), count: amount, recycle: 'discard', keep: 1)
+                emit Notice(text: '7: The next player draws ' + (amount as :Text) + ' cards and skips a turn.')
+                emit BeginTurn(player: afterNext)
+            } else {
+                emit BeginTurn(player: next)
+            }
+        }
+    }
+}

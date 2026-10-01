@@ -3,20 +3,28 @@
 
 enum GesCasts {
     static func number(_ value: GesValue) -> GesValue {
-        if value.kind == .integer { return value }
-        if value.kind == .text { return TextNumberCast.read(value.asText) ?? .nothing }
-        if value.kind == .series { return number(GesSeries.term(value, index: 0)) }
-        return .float(value.asNumber, unit: value.kind == .float ? value.unit : .none)
+        number(value, sink: GesValueFactory())
+    }
+
+    static func number<Output: GesValueOutput>(_ value: GesValue, sink: Output) -> Output.Result {
+        if value.kind == .integer { return sink.copy(value) }
+        if value.kind == .text { return TextNumberCast.read(value.asText, sink: sink) ?? sink.nothing }
+        if value.kind == .series { return GesSeries.term(value, index: 0, sink: sink) }
+        return sink.float(value.asNumber, unit: value.kind == .float ? value.unit : .none)
     }
 
     static func unit(_ value: GesValue, _ unit: GesUnit) -> GesValue {
-        guard unit == .none || value.unit == .none || value.unit == unit else { return .nothing }
+        Self.unit(value, unit, sink: GesValueFactory())
+    }
+
+    static func unit<Output: GesValueOutput>(_ value: GesValue, _ unit: GesUnit, sink: Output) -> Output.Result {
+        guard unit == .none || value.unit == .none || value.unit == unit else { return sink.nothing }
         switch value.kind {
-        case .integer: return .integer(value.asInteger, unit: unit)
-        case .float: return value.asNumber.isFinite ? .float(value.asNumber, unit: unit) : .nothing
-        case .vector: return .vector(x: value.x, y: value.y, z: value.z, unit: unit)
-        case .point: return .point(x: value.x, y: value.y, z: value.z, unit: unit)
-        default: return .nothing
+        case .integer: return sink.integer(value.asInteger, unit: unit)
+        case .float: return value.asNumber.isFinite ? sink.float(value.asNumber, unit: unit) : sink.nothing
+        case .vector: return sink.vector(x: value.x, y: value.y, z: value.z, unit: unit)
+        case .point: return sink.point(x: value.x, y: value.y, z: value.z, unit: unit)
+        default: return sink.nothing
         }
     }
 
@@ -43,55 +51,62 @@ enum GesCasts {
     }
 
     static func cast(_ value: GesValue, _ kind: GameEventScriptBytecodeTypeKind, _ context: GameEventScriptContext) throws -> GesValue {
+        try cast(value, kind, context, sink: GesValueFactory())
+    }
+
+    static func cast<Output: GesValueOutput>(_ value: GesValue, _ kind: GameEventScriptBytecodeTypeKind, _ context: GameEventScriptContext, sink: Output) throws -> Output.Result {
         switch kind {
-        case .nothing: return .nothing
-        case .boolean: return .boolean(value.asBoolean)
-        case .integer: return GesNumber.exactInteger(value.asNumber).map { .integer($0, unit: value.kind == .integer || value.kind == .float ? value.unit : .none) } ?? .nothing
-        case .float: return .float(value.asNumber, unit: value.kind == .integer || value.kind == .float ? value.unit : .none)
-        case .percentage: return TextNumberCast.percentage(value)
-        case .text: return .text(value.toText)
+        case .nothing: return sink.nothing
+        case .boolean: return sink.boolean(value.asBoolean)
+        case .integer:
+            guard let integer = GesNumber.exactInteger(value.asNumber) else { return sink.nothing }
+            return sink.integer(integer, unit: value.kind == .integer || value.kind == .float ? value.unit : .none)
+        case .float: return sink.float(value.asNumber, unit: value.kind == .integer || value.kind == .float ? value.unit : .none)
+        case .percentage: return TextNumberCast.percentage(value, sink: sink)
+        case .text: return sink.text(value.toText)
         case .tag:
-            if value.kind == .tag { return value }
-            if value.kind == .boolean { return try .tag(value.asBoolean ? "true" : "false") }
-            guard value.kind == .text else { return .nothing }
+            if value.kind == .tag { return sink.copy(value) }
+            if value.kind == .boolean { return try sink.tag(value.asBoolean ? "true" : "false") }
+            guard value.kind == .text else { return sink.nothing }
             let name = value.asText == "True" ? "true" : value.asText == "False" ? "false" : value.asText
-            return (try? .tag(name)) ?? .nothing
-        case .vector, .point: return spatial(value, point: kind == .point)
+            guard GesText.isLowerName(name) else { return sink.nothing }
+            return try sink.tag(name)
+        case .vector, .point: return spatial(value, point: kind == .point, sink: sink)
         case .dice:
-            if value.kind == .dice { return value }
-            guard let values = value.listValue else { return .dice([]) }
+            if value.kind == .dice { return sink.copy(value) }
+            guard let values = value.listValue else { return sink.dice([]) }
             var rolls: [Int32] = []
             rolls.reserveCapacity(values.count)
             for value in values {
-                guard let number = value.integerValue, number > 0, number <= Int32.max else { return .nothing }
+                guard let number = value.integerValue, number > 0, number <= Int32.max else { return sink.nothing }
                 rolls.append(Int32(number))
             }
-            return .dice(rolls)
+            return sink.dice(rolls)
         case .list:
-            if value.kind == .list { return value }
-            if let text = value.textValue { return .list(text.unicodeScalars.map { .text(String($0)) }) }
-            if value.spatialValue != nil { return .list([.float(value.x, unit: value.unit), .float(value.y, unit: value.unit), .float(value.z, unit: value.unit)]) }
-            if let dice = value.diceRolls { return .list(dice.map { .integer(Int64($0)) }) }
+            if value.kind == .list { return sink.copy(value) }
+            if let text = value.textValue { return sink.list(text.unicodeScalars.map { .text(String($0)) }) }
+            if value.spatialValue != nil { return sink.list([.float(value.x, unit: value.unit), .float(value.y, unit: value.unit), .float(value.z, unit: value.unit)]) }
+            if let dice = value.diceRolls { return sink.list(dice.map { .integer(Int64($0)) }) }
             if value.integerRangeValue != nil || value.floatRangeValue != nil {
                 let count = value.integerRangeValue?.count ?? value.floatRangeValue!.count
-                if count > Int32.max { return .nothing }
-                if !context.budget.range(count) { return .list([]) }
+                if count > Int32.max { return sink.nothing }
+                if !context.budget.range(count) { return sink.list([]) }
                 let iterator = GesIterator(value)!
                 var result: [GesValue] = []
                 result.reserveCapacity(Int(count))
                 while let item = iterator.next() { result.append(item) }
-                return .list(result)
+                return sink.list(result)
             }
-            return .list([])
+            return sink.list([])
         case .map:
-            if let map = try value.asMap ?? value.externalMap() { return .map(map.entries) }
-            if value.spatialValue != nil { return .map([.init(key: "x", value: .float(value.x, unit: value.unit)), .init(key: "y", value: .float(value.y, unit: value.unit)), .init(key: "z", value: .float(value.z, unit: value.unit))]) }
-            return .map([])
-        default: return check(value, kind) ? value : .nothing
+            if let map = try value.asMap ?? value.externalMap() { return sink.map(map.entries) }
+            if value.spatialValue != nil { return sink.map([.init(key: "x", value: .float(value.x, unit: value.unit)), .init(key: "y", value: .float(value.y, unit: value.unit)), .init(key: "z", value: .float(value.z, unit: value.unit))]) }
+            return sink.map([])
+        default: return check(value, kind) ? sink.copy(value) : sink.nothing
         }
     }
 
-    private static func spatial(_ value: GesValue, point: Bool) -> GesValue {
+    private static func spatial<Output: GesValueOutput>(_ value: GesValue, point: Bool, sink: Output) -> Output.Result {
         var x = 0.0
         var y = 0.0
         var z = 0.0
@@ -107,7 +122,7 @@ enum GesCasts {
             z = dice.count > 2 ? Double(dice[2]) : 0
         } else if let list = value.listValue {
             let numbers = list.prefix(3).map(\.asNumber)
-            if numbers.contains(where: { !$0.isFinite }) { return .nothing }
+            if numbers.contains(where: { !$0.isFinite }) { return sink.nothing }
             x = numbers.count > 0 ? numbers[0] : 0
             y = numbers.count > 1 ? numbers[1] : 0
             z = numbers.count > 2 ? numbers[2] : 0
@@ -115,7 +130,7 @@ enum GesCasts {
             x = map.get("x")?.asNumber ?? 0
             y = map.get("y")?.asNumber ?? 0
             z = map.get("z")?.asNumber ?? 0
-            if value.kind == .map && (!x.isFinite || !y.isFinite || !z.isFinite) { return .nothing }
+            if value.kind == .map && (!x.isFinite || !y.isFinite || !z.isFinite) { return sink.nothing }
         } else if value.integerRangeValue != nil || value.floatRangeValue != nil {
             let iterator = GesIterator(value)!
             x = iterator.next()?.asNumber ?? 0
@@ -123,23 +138,27 @@ enum GesCasts {
             z = iterator.next()?.asNumber ?? 0
         } else if [.integer, .float, .percentage, .tag, .boolean].contains(value.kind) {
             x = value.asNumber
-            if !x.isFinite { return .nothing }
+            if !x.isFinite { return sink.nothing }
             if value.kind == .integer || value.kind == .float { unit = value.unit }
         } else {
-            return .nothing
+            return sink.nothing
         }
-        return point ? .point(x: x, y: y, z: z, unit: unit) : .vector(x: x, y: y, z: z, unit: unit)
+        return point ? sink.point(x: x, y: y, z: z, unit: unit) : sink.vector(x: x, y: y, z: z, unit: unit)
     }
 }
 
 enum GesSeries {
     static func term(_ value: GesValue, index: Int64) -> GesValue {
-        guard let series = value.seriesValue, index >= 0 else { return .nothing }
+        term(value, index: index, sink: GesValueFactory())
+    }
+
+    static func term<Output: GesValueOutput>(_ value: GesValue, index: Int64, sink: Output) -> Output.Result {
+        guard let series = value.seriesValue, index >= 0 else { return sink.nothing }
         let (index, overflow) = index.addingReportingOverflow(series.offset)
-        if overflow || index < 0 { return .nothing }
+        if overflow || index < 0 { return sink.nothing }
         switch series.signatureID {
         case "fibonacci":
-            if index > 1476 { return .float(.infinity) }
+            if index > 1476 { return sink.float(.infinity) }
             var a = 0.0
             var b = 1.0
             for _ in 0..<index {
@@ -147,13 +166,13 @@ enum GesSeries {
                 a = b
                 b = next
             }
-            return .float(a)
+            return sink.float(a)
         case "factorial":
-            if index > 170 { return .float(.infinity) }
+            if index > 170 { return sink.float(.infinity) }
             var result = 1.0
             if index > 1 { for factor in 2...index { result *= Double(factor) } }
-            return .float(result)
-        default: return .nothing
+            return sink.float(result)
+        default: return sink.nothing
         }
     }
 }

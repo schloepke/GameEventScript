@@ -2,20 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 enum GesTakeDrop {
-    static func execute(_ op: GameEventScriptBytecodeOpCode, _ slot: GesVmState.Slot, count: Int, random: GameEventScriptRandomGenerator) -> GesValue {
+    static func execute<Output: GesValueOutput>(_ op: GameEventScriptBytecodeOpCode, _ slot: GesVmState.Slot, count: Int, random: GameEventScriptRandomGenerator, sink: Output) -> Output.Result {
         let source = slot.value
         let count = max(0, count)
         if let series = source.seriesValue {
-            if op == .takeFirst { return .list((0..<count).map { GesSeries.term(source, index: Int64($0)) }) }
+            if op == .takeFirst { return sink.list((0..<count).map { GesSeries.term(source, index: Int64($0)) }) }
             if op == .dropFirst {
                 let (offset, overflow) = series.offset.addingReportingOverflow(Int64(count))
-                return .series(.init(signatureID: series.signatureID, offset: overflow ? .max : offset))
+                return sink.series(.init(signatureID: series.signatureID, offset: overflow ? .max : offset))
             }
-            return .nothing
+            return sink.nothing
         }
         if source.integerRangeValue != nil || source.floatRangeValue != nil {
             let length = GesCollectionOperators.length(source)
-            if op == .oneRandom { return length == 0 ? .nothing : source.index(random.nextInclusiveInteger(0, length - 1) + 1) }
+            if op == .oneRandom { return length == 0 ? sink.nothing : source.index(random.nextInclusiveInteger(0, length - 1) + 1, sink: sink) }
             if op == .takeRandom {
                 let selectedCount = min(Int64(count), length)
                 var indexes: [Int64] = []
@@ -31,9 +31,9 @@ enum GesTakeDrop {
                         indexes.append(index)
                     }
                 }
-                return .list(indexes.map { source.index($0 + 1) })
+                return sink.list(indexes.map { source.index($0 + 1) })
             }
-            return range(op, source, count: Int64(count))
+            return range(op, source, count: Int64(count), sink: sink)
         }
         if case .iterator(let iterator) = slot, op == .oneRandom {
             defer { iterator.close() }
@@ -43,16 +43,16 @@ enum GesTakeDrop {
                 seen += 1
                 if random.nextInclusiveInteger(1, seen) == 1 { chosen = value }
             }
-            return chosen
+            return sink.copy(chosen)
         }
         if case .iterator(let iterator) = slot, op == .takeFirst {
             defer { iterator.close() }
             var values: [GesValue] = []
             while values.count < count, let value = iterator.next() { values.append(value) }
-            return .list(values)
+            return sink.list(values)
         }
-        guard let values = GesCollectionOperators.materialize(slot, ranges: false) else { return .nothing }
-        if op == .oneRandom { return values.isEmpty ? .nothing : values[Int(random.nextInclusiveInteger(0, Int64(values.count - 1)))] }
+        guard let values = GesCollectionOperators.materialize(slot, ranges: false) else { return sink.nothing }
+        if op == .oneRandom { return values.isEmpty ? sink.nothing : sink.copy(values[Int(random.nextInclusiveInteger(0, Int64(values.count - 1)))]) }
         let number = min(count, values.count)
         let result: [GesValue]
         switch op {
@@ -84,44 +84,44 @@ enum GesTakeDrop {
                 output.append(values[best!])
             }
             result = drop ? values.indices.filter { !selected[$0] }.map { values[$0] } : output
-        default: return .nothing
+        default: return sink.nothing
         }
-        return source.kind == .dice ? .dice(result.map { Int32($0.asInteger) }) : .list(result)
+        return source.kind == .dice ? sink.dice(result.map { Int32($0.asInteger) }) : sink.list(result)
     }
 
-    private static func range(_ op: GameEventScriptBytecodeOpCode, _ source: GesValue, count: Int64) -> GesValue {
+    private static func range<Output: GesValueOutput>(_ op: GameEventScriptBytecodeOpCode, _ source: GesValue, count: Int64, sink: Output) -> Output.Result {
         let length = GesCollectionOperators.length(source)
         let ascending = (source.integerRangeValue?.step ?? 0) > 0 || (source.floatRangeValue?.step ?? 0) > 0
         if op == .takeHighest || op == .takeLowest {
             let reverse = ascending == (op == .takeHighest)
             let ordered = reverse ? GesCollectionOperators.reverseRange(source) : source
             let n = min(count, length)
-            if n <= 0 { return .integerRange(from: 0, to: 0, step: 0) }
-            return sliced(ordered, first: 1, last: n, preserveEnd: false)
+            if n <= 0 { return sink.integerRange(from: 0, to: 0, step: 0) }
+            return sliced(ordered, first: 1, last: n, preserveEnd: false, sink: sink)
         }
         if op == .dropHighest || op == .dropLowest {
             let dropLast = ascending == (op == .dropHighest)
-            return range(dropLast ? .dropLast : .dropFirst, source, count: count)
+            return range(dropLast ? .dropLast : .dropFirst, source, count: count, sink: sink)
         }
         let drop = op == .dropFirst || op == .dropLast
-        if drop && count == 0 || !drop && count >= length { return source }
-        if drop && count >= length || !drop && count == 0 { return .integerRange(from: 0, to: 0, step: 0) }
+        if drop && count == 0 || !drop && count >= length { return sink.copy(source) }
+        if drop && count >= length || !drop && count == 0 { return sink.integerRange(from: 0, to: 0, step: 0) }
         switch op {
-        case .takeFirst: return sliced(source, first: 1, last: count, preserveEnd: false)
-        case .takeLast: return sliced(source, first: length - count + 1, last: length, preserveEnd: true)
-        case .dropFirst: return sliced(source, first: count + 1, last: length, preserveEnd: true)
-        case .dropLast: return sliced(source, first: 1, last: length - count, preserveEnd: false)
-        default: return .nothing
+        case .takeFirst: return sliced(source, first: 1, last: count, preserveEnd: false, sink: sink)
+        case .takeLast: return sliced(source, first: length - count + 1, last: length, preserveEnd: true, sink: sink)
+        case .dropFirst: return sliced(source, first: count + 1, last: length, preserveEnd: true, sink: sink)
+        case .dropLast: return sliced(source, first: 1, last: length - count, preserveEnd: false, sink: sink)
+        default: return sink.nothing
         }
     }
 
-    private static func sliced(_ value: GesValue, first: Int64, last: Int64, preserveEnd: Bool) -> GesValue {
+    private static func sliced<Output: GesValueOutput>(_ value: GesValue, first: Int64, last: Int64, preserveEnd: Bool, sink: Output) -> Output.Result {
         if let range = value.integerRangeValue {
-            guard let from = range.term(at: first), let to = preserveEnd ? range.to : range.term(at: last) else { return .nothing }
-            return .integerRange(from: from, to: to, step: range.step)
+            guard let from = range.term(at: first), let to = preserveEnd ? range.to : range.term(at: last) else { return sink.nothing }
+            return sink.integerRange(from: from, to: to, step: range.step)
         }
-        guard let range = value.floatRangeValue, let from = range.term(at: first), let to = preserveEnd ? range.to : range.term(at: last) else { return .nothing }
-        return .floatRange(from: from, to: to, step: range.step)
+        guard let range = value.floatRangeValue, let from = range.term(at: first), let to = preserveEnd ? range.to : range.term(at: last) else { return sink.nothing }
+        return sink.floatRange(from: from, to: to, step: range.step)
     }
 
     private static func extremeOrder(_ a: GesValue, _ b: GesValue) -> Int {

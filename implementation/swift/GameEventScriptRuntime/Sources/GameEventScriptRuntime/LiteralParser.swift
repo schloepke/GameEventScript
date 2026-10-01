@@ -16,7 +16,7 @@ struct GesLiteralParser {
 
     static func evaluate(_ input: GesValue, context: GameEventScriptContext, state: GesVmState, destination: Int) throws {
         let (value, nodes) = parse(input, context: context, state: state)
-        if nodes.isEmpty { state.set(destination, value) } else { try GesLiteralEvaluation(value, nodes: nodes, state: state, context: context, destination: destination).run() }
+        if nodes.isEmpty { state.setValue(destination, value) } else { try GesLiteralEvaluation(value, nodes: nodes, state: state, context: context, destination: destination).run() }
     }
 
     static func parse(_ input: GesValue, context: GameEventScriptContext, state: GesVmState? = nil) -> (GesValue, [GesLiteralNode]) {

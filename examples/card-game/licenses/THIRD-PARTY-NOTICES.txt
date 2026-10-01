@@ -1,0 +1,5 @@
+Game Event Script card lab: Apache-2.0 (LICENSE).
+Swift 6.4.0 and its bundled libraries: see the license texts and sources.json here.
+wasi-libc: see wasi-libc/LICENSE and the accompanying component notices.
+browser_wasi_shim 0.4.2: MIT OR Apache-2.0; see ../vendor/LICENSE-MIT and LICENSE-APACHE.
+This directory retains the Swift distribution notice set; not every component is linked by this demo.

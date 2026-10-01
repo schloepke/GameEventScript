@@ -42,6 +42,12 @@ dotnet test GameEventScript.sln --filter "TestCategory!=Performance"
   add compatibility APIs only when the user explicitly requires them.
 - Prefer language-neutral contracts that map cleanly to Swift, Kotlin, Go, Rust,
   C/C++, C#, and Unity.
+- C# is the reference for deliberately chosen implementation architecture as well
+  as behavior, especially on the hot path. Preserve its inline VM dispatch and
+  owner-local, typed register operations when porting; these avoid unnecessary
+  value copies without relying on language-specific ref/in/out features.
+  Architectural deviations require an explicit rationale and performance
+  validation; passing Conformance alone does not establish architecture parity.
 - Keep Reflection, Attributes, `System.Type`, delegate-based adapters,
   unordered public dictionary-input adapters, locks, threads, Tasks, and other
   CLR conveniences in `CSharpBridge`.

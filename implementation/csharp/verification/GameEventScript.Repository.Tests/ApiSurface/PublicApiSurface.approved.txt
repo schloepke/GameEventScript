@@ -652,6 +652,13 @@ sealed class GameEventScript.Api.GameEventScriptOpaqueSection
   property System.Int32 OriginalOrdinal { get }
   property System.UInt16 SectionType { get }
   property System.UInt16 SectionVersion { get }
+enum GameEventScript.Api.GameEventScriptProfilePhase
+  enum-field StateCheck = 0
+  enum-field BudgetCheck = 1
+  enum-field SliceCheck = 2
+  enum-field Fetch = 3
+  enum-field Execute = 4
+  enum-field Advance = 5
 sealed class GameEventScript.Api.GameEventScriptProgram
   property GameEventScript.Api.GameEventScriptBindingSegment Bindings { get }
   property GameEventScript.Api.GameEventScriptBuildMetadataSegment BuildMetadata { get }
@@ -948,6 +955,7 @@ interface GameEventScript.Api.IGameEventScriptProfiler
 interface GameEventScript.Api.IGameEventScriptProgramProfiler
   method System.Void FinishSlice()
   method System.Void InstructionStarting(System.Int32 address)
+  method System.Void PhaseStarting(GameEventScript.Api.GameEventScriptProfilePhase phase)
 interface GameEventScript.Api.IGameEventScriptPublishSink
   method System.Boolean Publish(GameEventScript.Api.GameEventScriptMessage message)
 interface GameEventScript.Api.IGameEventScriptRuntimeObserver

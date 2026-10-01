@@ -32,11 +32,43 @@ final class ProfilerTests: XCTestCase {
         XCTAssertEqual(UInt64(executed), profiler.programs.reduce(UInt64(0)) { $0 + $1.counts.reduce(0, +) })
         for measurement in profiler.programs {
             XCTAssertGreaterThan(measurement.counts.reduce(0, +), 0)
-            for index in measurement.counts.indices { XCTAssertEqual(measurement.counts[index] * 10, measurement.nanoseconds[index]) }
+            for index in measurement.counts.indices { XCTAssertEqual(measurement.counts[index] * 60, measurement.nanoseconds[index]) }
+            for address in measurement.counts.indices {
+                for phase in 0..<6 { XCTAssertEqual(measurement.counts[address] * 10, measurement.phaseNanoseconds[address * 6 + phase]) }
+            }
+            XCTAssertGreaterThan(measurement.phaseTotals.reduce(0, +), measurement.nanoseconds.reduce(0, +))
+            let stopped = now
             measurement.finishSlice()
+            XCTAssertEqual(now, stopped)
         }
         XCTAssertEqual(profiler.programs[0].counts, profiler.programs[1].counts)
         XCTAssertTrue(profiler.markdown().contains("sample.ges:"))
+        XCTAssertTrue(profiler.markdown().contains("## Loop phases"))
+        XCTAssertTrue(profiler.markdown().contains("| 60.000 | 10.000 | 10.000 | 10.000 | 10.000 | 10.000 | 10.000 |"))
+    }
+
+    func testFaultAndTerminalChecksRemainSeparate() throws {
+        var now: UInt64 = 0
+        let program = try GameEventScriptBuilder.create().addScript("on Tick { emit Result(10) }").compile()
+        let measurement = RunProfiler.Measurement(
+            program,
+            clock: {
+                now += 10
+                return now
+            }
+        )
+        measurement.phaseStarting(.stateCheck)
+        measurement.finishSlice()
+        now += 1_000_000
+        measurement.phaseStarting(.stateCheck)
+        measurement.phaseStarting(.budgetCheck)
+        measurement.phaseStarting(.sliceCheck)
+        measurement.phaseStarting(.fetch)
+        measurement.instructionStarting(0)
+        measurement.finishSlice()
+        XCTAssertEqual(measurement.nanoseconds[0], 50)
+        XCTAssertEqual(measurement.phaseTotals.reduce(0, +), 60)
+        XCTAssertEqual(Array(measurement.phaseNanoseconds.prefix(6)), [10, 10, 10, 10, 10, 0])
     }
 
     func testReportWithoutDebugData() throws {

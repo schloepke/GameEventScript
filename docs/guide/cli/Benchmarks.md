@@ -92,6 +92,12 @@ failure. Profile paths must end in `.md` and must not name an input file.
 The report contains program-instance IDs, all executed opcode kinds, and the top
 100 source-line and instruction rows by measured time. Each row shows instruction
 starts, total milliseconds, share of measured VM time and mean nanoseconds.
+Additional mean-nanosecond columns separate State (processing check), Budget
+(exhaustion check), Slice (reserved-count check), Fetch (instruction access and
+pointer increment), Execute (dispatch and opcode body), and Advance (completed
+counter and loop transition). A Loop phases table includes terminal checks that
+never reach an instruction; these are not assigned to an opcode or source line.
+Budget reservation and completion outside the loop are excluded.
 Source-line counts aggregate opcode starts, not source-statement invocations.
 Addresses and instance IDs remain available without debug information; their
 source is marked `[unmapped]`. Duplicate modules remain separate instances. A
@@ -102,7 +108,9 @@ native message handlers and waits between execution slices are excluded. Script
 calls use exclusive accounting: callee instructions receive their own time.
 
 Profiling perturbs execution. Bookkeeping is excluded from timed intervals, but
-clock reads, callback transitions and some VM loop work remain. Compare repeated
+clock reads and callback transitions remain. Six timed phases mean substantially
+more measurement overhead than a single timer per opcode. Tiny phases may be
+dominated by that overhead. Compare repeated
 profiles on the same machine and use unprofiled benchmarks for overall speed.
 A wall-clock-sensitive script may observe different delayed-message readiness
 under instrumentation. Counts after an opcode fault can differ from the Host's

@@ -29,7 +29,14 @@ enum GameEventScriptVirtualMachine {
         var executed = 0
         let reserved = context.budget.reserve(budget)
         do {
-            while state.processing && !context.budget.isExhausted && executed < reserved {
+            while true {
+                instrumentation.phaseStarting(.stateCheck)
+                if !state.processing { break }
+                instrumentation.phaseStarting(.budgetCheck)
+                if context.budget.isExhausted { break }
+                instrumentation.phaseStarting(.sliceCheck)
+                if executed >= reserved { break }
+                instrumentation.phaseStarting(.fetch)
                 if state.ip < 0 || state.ip >= state.program.code.count {
                     state.fail("runtime.illegalInstructionPointer")
                     break
@@ -38,6 +45,7 @@ enum GameEventScriptVirtualMachine {
                 state.ip += 1
                 instrumentation.instructionStarting(state.ip - 1)
                 try execute(instruction, state, context)
+                instrumentation.phaseStarting(.advance)
                 executed += 1
             }
         } catch let fault as GameEventScriptExtensionFault { state.fail(fault.diagnostic) } catch let fault as GesRuntimeError { state.fail(fault.diagnostic) } catch { state.fail("runtime.unhandledFailure", error: error) }
@@ -324,12 +332,16 @@ enum GameEventScriptVirtualMachine {
 }
 
 private protocol VmInstrumentation {
+    func phaseStarting(_ phase: GameEventScriptProfilePhase)
+
     func instructionStarting(_ address: Int)
 
     func finishSlice()
 }
 
 private struct NoInstrumentation: VmInstrumentation {
+    @inline(__always) func phaseStarting(_ phase: GameEventScriptProfilePhase) {}
+
     @inline(__always) func instructionStarting(_ address: Int) {}
 
     @inline(__always) func finishSlice() {}
@@ -337,6 +349,8 @@ private struct NoInstrumentation: VmInstrumentation {
 
 private struct ActiveInstrumentation: VmInstrumentation {
     let profiler: any GameEventScriptProgramProfiler
+
+    @inline(__always) func phaseStarting(_ phase: GameEventScriptProfilePhase) { profiler.phaseStarting(phase) }
 
     @inline(__always) func instructionStarting(_ address: Int) { profiler.instructionStarting(address) }
 

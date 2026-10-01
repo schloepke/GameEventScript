@@ -640,6 +640,15 @@ host-specific; no instrumentation state enters the immutable Program. Repeated
 loads, including identical Programs or module names, receive separate collectors.
 The factory can retain collectors for reporting after detach.
 
+The VM announces sequential loop phases through `PhaseStarting(phase)` /
+`phaseStarting(phase)`: StateCheck, BudgetCheck, SliceCheck, Fetch, and Advance
+(Swift lower camel case). These respectively check processing state, budget
+exhaustion, the reserved slice count, fetch/increment the instruction pointer,
+and advance the completed-opcode count. Checks short-circuit in that order;
+a terminal loop attempt may therefore have no instruction. Execute begins through
+`InstructionStarting`, not a separate PhaseStarting callback. It includes opcode
+dispatch, synchronous callbacks and any fault handling before FinishSlice.
+
 The VM calls `InstructionStarting(address)` / `instructionStarting(address)` once
 before executing each fetched opcode, with its zero-based address before jumps or
 calls change the instruction pointer. This counts **instruction starts**, including
@@ -654,13 +663,14 @@ they must not throw, mutate execution, or reenter any Host. A shared factory acr
 Hosts requires embedding-provided serialization. Violations are outside execution
 and recovery guarantees. Timing, storage and report generation belong to the
 embedding, not to the portable runtime. No clock access, source mapping or
-profiling allocation occurs when instrumentation is omitted. The C# loop uses one optional callback check per instruction and a finish check
+profiling allocation occurs when instrumentation is omitted. The C# loop uses six optional callback checks per completed instruction, checks on the terminal loop attempt, and a finish check
 per slice. Swift selects a specialized instrumented or uninstrumented loop once
 per slice, sharing the opcode implementation.
 
-A boundary-based timer ends the previous opcode at callback entry, updates its
+A phase-based timer ends the previous phase at callback entry, updates its
 preallocated counters, and starts the next interval after bookkeeping. It flushes
-the last opcode at FinishSlice. This excludes bookkeeping and time outside slices,
+the last phase at FinishSlice. Pre-execution phases are attributed to the following
+instruction; terminal checks without an instruction remain in phase totals only. This excludes bookkeeping and time outside slices,
 but includes callback/clock overhead, loop transitions, and synchronous work
 performed by an instruction. Call instructions measure the call mechanism; callee
 opcodes receive their own exclusive measurements. These are instrumented wall-time

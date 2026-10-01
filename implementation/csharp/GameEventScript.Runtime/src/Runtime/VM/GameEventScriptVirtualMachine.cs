@@ -34,8 +34,15 @@ internal static class GameEventScriptVirtualMachine
         var reservedSteps = context.RuntimeBudget.ReserveExecutionSlice(maxSteps, executionLimitDetail);
         try
         {
-            while (vmState.State == Processing && !context.RuntimeBudget.IsExhausted && opcodesExecuted < reservedSteps)
+            while (true)
             {
+                profiler?.PhaseStarting(GameEventScriptProfilePhase.StateCheck);
+                if (vmState.State != Processing) break;
+                profiler?.PhaseStarting(GameEventScriptProfilePhase.BudgetCheck);
+                if (context.RuntimeBudget.IsExhausted) break;
+                profiler?.PhaseStarting(GameEventScriptProfilePhase.SliceCheck);
+                if (opcodesExecuted >= reservedSteps) break;
+                profiler?.PhaseStarting(GameEventScriptProfilePhase.Fetch);
                 var instruction = vmState.FetchInstructionAndIncrementInstructionPointer();
                 profiler?.InstructionStarting(vmState.InstructionPointer - 1);
                 switch (instruction.OpCode)
@@ -737,6 +744,7 @@ internal static class GameEventScriptVirtualMachine
                         break;
                 }
 
+                profiler?.PhaseStarting(GameEventScriptProfilePhase.Advance);
                 opcodesExecuted++;
             }
         }

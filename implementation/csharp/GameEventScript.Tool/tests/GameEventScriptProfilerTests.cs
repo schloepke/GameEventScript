@@ -35,11 +35,18 @@ public sealed class GameEventScriptProfilerTests
         foreach (var measurement in profiler.Programs)
         {
             Assert.IsGreaterThan(0L, measurement.Counts.Sum());
-            for (var index = 0; index < measurement.Counts.Length; index++) Assert.AreEqual(measurement.Counts[index] * 10, measurement.Ticks[index]);
+            for (var index = 0; index < measurement.Counts.Length; index++) Assert.AreEqual(measurement.Counts[index] * 60, measurement.Ticks[index]);
+            for (var address = 0; address < measurement.Counts.Length; address++)
+                for (var phase = 0; phase < 6; phase++) Assert.AreEqual(measurement.Counts[address] * 10, measurement.PhaseTicks[address * 6 + phase]);
+            Assert.IsGreaterThan(measurement.Ticks.Sum(), measurement.PhaseTotals.Sum());
+            var stopped = now;
             measurement.FinishSlice();
+            Assert.AreEqual(stopped, now);
         }
         CollectionAssert.AreEqual(profiler.Programs[0].Counts, profiler.Programs[1].Counts);
         StringAssert.Contains(profiler.Markdown(), "sample.ges:");
+        StringAssert.Contains(profiler.Markdown(), "## Loop phases");
+        StringAssert.Contains(profiler.Markdown(), "| 60.000 | 10.000 | 10.000 | 10.000 | 10.000 | 10.000 | 10.000 |");
     }
 
     /// <summary>Counter and clock callbacks allocate nothing after per-Program storage is prepared.</summary>
@@ -51,14 +58,46 @@ public sealed class GameEventScriptProfilerTests
         var profiler = new RunProfiler(() => ++now, 1_000_000_000);
         var program = GameEventScriptBuilder.Create().AddScript("on Tick { emit Result(10) }").Compile();
         var measurement = profiler.CreateProgramProfiler(program);
-        for (var index = 0; index < 1000; index++) measurement.InstructionStarting(0);
+        for (var index = 0; index < 1000; index++) RecordInstruction();
         measurement.FinishSlice();
         var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var index = 0; index < 1000; index++) measurement.InstructionStarting(0);
+        for (var index = 0; index < 1000; index++) RecordInstruction();
         measurement.FinishSlice();
         var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
         Assert.AreEqual(0L, allocated);
         Assert.AreEqual(2000L, profiler.Programs[0].Counts[0]);
+
+        void RecordInstruction()
+        {
+            measurement.PhaseStarting(GameEventScriptProfilePhase.StateCheck);
+            measurement.PhaseStarting(GameEventScriptProfilePhase.BudgetCheck);
+            measurement.PhaseStarting(GameEventScriptProfilePhase.SliceCheck);
+            measurement.PhaseStarting(GameEventScriptProfilePhase.Fetch);
+            measurement.InstructionStarting(0);
+            measurement.PhaseStarting(GameEventScriptProfilePhase.Advance);
+        }
+
+    }
+
+    /// <summary>A fault closes execution without advance; terminal checks never leak into a resumed instruction.</summary>
+    [TestMethod]
+    public void FaultAndTerminalChecksRemainSeparate()
+    {
+        long now = 0;
+        var program = GameEventScriptBuilder.Create().AddScript("on Tick { emit Result(10) }").Compile();
+        var measurement = new RunProfiler.Measurement(program, () => now += 10);
+        measurement.PhaseStarting(GameEventScriptProfilePhase.StateCheck);
+        measurement.FinishSlice();
+        now += 1_000_000;
+        measurement.PhaseStarting(GameEventScriptProfilePhase.StateCheck);
+        measurement.PhaseStarting(GameEventScriptProfilePhase.BudgetCheck);
+        measurement.PhaseStarting(GameEventScriptProfilePhase.SliceCheck);
+        measurement.PhaseStarting(GameEventScriptProfilePhase.Fetch);
+        measurement.InstructionStarting(0);
+        measurement.FinishSlice();
+        Assert.AreEqual(50L, measurement.Ticks[0]);
+        Assert.AreEqual(60L, measurement.PhaseTotals.Sum());
+        CollectionAssert.AreEqual(new long[] { 10, 10, 10, 10, 10, 0 }, measurement.PhaseTicks.Take(6).ToArray());
     }
 
     /// <summary>Writes Markdown on successful and limit-failed runs, without changing script output.</summary>

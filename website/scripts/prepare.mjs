@@ -65,6 +65,7 @@ await rm(publicOutput, { recursive: true, force: true });
 const copyAssets = (source, destination) => execFileSync('python3', [path.join(repository, 'scripts/website_assets.py'), 'copy', source, destination], { stdio: 'inherit' });
 copyAssets(path.join(root, 'public'), publicOutput);
 execFileSync('python3', [path.join(repository, 'scripts/stage-api-docs.py')], { stdio: 'inherit' });
+execFileSync('python3', [path.join(repository, 'examples/card-game/scripts/site_assets.py')], { stdio: 'inherit' });
 execFileSync('python3', [path.join(root, 'scripts/package-editor-bundles.py')], { stdio: 'inherit' });
 execFileSync('python3', [path.join(root, 'scripts/package-brand.py'), '--site'], { stdio: 'inherit' });
 // Pagefind writes assets outside Vite's client bundle; retain its MIT notice too.

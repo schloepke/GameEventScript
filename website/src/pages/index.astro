@@ -27,6 +27,8 @@ on Attack(base, bonus) {
       <div class="header-inner wrap">
         <a class="brand" href="/" aria-label="Game Event Script home"><img src="/brand/logo.svg" width="44" height="44" alt="" />Game Event Script</a>
         <nav aria-label="Main navigation">
+          <a href="/examples/card-game/">Play</a>
+          <a href="#cli">Install CLI</a>
           <a href="/docs/learn/language/">Learn</a>
           <a href="/docs/">Documentation</a>
           <a href="https://github.com/schloepke/GameEventScript">GitHub <span aria-hidden="true">↗</span></a>
@@ -39,7 +41,7 @@ on Attack(base, bonus) {
           <p class="eyebrow">A language for event-driven game logic</p>
           <h1 id="hero-title">Your game rules.<br /><span>One event<br class="wide-break" /> at a time.</span></h1>
           <p class="lede">Write decisions in a small scripting language. Send messages from your game. Run the same rules in C# and Swift.</p>
-          <div class="actions"><a class="button" href="/docs/learn/language/">Write your first script <span aria-hidden="true">→</span></a><a class="text-link" href="/docs/">Explore the docs</a></div>
+          <div class="actions"><a class="button" href="/examples/card-game/">Play the card game <span aria-hidden="true">→</span></a><a class="text-link" href="/docs/learn/language/">Write your first script</a></div>
           <p class="meta">Open source · Apache 2.0 · C# + Swift</p>
         </div>
         <div class="example">
@@ -52,6 +54,10 @@ on Attack(base, bonus) {
           </div>
           <p class="example-caption">You own the game world. The script describes the rule.</p>
         </div>
+      </section>
+      <section class="next wrap" aria-labelledby="play-title">
+        <div><p class="eyebrow">Playable example · No installation</p><h2 id="play-title">Play Mau Mau. Change the rules.</h2><p>A two-player card game with editable GES rules, running locally in your browser.<br />The first visit downloads about 63 MB of WebAssembly.</p></div>
+        <a class="button" href="/examples/card-game/">Open the card lab <span aria-hidden="true">→</span></a>
       </section>
       <section class="principles wrap" aria-labelledby="principles-title">
         <div class="section-intro"><p class="eyebrow">Small language. Clear boundaries.</p><h2 id="principles-title">Fits inside your game.</h2></div>
@@ -69,6 +75,13 @@ on Attack(base, bonus) {
             <a class="platform" href="/docs/learn/swift/"><div class="platform-top"><span class="platform-icon">Sw</span><span class="package-type">Swift Package Manager</span></div><h3>Embed in Swift</h3><p>Add SwiftPM products, register closures and expose native data to scripts.</p><code>GameEventScriptRuntime</code><span class="platform-link">Follow the Swift guide <span aria-hidden="true">→</span></span></a>
           </div>
           <p class="release-note">GES is in 0.x development. These docs follow development; check the <a href="/docs/changelog/">changelog</a> against your installed release.</p>
+        </div>
+      </section>
+      <section class="cli wrap" id="cli" aria-labelledby="cli-title">
+        <div class="section-intro"><p class="eyebrow">Run scripts on your machine</p><h2 id="cli-title">Install the GES CLI.</h2><p>Compile, run and explore scripts in an interactive console.</p></div>
+        <div class="platforms">
+          <article class="platform"><h3>Homebrew</h3><p>Swift CLI for macOS and Linux.</p><code>brew install schloepke/gameeventscript/ges</code><a class="platform-link" href="/docs/tools/downloads/#install-through-homebrew-macos-and-linux">Homebrew installation →</a></article>
+          <article class="platform"><h3>.NET tool</h3><p>C# CLI for Windows, macOS and Linux. Requires .NET.</p><code>dotnet tool install --global GameEventScript.Tool</code><a class="platform-link" href="/docs/tools/downloads/">.NET installation and AOT options →</a></article>
         </div>
       </section>
       <section class="workflow wrap" aria-labelledby="workflow-title">
@@ -92,7 +105,7 @@ on Attack(base, bonus) {
   .header { background: var(--ges-paper); border-bottom: 1px solid #dce2ec; }
   .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding-block: 1.6rem; }
   .brand { display: flex; align-items: center; gap: .7rem; text-decoration: none; font-weight: 750; letter-spacing: -.025em; font-size: 1.2rem; }
-  nav { display: flex; gap: 1.7rem; align-items: center; font-size: .9rem; }
+  nav { display: flex; flex-wrap: wrap; gap: 1.7rem; align-items: center; font-size: .9rem; }
   nav a { text-decoration: none; }
   nav a:hover, .text-link:hover { color: var(--ges-action-blue); text-decoration: underline; }
   .hero { display: grid; grid-template-columns: 1fr 1.08fr; gap: 4rem; align-items: center; padding-block: 6.2rem 5.5rem; }
@@ -123,6 +136,8 @@ on Attack(base, bonus) {
   h3 { font-size: 1.18rem; letter-spacing: -.02em; line-height: 1.35; }
   .section-intro .eyebrow { margin-bottom: .7rem; }
   .section-intro > p:last-child:not(.eyebrow) { color: var(--ges-muted); }
+  .cli { padding-top: 4.5rem; }
+  .next p:not(.eyebrow) { color: var(--ges-muted); }
   .principles { padding-block: 2rem 5rem; }
   .principle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.8rem; margin-top: 2.7rem; }
   .principle-grid article { border-top: 1px solid #ccd6e6; padding-top: 1.3rem; }

@@ -10,6 +10,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+- Add a playable browser card-game example with editable GES rules, linked from
+  the website homepage alongside Homebrew and .NET CLI installation.
+
 ### Performance
 
 - Reduce Swift VM register-access and value-copy overhead for integer arithmetic,

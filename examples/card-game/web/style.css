@@ -1,0 +1,61 @@
+/* Copyright 2026 Stephan Schlöpke */
+/* SPDX-License-Identifier: Apache-2.0 */
+:root { font-family: ui-sans-serif, system-ui, sans-serif; color: #e9f0e9; background: #16191f; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 1120px; margin: auto; padding: 48px 24px; }
+h1 { font-size: clamp(2rem, 5vw, 3.8rem); letter-spacing: -.05em; margin: 10px 0; }
+p { line-height: 1.6; color: #b9cdc1; }
+.eyebrow { font-size: .75rem; letter-spacing: .17em; color: #71d3c5; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 24px 0; }
+button, input { font: inherit; border-radius: 9px; padding: 10px 16px; border: 1px solid #688074; }
+input { width: 120px; margin-left: 6px; background: #17382b; }
+button { background: #71d3c5; color: #153022; cursor: pointer; font-weight: 600; }
+button:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-2px); }
+button:disabled { cursor: default; opacity: .55; }
+.secondary { background: transparent; color: #e9f0e9; }
+#status { flex: 1; min-width: 200px; }
+#board { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.zone { padding: 22px; background: #20282e; border: 1px solid #355d46; border-radius: 16px; min-height: 185px; }
+.zone h2 { margin: 0 0 16px; font-size: 1rem; font-weight: 500; color: #cbdccf; }
+.cards { display: flex; flex-wrap: wrap; gap: 10px; }
+.card { display: grid; place-content: center; text-align: center; min-width: 66px; height: 94px; border: 2px solid transparent; border-radius: 9px; padding: 8px; background: #f4f0e4; color: #222c27; font-size: 1.1rem; }
+.card small { font-size: .6rem; margin-top: 3px; }
+.card.red { color: #b33c3c; }
+.card.playable { border-color: #bce96d; box-shadow: 0 0 0 3px #bce96d44; }
+.card.back { background: repeating-linear-gradient(45deg, #385c90, #385c90 5px, #314e7a 5px, #314e7a 10px); color: white; }
+details { margin-top: 36px; border-top: 1px solid #355d46; padding-top: 20px; }
+summary { cursor: pointer; }
+/* The native textarea owns selection, input, undo and accessibility. The pre only paints colors. */
+.source-editor { position: relative; margin-top: 12px; background: #0c1d17; border: 1px solid #355d46; border-radius: 10px; overflow: hidden; }
+.source-editor textarea, .source-editor pre { margin: 0; border: 0; padding: 16px; font: 14px/23px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-variant-ligatures: none; letter-spacing: normal; tab-size: 4; white-space: pre; text-align: left; }
+.source-editor textarea { display: block; position: relative; width: 100%; height: 440px; min-height: 180px; resize: vertical; overflow: auto; background: transparent; color: #dbe9dc; caret-color: #f3f7ed; outline-offset: -2px; }
+.source-editor pre { position: absolute; inset: 0; overflow: hidden; pointer-events: none; color: #dbe9dc; visibility: hidden; }
+.source-editor.highlighted pre { visibility: visible; }
+.source-editor.highlighted textarea { color: transparent; -webkit-text-fill-color: transparent; }
+.source-editor textarea::selection { background: #a4d27d55; }
+.editor-status { font-size: .8rem; margin-top: 8px; }
+.syntax-keyword { color: #d6a1f2; }
+.syntax-builtin, .syntax-type, .syntax-function { color: #88d6df; }
+.syntax-message, .syntax-constant { color: #f0c782; }
+.syntax-number, .syntax-tag { color: #93bfff; }
+.syntax-string { color: #c5df9b; }
+.syntax-comment { color: #84a390; }
+.syntax-module, .syntax-label, .syntax-register { color: #a5c8eb; }
+.syntax-symbol { color: #b8cabe; }
+
+footer { color: #94b09e; line-height: 1.6; margin-top: 28px; font-size: .8rem; }
+@media (max-width: 620px) { main { padding: 24px 16px; } #board { grid-template-columns: 1fr; } }
+
+.diagnostic-error { text-decoration: underline wavy #ff8585; text-decoration-thickness: 1.5px; text-underline-offset: 3px; background: #ec565622; }
+#diagnostics { padding-left: 22px; color: #ffb5b5; }
+.diagnostic-link { background: transparent; border: 0; padding: 5px 0; color: #ffb5b5; text-align: left; font-size: .85rem; font-weight: 400; overflow-wrap: anywhere; }
+.diagnostic-link:hover:not(:disabled) { text-decoration: underline; transform: none; }
+
+#error-dialog { width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 28px; color: #e9f0e9; background: #20282e; border: 1px solid #688074; border-radius: 16px; box-shadow: 0 20px 80px #0008; }
+#error-dialog::backdrop { background: #06100bcc; }
+#error-dialog h2 { margin: 0; font-size: 1.3rem; }
+#error-message { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 45dvh; overflow: auto; padding: 16px; background: #0c1d17; border: 1px solid #996568; border-radius: 8px; color: #ffb5b5; font: 14px/1.6 ui-monospace, monospace; }
+#error-dialog form { display: flex; justify-content: flex-end; margin-top: 20px; }
+
+a { color: #71d3c5; text-underline-offset: .2em; }

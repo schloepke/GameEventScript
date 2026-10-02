@@ -7,6 +7,145 @@ import XCTest
 
 /// Native storage controls complement the shared arithmetic semantics corpus.
 final class RegisterArithmeticTests: XCTestCase {
+    func testRegisterStorageStaysCompact() {
+        // C#'s scalar/reference/metadata architecture must not regress to nested payload enums.
+        XCTAssertLessThanOrEqual(MemoryLayout<GesValue>.stride, 32)
+        XCTAssertEqual(MemoryLayout<GameEventScriptMessage>.stride, MemoryLayout<AnyObject>.stride)
+        XCTAssertEqual(MemoryLayout<GameEventScriptMessageSignature>.stride, MemoryLayout<AnyObject>.stride)
+    }
+
+    func testDirectArrayMutationPreservesCopiesAndResetsMetadata() throws {
+        var values: [GesValue] = [.list([.text("original")])]
+        let retained = values[0]
+        values[0].setInteger(-7, unit: .meter)
+        XCTAssertEqual(retained.asList, [.text("original")])
+        XCTAssertEqual(values[0].integerValue, -7)
+        XCTAssertEqual(values[0].unit, .meter)
+        XCTAssertNil(values[0].listValue)
+        XCTAssertEqual(values[0].length, 0)
+        XCTAssertTrue(values[0].isNumeric)
+        XCTAssertEqual(values[0].truth, true)
+        values[0].setText("FALSE")
+        XCTAssertEqual(values[0].unit, .none)
+        XCTAssertFalse(values[0].isNumeric)
+        XCTAssertEqual(values[0].truth, false)
+        XCTAssertEqual(values[0].length, 5)
+        values[0].setPercentage(0)
+        XCTAssertTrue(values[0].hasValue)
+        XCTAssertEqual(values[0].truth, false)
+        values[0].setFloat(.nan)
+        XCTAssertFalse(values[0].hasValue)
+        XCTAssertFalse(values[0].isNumeric)
+        XCTAssertNil(values[0].truth)
+        XCTAssertEqual(values[0], .nothing)
+        XCTAssertEqual(values[0].hashValue, GesValue.nothing.hashValue)
+        let text = GesValue.text("true")
+        values[0].setTextConstant(text, tag: true)
+        XCTAssertEqual(values[0], try .tag("true"))
+        XCTAssertEqual(values[0].truth, false)
+        values[0].setTextConstant(text, tag: false)
+        XCTAssertEqual(values[0].truth, true)
+    }
+
+    func testRegisterOverwriteReleasesInternalObjects() throws {
+        let state = GesVmState(maxRegisters: 32, maxCallDepth: 4)
+        weak var released: GesIterator?
+        do {
+            let iterator = try XCTUnwrap(GesIterator(.list([.integer(1)])))
+            released = iterator
+            state.setIterator(0, iterator)
+        }
+        XCTAssertNotNil(released)
+        XCTAssertTrue(state.value(0).isNothing)
+        state.setInteger(0, 9)
+        XCTAssertNil(released)
+        XCTAssertNil(state.slot(0).iteratorValue)
+        XCTAssertTrue(state.slot(0).isRegisterData)
+    }
+
+    func testMessageAndHandlerWrapExistingImmutablePayloads() throws {
+        let signature = try GameEventScriptMessageSignature(name: "Done", parameters: ["value"])
+        let message = try XCTUnwrap(signature.createMessage([.integer(7)]))
+        var value = GesValue.message(message)
+        XCTAssertTrue(value.messageValue!.storage === message.storage)
+        let copy = value
+        value.setHandler(signature)
+        XCTAssertTrue(value.signatureValue!.storage === signature.storage)
+        XCTAssertEqual(copy.messageValue, message)
+        value.setNothing()
+        XCTAssertEqual(copy.messageValue, message)
+    }
+
+    func testMessageArgumentsReuseBuffersAndPreserveSnapshots() throws {
+        let signature = try GameEventScriptMessageSignature(name: "Done", parameters: ["_", "value", "_"])
+        var input: [GesValue] = [.integer(1), .text("kept"), .boolean(true)]
+        let message = try XCTUnwrap(signature.createMessage(input))
+        let arguments = message.arguments
+        input.withUnsafeBufferPointer { original in
+            arguments.values.withUnsafeBufferPointer { stored in XCTAssertEqual(original.baseAddress, stored.baseAddress) }
+        }
+        signature.parameters.withUnsafeBufferPointer { original in
+            arguments.signatureLabels.withUnsafeBufferPointer { stored in XCTAssertEqual(original.baseAddress, stored.baseAddress) }
+        }
+        let pairs = try [GameEventScriptMessageArgument(value: .integer(1)), GameEventScriptMessageArgument(name: "value", value: .text("kept")), GameEventScriptMessageArgument(value: .boolean(true))]
+        let rebuilt = try GameEventScriptMessageArguments(pairs)
+        XCTAssertEqual(arguments, rebuilt)
+        XCTAssertEqual(arguments.hashValue, rebuilt.hashValue)
+        XCTAssertEqual(Array(arguments), pairs)
+        XCTAssertEqual(try arguments.indexOf("value"), 1)
+        XCTAssertNil(try arguments.indexOf("_"))
+        var first = arguments.makeIterator()
+        var second = arguments.makeIterator()
+        XCTAssertEqual(first.next(), pairs[0])
+        XCTAssertEqual(first.next(), pairs[1])
+        XCTAssertEqual(second.next(), pairs[0])
+        XCTAssertEqual(first.next(), pairs[2])
+        XCTAssertNil(first.next())
+        XCTAssertNil(first.next())
+        input[0] = .integer(99)
+        var exposed = arguments.values
+        exposed[1] = .nothing
+        var labels = arguments.signatureLabels
+        labels[1] = "changed"
+        XCTAssertEqual(message.arguments, rebuilt)
+        XCTAssertEqual(message.signatureId, "Done(_,value,_)")
+        XCTAssertEqual(Array(GameEventScriptMessageArguments.empty), [])
+        XCTAssertNil(signature.createMessage([]))
+        XCTAssertThrowsError(try GameEventScriptMessageArguments([.init(name: "value", value: .integer(1)), .init(name: "value", value: .integer(2))]))
+    }
+
+    func testRecordReusesCanonicalMapStorageWhenOverwritingMapRegister() throws {
+        let state = GesVmState(maxRegisters: 32, maxCallDepth: 4)
+        state.setMap(0, [.init(key: "z", value: .integer(1)), .init(key: "a", value: .integer(2)), .init(key: "z", value: .integer(3))])
+        let map = try XCTUnwrap(state.value(0).asMap)
+        state.setRecord(0, typeName: "Sample", fields: map)
+        let record = state.value(0)
+        let fields = try XCTUnwrap(record.asMap)
+        map.entries.withUnsafeBufferPointer { original in
+            fields.entries.withUnsafeBufferPointer { stored in XCTAssertEqual(original.baseAddress, stored.baseAddress) }
+        }
+        XCTAssertEqual(record.customTypeName, "Sample")
+        XCTAssertEqual(fields.entries.map(\.key), ["a", "z"])
+        XCTAssertEqual(fields.get("z"), .integer(3))
+        var exposed = fields.entries
+        exposed[0] = .init(key: "changed", value: .nothing)
+        state.setNothing(0)
+        XCTAssertEqual(record.asMap, map)
+        XCTAssertEqual(record, .record(typeName: "Sample", entries: map.entries))
+    }
+
+    func testTextIdentityCastCanOverwriteItsSource() throws {
+        let state = GesVmState(maxRegisters: 32, maxCallDepth: 4)
+        let host = try GameEventScriptHost()
+        let context = GameEventScriptContext(host: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
+        state.setText(0, "kept 🐉 e\u{301}")
+        let snapshot = state.value(0)
+        try GesCasts.cast(state.value(0), .text, context, sink: state.output(0))
+        XCTAssertEqual(state.value(0), snapshot)
+        state.setNothing(0)
+        XCTAssertEqual(snapshot.asText, "kept 🐉 e\u{301}")
+    }
+
     func testIntegerResultsCanOverwriteEitherOperandAfterRegisterGrowth() {
         let cases: [(GameEventScriptBytecodeOpCode, GesValue)] = [
             (.add, .integer(34)), (.subtract, .integer(24)), (.multiply, .integer(145)),

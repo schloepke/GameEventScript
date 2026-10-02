@@ -46,8 +46,8 @@ enum GesDataConstruction {
             if let integer = number.integerValue { return sink.integer(integer, unit: unit) }
             return sink.float(number.asNumber, unit: unit)
         case "record":
-            guard first.kind == .text, let name = first.textValue, GesNames.type(name), values[1].kind == .map, let fields = values[1].mapEntries else { return sink.nothing }
-            return sink.record(typeName: name, entries: fields)
+            guard first.kind == .text, let name = first.textValue, GesNames.type(name), values[1].kind == .map, let fields = values[1].asMap else { return sink.nothing }
+            return sink.record(typeName: name, fields: fields)
         case "range" where arguments.count > 1:
             let step = arguments.count > 2 ? values[2] : .integer(1)
             guard first.numericOnly, values[1].numericOnly, step.numericOnly, !first.hasUnit, !values[1].hasUnit, !step.hasUnit else { return sink.nothing }

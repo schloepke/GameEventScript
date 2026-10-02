@@ -349,9 +349,13 @@ target/source descriptions; Swift CI runs this gate.
 Swift Host and Compiler expose createBuilder()/create() factories matching the
 C# builder workflow. Swift collections use immutable value semantics and copy-on-write storage.
 Text and map-key equality/order use Unicode scalars, not Swift String's
-canonical equivalence. Keep Int64 and Binary64 storage separate. Message and
-Handler value storage is inline; VM entry borrows arguments by index rather
-than allocating an argument array. Mutable callback arguments are borrowed only
+canonical equivalence. Keep Int64 and Binary64 storage separate. Register storage
+follows the C# architecture: one numeric word, an optional
+object reference, kind, unit and cached flags. Typed setters mutate these fields
+in the register array; do not replace this with nested associated-value enums.
+Immutable Message and Handler payloads are shared by reference behind read-only
+Swift value APIs. VM entry borrows arguments by index rather than allocating an
+argument array. Mutable callback arguments are borrowed only
 for the synchronous invocation.
 
 `./scripts/build-swift.sh` builds all SwiftPM packages independently in Release

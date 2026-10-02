@@ -1098,6 +1098,17 @@ DLL and may choose main-thread/manual pumping instead of the automatic runner.
 
 ### Swift
 
+`GesValue`, `GameEventScriptMessage` and `GameEventScriptMessageSignature`
+retain immutable public value semantics. Read-only properties may use shared
+immutable backing storage; copying a value and replacing a VM register never
+mutates another copy. Native register layout is an implementation detail and
+does not define binary or JSON encoding.
+
+Swift message arguments retain ordered signature labels and values in separate
+immutable arrays. Their `Iterator` yields `GameEventScriptMessageArgument` pairs
+without creating an intermediate pair array. Returned arrays retain Swift
+copy-on-write semantics; caller mutations cannot change a message.
+
 The Swift mapping separates the `GameEventScriptRuntime`,
 `GameEventScriptCompiler`, and `GameEventScriptConformance` SwiftPM packages.
 Compiler depends only on Runtime; Conformance depends on both. Runtime has no

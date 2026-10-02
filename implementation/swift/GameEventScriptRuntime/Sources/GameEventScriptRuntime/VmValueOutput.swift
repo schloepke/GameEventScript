@@ -32,7 +32,7 @@ protocol GesValueOutput {
 
     func map(_ value: [GesMapEntry]) -> Result
 
-    func record(typeName: String, entries: [GesMapEntry]) -> Result
+    func record(typeName: String, fields: GesValueMap) -> Result
 
     func integerRange(from: Int64, to: Int64, step: Int64) -> Result
 
@@ -82,7 +82,7 @@ struct GesValueFactory: GesValueOutput {
 
     func map(_ value: [GesMapEntry]) -> GesValue { .map(value) }
 
-    func record(typeName: String, entries: [GesMapEntry]) -> GesValue { .record(typeName: typeName, entries: entries) }
+    func record(typeName: String, fields: GesValueMap) -> GesValue { .record(typeName: typeName, fields: fields) }
 
     func integerRange(from: Int64, to: Int64, step: Int64) -> GesValue { .integerRange(from: from, to: to, step: step) }
 
@@ -124,7 +124,7 @@ struct GesRegisterOutput: GesValueOutput {
 
     func map(_ value: [GesMapEntry]) { state.setMap(index, value) }
 
-    func record(typeName: String, entries: [GesMapEntry]) { state.setRecord(index, typeName: typeName, entries: entries) }
+    func record(typeName: String, fields: GesValueMap) { state.setRecord(index, typeName: typeName, fields: fields) }
 
     func integerRange(from: Int64, to: Int64, step: Int64) { state.setIntegerRange(index, from: from, to: to, step: step) }
 

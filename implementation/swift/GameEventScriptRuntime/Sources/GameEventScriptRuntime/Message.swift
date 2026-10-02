@@ -3,17 +3,21 @@
 
 /// An immutable portable message with ordered arguments and delivery-tag metadata.
 public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
+    let storage: GesMessageStorage
+
+    init(storage: GesMessageStorage) { self.storage = storage }
+
     /// The normalized message name.
-    public let name: String
+    public var name: String { storage.name }
 
     /// The immutable arguments in signature order.
-    public let arguments: GameEventScriptMessageArguments
+    public var arguments: GameEventScriptMessageArguments { storage.arguments }
 
     /// Unique normalized delivery tags in first-occurrence order.
-    public let tags: [String]
+    public var tags: [String] { storage.tags }
 
     /// The normalized name and ordered labels, excluding delivery tags.
-    public let signatureId: String
+    public var signatureId: String { storage.signatureId }
 
     /// Creates a concrete message, normalizing names and tags and validating argument labels.
     public init(name: String, arguments: [GameEventScriptMessageArgument] = [], tags: [String] = []) throws {
@@ -54,10 +58,7 @@ public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
     }
 
     init(normalizedName: String, arguments: GameEventScriptMessageArguments, signatureId: String, normalizedTags: [String]) {
-        name = normalizedName
-        self.arguments = arguments
-        self.signatureId = signatureId
-        tags = normalizedTags
+        storage = GesMessageStorage(name: normalizedName, arguments: arguments, tags: normalizedTags, signatureId: signatureId)
     }
 
     private static func normalizeTagName(_ tag: String) throws -> String {
@@ -76,5 +77,20 @@ public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
             if !name.isEmpty && !normalized.contains(name) { normalized.append(name) }
         }
         return normalized
+    }
+}
+
+// Shared immutable payload; wrapping a message/signature in a register never allocates.
+final class GesMessageStorage {
+    let name: String
+    let arguments: GameEventScriptMessageArguments
+    let tags: [String]
+    let signatureId: String
+
+    init(name: String, arguments: GameEventScriptMessageArguments, tags: [String], signatureId: String) {
+        self.name = name
+        self.arguments = arguments
+        self.tags = tags
+        self.signatureId = signatureId
     }
 }

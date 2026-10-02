@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 enum GesTakeDrop {
-    static func execute<Output: GesValueOutput>(_ op: GameEventScriptBytecodeOpCode, _ slot: GesVmState.Slot, count: Int, random: GameEventScriptRandomGenerator, sink: Output) -> Output.Result {
-        let source = slot.value
+    static func execute<Output: GesValueOutput>(_ op: GameEventScriptBytecodeOpCode, _ slot: GesValue, count: Int, random: GameEventScriptRandomGenerator, sink: Output) -> Output.Result {
+        let source = slot.registerValue
         let count = max(0, count)
         if let series = source.seriesValue {
             if op == .takeFirst { return sink.list((0..<count).map { GesSeries.term(source, index: Int64($0)) }) }
@@ -35,7 +35,7 @@ enum GesTakeDrop {
             }
             return range(op, source, count: Int64(count), sink: sink)
         }
-        if case .iterator(let iterator) = slot, op == .oneRandom {
+        if let iterator = slot.iteratorValue, op == .oneRandom {
             defer { iterator.close() }
             var chosen = GesValue.nothing
             var seen: Int64 = 0
@@ -45,7 +45,7 @@ enum GesTakeDrop {
             }
             return sink.copy(chosen)
         }
-        if case .iterator(let iterator) = slot, op == .takeFirst {
+        if let iterator = slot.iteratorValue, op == .takeFirst {
             defer { iterator.close() }
             var values: [GesValue] = []
             while values.count < count, let value = iterator.next() { values.append(value) }

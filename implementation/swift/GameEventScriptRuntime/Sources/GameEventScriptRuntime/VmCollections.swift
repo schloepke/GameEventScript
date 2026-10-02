@@ -117,12 +117,6 @@ final class GesCollectionBuilder {
 }
 
 extension GesValue {
-    var truth: Bool? {
-        switch kind {
-        case .boolean, .integer, .float, .percentage, .text, .tag, .vector, .point: asBoolean
-        default: nil
-        }
-    }
     var numericOnly: Bool { [.integer, .float, .percentage].contains(kind) }
 
     func index(_ oneBased: Int64) -> GesValue {

@@ -111,8 +111,8 @@ enum GameEventScriptVirtualMachine {
                 case .loadInteger: state.setInteger(d, instruction.integer, unit: instruction.unit)
                 case .loadFloat: state.setFloat(d, instruction.float, unit: instruction.unit)
                 case .loadPercentage: state.setPercentage(d, instruction.float)
-                case .loadText: state.setText(d, state.text(instruction.word1))
-                case .loadTag: try state.setTag(d, state.text(instruction.word1))
+                case .loadText: state.loadText(d, constant: instruction.word1)
+                case .loadTag: state.loadText(d, constant: instruction.word1, tag: true)
                 case .loadHandler, .loadMessage:
                     let shape = state.list(instruction.opcode == .loadHandler ? instruction.word2 : instruction.word1)
                     if shape.isEmpty || (instruction.opcode == .loadMessage && state.list(instruction.word2).count != shape.count - 1) {
@@ -128,8 +128,8 @@ enum GameEventScriptVirtualMachine {
                 case .stageInteger: state.stageInteger(instruction.integer, unit: instruction.unit)
                 case .stageFloat: state.stageFloat(instruction.float, unit: instruction.unit)
                 case .stagePercentage: state.stagePercentage(instruction.float)
-                case .stageText: state.stageText(state.text(instruction.word1))
-                case .stageTag: try state.stageTag(state.text(instruction.word1))
+                case .stageText: state.stageTextConstant(instruction.word1)
+                case .stageTag: state.stageTextConstant(instruction.word1, tag: true)
                 case .createDice:
                     let count = Int(instruction.signedWord1)
                     let sides = Int(instruction.signedWord2)
@@ -166,7 +166,7 @@ enum GameEventScriptVirtualMachine {
                     state.call(Int(binding.entryAddress), destination: d)
                 case .createRecordValue:
                     let value = state.value(x)
-                    if let entries = value.mapEntries, value.kind == .map { state.setRecord(d, typeName: state.text(instruction.word2), entries: entries) } else { state.setNothing(d) }
+                    if let fields = value.asMap, value.kind == .map { state.setRecord(d, typeName: state.text(instruction.word2), fields: fields) } else { state.setNothing(d) }
                 case .createExternalType:
                     try GesCallbacks.constructor(instruction, state, context)
                     state.clearStage()
@@ -182,16 +182,16 @@ enum GameEventScriptVirtualMachine {
                 case .randomPop: if !context.random.pop() && !context.budget.isExhausted { state.fail("runtime.randomStackUnderflow") }
                 case .iteratorCreate, .iteratorCreateOrJump:
                     iterator(state, d, state.value(x), context)
-                    if instruction.opcode == .iteratorCreateOrJump, case .value = state.slot(d) { state.ip = y }
+                    if instruction.opcode == .iteratorCreateOrJump, state.slot(d).isRegisterData { state.ip = y }
                 case .iteratorNext:
-                    if case .iterator(let iterator) = state.slot(x), iterator.next(sink: state.output(d)) != nil {
+                    if let iterator = state.slot(x).iteratorValue, iterator.next(sink: state.output(d)) != nil {
                         _ = context.budget.loop()
                     } else {
                         state.setNothing(d)
                         state.ip = y
                     }
                 case .iteratorClose:
-                    if case .iterator(let iterator) = state.slot(x) { iterator.close() }
+                    if let iterator = state.slot(x).iteratorValue { iterator.close() }
                     state.setNothing(x)
                 case .listBuilderCreate, .mapBuilderCreate, .distinctBuilderCreate, .groupBuilderCreate, .orderBuilderCreate:
                     let kind: GesCollectionBuilder.Kind
@@ -204,11 +204,11 @@ enum GameEventScriptVirtualMachine {
                     }
                     state.createBuilder(d, kind)
                 case .listBuilderAdd, .mapBuilderAdd, .distinctBuilderAdd, .groupBuilderAdd, .orderBuilderAdd:
-                    if case .builder(let builder) = state.slot(x) {
+                    if let builder = state.slot(x).builderValue {
                         if instruction.opcode == .listBuilderAdd { builder.add(value: state.value(y), budget: context.budget) } else { builder.add(key: state.value(y), value: state.value(Int(instruction.a)), budget: context.budget) }
                     }
                 case .listBuilderFinish, .mapBuilderFinish, .distinctBuilderFinish, .groupBuilderFinish, .orderBuilderFinishAscending, .orderBuilderFinishDescending:
-                    if case .builder(let builder) = state.slot(x) { builder.finish(descending: instruction.opcode == .orderBuilderFinishDescending, sink: state.output(d)) } else { state.setNothing(d) }
+                    if let builder = state.slot(x).builderValue { builder.finish(descending: instruction.opcode == .orderBuilderFinishDescending, sink: state.output(d)) } else { state.setNothing(d) }
                 default:
                     if instruction.opcode.rawValue >= 0x50 && instruction.opcode.rawValue <= 0x97 {
                         try GesMath.execute(instruction, state, context, sink: state.output(d))

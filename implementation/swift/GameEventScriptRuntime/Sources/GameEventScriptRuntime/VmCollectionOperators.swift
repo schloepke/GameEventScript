@@ -5,13 +5,13 @@ enum GesCollectionOperators {
     static func execute<Output: GesValueOutput>(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext, sink: Output) throws -> Output.Result {
         let op = i.opcode
         let slot = s.slot(Int(i.word1))
-        let a = slot.value
+        let a = slot.registerValue
         switch op {
         case .takeFirst, .takeLast, .takeHighest, .takeLowest, .dropFirst, .dropLast, .dropHighest, .dropLowest, .oneRandom, .takeRandom: return GesTakeDrop.execute(op, slot, count: Int(i.signedWord2), random: c.random, sink: sink)
         case .oneWeighted, .takeWeighted: return weighted(a, s.value(Int(op == .oneWeighted ? i.word2 : i.a)), count: op == .oneWeighted ? 1 : Int(i.signedWord2), single: op == .oneWeighted, random: c.random, sink: sink)
         case .hasPattern, .takePattern: return GesPatterns.execute(slot, pattern: GameEventScriptBytecodePatternKind(rawValue: i.a)!, count: Int(i.signedWord2), face: i.a == 1 ? s.value(Int(i.b)) : .nothing, take: op == .takePattern, sink: sink)
         case .count:
-            if case .iterator(let iterator) = slot {
+            if let iterator = slot.iteratorValue {
                 defer { iterator.close() }
                 var count: Int64 = 0
                 while iterator.next() != nil { count += 1 }
@@ -21,7 +21,7 @@ enum GesCollectionOperators {
             if a.kind == .series || a.kind == .external || GesIterator(a) == nil { return sink.nothing }
             return sink.integer(length(a))
         case .first, .last, .single:
-            if case .iterator(let iterator) = slot {
+            if let iterator = slot.iteratorValue {
                 defer { iterator.close() }
                 guard let first = iterator.next() else { return sink.nothing }
                 if op == .first { return sink.copy(first) }
@@ -44,8 +44,8 @@ enum GesCollectionOperators {
         case .hasAny, .hasAll:
             let all = op == .hasAll
             let iterator: GesIterator?
-            if case .iterator(let source) = slot { iterator = source } else { iterator = GesIterator(a) }
-            if a.isNothing, case .value = slot { return sink.nothing }
+            if let source = slot.iteratorValue { iterator = source } else { iterator = GesIterator(a) }
+            if a.isNothing, slot.isRegisterData { return sink.nothing }
             guard let iterator else { return sink.boolean(false) }
             defer { iterator.close() }
             while let value = iterator.next() {
@@ -55,8 +55,8 @@ enum GesCollectionOperators {
             return sink.boolean(all)
         case .contains, .containsValue, .containsAny, .containsAll:
             let right = s.slot(Int(i.word2))
-            let b = right.value
-            if case .value = right, b.isNothing { return sink.nothing }
+            let b = right.registerValue
+            if right.isRegisterData, b.isNothing { return sink.nothing }
             if op == .containsValue {
                 if let entries = b.mapEntries { return sink.boolean(entries.contains { $0.value == a }) }
                 return sink.boolean(b.spatialValue != nil && (1...3).contains { b.index(Int64($0)) == a })
@@ -66,8 +66,8 @@ enum GesCollectionOperators {
             let candidates = [.list, .dice, .text, .tag, .integerRange, .floatRange].contains(a.kind) ? GesIterator(a) : nil
             guard let candidates else { return sink.boolean(all) }
             defer { candidates.close() }
-            let container: GesVmState.Slot
-            if case .iterator(let iterator) = right { container = .value(.list(read(iterator))) } else { container = right }
+            let container: GesValue
+            if let iterator = right.iteratorValue { container = .list(read(iterator)) } else { container = right }
             while let candidate = candidates.next() { if contains(candidate, container) != all { return sink.boolean(!all) } }
             return sink.boolean(all)
         case .startsWith, .endsWith:
@@ -115,9 +115,9 @@ enum GesCollectionOperators {
 
     static func sequence(_ value: GesValue) -> Bool { [.list, .dice, .integerRange, .floatRange].contains(value.kind) }
 
-    static func materialize(_ slot: GesVmState.Slot, ranges: Bool = true) -> [GesValue]? {
-        if case .iterator(let iterator) = slot { return read(iterator) }
-        let value = slot.value
+    static func materialize(_ slot: GesValue, ranges: Bool = true) -> [GesValue]? {
+        if let iterator = slot.iteratorValue { return read(iterator) }
+        let value = slot.registerValue
         if let list = value.listValue { return list }
         if let dice = value.diceRolls { return dice.map { .integer(Int64($0)) } }
         if ranges && (value.integerRangeValue != nil || value.floatRangeValue != nil) && length(value) <= Int32.max { return read(GesIterator(value)!) }
@@ -131,13 +131,13 @@ enum GesCollectionOperators {
         return values
     }
 
-    static func contains(_ needle: GesValue, _ slot: GesVmState.Slot) -> Bool {
-        if case .iterator(let iterator) = slot {
+    static func contains(_ needle: GesValue, _ slot: GesValue) -> Bool {
+        if let iterator = slot.iteratorValue {
             defer { iterator.close() }
             while let value = iterator.next() { if value == needle { return true } }
             return false
         }
-        let value = slot.value
+        let value = slot.registerValue
         if let text = value.textValue {
             guard let part = needle.textValue else { return false }
             let a = Array(text.unicodeScalars)

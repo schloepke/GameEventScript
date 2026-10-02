@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 enum GesPatterns {
-    static func execute<Output: GesValueOutput>(_ slot: GesVmState.Slot, pattern: GameEventScriptBytecodePatternKind, count: Int, face: GesValue, take: Bool, sink: Output) -> Output.Result {
-        let source = slot.value
+    static func execute<Output: GesValueOutput>(_ slot: GesValue, pattern: GameEventScriptBytecodePatternKind, count: Int, face: GesValue, take: Bool, sink: Output) -> Output.Result {
+        let source = slot.registerValue
         if source.kind == .series { return sink.nothing }
         let values: [GesValue]
-        if case .iterator(let iterator) = slot {
+        if let iterator = slot.iteratorValue {
             if !iterator.isPatternSequence { return take ? sink.nothing : sink.boolean(false) }
             values = GesCollectionOperators.read(iterator)
         } else if let array = GesCollectionOperators.materialize(slot, ranges: false) {

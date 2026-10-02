@@ -63,7 +63,7 @@ enum GesCasts {
             return sink.integer(integer, unit: value.kind == .integer || value.kind == .float ? value.unit : .none)
         case .float: return sink.float(value.asNumber, unit: value.kind == .integer || value.kind == .float ? value.unit : .none)
         case .percentage: return TextNumberCast.percentage(value, sink: sink)
-        case .text: return sink.text(value.toText)
+        case .text: return value.kind == .text ? sink.copy(value) : sink.text(value.toText)
         case .tag:
             if value.kind == .tag { return sink.copy(value) }
             if value.kind == .boolean { return try sink.tag(value.asBoolean ? "true" : "false") }

@@ -21,12 +21,16 @@ export async function createEngine(binary) {
   wasi.initialize(instance);
   const api = instance.exports;
 
+  let currentActions = [];
+
   const decode = (length) => {
     if (length < 0 || length > api.memory.buffer.byteLength)
       throw new Error('Invalid response length');
-    return JSON.parse(
+    const result = JSON.parse(
       new TextDecoder().decode(new Uint8Array(api.memory.buffer, api.cardgame_output(), length)),
     );
+    if (result.state) currentActions = result.state.actions;
+    return result;
   };
 
   const upload = (source) => {
@@ -49,22 +53,28 @@ export async function createEngine(binary) {
       return decode(api.cardgame_check(upload(source || '\n')));
     },
 
-    start(source, seed = 42) {
+    start(source, seed = crypto.getRandomValues(new Int32Array(1))[0], players = 2) {
       if (!Number.isInteger(seed) || seed < -2147483648 || seed > 2147483647)
         throw new Error('Seed must be an Int32');
-      return decode(api.cardgame_start(upload(source), seed));
+      if (!Number.isInteger(players) || players < 2 || players > 4)
+        throw new Error('Choose two to four players');
+      return decode(api.cardgame_start(upload(source), seed, players));
     },
 
     act(player, action, revision) {
-      const kind = ['play', 'draw', 'pass'].indexOf(action.kind);
+      const index = currentActions.findIndex(
+        (offer) =>
+          offer.kind === action.kind &&
+          offer.card === (action.card ?? null) &&
+          (action.id === undefined || offer.id === action.id),
+      );
       if (
         ![player, revision, action.card ?? 0].every(
           (value) => Number.isInteger(value) && value >= -2147483648 && value <= 2147483647,
-        ) ||
-        kind < 0
+        )
       )
         throw new Error('Invalid action');
-      return decode(api.cardgame_action(player, kind, action.card ?? 0, revision));
+      return decode(api.cardgame_action(player, index, revision));
     },
   };
 }

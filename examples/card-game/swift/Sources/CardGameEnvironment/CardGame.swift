@@ -35,16 +35,20 @@ public final class CardGame {
     public let players: [String]
     /// Active player selected by the rules; nil before setup completes.
     public var currentPlayer: Int? { bindings.currentPlayer }
-    /// Winner selected by the rules, or nil while playing or after a draw.
-    public var winner: Int? { bindings.winner }
+    /// Winners selected by the rules, in supplied order. Empty before completion or when nobody wins.
+    public var winners: [Int] { bindings.winners }
     /// Whether the rules have ended the game, including a draw.
     public var finished: Bool { bindings.finished }
-    /// Rule-provided explanation of the last completed action, or an empty string.
+    /// Most recent modal notice in the current request, or an empty string.
     public var notice: String { bindings.notice }
     /// Latest complete action offer, for the active player only.
     public var actions: [OfferedAction] { bindings.actions }
     /// Revision used to reject stale UI requests; increments after accepted actions.
     public private(set) var revision = 0
+    /// One-based turn number; actions within a turn do not advance it.
+    public private(set) var turn = 0
+    /// One-based round number; skipped seats count toward completing the current circuit.
+    public var round: Int { bindings.round }
     /// Whether a rule/runtime fault has stopped this session. Construct a new session to restart.
     public private(set) var failed = false
     /// Copied zone state for trusted native inspection; use viewJSON for player-filtered output.
@@ -52,11 +56,14 @@ public final class CardGame {
     /// Immutable card definitions for trusted native inspection, including hidden cards.
     public var cards: [Card] { bindings.board.cards }
 
-    private let bindings: Bindings
+    let bindings: Bindings
     private let host: GameEventScriptHost
     private var nextRequest = 1
+    private var roundProgress = 0
+    private var roundOpen = false
+    private var hasEndRound = false
 
-    /// Compiles the supplied GES, starts a seeded host, and sends Setup(players).
+    /// Compiles the supplied GES, starts a seeded host, and runs PrepareGame(players) and its queued messages before automatically starting the first round with player 0.
     /// Throws for invalid player counts, compiler diagnostics, binding errors, or bounded execution failure.
     public init(rules: String, players: [String] = ["Alice", "Bob"], seed: Int64 = 42) throws {
         guard (2...4).contains(players.count), players.allSatisfy({ !$0.isEmpty }) else { throw CardGameError("Provide two to four named players") }
@@ -71,6 +78,10 @@ public final class CardGame {
         host = try GameEventScriptHost(seed: seed, limits: limits, observer: bindings, extensions: bindings)
         do {
             let program = try GameEventScriptBuilder.create().addScript(rules, sourceName: "rules.ges").compile()
+            hasEndRound = program.bindings.contains { binding in
+                program.stringConstants[Int(binding.name)] == "EndRound" && binding.requiredTags.isEmpty
+                    && (binding.kind == .messageNameHandler || (binding.kind == .messageHandler && binding.argumentNames.map { program.stringConstants[Int($0)] } == ["number", "players"]))
+            }
             _ = try host.load(program)
         } catch let error as GameEventScriptCompileError {
             throw CardGameError(error.diagnostics.map(formatDiagnostic).joined(separator: "\n"))
@@ -79,10 +90,10 @@ public final class CardGame {
             _ = try host.subscribe(GameEventScriptMessageSignature(name: name, parameters: labels), handler: bindings)
         }
         guard try host.start().state == .ready else { throw CardGameError("GES initialization failed") }
-        try receive("Setup", [("players", .list(players.indices.map { .integer(Int64($0)) }))])
-        try pump()
-        bindings.settingUp = false
-        guard currentPlayer != nil, !actions.isEmpty || finished else { throw CardGameError("Setup did not establish a turn and action offer") }
+        try event("PrepareGame", [("players", bindings.playerValues)], phase: .prepareGame)
+        bindings.currentPlayer = 0
+        try beginRound()
+        if !finished { try beginTurn() }
     }
 
     /// Submits a selected action without pre-moving cards. GES revalidates against current state.
@@ -90,6 +101,8 @@ public final class CardGame {
     /// Throws on runtime failure and permanently stops this session; no rollback of previous commands is promised.
     public func submit(player: Int, action: OfferedAction, revision expectedRevision: Int) throws -> ActionResult {
         guard !failed else { throw CardGameError("Session failed; restart required") }
+        bindings.notices = []
+        bindings.notice = ""
         let request = nextRequest
         nextRequest += 1
 
@@ -99,28 +112,129 @@ public final class CardGame {
         guard !finished else { return reject("Game has ended") }
         guard expectedRevision == revision else { return reject("Stale action; refresh the board") }
         guard action.kind.utf8.count <= 80 else { return reject("Invalid action") }
+        guard let turnPlayer = currentPlayer else { return reject("Action was not offered") }
+        bindings.phase = .action
+        guard let activation = bindings.offeredActivations.first(where: { $0.kind == action.kind }), activation.offers.contains(action) else { return reject("Action has expired") }
+        guard activation.isGlobal || player == currentPlayer else { return reject("Action was not offered to this player") }
+        bindings.executingAction = activation.id
         bindings.pending = .init(id: request, player: player, action: action)
         bindings.result = nil
         do {
-            try receive(
-                "ActionRequested",
-                [
-                    ("request", .integer(Int64(request))), ("player", .integer(Int64(player))),
-                    ("action", .text(action.kind)), ("card", action.card.map { .integer(Int64($0)) } ?? .nothing),
-                ]
-            )
+            var arguments: [(String, GesValue)] = [("action", .integer(Int64(activation.id)))]
+            if !activation.isGlobal { arguments.append(("player", .integer(Int64(player)))) }
+            if activation.cards != nil { arguments.append(("card", action.card.map { .integer(Int64($0)) } ?? .nothing)) }
+            try receive(activation.handler.name, arguments)
             try pump()
             guard let result = bindings.result, bindings.pending == nil else { throw CardGameError("Rules did not explicitly complete or reject the request") }
             if result.accepted {
+                try bindings.settleAction(activation.id)
                 revision += 1
-                guard finished || !actions.isEmpty else { throw CardGameError("Rules did not offer the next actions") }
+                if bindings.endRequested {
+                    try endGame()
+                } else if bindings.waitingForRound {
+                    try resumeRoundIfRequested()
+                    if !finished && !bindings.waitingForRound { try beginTurn() }
+                } else if bindings.turnEnded {
+                    try advanceTurn(after: turnPlayer)
+                    if !finished && !bindings.waitingForRound { try beginTurn() }
+                }
+                guard finished || bindings.waitingForRound || !actions.isEmpty else { throw CardGameError("Rules must offer another action or emit NextPlayersTurn()") }
             }
+            bindings.executingAction = nil
+            bindings.phase = finished ? .finished : .idle
             return result
         } catch {
             failed = true
-            bindings.actions = []
+            bindings.removeAllActions()
             throw error
         }
+    }
+
+    private func event(_ name: String, _ values: [(String, GesValue)], phase: Bindings.Phase) throws {
+        bindings.phase = phase
+        try receive(name, values)
+        try pump()
+    }
+
+    private func beginRound() throws {
+        bindings.skipCount = 0
+        bindings.round += 1
+        roundOpen = true
+        try event("BeginRound", [("number", .integer(Int64(round))), ("players", bindings.playerValues)], phase: .beginRound)
+        if bindings.endRequested { try endGame() }
+    }
+
+    private func endRound(waitForNext: Bool = false) throws {
+        guard roundOpen else { return }
+        roundOpen = false
+        bindings.waitingForRound = waitForNext
+        bindings.nextRoundRequested = waitForNext && !hasEndRound
+        bindings.turnEnded = false
+        bindings.finishRequested = false
+        bindings.removeTurnActions()
+        try event("EndRound", [("number", .integer(Int64(round))), ("players", bindings.playerValues)], phase: .endRound)
+    }
+
+    private func resumeRoundIfRequested() throws {
+        guard bindings.waitingForRound, bindings.nextRoundRequested else { return }
+        guard !bindings.hasRequiredActions else { return }
+        bindings.cleanupActions(player: bindings.currentPlayer)
+        bindings.waitingForRound = false
+        bindings.nextRoundRequested = false
+        try beginRound()
+    }
+
+    private func advanceTurn(after player: Int) throws {
+        try event("EndTurn", [("player", .integer(Int64(player)))], phase: .endTurn)
+        if bindings.endRequested {
+            try endGame()
+            return
+        }
+        bindings.cleanupActions(player: player)
+        let next = bindings.nextPlayer(after: player)
+        roundProgress += 1 + bindings.skipCount
+        bindings.currentPlayer = next
+        if roundProgress >= players.count {
+            roundProgress %= players.count
+            try endRound(waitForNext: true)
+            if bindings.endRequested { try endGame() }
+            if !finished { try resumeRoundIfRequested() }
+        }
+    }
+
+    private func beginTurn() throws {
+        // Bound automatic skips across separate host pumps without recursive calls.
+        for _ in 0..<128 {
+            turn += 1
+            bindings.turnEnded = false
+            bindings.finishRequested = false
+            bindings.skipCount = 0
+            bindings.prepareTurnActions()
+            let player = bindings.currentPlayer!
+            try event("BeginTurn", [("player", .integer(Int64(player)))], phase: .beginTurn)
+            if bindings.endRequested { try endGame() }
+            if finished { return }
+            if bindings.finishRequested {
+                guard !bindings.hasRequiredActions else { throw CardGameError("Required actions remain") }
+                bindings.turnEnded = true
+                try advanceTurn(after: player)
+                if finished || bindings.waitingForRound { return }
+            } else {
+                guard !actions.isEmpty else { throw CardGameError("BeginTurn must offer actions, request NextPlayersTurn or end the game") }
+                bindings.phase = .idle
+                return
+            }
+        }
+        throw CardGameError("Automatic turn advancement exceeded its budget")
+    }
+
+    private func endGame() throws {
+        try endRound()
+        bindings.waitingForRound = false
+        bindings.removeAllActions()
+        try event("EndGame", [("players", bindings.playerValues)], phase: .endGame)
+        guard finished else { throw CardGameError("EndGame must emit Finish(winners), using an empty list when nobody wins") }
+        bindings.phase = .finished
     }
 
     private func receive(_ name: String, _ values: [(String, GesValue)]) throws {
@@ -144,6 +258,8 @@ func message(_ name: String, _ values: [(String, GesValue)]) throws -> GameEvent
 }
 
 final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtensionRegistry, GameEventScriptRuntimeObserver {
+    enum Phase { case prepareGame, beginRound, beginTurn, action, endTurn, endRound, endGame, idle, finished }
+
     struct Pending {
         let id: Int
         let player: Int
@@ -151,112 +267,202 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
     }
 
     static let commands: [(String, [String])] = [
-        ("CreateZone", ["zone", "owner", "visibility"]), ("CreateCard", ["zone", "properties"]),
-        ("Shuffle", ["zone"]), ("Take", ["source", "destination", "count"]),
-        ("BeginTurn", ["player"]), ("Allowed", ["player", "actions"]),
-        ("MoveCard", ["request", "card", "source", "destination"]),
-        ("DrawCard", ["request", "source", "destination", "recycle", "keep"]),
-        ("DrawCards", ["source", "destination", "count", "recycle", "keep"]), ("Notice", ["text"]),
-        ("Complete", ["request"]), ("Reject", ["request", "reason"]), ("Finish", ["winner"]),
+        ("CreateGame", ["setup"]),
+        ("BeginRound", ["number", "players"]), ("EndRound", ["number", "players"]),
+        ("Take", ["source", "destination", "count"]),
+        ("Action", ["spec"]), ("ActionGroup", ["spec"]), ("ClearActions", []), ("ClearActions", ["actions"]),
+        ("SetState", ["player", "key", "value"]),
+        ("Action", ["action", "label", "optional", "finishTurn", "consumable", "handler", "area"]),
+        ("Action", ["action", "label", "optional", "finishTurn", "consumable", "handler", "cards"]),
+        ("Action", ["action", "label", "optional", "finishTurn", "consumable", "handler", "zone"]),
+        ("SetActionCards", ["action", "cards"]), ("ConsumeAction", ["action"]),
+        ("NextPlayersTurn", []), ("NextPlayersTurn", ["nextPlayer"]), ("NextPlayersTurn", ["repeatTurnForPlayer"]), ("NextRound", []),
+        ("ReverseDirection", []), ("SetCardOrder", ["zone", "cards"]), ("SetState", ["key", "value"]), ("EndGame", []),
+        ("MoveCard", ["action", "card", "source", "destination"]),
+        ("DrawCard", ["action", "source", "destination"]),
+        ("MoveCards", ["source", "destination", "cards"]), ("Notice", ["text"]), ("NoticeTable", ["text"]),
+        ("Complete", ["action"]), ("Reject", ["action", "reason"]), ("Finish", ["winners"]),
     ]
     var board = Board()
+    var gameCreated = false
+    var round = 0
+    var waitingForRound = false
+    var nextRoundRequested = false
+    var direction = 1
+    var state: [String: GesValue] = [:]
+    var playerState: [Int: [String: GesValue]] = [:]
     let playerCount: Int
     var currentPlayer: Int?
-    var winner: Int?
+    var winners: [Int] = []
     var finished = false
-    var actions: [OfferedAction] = []
+    var activations: [ActionActivation] = []
+    var groups: [ActionGroup] = []
+    var nextActivation = 1
+    var executingAction: Int?
+    var finishRequested = false
+    var actions: [OfferedAction] {
+        offeredActivations.flatMap(\.offers)
+    }
+
     var pending: Pending?
     var result: ActionResult?
     var fault: String?
-    var settingUp = true
+    var phase = Phase.prepareGame
+    var turnEnded = false
+    var endRequested = false
+    var skipCount = 0
+    var lastAction = ""
+    var playerValues: GesValue { .list((0..<playerCount).map { .integer(Int64($0)) }) }
+
+    func nextPlayer(after player: Int) -> Int { (player + direction * (1 + skipCount) + playerCount * 2) % playerCount }
+
     var notice = ""
+    var notices: [String] = []
+    var tableNotice = ""
 
     init(playerCount: Int) { self.playerCount = playerCount }
 
     func resolve(_ reference: GameEventScriptExtensionReference) throws -> (any GameEventScriptExtensionFunction)? {
-        guard reference.extensionName == "board", Query.signatures[reference.functionName] == reference.argumentLabels else { return nil }
+        guard reference.extensionName == "board" else { return nil }
+        if reference.functionName == "state", reference.argumentLabels == ["player", "key"] { return Query(bindings: self, name: "playerstate") }
+        guard Query.signatures[reference.functionName] == reference.argumentLabels else { return nil }
         return Query(bindings: self, name: reference.functionName)
     }
 
     func handle(_ message: GameEventScriptMessage, context: GameEventScriptContext) throws {
         let args = message.arguments
         switch message.name {
-        case "CreateZone":
-            guard settingUp else { throw CardGameError("Zones can only be created during setup") }
-            let owner = args[1].kind == .nothing ? nil : try integer(args[1])
-            guard owner == nil || (0..<playerCount).contains(owner!) else { throw CardGameError("Unknown zone owner") }
-            try board.addZone(text(args[0]), owner: owner, visibility: text(args[2]))
-        case "CreateCard":
-            guard settingUp else { throw CardGameError("Cards can only be created during setup") }
-            try board.addCard(zone: text(args[0]), properties: args[1])
-        case "Shuffle":
-            guard settingUp else { throw CardGameError("Setup-only shuffle") }
-            try board.shuffle(text(args[0]), random: context.random)
+        case "BeginRound", "EndRound": break  // Optional script hooks still have a native recipient.
+        case "CreateGame":
+            guard phase == .prepareGame, !gameCreated else { throw CardGameError("CreateGame is allowed once during preparation") }
+            board = try Board.create(args[0], playerCount: playerCount)
+            try setupActions(field(args[0], "actions"))
+            gameCreated = true
         case "Take":
-            guard settingUp else { throw CardGameError("Setup-only take") }
-            try board.take(from: text(args[0]), to: text(args[1]), count: integer(args[2]))
-        case "BeginTurn":
-            guard pending == nil, !finished else { throw CardGameError("Cannot begin a turn during a pending action or ended game") }
-            let player = try integer(args[0])
-            guard (0..<playerCount).contains(player) else { throw CardGameError("Unknown player") }
-            currentPlayer = player
-            actions = []
-            try emit("PlayerRoundStart", [("player", .integer(Int64(player)))], context)
-        case "Allowed":
-            guard try integer(args[0]) == currentPlayer, !finished, let list = args[1].listValue else { throw CardGameError("Invalid action offer") }
-            actions = try list.map { value in
-                let id = field(value, "card")
-                return OfferedAction(kind: try text(field(value, "kind")), card: id.kind == .nothing ? nil : try integer(id))
+            try requireCardMutation()
+            try board.take(from: tag(args[0]), to: tag(args[1]), count: integer(args[2]))
+        case "NextPlayersTurn":
+            guard !endRequested, !waitingForRound else { throw CardGameError("Use NextRound between rounds") }
+            if phase == .action {
+                guard pending == nil, result?.accepted == true, !turnEnded else { throw CardGameError("NextPlayersTurn requires an accepted action") }
+                finishRequested = true
+            } else if phase == .beginTurn {
+                finishRequested = true
+            } else {
+                guard phase == .endTurn else { throw CardGameError("NextPlayersTurn is available in BeginTurn, after action acceptance or during EndTurn(player)") }
             }
+            if args.signatureLabels == ["nextPlayer"] {
+                let next = try integer(args[0])
+                guard (0..<playerCount).contains(next), let currentPlayer else { throw CardGameError("Unknown next player") }
+                let distance = ((next - currentPlayer) * direction + playerCount) % playerCount
+                skipCount = (distance == 0 ? playerCount : distance) - 1
+            } else if args.signatureLabels == ["repeatTurnForPlayer"] {
+                guard args[0].kind == .boolean else { throw CardGameError("repeatTurnForPlayer must be Boolean") }
+                skipCount = args[0].asBoolean ? playerCount - 1 : 0
+            } else {
+                skipCount = 0
+            }
+        case "NextRound":
+            if endRequested { break }
+            guard waitingForRound, phase == .endRound || (phase == .action && pending == nil && result?.accepted == true) else {
+                throw CardGameError("NextRound requires EndRound or an accepted between-round action")
+            }
+            nextRoundRequested = true
+        case "ReverseDirection":
+            guard [.prepareGame, .beginRound, .endTurn, .endRound, .action].contains(phase) else { throw CardGameError("Cannot reverse direction in this phase") }
+            direction = -direction
+        case "SetState":
+            if args.signatureLabels == ["player", "key", "value"] {
+                let player = try checkedPlayer(args[0])
+                let key = try tag(args[1])
+                var values = playerState[player] ?? [:]
+                guard args[2].kind == .nothing || values[key] != nil || values.count < 64 else { throw CardGameError("Maximum 64 state keys per player") }
+                if args[2].kind == .nothing { values.removeValue(forKey: key) } else { values[key] = args[2] }
+                playerState[player] = values
+            } else {
+                let key = try tag(args[0])
+                guard args[1].kind == .nothing || state[key] != nil || state.count < 64 else { throw CardGameError("Maximum 64 rule state keys") }
+                if args[1].kind == .nothing { state.removeValue(forKey: key) } else { state[key] = args[1] }
+            }
+        case "ClearActions":
+            try clearActions(args.signatureLabels.isEmpty ? nil : args[0])
+        case "ActionGroup":
+            try activateGroup(args[0])
+        case "EndGame":
+            guard [.beginRound, .beginTurn, .action, .endTurn, .endRound].contains(phase), pending == nil, !endRequested else { throw CardGameError("Cannot end the game in this phase") }
+            endRequested = true
+            removeAllActions()
+        case "Action":
+            try activate(args)
+        case "SetActionCards":
+            try requireActionEditing()
+            let kind = try tag(args[0])
+            guard let index = activations.firstIndex(where: { $0.kind == kind && ($0.isGlobal || $0.player == currentPlayer) && !$0.consumed }), activations[index].cards != nil else { throw CardGameError("Unknown card action") }
+            activations[index].cards = try actionCards(args[1])
+        case "ConsumeAction":
+            guard phase == .action, pending == nil, result?.accepted == true, executingAction == (try integer(args[0])),
+                let index = activations.firstIndex(where: { $0.id == executingAction }), activations[index].mode == "manual", !activations[index].consumed
+            else { throw CardGameError("ConsumeAction requires the successfully completed manual action") }
+            activations[index].consumed = true
         case "MoveCard":
-            let request = try requirePending(args[0])
-            var replacement = board
-            try replacement.move(integer(args[1]), from: text(args[2]), to: text(args[3]))
-            board = replacement
-            try complete(request, context)
+            try moveAndComplete(args[0], card: integer(args[1]), source: tag(args[2]), destination: tag(args[3]))
         case "DrawCard":
-            let request = try requirePending(args[0])
+            try moveAndComplete(args[0], card: nil, source: tag(args[1]), destination: tag(args[2]))
+        case "SetCardOrder":
+            try requireCardMutation()
+            guard let values = args[1].listValue else { throw CardGameError("Expected card IDs") }
+            try board.setCardOrder(values.map(integer), zone: tag(args[0]))
+        case "MoveCards":
+            try requireCardMutation()
+            guard let values = args[2].listValue else { throw CardGameError("Expected a list of card IDs") }
             var replacement = board
-            try replacement.draw(from: text(args[1]), to: text(args[2]), count: 1, recycling: text(args[3]), keeping: integer(args[4]), random: context.random)
+            try replacement.moveCards(values.map(integer), from: tag(args[0]), to: tag(args[1]))
             board = replacement
-            try complete(request, context)
-        case "DrawCards":
-            guard pending == nil, !finished else { throw CardGameError("Rule effects require a completed request and an active game") }
-            var replacement = board
-            try replacement.draw(from: text(args[0]), to: text(args[1]), count: integer(args[2]), recycling: text(args[3]), keeping: integer(args[4]), random: context.random)
-            board = replacement
-        case "Notice": notice = try text(args[0])
-        case "Complete": try complete(requirePending(args[0]), context)
+        case "Notice":
+            notice = try text(args[0])
+            notices.append(notice)
+        case "NoticeTable": tableNotice = try text(args[0])
+        case "Complete": complete(try requirePending(args[0]))
         case "Reject":
             let request = try requirePending(args[0])
             result = .init(request: request.id, accepted: false, reason: try text(args[1]))
             pending = nil
         case "Finish":
-            guard pending == nil, !finished else { throw CardGameError("Cannot finish with a pending request") }
-            let value = args[0].kind == .nothing ? nil : try integer(args[0])
-            guard value == nil || (0..<playerCount).contains(value!) else { throw CardGameError("Unknown winner") }
-            winner = value
+            guard phase == .endGame, !finished else { throw CardGameError("Finish is only available in EndGame") }
+            guard let entries = args[0].listValue else { throw CardGameError("Winners must be a list of player IDs") }
+            let values = try entries.map(integer)
+            guard Set(values).count == values.count, values.allSatisfy({ (0..<playerCount).contains($0) }) else { throw CardGameError("Invalid or duplicate winner") }
+            winners = values
             finished = true
-            actions = []
+            removeAllActions()
         default: throw CardGameError("Unknown board command")
         }
     }
 
+    private func moveAndComplete(_ action: GesValue, card: Int?, source: String, destination: String) throws {
+        let request = try requirePending(action)
+        guard let id = try card ?? board.zone(source).cards.last else { throw CardGameError("Cannot draw from an empty zone") }
+        var replacement = board
+        try replacement.move(id, from: source, to: destination)
+        board = replacement
+        complete(request)
+    }
+
+    private func requireCardMutation() throws {
+        guard [.prepareGame, .beginRound, .endRound, .action, .endTurn].contains(phase), !finished else {
+            throw CardGameError("Card movement is unavailable in this phase")
+        }
+    }
+
     private func requirePending(_ value: GesValue) throws -> Pending {
-        guard let pending, pending.id == (try integer(value)) else { throw CardGameError("Unknown or completed request") }
+        guard phase == .action, let pending, executingAction == (try integer(value)) else { throw CardGameError("Unknown or completed request") }
         return pending
     }
 
-    private func complete(_ request: Pending, _ context: GameEventScriptContext) throws {
-        notice = ""
+    private func complete(_ request: Pending) {
         result = .init(request: request.id, accepted: true, reason: "")
         pending = nil
-        actions = []
-        try emit("ActionCompleted", [("request", .integer(Int64(request.id))), ("player", .integer(Int64(request.player))), ("action", .text(request.action.kind))], context)
-    }
-
-    private func emit(_ name: String, _ values: [(String, GesValue)], _ context: GameEventScriptContext) throws {
-        guard context.emit(try message(name, values)) else { throw CardGameError("Host queue rejected a board event") }
+        lastAction = request.action.kind
     }
 
     func runtimeError(_ diagnostic: GameEventScriptDiagnostic) { fault = formatDiagnostic(diagnostic) }
@@ -265,25 +471,52 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
 }
 
 private struct Query: GameEventScriptExtensionFunction {
-    static let signatures: [String: [String]] = ["cards": ["zone"], "card": ["id"], "top": ["zone"], "current": [], "playercount": [], "players": []]
+    static let signatures: [String: [String]] = [
+        "actions": ["player"], "cards": ["zone"], "card": ["id"], "top": ["zone"], "current": [], "playercount": [], "players": [], "next": ["player"], "table": [], "zones": ["player"], "lastaction": [], "roundnumber": [], "direction": [],
+        "state": ["key"], "ending": [],
+    ]
     let bindings: Bindings
     let name: String
 
     func invoke(_ call: GesExtensionCall) throws {
         switch name {
+        case "actions": call.setValue(try bindings.actionEntries(player: try bindings.checkedPlayer(call.arguments[0])))
+        case "playerstate": call.setValue(bindings.playerState[try bindings.checkedPlayer(call.arguments[0])]?[try tag(call.arguments[1])] ?? .nothing)
         case "cards":
-            call.setValue(.list(try bindings.board.zone(text(call.arguments[0])).cards.map { try bindings.board.card($0).value }))
+            call.setValue(.list(try bindings.board.zone(tag(call.arguments[0])).cards.map { try bindings.board.card($0).value }))
         case "card":
             if call.arguments[0].kind == .nothing { call.setNothing() } else { call.setValue((try? bindings.board.card(integer(call.arguments[0])).value) ?? .nothing) }
         case "top":
-            let id = try bindings.board.zone(text(call.arguments[0])).cards.last
+            let id = try bindings.board.zone(tag(call.arguments[0])).cards.last
             call.setValue(try id.map { try bindings.board.card($0).value } ?? .nothing)
+        case "next":
+            let player = try integer(call.arguments[0])
+            guard (0..<bindings.playerCount).contains(player) else { throw CardGameError("Unknown player") }
+            call.setInteger(Int64(bindings.nextPlayer(after: player)))
+        case "ending": call.setValue(.boolean(bindings.endRequested))
+        case "direction": call.setInteger(Int64(bindings.direction))
+        case "state": call.setValue(bindings.state[try tag(call.arguments[0])] ?? .nothing)
+        case "roundnumber": call.setValue(.integer(Int64(bindings.round)))
+        case "table": call.setValue(.list(try bindings.board.zones.filter { $0.owner == nil }.map(zoneValue)))
+        case "zones":
+            let player = try integer(call.arguments[0])
+            guard (0..<bindings.playerCount).contains(player) else { throw CardGameError("Unknown player") }
+            call.setValue(.list(try bindings.board.zones.filter { $0.owner == player }.map(zoneValue)))
+        case "lastaction": call.setText(bindings.lastAction)
         case "current": call.setValue(bindings.currentPlayer.map { .integer(Int64($0)) } ?? .nothing)
         case "playercount": call.setInteger(Int64(bindings.playerCount))
         case "players": call.setValue(.list((0..<bindings.playerCount).map { .integer(Int64($0)) }))
         default: throw CardGameError("Unknown board query")
         }
     }
+}
+
+private func zoneValue(_ zone: Zone) throws -> GesValue {
+    try .map([
+        .init(key: "id", value: .tag(zone.id)), .init(key: "label", value: .text(zone.label)), .init(key: "position", value: .tag(zone.position)),
+        .init(key: "row", value: .integer(Int64(zone.row))), .init(key: "layout", value: .tag(zone.layout)),
+        .init(key: "count", value: .integer(Int64(zone.cards.count))),
+    ])
 }
 
 func formatDiagnostic(_ diagnostic: GameEventScriptDiagnostic) -> String {

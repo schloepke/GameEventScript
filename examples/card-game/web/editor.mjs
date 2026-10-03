@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { diagnosticRange } from './diagnostics.mjs';
+import { showLoading } from './loading.mjs';
 
 /** Paint Swift-provided UTF-16 ranges; keep the native textarea's editing behavior. */
 export function attachEditor(input, colors, container, status) {
@@ -11,6 +12,9 @@ export function attachEditor(input, colors, container, status) {
     revision = 0,
     inFlight = false,
     composing = false;
+  const lines = document.getElementById('source-lines');
+  let lineCount = 0;
+  const loading = document.getElementById('editor-loading');
   const diagnosticsList = document.getElementById('diagnostics');
   const checkButton = document.getElementById('check-source');
   const kinds = new Set([
@@ -37,6 +41,73 @@ export function attachEditor(input, colors, container, status) {
     colors.style.height = `${input.clientHeight}px`;
     colors.scrollTop = input.scrollTop;
     colors.scrollLeft = input.scrollLeft;
+    lines.style.height = `${input.clientHeight}px`;
+    lines.scrollTop = input.scrollTop;
+  }
+
+  function updateLines() {
+    const count = input.value.split('\n').length;
+    if (count !== lineCount) {
+      lineCount = count;
+      lines.textContent = Array.from({ length: count }, (_, index) => index + 1).join('\n');
+      container.style.setProperty('--gutter-width', `${Math.max(3, String(count).length) * 9 + 24}px`);
+    }
+    syncScroll();
+  }
+
+  function insertText(text, start = input.selectionStart, end = input.selectionEnd) {
+    input.setSelectionRange(start, end);
+    // Native insertion preserves the textarea's undo history where supported.
+    if (!document.execCommand('insertText', false, text)) {
+      input.setRangeText(text, start, end, 'end');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+
+  function editKey(event) {
+    if (composing || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const lineStart = start === 0 ? 0 : input.value.lastIndexOf('\n', start - 1) + 1;
+    if (event.key === 'Backspace' && start === end && lineStart > 0) {
+      const indentLength = input.value.slice(lineStart).match(/^[ \t]*/)[0].length;
+      if (indentLength > 0 && start <= lineStart + indentLength) {
+        event.preventDefault();
+        // Join the lines in one undoable edit, including indentation after the caret.
+        const newlineStart = input.value[lineStart - 2] === '\r' ? lineStart - 2 : lineStart - 1;
+        insertText('', newlineStart, lineStart + indentLength);
+      }
+    } else if (event.key === 'Tab') {
+      event.preventDefault();
+      if (!event.shiftKey && !input.value.slice(start, end).includes('\n')) {
+        insertText('    ');
+      } else {
+        // A selection ending at the next line's start does not indent that line.
+        const last = end > start && input.value[end - 1] === '\n' ? end - 1 : end;
+        const block = input.value.slice(lineStart, last);
+        const rows = block.split('\n');
+        const removed = rows.map((row) => event.shiftKey ? (row.match(/^(?: {1,4}|\t)/)?.[0].length ?? 0) : 0);
+        const replacement = rows.map((row, index) => event.shiftKey ? row.slice(removed[index]) : '    ' + row).join('\n');
+        insertText(replacement, lineStart, last);
+        const delta = replacement.length - block.length;
+        const firstDelta = event.shiftKey ? -Math.min(start - lineStart, removed[0]) : 4;
+        input.setSelectionRange(start + firstDelta, Math.max(start + firstDelta, end + delta));
+      }
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const prefix = input.value.slice(lineStart, start);
+      const indent = prefix.match(/^[ \t]*/)[0];
+      const lineEnd = input.value.indexOf('\n', end);
+      const suffix = input.value.slice(end, lineEnd < 0 ? input.value.length : lineEnd);
+      const code = prefix.trim();
+      const opensBlock = /[\[{]$/.test(code);
+      // A split inside a statement gets one continuation level; closing delimiters do not.
+      const continuesStatement = code.length > 0 && !code.startsWith('//')
+        && suffix.trim().length > 0 && !/^[\]})]/.test(suffix.trimStart());
+      const extra = opensBlock || continuesStatement ? '    ' : '';
+      const leadingSpace = suffix.match(/^[ \t]*/)[0].length;
+      insertText('\n' + indent + extra, start, end + leadingSpace);
+    }
   }
 
   function plain() {
@@ -45,6 +116,7 @@ export function attachEditor(input, colors, container, status) {
   }
 
   function fail(message) {
+    loading.hidden = true;
     clearTimeout(timeout);
     worker?.terminate();
     worker = null;
@@ -143,8 +215,14 @@ export function attachEditor(input, colors, container, status) {
     if (!worker) {
       const active = new Worker('./worker.mjs', { type: 'module' });
       worker = active;
+      showLoading(loading, { phase: 'download', loaded: 0 });
       active.onmessage = ({ data }) => {
         if (worker !== active) return;
+        if (data.type === 'loading') {
+          showLoading(loading, data);
+          return;
+        }
+        loading.hidden = true;
         clearTimeout(timeout);
         inFlight = false;
         if (data.id !== revision) {
@@ -165,20 +243,17 @@ export function attachEditor(input, colors, container, status) {
         }
       };
       active.onerror = () => {
-        if (worker === active)
-          fail('Could not load highlighting; editing remains available.');
+        if (worker === active) fail('Could not load highlighting; editing remains available.');
       };
     }
     inFlight = true;
     worker.postMessage({ id: revision, type: 'analyze', source });
-    timeout = setTimeout(
-      () => fail('Code check timed out; editing remains available.'),
-      120000,
-    );
+    timeout = setTimeout(() => fail('Code check timed out; editing remains available.'), 120000);
   }
 
   function changed() {
     revision++;
+    updateLines();
     plain();
     clearTimeout(debounce);
     diagnosticsList.replaceChildren();
@@ -193,6 +268,7 @@ export function attachEditor(input, colors, container, status) {
     request();
   });
   input.addEventListener('input', changed);
+  input.addEventListener('keydown', editKey);
   input.addEventListener('scroll', syncScroll);
   input.addEventListener('compositionstart', () => {
     composing = true;
@@ -212,5 +288,6 @@ export function attachEditor(input, colors, container, status) {
   window.addEventListener('pageshow', (event) => {
     if (event.persisted) request();
   });
+  updateLines();
   request();
 }

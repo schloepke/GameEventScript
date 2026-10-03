@@ -70,9 +70,11 @@ def main():
             raise RuntimeError('Clock body changed; review the isolated Wasm patch')
         clock.write_text(clock_text.replace(body, '        let value = card_game_monotonic_microseconds()\n        precondition(value >= 0, "WASI monotonic clock unavailable")\n        return value'))
         package = stage / package.relative_to(ROOT)
+        # Nested declarative setup maps need more compiler stack than WASI's 64 KiB default.
         command += ['--swift-sdks-path', str(ARTIFACTS / 'sdk'), '--swift-sdk', args.sdk,
                     '--product', 'card-game-wasm', '-c', 'release',
-                    '-Xswiftc', '-Xclang-linker', '-Xswiftc', '-mexec-model=reactor']
+                    '-Xswiftc', '-Xclang-linker', '-Xswiftc', '-mexec-model=reactor',
+                    '-Xlinker', '-z', '-Xlinker', 'stack-size=1048576']
         for symbol in ['cardgame_alloc', 'cardgame_start', 'cardgame_action', 'cardgame_output', 'cardgame_highlight', 'cardgame_check']:
             command += ['-Xlinker', '--export=' + symbol]
     command += ['--package-path', str(package), '--scratch-path', str(ARTIFACTS / ('wasm-build' if args.mode == 'wasm' else 'native')),
@@ -92,6 +94,9 @@ def main():
             if file.is_file() and file.suffix in {".mjs", ".html", ".css", ".json"}:
                 shutil.copy2(file, web / file.name)
         shutil.copy2(EXAMPLE / 'games/mau-mau/rules.ges', web / 'rules.ges')
+        (web / 'examples').mkdir()
+        for rules in (EXAMPLE / 'games').glob('*/rules.ges'):
+            shutil.copy2(rules, web / 'examples' / (rules.parent.name + '.ges'))
         vendor = ARTIFACTS / 'web-deps/node_modules/@bjorn3/browser_wasi_shim'
         if not (vendor / 'dist/index.js').exists():
             raise RuntimeError('Run scripts/setup-wasm.py to install the browser WASI adapter')

@@ -13,14 +13,16 @@ All generated files and downloaded tools live below `artifacts/card-game`.
 ## Game
 
 The default game uses a 32-card deck (7–A, four suits), five cards each, and a
-shared draw and discard pile. Play the same suit or rank, or draw one card and
-end the turn. Empty hand wins. An 8 skips the next player. A 7 makes the next player draw two cards and skip
-their turn; sevens cannot be stacked. When fewer cards are available, they draw
-what remains. The final card wins immediately without applying a penalty, and
-the initial discard has no effect. Jack effects and Mau-call penalties are not
-implemented. The discard pile is recycled while preserving its top card.
+shared draw and discard pile. Match suit or rank, draw once, then play or pass.
+An 8 skips the next player. A 7 starts a two-card debt; another 7 adds two and
+passes it on. After the first penalty draw, stacking is no longer available.
+Penalty cards are drawn individually as required actions, followed by the normal
+turn (including one optional draw). Shortages draw all available cards.
+A jack may be played on any card except another jack and requires an explicit choice of suit, including
+when it is the final card. Other final cards win immediately; the initial discard
+has no special effect. GES recycles discards while keeping the top card.
 If no draw is possible, blocked players pass; when all players are blocked, the
-rules declare a draw. The library also supports three or four players.
+rules declare a draw. Select two, three, or four players before starting a new game.
 
 ## Play in the browser
 
@@ -30,12 +32,15 @@ The prepared build can be served immediately:
 python3 examples/card-game/scripts/serve.py
 ```
 
-Open <http://127.0.0.1:8766/>. Click highlighted cards or **Draw a card**.
+Open <http://127.0.0.1:8766/>. Choose 2–4 players and start a game. Click highlighted cards or **Draw a card**.
 Expand the GES editor, change a rule, and choose **New game** to compile it
 in the browser. The editor uses the existing Swift syntax highlighter through
 Wasm, including while editing incomplete code. Its dedicated worker returns
 UTF-16 ranges; a text layer paints them behind the native textarea without
 changing selection or undo. Highlighting failures fall back to plain text.
+A loading bar shows Wasm download progress (percent and MB when the response size
+is known), followed by a separate initialization status. Unknown or compressed
+response sizes use an indeterminate bar. The editor shows its own loading status.
 **Stop** terminates the worker. Startup allows 120 seconds for the first download; a 15-second watchdog also
 terminates unresponsive compilation/execution.
 
@@ -119,3 +124,52 @@ Game startup, runtime/native-handler, worker and timeout failures open a modal
 with the full error text, including available handler and technical details.
 Close it with **Close** or Escape; **Error details** reopens the last error.
 Starting a new game clears it. Closing the dialog does not resume a failed game.
+
+## Board setup and lifecycle
+
+Table zones support piles and open card spreads at nine compass positions; zones in each row
+follow creation order from left to right. Players have fixed bottom/top/left/right
+areas. `CreateGame(setup: board(players: players))` creates the entire board
+atomically from flat table and player zone lists. Zone IDs are tags. Table positions
+use nine compass tags; player positions use #left, #center or #right. Optional
+newRow: true starts a row within the player area or table position. Side players rotate
+±90° while top and bottom stay upright. Initial cards can use `deck()[:shuffle]`.
+
+The environment runs `PrepareGame(players)` and all its queued messages, then
+`BeginRound`, `BeginTurn`, action requests, `EndTurn`, `EndRound` and `EndGame`.
+Rounds count a circuit from the starting player, including skipped seats; an
+incomplete final round closes before EndGame. An EndRound handler controls
+continuation with NextRound and may offer between-round actions; without one
+continuation is automatic. ReverseDirection supports reversed seat order. GES owns discard recycling and
+shuffling through `[:shuffle]` and `MoveCards`; native draws never refill a pile. Rules offer named actions
+with `Action` and typed handler references. Consumption may be automatic,
+manual, counted, or disabled. Required actions must be consumed before turn end.
+`NextPlayersTurn(nextPlayer: X)` chooses the next player;
+`NextPlayersTurn(repeatTurnForPlayer: true)` repeats the current player after a full circuit.
+Optional setup `actions` persist across turns and invoke handlers without player.
+`Notice` opens dialogs; `NoticeTable` updates a persistent centered table status. See `environment/Contract.md` for signatures and restrictions.
+
+The browser seed field is optional. Leave it empty for a fresh random seed on
+each new game, or enter an Int32 seed (including 0) for reproducible deals.
+
+Mau Mau creates the board, deals cards and places the first discard directly in
+PrepareGame. Custom preparation messages remain possible. Once all queued
+preparation messages finish, the first round starts automatically with player 0.
+
+The editor automatically stores its current source in localStorage for this
+browser and origin, including unfinished code. It restores the draft on reload.
+Game progress is not saved. “Load example” explicitly replaces the source, with
+“Undo example load” available until the next page reload; “New game” applies it.
+Storage failures are shown beside the editor. Clearing browser site data removes
+the saved draft. To add an example, create games/<id>/rules.ges and register its
+id, name, and examples/<id>.ges path in web/examples.json. The build copies all
+game sources into the example catalog's target directory.
+
+Player-specific duties can be queued with `Action(spec: [player: …, …])` or
+`ActionGroup(spec: [player: …, actions: […], …])`. Required offers set a priority
+floor, and exclusive groups let the player choose one alternative. Mau Mau uses
+this for stacking sevens or drawing the counted penalty before the normal turn.
+The group carries the penalty to its recipient; no global penalty state is needed.
+Eights store a per-player #skip flag, which BeginTurn handles with ClearActions()
+and NextPlayersTurn(). `:board.actions(player)` supports selective removal by
+stable references. See the environment contract and browser help for details.

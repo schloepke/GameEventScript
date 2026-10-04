@@ -98,7 +98,8 @@ been checked for playing, drawing, rule editing, stopping, and restarting.
 
 ## Files and contract
 
-- `games/mau-mau/rules.ges`: complete game setup and rules.
+- `games/mau-mau/mau-mau.ges`: Mau Mau setup and rules.
+- `games/high-card/high-card.ges`: Highest Card, a small example with mandatory reveals, open tricks and round scoring.
 - `swift/Sources/CardGameEnvironment/`: board mechanics, GES bindings, and views.
 - `swift/Sources/CardGameWasm/`: serial buffer-based C ABI for a persistent session.
 - `web/`: browser worker and small hot-seat interface.
@@ -128,8 +129,8 @@ Starting a new game clears it. Closing the dialog does not resume a failed game.
 ## Board setup and lifecycle
 
 Table zones support piles and open card spreads at nine compass positions; zones in each row
-follow creation order from left to right. Players have fixed bottom/top/left/right
-areas. `:board.create(setup: board(players: players))` creates the entire board
+follow creation order from left to right. Players sit in bottom/left/top/right order with three or four players;
+two players sit at bottom/top. `:board.create(setup: board(players: players))` creates the entire board
 atomically from flat table and player zone lists. Zone IDs are tags. Table positions
 use nine compass tags; player positions use #left, #center or #right. Optional
 newRow: true starts a row within the player area or table position. Side players rotate
@@ -166,7 +167,7 @@ browser and origin, including unfinished code. It restores the draft on reload.
 Game progress is not saved. “Load example” explicitly replaces the source, with
 “Undo example load” available until the next page reload; “New game” applies it.
 Storage failures are shown beside the editor. Clearing browser site data removes
-the saved draft. To add an example, create games/<id>/rules.ges and register its
+the saved draft. To add an example, create games/<id>/<id>.ges and register its
 id, name, and examples/<id>.ges path in web/examples.json. The build copies all
 game sources into the example catalog's target directory.
 
@@ -178,3 +179,29 @@ The group carries the penalty to its recipient; no global penalty state is neede
 Eights store a per-player #skip flag, which BeginTurn handles with ClearActions()
 and NextPlayersTurn(). `:board.actions(player)` supports selective removal by
 stable references. See the environment contract and browser help for details.
+
+## Highest Card
+
+Select **Highest Card** and choose **Load example**. Each of 2–4 players receives
+a shuffled 13-card pile in their own suit (2 through ace). Reveal one card per
+turn; the highest value wins the round, with the first reveal winning ties.
+**Collect trick** keeps the open cards visible until the user collects them.
+After 13 rounds, all players tied for the most collected cards win. The game
+uses the existing environment unchanged.
+
+## Skat – Trick Play
+
+Load **Skat – Trick Play**; the example selects three players automatically.
+This first stage fixes Player 1 as declarer, hearts as trump and Player 1 as the
+opening leader. It deals 3–skat–4–3, enforces following suit/trump, ranks the four
+jacks above the seven heart cards, and lets the trick winner lead next. Click
+**Collect trick** after the third card to keep the completed trick visible.
+The untouched skat counts toward the declarer's 61-eye target; otherwise both
+defenders win. The score totals 120 eyes. Other player counts end immediately
+with an explanatory notice.
+
+Tricks are counted explicitly in GES by three played cards, independently of the
+environment's seat-circuit rounds. This needs no Swift special case. Bidding,
+skat exchange, game selection, Schneider/Schwarz and game-value scoring are not
+part of this stage. Card ordering, following and eye counting follow the
+[International Skat Rules](https://dskv.de/app/uploads/sites/50/2020/08/Internationale-Skatordnung-2018.pdf).

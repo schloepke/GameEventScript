@@ -9,7 +9,7 @@ final class CardGameTests: XCTestCase {
     private var rules: String {
         get throws {
             let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            return try String(contentsOf: root.appendingPathComponent("games/mau-mau/rules.ges"), encoding: .utf8)
+            return try String(contentsOf: root.appendingPathComponent("games/mau-mau/mau-mau.ges"), encoding: .utf8)
         }
     }
 

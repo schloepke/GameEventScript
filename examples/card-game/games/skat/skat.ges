@@ -1,0 +1,102 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+module examples.skat
+
+// First stage: three players, player 1 declares hearts, no bidding or skat exchange.
+function hand(player) be ('hand' + (player as :Text)) as :Tag
+function won(player) be ('won' + (player as :Text)) as :Tag
+function ranks() be [[rank: '7', power: 0, eyes: 0], [rank: '8', power: 1, eyes: 0], [rank: '9', power: 2, eyes: 0], [rank: 'Q', power: 3, eyes: 3], [rank: 'K', power: 4, eyes: 4], [rank: '10', power: 5, eyes: 10], [rank: 'A', power: 6, eyes: 11], [rank: 'J', power: 7, eyes: 2]]
+function suits() be [[suit: 'diamonds', jack: 0], [suit: 'hearts', jack: 1], [suit: 'spades', jack: 2], [suit: 'clubs', jack: 3]]
+function deck() be suits()[:fold cards be [], suit => cards | ranks()[:select rank => [suit: suit.suit, rank: rank.rank, eyes: rank.eyes, power: (10 + suit.jack) when rank.rank = 'J' otherwise rank.power]]]
+function trump(card) be card.properties.rank = 'J' or card.properties.suit = 'hearts'
+function color(card) be 'trump' when trump(card: card) otherwise card.properties.suit
+function trick() be :board.cards(zone: #trick)
+function playable(player) be legal(cards: :board.cards(zone: hand(player: player)), played: trick())
+function legal(cards, played) be cards when played[:count] = 0 otherwise following(cards: cards, suited: cards[:filter card where color(card: card) = color(card: played[:first])])
+function following(cards, suited) be suited when suited[:count] > 0 otherwise cards
+function beats(card, best) be card.properties.power > best.properties.power when color(card: card) = color(card: best) otherwise trump(card: card)
+function eyes(zone) be :board.cards(zone: zone)[:fold total be 0, card => total + card.properties.eyes]
+
+on PrepareGame(players) {
+    :board.create(setup: [
+        table: [
+            [id: #deck, label: 'Deck', position: #nw, visibility: #hidden, cards: deck()[:shuffle]],
+            [id: #skat, label: 'Skat', position: #ne, visibility: #hidden],
+            [id: #trick, label: 'Trick', layout: #spread, visibility: #public]
+        ],
+        players: players[:select player => [id: player, zones: [
+            [id: hand(player: player), label: 'Hand', layout: #spread, visibility: #owner],
+            [id: won(player: player), label: 'Won tricks', visibility: #hidden]
+        ]]]
+    ])
+    if players[:count] = 3 {
+        // Deal 3 each, two to the skat, then 4 each and 3 each.
+        for amount in [3, 4, 3] {
+            for player in players { :board.take(source: #deck, destination: hand(player: player), count: amount) }
+            if :board.cards(zone: #skat)[:count] = 0 { :board.take(source: #deck, destination: #skat, count: 2) }
+        }
+        :board.setstate(key: #trickNumber, value: 1)
+        emit Notice(text: 'Skat trick play: Player 1 plays hearts against Players 2 and 3. All jacks are trumps, ordered clubs, spades, hearts, diamonds. Follow the led suit or trump if possible; otherwise play any card. The trick winner leads next. Player 1 needs 61 eyes, including the hidden skat. No bidding, exchange or game-value scoring yet.')
+    } else {
+        emit Notice(text: 'Skat requires exactly three players. Select 3 players and start a new game.')
+    }
+}
+
+on BeginTurn(player) {
+    if :board.playercount() <> 3 {
+        emit EndGame()
+    } else {
+        emit NoticeTable(text: 'Hearts · Player 1 declares · Trick ' + (:board.state(key: #trickNumber) as :Text) + ' of 10')
+        emit Action(spec: [action: #play, label: 'Play card', optional: false,
+            cards: playable(player: player)[:select card => card.id], handler: Play(action, player, card)])
+    }
+}
+
+on Play(action, player, card) {
+    if playable(player: player)[:any candidate where candidate.id = card] {
+        let played be :board.move(card: card, source: hand(player: player), destination: #trick)
+        let best be :board.state(key: #best)
+        if best is nothing or beats(card: played, best: best) {
+            :board.setstate(key: #best, value: played)
+            :board.setstate(key: #winner, value: player)
+        }
+        emit Complete(action: action)
+        if trick()[:count] = 3 {
+            emit ClearActions()
+            emit NoticeTable(text: 'Player ' + ((:board.state(key: #winner) + 1) as :Text) + ' wins ' + (eyes(zone: #trick) as :Text) + ' eyes.')
+            emit Action(spec: [action: #collect, label: 'Collect trick', optional: false, area: #table, handler: Collect(action, player)])
+        } else {
+            emit NextPlayersTurn()
+        }
+    } else {
+        emit Reject(action: action, reason: 'Follow the led suit or trump when possible.')
+    }
+}
+
+on Collect(action, player) {
+    let winner be :board.state(key: #winner)
+    :board.movecards(source: #trick, destination: won(player: winner), cards: trick()[:select card => card.id])
+    :board.setstate(key: #best, value: nothing)
+    emit Complete(action: action)
+    if :board.cards(zone: hand(player: player))[:count] = 0 {
+        emit EndGame()
+    } else {
+        :board.setstate(key: #trickNumber, value: :board.state(key: #trickNumber) + 1)
+        emit NextPlayersTurn(nextPlayer: winner)
+    }
+}
+
+// A trick is counted by its three played cards, independently of engine round boundaries.
+on EndTurn(player) {}
+
+on EndGame(players) {
+    if players[:count] = 3 {
+        let declarer be eyes(zone: won(player: 0)) + eyes(zone: #skat)
+        let defenders be eyes(zone: won(player: 1)) + eyes(zone: won(player: 2))
+        emit NoticeTable(text: 'Player 1: ' + (declarer as :Text) + ' eyes · Defenders: ' + (defenders as :Text) + ' eyes')
+        emit Finish(winners: [0] when declarer >= 61 otherwise [1, 2])
+    } else {
+        emit Finish(winners: [])
+    }
+}

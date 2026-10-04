@@ -4,7 +4,7 @@
 const draftKey = 'ges-card-lab.draft.v1';
 
 /** Restore the current draft and offer explicit loading of bundled examples. */
-export async function attachGameLibrary(input, select, loadButton, status, undoButton) {
+export async function attachGameLibrary(input, select, loadButton, status, undoButton, playerSelect) {
   let draft = null;
   let previous = null;
   let storageReadable = true;
@@ -32,7 +32,8 @@ export async function attachGameLibrary(input, select, loadButton, status, undoB
         typeof item.id !== 'string' ||
         typeof item.name !== 'string' ||
         typeof item.source !== 'string' ||
-        !/^examples\/[a-z0-9-]+\.ges$/.test(item.source),
+        !/^examples\/[a-z0-9-]+\.ges$/.test(item.source) ||
+        (item.players !== undefined && ![2, 3, 4].includes(item.players)),
     )
   ) {
     throw new Error('Invalid example list.');
@@ -61,6 +62,7 @@ export async function attachGameLibrary(input, select, loadButton, status, undoB
           version: 1,
           source: input.value,
           exampleId: select.value,
+          players: Number(playerSelect.value),
         }),
       );
       status.textContent = 'Saved in this browser.';
@@ -76,6 +78,8 @@ export async function attachGameLibrary(input, select, loadButton, status, undoB
       : storageReadable
         ? 'Edits are saved automatically in this browser.'
         : 'The saved draft could not be read. Keep a copy of your code.';
+  if ([2, 3, 4].includes(draft?.players)) playerSelect.value = String(draft.players);
+  playerSelect.addEventListener('change', save);
   input.addEventListener('input', save);
 
   loadButton.disabled = false;
@@ -91,7 +95,8 @@ export async function attachGameLibrary(input, select, loadButton, status, undoB
         status.textContent = 'Code changed while loading. Choose Load example again to replace it.';
         return;
       }
-      previous = before;
+      previous = { source: before, players: playerSelect.value };
+      if (example.players !== undefined) playerSelect.value = String(example.players);
       input.value = source;
       input.dispatchEvent(new Event('input', { bubbles: true }));
       undoButton.hidden = false;
@@ -105,7 +110,8 @@ export async function attachGameLibrary(input, select, loadButton, status, undoB
 
   undoButton.onclick = () => {
     if (previous === null) return;
-    input.value = previous;
+    input.value = previous.source;
+    playerSelect.value = previous.players;
     previous = null;
     undoButton.hidden = true;
     input.dispatchEvent(new Event('input', { bubbles: true }));

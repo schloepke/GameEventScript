@@ -50,7 +50,7 @@ def validate(directory, expected):
     info = json.loads(manifest.read_text())
     if info.get('source') != expected or info.get('files') != contents(directory):
         raise RuntimeError('Stale or modified card-game build; run examples/card-game/scripts/build.py wasm')
-    for name in ['index.html', 'card-game.wasm', 'worker.mjs', 'app.mjs', 'rules.ges', 'vendor/index.js', 'licenses/LICENSE']:
+    for name in ['index.html', 'card-game.wasm', 'worker.mjs', 'app.mjs', 'examples/mau-mau.ges', 'examples/high-card.ges', 'examples/skat.ges', 'examples.json', 'vendor/index.js', 'licenses/LICENSE']:
         if not (directory / name).is_file():
             raise RuntimeError(f'Incomplete card-game build: {name}')
 

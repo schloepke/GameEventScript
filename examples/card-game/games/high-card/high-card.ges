@@ -1,0 +1,69 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+module examples.highcard
+
+function pile(player) be ('pile' + (player as :Text)) as :Tag
+function won(player) be ('won' + (player as :Text)) as :Tag
+function suit(player) be 'clubs' when player = 0 otherwise ('spades' when player = 1 otherwise ('hearts' when player = 2 otherwise 'diamonds'))
+function rank(value) be 'A' when value = 14 otherwise ('K' when value = 13 otherwise ('Q' when value = 12 otherwise ('J' when value = 11 otherwise value as :Text)))
+function deck(player) be (from 2 to 14)[:select value => [suit: suit(player: player), rank: rank(value: value), value: value]][:shuffle]
+function score(player) be :board.cards(zone: won(player: player))[:count]
+
+on PrepareGame(players) {
+    :board.create(setup: [
+        table: [[id: #trick, label: 'Trick', layout: #spread, visibility: #public]],
+        players: players[:select player => [id: player, zones: [
+            [id: pile(player: player), label: 'Draw pile', visibility: #hidden, cards: deck(player: player)],
+            [id: won(player: player), label: 'Won cards', visibility: #top]
+        ]]]
+    ])
+    emit Notice(text: 'Reveal one card each round. The highest card wins all played cards; an ace is highest. Ties go to the first revealed card. After 13 rounds, the player with the most collected cards wins.')
+}
+
+on BeginRound(number, players) {
+    :board.setstate(key: #highest, value: 0)
+    emit NoticeTable(text: 'Round ' + (number as :Text) + ': reveal one card each.')
+}
+
+on BeginTurn(player) {
+    emit Action(spec: [action: #reveal, label: 'Reveal card', optional: false, finishTurn: true,
+        zone: pile(player: player), handler: Reveal(action, player)])
+}
+
+on Reveal(action, player) {
+    let card be :board.draw(source: pile(player: player), destination: #trick)
+    // Strictly greater preserves the first revealed card when values tie.
+    if card.properties.value > :board.state(key: #highest) {
+        :board.setstate(key: #highest, value: card.properties.value)
+        :board.setstate(key: #winner, value: player)
+    }
+    emit Complete(action: action)
+}
+
+// Turn completion needs no additional rule; scoring happens at the round boundary.
+on EndTurn(player) {}
+
+on EndRound(number, players) {
+    if not :board.ending() {
+        emit NoticeTable(text: 'Player ' + ((:board.state(key: #winner) + 1) as :Text) + ' wins this trick.')
+        emit Action(spec: [action: #collect, label: 'Collect trick', optional: false,
+            area: #table, handler: Collect(action, player)])
+    }
+}
+
+on Collect(action, player) {
+    :board.movecards(source: #trick, destination: won(player: :board.state(key: #winner)), cards: :board.cards(zone: #trick)[:select card => card.id])
+    emit Complete(action: action)
+    if :board.cards(zone: pile(player: player))[:count] = 0 {
+        emit EndGame()
+    } else {
+        emit NextRound()
+    }
+}
+
+on EndGame(players) {
+    let best be players[:fold maximum be 0, player => max of maximum and score(player: player)]
+    emit NoticeTable(text: 'Game over. Winning score: ' + (best as :Text) + ' cards.')
+    emit Finish(winners: players[:filter player where score(player: player) = best])
+}

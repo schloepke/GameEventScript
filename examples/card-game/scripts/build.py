@@ -93,10 +93,9 @@ def main():
         for file in (EXAMPLE / 'web').iterdir():
             if file.is_file() and file.suffix in {".mjs", ".html", ".css", ".json"}:
                 shutil.copy2(file, web / file.name)
-        shutil.copy2(EXAMPLE / 'games/mau-mau/rules.ges', web / 'rules.ges')
         (web / 'examples').mkdir()
-        for rules in (EXAMPLE / 'games').glob('*/rules.ges'):
-            shutil.copy2(rules, web / 'examples' / (rules.parent.name + '.ges'))
+        for rules in (EXAMPLE / 'games').glob('*/*.ges'):
+            shutil.copy2(rules, web / 'examples' / rules.name)
         vendor = ARTIFACTS / 'web-deps/node_modules/@bjorn3/browser_wasi_shim'
         if not (vendor / 'dist/index.js').exists():
             raise RuntimeError('Run scripts/setup-wasm.py to install the browser WASI adapter')

@@ -11,7 +11,7 @@ const web = path.join(root, 'artifacts/card-game/web');
 const { createEngine } = await import(pathToFileURL(path.join(web, 'engine.mjs')));
 const binary = await fs.readFile(path.join(web, 'card-game.wasm'));
 const source = await fs.readFile(
-  path.join(root, 'examples/card-game/games/mau-mau/rules.ges'),
+  path.join(root, 'examples/card-game/games/mau-mau/mau-mau.ges'),
   'utf8',
 );
 const game = await createEngine(binary);
@@ -318,3 +318,124 @@ queued = game.act(1, queued.state.actions[0], queued.state.revision);
 queued = game.act(0, queued.state.actions[0], queued.state.revision);
 assert.deepEqual(queued.state.actions.map(a => a.kind), ['next']);
 console.log('Queued groups, priority gating, exclusive selection, rejection and cleanup passed.');
+
+// A second rule set exercises open tricks and a human-controlled round boundary.
+const highCard = await fs.readFile(path.join(web, 'examples/high-card.ges'), 'utf8');
+assert.deepEqual(game.check(highCard), { diagnostics: [] });
+for (const players of [2, 3, 4]) {
+  for (const shuffled of [false, true]) {
+    let result = game.start(shuffled ? highCard : highCard.replace('[:shuffle]', ''), 42, players);
+    assert.equal(result.error, undefined, result.error);
+    const scores = Array(players).fill(0);
+    for (let round = 1; round <= 13; round++) {
+      assert.equal(result.state.round, round);
+      for (let player = 0; player < players; player++) {
+        assert.equal(result.state.currentPlayer, player);
+        assert.deepEqual(result.state.actions.map(action => action.kind), ['reveal']);
+        result = game.act(player, result.state.actions[0], result.state.revision);
+        assert.equal(result.error, undefined, result.error);
+        assert.equal(result.accepted, true);
+      }
+      const trick = result.state.zones.find(zone => zone.id === 'trick').cards;
+      assert.equal(trick.length, players);
+      const winner = trick.reduce((best, card, index) =>
+        Number(card.properties.value) > Number(trick[best].properties.value) ? index : best, 0);
+      scores[winner] += players;
+      if (!shuffled) assert.equal(winner, 0, 'First revealed card wins tied values');
+      assert.equal(result.state.waitingForRound, true);
+      assert.deepEqual(result.state.actions.map(action => action.kind), ['collect']);
+      result = game.act(result.state.currentPlayer, result.state.actions[0], result.state.revision);
+      assert.equal(result.error, undefined, result.error);
+      assert.equal(result.accepted, true);
+      assert.equal(result.state.zones.find(zone => zone.id === 'trick').count, 0);
+      for (let player = 0; player < players; player++) {
+        assert.equal(result.state.zones.find(zone => zone.id === `won${player}`).count, scores[player]);
+      }
+      assert.equal(result.state.zones.reduce((total, zone) => total + zone.count, 0), 13 * players);
+      assert.equal(result.state.finished, round === 13);
+    }
+    assert.deepEqual(result.state.winners, scores.flatMap((score, player) =>
+      score === Math.max(...scores) ? [player] : []));
+  }
+}
+console.log('Highest Card: 2–4 players, 13 rounds, visible tricks, collection, scoring and first-reveal ties passed.');
+
+const skat = await fs.readFile(path.join(web, 'examples/skat.ges'), 'utf8');
+assert.deepEqual(game.check(skat), { diagnostics: [] });
+const eyeValues = { A: 11, '10': 10, K: 4, Q: 3, J: 2, '9': 0, '8': 0, '7': 0 };
+const skatColor = card => card.properties.rank === 'J' || card.properties.suit === 'hearts'
+  ? 'trump' : card.properties.suit;
+const skatStrength = card => card.properties.rank === 'J'
+  ? 10 + ['diamonds', 'hearts', 'spades', 'clubs'].indexOf(card.properties.suit)
+  : ['7', '8', '9', 'Q', 'K', '10', 'A'].indexOf(card.properties.rank);
+const leaders = new Set();
+let followTrump = false, followSuit = false, discardFreely = false;
+for (let seed = 0; seed < 30; seed++) {
+  let result = game.start(skat, seed, 3);
+  assert.equal(result.error, undefined, result.error);
+  assert.deepEqual(result.state.zones.map(zone => zone.count), [0, 2, 0, 10, 0, 10, 0, 10, 0]);
+  const scores = [0, 0, 0];
+  const seen = new Set();
+  let leader = 0;
+  for (let trickNumber = 1; trickNumber <= 10; trickNumber++) {
+    leaders.add(leader);
+    for (let seat = 0; seat < 3; seat++) {
+      const state = result.state;
+      const player = (leader + seat) % 3;
+      assert.equal(state.currentPlayer, player);
+      const cards = state.zones.find(zone => zone.id === `hand${player}`).cards;
+      const trick = state.zones.find(zone => zone.id === 'trick').cards;
+      const following = trick.length ? cards.filter(card => skatColor(card) === skatColor(trick[0])) : [];
+      const legal = following.length ? following : cards;
+      if (trick.length) {
+        if (!following.length) discardFreely = true;
+        else if (skatColor(trick[0]) === 'trump') followTrump = true;
+        else followSuit = true;
+      }
+      assert.deepEqual(state.actions.map(action => action.card).sort((a, b) => a - b), legal.map(card => card.id).sort((a, b) => a - b));
+      const forbidden = cards.find(card => !legal.includes(card));
+      if (forbidden) {
+        const rejected = game.act(player, { kind: 'play', card: forbidden.id }, state.revision);
+        assert.equal(rejected.accepted, false);
+        assert.deepEqual(rejected.state, state);
+      }
+      // Vary choices without depending on the rule's stored rank/power metadata.
+      const action = state.actions[(seed + trickNumber + seat) % state.actions.length];
+      result = game.act(player, action, state.revision);
+      assert.equal(result.error, undefined, result.error);
+      assert.equal(result.accepted, true);
+      seen.add(action.card);
+    }
+    const trick = result.state.zones.find(zone => zone.id === 'trick').cards;
+    assert.equal(trick.length, 3);
+    const winningIndex = trick.reduce((best, card, index) => {
+      if (skatColor(card) === skatColor(trick[best])) return skatStrength(card) > skatStrength(trick[best]) ? index : best;
+      return skatColor(card) === 'trump' ? index : best;
+    }, 0);
+    const winner = (leader + winningIndex) % 3;
+    scores[winner] += trick.reduce((sum, card) => sum + eyeValues[card.properties.rank], 0);
+    assert.deepEqual(result.state.actions.map(action => action.kind), ['collect']);
+    result = game.act(result.state.currentPlayer, result.state.actions[0], result.state.revision);
+    assert.equal(result.error, undefined, result.error);
+    assert.equal(result.accepted, true);
+    assert.equal(result.state.zones.find(zone => zone.id === 'trick').count, 0);
+    assert.equal(result.state.zones.reduce((sum, zone) => sum + zone.count, 0), 32);
+    assert.equal(result.state.finished, trickNumber === 10);
+    leader = winner;
+  }
+  assert.equal(seen.size, 30);
+  const skatEyes = 120 - scores.reduce((sum, score) => sum + score, 0);
+  const declarer = scores[0] + skatEyes;
+  assert.deepEqual(result.state.winners, declarer >= 61 ? [0] : [1, 2]);
+  assert.equal(result.state.tableNotice, `Player 1: ${declarer} eyes · Defenders: ${scores[1] + scores[2]} eyes`);
+}
+assert.deepEqual([...leaders].sort(), [0, 1, 2]);
+assert.ok(followTrump && followSuit && discardFreely);
+for (const players of [2, 4]) {
+  const result = game.start(skat, 42, players);
+  assert.equal(result.error, undefined, result.error);
+  assert.equal(result.state.finished, true);
+  assert.deepEqual(result.state.winners, []);
+  assert.match(result.state.notice, /exactly three players/);
+}
+console.log('Skat: 30 complete games, dealing, follow-suit/trump, free discards, trick winners, changing leaders, 120-eye scoring and player-count guard passed.');

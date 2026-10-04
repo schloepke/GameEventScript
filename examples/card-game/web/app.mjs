@@ -13,15 +13,24 @@ let worker,
   timer,
   request = 0,
   busy = false;
-const seatResize = new ResizeObserver((entries) => {
-  for (const { target } of entries) {
-    const content = target.querySelector('.player-content');
-    content.style.width = `${target.clientHeight}px`;
-    content.style.height = `${target.clientWidth}px`;
-    content.style.transform = target.classList.contains('player-2')
-      ? `translateX(${target.clientWidth}px) rotate(90deg)`
-      : `translateY(${target.clientHeight}px) rotate(-90deg)`;
-  }
+let seatLayoutFrame = 0;
+const seatResize = new ResizeObserver(() => {
+  cancelAnimationFrame(seatLayoutFrame);
+  seatLayoutFrame = requestAnimationFrame(() => {
+    const board = byId('board');
+    for (const area of board.querySelectorAll('.seat-left, .seat-right')) {
+      const content = area.querySelector('.player-content');
+      const left = area.classList.contains('seat-left');
+      // Rotation swaps axes: table height constrains card rows, their natural
+      // height determines the horizontal space this player needs beside it.
+      content.style.width = `${area.clientHeight}px`;
+      const width = Math.max(184, Math.ceil(content.offsetHeight) + 2);
+      board.style.setProperty(left ? '--left-seat-width' : '--right-seat-width', `${width}px`);
+      content.style.transform = left
+        ? `translateX(${width - 2}px) rotate(90deg)`
+        : `translateY(${area.clientHeight}px) rotate(-90deg)`;
+    }
+  });
 });
 let noticeQueue = [];
 
@@ -81,6 +90,9 @@ function render(next) {
   cardActions.close();
   state = next;
   seatResize.disconnect();
+  cancelAnimationFrame(seatLayoutFrame);
+  byId('board').style.removeProperty('--left-seat-width');
+  byId('board').style.removeProperty('--right-seat-width');
   byId('board').replaceChildren();
   byId('board').dataset.players = String(state.players.length);
   const table = document.createElement('section');
@@ -124,7 +136,8 @@ function render(next) {
   const playerRows = new Map();
   state.players.forEach((name, index) => {
     const area = document.createElement('section');
-    area.className = `player-area player-${index}${index === state.currentPlayer ? ' active-player' : ''}`;
+    const seat = (state.players.length === 2 ? ['bottom', 'top'] : ['bottom', 'left', 'top', 'right'])[index];
+    area.className = `player-area player-${index} seat-${seat}${index === state.currentPlayer ? ' active-player' : ''}`;
     const content = document.createElement('div');
     content.className = 'player-content';
     area.append(content);
@@ -140,7 +153,10 @@ function render(next) {
       content.append(element);
     }
     byId('board').append(area);
-    if (index >= 2) seatResize.observe(area);
+    if (seat === 'left' || seat === 'right') {
+      seatResize.observe(area);
+      seatResize.observe(content);
+    }
   });
   const zoneActions = new Map();
   const zoneHeadings = new Map();
@@ -301,6 +317,7 @@ try {
     byId('load-example'),
     byId('save-status'),
     byId('undo-example'),
+    byId('players'),
   );
   let editorAttached = false;
   byId('source')

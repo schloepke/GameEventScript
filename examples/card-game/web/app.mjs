@@ -52,17 +52,16 @@ function lock(value) {
   });
 }
 
-function stop(message = 'Stopped. Choose “New game” to start again.') {
+function stop() {
   worker?.terminate();
   worker = null;
   clearTimeout(timer);
   byId('wasm-loading').hidden = true;
   lock(true);
-  byId('status').textContent = message;
 }
 
 function showError(message) {
-  stop('Game stopped after an error.');
+  stop();
   byId('error-message').textContent = String(message);
   byId('show-error').hidden = false;
   if (!byId('error-dialog').open) byId('error-dialog').showModal();
@@ -71,7 +70,6 @@ function showError(message) {
 function send(payload) {
   if (!worker) return;
   lock(true);
-  byId('status').textContent = payload.type === 'start' ? 'Preparing game …' : 'Running rules …';
   const id = ++request;
   worker.postMessage({ id, ...payload });
   clearTimeout(timer);
@@ -137,14 +135,21 @@ function render(next) {
   state.players.forEach((name, index) => {
     const area = document.createElement('section');
     const seat = (state.players.length === 2 ? ['bottom', 'top'] : ['bottom', 'left', 'top', 'right'])[index];
-    area.className = `player-area player-${index} seat-${seat}${index === state.currentPlayer ? ' active-player' : ''}`;
+    area.className = `player-area player-${index} seat-${seat}${!state.finished && index === state.currentPlayer ? ' active-player' : ''}`;
     const content = document.createElement('div');
     content.className = 'player-content';
     area.append(content);
     const heading = document.createElement('h2');
     heading.className = 'area-heading';
     areaHeadings.set(index, heading);
-    heading.textContent = `${name}${index === state.currentPlayer ? (state.waitingForRound ? ' · Prepare next round' : ' · Your turn') : ''}`;
+    heading.textContent = `${name}${!state.finished && index === state.currentPlayer ? ' · Your turn' : ''}`;
+    const badgeText = state.playerBadges?.[index];
+    if (badgeText) {
+      const badge = document.createElement('span');
+      badge.className = 'player-badge';
+      badge.textContent = badgeText;
+      heading.append(badge);
+    }
     content.append(heading);
     for (const row of state.rows.filter((row) => row.owner === index)) {
       const element = document.createElement('div');
@@ -247,13 +252,6 @@ function render(next) {
     button.className = 'area-action';
     (offer.zone ? zoneHeadings.get(offer.zone) : areaHeadings.get(offer.area)).append(button);
   }
-  byId('status').textContent = state.finished
-    ? state.winners.length === 0
-      ? 'Draw.'
-      : `${state.winners.map((player) => state.players[player]).join(" & ")} ${state.winners.length === 1 ? "wins" : "win"}!`
-    : state.waitingForRound
-      ? `Round ${state.round} complete · Prepare the next round`
-      : `${state.players[state.currentPlayer]} to play · Turn ${state.turn}`;
   noticeQueue.push(...state.notices);
   showNextNotice();
   lock(state.finished || state.failed);
@@ -266,7 +264,7 @@ function restart() {
     seedInput.validity.badInput ||
     (seed !== undefined && (!Number.isInteger(seed) || seed < -2147483648 || seed > 2147483647))
   ) {
-    byId('status').textContent = 'Seed must be an Int32 integer.';
+    showError('Seed must be an Int32 integer.');
     return;
   }
   stop();
@@ -292,7 +290,10 @@ function restart() {
       return;
     }
     render(data.state);
-    if (data.accepted === false) byId('status').textContent = data.reason;
+    if (data.accepted === false) {
+      noticeQueue.push(data.reason);
+      showNextNotice();
+    }
   };
   active.onerror = (event) => {
     if (active === worker) showError(`Worker error: ${event.message}`);
@@ -314,10 +315,11 @@ try {
   await attachGameLibrary(
     byId('source'),
     byId('example'),
-    byId('load-example'),
+    byId('save-game'),
     byId('save-status'),
-    byId('undo-example'),
     byId('players'),
+    restart,
+    showError,
   );
   let editorAttached = false;
   byId('source')

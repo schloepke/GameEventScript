@@ -18,12 +18,12 @@ on PrepareGame(players) {
             [id: won(player: player), label: 'Won cards', visibility: #top]
         ]]]
     ])
-    emit Notice(text: 'Reveal one card each round. The highest card wins all played cards; an ace is highest. Ties go to the first revealed card. After 13 rounds, the player with the most collected cards wins.')
+    emit Notice('Reveal one card each round. The highest card wins all played cards; an ace is highest. Ties go to the first revealed card. After 13 rounds, the player with the most collected cards wins.')
 }
 
 on BeginRound(number, players) {
     :board.setstate(key: #highest, value: 0)
-    emit NoticeTable(text: 'Round ' + (number as :Text) + ': reveal one card each.')
+    emit NoticeTable('Round ' + (number as :Text) + ': reveal one card each.')
 }
 
 on BeginTurn(player) {
@@ -46,7 +46,7 @@ on EndTurn(player) {}
 
 on EndRound(number, players) {
     if not :board.ending() {
-        emit NoticeTable(text: 'Player ' + ((:board.state(key: #winner) + 1) as :Text) + ' wins this trick.')
+        emit NoticeTable('Player ' + ((:board.state(key: #winner) + 1) as :Text) + ' wins this trick.')
         emit Action(spec: [action: #collect, label: 'Collect trick', optional: false,
             area: #table, handler: Collect(action, player)])
     }
@@ -64,6 +64,11 @@ on Collect(action, player) {
 
 on EndGame(players) {
     let best be players[:fold maximum be 0, player => max of maximum and score(player: player)]
-    emit NoticeTable(text: 'Game over. Winning score: ' + (best as :Text) + ' cards.')
-    emit Finish(winners: players[:filter player where score(player: player) = best])
+    let winners be players[:filter player where score(player: player) = best]
+    let names be winners[:fold labels be '', player => labels + ('' when labels = '' otherwise ' & ') + 'Player ' + ((player + 1) as :Text)]
+    let result be names + (' wins with ' when winners[:count] = 1 otherwise ' win with ') + (best as :Text) + ' cards!'
+    emit NoticeTable(result, stackClear: true)
+    emit Notice(result)
+    for player in winners { emit PlayerBadge('Winner', player: player) }
+    emit Finish(winners: winners)
 }

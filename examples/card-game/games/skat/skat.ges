@@ -37,9 +37,9 @@ on PrepareGame(players) {
             if :board.cards(zone: #skat)[:count] = 0 { :board.take(source: #deck, destination: #skat, count: 2) }
         }
         :board.setstate(key: #trickNumber, value: 1)
-        emit Notice(text: 'Skat trick play: Player 1 plays hearts against Players 2 and 3. All jacks are trumps, ordered clubs, spades, hearts, diamonds. Follow the led suit or trump if possible; otherwise play any card. The trick winner leads next. Player 1 needs 61 eyes, including the hidden skat. No bidding, exchange or game-value scoring yet.')
+        emit Notice('Skat trick play: Player 1 plays hearts against Players 2 and 3. All jacks are trumps, ordered clubs, spades, hearts, diamonds. Follow the led suit or trump if possible; otherwise play any card. The trick winner leads next. Player 1 needs 61 eyes, including the hidden skat. No bidding, exchange or game-value scoring yet.')
     } else {
-        emit Notice(text: 'Skat requires exactly three players. Select 3 players and start a new game.')
+        emit Notice('Skat requires exactly three players. Select 3 players and start a new game.')
     }
 }
 
@@ -47,7 +47,7 @@ on BeginTurn(player) {
     if :board.playercount() <> 3 {
         emit EndGame()
     } else {
-        emit NoticeTable(text: 'Hearts · Player 1 declares · Trick ' + (:board.state(key: #trickNumber) as :Text) + ' of 10')
+        emit NoticeTable('Hearts · Player 1 declares · Trick ' + (:board.state(key: #trickNumber) as :Text) + ' of 10')
         emit Action(spec: [action: #play, label: 'Play card', optional: false,
             cards: playable(player: player)[:select card => card.id], handler: Play(action, player, card)])
     }
@@ -64,7 +64,7 @@ on Play(action, player, card) {
         emit Complete(action: action)
         if trick()[:count] = 3 {
             emit ClearActions()
-            emit NoticeTable(text: 'Player ' + ((:board.state(key: #winner) + 1) as :Text) + ' wins ' + (eyes(zone: #trick) as :Text) + ' eyes.')
+            emit NoticeTable('Player ' + ((:board.state(key: #winner) + 1) as :Text) + ' wins ' + (eyes(zone: #trick) as :Text) + ' eyes.', pushOld: true)
             emit Action(spec: [action: #collect, label: 'Collect trick', optional: false, area: #table, handler: Collect(action, player)])
         } else {
             emit NextPlayersTurn()
@@ -76,6 +76,7 @@ on Play(action, player, card) {
 
 on Collect(action, player) {
     let winner be :board.state(key: #winner)
+    emit NoticeTable(pop: true)
     :board.movecards(source: #trick, destination: won(player: winner), cards: trick()[:select card => card.id])
     :board.setstate(key: #best, value: nothing)
     emit Complete(action: action)
@@ -94,8 +95,12 @@ on EndGame(players) {
     if players[:count] = 3 {
         let declarer be eyes(zone: won(player: 0)) + eyes(zone: #skat)
         let defenders be eyes(zone: won(player: 1)) + eyes(zone: won(player: 2))
-        emit NoticeTable(text: 'Player 1: ' + (declarer as :Text) + ' eyes · Defenders: ' + (defenders as :Text) + ' eyes')
-        emit Finish(winners: [0] when declarer >= 61 otherwise [1, 2])
+        let result be ('Player 1 wins! ' when declarer >= 61 otherwise 'Players 2 & 3 win! ') + 'Player 1: ' + (declarer as :Text) + ' eyes · Defenders: ' + (defenders as :Text) + ' eyes'
+        emit NoticeTable(result, stackClear: true)
+        emit Notice(result)
+        let winners be [0] when declarer >= 61 otherwise [1, 2]
+        for player in winners { emit PlayerBadge('Winner', player: player) }
+        emit Finish(winners: winners)
     } else {
         emit Finish(winners: [])
     }

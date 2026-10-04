@@ -11,14 +11,15 @@
 <body>
   <main>
     <header><a href="https://gameeventscript.org/">← Game Event Script</a><p class="eyebrow">GES CARD LAB · PLAYABLE EXAMPLES</p><h1>Card games. Your rules.</h1>
-      <p>Choose Mau Mau, Highest Card or Skat – Trick Play in the editor’s example menu, load it, and start a new game. Read and change the GES rules, then try your own variations.</p>
+      <p>Choose a game above to play. Edits are autosaved to Draft; Save keeps a separate copy in Saved. Read and change the GES rules, then try your own variations.</p>
     <p>First load: about 63 MB. Runs locally; your code is saved in this browser. <a href="https://github.com/schloepke/GameEventScript/tree/main/examples/card-game">View the source</a>.</p></header>
     <section class="toolbar" aria-label="Game controls">
+      <label>Game <select id="example" disabled></select></label>
+      <button id="save-game" class="secondary" type="button" disabled>Save</button>
       <label>Seed <input id="seed" type="number" placeholder="Random" min="-2147483648" max="2147483647" title="Leave empty for a random seed on each new game; enter an integer to repeat a deal."></label>
       <label>Players <select id="players"><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label>
       <button id="restart" disabled>New game</button><button id="stop" class="secondary">Stop</button>
       <button id="show-error" class="secondary" hidden>Error details</button>
-      <span id="status" role="status" aria-live="polite">Loading GES rules …</span>
     </section>
     <div id="wasm-loading" class="wasm-loading" hidden>
       <span role="status">Loading WebAssembly …</span>
@@ -26,13 +27,8 @@
     </div>
     <div class="board-scroll"><section id="board" aria-label="Game board"></section></div>
     <details><summary>Edit the game rules in GES</summary>
-      <p>Code is checked while you edit. “New game” applies your changes. Two to four players take turns using this browser.</p>
-      <div class="toolbar" aria-label="Game examples">
-        <label>Example <select id="example"></select></label>
-        <button id="load-example" class="secondary" type="button" disabled>Load example</button>
-        <button id="undo-example" class="secondary" type="button" hidden>Undo example load</button>
-      </div>
       <p id="save-status" class="editor-status" role="status" aria-live="polite">Loading saved code …</p>
+      <p>Code is checked while you edit. “New game” applies your changes. Two to four players take turns using this browser.</p>
       <div class="toolbar"><button id="check-source" class="secondary" type="button">Check code</button>
         <button id="show-help" class="secondary" type="button" aria-haspopup="dialog">Environment help</button></div>
       <div id="editor-loading" class="wasm-loading" hidden>
@@ -102,8 +98,12 @@
 <tr><td><code>NextPlayersTurn(repeatTurnForPlayer: true)</code></td><td>Repeat the active player after a full circuit; false means normal advancement. Available in BeginTurn, after acceptance or in on EndTurn(player).</td></tr>
 <tr><td><code>EndGame()</code></td><td>Request EndGame(players) from a round hook, BeginTurn, an answered action, or EndTurn. Closes the open round before EndGame(players).</td></tr>
 <tr><td><code>Finish(winners)</code></td><td>During EndGame: a list of distinct player IDs wins; [] means nobody wins.</td></tr>
-<tr><td><code>NoticeTable(text)</code></td><td>Replace the centered status text at the bottom of the table. Persists until changed; empty Text clears it.</td></tr>
-<tr><td><code>Notice(text)</code></td><td>Show a modal dialog after the rule cascade. Multiple notices display one after another; Complete does not erase them.</td></tr>
+<tr><td><code>NoticeTable(_ text)</code></td><td>Replace the centered status text at the bottom of the table. Persists until changed; empty Text clears it.</td></tr>
+<tr><td><code>NoticeTable(_ text, pushOld)</code></td><td>With true, save the current text and show the new text. Up to 64 saved texts; false only replaces the visible text.</td></tr>
+<tr><td><code>NoticeTable(pop)</code></td><td>With true, restore the most recently saved text. False or an empty stack does nothing.</td></tr>
+<tr><td><code>NoticeTable(_ text, stackClear)</code></td><td>With true, clear saved texts and show the new text. New game always resets the stack and visible text. Plain NoticeTable preserves the stack.</td></tr>
+<tr><td><code>PlayerBadge(_ text, player)</code></td><td>Set a free-text badge beside a player’s name; empty text removes it. Badges persist until changed or New game. Example: emit PlayerBadge('Winner', player: 0).</td></tr>
+<tr><td><code>Notice(_ text)</code></td><td>Show a modal dialog after the rule cascade. Text is unlabeled: emit Notice('Hello'). Multiple notices display one after another; Complete does not erase them.</td></tr>
 </tbody></table></section>
     <section id="help-extensions"><h3>Board extensions</h3><p>Mutations run immediately; later queries in the same handler see the result. Previously read values remain immutable snapshots. Complete(action) is still required. Operations validate before changing the board, but a later error or Reject does not undo earlier mutations. Card movement and reverse are available during preparation, round hooks, actions and EndTurn. State writes also work in BeginTurn and EndGame.</p><table><thead><tr><th scope="col">Signature / value</th><th scope="col">Meaning</th></tr></thead><tbody>
 <tr><td><code>:board.create(setup)</code></td><td>Once during preparation. Validates and creates the entire board atomically. Maximum 64 zones, 512 cards and 16 rows per player or table position. Unknown fields and duplicate IDs fail setup.</td></tr>
@@ -189,7 +189,7 @@ let top be :board.top(zone: #discard)</code></pre>
 
 on ShowRules(action) {
     emit Complete(action: action)
-    emit Notice(text: 'The rules of this game …')
+    emit Notice('The rules of this game …')
 }</pre></section>
     <section><h3>Execution rules</h3><p>After accepting an action, its consumption counter advances. You may activate further actions or update card choices. <code>finishTurn</code> ends the turn upon consumption; <code>EndGame()</code> requests game completion. Turn offers expire at turn end; completed queued groups and all their alternatives are removed, while unfinished queued offers retain their counters. The environment advances turns automatically. NextPlayersTurn variants control that advancement; they do not recursively emit on EndTurn(player).</p>
     <p>Emits are queued: a query in the same handler cannot see their effects yet. Extensions can inspect all players; visibility filters the browser view only. Runtime errors stop the game. “Check code” checks compilation, not native message signatures.</p></section>

@@ -39,7 +39,7 @@ function board(players) be [
 
 on ShowRules(action) {
     emit Complete(action: action)
-    emit Notice(text: 'Match suit or rank, or play a jack and choose a suit. A jack cannot be played on another jack. 8 skips one player. Stack a 7 to pass on two more penalty cards, or draw the entire penalty one card at a time. After paying the penalty, take your normal turn: draw at most once, then play or pass.')
+    emit Notice('Match suit or rank, or play a jack and choose a suit. A jack cannot be played on another jack. 8 skips one player. Stack a 7 to pass on two more penalty cards, or draw the entire penalty one card at a time. After paying the penalty, take your normal turn: draw at most once, then play or pass.')
 }
 
 on PrepareGame(players) {
@@ -56,7 +56,7 @@ on BeginTurn(player) {
     if :board.state(player: player, key: #skip) = true {
         :board.setstate(player: player, key: #skip, value: nothing)
         emit ClearActions()
-        emit Notice(text: '8: This player skips a turn.')
+        emit Notice('8: This player skips a turn.')
         emit NextPlayersTurn()
     } else {
         emit NormalTurn(player: player)
@@ -78,15 +78,15 @@ on QueuePenalty(player, count) {
 
 on TurnNotice() {
     if not (:board.state(key: #wish) is nothing) {
-        emit NoticeTable(text: 'Requested suit: ' + (:board.state(key: #wish) as :Text))
+        emit NoticeTable('Requested suit: ' + (:board.state(key: #wish) as :Text))
     } else {
-        emit NoticeTable(text: 'Match suit or rank. Draw once, then play or pass.')
+        emit NoticeTable('Match suit or rank. Draw once, then play or pass.')
     }
 }
 
 on NormalTurn(player) {
     if not (penalty(player: player) is nothing) {
-        emit NoticeTable(text: 'Stack a 7 or draw the penalty. Then take your normal turn.')
+        emit NoticeTable('Stack a 7 or draw the penalty. Then take your normal turn.')
     } else {
         emit TurnNotice()
     }
@@ -141,7 +141,7 @@ on DrawOne(action, player, penalty) {
             if penaltyLeft(player: player) = 1 {
                 emit TurnNotice()
             } else {
-                emit NoticeTable(text: 'Draw ' + ((penaltyLeft(player: player) - 1) as :Text) + ' more penalty cards.')
+                emit NoticeTable('Draw ' + ((penaltyLeft(player: player) - 1) as :Text) + ' more penalty cards.')
             }
             if not drawable() {
                 emit ClearActions(actions: offers(player: player, id: #draw))
@@ -184,7 +184,7 @@ on CardPlayed(player) {
     :board.setstate(key: #wish, value: nothing)
     let rank be :board.top(zone: #discard).properties.rank
     if rank = 'J' {
-        emit NoticeTable(text: 'Choose the suit for the next player.')
+        emit NoticeTable('Choose the suit for the next player.')
         emit Action(spec: [action: #clubs, label: 'Clubs ♣', finishTurn: true, handler: ChooseClubs(action, player), area: player])
         emit Action(spec: [action: #spades, label: 'Spades ♠', finishTurn: true, handler: ChooseSpades(action, player), area: player])
         emit Action(spec: [action: #hearts, label: 'Hearts ♥', finishTurn: true, handler: ChooseHearts(action, player), area: player])
@@ -208,7 +208,7 @@ on ChooseDiamonds(action, player) { emit ChooseSuit(action: action, suit: 'diamo
 on ChooseSuit(action, suit) {
     :board.setstate(key: #wish, value: suit)
     emit Complete(action: action)
-    emit NoticeTable(text: 'Requested suit: ' + suit)
+    emit NoticeTable('Requested suit: ' + suit)
 }
 
 on EndTurn(player) {
@@ -219,5 +219,9 @@ on EndTurn(player) {
 
 on EndGame(players) {
     let winners be players[:filter player where :board.cards(zone: hand(player: player))[:count] = 0]
+    let result be 'Draw.' when winners[:count] = 0 otherwise 'Player ' + ((winners[:first] + 1) as :Text) + ' wins!'
+    emit NoticeTable(result, stackClear: true)
+    emit Notice(result)
+    for player in winners { emit PlayerBadge('Winner', player: player) }
     emit Finish(winners: winners)
 }

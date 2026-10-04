@@ -275,7 +275,9 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
         ("SetActionCards", ["action", "cards"]), ("ConsumeAction", ["action"]),
         ("NextPlayersTurn", []), ("NextPlayersTurn", ["nextPlayer"]), ("NextPlayersTurn", ["repeatTurnForPlayer"]), ("NextRound", []),
         ("EndGame", []),
-        ("Notice", ["text"]), ("NoticeTable", ["text"]),
+        ("Notice", ["_"]), ("NoticeTable", ["_"]),
+        ("NoticeTable", ["_", "pushOld"]), ("NoticeTable", ["_", "stackClear"]), ("NoticeTable", ["pop"]),
+        ("PlayerBadge", ["_", "player"]),
         ("Complete", ["action"]), ("Reject", ["action", "reason"]), ("Finish", ["winners"]),
     ]
     var board = Board()
@@ -314,6 +316,8 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
     var notice = ""
     var notices: [String] = []
     var tableNotice = ""
+    var tableNoticeStack: [String] = []
+    var playerBadges: [Int: String] = [:]
 
     init(playerCount: Int) { self.playerCount = playerCount }
 
@@ -379,7 +383,29 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
         case "Notice":
             notice = try text(args[0])
             notices.append(notice)
-        case "NoticeTable": tableNotice = try text(args[0])
+        case "NoticeTable":
+            if args.signatureLabels == ["pop"] {
+                guard args[0].kind == .boolean else { throw CardGameError("pop must be Boolean") }
+                if args[0].asBoolean, let previous = tableNoticeStack.popLast() { tableNotice = previous }
+            } else {
+                let replacement = try text(args[0])
+                if args.count == 2 {
+                    guard args[1].kind == .boolean else { throw CardGameError("NoticeTable flags must be Boolean") }
+                    if args[1].asBoolean {
+                        if args.signatureLabels[1] == "pushOld" {
+                            guard tableNoticeStack.count < 64 else { throw CardGameError("Maximum 64 saved table notices") }
+                            tableNoticeStack.append(tableNotice)
+                        } else {
+                            tableNoticeStack.removeAll(keepingCapacity: true)
+                        }
+                    }
+                }
+                tableNotice = replacement
+            }
+        case "PlayerBadge":
+            let label = try text(args[0])
+            let player = try checkedPlayer(args[1])
+            if label.isEmpty { playerBadges.removeValue(forKey: player) } else { playerBadges[player] = label }
         case "Complete": complete(try requirePending(args[0]))
         case "Reject":
             let request = try requirePending(args[0])

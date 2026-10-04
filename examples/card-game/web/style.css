@@ -14,7 +14,6 @@ button { background: #71d3c5; color: #153022; cursor: pointer; font-weight: 600;
 button:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-2px); }
 button:disabled { cursor: default; opacity: .55; }
 .secondary { background: transparent; color: #e9f0e9; }
-#status { flex: 1; min-width: 200px; }
 #board { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .zone { padding: 22px; background: #20282e; border: 1px solid #355d46; border-radius: 16px; min-height: 185px; }
 .zone h2 { margin: 0 0 16px; font-size: 1rem; font-weight: 500; color: #cbdccf; }
@@ -153,3 +152,5 @@ select { font: inherit; padding: 10px; margin-left: 6px; border: 1px solid #6880
 .card-action-picker:popover-open { display: flex; flex-direction: column; gap: 6px; }
 .card-action-picker button { text-align: left; white-space: normal; overflow-wrap: anywhere; }
 .card-action-picker button:focus-visible { outline: 2px solid #e9ffc4; outline-offset: -4px; }
+
+.player-badge { display: inline-block; padding: 3px 8px; margin-left: 8px; border-radius: 999px; background: #c8ed8a; color: #17382b; font-size: .75rem; overflow-wrap: anywhere; }

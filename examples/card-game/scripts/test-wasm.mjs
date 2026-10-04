@@ -135,6 +135,9 @@ for (let seed = 0; seed < 30; seed++) {
     totalActions++;
   }
   assert.equal(result.state.finished, true, `Seed ${seed} did not finish`);
+  assert.ok(result.state.tableNotice);
+  assert.ok(result.state.notices.includes(result.state.tableNotice));
+  assert.deepEqual(result.state.playerBadges, result.state.players.map((_, player) => result.state.winners.includes(player) ? 'Winner' : ''));
 }
 assert.equal(recycled, true);
 assert.deepEqual([...specialCardsSeen].sort(), ['7', '8', 'J']);
@@ -354,6 +357,9 @@ for (const players of [2, 3, 4]) {
       assert.equal(result.state.zones.reduce((total, zone) => total + zone.count, 0), 13 * players);
       assert.equal(result.state.finished, round === 13);
     }
+    assert.ok(result.state.tableNotice);
+    assert.ok(result.state.notices.includes(result.state.tableNotice));
+  assert.deepEqual(result.state.playerBadges, result.state.players.map((_, player) => result.state.winners.includes(player) ? 'Winner' : ''));
     assert.deepEqual(result.state.winners, scores.flatMap((score, player) =>
       score === Math.max(...scores) ? [player] : []));
   }
@@ -427,7 +433,9 @@ for (let seed = 0; seed < 30; seed++) {
   const skatEyes = 120 - scores.reduce((sum, score) => sum + score, 0);
   const declarer = scores[0] + skatEyes;
   assert.deepEqual(result.state.winners, declarer >= 61 ? [0] : [1, 2]);
-  assert.equal(result.state.tableNotice, `Player 1: ${declarer} eyes · Defenders: ${scores[1] + scores[2]} eyes`);
+  assert.equal(result.state.tableNotice, `${declarer >= 61 ? 'Player 1 wins! ' : 'Players 2 & 3 win! '}Player 1: ${declarer} eyes · Defenders: ${scores[1] + scores[2]} eyes`);
+  assert.ok(result.state.notices.includes(result.state.tableNotice));
+  assert.deepEqual(result.state.playerBadges, result.state.players.map((_, player) => result.state.winners.includes(player) ? 'Winner' : ''));
 }
 assert.deepEqual([...leaders].sort(), [0, 1, 2]);
 assert.ok(followTrump && followSuit && discardFreely);

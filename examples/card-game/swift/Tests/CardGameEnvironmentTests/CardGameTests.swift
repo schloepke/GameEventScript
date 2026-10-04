@@ -36,7 +36,7 @@ final class CardGameTests: XCTestCase {
                 :board.setstate(player: 0, key: #seen, value: drawnCard.id)
                 let direction be :board.reverse()
                 if (originalCards[:count] = 3 and drawnCard.id = 3 and drawnCards[:select item => item.id] = [2, 1] and emptyDraw is nothing and movedCard.id = 2 and movedCards[:select item => item.id] = [3, 1] and :board.top(zone: #draw).id = 1 and :board.cards(zone: #discard)[:count] = 0 and :board.state(key: #snapshot) = originalCards and :board.state(player: 0, key: #seen) = 3 and direction = -1 and :board.direction() = -1) {
-                    emit NoticeTable(text: 'Snapshots verified')
+                    emit NoticeTable('Snapshots verified')
                 }
             }
             on BeginTurn(player) {
@@ -50,9 +50,48 @@ final class CardGameTests: XCTestCase {
         let game = try CardGame(rules: source)
         XCTAssertTrue(game.viewJSON(for: 0).contains("Snapshots verified"))
         XCTAssertTrue(try game.submit(player: 0, action: .init(kind: "draw"), revision: 0).accepted)
-        let unanswered = try CardGame(rules: source.replacingOccurrences(of: "emit Complete(action: action)", with: "emit Notice(text: 'Moved')"))
+        let unanswered = try CardGame(rules: source.replacingOccurrences(of: "emit Complete(action: action)", with: "emit Notice('Moved')"))
         XCTAssertThrowsError(try unanswered.submit(player: 0, action: .init(kind: "draw"), revision: 0))
         XCTAssertEqual(unanswered.zones.first { $0.id == "discard" }?.cards, [1])
+    }
+
+    func testTableNoticeStackAndPlayerBadges() throws {
+        let source = """
+            on PrepareGame(players) {
+                :board.create(setup: [table: [], players: players[:select player => [id: player, zones: []]]])
+                emit NoticeTable('Base')
+            }
+            on BeginTurn(player) {
+                emit Action(spec: [action: #test, label: 'Test', area: player, consumable: #never, handler: Test(action, player)])
+            }
+            on Test(action, player) {
+                BODY
+                emit Complete(action: action)
+            }
+            """
+        for (commands, expected) in [
+            ("emit NoticeTable('A', pushOld: true)\nemit NoticeTable('B', pushOld: true)\nemit NoticeTable(pop: true)", "A"),
+            ("emit NoticeTable('A', pushOld: true)\nemit NoticeTable('Replacement')\nemit NoticeTable(pop: true)", "Base"),
+            ("emit NoticeTable('A', pushOld: false)\nemit NoticeTable(pop: true)", "A"),
+            ("emit NoticeTable('A', pushOld: true)\nemit NoticeTable('B', stackClear: false)\nemit NoticeTable(pop: false)", "B"),
+            ("emit NoticeTable('A', pushOld: true)\nemit NoticeTable('Final', stackClear: true)\nemit NoticeTable(pop: true)", "Final"),
+            ("emit NoticeTable(pop: true)", "Base"),
+        ] {
+            let game = try CardGame(rules: source.replacingOccurrences(of: "BODY", with: commands + "\nemit PlayerBadge('Winner', player: 1)\nemit PlayerBadge('Old', player: 0)\nemit PlayerBadge('', player: 0)\nemit Notice('Popup')"))
+            _ = try game.submit(player: 0, action: .init(kind: "test"), revision: 0)
+            let view = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(game.viewJSON(for: 0).utf8)) as? [String: Any])
+            XCTAssertEqual(view["tableNotice"] as? String, expected)
+            XCTAssertEqual(view["playerBadges"] as? [String], ["", "Winner"])
+            XCTAssertEqual(game.notice, "Popup")
+        }
+        let invalid = try CardGame(rules: source.replacingOccurrences(of: "BODY", with: "emit NoticeTable('Bad', pushOld: 1)"))
+        XCTAssertThrowsError(try invalid.submit(player: 0, action: .init(kind: "test"), revision: 0))
+        let overflow = try CardGame(rules: source.replacingOccurrences(of: "BODY", with: "for index in (from 1 to 65) { emit NoticeTable('Nested', pushOld: true) }"))
+        XCTAssertThrowsError(try overflow.submit(player: 0, action: .init(kind: "test"), revision: 0))
+        let restarted = try CardGame(rules: source.replacingOccurrences(of: "BODY", with: "emit NoticeTable(pop: true)"))
+        _ = try restarted.submit(player: 0, action: .init(kind: "test"), revision: 0)
+        XCTAssertTrue(restarted.viewJSON(for: 0).contains("\"tableNotice\":\"Base\""))
+        XCTAssertTrue(restarted.viewJSON(for: 0).contains("\"playerBadges\":[\"\",\"\"]"))
     }
 
     func testSetupAndDeterminism() throws {
@@ -222,7 +261,7 @@ final class CardGameTests: XCTestCase {
                 for player in players :board.take(source: #draw, destination: (('hand' + (player as :Text)) as :Tag), count: 13)
                 emit BeginGame(players: players)
             }
-            on BeginGame(players) { emit NoticeTable(text: 'Ready') }
+            on BeginGame(players) { emit NoticeTable('Ready') }
             on BeginTurn(player) { emit Action(action: #inspect, label: 'Inspect', optional: true, finishTurn: true, consumable: #auto, handler: Inspect(action, player), area: player) }
             on Inspect(action, player) {
                 emit Complete(action: action)
@@ -262,7 +301,7 @@ final class CardGameTests: XCTestCase {
         }
         XCTAssertThrowsError(try CardGame(rules: source.replacingOccurrences(of: "position: #right", with: "position: #nw")))
         XCTAssertThrowsError(try CardGame(rules: source.replacingOccurrences(of: "id: player,", with: "id: 0,")))
-        XCTAssertThrowsError(try CardGame(rules: source.replacingOccurrences(of: "emit NoticeTable(text: 'Match suit or rank. Draw once, then play or pass.')", with: ":board.create(setup: board(players: players))")))
+        XCTAssertThrowsError(try CardGame(rules: source.replacingOccurrences(of: "emit NoticeTable('Match suit or rank. Draw once, then play or pass.')", with: ":board.create(setup: board(players: players))")))
     }
 
     func testFlatZoneListsAndTagReferences() throws {
@@ -281,7 +320,7 @@ final class CardGameTests: XCTestCase {
                 ]]]])
             }
             on BeginTurn(player) {
-                emit Notice(text: (:board.table()[0].id as :Text))
+                emit Notice((:board.table()[0].id as :Text))
                 emit Action(action: #inspect, label: 'Inspect', optional: true, finishTurn: false, consumable: #never, handler: Inspect(action, player), zone: #a)
             }
             on Inspect(action, player) { emit Complete(action: action) }
@@ -304,14 +343,14 @@ final class CardGameTests: XCTestCase {
             }
             on BeginRound(number, players) {
                 :board.take(source: #bank, destination: #begins, count: 1)
-                emit Notice(text: (:board.roundnumber() as :Text))
+                emit Notice((:board.roundnumber() as :Text))
             }
             on EndRound(number, players) { :board.take(source: #bank, destination: #ends, count: 1)\nemit NextRound() }
             on BeginTurn(player) {
                 emit Action(action: #step, label: 'Step', optional: true, finishTurn: true, consumable: #auto, handler: Step(action, player), area: player)
             }
             on Step(action, player) { emit Complete(action: action) }
-            on EndTurn(player) { emit Notice(text: 'Turn ended') }
+            on EndTurn(player) { emit Notice('Turn ended') }
             on EndGame(players) { emit Finish(winners: []) }
             """
         func create(_ rules: String) throws -> CardGame { try CardGame(rules: rules, players: ["A", "B", "C", "D"]) }
@@ -329,20 +368,20 @@ final class CardGameTests: XCTestCase {
         XCTAssertEqual(game.currentPlayer, 0)
         XCTAssertEqual(count(game, "ends"), 1)
         XCTAssertEqual(count(game, "begins"), 2)
-        let skipped = try create(source.replacingOccurrences(of: "emit Notice(text: 'Turn ended')", with: "emit NextPlayersTurn(nextPlayer: (:board.next(player: player) + 1) mod :board.playercount())"))
+        let skipped = try create(source.replacingOccurrences(of: "emit Notice('Turn ended')", with: "emit NextPlayersTurn(nextPlayer: (:board.next(player: player) + 1) mod :board.playercount())"))
         try step(skipped)
         XCTAssertEqual(skipped.round, 1)
         XCTAssertEqual(skipped.currentPlayer, 2)
         try step(skipped)
         XCTAssertEqual(skipped.round, 2)
-        let repeatPlayer = try create(source.replacingOccurrences(of: "emit Notice(text: 'Turn ended')", with: "if player = 1 emit NextPlayersTurn(repeatTurnForPlayer: true)"))
+        let repeatPlayer = try create(source.replacingOccurrences(of: "emit Notice('Turn ended')", with: "if player = 1 emit NextPlayersTurn(repeatTurnForPlayer: true)"))
         try step(repeatPlayer)
         try step(repeatPlayer)
         XCTAssertEqual(repeatPlayer.round, 2)
         XCTAssertEqual(repeatPlayer.currentPlayer, 1)
         XCTAssertEqual(count(repeatPlayer, "ends"), 1)
         for ending in [
-            source.replacingOccurrences(of: "emit Notice(text: 'Turn ended')", with: "emit EndGame()"),
+            source.replacingOccurrences(of: "emit Notice('Turn ended')", with: "emit EndGame()"),
             source.replacingOccurrences(of: "on Step(action, player) { emit Complete(action: action) }", with: "on Step(action, player) { emit Complete(action: action)\nemit EndGame() }"),
         ] {
             let final = try create(ending)
@@ -369,14 +408,14 @@ final class CardGameTests: XCTestCase {
                 :board.create(setup: [table: [], players: players[:select player => [id: player, zones: []]], actions: [
                     [action: #info, label: 'Info', optional: true, finishTurn: false, consumable: 2, handler: Info(action), area: #table]
                 ]])
-                emit NoticeTable(text: 'Persistent table text')
+                emit NoticeTable('Persistent table text')
             }
             on BeginTurn(player) { emit Action(action: #step, label: 'Step', optional: true, finishTurn: true, consumable: #auto, handler: Step(action, player), area: player) }
             on Step(action, player) { emit Complete(action: action) }
             on Info(action) {
-                emit Notice(text: 'One')
+                emit Notice('One')
                 emit Complete(action: action)
-                emit Notice(text: 'Two')
+                emit Notice('Two')
             }
             on EndTurn(player) { emit NextPlayersTurn() }
             """
@@ -404,7 +443,7 @@ final class CardGameTests: XCTestCase {
                 emit Complete(action: action)
                 emit NextPlayersTurn(nextPlayer: 3)
             }
-            on EndTurn(player) { emit NoticeTable(text: 'Turn ended') }
+            on EndTurn(player) { emit NoticeTable('Turn ended') }
             """
         for (command, expectedPlayer, expectedRound) in [("NextPlayersTurn(nextPlayer: 3)", 3, 1), ("NextPlayersTurn(repeatTurnForPlayer: true)", 0, 2), ("NextPlayersTurn(repeatTurnForPlayer: false)", 1, 1), ("NextPlayersTurn()", 1, 1)] {
             let game = try CardGame(rules: source.replacingOccurrences(of: "NextPlayersTurn(nextPlayer: 3)", with: command), players: ["A", "B", "C", "D"])
@@ -419,7 +458,7 @@ final class CardGameTests: XCTestCase {
             on PrepareGame(players) {}
             on BeginTurn(player) { emit Action(action: #step, label: 'Step', optional: true, finishTurn: true, consumable: #auto, handler: Step(action, player), area: player) }
             on Step(action, player) { emit Complete(action: action) }
-            on EndTurn(player) { emit NoticeTable(text: 'Turn complete') }
+            on EndTurn(player) { emit NoticeTable('Turn complete') }
             on EndRound(number, players) {
                 if not :board.ending() emit Action(action: #deal, label: 'Deal round card', optional: false, finishTurn: false, consumable: 2, handler: Deal(action, player), area: #table)
             }
@@ -476,7 +515,7 @@ final class CardGameTests: XCTestCase {
             }
             on Wait(action, player) { emit Complete(action: action) }
             on EndTurn(player) { :board.setstate(key: #ends, value: :board.state(key: #ends) + 1) }
-            on EndRound(number, players) { emit NoticeTable(text: (:board.state(key: #ends) as :Text))
+            on EndRound(number, players) { emit NoticeTable((:board.state(key: #ends) as :Text))
                 emit NextRound() }
             """
         let game = try CardGame(rules: source)
@@ -606,7 +645,7 @@ final class CardGameTests: XCTestCase {
                 emit ClearActions(actions: old)
                 emit Inspect(player: player)
             }
-            on Inspect(player) { emit NoticeTable(text: (:board.actions(player: player)[:count] as :Text)) }
+            on Inspect(player) { emit NoticeTable((:board.actions(player: player)[:count] as :Text)) }
             on Done(action, player) { emit Complete(action: action) }
             on EndTurn(player) {}
             """

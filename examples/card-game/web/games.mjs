@@ -1,119 +1,127 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-const draftKey = 'ges-card-lab.draft.v1';
+const libraryKey = 'ges-card-lab.library.v2';
+const legacyKey = 'ges-card-lab.draft.v1';
 
-/** Restore the current draft and offer explicit loading of bundled examples. */
-export async function attachGameLibrary(input, select, loadButton, status, undoButton, playerSelect) {
-  let draft = null;
-  let previous = null;
-  let storageReadable = true;
+/** Keep one autosaved draft and one explicit saved copy, independent of examples. */
+export async function attachGameLibrary(input, select, saveButton, status, playerSelect, onSelect, onError) {
+  const response = await fetch('./examples.json');
+  if (!response.ok) throw new Error('Could not load the game list.');
+  const examples = await response.json();
+  if (!Array.isArray(examples) || !examples.length || examples.some(item =>
+    typeof item.id !== 'string' || ['draft', 'saved'].includes(item.id) ||
+    typeof item.name !== 'string' || typeof item.source !== 'string' ||
+    !/^examples\/[a-z0-9-]+\.ges$/.test(item.source) ||
+    (item.players !== undefined && ![2, 3, 4].includes(item.players)))) {
+    throw new Error('Invalid game list.');
+  }
+  const validSlot = slot => slot && typeof slot.source === 'string' && [2, 3, 4].includes(slot.players);
+  let library = { version: 2, selected: examples[0].id, draft: null, saved: null };
+  let storageWarning = '';
   try {
-    const stored = localStorage.getItem(draftKey);
+    const stored = localStorage.getItem(libraryKey);
     if (stored !== null) {
-      const parsed = JSON.parse(stored);
-      if (parsed.version !== 1 || typeof parsed.source !== 'string') {
-        throw new Error('Invalid draft');
+      const value = JSON.parse(stored);
+      if (value.version !== 2 || (value.draft !== null && !validSlot(value.draft)) ||
+          (value.saved !== null && !validSlot(value.saved))) throw new Error('Invalid library');
+      library = value;
+    } else {
+      const legacy = JSON.parse(localStorage.getItem(legacyKey) ?? 'null');
+      if (legacy?.version === 1 && typeof legacy.source === 'string') {
+        library.draft = { source: legacy.source, players: [2, 3, 4].includes(legacy.players) ? legacy.players : 2 };
+        library.selected = 'draft';
       }
-      draft = parsed;
     }
   } catch {
-    storageReadable = false;
+    storageWarning = 'Stored code could not be read. Keep a copy before leaving.';
   }
+  let generation = 0;
+  let applying = false;
 
-  const response = await fetch('./examples.json');
-  if (!response.ok) throw new Error('Could not load the example list.');
-  const examples = await response.json();
-  if (
-    !Array.isArray(examples) ||
-    examples.length === 0 ||
-    examples.some(
-      (item) =>
-        typeof item.id !== 'string' ||
-        typeof item.name !== 'string' ||
-        typeof item.source !== 'string' ||
-        !/^examples\/[a-z0-9-]+\.ges$/.test(item.source) ||
-        (item.players !== undefined && ![2, 3, 4].includes(item.players)),
-    )
-  ) {
-    throw new Error('Invalid example list.');
-  }
-  for (const example of examples) {
-    const option = document.createElement('option');
-    option.value = example.id;
-    option.textContent = example.name;
-    select.append(option);
-  }
-  select.value = examples.some((item) => item.id === draft?.exampleId)
-    ? draft.exampleId
-    : examples[0].id;
-
-  async function readExample(example) {
-    const result = await fetch(example.source);
-    if (!result.ok) throw new Error('Could not load the example. Your code is unchanged.');
-    return result.text();
-  }
-
-  function save() {
+  function persist(message) {
     try {
-      localStorage.setItem(
-        draftKey,
-        JSON.stringify({
-          version: 1,
-          source: input.value,
-          exampleId: select.value,
-          players: Number(playerSelect.value),
-        }),
-      );
-      status.textContent = 'Saved in this browser.';
+      localStorage.setItem(libraryKey, JSON.stringify(library));
+      status.textContent = storageWarning || message;
     } catch {
-      status.textContent = 'Local saving is unavailable. Keep a copy of your code before leaving.';
+      status.textContent = 'Local saving is unavailable. Keep a copy before leaving; slots work only until reload.';
     }
   }
 
-  input.value = draft !== null ? draft.source : await readExample(examples[0]);
-  status.textContent =
-    draft !== null
-      ? 'Saved draft restored from this browser.'
-      : storageReadable
-        ? 'Edits are saved automatically in this browser.'
-        : 'The saved draft could not be read. Keep a copy of your code.';
-  if ([2, 3, 4].includes(draft?.players)) playerSelect.value = String(draft.players);
-  playerSelect.addEventListener('change', save);
-  input.addEventListener('input', save);
+  function options() {
+    select.replaceChildren();
+    for (const entry of [...examples, { id: 'draft', name: 'Draft · autosaved' }, { id: 'saved', name: 'Saved' }]) {
+      const option = document.createElement('option');
+      option.value = entry.id;
+      option.textContent = entry.name;
+      option.disabled = ['draft', 'saved'].includes(entry.id) && !library[entry.id];
+      select.append(option);
+    }
+    select.value = library.selected;
+  }
 
-  loadButton.disabled = false;
-  loadButton.onclick = async () => {
-    const example = examples.find((item) => item.id === select.value);
-    if (!example) return;
-    loadButton.disabled = true;
-    // If editing continues during the fetch, do not overwrite those new changes.
-    const before = input.value;
+  async function load(id) {
+    if (id === 'draft' || id === 'saved') {
+      if (!library[id]) throw new Error('This slot is empty.');
+      return { ...library[id] };
+    }
+    const example = examples.find(item => item.id === id);
+    if (!example) throw new Error('Unknown game.');
+    const result = await fetch(example.source);
+    if (!result.ok) throw new Error('Could not load the game. Your code is unchanged.');
+    return { source: await result.text(), players: example.players ?? Number(playerSelect.value) };
+  }
+
+  function apply(slot) {
+    applying = true;
+    input.value = slot.source;
+    playerSelect.value = String(slot.players);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    applying = false;
+  }
+
+  function autosave() {
+    if (applying) return;
+    generation++;
+    library.draft = { source: input.value, players: Number(playerSelect.value) };
+    library.selected = 'draft';
+    options();
+    persist('Draft autosaved. Save keeps a separate copy in Saved.');
+  }
+
+  if (!examples.some(item => item.id === library.selected) && !library[library.selected]) {
+    library.selected = examples[0].id;
+  }
+  apply(await load(library.selected));
+  options();
+  status.textContent = storageWarning || 'Edits are autosaved to Draft. Save replaces the Saved slot.';
+  input.addEventListener('input', autosave);
+  playerSelect.addEventListener('change', autosave);
+  select.disabled = false;
+  saveButton.disabled = false;
+  select.onchange = async () => {
+    const id = select.value;
+    const ticket = ++generation;
     try {
-      const source = await readExample(example);
-      if (input.value !== before) {
-        status.textContent = 'Code changed while loading. Choose Load example again to replace it.';
-        return;
-      }
-      previous = { source: before, players: playerSelect.value };
-      if (example.players !== undefined) playerSelect.value = String(example.players);
-      input.value = source;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      undoButton.hidden = false;
-      status.textContent += ' Example loaded; choose New game to apply it.';
+      const slot = await load(id);
+      if (ticket !== generation) return;
+      apply(slot);
+      library.selected = id;
+      options();
+      persist('Game loaded. Your Draft and Saved slots are retained.');
+      onSelect();
     } catch (error) {
+      if (ticket !== generation) return;
+      select.value = library.selected;
       status.textContent = error.message;
-    } finally {
-      loadButton.disabled = false;
+      onError(error.message);
     }
   };
-
-  undoButton.onclick = () => {
-    if (previous === null) return;
-    input.value = previous.source;
-    playerSelect.value = previous.players;
-    previous = null;
-    undoButton.hidden = true;
-    input.dispatchEvent(new Event('input', { bubbles: true }));
+  saveButton.onclick = () => {
+    generation++;
+    library.saved = { source: input.value, players: Number(playerSelect.value) };
+    library.selected = 'saved';
+    options();
+    persist('Saved slot updated. Further edits go to Draft.');
   };
 }

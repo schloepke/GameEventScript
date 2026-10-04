@@ -3,26 +3,37 @@
 
 import { createEngine } from './engine.mjs';
 
-const engine = fetch('./card-game.wasm')
-  .then((response) => {
-    if (!response.ok) throw new Error(`Wasm download failed: ${response.status}`);
-    return response.arrayBuffer();
-  })
-  .then(createEngine);
+import { loadWasm } from './loading.mjs';
+
+let engine;
+
+function getEngine() {
+  if (!engine) {
+    const report = (progress) => self.postMessage({ type: 'loading', ...progress });
+    engine = loadWasm(report).then(async (binary) => {
+      report({ phase: 'initialize' });
+      const game = await createEngine(binary);
+      report({ phase: 'ready' });
+      return game;
+    });
+  }
+  return engine;
+}
+
 let serial = Promise.resolve();
 
 self.onmessage = (event) => {
   serial = serial.then(async () => {
-    const { id, type, source, seed, player, action, revision } = event.data;
+    const { id, type, source, seed, players, player, action, revision } = event.data;
     try {
-      const game = await engine;
+      const game = await getEngine();
       const result =
         type === 'analyze'
           ? { ...game.highlight(source), ...game.check(source) }
           : type === 'highlight'
             ? game.highlight(source)
             : type === 'start'
-              ? game.start(source, seed)
+              ? game.start(source, seed, players)
               : game.act(player, action, revision);
       self.postMessage({ id, ...result });
     } catch (error) {

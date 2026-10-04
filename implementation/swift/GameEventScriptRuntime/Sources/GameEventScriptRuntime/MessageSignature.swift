@@ -21,6 +21,10 @@ public enum GameEventScriptMessageError: Error, Equatable {
 
 /// An immutable message identity: its name and ordered external argument labels.
 public struct GameEventScriptMessageSignature: Hashable, CustomStringConvertible, Sendable {
+    let storage: GesSignatureStorage
+
+    init(storage: GesSignatureStorage) { self.storage = storage }
+
     /// The label assigned to a positional argument without an external name.
     public static let unlabeledParameterName = "_"
 
@@ -28,13 +32,13 @@ public struct GameEventScriptMessageSignature: Hashable, CustomStringConvertible
     public static let empty = GameEventScriptMessageSignature(normalizedName: "", parameters: [])
 
     /// The normalized message name.
-    public let name: String
+    public var name: String { storage.name }
 
     /// The normalized external labels, in declaration order.
-    public let parameters: [String]
+    public var parameters: [String] { storage.parameters }
 
     /// The stable language-neutral signature spelling, such as `Done(value)`.
-    public let signatureId: String
+    public var signatureId: String { storage.signatureId }
 
     /// Creates a signature, normalizing names and rejecting duplicate named labels.
     /// Empty message names represent an empty identity; positional `_` labels may repeat.
@@ -82,8 +86,7 @@ public struct GameEventScriptMessageSignature: Hashable, CustomStringConvertible
     /// Binds ordered values to this signature, or returns nil for an empty name or wrong arity.
     public func createMessage(_ arguments: [GesValue]) -> GameEventScriptMessage? {
         guard !name.isEmpty, arguments.count == parameters.count else { return nil }
-        let pairs = zip(parameters, arguments).map { GameEventScriptMessageArgument(normalizedName: $0.0, value: $0.1) }
-        return GameEventScriptMessage(normalizedName: name, arguments: GameEventScriptMessageArguments(normalizedArguments: pairs), signatureId: signatureId, normalizedTags: [])
+        return GameEventScriptMessage(normalizedName: name, arguments: GameEventScriptMessageArguments(normalizedNames: parameters, values: arguments), signatureId: signatureId, normalizedTags: [])
     }
 
     /// Binds ordered values to this signature, throwing when a concrete message cannot be created.
@@ -102,9 +105,7 @@ public struct GameEventScriptMessageSignature: Hashable, CustomStringConvertible
     public func hash(into hasher: inout Hasher) { GesText.hashScalars(signatureId, into: &hasher) }
 
     private init(normalizedName: String, parameters: [String]) {
-        name = normalizedName
-        self.parameters = parameters
-        signatureId = normalizedName + "(" + parameters.joined(separator: ",") + ")"
+        storage = GesSignatureStorage(name: normalizedName, parameters: parameters, signatureId: normalizedName + "(" + parameters.joined(separator: ",") + ")")
     }
 }
 
@@ -123,4 +124,17 @@ enum MessageNames {
     }
 
     private static func isSpace(_ scalar: UInt32) -> Bool { scalar == 32 || scalar == 9 }
+}
+
+// Shared immutable payload; wrapping a message/signature in a register never allocates.
+final class GesSignatureStorage: Sendable {
+    let name: String
+    let parameters: [String]
+    let signatureId: String
+
+    init(name: String, parameters: [String], signatureId: String) {
+        self.name = name
+        self.parameters = parameters
+        self.signatureId = signatureId
+    }
 }

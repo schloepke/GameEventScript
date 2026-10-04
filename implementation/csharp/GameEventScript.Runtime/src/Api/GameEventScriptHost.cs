@@ -19,6 +19,7 @@ public sealed partial class GameEventScriptHost
     private const int DefaultRegisterLimit = 512;
     private readonly GameEventScriptRandomGenerator _random;
     private readonly IGameEventScriptRuntimeObserver? _observer;
+    private readonly IGameEventScriptProfiler? _profiler;
     private readonly IGameEventScriptExtensionRegistry _extensionRegistry;
     private readonly IGameEventScriptExternalTypeRegistry _externalTypeRegistry;
     private readonly GameEventScriptRuntimeLimits _limits;
@@ -50,10 +51,11 @@ public sealed partial class GameEventScriptHost
         IGameEventScriptExtensionRegistry? extensionRegistry,
         IGameEventScriptExternalTypeRegistry? externalTypeRegistry,
         GameEventScriptRuntimeLimits? limits,
-        IGameEventScriptPublishSink? publishSink, IGameEventScriptClock? clock = null)
+        IGameEventScriptPublishSink? publishSink, IGameEventScriptClock? clock = null, IGameEventScriptProfiler? profiler = null)
     {
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _observer = observer;
+        _profiler = profiler;
         _extensionRegistry = extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance;
         _externalTypeRegistry = externalTypeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance;
         _limits = limits ?? GameEventScriptRuntimeLimits.Default;
@@ -133,6 +135,7 @@ public sealed partial class GameEventScriptHost
             _pendingVmWarmupCapacity = Math.Max(_pendingVmWarmupCapacity, linked.RequiredRegisterCapacity);
 
         var registrationId = NextRegistrationId();
+        linked.Profiler = _profiler?.CreateProgramProfiler(program);
         var instance = new GameEventScriptInstance(this, registrationId, program, linked);
         var initialization = new List<SubscriptionEntry>();
         for (var index = 0; index < linked.Handlers.Length; index++)

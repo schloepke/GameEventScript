@@ -13,12 +13,12 @@ final class RunSession {
     let options: RunOptions
     var messages = 0, opcodes = 0, emits = 0, publishes = 0
 
-    init(options: RunOptions, io: ToolIO, nextID: Int = 1, workspace: RunWorkspace? = nil) throws {
+    init(options: RunOptions, io: ToolIO, nextID: Int = 1, workspace: RunWorkspace? = nil, profiler: (any GameEventScriptProfiler)? = nil) throws {
         self.workspace = workspace ?? RunWorkspace()
         self.options = options
         self.io = io
         observer = RunObserver(io: io, options: options)
-        host = try GameEventScriptHost(seed: options.seed, limits: options.limits, observer: observer)
+        host = try GameEventScriptHost(seed: options.seed, limits: options.limits, observer: observer, profiler: profiler)
         inventory = RunInventory(host: host, io: io, workspace: self.workspace, nextID: nextID)
         try observer.subscribe(inventory)
     }

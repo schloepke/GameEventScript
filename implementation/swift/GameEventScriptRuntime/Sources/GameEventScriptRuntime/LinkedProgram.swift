@@ -10,6 +10,8 @@ final class GesLinkedProgram {
         let excludedTags: [String]
     }
 
+    var profiler: (any GameEventScriptProgramProfiler)?
+    let textValues: [GesValue]
     let program: GameEventScriptProgram
     var handlers: [Handler] = []
     var records: [UInt16: GameEventScriptBinding] = [:]
@@ -22,6 +24,7 @@ final class GesLinkedProgram {
 
     init(_ program: GameEventScriptProgram, extensions: (any GameEventScriptExtensionRegistry)?, types: (any GameEventScriptExternalTypeRegistry)?) throws {
         self.program = program
+        textValues = program.stringConstants.map(GesValue.text)
         for binding in program.bindings {
             let name = program.stringConstants[Int(binding.name)]
             let labels = binding.argumentNames.map { program.stringConstants[Int($0)] }

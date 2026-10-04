@@ -65,10 +65,10 @@ final class GesLiteralEvaluation {
                     let name = state.text(index)
                     let match = (name == "_" ? unnamed : 0)..<node.labels.count
                     if let position = match.first(where: { node.labels[$0] == name }) {
-                        state.stage(args[position])
+                        state.stageValue(args[position])
                         if name == "_" { unnamed = position + 1 }
                     } else {
-                        state.stage(.nothing)
+                        state.stageNothing()
                     }
                 }
                 if state.processing { state.call(Int(constructor.entryAddress), destination: destination, literal: self) }
@@ -89,6 +89,6 @@ final class GesLiteralEvaluation {
             results[next] = result
             next += 1
         }
-        if next == operations.count { state.set(destination, results.last!) }
+        if next == operations.count { state.setValue(destination, results.last!) }
     }
 }

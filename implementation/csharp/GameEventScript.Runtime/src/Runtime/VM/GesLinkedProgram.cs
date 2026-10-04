@@ -38,6 +38,8 @@ internal sealed class GesLinkedProgram
         internal ushort RequiredCallStackDepth { get; } = requiredCallStackDepth;
     }
 
+    internal IGameEventScriptProgramProfiler? Profiler { get; set; }
+
     internal GesLinkedProgram(GameEventScriptProgram program, IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptExternalTypeRegistry typeRegistry)
     {
         Program = program ?? throw new ArgumentNullException(nameof(program));

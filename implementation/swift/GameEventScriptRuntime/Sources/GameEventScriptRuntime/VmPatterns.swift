@@ -2,22 +2,22 @@
 // SPDX-License-Identifier: Apache-2.0
 
 enum GesPatterns {
-    static func execute(_ slot: GesVmState.Slot, pattern: GameEventScriptBytecodePatternKind, count: Int, face: GesValue, take: Bool) -> GesValue {
-        let source = slot.value
-        if source.kind == .series { return .nothing }
+    static func execute<Output: GesValueOutput>(_ slot: GesValue, pattern: GameEventScriptBytecodePatternKind, count: Int, face: GesValue, take: Bool, sink: Output) -> Output.Result {
+        let source = slot.registerValue
+        if source.kind == .series { return sink.nothing }
         let values: [GesValue]
-        if case .iterator(let iterator) = slot {
-            if !iterator.isPatternSequence { return take ? .nothing : .boolean(false) }
+        if let iterator = slot.iteratorValue {
+            if !iterator.isPatternSequence { return take ? sink.nothing : sink.boolean(false) }
             values = GesCollectionOperators.read(iterator)
         } else if let array = GesCollectionOperators.materialize(slot, ranges: false) {
             values = array
         } else {
-            return take ? .nothing : .boolean(false)
+            return take ? sink.nothing : sink.boolean(false)
         }
         var result: [GesValue]?
         switch pattern {
         case .countFace:
-            if !take && source.kind == .dice { return .boolean(face.asNumber.isFinite && values.filter { $0.asInteger == GesNumber.saturatedInteger(face.asNumber) }.count >= count) }
+            if !take && source.kind == .dice { return sink.boolean(face.asNumber.isFinite && values.filter { $0.asInteger == GesNumber.saturatedInteger(face.asNumber) }.count >= count) }
             let matches = values.filter { $0 == face }
             if matches.count >= count { result = Array(matches.prefix(max(0, count))) }
         case .countAny:
@@ -29,7 +29,7 @@ enum GesPatterns {
                 }
             }
         case .fullHouse:
-            if !take && values.count != 5 { return .boolean(false) }
+            if !take && values.count != 5 { return sink.boolean(false) }
             for triple in values {
                 let triples = values.filter { $0 == triple }
                 if triples.count < 3 { continue }
@@ -51,8 +51,8 @@ enum GesPatterns {
             if numbers.count < 2 { break }
             if numbers.indices.dropFirst().allSatisfy({ numbers[$0 - 1] != .max && numbers[$0 - 1] + 1 == numbers[$0] }) { result = selected }
         }
-        if !take { return .boolean(result != nil) }
-        guard let result else { return .nothing }
-        return source.kind == .dice ? .dice(result.map { Int32($0.asInteger) }) : .list(result)
+        if !take { return sink.boolean(result != nil) }
+        guard let result else { return sink.nothing }
+        return source.kind == .dice ? sink.dice(result.map { Int32($0.asInteger) }) : sink.list(result)
     }
 }

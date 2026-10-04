@@ -234,3 +234,13 @@ Both interactive prompts indent continuation lines without adding `...` tokens.
 
 The public root SwiftPM package also exposes `ges` from 0.3.0. See
 [SwiftPM source builds and Homebrew installation](../../../docs/guide/distribution/Tools.md).
+
+## Opcode profiling
+
+> **Since: Unreleased**
+
+Pass `--profile report.md` to `run` for a Markdown report grouped by opcode,
+source line and instruction address. Batch and scenario execution are supported,
+including precompiled programs without source maps. See the
+[profiling guide](../../../docs/guide/cli/Benchmarks.md#opcode-and-source-line-profiling)
+for usage, timing boundaries and interpretation.

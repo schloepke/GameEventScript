@@ -27,33 +27,38 @@ enum GesDataConstruction {
     }
 
     static func create(_ type: String, _ labels: [String], _ arguments: [GesValue], _ context: GameEventScriptContext) throws -> GesValue {
-        guard let positions = positions(type, labels), arguments.count == labels.count else { return .nothing }
+        try create(type, labels, arguments, context, sink: GesValueFactory())
+    }
+
+    static func create<Output: GesValueOutput>(_ type: String, _ labels: [String], _ arguments: [GesValue], _ context: GameEventScriptContext, sink: Output) throws -> Output.Result {
+        guard let positions = positions(type, labels), arguments.count == labels.count else { return sink.nothing }
         var values = [GesValue](repeating: .nothing, count: max(3, arguments.count))
         for (i, position) in positions.enumerated() { values[position] = arguments[i] }
         let first = values[0]
         switch type {
-        case "nothing": return .nothing
+        case "nothing": return sink.nothing
         case "number":
+            if arguments.count == 1 { return GesCasts.number(first, sink: sink) }
             let number = GesCasts.number(first)
-            if arguments.count == 1 { return number }
-            guard values[1].kind == .text, let name = values[1].textValue else { return .nothing }
+            guard values[1].kind == .text, let name = values[1].textValue else { return sink.nothing }
             let units: [String: GesUnit] = ["": .none, "none": .none, "s": .second, "second": .second, "m": .meter, "meter": .meter, "°": .degree, "degree": .degree]
-            guard let unit = units[name], number.numericOnly, !number.hasUnit || number.unit == unit else { return .nothing }
-            return number.integerValue.map { .integer($0, unit: unit) } ?? .float(number.asNumber, unit: unit)
+            guard let unit = units[name], number.numericOnly, !number.hasUnit || number.unit == unit else { return sink.nothing }
+            if let integer = number.integerValue { return sink.integer(integer, unit: unit) }
+            return sink.float(number.asNumber, unit: unit)
         case "record":
-            guard first.kind == .text, let name = first.textValue, GesNames.type(name), values[1].kind == .map, let fields = values[1].mapEntries else { return .nothing }
-            return .record(typeName: name, entries: fields)
+            guard first.kind == .text, let name = first.textValue, GesNames.type(name), values[1].kind == .map, let fields = values[1].asMap else { return sink.nothing }
+            return sink.record(typeName: name, fields: fields)
         case "range" where arguments.count > 1:
             let step = arguments.count > 2 ? values[2] : .integer(1)
-            guard first.numericOnly, values[1].numericOnly, step.numericOnly, !first.hasUnit, !values[1].hasUnit, !step.hasUnit else { return .nothing }
-            if let from = first.integerValue, let to = values[1].integerValue, let stride = step.integerValue { return .integerRange(from: from, to: to, step: stride) }
-            return .floatRange(from: first.asNumber, to: values[1].asNumber, step: step.asNumber)
+            guard first.numericOnly, values[1].numericOnly, step.numericOnly, !first.hasUnit, !values[1].hasUnit, !step.hasUnit else { return sink.nothing }
+            if let from = first.integerValue, let to = values[1].integerValue, let stride = step.integerValue { return sink.integerRange(from: from, to: to, step: stride) }
+            return sink.floatRange(from: first.asNumber, to: values[1].asNumber, step: step.asNumber)
         case "series" where first.kind == .text:
-            guard let kind = first.textValue, ["fibonacci", "factorial"].contains(kind) else { return .nothing }
-            if arguments.count > 1 && (values[1].integerValue == nil || values[1].hasUnit || values[1].asInteger < 0) { return .nothing }
-            return .series(.init(signatureID: kind, offset: arguments.count > 1 ? values[1].asInteger : 0))
+            guard let kind = first.textValue, ["fibonacci", "factorial"].contains(kind) else { return sink.nothing }
+            if arguments.count > 1 && (values[1].integerValue == nil || values[1].hasUnit || values[1].asInteger < 0) { return sink.nothing }
+            return sink.series(.init(signatureID: kind, offset: arguments.count > 1 ? values[1].asInteger : 0))
         case "message" where arguments.count == 2:
-            guard let message = first.messageValue else { return .nothing }
+            guard let message = first.messageValue else { return sink.nothing }
             var tags: [String] = []
 
             func add(_ value: GesValue) {
@@ -61,12 +66,13 @@ enum GesDataConstruction {
             }
 
             add(values[1])
-            return (try? message.withTags(tags)).map(GesValue.message) ?? .nothing
+            guard let tagged = try? message.withTags(tags) else { return sink.nothing }
+            return sink.message(tagged)
         default:
             let kinds: [String: GameEventScriptBytecodeTypeKind] = [
                 "percentage": .percentage, "boolean": .boolean, "text": .text, "tag": .tag, "list": .list, "map": .map, "dice": .dice, "vector": .vector, "point": .point, "range": .range, "series": .series, "message": .message, "handler": .handler,
             ]
-            return try GesCasts.cast(first, kinds[type] ?? .nothing, context)
+            return try GesCasts.cast(first, kinds[type] ?? .nothing, context, sink: sink)
         }
     }
 
@@ -75,12 +81,12 @@ enum GesDataConstruction {
         return (9...13).contains(v) || [0x20, 0x85, 0xA0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000].contains(v) || (0x2000...0x200A).contains(v)
     }
 
-    static func split(_ input: GesValue, _ delimiter: GesValue, whitespace: Bool) -> GesValue {
-        guard input.kind == .text, let text = input.textValue else { return .nothing }
+    static func split<Output: GesValueOutput>(_ input: GesValue, _ delimiter: GesValue, whitespace: Bool, sink: Output) -> Output.Result {
+        guard input.kind == .text, let text = input.textValue else { return sink.nothing }
         if whitespace {
-            return .list(text.unicodeScalars.split(whereSeparator: Self.whitespace).map { .text(String(String.UnicodeScalarView($0))) })
+            return sink.list(text.unicodeScalars.split(whereSeparator: Self.whitespace).map { .text(String(String.UnicodeScalarView($0))) })
         }
-        guard delimiter.kind == .text, let separator = delimiter.textValue, !separator.isEmpty else { return .nothing }
+        guard delimiter.kind == .text, let separator = delimiter.textValue, !separator.isEmpty else { return sink.nothing }
         // Scalar arrays avoid Swift's canonical-equivalence and grapheme-cluster matching.
         let scalars = Array(text.unicodeScalars)
         let needle = Array(separator.unicodeScalars)
@@ -100,6 +106,6 @@ enum GesDataConstruction {
             }
         }
         result.append(segment(scalars.count))
-        return .list(result)
+        return sink.list(result)
     }
 }

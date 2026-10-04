@@ -21,12 +21,23 @@ extension CardGame {
                 let properties = card.properties.mapEntries ?? []
                 return "{\"id\":\(id),\"properties\":{\(properties.map { jsonString($0.key) + ":" + jsonString($0.value.asText) }.joined(separator: ","))}}"
             }.joined(separator: ",")
-            return "{\"id\":\(jsonString(zone.id)),\"owner\":\(zone.owner.map(String.init) ?? "null"),\"count\":\(zone.cards.count),\"cards\":[\(shown)]}"
+            return
+                "{\"id\":\(jsonString(zone.id)),\"label\":\(jsonString(zone.label)),\"owner\":\(zone.owner.map(String.init) ?? "null"),\"position\":\(jsonString(zone.position)),\"row\":\(zone.row),\"layout\":\(jsonString(zone.layout)),\"count\":\(zone.cards.count),\"cards\":[\(shown)]}"
         }.joined(separator: ",")
-        let offers = viewer == currentPlayer && viewer != nil ? actions : []
-        let actionJSON = offers.map { "{\"kind\":\(jsonString($0.kind)),\"card\":\($0.card.map(String.init) ?? "null")}" }.joined(separator: ",")
+        let rowJSON = bindings.board.rows.map { "{\"owner\":\($0.owner.map(String.init) ?? "null"),\"index\":\($0.index),\"position\":\(jsonString($0.position))}" }.joined(separator: ",")
+        let offers = bindings.offeredActivations.filter { activation in
+            guard let viewer, players.indices.contains(viewer) else { return false }
+            return viewer == currentPlayer || activation.isGlobal
+        }
+        let actionJSON = offers.flatMap { activation in
+            activation.offers.map { offer -> String in
+                let area = activation.area.map { $0.kind == .tag ? jsonString($0.asText) : $0.asText } ?? "null"
+                return
+                    "{\"id\":\(activation.id),\"kind\":\(jsonString(offer.kind)),\"label\":\(jsonString(activation.label)),\"zone\":\(activation.zone.map(jsonString) ?? "null"),\"area\":\(area),\"global\":\(activation.isGlobal),\"group\":\(activation.group.flatMap { id in bindings.groups.first { $0.id == id }.map { jsonString($0.kind) } } ?? "null"),\"priority\":\(activation.priority),\"optional\":\(activation.optional),\"remaining\":\(activation.remaining.map(String.init) ?? "null"),\"card\":\(offer.card.map(String.init) ?? "null")}"
+            }
+        }.joined(separator: ",")
         return
-            "{\"players\":[\(players.map(jsonString).joined(separator: ","))],\"currentPlayer\":\(currentPlayer.map(String.init) ?? "null"),\"winner\":\(winner.map(String.init) ?? "null"),\"finished\":\(finished),\"failed\":\(failed),\"revision\":\(revision),\"notice\":\(jsonString(notice)),\"zones\":[\(zoneJSON)],\"actions\":[\(actionJSON)]}"
+            "{\"players\":[\(players.map(jsonString).joined(separator: ","))],\"currentPlayer\":\(currentPlayer.map(String.init) ?? "null"),\"winners\":[\(winners.map(String.init).joined(separator: ","))],\"finished\":\(finished),\"failed\":\(failed),\"revision\":\(revision),\"turn\":\(turn),\"round\":\(round),\"waitingForRound\":\(bindings.waitingForRound),\"direction\":\(bindings.direction),\"notice\":\(jsonString(notice)),\"notices\":[\(bindings.notices.map(jsonString).joined(separator: ","))],\"tableNotice\":\(jsonString(bindings.tableNotice)),\"zones\":[\(zoneJSON)],\"rows\":[\(rowJSON)],\"actions\":[\(actionJSON)]}"
     }
 
 }

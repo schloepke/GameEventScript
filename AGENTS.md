@@ -42,6 +42,12 @@ dotnet test GameEventScript.sln --filter "TestCategory!=Performance"
   add compatibility APIs only when the user explicitly requires them.
 - Prefer language-neutral contracts that map cleanly to Swift, Kotlin, Go, Rust,
   C/C++, C#, and Unity.
+- C# is the reference for deliberately chosen implementation architecture as well
+  as behavior, especially on the hot path. Preserve its inline VM dispatch and
+  owner-local, typed register operations when porting; these avoid unnecessary
+  value copies without relying on language-specific ref/in/out features.
+  Architectural deviations require an explicit rationale and performance
+  validation; passing Conformance alone does not establish architecture parity.
 - Keep Reflection, Attributes, `System.Type`, delegate-based adapters,
   unordered public dictionary-input adapters, locks, threads, Tasks, and other
   CLR conveniences in `CSharpBridge`.
@@ -343,9 +349,13 @@ target/source descriptions; Swift CI runs this gate.
 Swift Host and Compiler expose createBuilder()/create() factories matching the
 C# builder workflow. Swift collections use immutable value semantics and copy-on-write storage.
 Text and map-key equality/order use Unicode scalars, not Swift String's
-canonical equivalence. Keep Int64 and Binary64 storage separate. Message and
-Handler value storage is inline; VM entry borrows arguments by index rather
-than allocating an argument array. Mutable callback arguments are borrowed only
+canonical equivalence. Keep Int64 and Binary64 storage separate. Register storage
+follows the C# architecture: one numeric word, an optional
+object reference, kind, unit and cached flags. Typed setters mutate these fields
+in the register array; do not replace this with nested associated-value enums.
+Immutable Message and Handler payloads are shared by reference behind read-only
+Swift value APIs. VM entry borrows arguments by index rather than allocating an
+argument array. Mutable callback arguments are borrowed only
 for the synchronous invocation.
 
 `./scripts/build-swift.sh` builds all SwiftPM packages independently in Release

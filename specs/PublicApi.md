@@ -478,6 +478,7 @@ reentrancy requirements of those callbacks.
 | `WithRegistry(registry)` | Selects the extension registry. Absence is represented by an empty registry, not null. |
 | `WithExternalTypeRegistry(registry)` | Selects the runtime external-constructor registry. |
 | `WithPublishSink(sink)` | Selects the single outbound sink. Not calling it means no sink. |
+| `WithProfiler(profiler)` | Selects optional synchronous opcode instrumentation; omission disables it. See [opcode instrumentation](#opcode-instrumentation). |
 | `WithRuntimeObserver(observer)` | Selects the single observer. Not calling it means no observer. |
 | `WithClock(clock)` | Selects the borrowed monotonic clock; omission uses the system clock. See [delayed-send scheduling](#monotonic-scheduling-api). |
 | `Build()` | Validates configuration and returns a new loading, native-capable Host with no loaded Program or subscription. |
@@ -624,6 +625,56 @@ must not throw. Throwing is an embedding-contract violation, is not converted to
 a GES diagnostic, and lies outside Host state/recovery guarantees. This differs
 deliberately from publish-sink exceptions, which the Host contains as specified
 above.
+
+### Opcode instrumentation
+
+> **Since: Unreleased**
+
+`WithProfiler` / `withProfiler` selects an optional synchronous
+`IGameEventScriptProfiler` / `GameEventScriptProfiler` factory. Swift also accepts
+`profiler` in its Host initializer. The Host calls
+`CreateProgramProfiler(program)` / `createProgramProfiler(program)` once per linked
+load instance, before execution. The result implements
+`IGameEventScriptProgramProfiler` / `GameEventScriptProgramProfiler` and remains
+host-specific; no instrumentation state enters the immutable Program. Repeated
+loads, including identical Programs or module names, receive separate collectors.
+The factory can retain collectors for reporting after detach.
+
+The VM announces sequential loop phases through `PhaseStarting(phase)` /
+`phaseStarting(phase)`: StateCheck, BudgetCheck, SliceCheck, Fetch, and Advance
+(Swift lower camel case). These respectively check processing state, budget
+exhaustion, the reserved slice count, fetch/increment the instruction pointer,
+and advance the completed-opcode count. Checks short-circuit in that order;
+a terminal loop attempt may therefore have no instruction. Execute begins through
+`InstructionStarting`, not a separate PhaseStarting callback. It includes opcode
+dispatch, synchronous callbacks and any fault handling before FinishSlice.
+
+The VM calls `InstructionStarting(address)` / `instructionStarting(address)` once
+before executing each fetched opcode, with its zero-based address before jumps or
+calls change the instruction pointer. This counts **instruction starts**, including
+an opcode that later fails; it need not equal ExecutionResult's completed-opcode
+counter after a fault. `FinishSlice()` / `finishSlice()` closes the last interval
+on completion, pause, limit or error. It can occur without an instruction and must
+clear pending timing. A resumed slice starts a fresh interval. Initializations use
+the same instrumentation; native message handlers do not.
+
+Callbacks are observational, synchronous and serialized with the owning Host;
+they must not throw, mutate execution, or reenter any Host. A shared factory across
+Hosts requires embedding-provided serialization. Violations are outside execution
+and recovery guarantees. Timing, storage and report generation belong to the
+embedding, not to the portable runtime. No clock access, source mapping or
+profiling allocation occurs when instrumentation is omitted. The C# loop uses six optional callback checks per completed instruction, checks on the terminal loop attempt, and a finish check
+per slice. Swift selects a specialized instrumented or uninstrumented loop once
+per slice, sharing the opcode implementation.
+
+A phase-based timer ends the previous phase at callback entry, updates its
+preallocated counters, and starts the next interval after bookkeeping. It flushes
+the last phase at FinishSlice. Pre-execution phases are attributed to the following
+instruction; terminal checks without an instruction remain in phase totals only. This excludes bookkeeping and time outside slices,
+but includes callback/clock overhead, loop transitions, and synchronous work
+performed by an instruction. Call instructions measure the call mechanism; callee
+opcodes receive their own exclusive measurements. These are instrumented wall-time
+observations, not portable timing guarantees or uninstrumented opcode costs.
 
 ### ExecutionResult
 
@@ -1046,6 +1097,17 @@ These adapters must delegate to the portable semantics. Unity consumes the C#
 DLL and may choose main-thread/manual pumping instead of the automatic runner.
 
 ### Swift
+
+`GesValue`, `GameEventScriptMessage` and `GameEventScriptMessageSignature`
+retain immutable public value semantics. Read-only properties may use shared
+immutable backing storage; copying a value and replacing a VM register never
+mutates another copy. Native register layout is an implementation detail and
+does not define binary or JSON encoding.
+
+Swift message arguments retain ordered signature labels and values in separate
+immutable arrays. Their `Iterator` yields `GameEventScriptMessageArgument` pairs
+without creating an intermediate pair array. Returned arrays retain Swift
+copy-on-write semantics; caller mutations cannot change a message.
 
 The Swift mapping separates the `GameEventScriptRuntime`,
 `GameEventScriptCompiler`, and `GameEventScriptConformance` SwiftPM packages.

@@ -792,3 +792,13 @@ until the file closes. Message pumping pauses while the editor is open. Only
 :save writes original files. Errors are red with --color unless NO_COLOR is set.
 
 Both interactive prompts indent continuation lines without adding `...` tokens.
+
+## Opcode profiling
+
+> **Since: Unreleased**
+
+Pass `--profile report.md` to `run` for a Markdown report grouped by opcode,
+source line and instruction address. Batch and scenario execution are supported,
+including precompiled programs without source maps. See the
+[profiling guide](../../../docs/guide/cli/Benchmarks.md#opcode-and-source-line-profiling)
+for usage, timing boundaries and interpretation.

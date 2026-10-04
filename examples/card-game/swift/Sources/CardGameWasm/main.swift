@@ -38,7 +38,7 @@ func respond(_ body: String) -> Int32 {
 func outputPointer() -> UnsafePointer<UInt8>? { output.map { UnsafePointer($0) } }
 
 @_cdecl("cardgame_start")
-func start(_ count: Int32, _ seed: Int32) -> Int32 {
+func start(_ count: Int32, _ seed: Int32, _ playerCount: Int32) -> Int32 {
     session = nil
     guard let input, count > 0, Int(count) <= inputCapacity else { return respond("{\"error\":\"Invalid source buffer\"}") }
     defer {
@@ -47,7 +47,9 @@ func start(_ count: Int32, _ seed: Int32) -> Int32 {
     }
     do {
         let source = String(decoding: UnsafeBufferPointer(start: input, count: Int(count)), as: UTF8.self)
-        let game = try CardGame(rules: source, seed: Int64(seed))
+        guard (2...4).contains(playerCount) else { throw CardGameError("Choose two to four players") }
+        let names = (1...Int(playerCount)).map { "Player \($0)" }
+        let game = try CardGame(rules: source, players: names, seed: Int64(seed))
         session = game
         return respond("{\"state\":\(game.viewJSON(for: game.currentPlayer))}")
     } catch { return respond("{\"error\":\(jsonString(String(describing: error)))}") }
@@ -59,12 +61,13 @@ func selfClearInput() {
 }
 
 @_cdecl("cardgame_action")
-func submit(_ player: Int32, _ kind: Int32, _ card: Int32, _ revision: Int32) -> Int32 {
+func submit(_ player: Int32, _ actionIndex: Int32, _ revision: Int32) -> Int32 {
     guard let game = session else { return respond("{\"error\":\"Start a game first\"}") }
-    let names = ["play", "draw", "pass"]
-    guard kind >= 0 && Int(kind) < names.count else { return respond("{\"error\":\"Invalid action code\"}") }
+    guard Int(revision) == game.revision, game.actions.indices.contains(Int(actionIndex)) else {
+        return respond("{\"accepted\":false,\"reason\":\"Stale or unknown action\",\"state\":\(game.viewJSON(for: game.currentPlayer))}")
+    }
     do {
-        let result = try game.submit(player: Int(player), action: .init(kind: names[Int(kind)], card: card > 0 ? Int(card) : nil), revision: Int(revision))
+        let result = try game.submit(player: Int(player), action: game.actions[Int(actionIndex)], revision: Int(revision))
         return respond("{\"accepted\":\(result.accepted),\"reason\":\(jsonString(result.reason)),\"state\":\(game.viewJSON(for: game.currentPlayer))}")
     } catch { return respond("{\"error\":\(jsonString(String(describing: error)))}") }
 }

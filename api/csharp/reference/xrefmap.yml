@@ -4598,6 +4598,18 @@ references:
   commentId: Overload:GameEventScript.Api.GameEventScriptHostBuilder.WithExternalTypeRegistry
   fullName: GameEventScript.Api.GameEventScriptHostBuilder.WithExternalTypeRegistry
   nameWithType: GameEventScriptHostBuilder.WithExternalTypeRegistry
+- uid: GameEventScript.Api.GameEventScriptHostBuilder.WithProfiler(GameEventScript.Api.IGameEventScriptProfiler)
+  name: WithProfiler(IGameEventScriptProfiler)
+  href: api/GameEventScript.Api.GameEventScriptHostBuilder.html#GameEventScript_Api_GameEventScriptHostBuilder_WithProfiler_GameEventScript_Api_IGameEventScriptProfiler_
+  commentId: M:GameEventScript.Api.GameEventScriptHostBuilder.WithProfiler(GameEventScript.Api.IGameEventScriptProfiler)
+  fullName: GameEventScript.Api.GameEventScriptHostBuilder.WithProfiler(GameEventScript.Api.IGameEventScriptProfiler)
+  nameWithType: GameEventScriptHostBuilder.WithProfiler(IGameEventScriptProfiler)
+- uid: GameEventScript.Api.GameEventScriptHostBuilder.WithProfiler*
+  name: WithProfiler
+  href: api/GameEventScript.Api.GameEventScriptHostBuilder.html#GameEventScript_Api_GameEventScriptHostBuilder_WithProfiler_
+  commentId: Overload:GameEventScript.Api.GameEventScriptHostBuilder.WithProfiler
+  fullName: GameEventScript.Api.GameEventScriptHostBuilder.WithProfiler
+  nameWithType: GameEventScriptHostBuilder.WithProfiler
 - uid: GameEventScript.Api.GameEventScriptHostBuilder.WithPublishSink(GameEventScript.Api.IGameEventScriptPublishSink)
   name: WithPublishSink(IGameEventScriptPublishSink)
   href: api/GameEventScript.Api.GameEventScriptHostBuilder.html#GameEventScript_Api_GameEventScriptHostBuilder_WithPublishSink_GameEventScript_Api_IGameEventScriptPublishSink_
@@ -5801,6 +5813,48 @@ references:
   commentId: Overload:GameEventScript.Api.GameEventScriptOpaqueSection.SectionVersion
   fullName: GameEventScript.Api.GameEventScriptOpaqueSection.SectionVersion
   nameWithType: GameEventScriptOpaqueSection.SectionVersion
+- uid: GameEventScript.Api.GameEventScriptProfilePhase
+  name: GameEventScriptProfilePhase
+  href: api/GameEventScript.Api.GameEventScriptProfilePhase.html
+  commentId: T:GameEventScript.Api.GameEventScriptProfilePhase
+  fullName: GameEventScript.Api.GameEventScriptProfilePhase
+  nameWithType: GameEventScriptProfilePhase
+- uid: GameEventScript.Api.GameEventScriptProfilePhase.Advance
+  name: Advance
+  href: api/GameEventScript.Api.GameEventScriptProfilePhase.html#GameEventScript_Api_GameEventScriptProfilePhase_Advance
+  commentId: F:GameEventScript.Api.GameEventScriptProfilePhase.Advance
+  fullName: GameEventScript.Api.GameEventScriptProfilePhase.Advance
+  nameWithType: GameEventScriptProfilePhase.Advance
+- uid: GameEventScript.Api.GameEventScriptProfilePhase.BudgetCheck
+  name: BudgetCheck
+  href: api/GameEventScript.Api.GameEventScriptProfilePhase.html#GameEventScript_Api_GameEventScriptProfilePhase_BudgetCheck
+  commentId: F:GameEventScript.Api.GameEventScriptProfilePhase.BudgetCheck
+  fullName: GameEventScript.Api.GameEventScriptProfilePhase.BudgetCheck
+  nameWithType: GameEventScriptProfilePhase.BudgetCheck
+- uid: GameEventScript.Api.GameEventScriptProfilePhase.Execute
+  name: Execute
+  href: api/GameEventScript.Api.GameEventScriptProfilePhase.html#GameEventScript_Api_GameEventScriptProfilePhase_Execute
+  commentId: F:GameEventScript.Api.GameEventScriptProfilePhase.Execute
+  fullName: GameEventScript.Api.GameEventScriptProfilePhase.Execute
+  nameWithType: GameEventScriptProfilePhase.Execute
+- uid: GameEventScript.Api.GameEventScriptProfilePhase.Fetch
+  name: Fetch
+  href: api/GameEventScript.Api.GameEventScriptProfilePhase.html#GameEventScript_Api_GameEventScriptProfilePhase_Fetch
+  commentId: F:GameEventScript.Api.GameEventScriptProfilePhase.Fetch
+  fullName: GameEventScript.Api.GameEventScriptProfilePhase.Fetch
+  nameWithType: GameEventScriptProfilePhase.Fetch
+- uid: GameEventScript.Api.GameEventScriptProfilePhase.SliceCheck
+  name: SliceCheck
+  href: api/GameEventScript.Api.GameEventScriptProfilePhase.html#GameEventScript_Api_GameEventScriptProfilePhase_SliceCheck
+  commentId: F:GameEventScript.Api.GameEventScriptProfilePhase.SliceCheck
+  fullName: GameEventScript.Api.GameEventScriptProfilePhase.SliceCheck
+  nameWithType: GameEventScriptProfilePhase.SliceCheck
+- uid: GameEventScript.Api.GameEventScriptProfilePhase.StateCheck
+  name: StateCheck
+  href: api/GameEventScript.Api.GameEventScriptProfilePhase.html#GameEventScript_Api_GameEventScriptProfilePhase_StateCheck
+  commentId: F:GameEventScript.Api.GameEventScriptProfilePhase.StateCheck
+  fullName: GameEventScript.Api.GameEventScriptProfilePhase.StateCheck
+  nameWithType: GameEventScriptProfilePhase.StateCheck
 - uid: GameEventScript.Api.GameEventScriptProgram
   name: GameEventScriptProgram
   href: api/GameEventScript.Api.GameEventScriptProgram.html
@@ -8837,6 +8891,69 @@ references:
   commentId: Overload:GameEventScript.Api.IGameEventScriptNativeMessageHandler.Handle
   fullName: GameEventScript.Api.IGameEventScriptNativeMessageHandler.Handle
   nameWithType: IGameEventScriptNativeMessageHandler.Handle
+- uid: GameEventScript.Api.IGameEventScriptProfiler
+  name: IGameEventScriptProfiler
+  href: api/GameEventScript.Api.IGameEventScriptProfiler.html
+  commentId: T:GameEventScript.Api.IGameEventScriptProfiler
+  fullName: GameEventScript.Api.IGameEventScriptProfiler
+  nameWithType: IGameEventScriptProfiler
+- uid: GameEventScript.Api.IGameEventScriptProfiler.CreateProgramProfiler(GameEventScript.Api.GameEventScriptProgram)
+  name: CreateProgramProfiler(GameEventScriptProgram)
+  href: api/GameEventScript.Api.IGameEventScriptProfiler.html#GameEventScript_Api_IGameEventScriptProfiler_CreateProgramProfiler_GameEventScript_Api_GameEventScriptProgram_
+  commentId: M:GameEventScript.Api.IGameEventScriptProfiler.CreateProgramProfiler(GameEventScript.Api.GameEventScriptProgram)
+  fullName: GameEventScript.Api.IGameEventScriptProfiler.CreateProgramProfiler(GameEventScript.Api.GameEventScriptProgram)
+  nameWithType: IGameEventScriptProfiler.CreateProgramProfiler(GameEventScriptProgram)
+- uid: GameEventScript.Api.IGameEventScriptProfiler.CreateProgramProfiler*
+  name: CreateProgramProfiler
+  href: api/GameEventScript.Api.IGameEventScriptProfiler.html#GameEventScript_Api_IGameEventScriptProfiler_CreateProgramProfiler_
+  commentId: Overload:GameEventScript.Api.IGameEventScriptProfiler.CreateProgramProfiler
+  fullName: GameEventScript.Api.IGameEventScriptProfiler.CreateProgramProfiler
+  nameWithType: IGameEventScriptProfiler.CreateProgramProfiler
+- uid: GameEventScript.Api.IGameEventScriptProgramProfiler
+  name: IGameEventScriptProgramProfiler
+  href: api/GameEventScript.Api.IGameEventScriptProgramProfiler.html
+  commentId: T:GameEventScript.Api.IGameEventScriptProgramProfiler
+  fullName: GameEventScript.Api.IGameEventScriptProgramProfiler
+  nameWithType: IGameEventScriptProgramProfiler
+- uid: GameEventScript.Api.IGameEventScriptProgramProfiler.FinishSlice
+  name: FinishSlice()
+  href: api/GameEventScript.Api.IGameEventScriptProgramProfiler.html#GameEventScript_Api_IGameEventScriptProgramProfiler_FinishSlice
+  commentId: M:GameEventScript.Api.IGameEventScriptProgramProfiler.FinishSlice
+  fullName: GameEventScript.Api.IGameEventScriptProgramProfiler.FinishSlice()
+  nameWithType: IGameEventScriptProgramProfiler.FinishSlice()
+- uid: GameEventScript.Api.IGameEventScriptProgramProfiler.FinishSlice*
+  name: FinishSlice
+  href: api/GameEventScript.Api.IGameEventScriptProgramProfiler.html#GameEventScript_Api_IGameEventScriptProgramProfiler_FinishSlice_
+  commentId: Overload:GameEventScript.Api.IGameEventScriptProgramProfiler.FinishSlice
+  fullName: GameEventScript.Api.IGameEventScriptProgramProfiler.FinishSlice
+  nameWithType: IGameEventScriptProgramProfiler.FinishSlice
+- uid: GameEventScript.Api.IGameEventScriptProgramProfiler.InstructionStarting(System.Int32)
+  name: InstructionStarting(int)
+  href: api/GameEventScript.Api.IGameEventScriptProgramProfiler.html#GameEventScript_Api_IGameEventScriptProgramProfiler_InstructionStarting_System_Int32_
+  commentId: M:GameEventScript.Api.IGameEventScriptProgramProfiler.InstructionStarting(System.Int32)
+  name.vb: InstructionStarting(Integer)
+  fullName: GameEventScript.Api.IGameEventScriptProgramProfiler.InstructionStarting(int)
+  fullName.vb: GameEventScript.Api.IGameEventScriptProgramProfiler.InstructionStarting(Integer)
+  nameWithType: IGameEventScriptProgramProfiler.InstructionStarting(int)
+  nameWithType.vb: IGameEventScriptProgramProfiler.InstructionStarting(Integer)
+- uid: GameEventScript.Api.IGameEventScriptProgramProfiler.InstructionStarting*
+  name: InstructionStarting
+  href: api/GameEventScript.Api.IGameEventScriptProgramProfiler.html#GameEventScript_Api_IGameEventScriptProgramProfiler_InstructionStarting_
+  commentId: Overload:GameEventScript.Api.IGameEventScriptProgramProfiler.InstructionStarting
+  fullName: GameEventScript.Api.IGameEventScriptProgramProfiler.InstructionStarting
+  nameWithType: IGameEventScriptProgramProfiler.InstructionStarting
+- uid: GameEventScript.Api.IGameEventScriptProgramProfiler.PhaseStarting(GameEventScript.Api.GameEventScriptProfilePhase)
+  name: PhaseStarting(GameEventScriptProfilePhase)
+  href: api/GameEventScript.Api.IGameEventScriptProgramProfiler.html#GameEventScript_Api_IGameEventScriptProgramProfiler_PhaseStarting_GameEventScript_Api_GameEventScriptProfilePhase_
+  commentId: M:GameEventScript.Api.IGameEventScriptProgramProfiler.PhaseStarting(GameEventScript.Api.GameEventScriptProfilePhase)
+  fullName: GameEventScript.Api.IGameEventScriptProgramProfiler.PhaseStarting(GameEventScript.Api.GameEventScriptProfilePhase)
+  nameWithType: IGameEventScriptProgramProfiler.PhaseStarting(GameEventScriptProfilePhase)
+- uid: GameEventScript.Api.IGameEventScriptProgramProfiler.PhaseStarting*
+  name: PhaseStarting
+  href: api/GameEventScript.Api.IGameEventScriptProgramProfiler.html#GameEventScript_Api_IGameEventScriptProgramProfiler_PhaseStarting_
+  commentId: Overload:GameEventScript.Api.IGameEventScriptProgramProfiler.PhaseStarting
+  fullName: GameEventScript.Api.IGameEventScriptProgramProfiler.PhaseStarting
+  nameWithType: IGameEventScriptProgramProfiler.PhaseStarting
 - uid: GameEventScript.Api.IGameEventScriptPublishSink
   name: IGameEventScriptPublishSink
   href: api/GameEventScript.Api.IGameEventScriptPublishSink.html

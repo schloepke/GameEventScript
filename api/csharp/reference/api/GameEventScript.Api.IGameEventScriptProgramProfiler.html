@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Interface IGameEventScriptProgramProfiler | Game Event Script C# API — Unreleased (16ce3ca20b31) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Interface IGameEventScriptProgramProfiler | Game Event Script C# API — Unreleased (16ce3ca20b31) ">
+      
+      <meta name="description" content="Instruction-boundary callbacks for one loaded instance. Callbacks must not throw, pump a host, or modify execution. No callback is made while the host waits between slices.">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Api.IGameEventScriptProgramProfiler">
+
+
+
+  <h1 id="GameEventScript_Api_IGameEventScriptProgramProfiler" data-uid="GameEventScript.Api.IGameEventScriptProgramProfiler" class="text-break">
+Interface IGameEventScriptProgramProfiler  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.Api.html">Api</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Instruction-boundary callbacks for one loaded instance. Callbacks must not throw, pump a host,
+or modify execution. No callback is made while the host waits between slices.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public interface IGameEventScriptProgramProfiler</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="GameEventScript_Api_IGameEventScriptProgramProfiler_FinishSlice_" data-uid="GameEventScript.Api.IGameEventScriptProgramProfiler.FinishSlice*"></a>
+
+  <h3 id="GameEventScript_Api_IGameEventScriptProgramProfiler_FinishSlice" data-uid="GameEventScript.Api.IGameEventScriptProgramProfiler.FinishSlice">
+  FinishSlice()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Closes the last phase interval on completion, pause, limit or failure. May be called without
+a preceding instruction. Clear pending timing so time outside the VM is never charged to the next slice.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void FinishSlice()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_IGameEventScriptProgramProfiler_InstructionStarting_" data-uid="GameEventScript.Api.IGameEventScriptProgramProfiler.InstructionStarting*"></a>
+
+  <h3 id="GameEventScript_Api_IGameEventScriptProgramProfiler_InstructionStarting_System_Int32_" data-uid="GameEventScript.Api.IGameEventScriptProgramProfiler.InstructionStarting(System.Int32)">
+  InstructionStarting(int)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Called immediately before each fetched instruction executes, including an instruction that faults.
+Closes Fetch and starts Execute for this address. Pre-execution phases belong to this instruction.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void InstructionStarting(int address)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>address</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Zero-based instruction address in the immutable Program, before any jump or call.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_IGameEventScriptProgramProfiler_PhaseStarting_" data-uid="GameEventScript.Api.IGameEventScriptProgramProfiler.PhaseStarting*"></a>
+
+  <h3 id="GameEventScript_Api_IGameEventScriptProgramProfiler_PhaseStarting_GameEventScript_Api_GameEventScriptProfilePhase_" data-uid="GameEventScript.Api.IGameEventScriptProgramProfiler.PhaseStarting(GameEventScript.Api.GameEventScriptProfilePhase)">
+  PhaseStarting(GameEventScriptProfilePhase)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Starts a loop phase, closing the preceding interval. Execute starts through InstructionStarting.
+Checks before an instruction may terminate the loop without another instruction start.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void PhaseStarting(GameEventScriptProfilePhase phase)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>phase</code> <a class="xref" href="GameEventScript.Api.GameEventScriptProfilePhase.html">GameEventScriptProfilePhase</a></dt>
+    <dd><p>The phase about to execute.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (16ce3ca20b31)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (cb9f60e78dd2) </title>
+      <title>Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (16ce3ca20b31) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (cb9f60e78dd2) ">
+      <meta name="title" content="Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (16ce3ca20b31) ">
       
       
       <link rel="icon" href="../assets/logo.svg">
@@ -481,6 +481,18 @@ Interfaces
 </dd>
     </dl>
     <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.IGameEventScriptProfiler.html">IGameEventScriptProfiler</a></dt>
+      <dd><p>Optional synchronous instrumentation factory. Callbacks must not throw or reenter a host.
+Timing, allocation and report policies belong to the embedding. Instances require serialized access.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.IGameEventScriptProgramProfiler.html">IGameEventScriptProgramProfiler</a></dt>
+      <dd><p>Instruction-boundary callbacks for one loaded instance. Callbacks must not throw, pump a host,
+or modify execution. No callback is made while the host waits between slices.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.IGameEventScriptPublishSink.html">IGameEventScriptPublishSink</a></dt>
       <dd><p>Receives synchronous outbound publications after the host has attempted local enqueue.</p>
 </dd>
@@ -550,6 +562,11 @@ Enums
 </dd>
     </dl>
     <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GameEventScriptProfilePhase.html">GameEventScriptProfilePhase</a></dt>
+      <dd><p>Non-overlapping regions of an instrumented VM loop; timing policies belong to the embedding.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GameEventScriptProgramFormatErrorCode.html">GameEventScriptProgramFormatErrorCode</a></dt>
       <dd><p>Defines the supported game event script program format error code values.</p>
 </dd>
@@ -600,7 +617,7 @@ to process and verify them appropriately.</p>
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (cb9f60e78dd2)
+          Game Event Script C# API — Unreleased (16ce3ca20b31)
         </div>
       </div>
     </footer>

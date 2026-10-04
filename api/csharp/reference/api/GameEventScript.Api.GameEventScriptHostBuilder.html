@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GameEventScriptHostBuilder | Game Event Script C# API — Unreleased (cb9f60e78dd2) </title>
+      <title>Class GameEventScriptHostBuilder | Game Event Script C# API — Unreleased (16ce3ca20b31) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GameEventScriptHostBuilder | Game Event Script C# API — Unreleased (cb9f60e78dd2) ">
+      <meta name="title" content="Class GameEventScriptHostBuilder | Game Event Script C# API — Unreleased (16ce3ca20b31) ">
       
       <meta name="description" content="Configures and creates independent serial  instances.">
       <link rel="icon" href="../assets/logo.svg">
@@ -264,6 +264,45 @@ Class GameEventScriptHostBuilder
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Api.GameEventScriptHostBuilder.html">GameEventScriptHostBuilder</a></dt>
     <dd><p>This builder.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptHostBuilder_WithProfiler_" data-uid="GameEventScript.Api.GameEventScriptHostBuilder.WithProfiler*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptHostBuilder_WithProfiler_GameEventScript_Api_IGameEventScriptProfiler_" data-uid="GameEventScript.Api.GameEventScriptHostBuilder.WithProfiler(GameEventScript.Api.IGameEventScriptProfiler)">
+  WithProfiler(IGameEventScriptProfiler)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Configures optional synchronous opcode instrumentation for subsequently built hosts.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GameEventScriptHostBuilder WithProfiler(IGameEventScriptProfiler profiler)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>profiler</code> <a class="xref" href="GameEventScript.Api.IGameEventScriptProfiler.html">IGameEventScriptProfiler</a></dt>
+    <dd><p>Factory for independent per-instance instrumentation. Callbacks must not throw or reenter a host.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptHostBuilder.html">GameEventScriptHostBuilder</a></dt>
+    <dd><p>This builder. The factory is shared; access across hosts must be serialized by the caller.</p>
 </dd>
   </dl>
 
@@ -615,7 +654,7 @@ Class GameEventScriptHostBuilder
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (cb9f60e78dd2)
+          Game Event Script C# API — Unreleased (16ce3ca20b31)
         </div>
       </div>
     </footer>

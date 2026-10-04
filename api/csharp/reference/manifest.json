@@ -698,6 +698,20 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GameEventScriptProfilePhase.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GameEventScriptProfilePhase.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GameEventScriptProfilePhase",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GameEventScriptProfilePhase.yml\" sourcestartlinenumber=\"1\">Non-overlapping regions of an instrumented VM loop; timing policies belong to the embedding.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/GameEventScript.Api.GameEventScriptProgram.yml",
       "output": {
         ".html": {
@@ -1283,6 +1297,34 @@
       "IsMRef": true,
       "Title": "GameEventScript.Api.IGameEventScriptNativeMessageHandler",
       "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGameEventScriptNativeMessageHandler.yml\" sourcestartlinenumber=\"1\">Portable synchronous message handler invoked by a <xref href=\"GameEventScript.Api.GameEventScriptHost\" data-throw-if-not-resolved=\"false\"></xref>.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.IGameEventScriptProfiler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.IGameEventScriptProfiler.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.IGameEventScriptProfiler",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGameEventScriptProfiler.yml\" sourcestartlinenumber=\"1\">Optional synchronous instrumentation factory. Callbacks must not throw or reenter a host.\nTiming, allocation and report policies belong to the embedding. Instances require serialized access.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.IGameEventScriptProgramProfiler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.IGameEventScriptProgramProfiler.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.IGameEventScriptProgramProfiler",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGameEventScriptProgramProfiler.yml\" sourcestartlinenumber=\"1\">Instruction-boundary callbacks for one loaded instance. Callbacks must not throw, pump a host,\nor modify execution. No callback is made while the host waits between slices.</p>\n"
     },
     {
       "type": "ManagedReference",

@@ -1846,6 +1846,13 @@ The unlabeled unary form accepts any unary expression, including `parse`:
 A following binary operator remains outside that unary argument; for example,
 `:test.echo parse value + 1` means `(:test.echo(parse value)) + 1`.
 
+An extension call with explicit argument parentheses, including `()`, accepts
+postfix member access and collection selectors directly on its result:
+`:board.top(zone: #discard).id` and `:board.cards(zone: #draw)[:count]`.
+These suffixes chain and bind before surrounding arithmetic, just as after an
+ordinary function call. Parenthesis-free calls retain their existing argument
+binding; use `(:board.top #discard).id` to access the result of that form.
+
 The compiler binds an extension by namespace, function name, and ordered
 argument labels. The declarative compiler registry must contain that exact
 signature. Runtime linking then resolves the same identity against the host
@@ -2168,10 +2175,10 @@ dice_expression ::= 'roll' 'dice' POSITIVE_INTEGER 'd' POSITIVE_INTEGER
 series_expression ::= 'series' ('fibonacci' | 'factorial')
 
 extension_reference ::= ':' LOWER_NAME '.' LOWER_NAME
-extension_call_expression ::= extension_reference [parenthesized_arguments |
-                              'of' expression ('and' expression)* |
+extension_call_expression ::= extension_reference (parenthesized_arguments postfix_suffix* |
+                              ['of' expression ('and' expression)* |
                               argument_label ':' expression (argument_label ':' expression)* |
-                              unary_expression]
+                              unary_expression])
 
 collection_selector ::= structured_selector | expression
 structured_selector ::= quantified_selector | pattern_selector | take_selector | drop_selector |

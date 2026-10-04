@@ -1704,9 +1704,10 @@ internal sealed class GesParser
     }
 
     private ExpressionNode ParsePostfixExpression()
-    {
-        var expression = ParsePrimaryExpression();
+        => ParsePostfixSuffixes(ParsePrimaryExpression());
 
+    private ExpressionNode ParsePostfixSuffixes(ExpressionNode expression)
+    {
         while (true)
         {
             if (Match(Dot))
@@ -2682,7 +2683,7 @@ internal sealed class GesParser
         return WithRange(new ChooseSelectorNode(count, atRandom, identifier, predicate, weightIdentifier, weightExpression), startToken);
     }
 
-    private ExtensionCallExpressionNode ParseExtensionCallExpression()
+    private ExpressionNode ParseExtensionCallExpression()
     {
         var startToken = Current;
         var (extensionName, functionName, _) = ParseExtensionSymbol();
@@ -2694,7 +2695,8 @@ internal sealed class GesParser
         SkipNewLines();
 
         ArgumentListNode arguments;
-        if (Match(LeftParen))
+        var parenthesized = Match(LeftParen);
+        if (parenthesized)
         {
             arguments = ParseArgumentListAfterLeftParen();
         }
@@ -2715,7 +2717,8 @@ internal sealed class GesParser
             arguments = ArgumentListNode.Empty;
         }
 
-        return WithRange(new ExtensionCallExpressionNode(extensionName, functionName, arguments), startToken);
+        var expression = WithRange(new ExtensionCallExpressionNode(extensionName, functionName, arguments), startToken);
+        return parenthesized ? ParsePostfixSuffixes(expression) : expression;
     }
 
     private TypeConstructorExpressionNode ParseTypeConstructorExpression()

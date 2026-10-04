@@ -12,6 +12,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Parenthesized extension calls now support direct member access and collection
+  selectors on their results in C# and Swift, such as `:board.top(zone: #discard).id`.
+  Parenthesis-free argument binding is unchanged.
+
 - Opcode profiles now separate six VM loop phases per opcode, source line and
   instruction, with independent totals for terminal loop checks in C# and Swift.
 

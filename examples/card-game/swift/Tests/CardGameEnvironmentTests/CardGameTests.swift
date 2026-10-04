@@ -245,7 +245,7 @@ final class CardGameTests: XCTestCase {
                 ]]]])
             }
             on BeginTurn(player) {
-                emit Notice(text: ((:board.table())[0].id as :Text))
+                emit Notice(text: (:board.table()[0].id as :Text))
                 emit Action(action: #inspect, label: 'Inspect', optional: true, finishTurn: false, consumable: #never, handler: Inspect(action, player), zone: #a)
             }
             on Inspect(action, player) { emit Complete(action: action) }
@@ -570,7 +570,7 @@ final class CardGameTests: XCTestCase {
                 emit ClearActions(actions: old)
                 emit Inspect(player: player)
             }
-            on Inspect(player) { emit NoticeTable(text: ((:board.actions(player: player))[:count] as :Text)) }
+            on Inspect(player) { emit NoticeTable(text: (:board.actions(player: player)[:count] as :Text)) }
             on Done(action, player) { emit Complete(action: action) }
             on EndTurn(player) {}
             """
@@ -585,7 +585,7 @@ final class CardGameTests: XCTestCase {
         let source = """
             on PrepareGame(players) {}
             on BeginTurn(player) {
-                if player = 0 and (:board.actions(player: player))[:count] = 0 {
+                if player = 0 and :board.actions(player: player)[:count] = 0 {
                     emit ActionGroup(spec: [group: #later, player: player, actions: [[action: #manual, label: 'Manual', consumable: #manual, handler: Manual(action, player), area: player]]])
                 }
                 emit Action(spec: [action: #normal, label: 'Normal', finishTurn: true, handler: Normal(action, player), area: player])
@@ -690,7 +690,7 @@ final class CardGameTests: XCTestCase {
         let source = try arrangedMauMau(first: "[[suit: 'hearts', rank: 'J'], [suit: 'clubs', rank: 'Q']]", second: "[[suit: 'spades', rank: 'J'], [suit: 'spades', rank: '9']]")
         for forceOffer in [false, true] {
             let game = try CardGame(
-                rules: forceOffer ? source.replacingOccurrences(of: "let plays be playable(player: player)[:select item => item.id]", with: "let plays be (:board.cards(zone: hand(player: player)))[:select item => item.id]") : source
+                rules: forceOffer ? source.replacingOccurrences(of: "let plays be playable(player: player)[:select item => item.id]", with: "let plays be :board.cards(zone: hand(player: player))[:select item => item.id]") : source
             )
             let jack = try XCTUnwrap(game.actions.first { $0.kind == "play" && game.cards[$0.card! - 1].properties.asMap?.get("rank")?.asText == "J" })
             _ = try game.submit(player: 0, action: jack, revision: game.revision)

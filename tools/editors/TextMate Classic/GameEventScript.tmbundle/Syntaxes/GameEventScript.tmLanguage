@@ -250,6 +250,8 @@
 		</dict>
 		<key>extensions-and-types</key>
 		<dict>
+			<key>comment</key>
+			<string>Parenthesized extension calls accept trailing member and collection suffixes; existing punctuation and selector rules tokenize them without an extra scope.</string>
 			<key>patterns</key>
 			<array>
 				<dict>

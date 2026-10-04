@@ -675,3 +675,86 @@ steps:
               type: ":Number.int64"
               value: "42"
 ```
+
+---
+
+## Test: extension-result-postfix-chains
+
+This case verifies chained suffixes on parenthesized extension results while preserving short-form argument binding.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: extension-result-postfix-chains
+kind: scriptApi
+level: scenario
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  emit Done(
+    member: :test.echo([nested: [id: 7]]).nested.id,
+    indexed: :test.echo([[id: 3], [id: 5]])[2].id,
+    pipeline: :test.echo([1, 2, 3])[:filter item where item > 1][:count],
+    precedence: :test.echo([id: 3]).id ^ 2 + 1,
+    split: :test.echo('a,b')[:split on ','][:count],
+    nested: :test.echo(:test.echo([id: 8]).id),
+    short: (:test.toJson [id: 7].id) = :test.toJson(7),
+    grouped: (:test.echo [id: 9]).id
+  )
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: "member"
+            value:
+              type: ":Number.int64"
+              value: "7"
+          - name: "indexed"
+            value:
+              type: ":Number.int64"
+              value: "5"
+          - name: "pipeline"
+            value:
+              type: ":Number.int64"
+              value: "2"
+          - name: "precedence"
+            value:
+              type: ":Number.int64"
+              value: "10"
+          - name: "split"
+            value:
+              type: ":Number.int64"
+              value: "2"
+          - name: "nested"
+            value:
+              type: ":Number.int64"
+              value: "8"
+          - name: "short"
+            value:
+              type: ":Boolean"
+              value: true
+          - name: "grouped"
+            value:
+              type: ":Number.int64"
+              value: "9"
+```

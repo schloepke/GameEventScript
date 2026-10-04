@@ -84,3 +84,7 @@ of full-document and incremental-line results, including every scope and offset.
 ```highlight
 {"name":"standalone declaration keywords while editing","language":"ges","source":"module\non\rlet\r\nrecord\nfunction\npredicate\nconstant","expect":[{"text":"module","kind":"keyword","scope":"keyword.control.module.gameeventscript"},{"text":"on","kind":"keyword","scope":"keyword.control.handler.gameeventscript"},{"text":"let","kind":"keyword","scope":"keyword.other.definition.gameeventscript"},{"text":"record","kind":"keyword","scope":"keyword.other.definition.gameeventscript"},{"text":"function","kind":"keyword","scope":"keyword.other.definition.gameeventscript"},{"text":"predicate","kind":"keyword","scope":"keyword.other.definition.gameeventscript"},{"text":"constant","kind":"keyword","scope":"keyword.other.definition.gameeventscript"}]}
 ```
+
+```highlight
+{"name":"postfix chains after parenthesized extensions","language":"ges","source":":board.top(zone: #discard).id\n:board.cards(zone: #draw)[:filter card where card.id > 1][:count]","expect":[{"text":"id","kind":"identifier"},{"text":"#discard","kind":"tag"},{"text":":filter","kind":"builtin"},{"text":":count","kind":"builtin"}]}
+```

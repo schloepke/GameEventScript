@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "394467849CB8E4A0F8EA0047F676179DE6BAFA5F828CA9AEB687D5230B7C188C",
+    "sha256": "A8ED11C7E2E4E7BC9C29B7BDD8D5FF236BE31AF4CA268242F21E3F7EE89ED240",
     "documentCount": 96,
-    "caseCount": 1684
+    "caseCount": 1685
   },
   "cases": [
     {
@@ -21096,6 +21096,24 @@
           "compiler",
           "host",
           "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.extensions-sequences/extension-result-postfix-chains",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
           "publish-sink",
           "vm"
         ],

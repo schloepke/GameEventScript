@@ -68,7 +68,8 @@ extension GesParser {
             let (ns, function) = try extensionSymbol()
             newlines()
             var args: [GesArgument] = []
-            if current.syntaxText == "(" {
+            let parenthesized = current.syntaxText == "("
+            if parenthesized {
                 args = try arguments()
             } else if match("of") {
                 args = [.init(label: "_", value: try expression(9))]
@@ -80,9 +81,14 @@ extension GesParser {
             {
                 args = [.init(label: "_", value: try expression(15))]
             }
-            return node(.extensionCall(ns, function, args), start)
+            let result = node(.extensionCall(ns, function, args), start)
+            return parenthesized ? try postfixSuffixes(result) : result
         }
-        var result = try primary()
+        return try postfixSuffixes(primary())
+    }
+
+    func postfixSuffixes(_ base: GesExpression) throws -> GesExpression {
+        var result = base
         while true {
             if match(".") {
                 newlines()

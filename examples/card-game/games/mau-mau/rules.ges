@@ -43,18 +43,18 @@ on ShowRules(action) {
 }
 
 on PrepareGame(players) {
-    emit CreateGame(setup: board(players: players))
+    :board.create(setup: board(players: players))
     for amount in [1, 1, 1, 1, 1] {
         for player in players {
-            emit Take(source: #draw, destination: hand(player: player), count: amount)
+            :board.take(source: #draw, destination: hand(player: player), count: amount)
         }
     }
-    emit Take(source: #draw, destination: #discard, count: 1)
+    :board.take(source: #draw, destination: #discard, count: 1)
 }
 
 on BeginTurn(player) {
     if :board.state(player: player, key: #skip) = true {
-        emit SetState(player: player, key: #skip, value: nothing)
+        :board.setstate(player: player, key: #skip, value: nothing)
         emit ClearActions()
         emit Notice(text: '8: This player skips a turn.')
         emit NextPlayersTurn()
@@ -110,8 +110,9 @@ on NormalTurn(player) {
 on Play(action, player, card) {
     let candidate be :board.card(id: card)
     if :board.cards(zone: hand(player: player))[:any item where item.id = card] and fits(card: candidate, top: :board.top(zone: #discard)) {
-        emit MoveCard(action: action, card: card, source: hand(player: player), destination: #discard)
-        emit AfterPlay(player: player)
+        :board.move(card: card, source: hand(player: player), destination: #discard)
+        emit Complete(action: action)
+        emit CardPlayed(player: player)
     } else {
         emit Reject(action: action, reason: 'Choose a card from your hand with matching suit or rank.')
     }
@@ -129,23 +130,31 @@ on PenaltyDraw(action, player) {
 on DrawOne(action, player, penalty) {
     if drawable() {
         if :board.cards(zone: #draw)[:count] = 0 {
-            emit MoveCards(source: #discard, destination: #draw, cards: recycled())
+            :board.movecards(source: #discard, destination: #draw, cards: recycled())
         }
-        emit DrawCard(action: action, source: #draw, destination: hand(player: player))
-        // These messages run after recycling and drawing, so offers include the new card.
+        :board.draw(source: #draw, destination: hand(player: player))
+        emit Complete(action: action)
+        // Movement is immediate; refreshed offers already include the drawn card.
+        emit SetActionCards(action: #play, cards: playable(player: player)[:select item => item.id])
         if penalty {
-            emit AfterPenaltyDraw(player: player)
+            // Consumption follows this cascade, so the current draw still counts as remaining.
+            if penaltyLeft(player: player) = 1 {
+                emit TurnNotice()
+            } else {
+                emit NoticeTable(text: 'Draw ' + ((penaltyLeft(player: player) - 1) as :Text) + ' more penalty cards.')
+            }
+            if not drawable() {
+                emit ClearActions(actions: offers(player: player, id: #draw))
+                if playable(player: player)[:count] = 0 {
+                    emit Action(spec: [action: #pass, label: 'Pass', finishTurn: true, handler: Pass(action, player), area: player])
+                }
+            }
         } else {
-            emit AfterDraw(player: player)
+            emit Action(spec: [action: #pass, label: 'Pass', finishTurn: true, handler: Pass(action, player), area: player])
         }
     } else {
         emit Reject(action: action, reason: 'No penalty card is available.' when penalty otherwise 'No card is available to draw.')
     }
-}
-
-on AfterDraw(player) {
-    emit SetActionCards(action: #play, cards: playable(player: player)[:select item => item.id])
-    emit Action(spec: [action: #pass, label: 'Pass', finishTurn: true, handler: Pass(action, player), area: player])
 }
 
 on Pass(action, player) {
@@ -155,26 +164,11 @@ on Pass(action, player) {
 on StackSeven(action, player, card) {
     let candidate be :board.card(id: card)
     if :board.cards(zone: hand(player: player))[:any item where item.id = card] and candidate.properties.rank = '7' {
-        emit MoveCard(action: action, card: card, source: hand(player: player), destination: #discard)
-        emit AfterPlay(player: player)
+        :board.move(card: card, source: hand(player: player), destination: #discard)
+        emit Complete(action: action)
+        emit CardPlayed(player: player)
     } else {
         emit Reject(action: action, reason: 'Only a seven from your hand can pass on the penalty.')
-    }
-}
-
-on AfterPenaltyDraw(player) {
-    // Counters advance after this message cascade; one remaining means this was the final draw.
-    if penaltyLeft(player: player) = 1 {
-        emit TurnNotice()
-    } else {
-        emit NoticeTable(text: 'Draw ' + ((penaltyLeft(player: player) - 1) as :Text) + ' more penalty cards.')
-    }
-    emit SetActionCards(action: #play, cards: playable(player: player)[:select item => item.id])
-    if not drawable() {
-        emit ClearActions(actions: offers(player: player, id: #draw))
-        if playable(player: player)[:count] = 0 {
-            emit Action(spec: [action: #pass, label: 'Pass', finishTurn: true, handler: Pass(action, player), area: player])
-        }
     }
 }
 
@@ -183,11 +177,11 @@ on WaivePenalty(action, player) {
     emit TurnNotice()
 }
 
-on AfterPlay(player) {
+on CardPlayed(player) {
     let previous be penalty(player: player)
     let debt be 0 when previous is nothing or previous.consumed otherwise previous.data
     emit ClearActions()
-    emit SetState(key: #wish, value: nothing)
+    :board.setstate(key: #wish, value: nothing)
     let rank be :board.top(zone: #discard).properties.rank
     if rank = 'J' {
         emit NoticeTable(text: 'Choose the suit for the next player.')
@@ -200,7 +194,7 @@ on AfterPlay(player) {
             emit QueuePenalty(player: :board.next(player: player), count: debt + 2)
         }
         if rank = '8' {
-            emit SetState(player: :board.next(player: player), key: #skip, value: true)
+            :board.setstate(player: :board.next(player: player), key: #skip, value: true)
         }
         emit NextPlayersTurn()
     }
@@ -212,7 +206,7 @@ on ChooseHearts(action, player) { emit ChooseSuit(action: action, suit: 'hearts'
 on ChooseDiamonds(action, player) { emit ChooseSuit(action: action, suit: 'diamonds') }
 
 on ChooseSuit(action, suit) {
-    emit SetState(key: #wish, value: suit)
+    :board.setstate(key: #wish, value: suit)
     emit Complete(action: action)
     emit NoticeTable(text: 'Requested suit: ' + suit)
 }

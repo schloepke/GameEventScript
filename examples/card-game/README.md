@@ -129,7 +129,7 @@ Starting a new game clears it. Closing the dialog does not resume a failed game.
 
 Table zones support piles and open card spreads at nine compass positions; zones in each row
 follow creation order from left to right. Players have fixed bottom/top/left/right
-areas. `CreateGame(setup: board(players: players))` creates the entire board
+areas. `:board.create(setup: board(players: players))` creates the entire board
 atomically from flat table and player zone lists. Zone IDs are tags. Table positions
 use nine compass tags; player positions use #left, #center or #right. Optional
 newRow: true starts a row within the player area or table position. Side players rotate
@@ -140,14 +140,19 @@ The environment runs `PrepareGame(players)` and all its queued messages, then
 Rounds count a circuit from the starting player, including skipped seats; an
 incomplete final round closes before EndGame. An EndRound handler controls
 continuation with NextRound and may offer between-round actions; without one
-continuation is automatic. ReverseDirection supports reversed seat order. GES owns discard recycling and
-shuffling through `[:shuffle]` and `MoveCards`; native draws never refill a pile. Rules offer named actions
+continuation is automatic. `:board.reverse()` supports reversed seat order. GES owns discard recycling and
+shuffling through `[:shuffle]` and `:board.movecards`; native draws never refill a pile. Rules offer named actions
 with `Action` and typed handler references. Consumption may be automatic,
 manual, counted, or disabled. Required actions must be consumed before turn end.
 `NextPlayersTurn(nextPlayer: X)` chooses the next player;
 `NextPlayersTurn(repeatTurnForPlayer: true)` repeats the current player after a full circuit.
 Optional setup `actions` persist across turns and invoke handlers without player.
 `Notice` opens dialogs; `NoticeTable` updates a persistent centered table status. See `environment/Contract.md` for signatures and restrictions.
+
+Board creation, card movement, rule-state writes and direction changes are synchronous
+`:board` extensions. They return results immediately; old values remain immutable
+snapshots. Actions explicitly emit `Complete(action: action)` after applying their
+effects. Lifecycle transitions, offers and notices remain queued messages.
 
 The browser seed field is optional. Leave it empty for a fresh random seed on
 each new game, or enter an Int32 seed (including 0) for reproducible deals.

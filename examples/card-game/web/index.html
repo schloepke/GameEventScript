@@ -63,9 +63,9 @@
   <dialog id="help-dialog" aria-labelledby="help-title">
     <header class="help-header"><h2 id="help-title">Card environment reference</h2><form method="dialog"><button autofocus>Close</button></form></header>
     <p>Write rules with <code>on Event(…)</code>, send commands with <code>emit Message(label: value)</code>, and read the board with <code>:board.function(label: value)</code>. Parameters below are listed in their required order.</p>
-    <nav class="help-nav" aria-label="Reference sections"><a href="#help-zones">Zones</a><a href="#help-events">Events received by GES</a><a href="#help-commands">Messages emitted by GES</a><a href="#help-extensions">Read-only extensions</a></nav>
+    <nav class="help-nav" aria-label="Reference sections"><a href="#help-zones">Zones</a><a href="#help-events">Events received by GES</a><a href="#help-commands">Messages emitted by GES</a><a href="#help-extensions">Board extensions</a></nav>
     <section id="help-zones"><h3>Zones</h3><table><thead><tr><th scope="col">Signature / value</th><th scope="col">Meaning</th></tr></thead><tbody>
-<tr><td><code>setup: [table: […], players: […], actions: […]]</code></td><td>CreateGame receives the complete board. Each player: [id: player, zones: […]]. Include every selected player exactly once. Optional actions contains global action maps.</td></tr>
+<tr><td><code>setup: [table: […], players: […], actions: […]]</code></td><td>:board.create receives the complete board. Each player: [id: player, zones: […]]. Include every selected player exactly once. Optional actions contains global action maps.</td></tr>
 <tr><td><code>position: #nw, #n, #ne, #w, #center, #e, #sw, #s, #se</code></td><td>Table zones only; default #center. Aliases: #left = #w, #right = #e, #top = #n, #bottom = #s. Aliases share rows; extensions return compass tags. Each position has its own rows; zones in each row are centered together in definition order.</td></tr>
 <tr><td><code>position: #left / #center / #right</code></td><td>Player zones: align the whole row. Initially #left; omitted values inherit the current alignment. Change alignment on a new row. Left player rotates +90°, right −90°; top and bottom stay upright.</td></tr>
 <tr><td><code>newRow: true / false</code></td><td>Optional, defaults to false. Starts a new row within the player area or the selected table position. The first zone starts row zero, even with true. No nested rows or align fields.</td></tr>
@@ -84,8 +84,6 @@
 <tr><td><code>on EndGame(players)</code></td><td>Determine the winners and emit Finish(winners: […]).</td></tr>
 </tbody></table></section>
     <section id="help-commands"><h3>Messages emitted by GES</h3><table><thead><tr><th scope="col">Signature / value</th><th scope="col">Meaning</th></tr></thead><tbody>
-<tr><td><code>CreateGame(setup)</code></td><td>Once during preparation. Validates and creates the entire board atomically. Maximum 64 zones, 512 cards and 16 rows per player or table position. Unknown fields and duplicate IDs fail setup.</td></tr>
-<tr><td><code>Take(source, destination, count)</code></td><td>Move count top cards during preparation, round hooks, actions or EndTurn. Never refills or shuffles; does not complete an action.</td></tr>
 <tr><td><code>Action(action, label, optional, finishTurn, consumable, handler, cards / zone / area)</code></td><td>Activate a tag unique for this player during BeginTurn, a waiting EndRound, or after successful completion. label is Text. Handler(action, player) for buttons; Handler(action, player, card) with a final cards list for card choices. area: #table or a numeric player ID places a button at that area’s heading. Alternatively, zone: Tag makes an existing zone clickable with a green outline instead of showing a button.</td></tr>
 <tr><td><code>consumable: #auto / 1–1000 / #manual / #never</code></td><td>Consume after one success, after N successes, explicitly via ConsumeAction, or never. Rejections do not count. #never requires optional: true and finishTurn: false.</td></tr>
 <tr><td><code>optional / finishTurn</code></td><td>Non-optional actions must be fully consumed before turn end. finishTurn requests turn end on full consumption, waiting for other required actions if necessary.</td></tr>
@@ -93,20 +91,13 @@
 <tr><td><code>Action(spec: […])</code></td><td>Action map with priority (default 0) and optional player. Explicit player queues for that player's next turn; otherwise the action lasts this turn. Defaults: optional true, finishTurn false, consumable #auto.</td></tr>
 <tr><td><code>ActionGroup(spec: […])</code></td><td>Fields: group, actions, optional player, priority, optional, exclusive, data. Alternatives inherit recipient and priority. One completed alternative completes the group. exclusive (default true) locks after first successful execution. Mandatory groups default optional false; alternatives omit optional/priority/player.</td></tr>
 <tr><td><code>priority: 10</code></td><td>Open mandatory offers block player actions with lower priority. Optional offers never block. Same-priority alternatives remain selectable; global actions stay accessible. Nothing executes automatically.</td></tr>
-<tr><td><code>SetState(player, key, value)</code></td><td>Player-specific information such as #skip; nothing deletes. Read with :board.state(player, key).</td></tr>
 <tr><td><code>:board.actions(player)</code></td><td>Active, queued and consumed actions/groups with stable ref, id, kind, player, priority, optional, queued, active, consumed. Actions include group and remaining; groups include exclusive and data. Pass filtered entries to ClearActions.</td></tr>
 <tr><td><code>SetActionCards(action, cards)</code></td><td>Refresh an active card action by tag, without resetting its consumption counter.</td></tr>
-<tr><td><code>MoveCard(action, card, source, destination)</code></td><td>Move a card and accept the pending request.</td></tr>
-<tr><td><code>DrawCard(action, source, destination)</code></td><td>Draw one from a nonempty source and accept. GES must refill explicitly before this command.</td></tr>
-<tr><td><code>Complete(action)</code></td><td>Accept the pending request without moving a card.</td></tr>
+<tr><td><code>Complete(action)</code></td><td>Accept the pending request after the rule has applied its effects.</td></tr>
 <tr><td><code>Reject(action, reason)</code></td><td>Reject with a Text reason; retain the current offers.</td></tr>
 <tr><td><code>NextRound()</code></td><td>Continue from EndRound or an accepted between-round action once required actions are consumed. Ignored during game shutdown.</td></tr>
-<tr><td><code>ReverseDirection()</code></td><td>Toggle +1/-1 seat order during preparation, round hooks, actions or EndTurn. Round progress is preserved. Use before an explicit next-player selection.</td></tr>
-<tr><td><code>SetState(key, value)</code></td><td>Store rule data under a Tag key (maximum 64). nothing deletes the key. Read via :board.state(key: …); absent values are nothing.</td></tr>
 <tr><td><code>ClearActions() / ClearActions(actions)</code></td><td>Remove all current-player offers, including queued groups, or selected entries from :board.actions(player). Group removal includes its alternatives; an empty group is removed. Global offers and other players remain when no list is supplied.</td></tr>
-<tr><td><code>SetCardOrder(zone, cards)</code></td><td>Apply an exact permutation of a zone's card IDs. GES can use [:shuffle] to produce the order.</td></tr>
 <tr><td><code>NextPlayersTurn()</code></td><td>Request normal turn advancement in BeginTurn, after acceptance, or in on EndTurn(player). Required actions must be consumed; finishTurn can request the transition automatically.</td></tr>
-<tr><td><code>MoveCards(source, destination, cards)</code></td><td>Move a list of distinct source card IDs in supplied order. Same phases as Take; does not complete an action. Use [:shuffle] in GES to choose random order. Last card becomes the top.</td></tr>
 <tr><td><code>NextPlayersTurn(nextPlayer: X)</code></td><td>Select a valid next player in BeginTurn, after acceptance or in on EndTurn(player). Forward seat distance counts toward round completion. Last NextPlayersTurn command wins.</td></tr>
 <tr><td><code>NextPlayersTurn(repeatTurnForPlayer: true)</code></td><td>Repeat the active player after a full circuit; false means normal advancement. Available in BeginTurn, after acceptance or in on EndTurn(player).</td></tr>
 <tr><td><code>EndGame()</code></td><td>Request EndGame(players) from a round hook, BeginTurn, an answered action, or EndTurn. Closes the open round before EndGame(players).</td></tr>
@@ -114,7 +105,16 @@
 <tr><td><code>NoticeTable(text)</code></td><td>Replace the centered status text at the bottom of the table. Persists until changed; empty Text clears it.</td></tr>
 <tr><td><code>Notice(text)</code></td><td>Show a modal dialog after the rule cascade. Multiple notices display one after another; Complete does not erase them.</td></tr>
 </tbody></table></section>
-    <section id="help-extensions"><h3>Read-only extensions</h3><table><thead><tr><th scope="col">Signature / value</th><th scope="col">Meaning</th></tr></thead><tbody>
+    <section id="help-extensions"><h3>Board extensions</h3><p>Mutations run immediately; later queries in the same handler see the result. Previously read values remain immutable snapshots. Complete(action) is still required. Operations validate before changing the board, but a later error or Reject does not undo earlier mutations. Card movement and reverse are available during preparation, round hooks, actions and EndTurn. State writes also work in BeginTurn and EndGame.</p><table><thead><tr><th scope="col">Signature / value</th><th scope="col">Meaning</th></tr></thead><tbody>
+<tr><td><code>:board.create(setup)</code></td><td>Once during preparation. Validates and creates the entire board atomically. Maximum 64 zones, 512 cards and 16 rows per player or table position. Unknown fields and duplicate IDs fail setup.</td></tr>
+<tr><td><code>:board.take(source, destination, count)</code></td><td>Move count top cards during preparation, round hooks, actions or EndTurn. Never refills or shuffles; does not complete an action.</td></tr>
+<tr><td><code>:board.setstate(player, key, value)</code></td><td>Player-specific information such as #skip; nothing deletes. Read with :board.state(player, key).</td></tr>
+<tr><td><code>:board.move(card, source, destination)</code></td><td>Move an explicit card and return its snapshot. Does not complete an action.</td></tr>
+<tr><td><code>:board.draw(source, destination)</code></td><td>Move the top card and return its snapshot, or nothing if empty. Does not complete an action; GES owns recycling.</td></tr>
+<tr><td><code>:board.reverse()</code></td><td>Toggle +1/-1 seat order during preparation, round hooks, actions or EndTurn. Round progress is preserved. Use before an explicit next-player selection.</td></tr>
+<tr><td><code>:board.setstate(key, value)</code></td><td>Store rule data under a Tag key (maximum 64). nothing deletes the key. Read via :board.state(key: …); absent values are nothing.</td></tr>
+<tr><td><code>:board.setorder(zone, cards)</code></td><td>Apply an exact permutation of a zone's card IDs. GES can use [:shuffle] to produce the order.</td></tr>
+<tr><td><code>:board.movecards(source, destination, cards)</code></td><td>Move a list of distinct source card IDs in supplied order. Same phases as :board.take; does not complete an action. Use [:shuffle] in GES to choose random order. Last card becomes the top.</td></tr>
 <tr><td><code>:board.cards(zone)</code></td><td>List of card snapshots [id, properties], from bottom to top.</td></tr>
 <tr><td><code>:board.card(id)</code></td><td>Card snapshot or nothing.</td></tr>
 <tr><td><code>:board.top(zone)</code></td><td>Top card snapshot or nothing.</td></tr>
@@ -138,7 +138,7 @@
 on DealCards(players) {
     for amount in [3, 2, 3] {
         for player in players {
-            emit Take(source: #draw,
+            :board.take(source: #draw,
                 destination: hand(player: player), count: amount)
         }
     }
@@ -160,7 +160,7 @@ function board(players) be [
 ]
 
 // In PrepareGame(players), before emitting DealCards:
-emit CreateGame(setup: board(players: players))
+:board.create(setup: board(players: players))
 
 // In BeginTurn(player):
 emit Action(action: #draw, label: 'Draw', optional: true,
@@ -181,7 +181,7 @@ emit ConsumeAction(action: action)
 let top be :board.top(zone: #discard)</code></pre>
     <p>Supply initial cards directly when creating a zone. Cards may contain custom properties; the browser uses <code>suit</code> and <code>rank</code> for their faces. Action names are tags, labels are Text, and callbacks are Handler values. Card actions share one consumption counter across their selectable cards.</p></section>
     <section><h3>Global actions</h3>
-    <p>Add an optional <code>actions: […]</code> list to CreateGame. Each map uses the same fields as Action, with exactly one area, zone or cards target. Its handler takes <code>action</code>, or <code>action, card</code>, without player. Complete or Reject normally. Globals are available to any player and retain counters across turns and rounds; consumed globals stay consumed. Tags must be unique across global and player actions. finishTurn affects the active player's turn.</p>
+    <p>Add an optional <code>actions: […]</code> list to :board.create. Each map uses the same fields as Action, with exactly one area, zone or cards target. Its handler takes <code>action</code>, or <code>action, card</code>, without player. Complete or Reject normally. Globals are available to any player and retain counters across turns and rounds; consumed globals stay consumed. Tags must be unique across global and player actions. finishTurn affects the active player's turn.</p>
     <pre>actions: [
     [action: #rules, label: 'Rules', optional: true, finishTurn: false,
         consumable: #never, handler: ShowRules(action), area: #table]

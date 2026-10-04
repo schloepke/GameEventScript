@@ -19,6 +19,42 @@ final class CardGameTests: XCTestCase {
         XCTAssertEqual(Set(locations), Set(1...32), file: file, line: line)
     }
 
+    func testSynchronousMutationsReturnSnapshotsAndRequireExplicitCompletion() throws {
+        let source = """
+            on PrepareGame(players) {
+                :board.create(setup: [table: [
+                    [id: #draw, label: 'Draw', cards: [[rank: 1], [rank: 2], [rank: 3]]], [id: #discard, label: 'Discard']
+                ], players: players[:select player => [id: player, zones: []]]])
+                let originalCards be :board.cards(zone: #draw)
+                let drawnCard be :board.draw(source: #draw, destination: #discard)
+                let drawnCards be :board.take(source: #draw, destination: #discard, count: 2)
+                let emptyDraw be :board.draw(source: #draw, destination: #discard)
+                :board.setorder(zone: #discard, cards: [1, 2, 3])
+                let movedCard be :board.move(card: 2, source: #discard, destination: #draw)
+                let movedCards be :board.movecards(source: #discard, destination: #draw, cards: [3, 1])
+                :board.setstate(key: #snapshot, value: originalCards)
+                :board.setstate(player: 0, key: #seen, value: drawnCard.id)
+                let direction be :board.reverse()
+                if (originalCards[:count] = 3 and drawnCard.id = 3 and drawnCards[:select item => item.id] = [2, 1] and emptyDraw is nothing and movedCard.id = 2 and movedCards[:select item => item.id] = [3, 1] and :board.top(zone: #draw).id = 1 and :board.cards(zone: #discard)[:count] = 0 and :board.state(key: #snapshot) = originalCards and :board.state(player: 0, key: #seen) = 3 and direction = -1 and :board.direction() = -1) {
+                    emit NoticeTable(text: 'Snapshots verified')
+                }
+            }
+            on BeginTurn(player) {
+                emit Action(spec: [action: #draw, label: 'Draw', consumable: #never, zone: #draw, handler: Draw(action, player)])
+            }
+            on Draw(action, player) {
+                let card be :board.draw(source: #draw, destination: #discard)
+                if card.id = :board.top(zone: #discard).id { emit Complete(action: action) }
+            }
+            """
+        let game = try CardGame(rules: source)
+        XCTAssertTrue(game.viewJSON(for: 0).contains("Snapshots verified"))
+        XCTAssertTrue(try game.submit(player: 0, action: .init(kind: "draw"), revision: 0).accepted)
+        let unanswered = try CardGame(rules: source.replacingOccurrences(of: "emit Complete(action: action)", with: "emit Notice(text: 'Moved')"))
+        XCTAssertThrowsError(try unanswered.submit(player: 0, action: .init(kind: "draw"), revision: 0))
+        XCTAssertEqual(unanswered.zones.first { $0.id == "discard" }?.cards, [1])
+    }
+
     func testSetupAndDeterminism() throws {
         let first = try CardGame(rules: rules, seed: 42)
         let second = try CardGame(rules: rules, seed: 42)
@@ -152,7 +188,7 @@ final class CardGameTests: XCTestCase {
     }
 
     func testInvalidMechanicalCommandDoesNotPartiallyMoveCards() throws {
-        let source = try rules.replacingOccurrences(of: "DrawCard(action: action, source: #draw, destination: hand(player: player)", with: "DrawCard(action: action, source: #draw, destination: #draw")
+        let source = try rules.replacingOccurrences(of: ":board.draw(source: #draw, destination: hand(player: player)", with: ":board.draw(source: #draw, destination: #draw")
         let game = try CardGame(rules: source)
         let before = game.zones.map(\.cards)
         XCTAssertThrowsError(try game.submit(player: 0, action: .init(kind: "draw"), revision: 0))
@@ -171,7 +207,7 @@ final class CardGameTests: XCTestCase {
             function deck() be ['clubs', 'spades', 'hearts', 'diamonds'][:fold cards be [], suit =>
                 cards | ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'][:select rank => [suit: suit, rank: rank, score: 10]]]
             on PrepareGame(players) {
-                emit CreateGame(setup: [
+                :board.create(setup: [
                     table: [
                         [id: #draw, label: 'Draw pile', visibility: #hidden, cards: deck() | deck() | [[suit: 'joker', rank: 'Joker'], [suit: 'joker', rank: 'Joker'], [suit: 'joker', rank: 'Joker'], [suit: 'joker', rank: 'Joker']]],
                         [id: #second, label: 'Second pile', visibility: #top]
@@ -183,7 +219,7 @@ final class CardGameTests: XCTestCase {
                 emit DealCards(players: players)
             }
             on DealCards(players) {
-                for player in players emit Take(source: #draw, destination: (('hand' + (player as :Text)) as :Tag), count: 13)
+                for player in players :board.take(source: #draw, destination: (('hand' + (player as :Text)) as :Tag), count: 13)
                 emit BeginGame(players: players)
             }
             on BeginGame(players) { emit NoticeTable(text: 'Ready') }
@@ -226,13 +262,13 @@ final class CardGameTests: XCTestCase {
         }
         XCTAssertThrowsError(try CardGame(rules: source.replacingOccurrences(of: "position: #right", with: "position: #nw")))
         XCTAssertThrowsError(try CardGame(rules: source.replacingOccurrences(of: "id: player,", with: "id: 0,")))
-        XCTAssertThrowsError(try CardGame(rules: source.replacingOccurrences(of: "emit NoticeTable(text: 'Match suit or rank. Draw once, then play or pass.')", with: "emit CreateGame(setup: board(players: players))")))
+        XCTAssertThrowsError(try CardGame(rules: source.replacingOccurrences(of: "emit NoticeTable(text: 'Match suit or rank. Draw once, then play or pass.')", with: ":board.create(setup: board(players: players))")))
     }
 
     func testFlatZoneListsAndTagReferences() throws {
         let source = """
             on PrepareGame(players) {
-                emit CreateGame(setup: [table: [
+                :board.create(setup: [table: [
                     [id: #a, label: 'A', position: #nw, newRow: true],
                     [id: #b, label: 'B', position: #center],
                     [id: #c, label: 'C', position: #nw, newRow: true],
@@ -261,16 +297,16 @@ final class CardGameTests: XCTestCase {
     func testRoundHooksIncludeSkippedSeatsAndPartialFinalRound() throws {
         let source = """
             on PrepareGame(players) {
-                emit CreateGame(setup: [table: [
+                :board.create(setup: [table: [
                     [id: #bank, label: 'Bank', cards: (from 1 to 30)[:select number => [rank: number]]],
                     [id: #begins, label: 'Begins'], [id: #ends, label: 'Ends']
                 ], players: players[:select player => [id: player, zones: []]]])
             }
             on BeginRound(number, players) {
-                emit Take(source: #bank, destination: #begins, count: 1)
+                :board.take(source: #bank, destination: #begins, count: 1)
                 emit Notice(text: (:board.roundnumber() as :Text))
             }
-            on EndRound(number, players) { emit Take(source: #bank, destination: #ends, count: 1)\nemit NextRound() }
+            on EndRound(number, players) { :board.take(source: #bank, destination: #ends, count: 1)\nemit NextRound() }
             on BeginTurn(player) {
                 emit Action(action: #step, label: 'Step', optional: true, finishTurn: true, consumable: #auto, handler: Step(action, player), area: player)
             }
@@ -317,8 +353,8 @@ final class CardGameTests: XCTestCase {
         }
         let stopAtBoundary = try create(
             source.replacingOccurrences(
-                of: "on EndRound(number, players) { emit Take(source: #bank, destination: #ends, count: 1)\nemit NextRound() }",
-                with: "on EndRound(number, players) { emit Take(source: #bank, destination: #ends, count: 1)\nemit EndGame() }"
+                of: "on EndRound(number, players) { :board.take(source: #bank, destination: #ends, count: 1)\nemit NextRound() }",
+                with: "on EndRound(number, players) { :board.take(source: #bank, destination: #ends, count: 1)\nemit EndGame() }"
             )
         )
         for _ in 0..<4 { try step(stopAtBoundary) }
@@ -330,7 +366,7 @@ final class CardGameTests: XCTestCase {
     func testGlobalActionsPersistAndNoticesRemainSeparate() throws {
         let source = """
             on PrepareGame(players) {
-                emit CreateGame(setup: [table: [], players: players[:select player => [id: player, zones: []]], actions: [
+                :board.create(setup: [table: [], players: players[:select player => [id: player, zones: []]], actions: [
                     [action: #info, label: 'Info', optional: true, finishTurn: false, consumable: 2, handler: Info(action), area: #table]
                 ]])
                 emit NoticeTable(text: 'Persistent table text')
@@ -408,13 +444,13 @@ final class CardGameTests: XCTestCase {
     func testReverseDirectionAndExplicitCardOrdering() throws {
         let source = """
             on PrepareGame(players) {
-                emit CreateGame(setup: [table: [[id: #deck, label: 'Deck', cards: [[rank: 'A'], [rank: 'B'], [rank: 'C']]]], players: players[:select player => [id: player, zones: []]]])
-                emit SetCardOrder(zone: #deck, cards: [2, 3, 1])
+                :board.create(setup: [table: [[id: #deck, label: 'Deck', cards: [[rank: 'A'], [rank: 'B'], [rank: 'C']]]], players: players[:select player => [id: player, zones: []]]])
+                :board.setorder(zone: #deck, cards: [2, 3, 1])
             }
             on BeginTurn(player) { emit Action(action: #step, label: 'Step', optional: true, finishTurn: true, consumable: #auto, handler: Step(action, player), area: player) }
             on Step(action, player) { emit Complete(action: action) }
             on EndTurn(player) {
-                if player = 0 emit ReverseDirection()
+                if player = 0 :board.reverse()
                 if player = 3 emit NextPlayersTurn(nextPlayer: :board.next(player: :board.next(player: player)))
             }
             """
@@ -430,7 +466,7 @@ final class CardGameTests: XCTestCase {
 
     func testAutomaticTurnSkippingAndRoundBoundary() throws {
         let source = """
-            on PrepareGame(players) { emit SetState(key: #ends, value: 0) }
+            on PrepareGame(players) { :board.setstate(key: #ends, value: 0) }
             on BeginTurn(player) {
                 if :board.roundnumber() = 1 or player = 0 {
                     emit NextPlayersTurn()
@@ -439,7 +475,7 @@ final class CardGameTests: XCTestCase {
                 }
             }
             on Wait(action, player) { emit Complete(action: action) }
-            on EndTurn(player) { emit SetState(key: #ends, value: :board.state(key: #ends) + 1) }
+            on EndTurn(player) { :board.setstate(key: #ends, value: :board.state(key: #ends) + 1) }
             on EndRound(number, players) { emit NoticeTable(text: (:board.state(key: #ends) as :Text))
                 emit NextRound() }
             """
@@ -475,7 +511,7 @@ final class CardGameTests: XCTestCase {
     func testPublicTableSpreadIncludesEveryCard() throws {
         let source = """
             on PrepareGame(players) {
-                emit CreateGame(setup: [table: [[id: #trick, label: 'Trick', layout: #spread, visibility: #public, cards: ['7', '8', '9'][:select rank => [suit: 'clubs', rank: rank]]]], players: players[:select player => [id: player, zones: []]]])
+                :board.create(setup: [table: [[id: #trick, label: 'Trick', layout: #spread, visibility: #public, cards: ['7', '8', '9'][:select rank => [suit: 'clubs', rank: rank]]]], players: players[:select player => [id: player, zones: []]]])
             }
             on BeginTurn(player) { emit Action(action: #wait, label: 'Wait', optional: true, finishTurn: false, consumable: #never, handler: Wait(action, player), area: player) }
             on Wait(action, player) { emit Complete(action: action) }
@@ -529,12 +565,12 @@ final class CardGameTests: XCTestCase {
                 for player in players {
                     emit Action(spec: [action: #debt, player: player, label: 'Debt', optional: false, priority: 10, handler: Pay(action, player), area: player])
                 }
-                emit SetState(player: 0, key: #skip, value: true)
+                :board.setstate(player: 0, key: #skip, value: true)
             }
             on BeginTurn(player) {
                 if :board.state(player: player, key: #skip) = true {
                     emit ClearActions()
-                    emit SetState(player: player, key: #skip, value: nothing)
+                    :board.setstate(player: player, key: #skip, value: nothing)
                     emit NextPlayersTurn()
                 } else {
                     emit Action(spec: [action: #normal, label: 'Normal', handler: Normal(action, player), finishTurn: true, area: player])
@@ -608,9 +644,9 @@ final class CardGameTests: XCTestCase {
 
     private func arrangedMauMau(first: String, second: String, draw: String = "['Q', 'K', 'A', '10', '9', '8'][:select rank => [suit: 'clubs', rank: rank]]") throws -> String {
         try rules.replacingOccurrences(
-            of: "emit CreateGame(setup: board(players: players))",
+            of: ":board.create(setup: board(players: players))",
             with: """
-                emit CreateGame(setup: [table: [
+                :board.create(setup: [table: [
                     [id: #draw, label: 'Draw', visibility: #hidden, cards: \(draw)],
                     [id: #discard, label: 'Discard', visibility: #top, cards: [[suit: 'clubs', rank: '9']]]
                 ], players: [
@@ -620,7 +656,7 @@ final class CardGameTests: XCTestCase {
                 """
         )
         .replacingOccurrences(of: "[1, 1, 1, 1, 1]", with: "[]")
-        .replacingOccurrences(of: "emit Take(source: #draw, destination: #discard, count: 1)", with: "")
+        .replacingOccurrences(of: ":board.take(source: #draw, destination: #discard, count: 1)", with: "")
     }
 
     func testPaidPenaltyDoesNotCarryIntoNormalSevenPlay() throws {

@@ -263,7 +263,7 @@ console.log(
 
 const sharedWinners = `
 on PrepareGame(players) {
-  emit CreateGame(setup: [table: [[id: #trick, label: 'Trick', layout: #spread, visibility: #public, cards: ['7', '8', '9'][:select rank => [suit: 'clubs', rank: rank]]]], players: players[:select player => [id: player, zones: []]]])
+  :board.create(setup: [table: [[id: #trick, label: 'Trick', layout: #spread, visibility: #public, cards: ['7', '8', '9'][:select rank => [suit: 'clubs', rank: rank]]]], players: players[:select player => [id: player, zones: []]]])
 }
 on BeginTurn(player) {
   if player = 0 { emit NextPlayersTurn() } else {

@@ -125,6 +125,7 @@ select { font: inherit; padding: 10px; margin-left: 6px; border: 1px solid #6880
 #board .zone h2 .area-action { position: relative; z-index: 2; margin-left: 8px; }
 
 /* Missing player seats and table positions reserve no space. */
+#board[data-players="1"] { grid-template-columns: minmax(360px, 1fr); grid-template-areas: 'table' 'south'; min-width: 360px; }
 #board[data-players="2"] { grid-template-columns: minmax(360px, 1fr); grid-template-areas: 'north' 'table' 'south'; min-width: 360px; }
 #board[data-players="3"] { grid-template-columns: var(--left-seat-width, 184px) minmax(360px, 1fr); grid-template-areas: '. north' 'west table' '. south'; min-width: 560px; }
 .table-area.has-left { --left-track: minmax(100px, 1fr); }

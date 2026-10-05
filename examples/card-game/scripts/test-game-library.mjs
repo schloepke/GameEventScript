@@ -18,6 +18,7 @@ globalThis.localStorage = {
 };
 globalThis.document = { createElement: () => new Element() };
 const examples = [
+  { id: 'blackjack', name: 'Blackjack', source: 'examples/blackjack.ges', players: 1, playerCounts: [1, 2, 3] },
   { id: 'mau-mau', name: 'Mau Mau', source: 'examples/mau-mau.ges' },
   { id: 'skat', name: 'Skat', source: 'examples/skat.ges', players: 3 },
 ];
@@ -92,3 +93,21 @@ await choose(restored, 'skat');
 await choose(restored, 'draft');
 assert.equal(restored.input.value, 'memory only');
 console.log('Game library: migration, autosave, explicit Save, switching, reload, fetch races and storage failure passed.');
+
+// Per-example seat counts include solo play and survive Draft/Save round trips.
+storageFails = false;
+await choose(restored, 'blackjack');
+assert.equal(restored.players.value, '1');
+assert.deepEqual(restored.players.children.map(option => option.value), ['1', '2', '3']);
+restored.save.onclick();
+const solo = await attach();
+assert.equal(solo.players.value, '1');
+assert.deepEqual(solo.players.children.map(option => option.value), ['1', '2', '3']);
+edit(solo, 'custom blackjack');
+await choose(solo, 'mau-mau');
+assert.equal(solo.players.value, '2');
+assert.deepEqual(solo.players.children.map(option => option.value), ['2', '3', '4']);
+await choose(solo, 'draft');
+assert.equal(solo.input.value, 'custom blackjack');
+assert.equal(solo.players.value, '1');
+console.log('Game library: solo counts, example limits, save/reload and draft switching passed.');

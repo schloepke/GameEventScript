@@ -3,16 +3,16 @@
 
 # GES card game prototype
 
-A playable, local Mau Mau: Swift owns cards and zones; GES defines the deck,
-setup, legal moves, turn changes, and winner. The Swift environment runs as a persistent WebAssembly session in a browser worker.
+Playable local card games: Highest Card, Blackjack, Mau Mau and Skat. Swift owns
+cards and zones; GES defines each deck, setup, legal moves, turn changes and results. The Swift environment runs as a persistent WebAssembly session in a browser worker.
 
 The source lives here in version control. The Website workflow builds and tests
 the example and publishes its static output at `/examples/card-game/`.
 All generated files and downloaded tools live below `artifacts/card-game`.
 
-## Game
+## Mau Mau
 
-The default game uses a 32-card deck (7–A, four suits), five cards each, and a
+Mau Mau uses a 32-card deck (7–A, four suits), five cards each, and a
 shared draw and discard pile. Match suit or rank, draw once, then play or pass.
 An 8 skips the next player. A 7 starts a two-card debt; another 7 adds two and
 passes it on. After the first penalty draw, stacking is no longer available.
@@ -32,7 +32,7 @@ The prepared build can be served immediately:
 python3 examples/card-game/scripts/serve.py
 ```
 
-Open <http://127.0.0.1:8766/>. Choose 2–4 players and start a game. Click highlighted cards or **Draw a card**.
+Open <http://127.0.0.1:8766/>. Choose a game and its player count, then start a game. Click highlighted cards or **Draw a card**.
 Expand the GES editor, change a rule, and choose **New game** to compile it
 in the browser. The editor uses the existing Swift syntax highlighter through
 Wasm, including while editing incomplete code. Its dedicated worker returns
@@ -195,6 +195,31 @@ turn; the highest value wins the round, with the first reveal winning ties.
 **Collect trick** keeps the open cards visible until the user collects them.
 After 13 rounds, all players tied for the most collected cards win. The game
 uses the existing environment unchanged.
+
+## Blackjack
+
+Select **Blackjack** for one to three human players against an automatic dealer
+on the table. The default is solo play. Each new game shuffles a fresh 52-card
+deck and deals two cards to everyone, with one dealer card hidden. Player hands
+are public. Choose **Hit** by clicking the deck, or **Stand** in the player header.
+
+Aces count as 1 or 11; face cards count as 10. Two initial cards totaling 21 are
+Blackjack, which beats a three-or-more-card 21. The dealer checks for Blackjack
+before players act. Player Blackjack skips that player's turn; hitting to 21 or
+busting also ends the turn automatically. After all players finish, the dealer
+reveals the hole card and draws below 17, standing on every 17 including soft 17.
+No further dealer cards are needed when all players have Blackjack or have busted.
+
+Each hand is evaluated against the dealer separately. A busted player loses even
+if the dealer subsequently busts. Equal totals push, and two Blackjacks push.
+Badges, table text and a result popup distinguish **Win**, **Push** and **Loss**;
+only winning players enter the environment's winner list. The example has no
+bets, payouts, double down, split, insurance or surrender. All blackjack rules
+and dealer behavior are in GES. See [Blackjack rules](https://bicyclecards.com/how-to-play/blackjack/).
+
+The environment accepts 1–4 players. Catalog entries can constrain their player
+selector with `playerCounts`; Draft and Saved preserve that choice along with
+source and player count. Existing examples default to their 2–4-player selector.
 
 ## Skat
 

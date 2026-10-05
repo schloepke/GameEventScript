@@ -202,7 +202,8 @@ assert.equal(drawn.state.currentPlayer, 0);
 assert.ok(!drawn.state.actions.some((a) => a.kind === 'draw'));
 assert.equal(drawn.state.actions.find((a) => a.kind === 'pass').area, 0);
 assert.equal(game.act(0, { kind: 'pass' }, drawn.state.revision).state.currentPlayer, 0);
-assert.throws(() => game.start(source, 42, 5), /two to four/);
+assert.throws(() => game.start(source, 42, 5), /one to four/);
+assert.throws(() => game.start(source, 42, 0), /one to four/);
 
 const bulk = source
   .replace(
@@ -736,3 +737,105 @@ for (const step of [null, 'bid', 'hold', 'passBid', 'passBid', 'hand', 'grand', 
   }
 }
 console.log('Skat: reusable global bidding reference preserves actions, cards and turn state.');
+
+const blackjack = await fs.readFile(path.join(web, 'examples/blackjack.ges'), 'utf8');
+assert.deepEqual(game.check(blackjack), { diagnostics: [] });
+const bjCards = (state, player) => state.zones.find(zone => zone.id === `hand${player}`).cards;
+const bjDealer = state => state.zones.find(zone => zone.id === 'dealer').cards;
+function bjTotal(cards) {
+  let total = cards.reduce((sum, card) => sum + (card.properties.rank === 'A' ? 11 : ['J', 'Q', 'K'].includes(card.properties.rank) ? 10 : Number(card.properties.rank)), 0);
+  let aces = cards.filter(card => card.properties.rank === 'A').length;
+  while (total > 21 && aces-- > 0) total -= 10;
+  return total;
+}
+const bjNatural = cards => cards.length === 2 && bjTotal(cards) === 21;
+function bjResult(cards, bank) {
+  if (bjTotal(cards) > 21) return 'Loss';
+  if (bjNatural(bank)) return bjNatural(cards) ? 'Push' : 'Loss';
+  if (bjNatural(cards) || bjTotal(bank) > 21 || bjTotal(cards) > bjTotal(bank)) return 'Win';
+  return bjTotal(cards) === bjTotal(bank) ? 'Push' : 'Loss';
+}
+function bjAct(result, kind) {
+  const action = result.state.actions.find(action => action.kind === kind);
+  assert.ok(action, `Missing Blackjack action ${kind}`);
+  const next = game.act(result.state.currentPlayer, action, result.state.revision);
+  assert.equal(next.error, undefined, next.error);
+  assert.equal(next.accepted, true);
+  return next;
+}
+function checkBlackjack(result) {
+  const state = result.state;
+  assert.equal(result.error, undefined, result.error);
+  assert.equal(state.finished, true);
+  assert.equal(state.zones.reduce((sum, zone) => sum + zone.count, 0), 52);
+  assert.equal(state.zones.find(zone => zone.id === 'hole').count, 0);
+  const bank = bjDealer(state);
+  const live = state.players.some((_, player) => bjTotal(bjCards(state, player)) <= 21 && !bjNatural(bjCards(state, player)));
+  if (live) assert.ok(bjTotal(bank) >= 17);
+  const winners = [];
+  state.players.forEach((_, player) => {
+    const result = bjResult(bjCards(state, player), bank);
+    assert.ok(state.playerBadges[player].startsWith(`${result} · `));
+    assert.ok(state.tableNotice.includes(`— ${result}`));
+    if (result === 'Win') winners.push(player);
+  });
+  assert.deepEqual(state.winners, winners);
+  assert.ok(state.notices.includes(state.tableNotice));
+}
+for (const players of [1, 2, 3]) for (let seed = 0; seed < 30; seed++) {
+  let result = game.start(blackjack, seed, players);
+  assert.equal(result.error, undefined, result.error);
+  let previous = 0;
+  for (let moves = 0; !result.state.finished && moves < 52; moves++) {
+    const state = result.state;
+    assert.ok(state.currentPlayer >= previous);
+    previous = state.currentPlayer;
+    assert.deepEqual(state.actions.filter(action => !action.global).map(action => action.kind), ['hit', 'stand']);
+    assert.equal(state.zones.find(zone => zone.id === 'hole').count, 1);
+    assert.deepEqual(state.zones.find(zone => zone.id === 'hole').cards, []);
+    assert.equal(bjDealer(state).length, 1);
+    const total = bjTotal(bjCards(state, state.currentPlayer));
+    result = bjAct(result, total < 17 ? 'hit' : 'stand');
+  }
+  checkBlackjack(result);
+}
+
+function fixedBlackjack(ranks, players = 1) {
+  const pool = ['clubs', 'spades', 'hearts', 'diamonds'].flatMap(suit =>
+    ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'].map(rank => ({ suit, rank })));
+  const drawn = ranks.map(rank => {
+    const index = pool.findIndex(card => card.rank === rank);
+    assert.ok(index >= 0);
+    return pool.splice(index, 1)[0];
+  });
+  const ordered = [...drawn, ...pool].reverse();
+  const literal = '[' + ordered.map(({ suit, rank }) => `[suit: '${suit}', rank: '${rank}', value: ${rank === 'A' ? 1 : ['J', 'Q', 'K'].includes(rank) ? 10 : Number(rank)}]`).join(', ') + ']';
+  const result = game.start(blackjack.replace('cards: deck()[:shuffle]', `cards: ${literal}`), 42, players);
+  assert.equal(result.error, undefined, result.error);
+  return result;
+}
+
+// Draw order for a single player is player, dealer up, player, dealer hole.
+for (const scenario of [
+  { cards: ['10', 'A', '8', '6'], actions: ['stand'], result: ['Win'], bank: 17, count: 2 },
+  { cards: ['A', '9', '6', '8', '10'], actions: ['hit', 'stand'], result: ['Push'], bank: 17, count: 2 },
+  { cards: ['A', '9', 'A', '7', 'A', '8', '5'], actions: ['hit', 'hit'], result: ['Push'], bank: 21, count: 3 },
+  { cards: ['A', 'A', 'K', 'Q'], actions: [], result: ['Push'], bank: 21, count: 2 },
+  { cards: ['10', 'A', '9', 'K'], actions: [], result: ['Loss'], bank: 21, count: 2 },
+  { cards: ['A', '9', 'K', '7'], actions: [], result: ['Win'], bank: 16, count: 2 },
+  { cards: ['A', '10', '6', 'K', '8', '5', '10'], actions: ['stand'], result: ['Win', 'Loss'], bank: 21, count: 3 },
+  { cards: ['10', '10', '10', '9', '8', '6', 'K', '6'], actions: ['hit', 'stand'], result: ['Loss', 'Win'], bank: 22, count: 3 },
+]) {
+  let result = fixedBlackjack(scenario.cards, scenario.result.length);
+  for (const action of scenario.actions) result = bjAct(result, action);
+  checkBlackjack(result);
+  assert.deepEqual(result.state.playerBadges.map(badge => badge.split(' · ')[0]), scenario.result);
+  assert.equal(bjTotal(bjDealer(result.state)), scenario.bank);
+  assert.equal(bjDealer(result.state).length, scenario.count);
+}
+const tooMany = game.start(blackjack, 42, 4);
+assert.equal(tooMany.error, undefined, tooMany.error);
+assert.equal(tooMany.state.finished, true);
+assert.deepEqual(tooMany.state.winners, []);
+assert.match(tooMany.state.notice, /one to three players/);
+console.log('Blackjack: 90 deals with 1–3 players, ace conversion, soft 17, naturals, pushes, dealer reveal, bust precedence and individual outcomes passed.');

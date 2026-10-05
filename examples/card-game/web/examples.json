@@ -5,6 +5,17 @@
     "source": "examples/high-card.ges"
   },
   {
+    "id": "blackjack",
+    "name": "Blackjack",
+    "source": "examples/blackjack.ges",
+    "players": 1,
+    "playerCounts": [
+      1,
+      2,
+      3
+    ]
+  },
+  {
     "id": "mau-mau",
     "name": "Mau Mau",
     "source": "examples/mau-mau.ges"

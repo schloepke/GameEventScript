@@ -3,6 +3,9 @@
 
 # Card environment contract — prototype
 
+The environment accepts one to four human players; each game defines its own limits.
+An automatic dealer can be represented by table zones, without occupying a player seat.
+
 Swift owns mutable cards, zones and the serial lifecycle. GES owns the deck,
 actions, effects and winner. This handwritten example does not change the GES
 language or portable Runtime API. No generator or compatibility layer is included.

@@ -64,9 +64,10 @@ public final class CardGame {
     private var hasEndRound = false
 
     /// Compiles the supplied GES, starts a seeded host, and runs PrepareGame(players) and its queued messages before automatically starting the first round with player 0.
+    /// Accepts one to four named players. Game-specific player limits belong to the rules.
     /// Throws for invalid player counts, compiler diagnostics, binding errors, or bounded execution failure.
     public init(rules: String, players: [String] = ["Alice", "Bob"], seed: Int64 = 42) throws {
-        guard (2...4).contains(players.count), players.allSatisfy({ !$0.isEmpty }) else { throw CardGameError("Provide two to four named players") }
+        guard (1...4).contains(players.count), players.allSatisfy({ !$0.isEmpty }) else { throw CardGameError("Provide one to four named players") }
         guard rules.utf8.count <= 131_072 else { throw CardGameError("Rule source exceeds 128 KiB") }
         self.players = players
         bindings = Bindings(playerCount: players.count)

@@ -13,15 +13,24 @@ let worker,
   timer,
   request = 0,
   busy = false;
-const seatResize = new ResizeObserver((entries) => {
-  for (const { target } of entries) {
-    const content = target.querySelector('.player-content');
-    content.style.width = `${target.clientHeight}px`;
-    content.style.height = `${target.clientWidth}px`;
-    content.style.transform = target.classList.contains('player-2')
-      ? `translateX(${target.clientWidth}px) rotate(90deg)`
-      : `translateY(${target.clientHeight}px) rotate(-90deg)`;
-  }
+let seatLayoutFrame = 0;
+const seatResize = new ResizeObserver(() => {
+  cancelAnimationFrame(seatLayoutFrame);
+  seatLayoutFrame = requestAnimationFrame(() => {
+    const board = byId('board');
+    for (const area of board.querySelectorAll('.seat-left, .seat-right')) {
+      const content = area.querySelector('.player-content');
+      const left = area.classList.contains('seat-left');
+      // Rotation swaps axes: table height constrains card rows, their natural
+      // height determines the horizontal space this player needs beside it.
+      content.style.width = `${area.clientHeight}px`;
+      const width = Math.max(184, Math.ceil(content.offsetHeight) + 2);
+      board.style.setProperty(left ? '--left-seat-width' : '--right-seat-width', `${width}px`);
+      content.style.transform = left
+        ? `translateX(${width - 2}px) rotate(90deg)`
+        : `translateY(${area.clientHeight}px) rotate(-90deg)`;
+    }
+  });
 });
 let noticeQueue = [];
 
@@ -43,17 +52,16 @@ function lock(value) {
   });
 }
 
-function stop(message = 'Stopped. Choose “New game” to start again.') {
+function stop() {
   worker?.terminate();
   worker = null;
   clearTimeout(timer);
   byId('wasm-loading').hidden = true;
   lock(true);
-  byId('status').textContent = message;
 }
 
 function showError(message) {
-  stop('Game stopped after an error.');
+  stop();
   byId('error-message').textContent = String(message);
   byId('show-error').hidden = false;
   if (!byId('error-dialog').open) byId('error-dialog').showModal();
@@ -62,7 +70,6 @@ function showError(message) {
 function send(payload) {
   if (!worker) return;
   lock(true);
-  byId('status').textContent = payload.type === 'start' ? 'Preparing game …' : 'Running rules …';
   const id = ++request;
   worker.postMessage({ id, ...payload });
   clearTimeout(timer);
@@ -81,6 +88,9 @@ function render(next) {
   cardActions.close();
   state = next;
   seatResize.disconnect();
+  cancelAnimationFrame(seatLayoutFrame);
+  byId('board').style.removeProperty('--left-seat-width');
+  byId('board').style.removeProperty('--right-seat-width');
   byId('board').replaceChildren();
   byId('board').dataset.players = String(state.players.length);
   const table = document.createElement('section');
@@ -124,14 +134,22 @@ function render(next) {
   const playerRows = new Map();
   state.players.forEach((name, index) => {
     const area = document.createElement('section');
-    area.className = `player-area player-${index}${index === state.currentPlayer ? ' active-player' : ''}`;
+    const seat = (state.players.length === 2 ? ['bottom', 'top'] : ['bottom', 'left', 'top', 'right'])[index];
+    area.className = `player-area player-${index} seat-${seat}${!state.finished && index === state.currentPlayer ? ' active-player' : ''}`;
     const content = document.createElement('div');
     content.className = 'player-content';
     area.append(content);
     const heading = document.createElement('h2');
     heading.className = 'area-heading';
     areaHeadings.set(index, heading);
-    heading.textContent = `${name}${index === state.currentPlayer ? (state.waitingForRound ? ' · Prepare next round' : ' · Your turn') : ''}`;
+    heading.textContent = `${name}${!state.finished && index === state.currentPlayer ? ' · Your turn' : ''}`;
+    const badgeText = state.playerBadges?.[index];
+    if (badgeText) {
+      const badge = document.createElement('span');
+      badge.className = 'player-badge';
+      badge.textContent = badgeText;
+      heading.append(badge);
+    }
     content.append(heading);
     for (const row of state.rows.filter((row) => row.owner === index)) {
       const element = document.createElement('div');
@@ -140,7 +158,10 @@ function render(next) {
       content.append(element);
     }
     byId('board').append(area);
-    if (index >= 2) seatResize.observe(area);
+    if (seat === 'left' || seat === 'right') {
+      seatResize.observe(area);
+      seatResize.observe(content);
+    }
   });
   const zoneActions = new Map();
   const zoneHeadings = new Map();
@@ -225,19 +246,11 @@ function render(next) {
     const button = document.createElement('button');
     button.textContent =
       offer.label +
-      (offer.remaining > 1 ? ` (${offer.remaining} remaining)` : '') +
-      (offer.optional ? '' : offer.group ? ' · required alternative' : ' · required');
+      (offer.remaining > 1 ? ` (${offer.remaining} remaining)` : '');
     button.onclick = () => act(offer);
     button.className = 'area-action';
     (offer.zone ? zoneHeadings.get(offer.zone) : areaHeadings.get(offer.area)).append(button);
   }
-  byId('status').textContent = state.finished
-    ? state.winners.length === 0
-      ? 'Draw.'
-      : `${state.winners.map((player) => state.players[player]).join(" & ")} ${state.winners.length === 1 ? "wins" : "win"}!`
-    : state.waitingForRound
-      ? `Round ${state.round} complete · Prepare the next round`
-      : `${state.players[state.currentPlayer]} to play · Turn ${state.turn}`;
   noticeQueue.push(...state.notices);
   showNextNotice();
   lock(state.finished || state.failed);
@@ -250,7 +263,7 @@ function restart() {
     seedInput.validity.badInput ||
     (seed !== undefined && (!Number.isInteger(seed) || seed < -2147483648 || seed > 2147483647))
   ) {
-    byId('status').textContent = 'Seed must be an Int32 integer.';
+    showError('Seed must be an Int32 integer.');
     return;
   }
   stop();
@@ -276,7 +289,10 @@ function restart() {
       return;
     }
     render(data.state);
-    if (data.accepted === false) byId('status').textContent = data.reason;
+    if (data.accepted === false) {
+      noticeQueue.push(data.reason);
+      showNextNotice();
+    }
   };
   active.onerror = (event) => {
     if (active === worker) showError(`Worker error: ${event.message}`);
@@ -298,9 +314,11 @@ try {
   await attachGameLibrary(
     byId('source'),
     byId('example'),
-    byId('load-example'),
+    byId('save-game'),
     byId('save-status'),
-    byId('undo-example'),
+    byId('players'),
+    restart,
+    showError,
   );
   let editorAttached = false;
   byId('source')

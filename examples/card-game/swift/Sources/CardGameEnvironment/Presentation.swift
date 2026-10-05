@@ -24,6 +24,7 @@ extension CardGame {
             return
                 "{\"id\":\(jsonString(zone.id)),\"label\":\(jsonString(zone.label)),\"owner\":\(zone.owner.map(String.init) ?? "null"),\"position\":\(jsonString(zone.position)),\"row\":\(zone.row),\"layout\":\(jsonString(zone.layout)),\"count\":\(zone.cards.count),\"cards\":[\(shown)]}"
         }.joined(separator: ",")
+        let badgeJSON = players.indices.map { jsonString(bindings.playerBadges[$0] ?? "") }.joined(separator: ",")
         let rowJSON = bindings.board.rows.map { "{\"owner\":\($0.owner.map(String.init) ?? "null"),\"index\":\($0.index),\"position\":\(jsonString($0.position))}" }.joined(separator: ",")
         let offers = bindings.offeredActivations.filter { activation in
             guard let viewer, players.indices.contains(viewer) else { return false }
@@ -37,7 +38,7 @@ extension CardGame {
             }
         }.joined(separator: ",")
         return
-            "{\"players\":[\(players.map(jsonString).joined(separator: ","))],\"currentPlayer\":\(currentPlayer.map(String.init) ?? "null"),\"winners\":[\(winners.map(String.init).joined(separator: ","))],\"finished\":\(finished),\"failed\":\(failed),\"revision\":\(revision),\"turn\":\(turn),\"round\":\(round),\"waitingForRound\":\(bindings.waitingForRound),\"direction\":\(bindings.direction),\"notice\":\(jsonString(notice)),\"notices\":[\(bindings.notices.map(jsonString).joined(separator: ","))],\"tableNotice\":\(jsonString(bindings.tableNotice)),\"zones\":[\(zoneJSON)],\"rows\":[\(rowJSON)],\"actions\":[\(actionJSON)]}"
+            "{\"players\":[\(players.map(jsonString).joined(separator: ","))],\"currentPlayer\":\(currentPlayer.map(String.init) ?? "null"),\"winners\":[\(winners.map(String.init).joined(separator: ","))],\"finished\":\(finished),\"failed\":\(failed),\"revision\":\(revision),\"turn\":\(turn),\"round\":\(round),\"waitingForRound\":\(bindings.waitingForRound),\"direction\":\(bindings.direction),\"notice\":\(jsonString(notice)),\"notices\":[\(bindings.notices.map(jsonString).joined(separator: ","))],\"playerBadges\":[\(badgeJSON)],\"tableNotice\":\(jsonString(bindings.tableNotice)),\"zones\":[\(zoneJSON)],\"rows\":[\(rowJSON)],\"actions\":[\(actionJSON)]}"
     }
 
 }

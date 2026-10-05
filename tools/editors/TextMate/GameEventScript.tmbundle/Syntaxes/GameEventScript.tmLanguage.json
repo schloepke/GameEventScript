@@ -348,6 +348,7 @@
       ]
     },
     "extensions-and-types": {
+      "comment": "Parenthesized extension calls accept trailing member and collection suffixes; existing punctuation and selector rules tokenize them without an extra scope.",
       "patterns": [
         {
           "match": ":(Quantity)(\\()((?:none|m|meter|s|second|degree|°))(\\))(?=$|[^A-Za-z0-9_])",

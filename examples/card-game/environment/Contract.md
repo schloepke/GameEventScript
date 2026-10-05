@@ -3,13 +3,16 @@
 
 # Card environment contract — prototype
 
+The environment accepts one to four human players; each game defines its own limits.
+An automatic dealer can be represented by table zones, without occupying a player seat.
+
 Swift owns mutable cards, zones and the serial lifecycle. GES owns the deck,
 actions, effects and winner. This handwritten example does not change the GES
 language or portable Runtime API. No generator or compatibility layer is included.
 
 ## Declarative board setup
 
-Emit `CreateGame(setup: board(players: players))` once during preparation.
+Call `:board.create(setup: board(players: players))` once during preparation.
 The entire board validates before replacing any state; no partial setup is committed.
 CreateZone is no longer a native message. The shape is:
 
@@ -63,11 +66,10 @@ Limits: 64 zones, 512 cards across the board, 16 rows per player or table positi
 Cards are property maps. GES shuffles initial lists using `[:shuffle]` with
 the host's seeded random stream. Cards receive unique IDs in traversal order
 (table, then players/zones); the last card is the top.
-All recycling and shuffling belongs to GES. MoveCards moves explicit card IDs
-in the supplied order without consuming randomness. DrawCard never refills a pile.
+All recycling and shuffling belongs to GES. :board.movecards moves explicit card IDs
+in the supplied order without consuming randomness. :board.draw never refills a pile.
 There are no native CreateDecks or Shuffle messages.
-Take is available during preparation, round hooks, actions and EndTurn. Emit DealCards after CreateGame
-to deal from the fully created board.
+:board.take is available during preparation, round hooks, actions and EndTurn. Call it directly after :board.create to deal from the fully created board.
 
 ## Lifecycle
 
@@ -110,7 +112,8 @@ on EndRound(number, players) {
 }
 on RoundDraw(action, player) {
     // Refill first in GES if this game requires it.
-    emit DrawCard(action: action, source: #draw, destination: hand(player: player))
+    :board.draw(source: #draw, destination: hand(player: player))
+    emit Complete(action: action)
     emit NextRound()
 }
 ```
@@ -134,9 +137,9 @@ must still be consumed. The target is reached forward in seat order; selecting t
 current player advances a full circuit. Skipped seats count toward round boundaries.
 The next-player override resets at the next turn. There are no SkipNextPlayer or
 SkipRound messages. `:board.next(player)` reflects already processed overrides.
-Direction starts at +1 (0, 1, 2, 3). `ReverseDirection()` toggles it to -1 and back;
+Direction starts at +1 (0, 1, 2, 3). `:board.reverse()` toggles it to -1 and back;
 `:board.direction()` returns +1/-1. It is available in preparation, round hooks,
-actions and EndTurn. Emit a reversal before selecting an explicit next player.
+actions and EndTurn. Call :board.reverse() before selecting an explicit next player.
 `:board.next(player)` respects direction; two nested calls skip one player.
 With two players, reversing alone still selects the other player. A game such as
 UNO can explicitly repeat the turn for its two-player reverse rule.
@@ -153,14 +156,14 @@ player, then two to each, then three to each:
 on DealCards(players) {
     for amount in [3, 2, 3] {
         for player in players {
-            emit Take(source: #draw, destination: hand(player: player), count: amount)
+            :board.take(source: #draw, destination: hand(player: player), count: amount)
         }
     }
 }
 ```
 
 Mau Mau uses `[1, 1, 1, 1, 1]` for five rounds of one card per player.
-Queued takes execute in emitted order and finish before the first round begins.
+Takes execute immediately in loop order, before the first round begins.
 `DealCards` and `BeginGame` are ordinary script-defined messages. The environment
 neither sends them nor reserves their names; any custom preparation messages can
 be used. Once the entire preparation queue drains, the first round starts automatically with player 0.
@@ -208,19 +211,13 @@ activation ID. Stale and wrong-player requests never execute GES.
 
 | Command | Effect |
 | --- | --- |
-| `MoveCard(action, card, source, destination)` | Move and accept the current action |
-| `DrawCard(action, source, destination)` | Draw one from a nonempty source and accept; never refill or shuffle |
-| `Complete(action)` | Accept without moving a card |
+| `Complete(action)` | Accept the current action |
 | `Reject(action, reason)` | Reject with Text reason |
 | `ConsumeAction(action)` | Consume the successfully completed current #manual activation |
 | `ClearActions()` / `ClearActions(actions)` | Remove current-player offers or queried entries, including groups and queued duties |
-| `SetState(key, value)` | Store immutable rule data under a Tag key; nothing deletes it, maximum 64 keys |
-| `SetCardOrder(zone, cards)` | Replace zone order with an exact permutation of its card IDs; never shuffle natively |
 | `SetActionCards(action, cards)` | Update an active card action by tag |
-| `Take(source, destination, count)` | Move top cards during preparation, round hooks, actions or EndTurn; does not accept an action |
-| `MoveCards(source, destination, cards)` | Move distinct card IDs in supplied order in the same phases; does not accept an action |
-| `Notice(text)` | Enqueue a modal dialog; multiple notices display in order |
-| `NoticeTable(text)` | Replace the centered table status text; empty Text clears it |
+| `Notice(_ text)` | Enqueue a modal dialog; multiple notices display in order |
+| `NoticeTable(_ text)` | Replace the centered table status text; empty Text clears it |
 
 State is owned by this embedding, not by mutable GES variables. `:board.state(key)`
 returns an immutable value or nothing. Test absence with `is nothing`, not equality.
@@ -233,8 +230,8 @@ fails the session unless the game ends. After acceptance GES may activate more
 actions, refresh cards, or request EndGame. `:board.lastaction()` returns the
 last accepted action tag name as Text. No central ActionRequested event remains.
 
-DrawCard selects the source’s top card; MoveCard selects an explicit card ID. Both
-use the same validated movement and action-completion path. Neither command
+:board.draw selects the source’s top card; :board.move selects an explicit card ID. Both
+return immediately without completing the action. Neither extension
 recycles or shuffles cards. Mau Mau shares its recycling rule in the GES DrawOne
 handler for normal and penalty draws.
 
@@ -315,7 +312,7 @@ the selected alternative releases the exclusive selection for remaining alternat
 ClearActions without arguments preserves other players' offers and global actions.
 Queries and explicit removal can address another player's queued offers.
 
-`SetState(player, key, value)` and `:board.state(player, key)` provide a separate
+`:board.setstate(player, key, value)` and `:board.state(player, key)` provide a separate
 64-key state store for each player. Nothing deletes a key. For example, GES stores
 #skip on the next player. Their BeginTurn clears the flag, calls ClearActions(),
 and then NextPlayersTurn(). This explicitly cancels their duties rather than
@@ -325,7 +322,7 @@ two more penalty draws. There is no global penalty counter.
 
 ### Global setup actions
 
-The optional `actions` list in CreateGame has maps with the same fields as Action:
+The optional `actions` list in :board.create has maps with the same fields as Action:
 
 ```ges
 actions: [
@@ -352,33 +349,35 @@ turns until changed or cleared. It is independent of modal notices.
 ### Reshuffling an existing deck
 
 ```ges
-emit SetCardOrder(zone: #draw, cards: (:board.cards(zone: #draw))[:select card => card.id][:shuffle])
+:board.setorder(zone: #draw, cards: (:board.cards(zone: #draw))[:select card => card.id][:shuffle])
 ```
 
-The command validates an exact permutation before changing anything.
+The extension validates an exact permutation before changing anything.
 
 ### Recycling in GES
 
 ```ges
 function recycled() be (:board.cards(zone: #discard))[:filter card where card.id <> (:board.top(zone: #discard)).id][:select card => card.id][:shuffle]
 
-// Within an action handler, before DrawCard:
+// Within an action handler, before :board.draw:
 if (:board.cards(zone: #draw))[:count] = 0 {
-    emit MoveCards(source: #discard, destination: #draw, cards: recycled())
+    :board.movecards(source: #discard, destination: #draw, cards: recycled())
 }
-emit DrawCard(action: action, source: #draw, destination: hand(player: player))
+:board.draw(source: #draw, destination: hand(player: player))
+emit Complete(action: action)
 ```
 
-MoveCards validates the entire list before mutation: all IDs must be unique and
+:board.movecards validates the entire list before mutation: all IDs must be unique and
 belong to source, and source/destination must differ. Cards append to destination
 in list order; its final card is the top. There is no native DrawCards, Shuffle,
 or recycling command. Mau Mau implements penalties as counted required actions. Each human draw
-uses DrawCard, preceded by MoveCards with a GES-shuffled list when needed.
-Emitted commands execute FIFO; state queries in the same handler still see the
-state before those queued commands. Use explicit calculations or continuation
-messages when later decisions need the updated state.
+uses :board.draw, preceded by :board.movecards with a GES-shuffled list when needed.
+Extensions execute immediately; queries in the same handler see the updated board.
+Emitted messages still execute FIFO after the current handler. Action acceptance
+and offer editing therefore remain ordered messages; consumption counters settle
+after the full action cascade.
 
-## Read-only extensions
+## Board extensions
 
 Zone parameters and returned zone IDs are Tags. Zone snapshots expose a zero-based
 row and a position Tag for both table and player zones.
@@ -437,3 +436,58 @@ UTF-16 offsets, including CRLF and astral characters. EOF diagnostics receive a
 visible marker. Automatic checks share the editor worker and revision guard;
 editing immediately clears stale diagnostics. This is compilation only, not
 linking against the board or execution of setup/game rules.
+
+## Synchronous mutations
+
+Mutating extensions apply host-owned changes immediately. Later queries in the same
+handler see those changes; already-read values remain immutable snapshots. Each
+operation validates before mutation, but errors or Reject do not roll back earlier
+operations. Complete(action) must be emitted explicitly after successful action work.
+Card movement and reverse are available during preparation, round hooks (including
+the final EndRound), actions and EndTurn. State writes also work in BeginTurn and
+EndGame. Creation is allowed exactly once during PrepareGame, and validates global
+actions together with the board before installing either.
+
+| Extension | Effect |
+| --- | --- |
+| `:board.move(card, source, destination)` | Move one explicit card; return its snapshot |
+| `:board.draw(source, destination)` | Move the top card; return its snapshot or nothing if empty; never refill or shuffle |
+| `:board.setstate(key, value)` | Store immutable rule data under a Tag key; nothing deletes it, maximum 64 keys |
+| `:board.setorder(zone, cards)` | Replace zone order with an exact permutation of its card IDs; never shuffle natively |
+| `:board.take(source, destination, count)` | Move top cards during preparation, round hooks, actions or EndTurn; does not accept an action |
+| `:board.movecards(source, destination, cards)` | Move distinct card IDs in supplied order in the same phases; does not accept an action |
+| `:board.create(setup)` | Create zones, cards and global actions atomically; returns nothing |
+| `:board.setstate(player, key, value)` | Store per-player rule data, maximum 64 keys; nothing deletes |
+| `:board.reverse()` | Reverse seat direction and return the new +1/-1 value |
+
+`:board.take` requires the full count to be available and returns moved snapshots
+in drawing order. `:board.movecards` returns snapshots in supplied order.
+`:board.create`, `:board.setorder` and both `:board.setstate` overloads return nothing.
+An empty draw returns nothing; unknown zones and invalid moves are errors.
+
+### Player badges and temporary table notices
+
+`emit PlayerBadge('Winner', player: player)` sets one free-text badge beside the
+player heading. Empty text removes it; later calls replace it. It persists across
+turns and the game result, but resets on New game. It has no game-rule effect.
+
+Notice text is an unlabeled argument: `emit Notice('Hello')` and
+`emit NoticeTable('Ready')`. The popup has no stack options. Table variants are:
+
+- `NoticeTable(_ text)`: replace the visible text, preserving saved texts.
+- `NoticeTable(_ text, pushOld)`: with true, save the visible text before replacing it.
+- `NoticeTable(pop)`: with true, restore and remove the last saved text; empty stack is a no-op.
+- `NoticeTable(_ text, stackClear)`: with true, clear saved texts before replacing the visible text.
+
+All flags require Boolean values; false skips the respective stack operation.
+The stack holds up to 64 saved texts; overflowing fails before changing it.
+New game creates a fresh environment with an empty stack, no badges and empty
+visible text (before PrepareGame runs). Nested pushes restore texts in LIFO order.
+
+```ges
+emit NoticeTable('Choose a suit', pushOld: true)
+emit NoticeTable(pop: true)
+emit NoticeTable('Game over', stackClear: true)
+emit PlayerBadge('Winner', player: 0)
+emit Notice('Player 1 wins!')
+```

@@ -47,7 +47,7 @@ func start(_ count: Int32, _ seed: Int32, _ playerCount: Int32) -> Int32 {
     }
     do {
         let source = String(decoding: UnsafeBufferPointer(start: input, count: Int(count)), as: UTF8.self)
-        guard (2...4).contains(playerCount) else { throw CardGameError("Choose two to four players") }
+        guard (1...4).contains(playerCount) else { throw CardGameError("Choose one to four players") }
         let names = (1...Int(playerCount)).map { "Player \($0)" }
         let game = try CardGame(rules: source, players: names, seed: Int64(seed))
         session = game

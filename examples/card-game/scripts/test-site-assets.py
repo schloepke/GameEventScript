@@ -13,7 +13,7 @@ class SiteAssetsTests(unittest.TestCase):
     def test_stale_modified_incomplete_and_metadata(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            for name in ['index.html', 'card-game.wasm', 'worker.mjs', 'app.mjs', 'rules.ges', 'vendor/index.js', 'licenses/LICENSE']:
+            for name in ['index.html', 'card-game.wasm', 'worker.mjs', 'app.mjs', 'examples/mau-mau.ges', 'examples/high-card.ges', 'examples/skat.ges', 'examples/blackjack.ges', 'examples.json', 'vendor/index.js', 'licenses/LICENSE']:
                 target = root / name
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text('fixture')

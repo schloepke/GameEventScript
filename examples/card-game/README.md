@@ -3,16 +3,16 @@
 
 # GES card game prototype
 
-A playable, local Mau Mau: Swift owns cards and zones; GES defines the deck,
-setup, legal moves, turn changes, and winner. The Swift environment runs as a persistent WebAssembly session in a browser worker.
+Playable local card games: Highest Card, Blackjack, Mau Mau and Skat. Swift owns
+cards and zones; GES defines each deck, setup, legal moves, turn changes and results. The Swift environment runs as a persistent WebAssembly session in a browser worker.
 
 The source lives here in version control. The Website workflow builds and tests
 the example and publishes its static output at `/examples/card-game/`.
 All generated files and downloaded tools live below `artifacts/card-game`.
 
-## Game
+## Mau Mau
 
-The default game uses a 32-card deck (7–A, four suits), five cards each, and a
+Mau Mau uses a 32-card deck (7–A, four suits), five cards each, and a
 shared draw and discard pile. Match suit or rank, draw once, then play or pass.
 An 8 skips the next player. A 7 starts a two-card debt; another 7 adds two and
 passes it on. After the first penalty draw, stacking is no longer available.
@@ -32,7 +32,7 @@ The prepared build can be served immediately:
 python3 examples/card-game/scripts/serve.py
 ```
 
-Open <http://127.0.0.1:8766/>. Choose 2–4 players and start a game. Click highlighted cards or **Draw a card**.
+Open <http://127.0.0.1:8766/>. Choose a game and its player count, then start a game. Click highlighted cards or **Draw a card**.
 Expand the GES editor, change a rule, and choose **New game** to compile it
 in the browser. The editor uses the existing Swift syntax highlighter through
 Wasm, including while editing incomplete code. Its dedicated worker returns
@@ -82,6 +82,7 @@ is checked into the source branch.
 python3 examples/card-game/scripts/build.py test
 python3 examples/card-game/scripts/build.py wasm
 node examples/card-game/scripts/test-wasm.mjs
+node examples/card-game/scripts/test-game-library.mjs
 ```
 
 Native tests cover setup, determinism, hidden-hand projection, invalid/stale
@@ -98,7 +99,8 @@ been checked for playing, drawing, rule editing, stopping, and restarting.
 
 ## Files and contract
 
-- `games/mau-mau/rules.ges`: complete game setup and rules.
+- `games/mau-mau/mau-mau.ges`: Mau Mau setup and rules.
+- `games/high-card/high-card.ges`: Highest Card, a small example with mandatory reveals, open tricks and round scoring.
 - `swift/Sources/CardGameEnvironment/`: board mechanics, GES bindings, and views.
 - `swift/Sources/CardGameWasm/`: serial buffer-based C ABI for a persistent session.
 - `web/`: browser worker and small hot-seat interface.
@@ -128,8 +130,8 @@ Starting a new game clears it. Closing the dialog does not resume a failed game.
 ## Board setup and lifecycle
 
 Table zones support piles and open card spreads at nine compass positions; zones in each row
-follow creation order from left to right. Players have fixed bottom/top/left/right
-areas. `CreateGame(setup: board(players: players))` creates the entire board
+follow creation order from left to right. Players sit in bottom/left/top/right order with three or four players;
+two players sit at bottom/top. `:board.create(setup: board(players: players))` creates the entire board
 atomically from flat table and player zone lists. Zone IDs are tags. Table positions
 use nine compass tags; player positions use #left, #center or #right. Optional
 newRow: true starts a row within the player area or table position. Side players rotate
@@ -140,14 +142,19 @@ The environment runs `PrepareGame(players)` and all its queued messages, then
 Rounds count a circuit from the starting player, including skipped seats; an
 incomplete final round closes before EndGame. An EndRound handler controls
 continuation with NextRound and may offer between-round actions; without one
-continuation is automatic. ReverseDirection supports reversed seat order. GES owns discard recycling and
-shuffling through `[:shuffle]` and `MoveCards`; native draws never refill a pile. Rules offer named actions
+continuation is automatic. `:board.reverse()` supports reversed seat order. GES owns discard recycling and
+shuffling through `[:shuffle]` and `:board.movecards`; native draws never refill a pile. Rules offer named actions
 with `Action` and typed handler references. Consumption may be automatic,
 manual, counted, or disabled. Required actions must be consumed before turn end.
 `NextPlayersTurn(nextPlayer: X)` chooses the next player;
 `NextPlayersTurn(repeatTurnForPlayer: true)` repeats the current player after a full circuit.
 Optional setup `actions` persist across turns and invoke handlers without player.
 `Notice` opens dialogs; `NoticeTable` updates a persistent centered table status. See `environment/Contract.md` for signatures and restrictions.
+
+Board creation, card movement, rule-state writes and direction changes are synchronous
+`:board` extensions. They return results immediately; old values remain immutable
+snapshots. Actions explicitly emit `Complete(action: action)` after applying their
+effects. Lifecycle transitions, offers and notices remain queued messages.
 
 The browser seed field is optional. Leave it empty for a fresh random seed on
 each new game, or enter an Int32 seed (including 0) for reproducible deals.
@@ -156,14 +163,20 @@ Mau Mau creates the board, deals cards and places the first discard directly in
 PrepareGame. Custom preparation messages remain possible. Once all queued
 preparation messages finish, the first round starts automatically with player 0.
 
-The editor automatically stores its current source in localStorage for this
-browser and origin, including unfinished code. It restores the draft on reload.
-Game progress is not saved. “Load example” explicitly replaces the source, with
-“Undo example load” available until the next page reload; “New game” applies it.
-Storage failures are shown beside the editor. Clearing browser site data removes
-the saved draft. To add an example, create games/<id>/rules.ges and register its
-id, name, and examples/<id>.ges path in web/examples.json. The build copies all
-game sources into the example catalog's target directory.
+The top Game selector switches and starts examples, **Draft · autosaved**, or
+**Saved**. Editing code or changing the player count updates Draft automatically;
+loading another game never overwrites it. **Save** copies the current source and
+player count into the single Saved slot. Further edits go to Draft, leaving Saved
+unchanged until the next Save. The selected entry and both slots persist in
+localStorage; old single-draft storage is imported into Draft. Game progress and
+seed are not saved. “New game” applies edits to the running game. GES controls game announcements through NoticeTable and Notice; all examples
+announce the winners both on the table and in a dialog. No separate turn, round
+or winner status is generated by the view. Load/runtime errors open a dialog. Storage failures are
+reported visibly, and in-memory slots remain usable until reload.
+
+To add an example, create games/<id>/<id>.ges and register its id, name, and
+examples/<id>.ges path in web/examples.json. Optional players chooses its default
+player count. The build copies game sources into the catalog's target directory.
 
 Player-specific duties can be queued with `Action(spec: [player: …, …])` or
 `ActionGroup(spec: [player: …, actions: […], …])`. Required offers set a priority
@@ -173,3 +186,83 @@ The group carries the penalty to its recipient; no global penalty state is neede
 Eights store a per-player #skip flag, which BeginTurn handles with ClearActions()
 and NextPlayersTurn(). `:board.actions(player)` supports selective removal by
 stable references. See the environment contract and browser help for details.
+
+## Highest Card
+
+Select **Highest Card** in the top Game selector. Each of 2–4 players receives
+a shuffled 13-card pile in their own suit (2 through ace). Reveal one card per
+turn; the highest value wins the round, with the first reveal winning ties.
+**Collect trick** keeps the open cards visible until the user collects them.
+After 13 rounds, all players tied for the most collected cards win. The game
+uses the existing environment unchanged.
+
+## Blackjack
+
+Select **Blackjack** for one to three human players against an automatic dealer
+on the table. The default is solo play. Each new game shuffles a fresh 52-card
+deck and deals two cards to everyone, with one dealer card hidden. Player hands
+are public. Choose **Hit** by clicking the deck, or **Stand** in the player header.
+
+Aces count as 1 or 11; face cards count as 10. Two initial cards totaling 21 are
+Blackjack, which beats a three-or-more-card 21. The dealer checks for Blackjack
+before players act. Player Blackjack skips that player's turn; hitting to 21 or
+busting also ends the turn automatically. After all players finish, the dealer
+reveals the hole card and draws below 17, standing on every 17 including soft 17.
+No further dealer cards are needed when all players have Blackjack or have busted.
+
+Each hand is evaluated against the dealer separately. A busted player loses even
+if the dealer subsequently busts. Equal totals push, and two Blackjacks push.
+Badges, table text and a result popup distinguish **Win**, **Push** and **Loss**;
+only winning players enter the environment's winner list. The example has no
+bets, payouts, double down, split, insurance or surrender. All blackjack rules
+and dealer behavior are in GES. See [Blackjack rules](https://bicyclecards.com/how-to-play/blackjack/).
+
+The environment accepts 1–4 players. Catalog entries can constrain their player
+selector with `playerCounts`; Draft and Saved preserve that choice along with
+source and player count. Existing examples default to their 2–4-player selector.
+
+## Skat
+
+Select **Skat**; the example selects three players automatically. Each new
+game is one deal: Player 1 is forehand, Player 2 middlehand and Player 3 rearhand.
+The table’s **Reizwerte** button opens a reusable reference with the bid sequence,
+Null values, Grand values and the scoring formula, without advancing play.
+After dealing 3–skat–4–3, middlehand bids against forehand. Rearhand then bids
+against their winner. **Bid** advances to the next legal value, **Hold** accepts
+it and **Pass** leaves that duel permanently. Bids range from 18 to 264. If both
+others pass without a bid, forehand can play for 18 or pass the deal too.
+
+The declarer chooses **Take skat** or **Play Hand**. Taking the skat adds two cards
+to the declarer's hand; two card clicks discard cards into the hidden skat before
+game selection. Hand leaves the skat unseen. Choose Clubs, Spades, Hearts,
+Diamonds, Grand or Null. Hand suit/Grand games additionally offer Schneider
+announced (at least 90 eyes), Schwarz announced (all ten tricks) or Ouvert
+(all ten tricks with the hand displayed publicly on the table). Null also offers
+Ouvert, with or without taking the skat; only variants covering the bid are offered.
+
+Forehand always leads the first trick, regardless of who declares. Suit games
+use the four jacks and the chosen suit as trumps; Grand uses only the jacks.
+Follow suit or trump when possible. Null has no trumps and orders cards
+A–K–Q–J–10–9–8–7. Click **Collect trick** to collect the visible cards; its winner
+leads next. Suit/Grand normally require 61 eyes including the skat. Null requires
+taking no tricks and ends in defeat after the declarer's first trick is collected.
+Other games play all ten tricks, including unsuccessful Hand announcements.
+Before playing your own card, **View last trick** shows the previous collected
+trick and its winner in a popup. It can be used repeatedly, including after
+another player has led, and neither moves cards nor ends the turn. Once you
+play, the action disappears until your next turn.
+
+Scoring includes with/without matadors (including the hidden skat), Hand,
+Schneider, Schwarz, announcements and Ouvert. Null values are 23, 35, 46 and 59.
+A failed announcement loses at least at its declared level. Overbidding loses at
+least the next multiple of the base value covering the bid. Lost games score
+double negatively. Winner badges, a popup and the table text show the outcome and
+the declarer's signed score; the two defenders win together when the declarer
+loses. All-pass deals score zero and have no winner.
+
+Bidding and preparation transfer action ownership through `NextPlayersTurn`;
+GES counts tricks separately from the environment's seat-circuit rounds. All
+Skat rules live in GES; no Swift game-specific code is needed. This example plays
+one deal, without a running match ledger, rotating dealer, bidding jumps,
+concessions or tournament dispute procedures. Rules follow the
+[International Skat Rules](https://dskv.de/app/uploads/sites/43/2022/11/ISkO-2022.pdf).

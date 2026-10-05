@@ -119,10 +119,11 @@ select { font: inherit; padding: 10px; margin-left: 6px; border: 1px solid #6880
 #board .zone-action:disabled { cursor: default; opacity: .4; }
 #board .zone button.card { position: relative; z-index: 2; }
 
-#board .area-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+#board .area-heading, #board .zone h2 { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
 #board .table-area > .area-heading { right: 16px; }
-#board .area-action { margin-left: auto; padding: 5px 10px; font-size: .8rem; font-weight: 600; letter-spacing: normal; text-transform: none; }
-#board .zone h2 .area-action { position: relative; z-index: 2; margin-left: 8px; }
+#board .area-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-left: auto; }
+#board .area-action { padding: 5px 10px; font-size: .8rem; font-weight: 600; letter-spacing: normal; text-transform: none; }
+#board .zone h2 .area-action { position: relative; z-index: 2; }
 
 /* Missing player seats and table positions reserve no space. */
 #board[data-players="1"] { grid-template-columns: minmax(360px, 1fr); grid-template-areas: 'table' 'south'; min-width: 360px; }
@@ -155,3 +156,7 @@ select { font: inherit; padding: 10px; margin-left: 6px; border: 1px solid #6880
 .card-action-picker button:focus-visible { outline: 2px solid #e9ffc4; outline-offset: -4px; }
 
 .player-badge { display: inline-block; padding: 3px 8px; margin-left: 8px; border-radius: 999px; background: #c8ed8a; color: #17382b; font-size: .75rem; overflow-wrap: anywhere; }
+
+.card-with-actions { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.below-actions { position: relative; z-index: 2; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 8px; }
+.card-with-actions > .below-actions { margin-top: 0; }

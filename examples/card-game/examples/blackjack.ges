@@ -1,0 +1,110 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+module examples.blackjack
+
+// One deal, one to three players against an automatic dealer; no wagers.
+function hand(player) be ('hand' + (player as :Text)) as :Tag
+function ranks() be ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
+function value(rank) be 1 when rank = 'A' otherwise (10 when rank in ['J', 'Q', 'K'] otherwise rank as :Number)
+function deck() be ['clubs', 'spades', 'hearts', 'diamonds'][:fold cards be [], suit => cards | ranks()[:select rank => [suit: suit, rank: rank, value: value(rank: rank)]]]
+function low(cards) be cards[:fold points be 0, card => points + card.properties.value]
+function total(cards) be low(cards: cards) + (10 when low(cards: cards) <= 11 and cards[:any card where card.properties.rank = 'A'] otherwise 0)
+function natural(cards) be cards[:count] = 2 and total(cards: cards) = 21
+function cards(player) be :board.cards(zone: hand(player: player))
+function dealer() be :board.cards(zone: #dealer) | :board.cards(zone: #hole)
+function description(cards) be 'Blackjack' when natural(cards: cards) otherwise (total(cards: cards) as :Text) + (' · Bust' when total(cards: cards) > 21 otherwise '')
+function outcome(cards, bank) be #loss when total(cards: cards) > 21 otherwise (#push when natural(cards: cards) and natural(cards: bank) otherwise (#loss when natural(cards: bank) otherwise (#win when natural(cards: cards) or total(cards: bank) > 21 or total(cards: cards) > total(cards: bank) otherwise (#push when total(cards: cards) = total(cards: bank) otherwise #loss))))
+function result(player) be outcome(cards: cards(player: player), bank: dealer())
+function label(result) be 'Win' when result = #win otherwise ('Push' when result = #push otherwise 'Loss')
+
+on PrepareGame(players) {
+    :board.create(setup: [
+        table: [
+            [id: #shoe, label: 'Deck', position: #nw, visibility: #hidden, cards: deck()[:shuffle]],
+            [id: #dealer, label: 'Dealer', position: #center, layout: #spread, visibility: #public],
+            [id: #hole, label: 'Dealer hole card', position: #e, visibility: #hidden]
+        ],
+        players: players[:select player => [id: player, zones: [
+            [id: hand(player: player), label: 'Hand', layout: #spread, visibility: #public]
+        ]]],
+        actions: [[action: #rules, label: 'Rules', area: #table, consumable: #never, handler: Rules(action)]]
+    ])
+    if players[:count] <= 3 {
+        for pass in [1, 2] {
+            for player in players { :board.draw(source: #shoe, destination: hand(player: player)) }
+            :board.draw(source: #shoe, destination: (#dealer when pass = 1 otherwise #hole))
+        }
+    } else { emit Notice('Blackjack supports one to three players against the dealer. Choose fewer players and start a new game.') }
+}
+
+on Rules(action) {
+    emit Complete(action: action)
+    emit Notice('Get closer to 21 than the dealer without going over. Hit draws one card; Stand ends your turn. Aces count as 1 or 11, face cards as 10. An ace and a ten-value card in the first two cards is Blackjack and beats any other 21. Equal hands push. The dealer checks for Blackjack before play, then reveals the hole card after the players finish and draws below 17, standing on all 17s including soft 17. Each player is evaluated separately. No bets, splitting, doubling or insurance in this example.')
+}
+
+// The dealer peeks before any player acts; round hooks permit board mutation.
+on BeginRound(number, players) {
+    if players[:count] <= 3 and natural(cards: dealer()) { emit DealerTurn() }
+}
+
+on BeginTurn(player) {
+    if :board.playercount() > 3 { emit EndGame() }
+    else {
+        if natural(cards: cards(player: player)) {
+            emit PlayerBadge('Blackjack', player: player)
+            emit NextPlayersTurn()
+        } else { emit OfferPlay(player: player) }
+    }
+}
+
+on OfferPlay(player) {
+    emit PlayerBadge(description(cards: cards(player: player)), player: player)
+    emit NoticeTable('Player ' + ((player + 1) as :Text) + ' · ' + description(cards: cards(player: player)) + ' · Hit or stand. Dealer stands on all 17s.')
+    emit ActionGroup(spec: [group: #choice, actions: [
+        [action: #hit, label: 'Hit', zone: #shoe, handler: Hit(action, player)],
+        [action: #stand, label: 'Stand', area: player, handler: Stand(action, player)]
+    ]])
+}
+
+on Hit(action, player) {
+    :board.draw(source: #shoe, destination: hand(player: player))
+    emit Complete(action: action)
+    emit ClearActions()
+    emit PlayerBadge(description(cards: cards(player: player)), player: player)
+    if total(cards: cards(player: player)) >= 21 { emit NextPlayersTurn() }
+    else { emit OfferPlay(player: player) }
+}
+
+on Stand(action, player) {
+    emit Complete(action: action)
+    emit ClearActions()
+    emit PlayerBadge(description(cards: cards(player: player)) + ' · Stand', player: player)
+    emit NextPlayersTurn()
+}
+
+on DealerTurn() {
+    :board.movecards(source: #hole, destination: #dealer, cards: :board.cards(zone: #hole)[:select card => card.id])
+    // No extra dealer cards are needed if every player is already bust or natural.
+    if :board.players()[:any player where total(cards: cards(player: player)) <= 21 and not natural(cards: cards(player: player))] {
+        // Iterate a bounded snapshot; stop drawing once the dealer reaches 17.
+        for available in :board.cards(zone: #shoe) {
+            if total(cards: dealer()) < 17 { :board.draw(source: #shoe, destination: #dealer) }
+        }
+    }
+    emit EndGame()
+}
+
+on EndTurn(player) {
+    if player = :board.playercount() - 1 { emit DealerTurn() }
+}
+
+on EndGame(players) {
+    if players[:count] <= 3 {
+        let summary be players[:fold text be 'Dealer: ' + description(cards: dealer()), player => text + ' · Player ' + ((player + 1) as :Text) + ': ' + description(cards: cards(player: player)) + ' — ' + label(result: result(player: player))]
+        for player in players { emit PlayerBadge(label(result: result(player: player)) + ' · ' + description(cards: cards(player: player)), player: player) }
+        emit NoticeTable(summary, stackClear: true)
+        emit Notice(summary)
+        emit Finish(winners: players[:filter player where result(player: player) = #win])
+    } else { emit Finish(winners: []) }
+}

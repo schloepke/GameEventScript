@@ -14,7 +14,6 @@ button { background: #71d3c5; color: #153022; cursor: pointer; font-weight: 600;
 button:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-2px); }
 button:disabled { cursor: default; opacity: .55; }
 .secondary { background: transparent; color: #e9f0e9; }
-#status { flex: 1; min-width: 200px; }
 #board { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .zone { padding: 22px; background: #20282e; border: 1px solid #355d46; border-radius: 16px; min-height: 185px; }
 .zone h2 { margin: 0 0 16px; font-size: 1rem; font-weight: 500; color: #cbdccf; }
@@ -65,10 +64,10 @@ a { color: #71d3c5; text-underline-offset: .2em; }
 .wasm-loading span { display: block; margin-bottom: 10px; font-size: .9rem; }
 .wasm-loading progress { display: block; width: 100%; height: 12px; accent-color: #c8ed8a; }
 
-/* Stable seats: player 1 below, player 2 above, player 3 left, player 4 right. */
+/* Seats proceed bottom, left, top, right; two players sit opposite each other. */
 select { font: inherit; padding: 10px; margin-left: 6px; border: 1px solid #688074; border-radius: 9px; background: #17382b; color: inherit; }
 .board-scroll { overflow-x: auto; padding: 4px; }
-#board { grid-template-columns: 184px minmax(360px, 1fr) 184px; grid-template-areas: '. north .' 'west table east' '. south .'; gap: 16px; min-width: 760px; align-items: center; }
+#board { grid-template-columns: var(--left-seat-width, 184px) minmax(360px, 1fr) var(--right-seat-width, 184px); grid-template-areas: '. north .' 'west table east' '. south .'; gap: 16px; min-width: 760px; align-items: center; }
 .table-area { grid-area: table; position: relative; min-height: clamp(300px, 35vw, 480px); min-width: 0; display: grid; grid-template-columns: var(--left-track, 0px) minmax(0, 3fr) var(--right-track, 0px); grid-template-rows: auto minmax(min-content, 1fr) auto; gap: 6px; padding: 48px 10px 16px; background: #14382d; border: 2px solid #416757; border-radius: 24px; }
 .table-area > h2 { position: absolute; top: 8px; left: 16px; margin: 0; color: #9dbbae; font-size: .75rem; text-transform: uppercase; letter-spacing: .15em; }
 .table-slot { display: flex; flex-direction: column; gap: 10px; align-items: center; align-content: center; justify-content: center; min-width: 0; padding: 4px; }
@@ -83,12 +82,12 @@ select { font: inherit; padding: 10px; margin-left: 6px; border: 1px solid #6880
 .slot-sw { grid-area: 3 / 1; }
 .slot-s { grid-area: 3 / 2; }
 .slot-se { grid-area: 3 / 3; }
-.player-0 { grid-area: south; }
-.player-1 { grid-area: north; }
-.player-2 { grid-area: west; }
-.player-3 { grid-area: east; }
+.seat-bottom { grid-area: south; }
+.seat-top { grid-area: north; }
+.seat-left { grid-area: west; }
+.seat-right { grid-area: east; }
 /* Side seats retain table height; their contents use rotated local coordinates. */
-.player-2, .player-3 { align-self: stretch; min-height: 0; overflow: auto; contain: size; }
+.seat-left, .seat-right { align-self: stretch; min-height: 0; overflow: auto; contain: size; }
 .player-area { min-width: 0; padding: 0; border: 1px solid #39494b; border-radius: 14px; background: #20282e; }
 .player-content > h2 { font-size: .9rem; margin: 0 0 12px; color: #b9cdc1; }
 .active-player { border-color: #71d3c5; box-shadow: 0 0 0 2px #71d3c522; }
@@ -126,14 +125,15 @@ select { font: inherit; padding: 10px; margin-left: 6px; border: 1px solid #6880
 #board .zone h2 .area-action { position: relative; z-index: 2; margin-left: 8px; }
 
 /* Missing player seats and table positions reserve no space. */
+#board[data-players="1"] { grid-template-columns: minmax(360px, 1fr); grid-template-areas: 'table' 'south'; min-width: 360px; }
 #board[data-players="2"] { grid-template-columns: minmax(360px, 1fr); grid-template-areas: 'north' 'table' 'south'; min-width: 360px; }
-#board[data-players="3"] { grid-template-columns: 184px minmax(360px, 1fr); grid-template-areas: '. north' 'west table' '. south'; min-width: 560px; }
+#board[data-players="3"] { grid-template-columns: var(--left-seat-width, 184px) minmax(360px, 1fr); grid-template-areas: '. north' 'west table' '. south'; min-width: 560px; }
 .table-area.has-left { --left-track: minmax(100px, 1fr); }
 .table-area.has-right { --right-track: minmax(100px, 1fr); }
 
 .player-content { padding: 12px; }
-.player-2, .player-3 { position: relative; overflow: hidden; }
-.player-2 .player-content, .player-3 .player-content { position: absolute; top: 0; left: 0; transform-origin: 0 0; overflow: auto; }
+.seat-left, .seat-right { position: relative; overflow: hidden; }
+.seat-left .player-content, .seat-right .player-content { position: absolute; top: 0; left: 0; transform-origin: 0 0; overflow: auto; }
 .player-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; min-width: 0; }
 .player-row + .player-row { margin-top: 12px; }
 .player-row.align-left { justify-content: flex-start; }
@@ -153,3 +153,5 @@ select { font: inherit; padding: 10px; margin-left: 6px; border: 1px solid #6880
 .card-action-picker:popover-open { display: flex; flex-direction: column; gap: 6px; }
 .card-action-picker button { text-align: left; white-space: normal; overflow-wrap: anywhere; }
 .card-action-picker button:focus-visible { outline: 2px solid #e9ffc4; outline-offset: -4px; }
+
+.player-badge { display: inline-block; padding: 3px 8px; margin-left: 8px; border-radius: 999px; background: #c8ed8a; color: #17382b; font-size: .75rem; overflow-wrap: anywhere; }

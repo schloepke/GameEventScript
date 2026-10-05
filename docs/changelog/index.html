@@ -80,6 +80,11 @@ available on <a href="https://github.com/schloepke/GameEventScript/releases">Git
 <h3 id="added">Added</h3>
 <ul>
 <li>
+<p>Parenthesized extension calls now support direct member access and collection
+selectors on their results in C# and Swift, such as <code>:board.top(zone: #discard).id</code>.
+Parenthesis-free argument binding is unchanged.</p>
+</li>
+<li>
 <p>Opcode profiles now separate six VM loop phases per opcode, source line and
 instruction, with independent totals for terminal loop checks in C# and Swift.</p>
 </li>

@@ -1,3 +1,29 @@
 [
-  { "id": "mau-mau", "name": "Mau Mau", "source": "examples/mau-mau.ges" }
+  {
+    "id": "high-card",
+    "name": "Highest Card",
+    "source": "examples/high-card.ges"
+  },
+  {
+    "id": "blackjack",
+    "name": "Blackjack",
+    "source": "examples/blackjack.ges",
+    "players": 1,
+    "playerCounts": [
+      1,
+      2,
+      3
+    ]
+  },
+  {
+    "id": "mau-mau",
+    "name": "Mau Mau",
+    "source": "examples/mau-mau.ges"
+  },
+  {
+    "id": "skat",
+    "name": "Skat",
+    "source": "examples/skat.ges",
+    "players": 3
+  }
 ]

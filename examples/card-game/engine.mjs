@@ -56,8 +56,8 @@ export async function createEngine(binary) {
     start(source, seed = crypto.getRandomValues(new Int32Array(1))[0], players = 2) {
       if (!Number.isInteger(seed) || seed < -2147483648 || seed > 2147483647)
         throw new Error('Seed must be an Int32');
-      if (!Number.isInteger(players) || players < 2 || players > 4)
-        throw new Error('Choose two to four players');
+      if (!Number.isInteger(players) || players < 1 || players > 4)
+        throw new Error('Choose one to four players');
       return decode(api.cardgame_start(upload(source), seed, players));
     },
 

@@ -7,15 +7,15 @@ function hand(player) be ('hand' + (player as :Text)) as :Tag
 // A jack chooses a suit, but never follows another jack. Other cards obey the wish or match suit/rank.
 function matches(card, top, wish) be card.properties.suit = wish when not (wish is nothing) otherwise (card.properties.suit = top.properties.suit or card.properties.rank = top.properties.rank)
 function fits(card, top) be top.properties.rank <> 'J' when card.properties.rank = 'J' otherwise matches(card: card, top: top, wish: :board.state(key: #wish))
-function playable(player) be (:board.cards(zone: hand(player: player)))[:filter item where fits(card: item, top: :board.top(zone: #discard))]
-function drawable() be (:board.cards(zone: #draw))[:count] > 0 or (:board.cards(zone: #discard))[:count] > 1
+function playable(player) be :board.cards(zone: hand(player: player))[:filter item where fits(card: item, top: :board.top(zone: #discard))]
+function drawable() be :board.cards(zone: #draw)[:count] > 0 or :board.cards(zone: #discard)[:count] > 1
 
-function penalty(player) be (:board.actions(player: player))[:first item where item.id = #sevenPenalty]
-function penaltyLeft(player) be ((:board.actions(player: player))[:first item where item.id = #penalty]).remaining
-function offers(player, id) be (:board.actions(player: player))[:filter item where item.id = id]
+function penalty(player) be :board.actions(player: player)[:first item where item.id = #sevenPenalty]
+function penaltyLeft(player) be :board.actions(player: player)[:first item where item.id = #penalty].remaining
+function offers(player, id) be :board.actions(player: player)[:filter item where item.id = id]
 
 // Keep the top discard; GES owns both the selection and random order.
-function recycled() be (:board.cards(zone: #discard))[:filter card where card.id <> (:board.top(zone: #discard)).id][:select card => card.id][:shuffle]
+function recycled() be :board.cards(zone: #discard)[:filter card where card.id <> :board.top(zone: #discard).id][:select card => card.id][:shuffle]
 
 function deck() be ['clubs', 'spades', 'hearts', 'diamonds'][:fold cards be [], suit =>
     cards | ['7', '8', '9', '10', 'J', 'Q', 'K', 'A'][:select rank => [suit: suit, rank: rank]]]
@@ -39,24 +39,24 @@ function board(players) be [
 
 on ShowRules(action) {
     emit Complete(action: action)
-    emit Notice(text: 'Match suit or rank, or play a jack and choose a suit. A jack cannot be played on another jack. 8 skips one player. Stack a 7 to pass on two more penalty cards, or draw the entire penalty one card at a time. After paying the penalty, take your normal turn: draw at most once, then play or pass.')
+    emit Notice('Match suit or rank, or play a jack and choose a suit. A jack cannot be played on another jack. 8 skips one player. Stack a 7 to pass on two more penalty cards, or draw the entire penalty one card at a time. After paying the penalty, take your normal turn: draw at most once, then play or pass.')
 }
 
 on PrepareGame(players) {
-    emit CreateGame(setup: board(players: players))
+    :board.create(setup: board(players: players))
     for amount in [1, 1, 1, 1, 1] {
         for player in players {
-            emit Take(source: #draw, destination: hand(player: player), count: amount)
+            :board.take(source: #draw, destination: hand(player: player), count: amount)
         }
     }
-    emit Take(source: #draw, destination: #discard, count: 1)
+    :board.take(source: #draw, destination: #discard, count: 1)
 }
 
 on BeginTurn(player) {
     if :board.state(player: player, key: #skip) = true {
-        emit SetState(player: player, key: #skip, value: nothing)
+        :board.setstate(player: player, key: #skip, value: nothing)
         emit ClearActions()
-        emit Notice(text: '8: This player skips a turn.')
+        emit Notice('8: This player skips a turn.')
         emit NextPlayersTurn()
     } else {
         emit NormalTurn(player: player)
@@ -66,27 +66,27 @@ on BeginTurn(player) {
 // The recipient receives these alternatives at their next turn.
 // Groups are mandatory and exclusive by default: finish one alternative before normal actions.
 on QueuePenalty(player, count) {
-    let available be (:board.cards(zone: #draw))[:count] + (:board.cards(zone: #discard))[:count] - 1
+    let available be :board.cards(zone: #draw)[:count] + :board.cards(zone: #discard)[:count] - 1
     let amount be min of count and available
     let draw be [action: #penalty, label: 'Draw penalty card', consumable: amount, handler: PenaltyDraw(action, player), zone: #draw] when amount > 0 otherwise [action: #penalty, label: 'No penalty cards available', handler: WaivePenalty(action, player), area: player]
     emit ActionGroup(spec: [group: #sevenPenalty, player: player, priority: 10, data: count, actions: [
         [action: #stack, label: 'Stack 7', handler: StackSeven(action, player, card),
-            cards: (:board.cards(zone: hand(player: player)))[:filter card where card.properties.rank = '7'][:select card => card.id]],
+            cards: :board.cards(zone: hand(player: player))[:filter card where card.properties.rank = '7'][:select card => card.id]],
         draw
     ]])
 }
 
 on TurnNotice() {
     if not (:board.state(key: #wish) is nothing) {
-        emit NoticeTable(text: 'Requested suit: ' + (:board.state(key: #wish) as :Text))
+        emit NoticeTable('Requested suit: ' + (:board.state(key: #wish) as :Text))
     } else {
-        emit NoticeTable(text: 'Match suit or rank. Draw once, then play or pass.')
+        emit NoticeTable('Match suit or rank. Draw once, then play or pass.')
     }
 }
 
 on NormalTurn(player) {
     if not (penalty(player: player) is nothing) {
-        emit NoticeTable(text: 'Stack a 7 or draw the penalty. Then take your normal turn.')
+        emit NoticeTable('Stack a 7 or draw the penalty. Then take your normal turn.')
     } else {
         emit TurnNotice()
     }
@@ -96,7 +96,7 @@ on NormalTurn(player) {
         emit Action(spec: [action: #draw, label: 'Draw', handler: Draw(action, player), zone: #draw])
     } else {
         // With no cards left to draw, allow a blocked player to pass.
-        let blocked be (:board.players())[:all candidate where playable(player: candidate)[:count] = 0]
+        let blocked be :board.players()[:all candidate where playable(player: candidate)[:count] = 0]
         if blocked {
             emit EndGame()
         } else {
@@ -109,9 +109,10 @@ on NormalTurn(player) {
 
 on Play(action, player, card) {
     let candidate be :board.card(id: card)
-    if (:board.cards(zone: hand(player: player)))[:any item where item.id = card] and fits(card: candidate, top: :board.top(zone: #discard)) {
-        emit MoveCard(action: action, card: card, source: hand(player: player), destination: #discard)
-        emit AfterPlay(player: player)
+    if :board.cards(zone: hand(player: player))[:any item where item.id = card] and fits(card: candidate, top: :board.top(zone: #discard)) {
+        :board.move(card: card, source: hand(player: player), destination: #discard)
+        emit Complete(action: action)
+        emit CardPlayed(player: player)
     } else {
         emit Reject(action: action, reason: 'Choose a card from your hand with matching suit or rank.')
     }
@@ -128,24 +129,32 @@ on PenaltyDraw(action, player) {
 
 on DrawOne(action, player, penalty) {
     if drawable() {
-        if (:board.cards(zone: #draw))[:count] = 0 {
-            emit MoveCards(source: #discard, destination: #draw, cards: recycled())
+        if :board.cards(zone: #draw)[:count] = 0 {
+            :board.movecards(source: #discard, destination: #draw, cards: recycled())
         }
-        emit DrawCard(action: action, source: #draw, destination: hand(player: player))
-        // These messages run after recycling and drawing, so offers include the new card.
+        :board.draw(source: #draw, destination: hand(player: player))
+        emit Complete(action: action)
+        // Movement is immediate; refreshed offers already include the drawn card.
+        emit SetActionCards(action: #play, cards: playable(player: player)[:select item => item.id])
         if penalty {
-            emit AfterPenaltyDraw(player: player)
+            // Consumption follows this cascade, so the current draw still counts as remaining.
+            if penaltyLeft(player: player) = 1 {
+                emit TurnNotice()
+            } else {
+                emit NoticeTable('Draw ' + ((penaltyLeft(player: player) - 1) as :Text) + ' more penalty cards.')
+            }
+            if not drawable() {
+                emit ClearActions(actions: offers(player: player, id: #draw))
+                if playable(player: player)[:count] = 0 {
+                    emit Action(spec: [action: #pass, label: 'Pass', finishTurn: true, handler: Pass(action, player), area: player])
+                }
+            }
         } else {
-            emit AfterDraw(player: player)
+            emit Action(spec: [action: #pass, label: 'Pass', finishTurn: true, handler: Pass(action, player), area: player])
         }
     } else {
         emit Reject(action: action, reason: 'No penalty card is available.' when penalty otherwise 'No card is available to draw.')
     }
-}
-
-on AfterDraw(player) {
-    emit SetActionCards(action: #play, cards: playable(player: player)[:select item => item.id])
-    emit Action(spec: [action: #pass, label: 'Pass', finishTurn: true, handler: Pass(action, player), area: player])
 }
 
 on Pass(action, player) {
@@ -154,27 +163,12 @@ on Pass(action, player) {
 
 on StackSeven(action, player, card) {
     let candidate be :board.card(id: card)
-    if (:board.cards(zone: hand(player: player)))[:any item where item.id = card] and candidate.properties.rank = '7' {
-        emit MoveCard(action: action, card: card, source: hand(player: player), destination: #discard)
-        emit AfterPlay(player: player)
+    if :board.cards(zone: hand(player: player))[:any item where item.id = card] and candidate.properties.rank = '7' {
+        :board.move(card: card, source: hand(player: player), destination: #discard)
+        emit Complete(action: action)
+        emit CardPlayed(player: player)
     } else {
         emit Reject(action: action, reason: 'Only a seven from your hand can pass on the penalty.')
-    }
-}
-
-on AfterPenaltyDraw(player) {
-    // Counters advance after this message cascade; one remaining means this was the final draw.
-    if penaltyLeft(player: player) = 1 {
-        emit TurnNotice()
-    } else {
-        emit NoticeTable(text: 'Draw ' + ((penaltyLeft(player: player) - 1) as :Text) + ' more penalty cards.')
-    }
-    emit SetActionCards(action: #play, cards: playable(player: player)[:select item => item.id])
-    if not drawable() {
-        emit ClearActions(actions: offers(player: player, id: #draw))
-        if playable(player: player)[:count] = 0 {
-            emit Action(spec: [action: #pass, label: 'Pass', finishTurn: true, handler: Pass(action, player), area: player])
-        }
     }
 }
 
@@ -183,14 +177,14 @@ on WaivePenalty(action, player) {
     emit TurnNotice()
 }
 
-on AfterPlay(player) {
+on CardPlayed(player) {
     let previous be penalty(player: player)
     let debt be 0 when previous is nothing or previous.consumed otherwise previous.data
     emit ClearActions()
-    emit SetState(key: #wish, value: nothing)
-    let rank be (:board.top(zone: #discard)).properties.rank
+    :board.setstate(key: #wish, value: nothing)
+    let rank be :board.top(zone: #discard).properties.rank
     if rank = 'J' {
-        emit NoticeTable(text: 'Choose the suit for the next player.')
+        emit NoticeTable('Choose the suit for the next player.')
         emit Action(spec: [action: #clubs, label: 'Clubs ♣', finishTurn: true, handler: ChooseClubs(action, player), area: player])
         emit Action(spec: [action: #spades, label: 'Spades ♠', finishTurn: true, handler: ChooseSpades(action, player), area: player])
         emit Action(spec: [action: #hearts, label: 'Hearts ♥', finishTurn: true, handler: ChooseHearts(action, player), area: player])
@@ -200,7 +194,7 @@ on AfterPlay(player) {
             emit QueuePenalty(player: :board.next(player: player), count: debt + 2)
         }
         if rank = '8' {
-            emit SetState(player: :board.next(player: player), key: #skip, value: true)
+            :board.setstate(player: :board.next(player: player), key: #skip, value: true)
         }
         emit NextPlayersTurn()
     }
@@ -212,18 +206,22 @@ on ChooseHearts(action, player) { emit ChooseSuit(action: action, suit: 'hearts'
 on ChooseDiamonds(action, player) { emit ChooseSuit(action: action, suit: 'diamonds') }
 
 on ChooseSuit(action, suit) {
-    emit SetState(key: #wish, value: suit)
+    :board.setstate(key: #wish, value: suit)
     emit Complete(action: action)
-    emit NoticeTable(text: 'Requested suit: ' + suit)
+    emit NoticeTable('Requested suit: ' + suit)
 }
 
 on EndTurn(player) {
-    if (:board.cards(zone: hand(player: player)))[:count] = 0 {
+    if :board.cards(zone: hand(player: player))[:count] = 0 {
         emit EndGame()
     }
 }
 
 on EndGame(players) {
-    let winners be players[:filter player where (:board.cards(zone: hand(player: player)))[:count] = 0]
+    let winners be players[:filter player where :board.cards(zone: hand(player: player))[:count] = 0]
+    let result be 'Draw.' when winners[:count] = 0 otherwise 'Player ' + ((winners[:first] + 1) as :Text) + ' wins!'
+    emit NoticeTable(result, stackClear: true)
+    emit Notice(result)
+    for player in winners { emit PlayerBadge('Winner', player: player) }
     emit Finish(winners: winners)
 }

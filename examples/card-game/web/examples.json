@@ -1,17 +1,17 @@
 [
   {
-    "id": "mau-mau",
-    "name": "Mau Mau",
-    "source": "examples/mau-mau.ges"
-  },
-  {
     "id": "high-card",
     "name": "Highest Card",
     "source": "examples/high-card.ges"
   },
   {
+    "id": "mau-mau",
+    "name": "Mau Mau",
+    "source": "examples/mau-mau.ges"
+  },
+  {
     "id": "skat",
-    "name": "Skat – Trick Play",
+    "name": "Skat",
     "source": "examples/skat.ges",
     "players": 3
   }

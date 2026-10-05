@@ -246,8 +246,7 @@ function render(next) {
     const button = document.createElement('button');
     button.textContent =
       offer.label +
-      (offer.remaining > 1 ? ` (${offer.remaining} remaining)` : '') +
-      (offer.optional ? '' : offer.group ? ' · required alternative' : ' · required');
+      (offer.remaining > 1 ? ` (${offer.remaining} remaining)` : '');
     button.onclick = () => act(offer);
     button.className = 'area-action';
     (offer.zone ? zoneHeadings.get(offer.zone) : areaHeadings.get(offer.area)).append(button);

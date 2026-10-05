@@ -196,19 +196,48 @@ turn; the highest value wins the round, with the first reveal winning ties.
 After 13 rounds, all players tied for the most collected cards win. The game
 uses the existing environment unchanged.
 
-## Skat – Trick Play
+## Skat
 
-Select **Skat – Trick Play**; the example selects three players automatically.
-This first stage fixes Player 1 as declarer, hearts as trump and Player 1 as the
-opening leader. It deals 3–skat–4–3, enforces following suit/trump, ranks the four
-jacks above the seven heart cards, and lets the trick winner lead next. Click
-**Collect trick** after the third card to keep the completed trick visible.
-The untouched skat counts toward the declarer's 61-eye target; otherwise both
-defenders win. The score totals 120 eyes. Other player counts end immediately
-with an explanatory notice.
+Select **Skat**; the example selects three players automatically. Each new
+game is one deal: Player 1 is forehand, Player 2 middlehand and Player 3 rearhand.
+The table’s **Reizwerte** button opens a reusable reference with the bid sequence,
+Null values, Grand values and the scoring formula, without advancing play.
+After dealing 3–skat–4–3, middlehand bids against forehand. Rearhand then bids
+against their winner. **Bid** advances to the next legal value, **Hold** accepts
+it and **Pass** leaves that duel permanently. Bids range from 18 to 264. If both
+others pass without a bid, forehand can play for 18 or pass the deal too.
 
-Tricks are counted explicitly in GES by three played cards, independently of the
-environment's seat-circuit rounds. This needs no Swift special case. Bidding,
-skat exchange, game selection, Schneider/Schwarz and game-value scoring are not
-part of this stage. Card ordering, following and eye counting follow the
-[International Skat Rules](https://dskv.de/app/uploads/sites/50/2020/08/Internationale-Skatordnung-2018.pdf).
+The declarer chooses **Take skat** or **Play Hand**. Taking the skat adds two cards
+to the declarer's hand; two card clicks discard cards into the hidden skat before
+game selection. Hand leaves the skat unseen. Choose Clubs, Spades, Hearts,
+Diamonds, Grand or Null. Hand suit/Grand games additionally offer Schneider
+announced (at least 90 eyes), Schwarz announced (all ten tricks) or Ouvert
+(all ten tricks with the hand displayed publicly on the table). Null also offers
+Ouvert, with or without taking the skat; only variants covering the bid are offered.
+
+Forehand always leads the first trick, regardless of who declares. Suit games
+use the four jacks and the chosen suit as trumps; Grand uses only the jacks.
+Follow suit or trump when possible. Null has no trumps and orders cards
+A–K–Q–J–10–9–8–7. Click **Collect trick** to collect the visible cards; its winner
+leads next. Suit/Grand normally require 61 eyes including the skat. Null requires
+taking no tricks and ends in defeat after the declarer's first trick is collected.
+Other games play all ten tricks, including unsuccessful Hand announcements.
+Before playing your own card, **View last trick** shows the previous collected
+trick and its winner in a popup. It can be used repeatedly, including after
+another player has led, and neither moves cards nor ends the turn. Once you
+play, the action disappears until your next turn.
+
+Scoring includes with/without matadors (including the hidden skat), Hand,
+Schneider, Schwarz, announcements and Ouvert. Null values are 23, 35, 46 and 59.
+A failed announcement loses at least at its declared level. Overbidding loses at
+least the next multiple of the base value covering the bid. Lost games score
+double negatively. Winner badges, a popup and the table text show the outcome and
+the declarer's signed score; the two defenders win together when the declarer
+loses. All-pass deals score zero and have no winner.
+
+Bidding and preparation transfer action ownership through `NextPlayersTurn`;
+GES counts tricks separately from the environment's seat-circuit rounds. All
+Skat rules live in GES; no Swift game-specific code is needed. This example plays
+one deal, without a running match ledger, rotating dealer, bidding jumps,
+concessions or tournament dispute procedures. Rules follow the
+[International Skat Rules](https://dskv.de/app/uploads/sites/43/2022/11/ISkO-2022.pdf).

@@ -3,32 +3,51 @@
 
 module examples.skat
 
-// First stage: three players, player 1 declares hearts, no bidding or skat exchange.
-function hand(player) be ('hand' + (player as :Text)) as :Tag
+// One deal, with bidding, declarations and game-value scoring.
+// Seats are fixed for this deal: forehand 0, middlehand 1, rearhand 2.
+function privateHand(player) be ('hand' + (player as :Text)) as :Tag
+function hand(player) be #open when :board.state(key: #ouvert) = true and player = :board.state(key: #declarer) otherwise privateHand(player: player)
+function playerName(player) be 'Player ' + ((player + 1) as :Text)
 function won(player) be ('won' + (player as :Text)) as :Tag
-function ranks() be [[rank: '7', power: 0, eyes: 0], [rank: '8', power: 1, eyes: 0], [rank: '9', power: 2, eyes: 0], [rank: 'Q', power: 3, eyes: 3], [rank: 'K', power: 4, eyes: 4], [rank: '10', power: 5, eyes: 10], [rank: 'A', power: 6, eyes: 11], [rank: 'J', power: 7, eyes: 2]]
+function ranks() be [[rank: '7', power: 0, eyes: 0, nullPower: 0], [rank: '8', power: 1, eyes: 0, nullPower: 1], [rank: '9', power: 2, eyes: 0, nullPower: 2], [rank: 'Q', power: 3, eyes: 3, nullPower: 5], [rank: 'K', power: 4, eyes: 4, nullPower: 6], [rank: '10', power: 5, eyes: 10, nullPower: 3], [rank: 'A', power: 6, eyes: 11, nullPower: 7], [rank: 'J', power: 7, eyes: 2, nullPower: 4]]
 function suits() be [[suit: 'diamonds', jack: 0], [suit: 'hearts', jack: 1], [suit: 'spades', jack: 2], [suit: 'clubs', jack: 3]]
-function deck() be suits()[:fold cards be [], suit => cards | ranks()[:select rank => [suit: suit.suit, rank: rank.rank, eyes: rank.eyes, power: (10 + suit.jack) when rank.rank = 'J' otherwise rank.power]]]
-function trump(card) be card.properties.rank = 'J' or card.properties.suit = 'hearts'
+function deck() be suits()[:fold cards be [], suit => cards | ranks()[:select rank => [suit: suit.suit, rank: rank.rank, eyes: rank.eyes, nullPower: rank.nullPower, power: (10 + suit.jack) when rank.rank = 'J' otherwise rank.power]]]
+function nullGame() be :board.state(key: #game) = #null
+function trump(card) be not nullGame() and (card.properties.rank = 'J' or (card.properties.suit as :Tag) = :board.state(key: #game))
+function strength(card) be card.properties.nullPower when nullGame() otherwise card.properties.power
 function color(card) be 'trump' when trump(card: card) otherwise card.properties.suit
 function trick() be :board.cards(zone: #trick)
 function playable(player) be legal(cards: :board.cards(zone: hand(player: player)), played: trick())
 function legal(cards, played) be cards when played[:count] = 0 otherwise following(cards: cards, suited: cards[:filter card where color(card: card) = color(card: played[:first])])
 function following(cards, suited) be suited when suited[:count] > 0 otherwise cards
-function beats(card, best) be card.properties.power > best.properties.power when color(card: card) = color(card: best) otherwise trump(card: card)
+function beats(card, best) be strength(card: card) > strength(card: best) when color(card: card) = color(card: best) otherwise trump(card: card)
 function eyes(zone) be :board.cards(zone: zone)[:fold total be 0, card => total + card.properties.eyes]
+
+// Legal bid values, including Null; bidding advances one value at a time.
+function bids() be ([9, 10, 11, 12][:fold values be [23, 35, 46, 59], base => values | (from 2 to 18)[:select factor => base * factor]] | (from 2 to 11)[:select factor => 24 * factor])[:distinct][:sort ascending]
+function nextBid() be bids()[:filter value where value > :board.state(key: #bid)][:first]
+function baseValue() be [diamonds: 9, hearts: 10, spades: 11, clubs: 12, grand: 24][(:board.state(key: #game))]
+function nullValue(open) be (59 when :board.state(key: #handGame) otherwise 46) when open otherwise (35 when :board.state(key: #handGame) otherwise 23)
+function tops() be [13, 12, 11, 10] when :board.state(key: #game) = #grand otherwise [13, 12, 11, 10, 6, 5, 4, 3, 2, 1, 0]
+function hasTop(cards, power) be cards[:any card where trump(card: card) and card.properties.power = power]
+// Count consecutive top trumps with the same possession status as the clubs jack.
+function matadors(cards) be tops()[:fold run be [count: 0, active: true], power => [count: run.count + 1, active: true] when run.active and hasTop(cards: cards, power: power) = hasTop(cards: cards, power: 13) otherwise [count: run.count, active: false]].count
+function orderedHand(cards) be suits()[:fold ordered be [], suit => ordered | ['A', 'K', 'Q', 'J', '10', '9', '8', '7'][:fold suited be [], rank => suited | cards[:filter card where card.properties.suit = suit.suit and card.properties.rank = rank]]]
 
 on PrepareGame(players) {
     :board.create(setup: [
         table: [
             [id: #deck, label: 'Deck', position: #nw, visibility: #hidden, cards: deck()[:shuffle]],
             [id: #skat, label: 'Skat', position: #ne, visibility: #hidden],
-            [id: #trick, label: 'Trick', layout: #spread, visibility: #public]
+            [id: #trick, label: 'Trick', layout: #spread, visibility: #public],
+            [id: #open, label: 'Ouvert hand', position: #s, layout: #spread, visibility: #public]
         ],
         players: players[:select player => [id: player, zones: [
             [id: hand(player: player), label: 'Hand', layout: #spread, visibility: #owner],
             [id: won(player: player), label: 'Won tricks', visibility: #hidden]
-        ]]]
+        ]]],
+        actions: [[action: #bidValues, label: 'Reizwerte', area: #table,
+            consumable: #never, handler: ShowBidValues(action)]]
     ])
     if players[:count] = 3 {
         // Deal 3 each, two to the skat, then 4 each and 3 each.
@@ -37,20 +56,293 @@ on PrepareGame(players) {
             if :board.cards(zone: #skat)[:count] = 0 { :board.take(source: #deck, destination: #skat, count: 2) }
         }
         :board.setstate(key: #trickNumber, value: 1)
-        emit Notice('Skat trick play: Player 1 plays hearts against Players 2 and 3. All jacks are trumps, ordered clubs, spades, hearts, diamonds. Follow the led suit or trump if possible; otherwise play any card. The trick winner leads next. Player 1 needs 61 eyes, including the hidden skat. No bidding, exchange or game-value scoring yet.')
+        :board.setstate(key: #phase, value: #bidding)
+        :board.setstate(key: #bid, value: 0)
+        :board.setstate(key: #holder, value: 0)
+        :board.setstate(key: #bidder, value: 1)
+        :board.setstate(key: #duel, value: 1)
+        emit PlayerBadge('Forehand', player: 0)
+        emit PlayerBadge('Middlehand', player: 1)
+        emit PlayerBadge('Rearhand', player: 2)
+        emit Notice('Middlehand bids against forehand; rearhand then bids against their winner. The declarer takes the skat and discards two cards, or plays Hand. Choose a suit, Grand or Null; forehand always leads first. Follow suit or trump when possible. Suit/Grand need 61 eyes, Null no tricks. Hand also allows Schneider/Schwarz announcements; ouvert reveals the hand. The game value must cover the bid. Lost games score double negatively.')
     } else {
         emit Notice('Skat requires exactly three players. Select 3 players and start a new game.')
     }
 }
 
+// The reference uses the same bid sequence as the auction and has no game effects.
+on ShowBidValues(action) {
+    let values be bids()[:fold text be '', value => text + ('' when text = '' otherwise ', ') + (value as :Text)]
+    emit Complete(action: action)
+    emit Notice('REIZFOLGE
+' + values + '
+
+NULL – feste Spielwerte
+Null: 23 · Null Hand: 35
+Null Ouvert: 46 · Null Ouvert Hand: 59
+Bei allen Nullspielen darfst du keinen Stich machen.
+
+FARBEN UND GRAND
+Grundwerte: Karo 9 · Herz 10 · Pik 11 · Kreuz 12 · Grand 24
+Spielwert = Grundwert × (Spitzen + Gewinnstufen)
+Spitzen: lückenlose vorhandene oder fehlende Trümpfe ab Kreuz-Bube; der Skat zählt mit. Bei Grand sind nur die vier Buben Trumpf.
+
+GRAND – mit/ohne 1, 2, 3 oder 4 Spitzen
+Einfach gewonnen: 48 / 72 / 96 / 120
+Hand, einfach gewonnen: 72 / 96 / 120 / 144
+Hand, Schneider angesagt und erreicht: 120 / 144 / 168 / 192
+Hand, Schwarz angesagt und erreicht: 168 / 192 / 216 / 240
+Ouvert, gewonnen: 192 / 216 / 240 / 264
+
+GEWINNSTUFEN
+Spiel: +1 · Hand: +1 · Schneider: +1 · Schwarz: +1
+Schneider angesagt: zusätzlich +1
+Schwarz angesagt: zusätzlich +1 · Ouvert: zusätzlich +1
+Ansagen nur bei Hand. Schwarz angesagt schließt Schneider angesagt ein; Ouvert schließt beide ein.
+Schneider: Gegenpartei höchstens 30 Augen. Schwarz: alle zehn Stiche.
+Grand/Farbspiel Ouvert ist immer Hand und verlangt alle Stiche.
+
+Der Spielwert muss mindestens deinen Reizwert erreichen. Ein höherwertiges Spiel ist erlaubt. Zusätzlicher Schneider/Schwarz erhöht den Wert, soweit noch nicht eingerechnet. Verlorene Spiele zählen doppelt negativ.')
+}
+
 on BeginTurn(player) {
-    if :board.playercount() <> 3 {
-        emit EndGame()
-    } else {
-        emit NoticeTable('Hearts · Player 1 declares · Trick ' + (:board.state(key: #trickNumber) as :Text) + ' of 10')
-        emit Action(spec: [action: #play, label: 'Play card', optional: false,
-            cards: playable(player: player)[:select card => card.id], handler: Play(action, player, card)])
+    if :board.playercount() <> 3 { emit EndGame() }
+    else {
+        let phase be :board.state(key: #phase)
+        if phase = #bidding {
+            if player <> :board.state(key: #bidder) { emit NextPlayersTurn(nextPlayer: :board.state(key: #bidder)) }
+            else { emit OfferBid(player: player) }
+        } else {
+            if phase = #holding { emit OfferHold(player: player) }
+            else {
+                if phase = #forehand { emit OfferForehand(player: player) }
+                else {
+                    if phase = #preparation { emit OfferPreparation(player: player) }
+                    else { emit OfferPlay(player: player) }
+                }
+            }
+        }
     }
+}
+
+// A duel alternates bid and hold. A pass closes that duel permanently.
+on OfferBid(player) {
+    let value be nextBid()
+    let raise be [[action: #bid, label: 'Bid ' + (value as :Text), area: player, handler: Bid(action, player)]] when value is not nothing otherwise []
+    emit NoticeTable(playerName(player: player) + ' bids against ' + playerName(player: :board.state(key: #holder)) + ' · Held: ' + (:board.state(key: #bid) as :Text))
+    emit ActionGroup(spec: [group: #bidding, actions: raise | [[action: #passBid, label: 'Pass', area: player, handler: PassBid(action, player)]]])
+}
+
+on Bid(action, player) {
+    :board.setstate(key: #pendingBid, value: nextBid())
+    :board.setstate(key: #phase, value: #holding)
+    emit Complete(action: action)
+    emit NextPlayersTurn(nextPlayer: :board.state(key: #holder))
+}
+
+on OfferHold(player) {
+    emit NoticeTable(playerName(player: :board.state(key: #bidder)) + ' bids ' + (:board.state(key: #pendingBid) as :Text) + ' · ' + playerName(player: player) + ': hold or pass.')
+    emit ActionGroup(spec: [group: #holding, actions: [
+        [action: #hold, label: 'Hold ' + (:board.state(key: #pendingBid) as :Text), area: player, handler: Hold(action, player)],
+        [action: #passBid, label: 'Pass', area: player, handler: PassBid(action, player)]
+    ]])
+}
+
+on Hold(action, player) {
+    :board.setstate(key: #bid, value: :board.state(key: #pendingBid))
+    :board.setstate(key: #phase, value: #bidding)
+    emit Complete(action: action)
+    emit NextPlayersTurn(nextPlayer: :board.state(key: #bidder))
+}
+
+on PassBid(action, player) {
+    let holding be :board.state(key: #phase) = #holding
+    let winner be :board.state(key: #bidder) when holding otherwise :board.state(key: #holder)
+    if holding { :board.setstate(key: #bid, value: :board.state(key: #pendingBid)) }
+    emit Complete(action: action)
+    emit ClearActions()
+    if :board.state(key: #duel) = 1 {
+        :board.setstate(key: #duel, value: 2)
+        :board.setstate(key: #holder, value: winner)
+        :board.setstate(key: #bidder, value: 2)
+        :board.setstate(key: #phase, value: #bidding)
+        emit NextPlayersTurn(nextPlayer: 2)
+    } else {
+        if :board.state(key: #bid) = 0 {
+            :board.setstate(key: #phase, value: #forehand)
+            emit NextPlayersTurn(nextPlayer: 0)
+        } else { emit Declare(player: winner) }
+    }
+}
+
+on OfferForehand(player) {
+    emit NoticeTable('Both other players passed. Forehand may play for 18 or pass as well.')
+    emit ActionGroup(spec: [group: #forehand, actions: [
+        [action: #play18, label: 'Play for 18', area: player, handler: Play18(action, player)],
+        [action: #passDeal, label: 'Pass', area: player, handler: PassDeal(action, player)]
+    ]])
+}
+
+on Play18(action, player) {
+    :board.setstate(key: #bid, value: 18)
+    emit Complete(action: action)
+    emit ClearActions()
+    emit Declare(player: player)
+}
+
+on PassDeal(action, player) {
+    emit Complete(action: action)
+    emit EndGame()
+}
+
+on Declare(player) {
+    :board.setstate(key: #declarer, value: player)
+    :board.setstate(key: #phase, value: #preparation)
+    for candidate in :board.players() { emit PlayerBadge('Declarer' when candidate = player otherwise 'Defender', player: candidate) }
+    if player = :board.current() { emit OfferPreparation(player: player) }
+    else { emit NextPlayersTurn(nextPlayer: player) }
+}
+
+on OfferPreparation(player) {
+    emit NoticeTable(playerName(player: player) + ' declares at ' + (:board.state(key: #bid) as :Text) + ' · Take the skat or play Hand.')
+    emit ActionGroup(spec: [group: #preparation, actions: [
+        [action: #takeSkat, label: 'Take skat', zone: #skat, handler: TakeSkat(action, player)],
+        [action: #hand, label: 'Play Hand', area: player, handler: Hand(action, player)]
+    ]])
+}
+
+on TakeSkat(action, player) {
+    :board.take(source: #skat, destination: hand(player: player), count: 2)
+    :board.setstate(key: #handGame, value: false)
+    emit Complete(action: action)
+    emit ClearActions()
+    emit NoticeTable('Choose two cards from your hand to put into the skat.')
+    emit Action(spec: [action: #discard, label: 'Discard to skat', optional: false, consumable: 2,
+        cards: :board.cards(zone: hand(player: player))[:select candidate => candidate.id], handler: Discard(action, player, card)])
+}
+
+on Discard(action, player, card) {
+    :board.move(card: card, source: hand(player: player), destination: #skat)
+    emit Complete(action: action)
+    if :board.cards(zone: hand(player: player))[:count] = 10 {
+        emit ClearActions()
+        emit OfferGames(player: player)
+    } else {
+        emit SetActionCards(action: #discard, cards: :board.cards(zone: hand(player: player))[:select candidate => candidate.id])
+        emit NoticeTable('Choose one more card to put into the skat.')
+    }
+}
+
+on Hand(action, player) {
+    :board.setstate(key: #handGame, value: true)
+    emit Complete(action: action)
+    emit ClearActions()
+    emit OfferGames(player: player)
+}
+
+on OfferGames(player) {
+    emit NoticeTable('Choose a suit, Grand (jacks only) or Null (no tricks).')
+    emit ActionGroup(spec: [group: #gameChoice, actions: [
+        [action: #clubs, label: 'Clubs', area: player, handler: Clubs(action, player)],
+        [action: #spades, label: 'Spades', area: player, handler: Spades(action, player)],
+        [action: #hearts, label: 'Hearts', area: player, handler: Hearts(action, player)],
+        [action: #diamonds, label: 'Diamonds', area: player, handler: Diamonds(action, player)],
+        [action: #grand, label: 'Grand', area: player, handler: Grand(action, player)]
+    ] | ([[action: #null, label: 'Null', area: player, handler: Null(action, player)]] when :board.state(key: #bid) <= nullValue(open: true) otherwise [])])
+}
+
+on Clubs(action, player) { emit ChooseGame(action: action, player: player, game: #clubs, label: 'Clubs') }
+on Spades(action, player) { emit ChooseGame(action: action, player: player, game: #spades, label: 'Spades') }
+on Hearts(action, player) { emit ChooseGame(action: action, player: player, game: #hearts, label: 'Hearts') }
+on Diamonds(action, player) { emit ChooseGame(action: action, player: player, game: #diamonds, label: 'Diamonds') }
+on Grand(action, player) { emit ChooseGame(action: action, player: player, game: #grand, label: 'Grand') }
+on Null(action, player) { emit ChooseGame(action: action, player: player, game: #null, label: 'Null') }
+
+on ChooseGame(action, player, game, label) {
+    :board.setstate(key: #game, value: game)
+    :board.setstate(key: #gameLabel, value: label + (' Hand' when :board.state(key: #handGame) otherwise ''))
+    emit Complete(action: action)
+    emit ClearActions()
+    emit OfferAnnouncements(player: player)
+}
+
+// Null's fixed values must cover the bid. Suit/Grand can still be overbid,
+// especially when a hidden skat changes the matador count in a Hand game.
+on OfferAnnouncements(player) {
+    if nullGame() {
+        let closed be [[action: #closed, label: 'Closed · ' + (nullValue(open: false) as :Text), area: player, handler: Closed(action, player)]] when :board.state(key: #bid) <= nullValue(open: false) otherwise []
+        emit NoticeTable('Choose closed or ouvert (reveal all ten cards).')
+        emit ActionGroup(spec: [group: #announcement, actions: closed | [[action: #ouvert, label: 'Ouvert · ' + (nullValue(open: true) as :Text), area: player, handler: Ouvert(action, player)]]])
+    } else {
+        if :board.state(key: #handGame) {
+            emit NoticeTable('Choose the goal for your Hand game. Schneider: at least 90 eyes; Schwarz/ouvert: all ten tricks.')
+            emit ActionGroup(spec: [group: #announcement, actions: [
+                [action: #closed, label: 'Normal · 61 eyes', area: player, handler: Closed(action, player)],
+                [action: #schneider, label: 'Schneider announced', area: player, handler: Schneider(action, player)],
+                [action: #schwarz, label: 'Schwarz announced', area: player, handler: Schwarz(action, player)],
+                [action: #ouvert, label: 'Ouvert · all tricks', area: player, handler: Ouvert(action, player)]
+            ]])
+        } else { emit StartPlay(player: player, announcement: #normal) }
+    }
+}
+
+on Closed(action, player) {
+    emit Complete(action: action)
+    emit ClearActions()
+    emit StartPlay(player: player, announcement: #normal)
+}
+
+on Schneider(action, player) {
+    emit Complete(action: action)
+    emit ClearActions()
+    emit StartPlay(player: player, announcement: #schneider)
+}
+
+on Schwarz(action, player) {
+    emit Complete(action: action)
+    emit ClearActions()
+    emit StartPlay(player: player, announcement: #schwarz)
+}
+
+on Ouvert(action, player) {
+    emit Complete(action: action)
+    emit ClearActions()
+    emit StartPlay(player: player, announcement: #ouvert)
+}
+
+on StartPlay(player, announcement) {
+    let cards be :board.cards(zone: hand(player: player)) | :board.cards(zone: #skat)
+    :board.setstate(key: #matadors, value: matadors(cards: cards))
+    :board.setstate(key: #withMatadors, value: hasTop(cards: cards, power: 13))
+    :board.setstate(key: #announcement, value: announcement)
+    :board.setstate(key: #phase, value: #playing)
+    if announcement = #ouvert {
+        :board.movecards(source: privateHand(player: player), destination: #open, cards: orderedHand(cards: :board.cards(zone: privateHand(player: player)))[:select card => card.id])
+        :board.setstate(key: #ouvert, value: true)
+    }
+    :board.setstate(key: #gameLabel, value: :board.state(key: #gameLabel) + (' Ouvert' when announcement = #ouvert otherwise (' Schneider announced' when announcement = #schneider otherwise (' Schwarz announced' when announcement = #schwarz otherwise ''))))
+    // Forehand leads even when middlehand or rearhand won the auction.
+    if player = 0 { emit OfferPlay(player: 0) }
+    else { emit NextPlayersTurn(nextPlayer: 0) }
+}
+
+on OfferPlay(player) {
+    emit NoticeTable(:board.state(key: #gameLabel) + ' · ' + playerName(player: :board.state(key: #declarer)) + ' declares at ' + (:board.state(key: #bid) as :Text) + ' · Trick ' + (:board.state(key: #trickNumber) as :Text) + ' of 10')
+    emit Action(spec: [action: #play, label: 'Play card', optional: false,
+        cards: playable(player: player)[:select card => card.id], handler: Play(action, player, card)])
+    // The current player has not contributed to this trick yet (ISkO 4.3.3).
+    if :board.state(key: #lastTrick) is not nothing {
+        emit Action(spec: [action: #viewLastTrick, label: 'View last trick', area: player,
+            optional: true, consumable: #never, handler: ViewLastTrick(action, player)])
+    }
+}
+
+on ViewLastTrick(action, player) {
+    let last be :board.state(key: #lastTrick)
+    let symbols be [clubs: '♣', spades: '♠', hearts: '♥', diamonds: '♦']
+    let cards be last.cards[:fold text be '', card => text + ' · ' + symbols[card.properties.suit] + ' ' + card.properties.rank]
+    emit Notice('Last trick · won by ' + playerName(player: last.winner) + cards)
+    emit Complete(action: action)
 }
 
 on Play(action, player, card) {
@@ -64,7 +356,7 @@ on Play(action, player, card) {
         emit Complete(action: action)
         if trick()[:count] = 3 {
             emit ClearActions()
-            emit NoticeTable('Player ' + ((:board.state(key: #winner) + 1) as :Text) + ' wins ' + (eyes(zone: #trick) as :Text) + ' eyes.', pushOld: true)
+            emit NoticeTable('Player ' + ((:board.state(key: #winner) + 1) as :Text) + (' wins this trick.' when nullGame() otherwise ' wins ' + (eyes(zone: #trick) as :Text) + ' eyes.'), pushOld: true)
             emit Action(spec: [action: #collect, label: 'Collect trick', optional: false, area: #table, handler: Collect(action, player)])
         } else {
             emit NextPlayersTurn()
@@ -77,10 +369,11 @@ on Play(action, player, card) {
 on Collect(action, player) {
     let winner be :board.state(key: #winner)
     emit NoticeTable(pop: true)
+    :board.setstate(key: #lastTrick, value: [cards: trick(), winner: winner])
     :board.movecards(source: #trick, destination: won(player: winner), cards: trick()[:select card => card.id])
     :board.setstate(key: #best, value: nothing)
     emit Complete(action: action)
-    if :board.cards(zone: hand(player: player))[:count] = 0 {
+    if (nullGame() and winner = :board.state(key: #declarer)) or :board.cards(zone: hand(player: player))[:count] = 0 {
         emit EndGame()
     } else {
         :board.setstate(key: #trickNumber, value: :board.state(key: #trickNumber) + 1)
@@ -91,17 +384,44 @@ on Collect(action, player) {
 // A trick is counted by its three played cards, independently of engine round boundaries.
 on EndTurn(player) {}
 
+// Scoring is independent of the turn engine. Hidden skat cards always belong
+// to the declarer for eyes and matadors, even in a Hand game.
 on EndGame(players) {
-    if players[:count] = 3 {
-        let declarer be eyes(zone: won(player: 0)) + eyes(zone: #skat)
-        let defenders be eyes(zone: won(player: 1)) + eyes(zone: won(player: 2))
-        let result be ('Player 1 wins! ' when declarer >= 61 otherwise 'Players 2 & 3 win! ') + 'Player 1: ' + (declarer as :Text) + ' eyes · Defenders: ' + (defenders as :Text) + ' eyes'
+    for player in players { emit PlayerBadge('', player: player) }
+    if players[:count] = 3 and :board.state(key: #declarer) is not nothing {
+        let declarer be :board.state(key: #declarer)
+        let points be eyes(zone: won(player: declarer)) + eyes(zone: #skat)
+        let trickCount be :board.cards(zone: won(player: declarer))[:count] / 3
+        let announcement be :board.state(key: #announcement)
+        let announcedSchwarz be announcement = #schwarz or announcement = #ouvert
+        let announcedSchneider be announcement = #schneider or announcedSchwarz
+        let schneider be points >= 90 or points <= 30
+        let schwarz be trickCount = 10 or trickCount = 0
+        let handLevel be 1 when :board.state(key: #handGame) otherwise 0
+        let schneiderLevels be 2 when announcedSchneider otherwise (1 when schneider otherwise 0)
+        let schwarzLevels be 2 when announcedSchwarz otherwise (1 when schwarz otherwise 0)
+        let openLevel be 1 when announcement = #ouvert otherwise 0
+        let levels be 1 + handLevel + schneiderLevels + schwarzLevels + openLevel
+        let value be nullValue(open: announcement = #ouvert) when nullGame() otherwise baseValue() * (:board.state(key: #matadors) + levels)
+        let overbid be value < :board.state(key: #bid)
+        let fulfilled be trickCount = 0 when nullGame() otherwise points >= 61 and (not announcedSchneider or points >= 90) and (not announcedSchwarz or trickCount = 10)
+        let success be fulfilled and not overbid
+        // Overbidding loses at least the smallest multiple of the base covering the bid.
+        let charged be (((:board.state(key: #bid) - 1) div baseValue()) + 1) * baseValue() when overbid and not nullGame() otherwise value
+        let score be value when success otherwise 0 - 2 * charged
+        let detail be ('No tricks taken' when trickCount = 0 otherwise 'A trick was taken') when nullGame() otherwise (points as :Text) + ': ' + ((120 - points) as :Text) + ' eyes · ' + ('With ' when :board.state(key: #withMatadors) otherwise 'Without ') + (:board.state(key: #matadors) as :Text) + ' + ' + (levels as :Text) + ' levels'
+        let result be playerName(player: declarer) + (' wins' when success otherwise ' loses') + ' · ' + :board.state(key: #gameLabel) + ' · ' + detail + ' · Bid ' + (:board.state(key: #bid) as :Text) + (' · Overbid' when overbid otherwise '') + ' · Score ' + (score as :Text)
+        :board.setstate(key: #score, value: score)
         emit NoticeTable(result, stackClear: true)
         emit Notice(result)
-        let winners be [0] when declarer >= 61 otherwise [1, 2]
+        let winners be [declarer] when success otherwise players[:filter player where player <> declarer]
         for player in winners { emit PlayerBadge('Winner', player: player) }
         emit Finish(winners: winners)
     } else {
+        if players[:count] = 3 {
+            emit NoticeTable('All players passed · No game · Score 0', stackClear: true)
+            emit Notice('All players passed. Start a new game to deal again.')
+        }
         emit Finish(winners: [])
     }
 }

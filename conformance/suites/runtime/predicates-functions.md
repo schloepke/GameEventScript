@@ -1370,3 +1370,97 @@ steps:
       exclude:
         - any: true
 ```
+
+---
+
+## Test: parameterless predicate shorthand composes with expressions
+
+This case verifies parameterless predicate calls, negation aliases, Nothing, overload selection, local-name independence, expression precedence and binary round trips.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nullary-predicate-shorthand
+kind: scriptApi
+level: scenario
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+predicate ready() be true
+predicate ready(value) be value > 0
+predicate blocked() be false
+predicate unknown() be nothing
+predicate composite() be is ready and is not blocked
+function choose() be 7 when is composite otherwise 0
+function identity(value) be value
+on Start() {
+  let blocked be true
+  let prefix be is ready
+  let multiline be is
+    not
+    blocked
+  if is ready and 2 is ready {
+    emit Done(value: [prefix, not blocked, multiline, is ! blocked, is ~ blocked, is ¬ blocked,
+      not is blocked, is unknown, is not unknown, is blocked or is composite,
+      choose(), identity(value: is ready), [1, 2][:filter x where is ready][:count],
+      is ready = ready(), is ready is :Boolean])
+  }
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":List"
+              items:
+                - type: ":Boolean"
+                  value: true
+                - type: ":Boolean"
+                  value: false
+                - type: ":Boolean"
+                  value: true
+                - type: ":Boolean"
+                  value: true
+                - type: ":Boolean"
+                  value: true
+                - type: ":Boolean"
+                  value: true
+                - type: ":Boolean"
+                  value: true
+                - type: ":Nothing"
+                - type: ":Nothing"
+                - type: ":Boolean"
+                  value: true
+                - type: ":Number.int64"
+                  value: "7"
+                - type: ":Boolean"
+                  value: true
+                - type: ":Number.int64"
+                  value: "2"
+                - type: ":Boolean"
+                  value: true
+                - type: ":Boolean"
+                  value: true
+    runtimeLimits:
+      exclude:
+        - any: true
+```

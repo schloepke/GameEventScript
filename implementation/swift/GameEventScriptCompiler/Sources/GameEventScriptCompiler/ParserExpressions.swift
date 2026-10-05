@@ -134,6 +134,15 @@ extension GesParser {
     }
 
     func primary() throws -> GesExpression {
+        if match("is") {
+            let start = previous
+            newlines()
+            let negated = match("not") || match("!")
+            newlines()
+            let name = try identifier()
+            let value = node(.predicate(nil, name), start)
+            return negated ? node(.unary("!", value), start) : value
+        }
         if current.syntaxText == "emit" || current.syntaxText == "publish" {
             let start = advance()
             return try sendExpression(start.text == "publish", start)

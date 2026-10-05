@@ -142,7 +142,7 @@ for (let seed = 0; seed < 30; seed++) {
 assert.equal(recycled, true);
 assert.deepEqual([...specialCardsSeen].sort(), ['7', '8', 'J']);
 const changed = source
-  .replace(/^function fits\(card, top\) be .*$/m, 'function fits(card, top) be true')
+  .replace(/^predicate fits\(card, top\) be[\s\S]*?(?=\n\n)/m, 'predicate fits(card, top) be true')
   .replace('[1, 1, 1, 1, 1]', '[1]');
 const single = game.start(changed, 42);
 assert.equal(single.error, undefined);
@@ -335,8 +335,8 @@ for (const players of [2, 3, 4]) {
       assert.equal(result.state.round, round);
       for (let player = 0; player < players; player++) {
         assert.equal(result.state.currentPlayer, player);
-        assert.deepEqual(result.state.actions.map(action => action.kind), ['reveal']);
-        result = game.act(player, result.state.actions[0], result.state.revision);
+        assert.deepEqual(result.state.actions.filter(action => !action.global).map(action => action.kind), ['reveal']);
+        result = game.act(player, result.state.actions.find(action => !action.global), result.state.revision);
         assert.equal(result.error, undefined, result.error);
         assert.equal(result.accepted, true);
       }
@@ -347,8 +347,8 @@ for (const players of [2, 3, 4]) {
       scores[winner] += players;
       if (!shuffled) assert.equal(winner, 0, 'First revealed card wins tied values');
       assert.equal(result.state.waitingForRound, true);
-      assert.deepEqual(result.state.actions.map(action => action.kind), ['collect']);
-      result = game.act(result.state.currentPlayer, result.state.actions[0], result.state.revision);
+      assert.deepEqual(result.state.actions.filter(action => !action.global).map(action => action.kind), ['collect']);
+      result = game.act(result.state.currentPlayer, result.state.actions.find(action => !action.global), result.state.revision);
       assert.equal(result.error, undefined, result.error);
       assert.equal(result.accepted, true);
       assert.equal(result.state.zones.find(zone => zone.id === 'trick').count, 0);
@@ -731,7 +731,7 @@ for (const step of [null, 'bid', 'hold', 'passBid', 'passBid', 'hand', 'grand', 
     assert.deepEqual(reference.state.zones, before.zones);
     assert.deepEqual(reference.state.actions, before.actions);
     assert.equal(reference.state.tableNotice, before.tableNotice);
-    assert.match(reference.state.notice, /REIZFOLGE\n18, 20, 22, 23, 24/);
+    assert.match(reference.state.notice, /BIDDING VALUES\n18, 20, 22, 23, 24/);
     assert.match(reference.state.notice, /Null Ouvert Hand: 59/);
     assert.match(reference.state.notice, /192 \/ 216 \/ 240 \/ 264/);
   }

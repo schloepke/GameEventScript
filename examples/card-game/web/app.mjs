@@ -249,7 +249,14 @@ function render(next) {
       (offer.remaining > 1 ? ` (${offer.remaining} remaining)` : '');
     button.onclick = () => act(offer);
     button.className = 'area-action';
-    (offer.zone ? zoneHeadings.get(offer.zone) : areaHeadings.get(offer.area)).append(button);
+    const heading = offer.zone ? zoneHeadings.get(offer.zone) : areaHeadings.get(offer.area);
+    let buttons = heading.querySelector('.area-actions');
+    if (!buttons) {
+      buttons = document.createElement('span');
+      buttons.className = 'area-actions';
+      heading.append(buttons);
+    }
+    buttons.append(button);
   }
   noticeQueue.push(...state.notices);
   showNextNotice();

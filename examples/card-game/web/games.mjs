@@ -8,7 +8,7 @@ const validCounts = counts => Array.isArray(counts) && counts.length > 0 &&
 
 /** Keep one autosaved draft and one explicit saved copy, independent of examples. */
 export async function attachGameLibrary(input, select, saveButton, status, playerSelect, onSelect, onError) {
-  const response = await fetch('./examples.json');
+  const response = await fetch('./examples.json', { cache: 'no-cache' });
   if (!response.ok) throw new Error('Could not load the game list.');
   const examples = await response.json();
   if (!Array.isArray(examples) || !examples.length || examples.some(item =>
@@ -72,7 +72,7 @@ export async function attachGameLibrary(input, select, saveButton, status, playe
     }
     const example = examples.find(item => item.id === id);
     if (!example) throw new Error('Unknown game.');
-    const result = await fetch(example.source);
+    const result = await fetch(example.source, { cache: 'no-cache' });
     if (!result.ok) throw new Error('Could not load the game. Your code is unchanged.');
     const counts = example.playerCounts ?? [2, 3, 4];
     const requested = example.players ?? Number(playerSelect.value);

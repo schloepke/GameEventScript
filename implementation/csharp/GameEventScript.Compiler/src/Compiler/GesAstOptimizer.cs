@@ -302,7 +302,7 @@ internal static class GesAstOptimizer
             },
             PredicateCallExpressionNode predicateCall => predicateCall with
             {
-                Value = OptimizeExpression(predicateCall.Value, knownTypeNames)
+                Value = predicateCall.Value is null ? null : OptimizeExpression(predicateCall.Value, knownTypeNames)
             },
             ExtensionPredicateExpressionNode extensionPredicate => extensionPredicate with
             {

@@ -2116,13 +2116,13 @@ internal static class GesCompiler
 
         private void EmitPredicateCallInto(PredicateCallExpressionNode predicate, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
-            var callable = GesCallableSignatures.ResolveSingleParameterPredicate(module.Callables, predicate.PredicateName);
+            var callable = GesCallableSignatures.ResolvePredicate(module.Callables, predicate.PredicateName, predicate.Value is null ? 0 : 1);
             if (callable is null || !_callableRoutines.TryGetValue(callable.SignatureId, out var entry))
             {
                 throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript binary compiler could not resolve predicate '{predicate.PredicateName}'.", predicate.PredicateName);
             }
 
-            EmitStageArgument(PrepareStageArgument(predicate.Value, context, state));
+            if (predicate.Value is not null) EmitStageArgument(PrepareStageArgument(predicate.Value, context, state));
             _builder.Call(destination, entry.EntryLabel, GameEventScriptInstructionFlag.NormalizeResultAsPredicate);
         }
 

@@ -3,12 +3,27 @@
 
 module examples.highcard
 
+// Functions
+
+function suit(player) be 'clubs' when player = 0 otherwise (
+    'spades' when player = 1 otherwise ('hearts' when player = 2 otherwise 'diamonds')
+)
+
+function rank(value) be 'A' when value = 14 otherwise (
+    'K' when value = 13 otherwise ('Q' when value = 12 otherwise ('J' when value = 11 otherwise value as :Text))
+)
+
+function deck(player) be (from 2 to 14)[:select value =>
+    [suit: suit(player: player), rank: rank(value: value), value: value]
+][:shuffle]
+
 function pile(player) be ('pile' + (player as :Text)) as :Tag
+
 function won(player) be ('won' + (player as :Text)) as :Tag
-function suit(player) be 'clubs' when player = 0 otherwise ('spades' when player = 1 otherwise ('hearts' when player = 2 otherwise 'diamonds'))
-function rank(value) be 'A' when value = 14 otherwise ('K' when value = 13 otherwise ('Q' when value = 12 otherwise ('J' when value = 11 otherwise value as :Text)))
-function deck(player) be (from 2 to 14)[:select value => [suit: suit(player: player), rank: rank(value: value), value: value]][:shuffle]
+
 function score(player) be :board.cards(zone: won(player: player))[:count]
+
+// Handlers
 
 on PrepareGame(players) {
     :board.create(setup: [
@@ -16,9 +31,11 @@ on PrepareGame(players) {
         players: players[:select player => [id: player, zones: [
             [id: pile(player: player), label: 'Draw pile', visibility: #hidden, cards: deck(player: player)],
             [id: won(player: player), label: 'Won cards', visibility: #top]
-        ]]]
+        ]]],
+        actions: [
+            [action: #rules, label: 'Rules', area: #table, consumable: #never, handler: ShowRules(action)]
+        ]
     ])
-    emit Notice('Reveal one card each round. The highest card wins all played cards; an ace is highest. Ties go to the first revealed card. After 13 rounds, the player with the most collected cards wins.')
 }
 
 on BeginRound(number, players) {
@@ -53,7 +70,11 @@ on EndRound(number, players) {
 }
 
 on Collect(action, player) {
-    :board.movecards(source: #trick, destination: won(player: :board.state(key: #winner)), cards: :board.cards(zone: #trick)[:select card => card.id])
+    :board.movecards(
+        source: #trick,
+        destination: won(player: :board.state(key: #winner)),
+        cards: :board.cards(zone: #trick)[:select card => card.id]
+    )
     emit Complete(action: action)
     if :board.cards(zone: pile(player: player))[:count] = 0 {
         emit EndGame()
@@ -69,6 +90,13 @@ on EndGame(players) {
     let result be names + (' wins with ' when winners[:count] = 1 otherwise ' win with ') + (best as :Text) + ' cards!'
     emit NoticeTable(result, stackClear: true)
     emit Notice(result)
-    for player in winners { emit PlayerBadge('Winner', player: player) }
+    for player in winners {
+        emit PlayerBadge('Winner', player: player)
+    }
     emit Finish(winners: winners)
+}
+
+on ShowRules(action) {
+    emit Complete(action: action)
+    emit Notice('Reveal one card each round. The highest card wins all played cards; an ace is highest. Ties go to the first revealed card. After 13 rounds, the player with the most collected cards wins.')
 }

@@ -25,7 +25,8 @@ const examples = [
 let pendingFetch;
 let deferFetch = false;
 let failFetch = false;
-globalThis.fetch = async url => {
+globalThis.fetch = async (url, options) => {
+  assert.equal(options?.cache, 'no-cache');
   if (deferFetch && url !== './examples.json') await new Promise(resolve => { pendingFetch = resolve; });
   return { ok: !failFetch, json: async () => examples, text: async () => url };
 };

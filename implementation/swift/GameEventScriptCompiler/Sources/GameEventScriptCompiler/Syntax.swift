@@ -53,7 +53,7 @@ final class GesExpression {
         case selector(GesExpression, GesSelector)
         case cast(GesExpression, String)
         case check(GesExpression, String)
-        case predicate(GesExpression, String)
+        case predicate(GesExpression?, String)
         case intrinsic(String, [GesExpression])
         case range(GesExpression, GesExpression, GesExpression?)
         case random(GesExpression, GesExpression)

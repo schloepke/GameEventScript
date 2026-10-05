@@ -749,6 +749,22 @@ skipped. If none is true, only the `otherwise` expression is evaluated.
 
 ### Predicate Sugar
 
+Parameterless script predicates can be called as `is name` or `is not name`,
+equivalent to `name()` and `not name()`. This is a primary expression, available
+wherever expressions are accepted, not only in `if` conditions. It consumes only
+the predicate name; following logical operators belong to the surrounding expression.
+Newlines may separate `is`, the optional negation operator, and the name.
+The target must resolve to a predicate with zero parameters; functions, local
+values, unary-only predicates and extension references are not eligible.
+Other overloads of the same predicate name do not affect this zero-parameter lookup.
+The optional negation accepts the same spellings as ordinary `not`.
+
+```ges
+predicate drawable() be true
+let available be is drawable
+if is not drawable { emit Blocked() }
+```
+
 Unary predicates can be used with `is`:
 
 ```ges
@@ -2148,10 +2164,11 @@ variadic_expression ::= ('min' | 'max') 'of' expression ('and' expression)*
 
 postfix_expression ::= primary_expression postfix_suffix*
 postfix_suffix ::= '.' LOWER_NAME | '[' collection_selector ']'
-primary_expression ::= literal | CONSTANT_REFERENCE | call_expression | uppercase_call_expression |
+primary_expression ::= nullary_predicate_expression | literal | CONSTANT_REFERENCE | call_expression | uppercase_call_expression |
                        type_constructor_expression | VARIABLE_NAME |
                        '(' expression ')' | bracket_literal | generated_list_expression |
                        range_expression | random_expression | seeded_random_expression | dice_expression | send_expression
+nullary_predicate_expression ::= 'is' [not_operator] LOWER_NAME
 call_expression ::= LOWER_NAME parenthesized_arguments
 uppercase_call_expression ::= MESSAGE_NAME parenthesized_arguments
 type_constructor_expression ::= (built_in_type_tag | custom_type_tag) parenthesized_arguments

@@ -1044,16 +1044,17 @@ internal static class GesAstValidator
                         GameEventScriptSymbolKind.Predicate,
                         $"Predicate test target '{predicateCall.PredicateName}' must use identifier casing (start lowercase)",
                         errors);
-                    if (GesCallableSignatures.ResolveSingleParameterPredicate(callables, predicateCall.PredicateName) is null)
+                    if (GesCallableSignatures.ResolvePredicate(callables, predicateCall.PredicateName, predicateCall.Value is null ? 0 : 1) is null)
                     {
                         errors.Add(
                             parsedScriptContext,
-                            $"Predicate '{predicateCall.PredicateName}' must exist and declare exactly one parameter to be used with 'is'",
+                            $"Predicate '{predicateCall.PredicateName}' must exist and declare exactly {(predicateCall.Value is null ? 0 : 1)} parameters for this 'is' form",
                             predicateCall.PredicateName,
                             GameEventScriptSymbolKind.Predicate,
                             GameEventScriptDiagnosticCodes.ValidateInvalidPredicate);
                     }
 
+                    if (predicateCall.Value is null) return;
                     expression = predicateCall.Value;
                     continue;
 

@@ -8,6 +8,7 @@ struct ActionActivation {
     let id: Int
     let kind: String
     let label: String
+    let button: Bool
     let optional: Bool
     let finishTurn: Bool
     let mode: String
@@ -126,14 +127,17 @@ extension Bindings {
     }
 
     private func activateSpec(_ spec: GesValue, isGlobal: Bool = false, group: ActionGroup? = nil) throws {
-        let base = ["action", "label", "finishTurn", "consumable", "handler", "area", "zone", "cards"]
+        let base = ["action", "label", "button", "finishTurn", "consumable", "handler", "area", "zone", "cards"]
         try validateFields(spec, base + (group == nil ? ["optional", "priority"] + (isGlobal ? [] : ["player"]) : []))
         let queued = group?.queued ?? (!isGlobal && field(spec, "player").kind != .nothing)
         let player = try group?.player ?? (isGlobal ? nil : queued ? checkedPlayer(field(spec, "player")) : currentPlayer)
         guard isGlobal || player != nil else { throw CardGameError("Preparation offers require a player") }
         let kind = try tag(field(spec, "action"))
         try validateTag(kind, player: player, isGlobal: isGlobal)
-        let label = try text(field(spec, "label"))
+        let captions = (spec.mapEntries ?? []).filter { ["label", "button"].contains($0.key) }
+        guard captions.count == 1 else { throw CardGameError("Action requires exactly one label or button") }
+        let button = captions[0].key == "button"
+        let label = try text(captions[0].value)
         let optional = try group?.optional ?? boolean(spec, "optional", default: true)
         let finishTurn = try boolean(spec, "finishTurn", default: false)
         guard !waitingForRound || queued || !finishTurn else { throw CardGameError("Between-round actions use NextRound, not finishTurn") }
@@ -167,6 +171,7 @@ extension Bindings {
                 id: nextActivation,
                 kind: kind,
                 label: label,
+                button: button,
                 optional: optional,
                 finishTurn: finishTurn,
                 mode: mode,

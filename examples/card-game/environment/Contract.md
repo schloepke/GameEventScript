@@ -177,7 +177,8 @@ emit Action(action: #draw, label: 'Draw', optional: true,
     finishTurn: false, consumable: #auto, handler: Draw(action, player), zone: #draw)
 ```
 
-`action` is a tag unique within the turn; `label` is Text. A fresh numeric
+`action` is a tag unique within the turn. Supply exactly one Text caption: `label`
+for the existing click presentation or `button` for an explicit button. A fresh numeric
 activation ID is passed to the handler as `action`; use it in completion and
 consumption commands. The handler is a GES Handler value, not a name string.
 A final `zone: Tag` argument associates a button action with an existing
@@ -188,6 +189,19 @@ appear as buttons in the zone heading. Alternatively, `area: #table` or
 `area: player` places a button beside the table or player heading.
 Each activation requires exactly one presentation: `zone`, `area`, or `cards`.
 There is no global action bar.
+With `button: 'Collect trick'` and `zone: #trick`, the browser shows a centered
+button below the zone cards, including an empty zone. With `cards: [id, …]`, it
+shows a button below each visible target card. These offers do not make the card
+or zone clickable and are excluded from the card action chooser. Other `label`
+actions retain click behavior. Multiple buttons share a centered wrapping row.
+With `area`, both caption forms use the right-aligned heading buttons. This
+applies to action maps, group alternatives, global setup actions and the full
+positional Action signature (replace its `label` argument with `button`).
+
+```ges
+emit Action(spec: [action: #collect, button: 'Collect trick', zone: #trick,
+    optional: false, handler: Collect(action, player)])
+```
 Buttons use a handler with `(action, player)`. Card actions add a final
 `cards: [id, …]` argument and use `(action, player, card)`. All selections for
 one activation share its counter. An empty card list temporarily offers no

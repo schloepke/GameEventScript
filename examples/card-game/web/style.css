@@ -156,3 +156,7 @@ select { font: inherit; padding: 10px; margin-left: 6px; border: 1px solid #6880
 .card-action-picker button:focus-visible { outline: 2px solid #e9ffc4; outline-offset: -4px; }
 
 .player-badge { display: inline-block; padding: 3px 8px; margin-left: 8px; border-radius: 999px; background: #c8ed8a; color: #17382b; font-size: .75rem; overflow-wrap: anywhere; }
+
+.card-with-actions { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.below-actions { position: relative; z-index: 2; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 8px; }
+.card-with-actions > .below-actions { margin-top: 0; }

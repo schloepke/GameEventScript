@@ -64,8 +64,8 @@ on EndTurn(player) {}
 on EndRound(number, players) {
     if not :board.ending() {
         emit NoticeTable('Player ' + ((:board.state(key: #winner) + 1) as :Text) + ' wins this trick.')
-        emit Action(spec: [action: #collect, label: 'Collect trick', optional: false,
-            area: #table, handler: Collect(action, player)])
+        emit Action(spec: [action: #collect, button: 'Collect trick', optional: false,
+            zone: #trick, handler: Collect(action, player)])
     }
 }
 

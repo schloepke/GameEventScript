@@ -839,3 +839,34 @@ assert.equal(tooMany.state.finished, true);
 assert.deepEqual(tooMany.state.winners, []);
 assert.match(tooMany.state.notice, /one to three players/);
 console.log('Blackjack: 90 deals with 1–3 players, ace conversion, soft 17, naturals, pushes, dealer reveal, bust precedence and individual outcomes passed.');
+
+// Explicit button captions are separate from click actions, with the same rule dispatch.
+const buttonRules = `
+on PrepareGame(players) {
+  :board.create(setup: [table: [[id: #trick, label: 'Trick', layout: #spread,
+    cards: [[suit: 'clubs', rank: 'A']]]], players: players[:select player => [id: player, zones: []]]])
+}
+on BeginTurn(player) {
+  emit Action(spec: [action: #pile, button: 'Collect', zone: #trick, handler: Do(action, player)])
+  emit Action(spec: [action: #card, button: 'Inspect', cards: :board.cards(zone: #trick)[:select card => card.id], handler: Inspect(action, player, card)])
+  emit Action(spec: [action: #click, label: 'Play', cards: :board.cards(zone: #trick)[:select card => card.id], handler: Inspect(action, player, card)])
+  emit Action(action: #area, button: 'Info', optional: true, finishTurn: false, consumable: #never, handler: Do(action, player), area: #table)
+}
+on Do(action, player) { emit Complete(action: action) }
+on Inspect(action, player, card) { emit Complete(action: action) }
+`;
+let buttons = game.start(buttonRules, 42, 2);
+assert.equal(buttons.error, undefined);
+assert.deepEqual(buttons.state.actions.map(({ kind, button }) => [kind, button]), [
+  ['pile', true], ['card', true], ['click', false], ['area', true],
+]);
+for (const caption of ["label: 'Collect', button: 'Collect'", "button: #collect"]) {
+  assert.ok(game.start(buttonRules.replace("button: 'Collect'", caption), 42, 2).error);
+}
+buttons = game.start(buttonRules, 42, 2);
+for (const kind of ['card', 'pile', 'area']) {
+  buttons = game.act(buttons.state.currentPlayer, buttons.state.actions.find(action => action.kind === kind), buttons.state.revision);
+  assert.equal(buttons.error, undefined);
+  assert.equal(buttons.accepted, true);
+}
+console.log('Explicit zone, card and area buttons: presentation, caption validation and dispatch passed.');

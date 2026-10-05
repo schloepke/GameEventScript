@@ -44,6 +44,20 @@ byId('notice-dialog').addEventListener('close', showNextNotice);
 
 const symbols = { clubs: '♣', spades: '♠', hearts: '♥', diamonds: '♦' };
 
+function actionButtons(offers) {
+  const group = document.createElement('div');
+  group.className = 'below-actions';
+  for (const offer of offers) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'area-action';
+    button.textContent = offer.label + (offer.remaining > 1 ? ` (${offer.remaining} remaining)` : '');
+    button.onclick = () => act(offer);
+    group.append(button);
+  }
+  return group;
+}
+
 function lock(value) {
   busy = value;
   if (value) cardActions.close();
@@ -166,7 +180,7 @@ function render(next) {
   const zoneActions = new Map();
   const zoneHeadings = new Map();
   for (const action of state.actions) {
-    if (action.zone && action.card === null && !zoneActions.has(action.zone)) {
+    if (!action.button && action.zone && action.card === null && !zoneActions.has(action.zone)) {
       zoneActions.set(action.zone, action);
     }
   }
@@ -190,7 +204,7 @@ function render(next) {
     const cards = document.createElement('div');
     cards.className = 'cards';
     for (const card of zone.layout === 'pile' ? zone.cards.slice(-1) : zone.cards) {
-      const offers = state.actions.filter((action) => action.card === card.id);
+      const offers = state.actions.filter((action) => action.card === card.id && !action.button);
       const offer = offers[0];
       const element = document.createElement(offer ? 'button' : 'div');
       element.className = `card ${['hearts', 'diamonds'].includes(card.properties.suit) ? 'red' : ''} ${offer ? 'playable' : ''}`;
@@ -220,7 +234,15 @@ function render(next) {
           else cardActions.open(element, offers);
         };
       }
-      cards.append(element);
+      const buttons = state.actions.filter((action) => action.card === card.id && action.button);
+      if (buttons.length) {
+        const item = document.createElement('div');
+        item.className = 'card-with-actions';
+        item.append(element, actionButtons(buttons));
+        cards.append(item);
+      } else {
+        cards.append(element);
+      }
     }
     if (zone.count > 0 && zone.cards.length === 0) {
       const back = document.createElement('div');
@@ -229,6 +251,8 @@ function render(next) {
       cards.append(back);
     }
     section.append(cards);
+    const buttons = state.actions.filter((action) => action.zone === zone.id && action.button && action.card === null);
+    if (buttons.length) section.append(actionButtons(buttons));
     if (!zone.count) {
       const empty = document.createElement('div');
       empty.className = 'empty-pile';
@@ -241,7 +265,7 @@ function render(next) {
     ).append(section);
   }
   for (const offer of state.actions.filter(
-    (action) => action.card === null && zoneActions.get(action.zone) !== action,
+    (action) => action.card === null && !(action.zone && action.button) && zoneActions.get(action.zone) !== action,
   )) {
     const button = document.createElement('button');
     button.textContent =

@@ -459,7 +459,7 @@ on Play(action, player, card) {
                     (' wins this trick.' when is nullGame otherwise ' wins ' + (eyes(zone: #trick) as :Text) + ' eyes.'),
                 pushOld: true
             )
-            emit Action(spec: [action: #collect, label: 'Collect trick', optional: false, area: #table, handler: Collect(action, player)])
+            emit Action(spec: [action: #collect, button: 'Collect trick', optional: false, zone: #trick, handler: Collect(action, player)])
         } else {
             emit NextPlayersTurn()
         }

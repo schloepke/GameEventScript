@@ -88,3 +88,7 @@ of full-document and incremental-line results, including every scope and offset.
 ```highlight
 {"name":"postfix chains after parenthesized extensions","language":"ges","source":":board.top(zone: #discard).id\n:board.cards(zone: #draw)[:filter card where card.id > 1][:count]","expect":[{"text":"id","kind":"identifier"},{"text":"#discard","kind":"tag"},{"text":":filter","kind":"builtin"},{"text":":count","kind":"builtin"}]}
 ```
+
+```highlight
+{"name":"parameterless predicate shorthand","language":"ges","source":"if is drawable and is not blocked { emit Ready() }","expect":[{"text":"is","kind":"keyword","scope":"keyword.operator.word.gameeventscript"},{"text":"not","kind":"keyword"},{"text":"drawable","kind":"identifier"},{"text":"blocked","kind":"identifier"}]}
+```

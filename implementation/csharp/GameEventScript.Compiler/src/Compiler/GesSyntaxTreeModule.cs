@@ -100,12 +100,12 @@ internal static class GesCallableSignatures
         return result;
     }
 
-    public static GesCallableDefinition? ResolveSingleParameterPredicate(IReadOnlyDictionary<string, GesCallableDefinition> callables, string name)
+    public static GesCallableDefinition? ResolvePredicate(IReadOnlyDictionary<string, GesCallableDefinition> callables, string name, int parameterCount)
     {
         GesCallableDefinition? result = null;
         foreach (var callable in callables.Values)
         {
-            if (callable.Kind != GameEventScriptCallableKind.PredicateCall || callable.Parameters.Count != 1 || !string.Equals(callable.Name, name, StringComparison.Ordinal)) continue;
+            if (callable.Kind != GameEventScriptCallableKind.PredicateCall || callable.Parameters.Count != parameterCount || !string.Equals(callable.Name, name, StringComparison.Ordinal)) continue;
             if (result is not null) return null;
             result = callable;
         }

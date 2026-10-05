@@ -2128,6 +2128,15 @@ internal sealed class GesParser
 
     private ExpressionNode ParsePrimaryExpression()
     {
+        if (Match(GesTokenKind.Is))
+        {
+            var startToken = Previous;
+            SkipNewLines();
+            var negated = Match(OperatorNot);
+            SkipNewLines();
+            var name = Expect(Identifier).Text;
+            return ApplyIsNegation(WithRange(new PredicateCallExpressionNode(null, name), startToken), negated);
+        }
         if (Match(Emit)) return ParseSendExpression(PublishStatementKind.Emit, Previous);
         if (Match(Publish)) return ParseSendExpression(PublishStatementKind.Publish, Previous);
         ThrowIfIllegalToken();

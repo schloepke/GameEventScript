@@ -244,7 +244,7 @@ internal sealed class GesValidationErrors
             TypeCastExpressionNode cast => FindNodeInExpression(cast.Value, symbol),
             TypeCheckExpressionNode check => FindNodeInExpression(check.Value, symbol),
             NothingCheckExpressionNode check => FindNodeInExpression(check.Value, symbol),
-            PredicateCallExpressionNode predicateCall => FindNodeInExpression(predicateCall.Value, symbol),
+            PredicateCallExpressionNode predicateCall => predicateCall.Value is null ? null : FindNodeInExpression(predicateCall.Value, symbol),
             ExtensionPredicateExpressionNode extensionPredicate => FindNodeInExpression(extensionPredicate.Value, symbol),
             MemberAccessExpressionNode member => FindNodeInExpression(member.Target, symbol),
             CollectionAccessExpressionNode collection => FindNodeInExpression(collection.Target, symbol) ?? FindNodeInSelector(collection.Selector, symbol),

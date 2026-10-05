@@ -152,8 +152,9 @@ final class CardGameTests: XCTestCase {
     func testRulesReallyOwnMatchingAndSetup() throws {
         let source = try rules.replacingOccurrences(
             of:
-                "function fits(card, top) be top.properties.rank <> 'J' when card.properties.rank = 'J' otherwise matches(card: card, top: top, wish: :board.state(key: #wish))",
-            with: "function fits(card, top) be true"
+                #"(?m)^predicate fits\(card, top\) be[\s\S]*?(?=\n\n)"#,
+            with: "predicate fits(card, top) be true",
+            options: .regularExpression
         )
         .replacingOccurrences(of: "[1, 1, 1, 1, 1]", with: "[1]")
         let game = try CardGame(rules: source)
@@ -212,8 +213,9 @@ final class CardGameTests: XCTestCase {
     func testBlockedGameEndsInDrawFromGES() throws {
         let source = try rules.replacingOccurrences(
             of:
-                "function fits(card, top) be top.properties.rank <> 'J' when card.properties.rank = 'J' otherwise matches(card: card, top: top, wish: :board.state(key: #wish))",
-            with: "function fits(card, top) be false"
+                #"(?m)^predicate fits\(card, top\) be[\s\S]*?(?=\n\n)"#,
+            with: "predicate fits(card, top) be false",
+            options: .regularExpression
         )
         let game = try CardGame(rules: source)
         for _ in 0..<21 {
@@ -849,8 +851,9 @@ final class CardGameTests: XCTestCase {
     func testDrawnCardBecomesPlayableAndPlayingEndsTurn() throws {
         let source = try rules.replacingOccurrences(
             of:
-                "function fits(card, top) be top.properties.rank <> 'J' when card.properties.rank = 'J' otherwise matches(card: card, top: top, wish: :board.state(key: #wish))",
-            with: "function fits(card, top) be true"
+                #"(?m)^predicate fits\(card, top\) be[\s\S]*?(?=\n\n)"#,
+            with: "predicate fits(card, top) be true",
+            options: .regularExpression
         )
         let game = try CardGame(rules: source)
         XCTAssertFalse(game.actions.contains(.init(kind: "pass")))

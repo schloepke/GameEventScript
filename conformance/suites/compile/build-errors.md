@@ -2378,3 +2378,287 @@ on Start {
 gesBlock: expect
 error: { phase: compile, code: compile.unresolvedSymbol, symbol: item }
 ```
+
+---
+
+## Test: nullary-is-rejects-function
+
+This negative compiler case verifies the portable diagnostic for “nullary-is-rejects-function”.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nullary-is-rejects-function
+kind: compileError
+level: atomic
+```
+
+### Source code under test
+
+```ges
+function ready() be true
+on Start() { if is ready { emit Done() } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidPredicate"
+  symbol: "ready"
+  symbolKind: "predicate"
+```
+
+---
+
+## Test: nullary-is-rejects-arguments
+
+This negative compiler case verifies the portable diagnostic for “nullary-is-rejects-arguments”.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nullary-is-rejects-arguments
+kind: compileError
+level: atomic
+```
+
+### Source code under test
+
+```ges
+predicate ready(value) be value > 0
+on Start() { let value be is ready }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidPredicate"
+  symbol: "ready"
+  symbolKind: "predicate"
+```
+
+---
+
+## Test: nullary-is-rejects-local
+
+This negative compiler case verifies the portable diagnostic for “nullary-is-rejects-local”.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nullary-is-rejects-local
+kind: compileError
+level: atomic
+```
+
+### Source code under test
+
+```ges
+on Start() { let ready be true; if is ready { emit Done() } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidPredicate"
+  symbol: "ready"
+  symbolKind: "predicate"
+```
+
+---
+
+## Test: nullary-is-rejects-missing
+
+This negative compiler case verifies the portable diagnostic for “nullary-is-rejects-missing”.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nullary-is-rejects-missing
+kind: compileError
+level: atomic
+```
+
+### Source code under test
+
+```ges
+on Start() { emit Done(value: is missing) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidPredicate"
+  symbol: "missing"
+  symbolKind: "predicate"
+```
+
+---
+
+## Test: nullary-is-cycle
+
+This negative compiler case verifies the portable diagnostic for “nullary-is-cycle”.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nullary-is-cycle
+kind: compileError
+level: atomic
+```
+
+### Source code under test
+
+```ges
+predicate ready() be is ready
+on Start() { emit Done(value: is ready) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "compile"
+  code: "compile.cyclicCallGraph"
+```
+
+---
+
+## Test: nullary-is-indirect-cycle
+
+This negative compiler case verifies the portable diagnostic for “nullary-is-indirect-cycle”.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nullary-is-indirect-cycle
+kind: compileError
+level: atomic
+```
+
+### Source code under test
+
+```ges
+predicate ready() be is blocked
+predicate blocked() be ready()
+on Start() { emit Done(value: is ready) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "compile"
+  code: "compile.cyclicCallGraph"
+```
+
+---
+
+## Test: nullary-is-rejects-empty
+
+This negative compiler case verifies the portable diagnostic for “nullary-is-rejects-empty”.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nullary-is-rejects-empty
+kind: compileError
+level: atomic
+```
+
+### Source code under test
+
+```ges
+on Start() { if is { emit Done() } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: nullary-is-rejects-extension
+
+This negative compiler case verifies the portable diagnostic for “nullary-is-rejects-extension”.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nullary-is-rejects-extension
+kind: compileError
+level: atomic
+```
+
+### Source code under test
+
+```ges
+on Start() { let value be is :math.abs }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: nullary-is-rejects-parentheses
+
+This negative compiler case verifies the portable diagnostic for “nullary-is-rejects-parentheses”.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nullary-is-rejects-parentheses
+kind: compileError
+level: atomic
+```
+
+### Source code under test
+
+```ges
+predicate ready() be true
+on Start() { let value be is ready() }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```

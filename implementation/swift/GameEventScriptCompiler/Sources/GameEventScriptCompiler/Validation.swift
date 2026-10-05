@@ -158,7 +158,8 @@ extension GesCompiler {
                 }
             }
             children = (delay.map { [$0] } ?? []) + [message] + tags
-        case .unary(_, let a), .member(let a, _), .predicate(let a, _): children = [a]
+        case .unary(_, let a), .member(let a, _): children = [a]
+        case .predicate(let a, _): children = a.map { [$0] } ?? []
         case .cast(let a, _), .check(let a, _): children = [a]
         case .binary(_, let a, let b), .random(let a, let b): children = [a, b]
         case .seeded(let a, let b):

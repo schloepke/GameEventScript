@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "A8ED11C7E2E4E7BC9C29B7BDD8D5FF236BE31AF4CA268242F21E3F7EE89ED240",
+    "sha256": "FB9BA60D5E70BC846C78142C17FB186019D4A614C15605FF0F81FFDC381FA7CA",
     "documentCount": 96,
-    "caseCount": 1685
+    "caseCount": 1695
   },
   "cases": [
     {
@@ -2865,6 +2865,123 @@
       "id": "compile.build-errors/duplicate-typed-parameters-forward",
       "kind": "compileError",
       "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/nullary-is-cycle",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/nullary-is-indirect-cycle",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/nullary-is-rejects-arguments",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/nullary-is-rejects-empty",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/nullary-is-rejects-extension",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/nullary-is-rejects-function",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/nullary-is-rejects-local",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/nullary-is-rejects-missing",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/nullary-is-rejects-parentheses",
+      "kind": "compileError",
+      "level": "atomic",
       "requires": {
         "core": [
           "compiler"
@@ -24694,6 +24811,24 @@
           "compiler",
           "host",
           "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.predicates-functions/nullary-predicate-shorthand",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
           "publish-sink",
           "vm"
         ],

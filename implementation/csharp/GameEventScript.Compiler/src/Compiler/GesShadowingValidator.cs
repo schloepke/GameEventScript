@@ -190,7 +190,7 @@ internal static class GesShadowingValidator
                 VisitExpression(binary.Right, scope, script, errors);
                 break;
             case PredicateCallExpressionNode predicate:
-                VisitExpression(predicate.Value, scope, script, errors);
+                if (predicate.Value is not null) VisitExpression(predicate.Value, scope, script, errors);
                 break;
             case ExtensionPredicateExpressionNode predicate:
                 VisitExpression(predicate.Value, scope, script, errors);

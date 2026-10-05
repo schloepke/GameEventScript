@@ -191,9 +191,10 @@ extension GesCompiler {
                 r.dependencies.insert(key)
             }
         case .predicate(let value, let name):
-            let matches = definitions.values.filter { $0.name == name && $0.kind == "predicate" && $0.parameters.count == 1 }
-            guard matches.count == 1, let definition = matches.first else { throw error("validate.invalidPredicate", e.location, symbol: name, kind: .predicate, message: "No unique single-argument predicate named '\(name)' is available.") }
-            stage([try expression(value, r, scope)], r)
+            let count = value == nil ? 0 : 1
+            let matches = definitions.values.filter { $0.name == name && $0.kind == "predicate" && $0.parameters.count == count }
+            guard matches.count == 1, let definition = matches.first else { throw error("validate.invalidPredicate", e.location, symbol: name, kind: .predicate, message: "No unique predicate named '\(name)' with \(count) parameters is available.") }
+            if let value { stage([try expression(value, r, scope)], r) }
             let instruction = r.emit(.call, d, flags: 0x20)
             r.calls.append((instruction, definition.signature))
             r.dependencies.insert(definition.signature)

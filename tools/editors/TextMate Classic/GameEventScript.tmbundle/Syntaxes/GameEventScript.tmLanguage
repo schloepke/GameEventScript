@@ -1023,6 +1023,8 @@
 				<dict>
 					<key>match</key>
 					<string>\b(?:or|xor|and|not|is|empty|div|mod|rem|of)\b</string>
+					<key>comment</key>
+					<string>is name and is not name call parameterless predicates; value is name calls unary predicates. Both use the existing operator and identifier scopes.</string>
 					<key>name</key>
 					<string>keyword.operator.word.gameeventscript</string>
 				</dict>

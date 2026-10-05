@@ -72,6 +72,7 @@
           "name": "keyword.other.definition.gameeventscript"
         },
         {
+          "comment": "is name and is not name call parameterless predicates; value is name calls unary predicates. Both use the existing operator and identifier scopes.",
           "match": "\\b(?:or|xor|and|not|is|empty|div|mod|rem|of)\\b",
           "name": "keyword.operator.word.gameeventscript"
         },

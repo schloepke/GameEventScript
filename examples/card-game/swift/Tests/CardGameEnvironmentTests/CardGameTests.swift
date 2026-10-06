@@ -417,7 +417,7 @@ final class CardGameTests: XCTestCase {
             on Info(action) {
                 emit Notice('One')
                 emit Complete(action: action)
-                emit Notice('Two')
+                emit Notice('Two', title: 'Rules')
             }
             on EndTurn(player) { emit NextPlayersTurn() }
             """
@@ -426,7 +426,7 @@ final class CardGameTests: XCTestCase {
         XCTAssertFalse(game.viewJSON(for: 1).contains("\"kind\":\"step\""))
         XCTAssertTrue(try game.submit(player: 1, action: .init(kind: "info"), revision: 0).accepted)
         XCTAssertEqual(game.turn, 1)
-        XCTAssertTrue(game.viewJSON(for: 0).contains("\"notices\":[\"One\",\"Two\"]"))
+        XCTAssertTrue(game.viewJSON(for: 0).contains("\"notices\":[{\"text\":\"One\",\"title\":\"Game Notice\"},{\"text\":\"Two\",\"title\":\"Rules\"}]"))
         XCTAssertTrue(try game.submit(player: 0, action: .init(kind: "step"), revision: 1).accepted)
         XCTAssertEqual(game.currentPlayer, 1)
         XCTAssertTrue(game.viewJSON(for: 1).contains("\"notices\":[]"))

@@ -12,7 +12,7 @@ predicate nullGame() be :board.state(key: #game) = #null
 
 predicate trump(card) be is not nullGame and (card.properties.rank = 'J' or (card.properties.suit as :Tag) = :board.state(key: #game))
 
-predicate beats(card, best) be strength(card: card) > strength(card: best) when color(card: card) = color(card: best) otherwise card is trump
+predicate beats(card, best) be strength(card: card) is more than strength(card: best) when color(card: card) = color(card: best) otherwise card is trump
 
 predicate hasTop(cards, power) be cards[:any card where card is trump and card.properties.power = power]
 
@@ -58,7 +58,7 @@ function strength(card) be card.properties.nullPower when is nullGame otherwise 
 
 function color(card) be 'trump' when card is trump otherwise card.properties.suit
 
-function following(cards, suited) be suited when suited[:count] > 0 otherwise cards
+function following(cards, suited) be suited when suited[:count] is more than 0 otherwise cards
 
 function legal(cards, played) be cards when played[:count] = 0 otherwise following(
     cards: cards,
@@ -80,13 +80,15 @@ function bids() be (
     ] | (from 2 to 11)[:select factor => 24 * factor]
 )[:distinct][:sort ascending]
 
-function nextBid() be bids()[:filter value where value > :board.state(key: #bid)][:first]
+function nextBid() be bids()[:filter value where value is more than :board.state(key: #bid)][:first]
 
 function baseValue() be [diamonds: 9, hearts: 10, spades: 11, clubs: 12, grand: 24][(:board.state(key: #game))]
 
 function nullValue(open) be
-    (59 when :board.state(key: #handGame) otherwise 46) when open
-    otherwise (35 when :board.state(key: #handGame) otherwise 23)
+    59 when open and :board.state(key: #handGame),
+    46 when open,
+    35 when :board.state(key: #handGame)
+    otherwise 23
 
 function tops() be [13, 12, 11, 10] when :board.state(key: #game) = #grand otherwise [13, 12, 11, 10, 6, 5, 4, 3, 2, 1, 0]
 
@@ -313,7 +315,7 @@ on OfferGames(player) {
         [action: #hearts, label: 'Hearts', area: player, handler: Hearts(action, player)],
         [action: #diamonds, label: 'Diamonds', area: player, handler: Diamonds(action, player)],
         [action: #grand, label: 'Grand', area: player, handler: Grand(action, player)]
-    ] | ([[action: #null, label: 'Null', area: player, handler: Null(action, player)]] when :board.state(key: #bid) <= nullValue(open: true)
+    ] | ([[action: #null, label: 'Null', area: player, handler: Null(action, player)]] when :board.state(key: #bid) is at most nullValue(open: true)
         otherwise [])])
 }
 
@@ -354,7 +356,7 @@ on ChooseGame(action, player, game, label) {
 on OfferAnnouncements(player) {
     if is nullGame {
         let closed be [[action: #closed, label: 'Closed · ' + (nullValue(open: false) as :Text), area: player, handler: Closed(action, player)]] when
-            :board.state(key: #bid) <= nullValue(open: false) otherwise []
+            :board.state(key: #bid) is at most nullValue(open: false) otherwise []
         emit NoticeTable('Choose closed or ouvert (reveal all ten cards).')
         emit ActionGroup(spec: [group: #announcement, actions: closed | [[action: #ouvert, label: 'Ouvert · ' + (nullValue(open: true) as :Text),
             area: player, handler: Ouvert(action, player)]]])
@@ -414,10 +416,10 @@ on StartPlay(player, announcement) {
     :board.setstate(
         key: #gameLabel,
         value: :board.state(key: #gameLabel) + (
-            ' Ouvert' when announcement = #ouvert otherwise (
-                ' Schneider announced' when announcement = #schneider
-                otherwise (' Schwarz announced' when announcement = #schwarz otherwise '')
-            )
+            ' Ouvert' when announcement = #ouvert,
+            ' Schneider announced' when announcement = #schneider,
+            ' Schwarz announced' when announcement = #schwarz
+            otherwise ''
         )
     )
     // Forehand leads even when middlehand or rearhand won the auction.
@@ -472,7 +474,7 @@ on ViewLastTrick(action, player) {
     let last be :board.state(key: #lastTrick)
     let symbols be [clubs: '♣', spades: '♠', hearts: '♥', diamonds: '♦']
     let cards be last.cards[:fold text be '', card => text + ' · ' + symbols[card.properties.suit] + ' ' + card.properties.rank]
-    emit Notice('Last trick · won by ' + playerName(player: last.winner) + cards)
+    emit Notice('Last trick · won by ' + playerName(player: last.winner) + cards, title: 'Last trick')
     emit Complete(action: action)
 }
 
@@ -507,17 +509,17 @@ on EndGame(players) {
         let announcement be :board.state(key: #announcement)
         let announcedSchwarz be announcement = #schwarz or announcement = #ouvert
         let announcedSchneider be announcement = #schneider or announcedSchwarz
-        let schneider be points >= 90 or points <= 30
+        let schneider be points is at least 90 or points is at most 30
         let schwarz be trickCount = 10 or trickCount = 0
         let handLevel be 1 when :board.state(key: #handGame) otherwise 0
-        let schneiderLevels be 2 when announcedSchneider otherwise (1 when schneider otherwise 0)
-        let schwarzLevels be 2 when announcedSchwarz otherwise (1 when schwarz otherwise 0)
+        let schneiderLevels be 2 when announcedSchneider, 1 when schneider otherwise 0
+        let schwarzLevels be 2 when announcedSchwarz, 1 when schwarz otherwise 0
         let openLevel be 1 when announcement = #ouvert otherwise 0
         let levels be 1 + handLevel + schneiderLevels + schwarzLevels + openLevel
         let value be nullValue(open: announcement = #ouvert) when is nullGame otherwise baseValue() * (:board.state(key: #matadors) + levels)
-        let overbid be value < :board.state(key: #bid)
+        let overbid be value is less than :board.state(key: #bid)
         let fulfilled be trickCount = 0 when is nullGame otherwise
-            points >= 61 and (not announcedSchneider or points >= 90) and (not announcedSchwarz or trickCount = 10)
+            points is at least 61 and (not announcedSchneider or points is at least 90) and (not announcedSchwarz or trickCount = 10)
         let success be fulfilled and not overbid
         // Overbidding loses at least the smallest multiple of the base covering the bid.
         let charged be (((:board.state(key: #bid) - 1) div baseValue()) + 1) * baseValue() when overbid and is not nullGame otherwise value
@@ -550,7 +552,7 @@ on EndGame(players) {
 
 on ShowRules(action) {
     emit Complete(action: action)
-    emit Notice('Middlehand bids against forehand; rearhand then bids against their winner. The declarer takes the skat and discards two cards, or plays Hand. Choose a suit, Grand or Null; forehand always leads first. Follow suit or trump when possible. Suit/Grand need 61 eyes, Null no tricks. Hand also allows Schneider/Schwarz announcements; ouvert reveals the hand. The game value must cover the bid. Lost games score double negatively.')
+    emit Notice('Middlehand bids against forehand; rearhand then bids against their winner. The declarer takes the skat and discards two cards, or plays Hand. Choose a suit, Grand or Null; forehand always leads first. Follow suit or trump when possible. Suit/Grand need 61 eyes, Null no tricks. Hand also allows Schneider/Schwarz announcements; ouvert reveals the hand. The game value must cover the bid. Lost games score double negatively.', title: 'Rules')
 }
 
 // The reference uses the same bid sequence as the auction and has no game effects.
@@ -585,5 +587,5 @@ Announcements are available only in Hand games. Announcing Schwarz includes Schn
 Schneider: the opposing side has at most 30 card points. Schwarz: all ten tricks.
 Ouvert in Grand or a suit game is always Hand and requires all tricks.
 
-The game value must cover your bid. A higher-value game is allowed. Additional Schneider/Schwarz increases the value unless already counted. Lost games score double negatively.')
+The game value must cover your bid. A higher-value game is allowed. Additional Schneider/Schwarz increases the value unless already counted. Lost games score double negatively.', title: 'Bidding values')
 }

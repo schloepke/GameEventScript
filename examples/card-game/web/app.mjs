@@ -36,7 +36,9 @@ let noticeQueue = [];
 
 function showNextNotice() {
   if (byId('notice-dialog').open || noticeQueue.length === 0) return;
-  byId('notice-message').textContent = noticeQueue.shift();
+  const notice = noticeQueue.shift();
+  byId('notice-title').textContent = notice.title;
+  byId('notice-message').textContent = notice.text;
   byId('notice-dialog').showModal();
 }
 
@@ -321,7 +323,7 @@ function restart() {
     }
     render(data.state);
     if (data.accepted === false) {
-      noticeQueue.push(data.reason);
+      noticeQueue.push({ text: data.reason, title: 'Game Notice' });
       showNextNotice();
     }
   };

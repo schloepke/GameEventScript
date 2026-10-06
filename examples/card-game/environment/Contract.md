@@ -230,7 +230,7 @@ activation ID. Stale and wrong-player requests never execute GES.
 | `ConsumeAction(action)` | Consume the successfully completed current #manual activation |
 | `ClearActions()` / `ClearActions(actions)` | Remove current-player offers or queried entries, including groups and queued duties |
 | `SetActionCards(action, cards)` | Update an active card action by tag |
-| `Notice(_ text)` | Enqueue a modal dialog; multiple notices display in order |
+| `Notice(_ text)` / `Notice(_ text, title)` | Enqueue a modal dialog with an optional Text title (default: `Game Notice`); multiple notices display in order |
 | `NoticeTable(_ text)` | Replace the centered table status text; empty Text clears it |
 
 State is owned by this embedding, not by mutable GES variables. `:board.state(key)`
@@ -486,7 +486,10 @@ player heading. Empty text removes it; later calls replace it. It persists acros
 turns and the game result, but resets on New game. It has no game-rule effect.
 
 Notice text is an unlabeled argument: `emit Notice('Hello')` and
-`emit NoticeTable('Ready')`. The popup has no stack options. Table variants are:
+`emit NoticeTable('Ready')`. The popup accepts an optional Text title, for example
+`emit Notice('The rules …', title: 'Rules')`; omitted titles default to
+`Game Notice`. Each queued browser notice carries its own `text` and `title`.
+The popup has no stack options. Table variants are:
 
 - `NoticeTable(_ text)`: replace the visible text, preserving saved texts.
 - `NoticeTable(_ text, pushOld)`: with true, save the visible text before replacing it.

@@ -5,13 +5,18 @@ module examples.highcard
 
 // Functions
 
-function suit(player) be 'clubs' when player = 0 otherwise (
-    'spades' when player = 1 otherwise ('hearts' when player = 2 otherwise 'diamonds')
-)
+function suit(player) be
+    'clubs' when player = 0,
+    'spades' when player = 1,
+    'hearts' when player = 2
+    otherwise 'diamonds'
 
-function rank(value) be 'A' when value = 14 otherwise (
-    'K' when value = 13 otherwise ('Q' when value = 12 otherwise ('J' when value = 11 otherwise value as :Text))
-)
+function rank(value) be
+    'A' when value = 14,
+    'K' when value = 13,
+    'Q' when value = 12,
+    'J' when value = 11
+    otherwise value as :Text
 
 function deck(player) be (from 2 to 14)[:select value =>
     [suit: suit(player: player), rank: rank(value: value), value: value]
@@ -51,7 +56,7 @@ on BeginTurn(player) {
 on Reveal(action, player) {
     let card be :board.draw(source: pile(player: player), destination: #trick)
     // Strictly greater preserves the first revealed card when values tie.
-    if card.properties.value > :board.state(key: #highest) {
+    if card.properties.value is more than :board.state(key: #highest) {
         :board.setstate(key: #highest, value: card.properties.value)
         :board.setstate(key: #winner, value: player)
     }
@@ -98,5 +103,5 @@ on EndGame(players) {
 
 on ShowRules(action) {
     emit Complete(action: action)
-    emit Notice('Reveal one card each round. The highest card wins all played cards; an ace is highest. Ties go to the first revealed card. After 13 rounds, the player with the most collected cards wins.')
+    emit Notice('Reveal one card each round. The highest card wins all played cards; an ace is highest. Ties go to the first revealed card. After 13 rounds, the player with the most collected cards wins.', title: 'Rules')
 }

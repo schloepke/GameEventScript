@@ -279,7 +279,7 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
         ("SetActionCards", ["action", "cards"]), ("ConsumeAction", ["action"]),
         ("NextPlayersTurn", []), ("NextPlayersTurn", ["nextPlayer"]), ("NextPlayersTurn", ["repeatTurnForPlayer"]), ("NextRound", []),
         ("EndGame", []),
-        ("Notice", ["_"]), ("NoticeTable", ["_"]),
+        ("Notice", ["_"]), ("Notice", ["_", "title"]), ("NoticeTable", ["_"]),
         ("NoticeTable", ["_", "pushOld"]), ("NoticeTable", ["_", "stackClear"]), ("NoticeTable", ["pop"]),
         ("PlayerBadge", ["_", "player"]),
         ("Complete", ["action"]), ("Reject", ["action", "reason"]), ("Finish", ["winners"]),
@@ -318,7 +318,7 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
     func nextPlayer(after player: Int) -> Int { (player + direction * (1 + skipCount) + playerCount * 2) % playerCount }
 
     var notice = ""
-    var notices: [String] = []
+    var notices: [(text: String, title: String)] = []
     var tableNotice = ""
     var tableNoticeStack: [String] = []
     var playerBadges: [Int: String] = [:]
@@ -385,8 +385,10 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
             else { throw CardGameError("ConsumeAction requires the successfully completed manual action") }
             activations[index].consumed = true
         case "Notice":
-            notice = try text(args[0])
-            notices.append(notice)
+            let message = try text(args[0])
+            let title = try args.count == 2 ? text(args[1]) : "Game Notice"
+            notice = message
+            notices.append((text: message, title: title))
         case "NoticeTable":
             if args.signatureLabels == ["pop"] {
                 guard args[0].kind == .boolean else { throw CardGameError("pop must be Boolean") }

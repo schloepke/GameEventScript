@@ -50,6 +50,19 @@ for (const [tag, text] of [
 ]) {
   assert.ok(game.start(source.replace(tag, text)).error);
 }
+// Each queued popup retains its own title; invalid titles fail at the host boundary.
+const noticeSource = source.replace('on PrepareGame(players) {', `on PrepareGame(players) {
+    emit Notice('Default message')
+    emit Notice('Custom message', title: 'Rules')
+    emit Notice('Next message', title: 'Bidding values')`);
+const noticeResult = game.start(noticeSource, 42);
+assert.equal(noticeResult.error, undefined);
+assert.deepEqual(noticeResult.state.notices, [
+  { text: 'Default message', title: 'Game Notice' },
+  { text: 'Custom message', title: 'Rules' },
+  { text: 'Next message', title: 'Bidding values' },
+]);
+assert.ok(game.start(noticeSource.replace("title: 'Rules'", 'title: #rules'), 42).error);
 const initial = game.start(source, 42);
 assert.equal(initial.error, undefined);
 assert.equal(initial.state.currentPlayer, 0);
@@ -136,7 +149,7 @@ for (let seed = 0; seed < 30; seed++) {
   }
   assert.equal(result.state.finished, true, `Seed ${seed} did not finish`);
   assert.ok(result.state.tableNotice);
-  assert.ok(result.state.notices.includes(result.state.tableNotice));
+  assert.ok(result.state.notices.some(notice => notice.text === result.state.tableNotice));
   assert.deepEqual(result.state.playerBadges, result.state.players.map((_, player) => result.state.winners.includes(player) ? 'Winner' : ''));
 }
 assert.equal(recycled, true);
@@ -359,7 +372,7 @@ for (const players of [2, 3, 4]) {
       assert.equal(result.state.finished, round === 13);
     }
     assert.ok(result.state.tableNotice);
-    assert.ok(result.state.notices.includes(result.state.tableNotice));
+    assert.ok(result.state.notices.some(notice => notice.text === result.state.tableNotice));
     assert.deepEqual(result.state.playerBadges, result.state.players.map((_, player) => result.state.winners.includes(player) ? 'Winner' : ''));
     assert.deepEqual(result.state.winners, scores.flatMap((score, player) =>
       score === Math.max(...scores) ? [player] : []));
@@ -453,7 +466,7 @@ for (const mode of modes) for (const handGame of [false, true]) for (let seed = 
           assert.equal(state.tableNotice, before.tableNotice);
           const symbols = { clubs: '♣', spades: '♠', hearts: '♥', diamonds: '♦' };
           const expected = `Last trick · won by Player ${leader + 1}` + previousTrick.map(card => ` · ${symbols[card.properties.suit]} ${card.properties.rank}`).join('');
-          assert.ok(state.notices.includes(expected), JSON.stringify({expected, notices: state.notices}));
+          assert.ok(state.notices.some(notice => notice.text === expected), JSON.stringify({expected, notices: state.notices}));
         }
       }
       assert.equal(state.currentPlayer, player);
@@ -525,7 +538,7 @@ for (const mode of modes) for (const handGame of [false, true]) for (let seed = 
     const value = { clubs: 12, spades: 11, hearts: 10, diamonds: 9, grand: 24 }[mode] * (matadors + levels);
     assert.ok(result.state.tableNotice.endsWith(`Score ${(declarer >= 61 ? 1 : -2) * value}`), JSON.stringify({ mode, handGame, seed, solo, ownCards: [...ownCards], matadors, levels, value, notice: result.state.tableNotice }));
   }
-  assert.ok(result.state.notices.includes(result.state.tableNotice));
+  assert.ok(result.state.notices.some(notice => notice.text === result.state.tableNotice));
   assert.deepEqual(result.state.playerBadges, result.state.players.map((_, player) => result.state.winners.includes(player) ? 'Winner' : ''));
 }
 assert.deepEqual([...leaders].sort(), [0, 1, 2]);
@@ -780,7 +793,7 @@ function checkBlackjack(result) {
     if (result === 'Win') winners.push(player);
   });
   assert.deepEqual(state.winners, winners);
-  assert.ok(state.notices.includes(state.tableNotice));
+  assert.ok(state.notices.some(notice => notice.text === state.tableNotice));
 }
 for (const players of [1, 2, 3]) for (let seed = 0; seed < 30; seed++) {
   let result = game.start(blackjack, seed, players);

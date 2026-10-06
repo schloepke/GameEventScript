@@ -50,18 +50,7 @@ extension GesParser {
                             let type = advance()
                             operands.append(node(.literal(.text(String(type.text.dropFirst()))), type))
                         } else {
-                            let value = try expression()
-                            if case .unary("-", let number) = value.kind, case .literal(let literal) = number.kind, literal.isNumeric {
-                                if literal.kind == .percentage {
-                                    operands.append(node(.literal(.percentage(-literal.asNumber)), token))
-                                } else if let integer = literal.integerValue, integer != Int64.min {
-                                    operands.append(node(.literal(.integer(-integer, unit: literal.unit)), token))
-                                } else {
-                                    operands.append(node(.literal(.float(-literal.asNumber, unit: literal.unit)), token))
-                                }
-                            } else {
-                                operands.append(value)
-                            }
+                            operands.append(try expression())
                         }
                     } while match(",")
                 }
@@ -71,7 +60,37 @@ extension GesParser {
             separators()
         }
         try expect("}")
-        return .init(output: output, declarations: declarations, lines: lines, predicate: predicate, allowSend: allowSend, location: location(start, previous))
+        let normalizedLines = lines.map { line in
+            GesAssemblyLine(name: line.name, label: line.label, operands: line.operands.map(normalizeAssemblyOperand), location: line.location)
+        }
+        return .init(output: output, declarations: declarations, lines: normalizedLines, predicate: predicate, allowSend: allowSend, location: location(start, previous))
+    }
+
+    func normalizeAssemblyOperand(_ expression: GesExpression) -> GesExpression {
+        func arguments(_ args: [GesArgument]) -> [GesArgument] {
+            args.map { .init(label: $0.label, value: normalizeAssemblyOperand($0.value)) }
+        }
+
+        let kind: GesExpression.Kind
+        switch expression.kind {
+        case .unary("-", let operand):
+            guard case .literal(let value) = operand.kind, value.isNumeric else { return expression }
+            if value.kind == .percentage {
+                kind = .literal(.percentage(-value.asNumber))
+            } else if let integer = value.integerValue, integer != Int64.min {
+                kind = .literal(.integer(-integer, unit: value.unit))
+            } else {
+                kind = .literal(.float(-value.asNumber, unit: value.unit))
+            }
+        case .call(let name, let args): kind = .call(name, arguments(args))
+        case .extensionCall(let namespace, let name, let args): kind = .extensionCall(namespace, name, arguments(args))
+        case .constructor(let type, let args): kind = .constructor(type, arguments(args))
+        case .message(let name, let args): kind = .message(name, arguments(args))
+        case .list(let items): kind = .list(items.map(normalizeAssemblyOperand))
+        case .map(let entries): kind = .map(entries.map { ($0.0, normalizeAssemblyOperand($0.1)) })
+        default: return expression
+        }
+        return .init(kind, expression.location, depth: expression.depth)
     }
 
     func assemblyMessageOperand(_ opcode: String, _ index: Int) -> Bool {

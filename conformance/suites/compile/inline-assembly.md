@@ -2360,3 +2360,698 @@ steps:
               type: ":Number.int64"
               value: "42"
 ```
+
+---
+
+## Test: predicate boolean cast
+
+This case verifies predicate boolean cast using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: predicate-boolean-cast
+kind: scriptApi
+level: scenario
+sources:
+  - name: predicate-boolean-cast.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+predicate valid(value) be asm { Cast valid, value, :Boolean }
+on Start() { emit Done(value: valid(value: true)) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Boolean"
+              value: true
+```
+
+---
+
+## Test: predicate call result
+
+This case verifies predicate call result using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: predicate-call-result
+kind: scriptApi
+level: scenario
+sources:
+  - name: predicate-call-result.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+predicate positive(value) be value > 0
+predicate valid(value) be asm { Call valid, positive(value: value) }
+on Start() { emit Done(value: valid(value: 1) and not valid(value: -1)) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Boolean"
+              value: true
+```
+
+---
+
+## Test: predicate cast and call join
+
+This case verifies predicate cast and call join using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: predicate-cast-and-call-join
+kind: scriptApi
+level: scenario
+sources:
+  - name: predicate-cast-and-call-join.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+predicate positive(value) be value > 0
+predicate valid(value, chooseCast) be asm {
+    JumpIfTrue chooseCast, cast
+    Call valid, positive(value: value)
+    Jump done
+    cast:
+    Cast valid, true, :Boolean
+    done:
+    Nop
+}
+on Start() { emit Done(value: valid(value: 1, chooseCast: false) and valid(value: 0, chooseCast: true)) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Boolean"
+              value: true
+```
+
+---
+
+## Test: predicate numeric cast rejected
+
+This case verifies predicate numeric cast rejected using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: predicate-numeric-cast-rejected
+kind: compileError
+level: scenario
+sources:
+  - name: predicate-numeric-cast-rejected.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+predicate invalid(value) be asm { Cast invalid, value, :Number }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: predicate function call rejected
+
+This case verifies predicate function call rejected using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: predicate-function-call-rejected
+kind: compileError
+level: scenario
+sources:
+  - name: predicate-function-call-rejected.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+function number() be 1
+predicate invalid() be asm { Call invalid, number() }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: vector rejects point
+
+This case verifies vector rejects point using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: vector-rejects-point
+kind: compileError
+level: scenario
+sources:
+  - name: vector-rejects-point.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { let result be asm { CreateVector result, :Point(x: 1, y: 2) } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: point rejects vector
+
+This case verifies point rejects vector using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: point-rejects-vector
+kind: compileError
+level: scenario
+sources:
+  - name: point-rejects-vector.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { let result be asm { CreatePoint result, :Vector(x: 1, y: 2) } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: record rejects spatial
+
+This case verifies record rejects spatial using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: record-rejects-spatial
+kind: compileError
+level: scenario
+sources:
+  - name: record-rejects-spatial.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { let result be asm { CreateRecord result, :Point(x: 1, y: 2) } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: external rejects record
+
+This case verifies external rejects record using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: external-rejects-record
+kind: compileError
+level: scenario
+sources:
+  - name: external-rejects-record.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Sample as { value: :Number }
+on Start() { let result be asm { CreateExternalType result, :Sample(value: 1) } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: data rejects record
+
+This case verifies data rejects record using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: data-rejects-record
+kind: compileError
+level: scenario
+sources:
+  - name: data-rejects-record.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Sample as { value: :Number }
+on Start() { let result be asm { ConstructData result, :Sample(value: 1) } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: data rejects cast
+
+This case verifies data rejects cast using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: data-rejects-cast
+kind: compileError
+level: scenario
+sources:
+  - name: data-rejects-cast.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { let result be asm { ConstructData result, :Number(1) } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: negative symbolic call
+
+This case verifies negative symbolic call using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: negative-symbolic-call
+kind: scriptApi
+level: scenario
+sources:
+  - name: negative-symbolic-call.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+function identity(value) be value
+on Start() { let result be asm { Call result, identity(value: -1) }; emit Done(value: result) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Number.int64"
+              value: "-1"
+```
+
+---
+
+## Test: negative symbolic values
+
+This case verifies negative symbolic values using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: negative-symbolic-values
+kind: scriptApi
+level: scenario
+sources:
+  - name: negative-symbolic-values.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+    let result be asm {
+        .register list, map, first, second
+        CreateList list, [-1, -2]
+        CreateMap map, [amount: -3]
+        IndexAccess first, 1, list
+        MemberAccess second, 'amount', map
+        Add result, first, second
+    }
+    emit Done(value: result)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Number.int64"
+              value: "-4"
+```
+
+---
+
+## Test: negative symbolic constructor
+
+This case verifies negative symbolic constructor using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: negative-symbolic-constructor
+kind: scriptApi
+level: scenario
+sources:
+  - name: negative-symbolic-constructor.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+    let result be asm {
+        .register point
+        CreatePoint point, :Point(x: -1m, y: -2m)
+        MemberAccess result, 'y', point
+    }
+    emit Done(value: result as :Text)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Text"
+              value: "-2m"
+```
+
+---
+
+## Test: negative symbolic message
+
+This case verifies negative symbolic message using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: negative-symbolic-message
+kind: scriptApi
+level: scenario
+sources:
+  - name: negative-symbolic-message.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { asm { EmitMessage Done(value: -1) } }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Number.int64"
+              value: "-1"
+```
+
+---
+
+## Test: negative symbolic emit
+
+This case verifies negative symbolic emit using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: negative-symbolic-emit
+kind: scriptApi
+level: scenario
+sources:
+  - name: negative-symbolic-emit.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { asm { emit Done(value: -1) } }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Number.int64"
+              value: "-1"
+```
+
+---
+
+## Test: symbolic data constructor
+
+This case verifies symbolic data constructor using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: symbolic-data-constructor
+kind: scriptApi
+level: scenario
+sources:
+  - name: symbolic-data-constructor.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+    let result be asm {
+        .register fields, instance
+        CreateMap fields, [value: -7]
+        ConstructData instance, :Record('Example', fields)
+        MemberAccess result, 'value', instance
+    }
+    emit Done(value: result)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Number.int64"
+              value: "-7"
+```

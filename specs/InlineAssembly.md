@@ -446,6 +446,18 @@ in handlers may send messages; function, predicate and computed-field blocks may
 not. The explicit `emit`/`publish` spellings retain their normal message syntax.
 Arguments inside symbolic forms must be scalar literals or register names;
 compute more involved values with preceding instructions or ordinary GES.
+Negative numeric, quantity and percentage literals are also accepted inside
+symbolic argument lists, list/map values and message operands.
+
+Constructor operands must match the named instruction: CreateVector/CreatePoint
+require the corresponding spatial type, CreateRecord a script record, and
+CreateExternalType an external type. ConstructData requires an explicit data
+constructor that lowers to ConstructData, not a cast or script/external record
+constructor. Mismatches report `compile.invalidAssembly`.
+
+Predicate result analysis recognizes Boolean/Nothing casts and resolved
+predicate calls as Boolean-or-Nothing results, including at control-flow joins.
+A numeric cast or an ordinary function call does not establish that result type.
 
 `Cast`/`CheckType` accept a built-in type such as `:Number`. These are the direct
 VM operations; use `CastNumeric` for the VM's numeric conversion operation.

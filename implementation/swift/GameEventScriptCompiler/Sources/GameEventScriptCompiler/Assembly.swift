@@ -256,6 +256,8 @@ extension GesCompiler {
     func assemblyResultKind(_ line: GesAssemblyLine, _ state: [String: String]) -> String {
         if ["IteratorCreate", "IteratorCreateOrJump", "CreateRangeIterator", "CreateRangeIteratorWithStep", "CreateRangeIteratorShort"].contains(line.name) { return "iterator" }
         if line.name.hasSuffix("BuilderCreate") { return String(line.name.dropLast(6)) }
+        if line.name == "Cast", case .literal(let type) = line.operands[2].kind, ["boolean", "nothing"].contains(type.textValue?.lowercased() ?? "") { return "boolean" }
+        if line.name == "Call", case .call(let name, let args) = line.operands[1].kind, definitions[signature(name, args.map(\.label))]?.kind == "predicate" { return "boolean" }
         if line.name == "Move" {
             if assemblyBooleanOperand(line.operands[1], state) { return "boolean" }
             if case .name(let name) = line.operands[1].kind { return state[name] ?? "value" }

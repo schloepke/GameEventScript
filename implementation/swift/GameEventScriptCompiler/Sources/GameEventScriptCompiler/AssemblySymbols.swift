@@ -28,7 +28,12 @@ extension GesCompiler {
             let valid: Bool
             switch (line.name, line.operands[1].kind) {
             case ("Call", .call), ("BindHandler", .call), ("CallExternal", .extensionCall), ("CreateList", .list), ("CreateMap", .map), ("LoadMessage", .message), ("LoadHandler", .handler): valid = true
-            case ("CreateRecord", .constructor), ("CreateExternalType", .constructor), ("CreateVector", .constructor), ("CreatePoint", .constructor), ("ConstructData", .constructor): valid = true
+            case ("CreateVector", .constructor(let type, _)): valid = type == "vector"
+            case ("CreatePoint", .constructor(let type, _)): valid = type == "point"
+            case ("CreateRecord", .constructor(let type, _)): valid = records[type] != nil
+            case ("CreateExternalType", .constructor(let type, _)): valid = try records[type] == nil && type.first?.isUppercase == true && catalog?.resolve(type) != nil
+            case ("ConstructData", .constructor(let type, let args)):
+                valid = ["record", "series"].contains(type) || ["number", "range", "message", "nothing", "percentage", "boolean", "text", "tag", "list", "map", "dice", "handler"].contains(type) && (args.count != 1 || args[0].label != "_")
             default: valid = false
             }
             if !valid { throw assemblyFailure(line.location, "Operand does not match symbolic instruction.", line.name) }

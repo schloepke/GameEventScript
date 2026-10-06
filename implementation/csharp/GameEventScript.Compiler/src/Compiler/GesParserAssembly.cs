@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Collections.Generic;
+using System.Linq;
 using static GameEventScript.Compiler.GesTokenKind;
 
 namespace GameEventScript.Compiler;
@@ -37,9 +38,9 @@ internal sealed partial class GesParser
             else if (Match(Emit) || Match(Publish))
             {
                 var kind = Previous.Kind == Emit ? PublishStatementKind.Emit : PublishStatementKind.Publish;
-                var message = ParsePublishMessageExpression();
+                var message = NormalizeAssemblyOperand(ParsePublishMessageExpression());
                 var operands = new List<ExpressionNode> { message };
-                operands.AddRange(ParseOptionalTagExpressions());
+                operands.AddRange(ParseOptionalTagExpressions().Select(NormalizeAssemblyOperand));
                 lines.Add(WithRange(new AssemblyLine(kind == PublishStatementKind.Emit ? "emit" : "publish", false, operands), token));
             }
             else if (Is(Identifier))
@@ -76,7 +77,7 @@ internal sealed partial class GesParser
 
     private ExpressionNode ParseAssemblyOperand(bool message)
     {
-        if (message && Is(Message)) return ParseMessageLiteralExpressionCore();
+        if (message && Is(Message)) return NormalizeAssemblyOperand(ParseMessageLiteralExpressionCore());
         if (Is(OperatorMinus) && _reader.Peek(1).Kind == Float && _reader.Peek(1).Text == "9223372036854775808")
         {
             var start = Advance();
@@ -90,7 +91,14 @@ internal sealed partial class GesParser
         }
         // Reuse literal decoding and its exact Int64/units rules; reject compound
         // expressions during assembly validation, before lowering any instruction.
-        var operand = ParseExpression();
+        return NormalizeAssemblyOperand(ParseExpression());
+    }
+
+    private ExpressionNode NormalizeAssemblyOperand(ExpressionNode operand)
+    {
+        ArgumentListNode Arguments(ArgumentListNode arguments)
+            => WithRange(new ArgumentListNode(arguments.Arguments.Select(argument => argument with { Expression = NormalizeAssemblyOperand(argument.Expression) }).ToArray()), arguments);
+
         return operand switch
         {
             UnaryExpressionNode { Operator: GesUnaryOperator.Negate, Operand: IntegerLiteralExpressionNode integer } when integer.Value != long.MinValue => WithRange(new IntegerLiteralExpressionNode(-integer.Value), operand),
@@ -101,6 +109,12 @@ internal sealed partial class GesParser
                 => WithRange(new UnitFloatLiteralExpressionNode(-number.Value, number.UnitName), operand),
             UnaryExpressionNode { Operator: GesUnaryOperator.Negate, Operand: PercentageLiteralExpressionNode percentage }
                 => WithRange(new PercentageLiteralExpressionNode(-percentage.RatioValue), operand),
+            CallExpressionNode call => WithRange(new CallExpressionNode(call.Name, Arguments(call.ArgumentList)), operand),
+            ExtensionCallExpressionNode call => WithRange(new ExtensionCallExpressionNode(call.ExtensionName, call.FunctionName, Arguments(call.ArgumentList)), operand),
+            TypeConstructorExpressionNode constructor => WithRange(new TypeConstructorExpressionNode(constructor.TypeName, Arguments(constructor.ArgumentList)), operand),
+            MessageLiteralExpressionNode message => WithRange(new MessageLiteralExpressionNode(message.Message, Arguments(message.ArgumentList)), operand),
+            ListLiteralExpressionNode list => WithRange(new ListLiteralExpressionNode(list.Items.Select(NormalizeAssemblyOperand).ToArray()), operand),
+            MapLiteralExpressionNode map => WithRange(new MapLiteralExpressionNode(map.Entries.Select(entry => entry with { Value = NormalizeAssemblyOperand(entry.Value) }).ToArray()), operand),
             _ => operand
         };
     }

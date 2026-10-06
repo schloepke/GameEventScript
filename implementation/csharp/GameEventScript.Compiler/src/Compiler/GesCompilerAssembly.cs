@@ -164,7 +164,7 @@ internal static partial class GesCompiler
                 if (declaration.Export) outer.DeclareExisting(declaration.Name, context.Require(declaration.Name));
         }
 
-        private static void ValidateAssemblyFlow(
+        private void ValidateAssemblyFlow(
             AssemblyBlockNode block,
             string[] signatures,
             IReadOnlyDictionary<string, int> labels,
@@ -254,18 +254,18 @@ internal static partial class GesCompiler
                     var reads = signature[operandIndex] == 'e' ? AssemblySymbolicReads(line.Operands[operandIndex], line.Name == "BindHandler") : new[] { line.Operands[operandIndex] };
                     foreach (var read in reads)
                     {
-                    if (read is not IdentifierExpressionNode name) continue;
-                    if (writable.Contains(name.Name) && !state.ContainsKey(name.Name))
-                        throw AssemblyFailure("Assembly register is not initialized on every incoming path.", name.Name);
-                    if (state.TryGetValue(name.Name, out var kind))
-                    {
-                        if (kind == "closed") throw AssemblyFailure("Assembly resource is already closed.", name.Name);
-                        if (IsAssemblyResource(kind) && !AssemblyAcceptsResource(line.Name, operandIndex, kind))
-                            throw AssemblyFailure("Internal assembly values cannot escape or be copied.", name.Name);
-                    }
-                    var expected = AssemblyExpectedResource(line.Name, operandIndex);
-                    if (expected is not null && (!state.TryGetValue(name.Name, out var actual) || expected != actual))
-                        throw AssemblyFailure("Assembly resource has the wrong lifecycle state.", name.Name);
+                        if (read is not IdentifierExpressionNode name) continue;
+                        if (writable.Contains(name.Name) && !state.ContainsKey(name.Name))
+                            throw AssemblyFailure("Assembly register is not initialized on every incoming path.", name.Name);
+                        if (state.TryGetValue(name.Name, out var kind))
+                        {
+                            if (kind == "closed") throw AssemblyFailure("Assembly resource is already closed.", name.Name);
+                            if (IsAssemblyResource(kind) && !AssemblyAcceptsResource(line.Name, operandIndex, kind))
+                                throw AssemblyFailure("Internal assembly values cannot escape or be copied.", name.Name);
+                        }
+                        var expected = AssemblyExpectedResource(line.Name, operandIndex);
+                        if (expected is not null && (!state.TryGetValue(name.Name, out var actual) || expected != actual))
+                            throw AssemblyFailure("Assembly resource has the wrong lifecycle state.", name.Name);
                     }
                 }
                 for (var operandIndex = 0; operandIndex < signature.Length; operandIndex++)
@@ -307,9 +307,11 @@ internal static partial class GesCompiler
         private static bool AssemblyBooleanOperand(ExpressionNode operand, IReadOnlyDictionary<string, string> state)
             => operand is BooleanLiteralExpressionNode or NothingLiteralExpressionNode || operand is IdentifierExpressionNode name && state.TryGetValue(name.Name, out var kind) && kind == "boolean";
 
-        private static string AssemblyResultKind(AssemblyLine line, IReadOnlyDictionary<string, string> state)
+        private string AssemblyResultKind(AssemblyLine line, IReadOnlyDictionary<string, string> state)
             => line.Name switch
             {
+                "Cast" when AssemblyType(line.Operands[2]) is GameEventScriptBytecodeTypeKind.Boolean or GameEventScriptBytecodeTypeKind.Nothing => "boolean",
+                "Call" when line.Operands[1] is CallExpressionNode call && GesCallableSignatures.Resolve(module.Callables, call)?.Kind == GameEventScriptCallableKind.PredicateCall => "boolean",
                 "Move" when line.Operands[1] is BooleanLiteralExpressionNode or NothingLiteralExpressionNode => "boolean",
                 "Not" when AssemblyBooleanOperand(line.Operands[1], state) => "boolean",
                 "And" or "Or" or "Xor" or "Implies" when AssemblyBooleanOperand(line.Operands[1], state) && AssemblyBooleanOperand(line.Operands[2], state) => "boolean",

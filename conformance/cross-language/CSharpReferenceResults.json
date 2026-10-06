@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "0BD999F2861CF646AB8AFD891295F759ACD7B028C58EB0F7F7C783653C47B9A1",
+    "sha256": "8D19FF24B5C224CA660C9D20C6A58D284CDF42578A38DE56BB88F93F370855A3",
     "documentCount": 98,
-    "caseCount": 1774
+    "caseCount": 1791
   },
   "cases": [
     {
@@ -3335,6 +3335,32 @@
       "code": "conformance.passed"
     },
     {
+      "id": "compile.inline-assembly/data-rejects-cast",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/data-rejects-record",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "compile.inline-assembly/duplicate-label",
       "kind": "compileError",
       "level": "scenario",
@@ -3409,6 +3435,19 @@
     },
     {
       "id": "compile.inline-assembly/expression-send",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/external-rejects-record",
       "kind": "compileError",
       "level": "scenario",
       "requires": {
@@ -3618,6 +3657,91 @@
       "code": "conformance.passed"
     },
     {
+      "id": "compile.inline-assembly/negative-symbolic-call",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/negative-symbolic-constructor",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/negative-symbolic-emit",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/negative-symbolic-message",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/negative-symbolic-values",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "compile.inline-assembly/negative-unit-preserved",
       "kind": "scriptApi",
       "level": "scenario",
@@ -3635,6 +3759,19 @@
       "code": "conformance.passed"
     },
     {
+      "id": "compile.inline-assembly/point-rejects-vector",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "compile.inline-assembly/predicate",
       "kind": "scriptApi",
       "level": "scenario",
@@ -3645,6 +3782,83 @@
           "observer",
           "publish-sink",
           "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/predicate-boolean-cast",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/predicate-call-result",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/predicate-cast-and-call-join",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/predicate-function-call-rejected",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/predicate-numeric-cast-rejected",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
         ],
         "optional": []
       },
@@ -3816,6 +4030,19 @@
       "code": "conformance.passed"
     },
     {
+      "id": "compile.inline-assembly/record-rejects-spatial",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "compile.inline-assembly/resource-after-finish",
       "kind": "compileError",
       "level": "scenario",
@@ -3916,6 +4143,23 @@
     },
     {
       "id": "compile.inline-assembly/symbolic-call",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/symbolic-data-constructor",
       "kind": "scriptApi",
       "level": "scenario",
       "requires": {
@@ -4066,6 +4310,19 @@
     },
     {
       "id": "compile.inline-assembly/unreachable-unknown-opcode",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/vector-rejects-point",
       "kind": "compileError",
       "level": "scenario",
       "requires": {

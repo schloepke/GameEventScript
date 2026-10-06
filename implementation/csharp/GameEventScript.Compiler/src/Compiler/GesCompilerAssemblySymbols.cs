@@ -11,7 +11,7 @@ internal static partial class GesCompiler
 {
     private sealed partial class BinaryCompiler
     {
-        private static string? AssemblySymbolicSignature(AssemblyLine line)
+        private string? AssemblySymbolicSignature(AssemblyLine line)
         {
             if (line.Name is "emit" or "publish") return new string('e', line.Operands.Count);
             if (AssemblySend(line) is { } send)
@@ -32,11 +32,21 @@ internal static partial class GesCompiler
                 "CreateMap" => value is MapLiteralExpressionNode,
                 "LoadMessage" => value is MessageLiteralExpressionNode,
                 "LoadHandler" => value is HandlerLiteralExpressionNode,
-                _ => value is TypeConstructorExpressionNode
+                "CreateVector" => value is TypeConstructorExpressionNode { TypeName: "vector" } vector && GetSpatialConstructorStageShape(vector.Arguments) is not null,
+                "CreatePoint" => value is TypeConstructorExpressionNode { TypeName: "point" } point && GetSpatialConstructorStageShape(point.Arguments) is not null,
+                "CreateRecord" => value is TypeConstructorExpressionNode record && module.TypeDefinitions.ContainsKey(record.TypeName),
+                "CreateExternalType" => value is TypeConstructorExpressionNode external && !module.TypeDefinitions.ContainsKey(external.TypeName)
+                    && module.ExternalTypeDefinitions.Resolve(external.TypeName) is not null,
+                "ConstructData" => value is TypeConstructorExpressionNode data && IsAssemblyDataConstructor(data),
+                _ => false
             };
             if (!valid) throw AssemblyFailure("Operand does not match the symbolic instruction.", line.Name);
             return "we";
         }
+
+        private static bool IsAssemblyDataConstructor(TypeConstructorExpressionNode constructor)
+            => constructor.TypeName is "record" or "series" || constructor.TypeName is "number" or "range" or "message" or "nothing" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "handler"
+                && (constructor.Arguments.Count != 1 || constructor.Arguments[0].Label is not null);
 
         private static (bool Publish, bool Result, bool Delayed, bool Tags)? AssemblySend(AssemblyLine line)
         {

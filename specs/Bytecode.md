@@ -140,6 +140,16 @@ V1 field limits or inconsistent frame/staging states are invalid resource
 metadata. Underdeclared resources are rejected at the Compiler, Reader, Writer,
 and `Host.Load` validation boundaries before execution.
 
+Internal iterator and builder values may only be used in their designated
+operand roles. They must not be copied with `Move`, returned, staged, placed in
+argument/tag lists or stored as ordinary collection elements. Builders may only
+be read by the matching builder family; iterators may be consumed by the
+iterator-aware collection operations. Complete Program validation follows each
+reachable internal producer through control flow until its register is
+overwritten or released, rejecting escapes with `InvalidOperand`. Ordinary
+values and register reuse after an overwrite remain valid. This applies to
+all Programs regardless of which compiler or assembler produced them.
+
 The synchronous call graph must be acyclic. Direct and indirect recursion are
 compile errors, and a loader must validate the same invariant for deserialized
 programs before accepting them. Loops and bounded collection operations are the

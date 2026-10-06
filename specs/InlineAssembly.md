@@ -96,7 +96,8 @@ incoming paths. Every output must be initialized on every normal block exit.
 Unreachable instructions still receive structural, operand and name checks.
 Branch joins intersect definite-initialization sets; loops require a fixed point.
 Source operands are checked before destination writes, including aliasing cases.
-IteratorNext initializes its destination only on the success edge.
+IteratorNext writes an item on success and Nothing on exhaustion; both edges
+initialize its destination.
 
 Physical register allocation must preserve values across back edges and branches.
 Read-only inputs must stay live for all their reads; output/input aliasing must
@@ -153,6 +154,22 @@ Take/Drop, Distinct and ordering. Each pair must preserve type, Nothing/NaN,
 unit, ordering and empty-input semantics. Timing excludes compilation, assembly
 and input creation. Report allocations, code size, limits and pause granularity
 as well as elapsed time; do not infer that all operations behave alike.
+
+## Implementation progress
+
+- Step 1: contract and inventory recorded.
+- Step 2: internal-value escape validation implemented in both runtimes. The
+  shared `program.internal-values` corpus has 19 binary fixtures covering all
+  six internal families, copying, staging, message/return escape, self-insertion,
+  branch/loop paths, wrong builder families, valid finishing, register release,
+  overwrite, iterator closing and collection consumption. Validation uses two
+  instruction-sized scratch arrays in C# and equivalent bounded worklists in
+  Swift, rather than an instruction-by-register state matrix. It follows each
+  reachable producer until overwrite/release; worst-case work is proportional
+  to producer count times instruction count. VM dispatch is unchanged.
+- Steps 3–7 remain pending. In particular, the source-level definite-assignment,
+  lifecycle and random-scope checks are not implemented by the binary escape
+  validator. No ASM source syntax is accepted yet.
 
 ## Complete opcode inventory
 

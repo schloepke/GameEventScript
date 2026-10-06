@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "FB9BA60D5E70BC846C78142C17FB186019D4A614C15605FF0F81FFDC381FA7CA",
-    "documentCount": 96,
-    "caseCount": 1695
+    "sha256": "0480E08FDD2E9CACED8230E283C0EF7D90CF3FE0B9334E4726EC0955013E143E",
+    "documentCount": 97,
+    "caseCount": 1714
   },
   "cases": [
     {
@@ -6374,6 +6374,253 @@
       "id": "program.call-graph-depth/valid-shallow-call-chain",
       "kind": "programBinary",
       "level": "scenario",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/builder-branch-escape",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/builder-copy",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/builder-finished",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/builder-loop-escape",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/builder-overwritten",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/builder-return",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/builder-self-insertion",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/builder-staging",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/builder-wrong-family",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/closed-iterator",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/distinct-builder-escape",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/group-builder-escape",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/iterator-branch-escape",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/iterator-counted",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/iterator-escape",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/list-builder-escape",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/map-builder-escape",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/order-builder-escape",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.internal-values/released-register",
+      "kind": "programBinary",
+      "level": "atomic",
       "requires": {
         "core": [
           "program-binary"

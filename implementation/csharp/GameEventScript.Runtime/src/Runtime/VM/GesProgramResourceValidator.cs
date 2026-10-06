@@ -72,6 +72,7 @@ internal readonly struct GesProgramResourceValidator
 
         foreach (var routine in completed) Analyze(routine);
         ValidateInactiveCodeAndDebugSymbols();
+        GesProgramInternalValueValidator.Validate(_program, _entries, Frames);
         for (var index = 0; index < _program.Bindings.Entries.Count; index++)
         {
             var bind = _program.Bindings.Entries[index];

@@ -249,7 +249,7 @@ public static class GameEventScriptProgramValidator
         }
     }
 
-    private static bool IsRegisterOperand(GameEventScriptOpcodePrinter.OperandPart part)
+    internal static bool IsRegisterOperand(GameEventScriptOpcodePrinter.OperandPart part)
         => part != GameEventScriptOpcodePrinter.OperandPart.OutboundMessage &&
            (part is >= GameEventScriptOpcodePrinter.OperandPart.TargetRegister and <= GameEventScriptOpcodePrinter.OperandPart.AuxDRegister || part == GameEventScriptOpcodePrinter.OperandPart.FaceRegister);
 
@@ -268,7 +268,7 @@ public static class GameEventScriptProgramValidator
         }
     }
 
-    private static ushort ReadRegisterOperand(GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part, int operandIndex)
+    internal static ushort ReadRegisterOperand(GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part, int operandIndex)
         => part switch
         {
             GameEventScriptOpcodePrinter.OperandPart.TargetRegister or GameEventScriptOpcodePrinter.OperandPart.OutboundMessage => instruction.DestinationRegister,
@@ -304,7 +304,7 @@ public static class GameEventScriptProgramValidator
     private static bool IsListOperand(GameEventScriptOpcodePrinter.OperandPart part)
         => part is >= GameEventScriptOpcodePrinter.OperandPart.MessageShapeList and <= GameEventScriptOpcodePrinter.OperandPart.TagRegisterList;
 
-    private static ushort ReadListOperand(GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part)
+    internal static ushort ReadListOperand(GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part)
         => part switch
         {
             GameEventScriptOpcodePrinter.OperandPart.ArgumentNameList when instruction.OpCode == GameEventScriptBytecodeOpCode.ConstructData => instruction.AU,

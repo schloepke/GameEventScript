@@ -92,3 +92,6 @@ allocation results. Compilation and input creation should be outside timing.
 There is no dedicated `Sum` opcode: ordinary `[:sum]` already lowers to iteration
 and arithmetic. Existing operations such as `Count`, `HasAny` and `First` are
 better initial candidates for comparisons with explicit iterator loops.
+
+The [measured comparison](InlineAssemblyBenchmarks.md) includes a reproducible
+C# harness, List workloads, allocation and frame-budget observations.

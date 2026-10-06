@@ -48,6 +48,11 @@ Every contract area has exactly one owning document. Other documents link to tha
 
 All specification documents in the table are normative.
 
+## Compiler experiments
+
+- [Inline assembly guide](guide/InlineAssembly.md): safe register and symbolic operand syntax.
+- [Collection opcode measurements](guide/InlineAssemblyBenchmarks.md): reproducible ASM comparisons and their limits.
+
 ## Generated API references
 
 - [C# API reference](guide/api/CSharp.md): public assemblies and XML documentation.

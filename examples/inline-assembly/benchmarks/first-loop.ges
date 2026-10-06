@@ -1,0 +1,10 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+function operation(items) be asm {
+    .register iterator
+    IteratorCreate iterator, items
+    IteratorNext operation, iterator, done
+    done:
+    IteratorClose iterator
+}

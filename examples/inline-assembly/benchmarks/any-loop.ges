@@ -1,0 +1,16 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+function operation(items) be asm {
+    .register iterator, item
+    LoadFalse operation
+    IteratorCreate iterator, items
+    next:
+    IteratorNext item, iterator, done
+    JumpIfTrue item, found
+    Jump next
+    found:
+    LoadTrue operation
+    done:
+    IteratorClose iterator
+}

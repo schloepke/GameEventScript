@@ -3,7 +3,7 @@
 
 # Inline assembly implementation contract
 
-Status: C# and Swift implementations qualified; measurement report pending. Each
+Status: C# and Swift implementations and initial measurements qualified. Each
 implementation milestone must qualify the corresponding behavior in shared
 Markdown Conformance before marking it implemented. Inline assembly is GES
 source syntax, not a reader for the GESA dump format.
@@ -187,7 +187,11 @@ as well as elapsed time; do not infer that all operations behave alike.
   acceptance passes 1,743 and skips 31 optional performance cases. Swift Runtime
   passes 1,414 scenarios using C#-compiled inputs. C# Release/allocation, Swift
   API, native adapters, CLI, numeric text and product JSON roundtrips pass.
-- Step 7 remains pending: collection-opcode measurements and their interpretation.
+- Step 7: reproducible C# comparisons of Count, HasAny, HasAll and First against
+  explicit iterator loops record elapsed time, allocation, code size, registers
+  and pause granularity. The [measured report](../docs/guide/InlineAssemblyBenchmarks.md)
+  supports retaining these opcodes; it does not generalize to unmeasured operations
+  or runtimes. No opcode changes follow from this initial study.
 
 ## Complete opcode inventory
 

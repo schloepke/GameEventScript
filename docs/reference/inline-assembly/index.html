@@ -1,0 +1,1179 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-g5ptsecz"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Inline assembly implementation contract | Game Event Script</title><link rel="canonical" href="https://gameeventscript.org/docs/reference/inline-assembly/"/><link rel="sitemap" href="/sitemap-index.xml"/><link rel="shortcut icon" href="/favicon-pixel-duo.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.3.5"/><meta name="generator" content="Starlight v0.42.4"/><meta property="og:title" content="Inline assembly implementation contract"/><meta property="og:type" content="article"/><meta property="og:url" content="https://gameeventscript.org/docs/reference/inline-assembly/"/><meta property="og:locale" content="en"/><meta property="og:description" content="Inline assembly implementation contract — Game Event Script documentation."/><meta property="og:site_name" content="Game Event Script"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Inline assembly implementation contract — Game Event Script documentation."/><script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script><template id="theme-icons"><svg aria-hidden="true" class="light astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg><svg aria-hidden="true" class="dark astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg><svg aria-hidden="true" class="auto astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg></template><link rel="stylesheet" href="/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/_astro/common.DzjHulxO.css"><script type="module" src="/_astro/page.Dwipeu-R.js"></script></head><body class="astro-g5ptsecz"><a class="sl-skip-link astro-qb7clj6f" href="#_top">Skip to content</a><div class="page sl-flex astro-yntsjkba"><header class="header astro-yntsjkba"><div class="header astro-by6fddyj"><div class="title-wrapper sl-flex astro-by6fddyj"><a href="/" class="site-title sl-flex astro-6rvad3va"><img class="astro-6rvad3va" alt src="/_astro/mark.DsNbRX0k.svg" width="64" height="64"><span class="astro-6rvad3va" translate="no">Game Event Script</span></a></div><div class="sl-flex print:hidden astro-by6fddyj"><site-search class="astro-by6fddyj astro-b5kgnn7o" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-b5kgnn7o"><svg aria-hidden="true" class="astro-b5kgnn7o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block astro-b5kgnn7o" aria-hidden="true">Search</span><kbd class="sl-hidden md:sl-flex astro-b5kgnn7o" style="display: none;"><kbd class="astro-b5kgnn7o">Ctrl</kbd><kbd class="astro-b5kgnn7o">K</kbd></kbd></button><dialog style="padding:0" aria-label="Search" class="astro-b5kgnn7o"><div class="dialog-frame sl-flex astro-b5kgnn7o"><button data-close-modal class="sl-flex md:sl-hidden astro-b5kgnn7o">Cancel</button><div class="search-container astro-b5kgnn7o"><div id="starlight__search" class="astro-b5kgnn7o"></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/_astro/Search.astro_astro_type_script_index_0_lang.BuGLwjLu.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group astro-by6fddyj"><div class="sl-flex social-icons astro-by6fddyj"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script><script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div><aside class="ges-development-notice" aria-label="Documentation version" data-pagefind-ignore>Development documentation. Check the <a href="/docs/changelog/">changelog</a> when using a published package.</aside><script type="module">var e=document.querySelector(`.ges-development-notice`);if(e){let t=()=>document.documentElement.style.setProperty(`--ges-notice-height`,`${e.getBoundingClientRect().height}px`);t(),new ResizeObserver(t).observe(e)}</script></header><nav class="sidebar print:hidden astro-yntsjkba" aria-label="Main"><button popovertarget="starlight__sidebar" class="sl-menu-button sl-flex md:sl-hidden print:hidden astro-r2osgdlg"><svg aria-hidden="true" class="open-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg><svg aria-hidden="true" class="close-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg><span class="sr-only astro-r2osgdlg">Menu</span></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=matchMedia(`(min-width: 50em)`),t=()=>{this.popover=e.matches?null:`auto`};t(),e.addEventListener(`change`,()=>t()),this.addEventListener(`toggle`,({newState:e})=>this.trapFocus(e===`open`))}trapFocus(e){document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}};customElements.define(`sl-sidebar-pane`,e);</script><sl-sidebar-pane popover id="starlight__sidebar" class="sidebar-pane astro-yntsjkba"><div class="sidebar-content sl-flex astro-yntsjkba"><sl-sidebar-state-persist data-hash="1e38q1f" class="astro-ipdry5cl"><script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script><ul class="top-level astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/" class="large astro-rmhv4bp6"><span class="astro-rmhv4bp6">Home</span></a></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Start here</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="0"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Documentation overview</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Learn the language</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in C#</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/learn/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Embed in Swift</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Tools</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="1"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/tools/downloads/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">CLI installation and downloads</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-cli/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Native Swift CLI</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/csharp-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/swift-highlighter/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift syntax highlighting</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/tools/editor-bundles/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Editor packages and syntax highlighting</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Native integration</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="2"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/implementations/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/csharp-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# API reference</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/implementations/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift implementation</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/integration/swift-bridge/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift bridge</span></a></li><li class="astro-rmhv4bp6"><a href="/api/swift/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Swift API reference</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Language and host reference</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="3"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/language/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Game Event Script language specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/text/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable text and Unicode semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/numbers/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable number semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/semantics/determinism/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable determinism semantics</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/host-runtime/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Host runtime specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/public-api/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable public API specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/diagnostics/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable diagnostics specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/message-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Product message JSON V1</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/syntax-highlighting/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Syntax highlighting</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Program formats</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="4"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/program-model/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable program model specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/bytecode/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Bytecode specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/binary-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesb` binary format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/assembler-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">`.gesa` assembler format specification</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Conformance</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="5"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/markdown-format/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance Markdown format specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/runner/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance runner specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/environment/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Conformance environment specification</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/coverage/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Portable Conformance Coverage</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/reference/conformance/cross-language-acceptance/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Cross-language conformance acceptance</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Packages and releases</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="6"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/docs/distribution/packages/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Library packages and releases</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/distribution/csharp/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">C# distribution</span></a></li><li class="astro-rmhv4bp6"><a href="/docs/changelog/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Changelog</span></a></li></ul></details></li></ul><script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist><div class="md:sl-hidden"><div class="mobile-preferences sl-flex astro-p4azlveh"><div class="social-icons astro-p4azlveh"><a href="https://github.com/schloepke/GameEventScript" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script></div></div></div></sl-sidebar-pane></nav><div class="main-frame astro-yntsjkba"><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-lrzkfocr"><aside class="right-sidebar-container print:hidden astro-lrzkfocr"><div class="right-sidebar astro-lrzkfocr"><div class="lg:sl-hidden astro-qok35upx"><mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-66cqc7ze"><nav aria-labelledby="starlight__on-this-page--mobile" class="astro-66cqc7ze"><details id="starlight__mobile-toc" class="astro-66cqc7ze"><summary id="starlight__on-this-page--mobile" class="sl-flex astro-66cqc7ze"><span class="toggle sl-flex astro-66cqc7ze">On this page<svg aria-hidden="true" class="caret astro-66cqc7ze astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current astro-66cqc7ze"></span></summary><div class="dropdown astro-66cqc7ze"><ul class="isMobile astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#scope-and-syntax" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Scope and syntax</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#operands-and-expansion" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Operands and expansion</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#register-and-control-flow-analysis" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Register and control-flow analysis</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#preservation-and-safety" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Preservation and safety</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#delivery-and-verification" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Delivery and verification</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#implementation-progress" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Implementation progress</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#complete-opcode-inventory" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Complete opcode inventory</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#symbolic-source-operands" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Symbolic source operands</span></a></li></ul></div></details></nav></mobile-starlight-toc><script type="module" src="/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C3fM4Kra.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block astro-qok35upx"><div class="sl-container astro-qok35upx"><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul class="astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#scope-and-syntax" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Scope and syntax</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#operands-and-expansion" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Operands and expansion</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#register-and-control-flow-analysis" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Register and control-flow analysis</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#preservation-and-safety" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Preservation and safety</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#delivery-and-verification" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Delivery and verification</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#implementation-progress" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Implementation progress</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#complete-opcode-inventory" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Complete opcode inventory</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#symbolic-source-operands" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Symbolic source operands</span></a></li></ul></nav></starlight-toc><script type="module" src="/_astro/TableOfContents.astro_astro_type_script_index_0_lang.BpJaGz7G.js"></script></div></div></div></aside><div class="main-pane astro-lrzkfocr"><main data-pagefind-body class="astro-g5ptsecz" lang="en" dir="ltr"><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><h1 id="_top" class="astro-bebwqqxs">Inline assembly implementation contract</h1></div></div><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><div class="sl-markdown-content"><!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<p>Status: C# and Swift implementations and initial measurements qualified. Each
+implementation milestone must qualify the corresponding behavior in shared
+Markdown Conformance before marking it implemented. Inline assembly is GES
+source syntax, not a reader for the GESA dump format.</p>
+<h2 id="scope-and-syntax">Scope and syntax</h2>
+<p>The portable C# and Swift Compilers implement the same contract. No additional
+module, opcode, binary section, or host-level ASM permission is required.</p>
+<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="ges"><code><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">on</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">Example</span><span style="--0:#D6DEEB;--1:#403F53">(</span><span style="--0:#C5E478;--1:#3B61B0">input</span><span style="--0:#D6DEEB;--1:#403F53">) {</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">asm</span><span style="--0:#D6DEEB;--1:#403F53"> {</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">x</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#C5E478;--1:#3B61B0">y</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#C5E478;--1:#3B61B0">LoadInteger</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">x</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#F78C6C;--1:#AA0982">10</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#C5E478;--1:#3B61B0">LoadInteger</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">y</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#F78C6C;--1:#AA0982">20</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">square</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">asm</span><span style="--0:#D6DEEB;--1:#403F53"> {</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#C5E478;--1:#3B61B0">Multiply</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">square</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#C5E478;--1:#3B61B0">x</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#C5E478;--1:#3B61B0">x</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">function</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">square</span><span style="--0:#D6DEEB;--1:#403F53">(</span><span style="--0:#C5E478;--1:#3B61B0">x</span><span style="--0:#D6DEEB;--1:#403F53">) </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">asm</span><span style="--0:#D6DEEB;--1:#403F53"> {</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C5E478;--1:#3B61B0">Multiply</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">square</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#C5E478;--1:#3B61B0">x</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#C5E478;--1:#3B61B0">x</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">predicate</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">positive</span><span style="--0:#D6DEEB;--1:#403F53">(</span><span style="--0:#C5E478;--1:#3B61B0">x</span><span style="--0:#D6DEEB;--1:#403F53">) </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">asm</span><span style="--0:#D6DEEB;--1:#403F53"> {</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">.register</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">zero</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C5E478;--1:#3B61B0">LoadInteger</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">zero</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#F78C6C;--1:#AA0982">0</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C5E478;--1:#3B61B0">Greater</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">positive</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#C5E478;--1:#3B61B0">x</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#C5E478;--1:#3B61B0">zero</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">record</span><span style="--0:#D6DEEB;--1:#403F53"> :Example </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> {</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--1:#403F53">    </span></span><span style="--0:#D7DBE0;--1:#403F53">x</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#C5E478;--1:#3B61B0">:Number</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">computed</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">by</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">asm</span><span style="--0:#D6DEEB;--1:#403F53"> {</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#C5E478;--1:#3B61B0">LoadInteger</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">x</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#F78C6C;--1:#AA0982">10</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="on Example(input) {    asm {        let x, y        LoadInteger x, 10        LoadInteger y, 20    }    let square be asm {        Multiply square, x, x    }}function square(x) be asm {    Multiply square, x, x}predicate positive(x) be asm {    .register zero    LoadInteger zero, 0    Greater positive, x, zero}record :Example as {    x: :Number computed by asm {        LoadInteger x, 10    }}"><div></div></button></div></figure></div>
+<p>An independent ASM statement exports zero or more bindings declared by <code>let</code>.
+Declarations have no initializer and can list multiple names. These bindings
+become visible after the block in its containing lexical scope. A block in a
+branch or loop never exports bindings beyond that containing scope.</p>
+<p>An ASM initializer, callable body, or computed field has one implicit output
+register named after its binding, callable, or field. These forms reject <code>let</code>
+declarations. <code>.register name</code> declares block-local temporary storage in all
+forms. Declarations precede executable instructions, apply once per block entry,
+and emit no initialization instructions. Nested ASM blocks are not supported.</p>
+<p>Parameters and all visible outer bindings are read-only. Existing names cannot
+be shadowed. A callable-name/parameter collision is rejected only for an ASM
+body. The implicit output is a fresh register, never an alias to an outer value.
+Computed fields see only the inputs available to ordinary computed expressions.
+Normal field casts, parameter casts, predicate result validation and predicate
+normalization remain in force. ASM is not a general nested expression form.</p>
+<p>Instructions use canonical opcode names. Register/label names follow ordinary
+binding-name rules; labels occupy a separate block-local namespace. <code>name:</code>
+marks an instruction boundary. Label references never cross block boundaries.
+Unknown instructions and numeric opcode escapes are rejected.</p>
+<h2 id="operands-and-expansion">Operands and expansion</h2>
+<p>Register sources accept names or scalar literals. Literals are evaluated in
+operand order and expand to explicit load instructions when a register is
+required. Exact-encoding measurements should use explicit <code>Load…</code> instructions.
+No arbitrary GES expressions occur in instruction operands. Units, types,
+pattern kinds, modes, members, and counts are symbolic or literal operands,
+never undocumented bit fields. Opcode-specific immediate ranges are checked.</p>
+<p>String and list pool indices, binding IDs and code addresses are compiler-owned.
+Text and tags use literals. Calls use the callable name and ordered argument
+labels. Extensions use their normal namespace and ordered labels. Messages use
+normal message signatures and tag syntax. Result-bearing/delayed sends name a
+destination and preserve normal send behavior. Constructors use symbolic types
+and argument labels. A syntax table for each symbolic expansion is required
+before enabling that family; no fallback to raw pool indices is permitted.</p>
+<p>Raw Stage instructions, RegisterLocals and VM Return instructions are forbidden.
+Symbolic calls and staged constructors expand to one contiguous staging/consumer
+sequence. No user label may enter that expansion. Calls participate in the normal
+acyclic call graph and resource analysis. CreateRecordValue remains internal;
+record construction must not bypass field/constructor semantics.</p>
+<h2 id="register-and-control-flow-analysis">Register and control-flow analysis</h2>
+<p>Every output and temporary starts abstractly uninitialized. No implicit
+LoadNothing is emitted. Reads require definite initialization on all reachable
+incoming paths. Every output must be initialized on every normal block exit.
+Unreachable instructions still receive structural, operand and name checks.
+Branch joins intersect definite-initialization sets; loops require a fixed point.
+Source operands are checked before destination writes, including aliasing cases.
+IteratorNext writes an item on success and Nothing on exhaustion; both edges
+initialize its destination.</p>
+<p>Physical register allocation must preserve values across back edges and branches.
+Read-only inputs must stay live for all their reads; output/input aliasing must
+not expose a write to a still-live outer binding. No automatic initializer may
+be assumed from recycled physical registers. Labels have no runtime scope cost.</p>
+<p>Iterators and builders are internal mutable capabilities, not GES output values.
+They are permitted only in temporary registers, cannot be copied through Move,
+returned/exported, stored in collections, or passed to messages/calls/extensions.
+Each operation requires a compatible lifecycle state. Merges of incompatible
+states, use after closing/finishing, and overwriting live resources are rejected.
+Actual consumer/close semantics must be audited before enabling each family.
+Random scopes must balance on all outgoing paths; a block cannot pop a caller’s
+scope. Runtime limits and boundary restoration remain active.</p>
+<h2 id="preservation-and-safety">Preservation and safety</h2>
+<p>Explicit instructions retain their order and are not folded, removed, combined
+or hoisted. Surrounding optimization cannot delete a complete ASM block or move
+effects across it. Pool interning, symbolic expansion, register assignment,
+source maps and mandatory callable/field boundaries remain compiler work.
+Effect analysis includes extensions, host member getters, random operations,
+sends, constructors, custom casts and ParseLiteral’s possible constructor calls.
+Permitted effects follow the enclosing GES context; ASM adds no permission to
+send messages from ordinary expression-only contexts.</p>
+<p>A Program does not retain the AST or compiler analysis state. No ASM marker is a
+security boundary. All untrusted Programs must be safe at Reader, Writer,
+Compiler and Host.Load validation boundaries. The existing frame/staging/call
+analysis is not by itself proof of internal-value safety. Adversarial binary
+fixtures must qualify internal handles, resource use, aliases and escape paths.
+Any required safety fix applies equally to non-ASM Programs in both runtimes.</p>
+<h2 id="delivery-and-verification">Delivery and verification</h2>
+<ol>
+<li>Contract and complete opcode inventory (this document).</li>
+<li>Audit shared binary validation and qualify/harden internal-value safety.</li>
+<li>C# parser, AST, symbol/flow analysis, preservation and lowering.</li>
+<li>Swift implementation of the identical contract.</li>
+<li>Normative language documentation, editor grammars, highlighters and examples.</li>
+<li>Shared Conformance acceptance, binary interoperability and targeted native gates.</li>
+<li>Collection-opcode comparison workloads and measured report.</li>
+</ol>
+<p>Behavior, syntax, scoping, context restrictions, diagnostics and failures belong
+primarily in shared Markdown Conformance. Assertions use stable phase/code and
+structured context, never diagnostic prose. Prefer existing GESA snapshots and
+binary fixture mechanisms to new native behavior tests. Native tests are limited
+to implementation properties not expressible through the portable corpus,
+including allocation, register allocation internals and measurement controls.</p>
+<p>There is no Sum opcode today: sum already lowers to an iterator and arithmetic.
+Candidate comparisons include Count, HasAny/HasAll, First/Last/Single,
+Take/Drop, Distinct and ordering. Each pair must preserve type, Nothing/NaN,
+unit, ordering and empty-input semantics. Timing excludes compilation, assembly
+and input creation. Report allocations, code size, limits and pause granularity
+as well as elapsed time; do not infer that all operations behave alike.</p>
+<h2 id="implementation-progress">Implementation progress</h2>
+<ul>
+<li>Step 1: contract and inventory recorded.</li>
+<li>Step 2: internal-value escape validation implemented in both runtimes. The
+shared <code>program.internal-values</code> corpus has 19 binary fixtures covering all
+six internal families, copying, staging, message/return escape, self-insertion,
+branch/loop paths, wrong builder families, valid finishing, register release,
+overwrite, iterator closing and collection consumption. Validation uses two
+instruction-sized scratch arrays in C# and equivalent bounded worklists in
+Swift, rather than an instruction-by-register state matrix. It follows each
+reachable producer until overwrite/release; worst-case work is proportional
+to producer count times instruction count. VM dispatch is unchanged.</li>
+<li>Step 3: C# source parsing, explicit instructions, symbolic calls/sends and
+constructors, definite initialization, internal resource lifetimes and random
+scope balance are implemented. ASM locals use pinned physical storage because
+ordinary temporary intervals do not describe arbitrary backward branches.
+Optimization is preserved for other routines; a routine containing ASM is
+retained as lowered. Calls are conservatively effectful when such a routine
+exists. This is a compiler tradeoff, not an additional VM scope or frame.</li>
+<li>Step 4: Swift implements the same source syntax, operand forms and control-flow
+rules. All 39 assembly cases pass with both native compilers; the complete Swift
+corpus passes 1,722 cases with 31 optional performance cases skipped.</li>
+<li>Step 5: the guide and runnable example document the four binding contexts,
+symbolic forms and measurement tradeoffs. Both TextMate variants, Sublime and
+the embedded C#/Swift highlighters recognize ASM; shared highlighting cases
+qualify complete-document and incremental rendering.</li>
+<li>Step 6: 60 shared ASM cases cover valid execution, errors, instruction
+preservation, symbolic messages/calls, signed values and resource joins. The
+complete native Swift compiler corpus passes 1,774 cases; strict portable
+acceptance passes 1,743 and skips 31 optional performance cases. Swift Runtime
+passes 1,414 scenarios using C#-compiled inputs. C# Release/allocation, Swift
+API, native adapters, CLI, numeric text and product JSON roundtrips pass.</li>
+<li>Step 7: reproducible C# comparisons of Count, HasAny, HasAll and First against
+explicit iterator loops record elapsed time, allocation, code size, registers
+and pause granularity. The <a href="https://github.com/schloepke/GameEventScript/blob/main/docs/guide/InlineAssemblyBenchmarks.md">measured report</a>
+supports retaining these opcodes; it does not generalize to unmeasured operations
+or runtimes. No opcode changes follow from this initial study.</li>
+</ul>
+<h2 id="complete-opcode-inventory">Complete opcode inventory</h2>
+<p>The table below is derived from the current Bytecode specification. Direct
+means explicit operands, not unchecked bits. All categories still require
+initialization, context, effect and resource checks.</p>
+<table>
+<thead>
+<tr>
+<th>Opcode</th>
+<th>Handling</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Nop</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>RegisterLocals</code></td>
+<td>Forbidden; compiler-owned</td>
+</tr>
+<tr>
+<td><code>Jump</code></td>
+<td>Block-local label</td>
+</tr>
+<tr>
+<td><code>JumpIfTrue</code></td>
+<td>Block-local label</td>
+</tr>
+<tr>
+<td><code>JumpIfFalse</code></td>
+<td>Block-local label</td>
+</tr>
+<tr>
+<td><code>JumpIfNotTrue</code></td>
+<td>Block-local label</td>
+</tr>
+<tr>
+<td><code>JumpIfNothing</code></td>
+<td>Block-local label</td>
+</tr>
+<tr>
+<td><code>Call</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>CreateSeries</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>CallExternal</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>ReturnVoid</code></td>
+<td>Forbidden; compiler-owned</td>
+</tr>
+<tr>
+<td><code>ReturnValue</code></td>
+<td>Forbidden; compiler-owned</td>
+</tr>
+<tr>
+<td><code>EmitMessage</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>EmitMessageWithTags</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>EmitMessageValue</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>EmitMessageValueWithTags</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>PublishMessage</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>PublishMessageWithTags</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>PublishMessageValue</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>PublishMessageValueWithTags</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>Cast</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>CastCustom</code></td>
+<td>Symbolic text pool reference</td>
+</tr>
+<tr>
+<td><code>CastUnit</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>CastNumeric</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>CheckType</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>CheckCustomType</code></td>
+<td>Symbolic text pool reference</td>
+</tr>
+<tr>
+<td><code>CheckUnit</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>CheckNumeric</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>CheckInteger</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>CheckFractional</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Move</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>MemberAccess</code></td>
+<td>Symbolic text pool reference</td>
+</tr>
+<tr>
+<td><code>IndexAccess</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>PropertyAccess</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>BindHandler</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>LoadNothing</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>LoadTrue</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>LoadFalse</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>LoadInteger</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>LoadFloat</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>LoadPercentage</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>LoadText</code></td>
+<td>Symbolic text pool reference</td>
+</tr>
+<tr>
+<td><code>LoadTag</code></td>
+<td>Symbolic text pool reference</td>
+</tr>
+<tr>
+<td><code>LoadHandler</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>LoadMessage</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>StageRegister</code></td>
+<td>Forbidden; compiler-owned</td>
+</tr>
+<tr>
+<td><code>StageNothing</code></td>
+<td>Forbidden; compiler-owned</td>
+</tr>
+<tr>
+<td><code>StageTrue</code></td>
+<td>Forbidden; compiler-owned</td>
+</tr>
+<tr>
+<td><code>StageFalse</code></td>
+<td>Forbidden; compiler-owned</td>
+</tr>
+<tr>
+<td><code>StageInteger</code></td>
+<td>Forbidden; compiler-owned</td>
+</tr>
+<tr>
+<td><code>StageFloat</code></td>
+<td>Forbidden; compiler-owned</td>
+</tr>
+<tr>
+<td><code>StageText</code></td>
+<td>Forbidden; compiler-owned</td>
+</tr>
+<tr>
+<td><code>StageTag</code></td>
+<td>Forbidden; compiler-owned</td>
+</tr>
+<tr>
+<td><code>StagePercentage</code></td>
+<td>Forbidden; compiler-owned</td>
+</tr>
+<tr>
+<td><code>CreateDice</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>CreateVector</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>CreatePoint</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>CreateList</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>CreateMap</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>CreateRange</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>CreateRangeWithStep</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>CreateRangeIterator</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>CreateRangeIteratorWithStep</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>CreateRangeIteratorShort</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>CreateRecord</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>CreateRecordValue</code></td>
+<td>Forbidden; compiler-owned</td>
+</tr>
+<tr>
+<td><code>CreateExternalType</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>HasValue</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>IsEmpty</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Default</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Or</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>And</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Xor</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Implies</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Not</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Equal</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>NotEqual</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Less</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Greater</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>LessOrEqual</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>GreaterOrEqual</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Add</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Subtract</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Multiply</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Divide</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Power</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>IntegerDivide</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Modulo</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Remainder</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Min</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Max</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Negate</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Abs</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>LogN</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Chance</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Clamp</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>RandomTake</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>RandomTakeFloat</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>RandomPush</code></td>
+<td>Balanced random scope</td>
+</tr>
+<tr>
+<td><code>RandomPushConstant</code></td>
+<td>Balanced random scope</td>
+</tr>
+<tr>
+<td><code>RandomPop</code></td>
+<td>Balanced random scope</td>
+</tr>
+<tr>
+<td><code>Term</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Exp</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Floor</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Ceil</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Truncate</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>RoundHalfEven</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>RoundHalfUp</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>RoundHalfDown</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>DegreeToRadians</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>DegreeFromRadians</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>WrapDegree</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Sin</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Cos</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Tan</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Asin</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Acos</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Atan</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Atan2</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Hypot2D</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Hypot3D</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Distance</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Distance2D</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Distance3D</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>DistanceSquared</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>DistanceSquared2D</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>DistanceSquared3D</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>LengthSquared</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>LengthSquared2D</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>LengthSquared3D</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Normalize</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Normalize2D</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Normalize3D</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Dot</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Dot2D</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Dot3D</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Cross</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Cross2D</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Cross3D</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>AngleBetween</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>AngleBetween2D</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>AngleBetween3D</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>TakeFirst</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>DropFirst</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>TakeLast</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>DropLast</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>TakeHighest</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>TakeLowest</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>DropHighest</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>DropLowest</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>OneRandom</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>TakeRandom</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>OneWeighted</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>TakeWeighted</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Count</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>StartsWith</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>EndsWith</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Contains</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>ContainsAny</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>ContainsAll</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>HasAny</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>HasAll</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>ContainsValue</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Union</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Intersect</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Zip</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>KeysOfMap</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>ValuesOfMap</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>EntriesOfMap</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>First</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Last</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Single</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>IteratorCreate</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>IteratorCreateOrJump</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>IteratorNext</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>IteratorClose</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>Distinct</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>SortAscending</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>SortDescending</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Reverse</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>Shuffle</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>ListBuilderCreate</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>ListBuilderAdd</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>ListBuilderFinish</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>MapBuilderCreate</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>MapBuilderAdd</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>MapBuilderFinish</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>DistinctBuilderCreate</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>DistinctBuilderAdd</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>DistinctBuilderFinish</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>GroupBuilderCreate</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>GroupBuilderAdd</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>GroupBuilderFinish</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>OrderBuilderCreate</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>OrderBuilderAdd</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>OrderBuilderFinishAscending</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>OrderBuilderFinishDescending</code></td>
+<td>Internal resource and edge-state analysis</td>
+</tr>
+<tr>
+<td><code>HasPattern</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>TakePattern</code></td>
+<td>Direct; typed operands</td>
+</tr>
+<tr>
+<td><code>ParseLiteral</code></td>
+<td>Direct; constructor effects and call graph</td>
+</tr>
+<tr>
+<td><code>EmitInstant</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>EmitAfter</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>PublishInstant</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>PublishAfter</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>ConstructData</code></td>
+<td>Symbolic expansion</td>
+</tr>
+<tr>
+<td><code>SplitText</code></td>
+<td>Direct; typed operands</td>
+</tr>
+</tbody>
+</table>
+<p>Inventory: 206 defined opcodes; reserved numeric values are forbidden.
+The <a href="/docs/reference/bytecode/#experimental-opcode-reservation">experimental range 0xF8..0xFF</a>
+requires an explicit experimental implementation; standard ASM cannot emit it.</p>
+<h2 id="symbolic-source-operands">Symbolic source operands</h2>
+<p>Operands are comma-separated. Direct opcodes follow the operand order of the
+compiler’s typed builder (destination first when present). Source registers may
+be replaced by scalar literals. Labels and destination registers require names.
+Instruction names are case-sensitive. Immediate integers are range-checked.</p>
+<table>
+<thead>
+<tr>
+<th>Source form</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Call result, calculate(value: input)</code></td>
+<td>Resolve function/predicate and stage ordered arguments</td>
+</tr>
+<tr>
+<td><code>CallExternal result, :math.calculate(value: input)</code></td>
+<td>Resolve extension signature</td>
+</tr>
+<tr>
+<td><code>BindHandler result, handler(value: input)</code></td>
+<td>Bind ordered arguments to a handler register</td>
+</tr>
+<tr>
+<td><code>CreateList result, [first, second]</code></td>
+<td>Stage values and construct a list</td>
+</tr>
+<tr>
+<td><code>CreateMap result, [left: first, right: second]</code></td>
+<td>Intern keys and stage values</td>
+</tr>
+<tr>
+<td><code>CreateRecord result, :Sample(value: input)</code></td>
+<td>Invoke a script constructor</td>
+</tr>
+<tr>
+<td><code>CreateExternalType result, :Sample(value: input)</code></td>
+<td>Invoke a registered external constructor</td>
+</tr>
+<tr>
+<td><code>CreateVector result, :Vector(x: first, y: second)</code></td>
+<td>Construct a vector with ordered components</td>
+</tr>
+<tr>
+<td><code>CreatePoint result, :Point(x: first, y: second)</code></td>
+<td>Construct a point with ordered components</td>
+</tr>
+<tr>
+<td><code>ConstructData result, :Record('Sample', fields)</code></td>
+<td>Use an explicit data constructor</td>
+</tr>
+<tr>
+<td><code>LoadHandler result, Example(value)</code></td>
+<td>Intern a handler signature</td>
+</tr>
+<tr>
+<td><code>LoadMessage result, Example(value: input)</code></td>
+<td>Construct a message value</td>
+</tr>
+<tr>
+<td><code>emit Example(value: input) with #tag</code></td>
+<td>Ordinary statement send, including ordered tags</td>
+</tr>
+<tr>
+<td><code>publish Example(value: input)</code></td>
+<td>Ordinary publication</td>
+</tr>
+<tr>
+<td><code>EmitMessage Example(value: input)</code></td>
+<td>Canonical statement opcode spelling</td>
+</tr>
+<tr>
+<td><code>EmitMessageWithTags Example(value: input), [#tag]</code></td>
+<td>Canonical tagged statement spelling</td>
+</tr>
+<tr>
+<td><code>EmitMessageValue message</code></td>
+<td>Send a message register; tagged form takes a second list operand</td>
+</tr>
+<tr>
+<td><code>EmitInstant result, Example(value: input)</code></td>
+<td>Result-bearing immediate send</td>
+</tr>
+<tr>
+<td><code>EmitAfter result, 1s, Example(value: input), [#tag]</code></td>
+<td>Result-bearing delayed send, with optional tag list</td>
+</tr>
+</tbody>
+</table>
+<p>Each <code>Emit…</code> form also has a corresponding <code>Publish…</code> form. Expression blocks
+in handlers may send messages; function, predicate and computed-field blocks may
+not. The explicit <code>emit</code>/<code>publish</code> spellings retain their normal message syntax.
+Arguments inside symbolic forms must be scalar literals or register names;
+compute more involved values with preceding instructions or ordinary GES.
+Negative numeric, quantity and percentage literals are also accepted inside
+symbolic argument lists, list/map values and message operands.</p>
+<p>Constructor operands must match the named instruction: CreateVector/CreatePoint
+require the corresponding spatial type, CreateRecord a script record, and
+CreateExternalType an external type. ConstructData requires an explicit data
+constructor that lowers to ConstructData, not a cast or script/external record
+constructor. Mismatches report <code>compile.invalidAssembly</code>.</p>
+<p>Predicate result analysis recognizes Boolean/Nothing casts and resolved
+predicate calls as Boolean-or-Nothing results, including at control-flow joins.
+A numeric cast or an ordinary function call does not establish that result type.</p>
+<p><code>Cast</code>/<code>CheckType</code> accept a built-in type such as <code>:Number</code>. These are the direct
+VM operations; use <code>CastNumeric</code> for the VM’s numeric conversion operation.
+<code>CastCustom</code>/<code>CheckCustomType</code> take literal type names. <code>CastUnit</code>/<code>CheckUnit</code> and
+optional third operands of <code>LoadInteger</code>/<code>LoadFloat</code> accept unit tags <code>#none</code>,
+<code>#degree</code>, <code>#m</code>/<code>#meter</code>, <code>#s</code>/<code>#second</code>.
+<code>CreateSeries</code> accepts <code>#fibonacci</code> or <code>#factorial</code>. <code>HasPattern</code>/<code>TakePattern</code>
+accept a pattern tag (<code>#countAny</code>, <code>#countFace</code>, <code>#fullHouse</code>, <code>#straight</code>), an
+Int16 count, and a face register only for <code>#countFace</code>. <code>SplitText</code> takes a
+source and optionally a separator; omitting it selects whitespace splitting.</p>
+<p>Invalid assembly is reported as <code>compile.invalidAssembly</code>; malformed source
+continues to use <code>parse.syntax</code>. Ordinary symbol/signature diagnostics remain
+applicable to symbolic operands.</p>
+</div><footer class="sl-flex astro-ddtxxk7k"><div class="meta sl-flex astro-ddtxxk7k"><a href="https://github.com/schloepke/GameEventScript/edit/main/specs/InlineAssembly.md" class="sl-flex print:hidden astro-qlekgd3o"><svg aria-hidden="true" class="astro-qlekgd3o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.2em;"><path d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-1.1-.22 1 1 0 0 0-.32.22l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8c.1-.1.17-.2.22-.33a1 1 0 0 0 0-.24v-.14l.07-.05ZM6.83 20H4v-2.83l9.93-9.93 2.83 2.83L6.83 20ZM18.17 8.66l-2.83-2.83 1.42-1.41 2.82 2.82-1.41 1.42Z"/></svg>Edit page</a></div><div class="pagination-links print:hidden astro-b5raizh3" dir="ltr"></div></footer><script type="module" src="/_astro/DocsFooter.astro_astro_type_script_index_0_lang.CcG6r9Au.js"></script></div></div></main></div></div></div></div></body></html>

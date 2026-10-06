@@ -52,6 +52,35 @@ internal sealed partial class GesBinaryBuilder
 
     private PlanItem[] RunDefaultOptimizationPasses(IReadOnlyList<PlanItem> items)
     {
+        if (_preservedRoutines.Count == 0) return OptimizeRegion(items);
+        var result = new List<PlanItem>();
+        var region = new List<PlanItem>();
+        var entries = new HashSet<int>();
+        foreach (var routine in _routines) entries.Add(routine.EntryLabel.Id);
+        foreach (var item in items)
+        {
+            if (item.Label is { } label && entries.Contains(label.Id) && region.Count != 0) Flush();
+            region.Add(item);
+        }
+        Flush();
+        return result.ToArray();
+
+        void Flush()
+        {
+            var preserved = false;
+            foreach (var item in region)
+                if (item.Instruction is { } instruction && _preservedRoutines.Contains(instruction.RoutineId)) preserved = true;
+            result.AddRange(preserved ? region.ToArray() : OptimizeRegion(region));
+            region.Clear();
+        }
+    }
+
+    private readonly HashSet<int> _preservedRoutines = [];
+
+    internal void PreserveCurrentRoutine() => _preservedRoutines.Add(CurrentRoutineId);
+
+    private PlanItem[] OptimizeRegion(IReadOnlyList<PlanItem> items)
+    {
         var context = new RewriteContext(this, items);
         for (var index = 0; index < DefaultOptimizationPasses.Length; index++)
         {

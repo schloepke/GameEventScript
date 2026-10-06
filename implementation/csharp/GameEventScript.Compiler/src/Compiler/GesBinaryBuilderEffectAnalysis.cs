@@ -27,6 +27,9 @@ internal sealed partial class GesBinaryBuilder
             foreach (var routine in builder._routines)
             {
                 _routineByEntryLabel[routine.EntryLabel.Id] = routine.Id;
+                // With assembly present, optimization runs per routine. Preserve
+                // calls whose bodies are outside the current region conservatively.
+                if (builder._preservedRoutines.Count != 0) _routineHasEffects[routine.Id] = true;
                 if (routine.Kind == GameEventScriptBinaryBindKind.Record) _recordRoutineByName.Add(routine.Name, routine.Id);
             }
 

@@ -3,7 +3,7 @@
 
 # Inline assembly implementation contract
 
-Status: planned; this document does not claim current compiler support. Each
+Status: C# compiler implemented; Swift parity and final acceptance pending. Each
 implementation milestone must qualify the corresponding behavior in shared
 Markdown Conformance before marking it implemented. Inline assembly is GES
 source syntax, not a reader for the GESA dump format.
@@ -167,9 +167,15 @@ as well as elapsed time; do not infer that all operations behave alike.
   Swift, rather than an instruction-by-register state matrix. It follows each
   reachable producer until overwrite/release; worst-case work is proportional
   to producer count times instruction count. VM dispatch is unchanged.
-- Steps 3–7 remain pending. In particular, the source-level definite-assignment,
-  lifecycle and random-scope checks are not implemented by the binary escape
-  validator. No ASM source syntax is accepted yet.
+- Step 3: C# source parsing, explicit instructions, symbolic calls/sends and
+  constructors, definite initialization, internal resource lifetimes and random
+  scope balance are implemented. ASM locals use pinned physical storage because
+  ordinary temporary intervals do not describe arbitrary backward branches.
+  Optimization is preserved for other routines; a routine containing ASM is
+  retained as lowered. Calls are conservatively effectful when such a routine
+  exists. This is a compiler tradeoff, not an additional VM scope or frame.
+- Steps 4–7 remain pending: Swift parity, complete documentation/highlighting
+  qualification, cross-language acceptance and measurements.
 
 ## Complete opcode inventory
 
@@ -387,3 +393,52 @@ initialization, context, effect and resource checks.
 | `SplitText` | Direct; typed operands |
 
 Inventory: 206 defined opcodes; reserved numeric values are forbidden.
+
+## Symbolic source operands
+
+Operands are comma-separated. Direct opcodes follow the operand order of the
+compiler's typed builder (destination first when present). Source registers may
+be replaced by scalar literals. Labels and destination registers require names.
+Instruction names are case-sensitive. Immediate integers are range-checked.
+
+| Source form | Meaning |
+| --- | --- |
+| `Call result, calculate(value: input)` | Resolve function/predicate and stage ordered arguments |
+| `CallExternal result, :math.calculate(value: input)` | Resolve extension signature |
+| `BindHandler result, handler(value: input)` | Bind ordered arguments to a handler register |
+| `CreateList result, [first, second]` | Stage values and construct a list |
+| `CreateMap result, [left: first, right: second]` | Intern keys and stage values |
+| `CreateRecord result, :Sample(value: input)` | Invoke a script constructor |
+| `CreateExternalType result, :Sample(value: input)` | Invoke a registered external constructor |
+| `CreateVector result, :Vector(x: first, y: second)` | Construct a vector with ordered components |
+| `CreatePoint result, :Point(x: first, y: second)` | Construct a point with ordered components |
+| `ConstructData result, :Record('Sample', fields)` | Use an explicit data constructor |
+| `LoadHandler result, Example(value)` | Intern a handler signature |
+| `LoadMessage result, Example(value: input)` | Construct a message value |
+| `emit Example(value: input) with #tag` | Ordinary statement send, including ordered tags |
+| `publish Example(value: input)` | Ordinary publication |
+| `EmitMessage Example(value: input)` | Canonical statement opcode spelling |
+| `EmitMessageWithTags Example(value: input), [#tag]` | Canonical tagged statement spelling |
+| `EmitMessageValue message` | Send a message register; tagged form takes a second list operand |
+| `EmitInstant result, Example(value: input)` | Result-bearing immediate send |
+| `EmitAfter result, 1s, Example(value: input), [#tag]` | Result-bearing delayed send, with optional tag list |
+
+Each `Emit…` form also has a corresponding `Publish…` form. Expression blocks
+in handlers may send messages; function, predicate and computed-field blocks may
+not. The explicit `emit`/`publish` spellings retain their normal message syntax.
+Arguments inside symbolic forms must be scalar literals or register names;
+compute more involved values with preceding instructions or ordinary GES.
+
+`Cast`/`CheckType` accept a built-in type such as `:Number`. These are the direct
+VM operations; use `CastNumeric` for the VM's numeric conversion operation.
+`CastCustom`/`CheckCustomType` take literal type names. `CastUnit`/`CheckUnit` and
+optional third operands of `LoadInteger`/`LoadFloat` accept unit tags `#none`,
+`#degree`, `#m`/`#meter`, `#s`/`#second`.
+`CreateSeries` accepts `#fibonacci` or `#factorial`. `HasPattern`/`TakePattern`
+accept a pattern tag (`#countAny`, `#countFace`, `#fullHouse`, `#straight`), an
+Int16 count, and a face register only for `#countFace`. `SplitText` takes a
+source and optionally a separator; omitting it selects whitespace splitting.
+
+Invalid assembly is reported as `compile.invalidAssembly`; malformed source
+continues to use `parse.syntax`. Ordinary symbol/signature diagnostics remain
+applicable to symbolic operands.

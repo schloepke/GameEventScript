@@ -10,6 +10,7 @@ extension GesCompiler {
         func predicate(_ type: String) -> Bool { type == "boolean" || type == "nothing" }
 
         switch expression.kind {
+        case .assembly(let block): return block.predicate ? "boolean" : "other"
         case .literal(let value):
             if value.hasUnit { return "quantity:" + String(describing: value.unit) }
             return String(describing: value.kind)

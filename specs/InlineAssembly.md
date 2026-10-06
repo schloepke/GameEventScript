@@ -3,7 +3,7 @@
 
 # Inline assembly implementation contract
 
-Status: C# compiler implemented; Swift parity and final acceptance pending. Each
+Status: C# and Swift compiler implementations available; final acceptance and measurements pending. Each
 implementation milestone must qualify the corresponding behavior in shared
 Markdown Conformance before marking it implemented. Inline assembly is GES
 source syntax, not a reader for the GESA dump format.
@@ -174,8 +174,11 @@ as well as elapsed time; do not infer that all operations behave alike.
   Optimization is preserved for other routines; a routine containing ASM is
   retained as lowered. Calls are conservatively effectful when such a routine
   exists. This is a compiler tradeoff, not an additional VM scope or frame.
-- Steps 4–7 remain pending: Swift parity, complete documentation/highlighting
-  qualification, cross-language acceptance and measurements.
+- Step 4: Swift implements the same source syntax, operand forms and control-flow
+  rules. All 39 assembly cases pass with both native compilers; the complete Swift
+  corpus passes 1,722 cases with 31 optional performance cases skipped.
+- Steps 5–7 remain pending: complete documentation/highlighting qualification,
+  broader cross-language acceptance and measurements.
 
 ## Complete opcode inventory
 

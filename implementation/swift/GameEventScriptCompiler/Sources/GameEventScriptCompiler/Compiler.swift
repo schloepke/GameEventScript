@@ -14,6 +14,7 @@ final class GesRoutine {
     var pinned: Set<Int> = []
     var registers: Int
     var maxStage = 0
+    var hasAssembly = false
     var calls: [(Int, String)] = []
     var dependencies: Set<String> = []
     var symbols: [(String, Int, Int, Bool)] = []
@@ -228,7 +229,13 @@ final class GesCompiler {
             r.location = field.location
             let reg = scope.get(field.name)!
             if let computed = field.computed {
-                let value = try expression(computed, r, scope)
+                let value: Int
+                if case .assembly(let block) = computed.kind {
+                    value = scope.get(field.name)!
+                    try assembly(block, r, scope, destination: value)
+                } else {
+                    value = try expression(computed, r, scope)
+                }
                 try cast(reg, value, field.type, r)
             } else {
                 try cast(reg, reg, field.type, r)

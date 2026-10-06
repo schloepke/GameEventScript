@@ -91,6 +91,13 @@ extension GesCompiler {
         var types = initialTypes
         for s in statements {
             switch s.kind {
+            case .assembly(let block):
+                for line in block.lines { for operand in line.operands { try validateExpression(operand, visible: names.union(ancestors), types: types) } }
+                for declaration in block.declarations where declaration.export {
+                    if names.contains(declaration.name) { throw error("validate.duplicateVariable", s.location, symbol: declaration.name, kind: .variable) }
+                    if ancestors.contains(declaration.name) { throw error("validate.shadowedVariable", s.location, symbol: declaration.name, kind: .variable) }
+                    names.insert(declaration.name)
+                }
             case .letBinding(let name, let expression):
                 try validateExpression(expression, visible: names.union(ancestors), types: types)
                 types[name] = infer(expression, types)
@@ -146,6 +153,7 @@ extension GesCompiler {
         }
 
         switch e.kind {
+        case .assembly(let block): children = block.lines.flatMap { $0.operands }
         case .literal, .name, .constant, .dice, .series: break
         case .handler(let name, let params):
             var labels: Set<String> = []

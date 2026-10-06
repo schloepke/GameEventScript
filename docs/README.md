@@ -35,6 +35,7 @@ Every contract area has exactly one owning document. Other documents link to tha
 | Bytecode | [Bytecode](../specs/Bytecode.md) | Instruction model, opcode semantics, operands, and control flow | Normative |
 | Binary format | [Binary format](../specs/BinaryFormat.md) | `.gesb` container, segments, encoding, retention, and decoding | Normative |
 | Assembler format | [Assembler format](../specs/AssemblerFormat.md) | Human-readable `.gesa` dump syntax and presentation metadata | Normative |
+| Inline assembly | [Inline assembly](../specs/InlineAssembly.md) | Syntax, opcode inventory, and implementation gates | Implemented |
 | Diagnostics | [Diagnostics](../specs/Diagnostics.md) | Stable phases, codes, locations, and propagation rules | Normative |
 | Text semantics | [Text](../specs/Semantics/Text.md) | Unicode, source text, names, ordering, scalar operations, data formatting, and literal recognition | Normative |
 | Number semantics | [Numbers](../specs/Semantics/Numbers.md) | Integer, Binary64, units, arithmetic, conversion, and equality | Normative |
@@ -46,6 +47,11 @@ Every contract area has exactly one owning document. Other documents link to tha
 | Cross-language acceptance | [Cross-language acceptance](../specs/Conformance/CrossLanguageAcceptance.md) | Corpus identity and acceptance criteria for language ports | Normative |
 
 All specification documents in the table are normative.
+
+## Compiler experiments
+
+- [Inline assembly guide](guide/InlineAssembly.md): safe register and symbolic operand syntax.
+- [Collection opcode measurements](guide/InlineAssemblyBenchmarks.md): reproducible ASM comparisons and their limits.
 
 ## Generated API references
 

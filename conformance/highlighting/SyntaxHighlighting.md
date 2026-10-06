@@ -92,3 +92,7 @@ of full-document and incremental-line results, including every scope and offset.
 ```highlight
 {"name":"parameterless predicate shorthand","language":"ges","source":"if is drawable and is not blocked { emit Ready() }","expect":[{"text":"is","kind":"keyword","scope":"keyword.operator.word.gameeventscript"},{"text":"not","kind":"keyword"},{"text":"drawable","kind":"identifier"},{"text":"blocked","kind":"identifier"}]}
 ```
+
+```highlight
+{"name":"inline assembly registers and instructions","language":"ges","source":"let result be asm {\n    .register temp\n    LoadInteger temp, 7\n    Multiply result, temp, temp // preserve instructions\n}\nemit Done(value: result)","expect":[{"text":"asm","kind":"keyword"},{"text":".register","kind":"keyword"},{"text":"LoadInteger","kind":"builtin","scope":"support.function.opcode.gameeventscript"},{"text":"Multiply","kind":"builtin"},{"text":"7","kind":"number"},{"text":"// preserve instructions","kind":"comment"},{"text":"emit","kind":"keyword"}]}
+```

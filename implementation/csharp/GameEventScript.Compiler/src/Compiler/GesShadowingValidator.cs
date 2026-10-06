@@ -79,6 +79,13 @@ internal static class GesShadowingValidator
                     VisitExpression(publish.MessageExpression, scope, script, errors);
                     VisitExpressions(publish.TagExpressions, scope, script, errors);
                     break;
+                case AssemblyStatementNode assembly:
+                    foreach (var declaration in assembly.Block.Declarations)
+                    {
+                        if (scope.ContainsVisible(declaration.Name)) AddShadowError(script, errors, declaration.Name, declaration);
+                        if (declaration.Export) scope.Declare(declaration.Name);
+                    }
+                    break;
                 case LetStatementNode let:
                     VisitExpression(let.Expression, scope, script, errors);
                     if (scope.ContainsInAncestor(let.Identifier)) AddShadowError(script, errors, let.Identifier, let);

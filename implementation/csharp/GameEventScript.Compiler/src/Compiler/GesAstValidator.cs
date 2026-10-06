@@ -369,6 +369,14 @@ internal static class GesAstValidator
 
                 return;
 
+            case AssemblyStatementNode assembly:
+                foreach (var line in assembly.Block.Lines)
+                    foreach (var operand in line.Operands) ValidateExpressionReferences(parsedScriptContext, operand, callables, typeDefinitions, errors, scope.DeclaredTypes);
+                foreach (var declaration in assembly.Block.Declarations)
+                    if (declaration.Export)
+                        ValidateStatementReferences(parsedScriptContext, new LetStatementNode(declaration.Name, new NothingLiteralExpressionNode()) { SourceRange = declaration.SourceRange }, callables, typeDefinitions, errors, scope);
+                return;
+
             case LetStatementNode let:
                 ValidateExpressionReferences(parsedScriptContext, let.Expression, callables, typeDefinitions, errors, scope.DeclaredTypes);
                 ValidateIdentifierCase(
@@ -586,6 +594,7 @@ internal static class GesAstValidator
     {
         switch (expression)
         {
+            case AssemblyExpressionNode { Block.Predicate: true }:
             case BooleanLiteralExpressionNode:
                 return StaticExpressionInfo.Boolean;
 
@@ -929,6 +938,11 @@ internal static class GesAstValidator
         {
             switch (expression)
             {
+                case AssemblyExpressionNode assembly:
+                    foreach (var line in assembly.Block.Lines)
+                        foreach (var operand in line.Operands) ValidateExpressionReferences(parsedScriptContext, operand, callables, typeDefinitions, errors, declaredTypes);
+                    return;
+
                 case NothingLiteralExpressionNode:
                 case ConstantReferenceExpressionNode:
                     return;

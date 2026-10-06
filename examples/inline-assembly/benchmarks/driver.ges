@@ -1,0 +1,17 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+module benchmark.assembly
+
+on Measure(items, repetitions) {
+    let result be asm {
+        .register remaining, again
+        Move remaining, repetitions
+        repeat:
+        Call result, operation(items: items)
+        Subtract remaining, remaining, 1
+        Greater again, remaining, 0
+        JumpIfTrue again, repeat
+    }
+    emit Result(value: result)
+}

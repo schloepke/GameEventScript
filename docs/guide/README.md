@@ -19,6 +19,11 @@ Guides optimize for understanding and may omit edge cases. Exact behavior is def
 These guides track the development checkout. Unreleased features are marked;
 consult the [changelog](../../CHANGELOG.md) when targeting a published release.
 
+## Instruction-level experiments
+
+- [Inline assembly](InlineAssembly.md): explicit instructions, register scopes,
+  symbolic calls and the runnable experiment.
+
 ## Distribution
 
 - [Library packages and releases](distribution/Packages.md) describes public

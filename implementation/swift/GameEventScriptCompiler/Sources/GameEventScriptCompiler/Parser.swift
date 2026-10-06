@@ -166,7 +166,7 @@ final class GesParser {
                     }
                     if match("computed") {
                         try expect("by")
-                        computed = try expression()
+                        computed = try assemblyOrExpression(field)
                     }
                     if unlabeled && computed != nil { throw failure("Computed field cannot be a parameter.", fieldStart) }
                     fields.append(.init(name: field, type: type, label: computed == nil ? (unlabeled ? "_" : field) : nil, minimum: low, maximum: high, computed: computed, location: location(fieldStart, previous)))
@@ -181,7 +181,7 @@ final class GesParser {
                 let params = try parameters()
                 try expect("be")
                 newlines()
-                let body = try expression()
+                let body = try assemblyOrExpression(name, predicate: kind == "predicate")
                 definitions.append(.init(kind: kind, name: name, parameters: params, expression: body, statements: [], required: [], excluded: [], location: location(begin, previous)))
             } else {
                 try expect("on")
@@ -251,7 +251,9 @@ final class GesParser {
     func statement() throws -> GesStatement {
         let start = current
         let kind: GesStatement.Kind
-        if current.syntaxText == "emit" || current.syntaxText == "publish" {
+        if match("asm") {
+            kind = .assembly(try assemblyBlock(nil, allowSend: true))
+        } else if current.syntaxText == "emit" || current.syntaxText == "publish" {
             let publish = advance().text == "publish"
             newlines()
             if current.syntaxText == "after" {
@@ -272,7 +274,7 @@ final class GesParser {
         } else if match("let") {
             let name = try identifier()
             try expect("be")
-            kind = .letBinding(name, try expression())
+            kind = .letBinding(name, try assemblyOrExpression(name, allowSend: true))
         } else if match("if") {
             var conditions: [(String?, GesExpression)] = []
             repeat {

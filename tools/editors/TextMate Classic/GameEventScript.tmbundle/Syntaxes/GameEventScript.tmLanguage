@@ -26,6 +26,10 @@
 		</dict>
 		<dict>
 			<key>include</key>
+			<string>#assembly</string>
+		</dict>
+		<dict>
+			<key>include</key>
 			<string>#declarations</string>
 		</dict>
 		<dict>
@@ -67,6 +71,91 @@
 	</array>
 	<key>repository</key>
 	<dict>
+		<key>assembly</key>
+		<dict>
+			<key>patterns</key>
+			<array>
+				<dict>
+					<key>begin</key>
+					<string>\basm\b</string>
+					<key>beginCaptures</key>
+					<dict>
+						<key>0</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.assembly.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>end</key>
+					<string>\}</string>
+					<key>name</key>
+					<string>meta.assembly.gameeventscript</string>
+					<key>patterns</key>
+					<array>
+						<dict>
+							<key>include</key>
+							<string>#comments</string>
+						</dict>
+						<dict>
+							<key>include</key>
+							<string>#strings</string>
+						</dict>
+						<dict>
+							<key>match</key>
+							<string>\.register\b</string>
+							<key>name</key>
+							<string>keyword.other.declaration.gameeventscript</string>
+						</dict>
+						<dict>
+							<key>match</key>
+							<string>\b(?:Nop|RegisterLocals|Jump|JumpIfTrue|JumpIfFalse|JumpIfNotTrue|JumpIfNothing|Call|CreateSeries|CallExternal|ReturnVoid|ReturnValue|EmitMessage|EmitMessageWithTags|EmitMessageValue|EmitMessageValueWithTags|PublishMessage|PublishMessageWithTags|PublishMessageValue|PublishMessageValueWithTags|Cast|CastCustom|CastUnit|CastNumeric|CheckType|CheckCustomType|CheckUnit|CheckNumeric|CheckInteger|CheckFractional|Move|MemberAccess|IndexAccess|PropertyAccess|BindHandler|LoadNothing|LoadTrue|LoadFalse|LoadInteger|LoadFloat|LoadPercentage|LoadText|LoadTag|LoadHandler|LoadMessage|StageRegister|StageNothing|StageTrue|StageFalse|StageInteger|StageFloat|StageText|StageTag|StagePercentage|CreateDice|CreateVector|CreatePoint|CreateList|CreateMap|CreateRange|CreateRangeWithStep|CreateRangeIterator|CreateRangeIteratorWithStep|CreateRangeIteratorShort|CreateRecord|CreateRecordValue|CreateExternalType|HasValue|IsEmpty|Default|Or|And|Xor|Implies|Not|Equal|NotEqual|Less|Greater|LessOrEqual|GreaterOrEqual|Add|Subtract|Multiply|Divide|Power|IntegerDivide|Modulo|Remainder|Min|Max|Negate|Abs|LogN|Chance|Clamp|RandomTake|RandomTakeFloat|RandomPush|RandomPushConstant|RandomPop|Term|Exp|Floor|Ceil|Truncate|RoundHalfEven|RoundHalfUp|RoundHalfDown|DegreeToRadians|DegreeFromRadians|WrapDegree|Sin|Cos|Tan|Asin|Acos|Atan|Atan2|Hypot2D|Hypot3D|Distance|Distance2D|Distance3D|DistanceSquared|DistanceSquared2D|DistanceSquared3D|LengthSquared|LengthSquared2D|LengthSquared3D|Normalize|Normalize2D|Normalize3D|Dot|Dot2D|Dot3D|Cross|Cross2D|Cross3D|AngleBetween|AngleBetween2D|AngleBetween3D|TakeFirst|DropFirst|TakeLast|DropLast|TakeHighest|TakeLowest|DropHighest|DropLowest|OneRandom|TakeRandom|OneWeighted|TakeWeighted|Count|StartsWith|EndsWith|Contains|ContainsAny|ContainsAll|HasAny|HasAll|ContainsValue|Union|Intersect|Zip|KeysOfMap|ValuesOfMap|EntriesOfMap|First|Last|Single|IteratorCreate|IteratorCreateOrJump|IteratorNext|IteratorClose|Distinct|SortAscending|SortDescending|Reverse|Shuffle|ListBuilderCreate|ListBuilderAdd|ListBuilderFinish|MapBuilderCreate|MapBuilderAdd|MapBuilderFinish|DistinctBuilderCreate|DistinctBuilderAdd|DistinctBuilderFinish|GroupBuilderCreate|GroupBuilderAdd|GroupBuilderFinish|OrderBuilderCreate|OrderBuilderAdd|OrderBuilderFinishAscending|OrderBuilderFinishDescending|HasPattern|TakePattern|ParseLiteral|EmitInstant|EmitAfter|PublishInstant|PublishAfter|ConstructData|SplitText)\b</string>
+							<key>name</key>
+							<string>support.function.opcode.gameeventscript</string>
+						</dict>
+						<dict>
+							<key>include</key>
+							<string>#declarations</string>
+						</dict>
+						<dict>
+							<key>include</key>
+							<string>#messages</string>
+						</dict>
+						<dict>
+							<key>include</key>
+							<string>#selectors</string>
+						</dict>
+						<dict>
+							<key>include</key>
+							<string>#extensions-and-types</string>
+						</dict>
+						<dict>
+							<key>include</key>
+							<string>#constants</string>
+						</dict>
+						<dict>
+							<key>include</key>
+							<string>#numbers</string>
+						</dict>
+						<dict>
+							<key>include</key>
+							<string>#key-phrases</string>
+						</dict>
+						<dict>
+							<key>include</key>
+							<string>#keywords</string>
+						</dict>
+						<dict>
+							<key>include</key>
+							<string>#operators</string>
+						</dict>
+						<dict>
+							<key>include</key>
+							<string>#labels</string>
+						</dict>
+					</array>
+				</dict>
+			</array>
+		</dict>
 		<key>comments</key>
 		<dict>
 			<key>patterns</key>
@@ -396,10 +485,6 @@
 					<string>meta.keyword-phrase.gameeventscript</string>
 				</dict>
 				<dict>
-					<key>match</key>
-					<string>(:Dice)([ \t\r\n]*)(\[)</string>
-					<key>name</key>
-					<string>meta.literal.dice.gameeventscript</string>
 					<key>captures</key>
 					<dict>
 						<key>1</key>
@@ -413,6 +498,10 @@
 							<string>punctuation.bracket.gameeventscript</string>
 						</dict>
 					</dict>
+					<key>match</key>
+					<string>(:Dice)([ \t\r\n]*)(\[)</string>
+					<key>name</key>
+					<string>meta.literal.dice.gameeventscript</string>
 				</dict>
 				<dict>
 					<key>match</key>
@@ -1007,12 +1096,12 @@
 					<string>keyword.other.definition.gameeventscript</string>
 				</dict>
 				<dict>
+					<key>comment</key>
+					<string>if headers and then bodies share a local scope; else has a sibling scope, with or without braces.</string>
 					<key>match</key>
 					<string>\b(?:if|else|for|in|from|to|when|otherwise|matching|without|with)\b</string>
 					<key>name</key>
 					<string>keyword.control.gameeventscript</string>
-					<key>comment</key>
-					<string>if headers and then bodies share a local scope; else has a sibling scope, with or without braces.</string>
 				</dict>
 				<dict>
 					<key>match</key>
@@ -1021,10 +1110,10 @@
 					<string>keyword.other.definition.gameeventscript</string>
 				</dict>
 				<dict>
-					<key>match</key>
-					<string>\b(?:or|xor|and|not|is|empty|div|mod|rem|of)\b</string>
 					<key>comment</key>
 					<string>is name and is not name call parameterless predicates; value is name calls unary predicates. Both use the existing operator and identifier scopes.</string>
+					<key>match</key>
+					<string>\b(?:or|xor|and|not|is|empty|div|mod|rem|of)\b</string>
 					<key>name</key>
 					<string>keyword.operator.word.gameeventscript</string>
 				</dict>
@@ -1374,14 +1463,14 @@
 			<key>patterns</key>
 			<array>
 				<dict>
+					<key>applyEndPatternLast</key>
+					<true/>
 					<key>begin</key>
 					<string>'</string>
 					<key>end</key>
 					<string>'</string>
 					<key>name</key>
 					<string>string.quoted.single.gameeventscript</string>
-					<key>applyEndPatternLast</key>
-					<true/>
 					<key>patterns</key>
 					<array>
 						<dict>
@@ -1393,14 +1482,14 @@
 					</array>
 				</dict>
 				<dict>
+					<key>applyEndPatternLast</key>
+					<true/>
 					<key>begin</key>
 					<string>"</string>
 					<key>end</key>
 					<string>"</string>
 					<key>name</key>
 					<string>string.quoted.double.gameeventscript</string>
-					<key>applyEndPatternLast</key>
-					<true/>
 					<key>patterns</key>
 					<array>
 						<dict>

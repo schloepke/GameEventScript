@@ -140,6 +140,7 @@ enum GesProgramResourceValidator {
             let end = position + 1 < entries.count ? entries[position + 1] : p.code.count
             if position < 0 || UInt64(symbol.codeStart) + UInt64(symbol.codeLength) > UInt64(end) || Int(symbol.registerID) >= maximumFrames[position] { throw GameEventScriptProgramValidator.failure(.invalidDebugSymbol, 32, index) }
         }
+        try GesProgramInternalValueValidator.validate(p, entries, frames)
         for (index, binding) in p.bindings.enumerated() where binding.isHandler {
             let routine = indexes[Int(binding.entryAddress)]!
             if Int(binding.requiredRegisterCount) < registers[routine] || Int(binding.requiredCallStackDepth) < depths[routine] { throw GameEventScriptProgramValidator.failure(.invalidResourceMetadata, 4, index) }

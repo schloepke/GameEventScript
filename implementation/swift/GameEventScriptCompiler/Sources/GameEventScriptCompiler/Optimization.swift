@@ -5,6 +5,7 @@
 
 extension GesCompiler {
     func optimize(_ routine: GesRoutine) {
+        if routine.hasAssembly { return }
         let branches: Set<Op> = [.jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing, .iteratorNext, .iteratorCreateOrJump]
         for _ in 0..<2 {
             var reads: [Int: Int] = [:]

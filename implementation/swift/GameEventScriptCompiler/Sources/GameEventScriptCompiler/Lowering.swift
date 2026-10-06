@@ -9,6 +9,7 @@ extension GesCompiler {
             try checkLimits(r)
             r.location = statement.location
             switch statement.kind {
+            case .assembly(let block): try assembly(block, r, scope)
             case .letBinding(let name, let value):
                 let d = r.local()
                 scope.values[name] = d
@@ -137,6 +138,7 @@ extension GesCompiler {
             return d
         }
         switch e.kind {
+        case .assembly(let block): try assembly(block, r, scope, destination: d)
         case .literal(let value): try literal(value, d, r)
         case .name, .constant: break
         case .unary(let op, let input):

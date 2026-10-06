@@ -36,6 +36,7 @@ struct GesArgument {
 
 final class GesExpression {
     enum Kind {
+        case assembly(GesAssembly)
         case literal(GesValue)
         case name(String)
         case constant(String)
@@ -88,6 +89,7 @@ struct GesSelector {
 
 struct GesStatement {
     indirect enum Kind {
+        case assembly(GesAssembly)
         case expression(GesExpression)
         case letBinding(String, GesExpression)
         case publish(Bool, GesExpression, [GesExpression])

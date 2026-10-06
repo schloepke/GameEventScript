@@ -11,7 +11,7 @@ using static GameEventScript.Compiler.GesTokenKind;
 
 namespace GameEventScript.Compiler;
 
-internal sealed class GesParser
+internal sealed partial class GesParser
 {
     private const double SquareRootExponent = 0.5d;
     private const double CubeRootExponent = 0.3333333333333333333333333333d;
@@ -296,7 +296,7 @@ internal sealed class GesParser
         if (MatchWord("computed"))
         {
             ExpectWord("by");
-            computedExpression = ParseExpression();
+            computedExpression = ParseAssemblyOrExpression(name);
         }
 
         if (isUnlabeledConstructorParameter && computedExpression is not null)
@@ -320,7 +320,7 @@ internal sealed class GesParser
         var parameters = ParseDefinitionParameters();
         Expect(Be);
         SkipNewLines();
-        var expression = ParseExpression();
+        var expression = ParseAssemblyOrExpression(name, predicate: true);
         return WithRange(new PredicateDefinitionNode(name, parameters, expression), startToken);
     }
 
@@ -331,7 +331,7 @@ internal sealed class GesParser
         var parameters = ParseDefinitionParameters();
         Expect(Be);
         SkipNewLines();
-        var expression = ParseExpression();
+        var expression = ParseAssemblyOrExpression(name);
         return WithRange(new FunctionDefinitionNode(name, parameters, expression), startToken);
     }
 
@@ -536,6 +536,12 @@ internal sealed class GesParser
 
     private StatementNode ParseStatement()
     {
+        if (MatchWord("asm"))
+        {
+            var block = ParseAssemblyBlock(null);
+            return WithRange(new AssemblyStatementNode(block), block);
+        }
+
         if (IsSeededRandomStatementStart())
         {
             return ParseSeededRandomStatement();
@@ -714,7 +720,7 @@ internal sealed class GesParser
         var identifier = ExpectIdentifier();
         if (Match(Be))
         {
-            var expression = ParseExpression();
+            var expression = ParseAssemblyOrExpression(identifier, allowSend: true);
             return WithRange(new LetStatementNode(identifier, expression), startToken);
         }
         var token = Current;

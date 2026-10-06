@@ -8,7 +8,7 @@ using GameEventScript.Runtime.VM;
 
 namespace GameEventScript.Compiler;
 
-internal static class GesCompiler
+internal static partial class GesCompiler
 {
     public static GameEventScriptProgram Compile(GesSyntaxTreeModule module, GameEventScriptCompileOptions? options = null)
     {
@@ -26,7 +26,7 @@ internal static class GesCompiler
             message,
             symbol));
 
-    private sealed class BinaryCompiler(GesSyntaxTreeModule module, GameEventScriptCompileOptions options)
+    private sealed partial class BinaryCompiler(GesSyntaxTreeModule module, GameEventScriptCompileOptions options)
     {
         private readonly GesBinaryBuilder _builder = new GesBinaryBuilder()
             .WithModuleName(module.ModuleName)
@@ -272,7 +272,9 @@ internal static class GesCompiler
                     var fieldRegister = fieldRegisters[fieldIndex];
                     if (field.ComputedExpression is not null)
                     {
-                        var computed = EmitExpressionForRead(field.ComputedExpression, context, state);
+                        var computed = fieldRegister;
+                        if (field.ComputedExpression is AssemblyExpressionNode assembly) EmitAssembly(assembly.Block, fieldRegister, context);
+                        else computed = EmitExpressionForRead(field.ComputedExpression, context, state);
                         EmitCastInto(fieldRegister, computed, field.TypeName);
                         continue;
                     }
@@ -359,6 +361,10 @@ internal static class GesCompiler
                 using var sourceRange = _builder.SourceRange(statement.SourceRange);
                 switch (statement)
                 {
+                    case AssemblyStatementNode assembly:
+                        EmitAssembly(assembly.Block, null, context);
+                        break;
+
                     case LetStatementNode let:
                     {
                         var destination = context.Declare(let.Identifier);
@@ -519,6 +525,9 @@ internal static class GesCompiler
             using var sourceRange = _builder.SourceRange(expression.SourceRange);
             switch (expression)
             {
+                case AssemblyExpressionNode assembly:
+                    EmitAssembly(assembly.Block, destination, context);
+                    return true;
                 case BooleanLiteralExpressionNode boolean:
                     _builder.LoadBoolean(destination, boolean.Value);
                     return true;
@@ -2723,6 +2732,8 @@ internal static class GesCompiler
             RegisterCount++;
             return _routine.AddTemporaryRegister(name);
         }
+
+        public bool Contains(string name) => _registers.ContainsKey(name) || _parent?.Contains(name) == true;
 
         public GesRegisterRef Require(string name)
         {

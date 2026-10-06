@@ -1,0 +1,37 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+module examples.assembly
+
+predicate positive(value) be asm {
+    Greater positive, value, 0
+}
+
+function square(value) be asm {
+    Multiply square, value, value
+}
+
+// This example expects a List of ordinary numbers.
+function total(items) be asm {
+    .register iterator, item
+    LoadInteger total, 0
+    IteratorCreate iterator, items
+    next:
+    IteratorNext item, iterator, done
+    Add total, total, item
+    Jump next
+    done:
+    IteratorClose iterator
+}
+
+on Main(args) {
+    asm {
+        let first, second
+        LoadInteger first, 6
+        LoadInteger second, 7
+    }
+    let product be asm {
+        Multiply product, first, second
+    }
+    emit ConsoleOut(product: product, square: square(value: second), total: total(items: [10, 20, 12]), positive: positive(value: product))
+}

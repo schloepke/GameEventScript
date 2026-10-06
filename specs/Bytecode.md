@@ -389,6 +389,32 @@ groups are:
 
 The exhaustive [canonical opcode field map](#canonical-opcode-field-map) in this document lists every defined opcode as its own row, and every group ends with one `reserved` row for its unused tail range.
 
+### Experimental opcode reservation
+
+`0xF8..0xFF` (eight values) is reserved exclusively for local experimental
+opcodes, within the reserved tail of Group 3. It must not be allocated to
+permanent standard opcodes. `0xE0..0xF7` remains available for future standard
+allocations.
+
+This reservation defines no executable instructions or operand layouts.
+Standard compilers never emit experimental opcodes, and standard Program
+validators reject all eight values as `InvalidOpcode`, including when reading
+or loading a `.gesb` file. Inline assembly does not bypass this validation.
+
+An experimental build may implement individual values with explicit operand
+validation, execution semantics and symbolic ASM support. The value's meaning
+is local to that experiment: neither another experiment nor another build is
+required to interpret it identically. Experimental Programs and `.gesb` files
+are not portable distribution artifacts. There is no standard host switch to
+accept these values and no change to the binary format version or instruction
+encoding solely because this range is reserved.
+
+If an experiment becomes a standard instruction, assign it an available
+non-experimental opcode value and complete the normal specification,
+implementation and Conformance requirements. Recompile experimental Programs;
+the experimental value becomes available for reuse without a compatibility
+mapping.
+
 Large structured metadata belongs in tables and pools, not nested instruction
 objects. Examples: `UShortListPool` message shapes/register lists, `StringPool`
 names, bind tables, and optional debug layouts.
@@ -1643,7 +1669,7 @@ remain protection limits, not additional optimizer-observable effects.
 | 0xDD | `PublishAfter` | WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged, `BU`=duration register | Accepts delayed dispatch; see result-bearing sends below. |
 | 0xDE | `ConstructData` | - | result register | type-name Text index | argument-register list | `AU`=argument-label Text list | Constructs explicit built-in data. |
 | 0xDF | `SplitText` | - | result register | input register | delimiter register, zero in whitespace mode | `AU`=mode: 0 explicit separator, 1 whitespace | Produces a Text/Nothing List. |
-| 0xE0..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3 for future collection, iterator, pipeline, extension, or VM opcodes. |
+| 0xE0..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3: 0xE0..0xF7 for future standard opcodes; 0xF8..0xFF exclusively for local experiments. |
 
 ## Side-Table Summary
 

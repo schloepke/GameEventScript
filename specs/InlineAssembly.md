@@ -409,6 +409,8 @@ initialization, context, effect and resource checks.
 | `SplitText` | Direct; typed operands |
 
 Inventory: 206 defined opcodes; reserved numeric values are forbidden.
+The [experimental range 0xF8..0xFF](Bytecode.md#experimental-opcode-reservation)
+requires an explicit experimental implementation; standard ASM cannot emit it.
 
 ## Symbolic source operands
 

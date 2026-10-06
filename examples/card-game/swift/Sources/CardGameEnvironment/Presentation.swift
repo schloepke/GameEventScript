@@ -38,7 +38,7 @@ extension CardGame {
             }
         }.joined(separator: ",")
         return
-            "{\"players\":[\(players.map(jsonString).joined(separator: ","))],\"currentPlayer\":\(currentPlayer.map(String.init) ?? "null"),\"winners\":[\(winners.map(String.init).joined(separator: ","))],\"finished\":\(finished),\"failed\":\(failed),\"revision\":\(revision),\"turn\":\(turn),\"round\":\(round),\"waitingForRound\":\(bindings.waitingForRound),\"direction\":\(bindings.direction),\"notice\":\(jsonString(notice)),\"notices\":[\(bindings.notices.map(jsonString).joined(separator: ","))],\"playerBadges\":[\(badgeJSON)],\"tableNotice\":\(jsonString(bindings.tableNotice)),\"zones\":[\(zoneJSON)],\"rows\":[\(rowJSON)],\"actions\":[\(actionJSON)]}"
+            "{\"players\":[\(players.map(jsonString).joined(separator: ","))],\"currentPlayer\":\(currentPlayer.map(String.init) ?? "null"),\"winners\":[\(winners.map(String.init).joined(separator: ","))],\"finished\":\(finished),\"failed\":\(failed),\"revision\":\(revision),\"turn\":\(turn),\"round\":\(round),\"waitingForRound\":\(bindings.waitingForRound),\"direction\":\(bindings.direction),\"notice\":\(jsonString(notice)),\"notices\":[\(bindings.notices.map { "{\"text\":\(jsonString($0.text)),\"title\":\(jsonString($0.title))}" }.joined(separator: ","))],\"playerBadges\":[\(badgeJSON)],\"tableNotice\":\(jsonString(bindings.tableNotice)),\"zones\":[\(zoneJSON)],\"rows\":[\(rowJSON)],\"actions\":[\(actionJSON)]}"
     }
 
 }

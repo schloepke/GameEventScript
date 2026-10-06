@@ -177,8 +177,11 @@ as well as elapsed time; do not infer that all operations behave alike.
 - Step 4: Swift implements the same source syntax, operand forms and control-flow
   rules. All 39 assembly cases pass with both native compilers; the complete Swift
   corpus passes 1,722 cases with 31 optional performance cases skipped.
-- Steps 5–7 remain pending: complete documentation/highlighting qualification,
-  broader cross-language acceptance and measurements.
+- Step 5: the guide and runnable example document the four binding contexts,
+  symbolic forms and measurement tradeoffs. Both TextMate variants, Sublime and
+  the embedded C#/Swift highlighters recognize ASM; shared highlighting cases
+  qualify complete-document and incremental rendering.
+- Steps 6–7 remain pending: broader cross-language acceptance and measurements.
 
 ## Complete opcode inventory
 

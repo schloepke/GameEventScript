@@ -15,11 +15,11 @@ final class RunProfiler: GameEventScriptProfiler {
         var phaseCounts = [UInt64](repeating: 0, count: 6)
         private var prelude = [UInt64](repeating: 0, count: 6)
         private var phase = -1
-        private let clock: () -> UInt64
+        private let clock: (() -> UInt64)?
         private var pending = -1
         private var start: UInt64 = 0
 
-        init(_ program: GameEventScriptProgram, clock: @escaping () -> UInt64) {
+        init(_ program: GameEventScriptProgram, clock: (() -> UInt64)? = nil) {
             self.program = program
             self.clock = clock
             phaseNanoseconds = .init(repeating: 0, count: program.code.count * 6)
@@ -28,14 +28,16 @@ final class RunProfiler: GameEventScriptProfiler {
         }
 
         func phaseStarting(_ next: GameEventScriptProfilePhase) {
-            closePhase()
+            let end = DispatchTime.now().uptimeNanoseconds
+            closePhase(end)
             if next == .stateCheck { pending = -1 }
             phase = next.rawValue
-            start = clock()
+            start = clock?() ?? DispatchTime.now().uptimeNanoseconds
         }
 
         func instructionStarting(_ address: Int) {
-            closePhase()
+            let end = DispatchTime.now().uptimeNanoseconds
+            closePhase(end)
             counts[address] += 1
             pending = address
             for index in 0..<6 {
@@ -44,13 +46,15 @@ final class RunProfiler: GameEventScriptProfiler {
                 prelude[index] = 0
             }
             phase = GameEventScriptProfilePhase.execute.rawValue
-            start = clock()
+            start = clock?() ?? DispatchTime.now().uptimeNanoseconds
         }
 
-        private func closePhase() {
+        private func closePhase(_ end: UInt64) {
             guard phase >= 0 else { return }
-            let end = clock()
-            let elapsed = end >= start ? end - start : 0
+            // Production captures the timestamp directly at callback entry.
+            // A deterministic test clock is substituted outside the measured interval.
+            let measuredEnd = clock?() ?? end
+            let elapsed = measuredEnd >= start ? measuredEnd - start : 0
             phaseTotals[phase] += elapsed
             phaseCounts[phase] += 1
             if pending >= 0 {
@@ -63,7 +67,8 @@ final class RunProfiler: GameEventScriptProfiler {
         }
 
         func finishSlice() {
-            closePhase()
+            let end = DispatchTime.now().uptimeNanoseconds
+            closePhase(end)
             pending = -1
             for index in 0..<6 { prelude[index] = 0 }
         }
@@ -71,9 +76,9 @@ final class RunProfiler: GameEventScriptProfiler {
 
     var outcome = "Incomplete or failed"
     private(set) var programs: [Measurement] = []
-    private let clock: () -> UInt64
+    private let clock: (() -> UInt64)?
 
-    init(clock: @escaping () -> UInt64 = { DispatchTime.now().uptimeNanoseconds }) { self.clock = clock }
+    init(clock: (() -> UInt64)? = nil) { self.clock = clock }
 
     func createProgramProfiler(_ program: GameEventScriptProgram) -> any GameEventScriptProgramProfiler {
         let result = Measurement(program, clock: clock)

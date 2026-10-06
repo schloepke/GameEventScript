@@ -46,7 +46,7 @@
     <footer>Swift and GES run as WebAssembly in a worker. No game server. Local hot-seat play: hands are not securely hidden from the other player. <a href="licenses/LICENSE">License</a> · <a href="licenses/THIRD-PARTY-NOTICES.txt">Third-party notices</a></footer>
   </main>
   <dialog id="notice-dialog" aria-labelledby="notice-title" aria-describedby="notice-message">
-    <h2 id="notice-title">Game notice</h2>
+    <h2 id="notice-title">Game Notice</h2>
     <p id="notice-message"></p>
     <form method="dialog"><button autofocus>OK</button></form>
   </dialog>
@@ -103,7 +103,7 @@
 <tr><td><code>NoticeTable(pop)</code></td><td>With true, restore the most recently saved text. False or an empty stack does nothing.</td></tr>
 <tr><td><code>NoticeTable(_ text, stackClear)</code></td><td>With true, clear saved texts and show the new text. New game always resets the stack and visible text. Plain NoticeTable preserves the stack.</td></tr>
 <tr><td><code>PlayerBadge(_ text, player)</code></td><td>Set a free-text badge beside a player’s name; empty text removes it. Badges persist until changed or New game. Example: emit PlayerBadge('Winner', player: 0).</td></tr>
-<tr><td><code>Notice(_ text)</code></td><td>Show a modal dialog after the rule cascade. Text is unlabeled: emit Notice('Hello'). Multiple notices display one after another; Complete does not erase them.</td></tr>
+<tr><td><code>Notice(_ text, title: Text)</code></td><td>Show a modal dialog after the rule cascade. Text is unlabeled; title is optional: emit Notice('Hello', title: 'Rules'). Without title, the heading is Game Notice. Multiple notices display one after another; Complete does not erase them.</td></tr>
 </tbody></table></section>
     <section id="help-extensions"><h3>Board extensions</h3><p>Mutations run immediately; later queries in the same handler see the result. Previously read values remain immutable snapshots. Complete(action) is still required. Operations validate before changing the board, but a later error or Reject does not undo earlier mutations. Card movement and reverse are available during preparation, round hooks, actions and EndTurn. State writes also work in BeginTurn and EndGame.</p><table><thead><tr><th scope="col">Signature / value</th><th scope="col">Meaning</th></tr></thead><tbody>
 <tr><td><code>:board.create(setup)</code></td><td>Once during preparation. Validates and creates the entire board atomically. Maximum 64 zones, 512 cards and 16 rows per player or table position. Unknown fields and duplicate IDs fail setup.</td></tr>

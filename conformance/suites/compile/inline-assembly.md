@@ -1522,3 +1522,841 @@ steps:
               type: ":Number.int64"
               value: "42"
 ```
+
+---
+
+## Test: signed int64 minimum
+
+This case verifies signed int64 minimum using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: signed-int64-minimum
+kind: scriptApi
+level: scenario
+sources:
+  - name: signed-int64-minimum.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { let result be asm { LoadInteger result, -9223372036854775808 }; emit Done(value: result) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Number.int64"
+              value: "-9223372036854775808"
+```
+
+---
+
+## Test: negative unit preserved
+
+This case verifies negative unit preserved using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: negative-unit-preserved
+kind: scriptApi
+level: scenario
+sources:
+  - name: negative-unit-preserved.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { let result be asm { .register number; Move number, -7m; Cast result, number, :Text }; emit Done(value: result) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Text"
+              value: "-7m"
+```
+
+---
+
+## Test: range iterator short
+
+This case verifies range iterator short using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: range-iterator-short
+kind: scriptApi
+level: scenario
+sources:
+  - name: range-iterator-short.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { let result be asm {
+    .register iterator, item
+    LoadInteger result, 0
+    CreateRangeIteratorShort iterator, 1, 6, 1
+    next:
+    IteratorNext item, iterator, end
+    Add result, result, item
+    Jump next
+    end:
+    IteratorClose iterator
+}; emit Done(value: result) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Number.int64"
+              value: "21"
+```
+
+---
+
+## Test: iterator failure edge
+
+This case verifies iterator failure edge using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: iterator-failure-edge
+kind: scriptApi
+level: scenario
+sources:
+  - name: iterator-failure-edge.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { let result be asm {
+    .register iterator, item
+    LoadInteger result, 42
+    IteratorCreateOrJump iterator, nothing, end
+    IteratorClose iterator
+    end:
+    Nop
+}; emit Done(value: result) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Number.int64"
+              value: "42"
+```
+
+---
+
+## Test: symbolic record
+
+This case verifies symbolic record using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: symbolic-record
+kind: scriptApi
+level: scenario
+sources:
+  - name: symbolic-record.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Sample as { value: :Number }
+on Start() { let result be asm { .register instance; CreateRecord instance, :Sample(value: 42); MemberAccess result, 'value', instance }; emit Done(value: result) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Number.int64"
+              value: "42"
+```
+
+---
+
+## Test: map builder
+
+This case verifies map builder using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: map-builder
+kind: scriptApi
+level: scenario
+sources:
+  - name: map-builder.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { let result be asm {
+    .register builder, map
+    MapBuilderCreate builder
+    MapBuilderAdd builder, 'answer', 42
+    MapBuilderFinish map, builder
+    MemberAccess result, 'answer', map
+}; emit Done(value: result) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Number.int64"
+              value: "42"
+```
+
+---
+
+## Test: handler binding
+
+This case verifies handler binding using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: handler-binding
+kind: scriptApi
+level: scenario
+sources:
+  - name: handler-binding.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { asm {
+    .register handler, message
+    LoadHandler handler, Done(value)
+    BindHandler message, handler(value: 42)
+    EmitMessageValue message
+} }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Number.int64"
+              value: "42"
+```
+
+---
+
+## Test: temporary does not escape
+
+This case verifies temporary does not escape using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: temporary-does-not-escape
+kind: compileError
+level: scenario
+sources:
+  - name: temporary-does-not-escape.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { asm { .register temp; LoadInteger temp, 1 }; emit Done(value: temp) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.unresolvedSymbol }
+```
+
+---
+
+## Test: export does not escape branch
+
+This case verifies export does not escape branch using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: export-does-not-escape-branch
+kind: compileError
+level: scenario
+sources:
+  - name: export-does-not-escape-branch.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { if true { asm { let result; LoadInteger result, 1 } }; emit Done(value: result) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.unresolvedSymbol }
+```
+
+---
+
+## Test: late declaration
+
+This case verifies late declaration using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: late-declaration
+kind: compileError
+level: scenario
+sources:
+  - name: late-declaration.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { asm { Nop; .register temp } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: parse, code: parse.syntax }
+```
+
+---
+
+## Test: unreachable bad register
+
+This case verifies unreachable bad register using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: unreachable-bad-register
+kind: compileError
+level: scenario
+sources:
+  - name: unreachable-bad-register.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { asm { Jump end; Add unknown, 1, 2; end:; Nop } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: live resource overwrite
+
+This case verifies live resource overwrite using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: live-resource-overwrite
+kind: compileError
+level: scenario
+sources:
+  - name: live-resource-overwrite.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { asm { .register iterator; CreateRangeIteratorShort iterator, 1, 2, 1; LoadNothing iterator } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: closed resource join
+
+This case verifies closed resource join using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: closed-resource-join
+kind: compileError
+level: scenario
+sources:
+  - name: closed-resource-join.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(flag) { let result be asm {
+    .register builder
+    JumpIfTrue flag, plain
+    ListBuilderCreate builder
+    ListBuilderFinish result, builder
+    Jump end
+    plain:
+    LoadNothing builder
+    end:
+    Move result, builder
+} }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: uninitialized symbolic message
+
+This case verifies uninitialized symbolic message using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: uninitialized-symbolic-message
+kind: compileError
+level: scenario
+sources:
+  - name: uninitialized-symbolic-message.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { asm { .register value; emit Done(value: value) } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: float in integer immediate
+
+This case verifies float in integer immediate using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: float-in-integer-immediate
+kind: compileError
+level: scenario
+sources:
+  - name: float-in-integer-immediate.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { asm { .register value; LoadInteger value, 1.5 } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: raw record construction
+
+This case verifies raw record construction using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: raw-record-construction
+kind: compileError
+level: scenario
+sources:
+  - name: raw-record-construction.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { asm { CreateRecordValue } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: raw register frame
+
+This case verifies raw register frame using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: raw-register-frame
+kind: compileError
+level: scenario
+sources:
+  - name: raw-register-frame.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { asm { RegisterLocals 3 } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: cyclic symbolic call
+
+This case verifies cyclic symbolic call using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: cyclic-symbolic-call
+kind: compileError
+level: scenario
+sources:
+  - name: cyclic-symbolic-call.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+function loop() be asm { Call loop, loop() }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.cyclicCallGraph }
+```
+
+---
+
+## Test: instruction preservation
+
+This case verifies instruction preservation using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: instruction-preservation
+kind: bytecode
+level: scenario
+sources:
+  - name: instruction-preservation.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { asm {
+    .register first, second, ignored
+    LoadInteger first, 7
+    LoadInteger first, 8
+    LoadInteger second, 6
+    Multiply ignored, first, second
+    Nop
+    Jump end
+    Nop
+    end:
+    Nop
+} }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+opcodes:
+  counts:
+    LoadInteger: 3
+    Multiply: 1
+    Nop: 3
+    Jump: 1
+```
+
+---
+
+## Test: zero argument symbolic message
+
+This case verifies zero argument symbolic message using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: zero-argument-symbolic-message
+kind: scriptApi
+level: scenario
+sources:
+  - name: zero-argument-symbolic-message.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { asm { EmitMessage Ping() } }
+on Ping() { emit Done(value: 42) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Ping
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Number.int64"
+              value: "42"
+```
+
+---
+
+## Test: zero argument message value
+
+This case verifies zero argument message value using the shared portable compiler contract.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: zero-argument-message-value
+kind: scriptApi
+level: scenario
+sources:
+  - name: zero-argument-message-value.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { asm { .register message; LoadMessage message, Ping(); EmitMessageValue message } }
+on Ping() { emit Done(value: 42) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Ping
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Number.int64"
+              value: "42"
+```

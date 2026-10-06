@@ -35,7 +35,7 @@ Every contract area has exactly one owning document. Other documents link to tha
 | Bytecode | [Bytecode](../specs/Bytecode.md) | Instruction model, opcode semantics, operands, and control flow | Normative |
 | Binary format | [Binary format](../specs/BinaryFormat.md) | `.gesb` container, segments, encoding, retention, and decoding | Normative |
 | Assembler format | [Assembler format](../specs/AssemblerFormat.md) | Human-readable `.gesa` dump syntax and presentation metadata | Normative |
-| Inline assembly | [Inline assembly](../specs/InlineAssembly.md) | Syntax, opcode inventory, and implementation gates | Implemented; final acceptance pending |
+| Inline assembly | [Inline assembly](../specs/InlineAssembly.md) | Syntax, opcode inventory, and implementation gates | Implemented |
 | Diagnostics | [Diagnostics](../specs/Diagnostics.md) | Stable phases, codes, locations, and propagation rules | Normative |
 | Text semantics | [Text](../specs/Semantics/Text.md) | Unicode, source text, names, ordering, scalar operations, data formatting, and literal recognition | Normative |
 | Number semantics | [Numbers](../specs/Semantics/Numbers.md) | Integer, Binary64, units, arithmetic, conversion, and equality | Normative |

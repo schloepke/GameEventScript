@@ -3,7 +3,7 @@
 
 # Inline assembly implementation contract
 
-Status: C# and Swift compiler implementations available; final acceptance and measurements pending. Each
+Status: C# and Swift implementations qualified; measurement report pending. Each
 implementation milestone must qualify the corresponding behavior in shared
 Markdown Conformance before marking it implemented. Inline assembly is GES
 source syntax, not a reader for the GESA dump format.
@@ -181,7 +181,13 @@ as well as elapsed time; do not infer that all operations behave alike.
   symbolic forms and measurement tradeoffs. Both TextMate variants, Sublime and
   the embedded C#/Swift highlighters recognize ASM; shared highlighting cases
   qualify complete-document and incremental rendering.
-- Steps 6–7 remain pending: broader cross-language acceptance and measurements.
+- Step 6: 60 shared ASM cases cover valid execution, errors, instruction
+  preservation, symbolic messages/calls, signed values and resource joins. The
+  complete native Swift compiler corpus passes 1,774 cases; strict portable
+  acceptance passes 1,743 and skips 31 optional performance cases. Swift Runtime
+  passes 1,414 scenarios using C#-compiled inputs. C# Release/allocation, Swift
+  API, native adapters, CLI, numeric text and product JSON roundtrips pass.
+- Step 7 remains pending: collection-opcode measurements and their interpretation.
 
 ## Complete opcode inventory
 

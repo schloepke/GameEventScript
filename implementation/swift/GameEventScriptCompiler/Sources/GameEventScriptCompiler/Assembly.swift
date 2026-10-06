@@ -184,8 +184,9 @@ extension GesCompiler {
                     }
                     if old != kind {
                         if assemblyResource(old) || assemblyResource(kind) { throw assemblyFailure(line.location, "Incompatible resource states.", name) }
-                        if old != "value" {
-                            previous[name] = "value"
+                        let merged = old == "closed" || kind == "closed" ? "closed" : "value"
+                        if old != merged {
+                            previous[name] = merged
                             changed = true
                         }
                     }

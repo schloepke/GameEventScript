@@ -97,7 +97,16 @@ extension GesCompiler {
             return true
         }
         if ["Call", "CallExternal", "CreateList", "CreateMap", "CreateRecord", "CreateExternalType", "CreateVector", "CreatePoint", "LoadMessage", "LoadHandler", "BindHandler", "ConstructData"].contains(line.name) {
-            if line.name == "Call", case .call(let name, _) = line.operands[1].kind, scope.get(name) != nil { throw assemblyFailure(line.location, "Call requires a script callable.", name) }
+            if line.name == "Call", case .call(let name, let args) = line.operands[1].kind {
+                let key = signature(name, args.map(\.label))
+                guard let definition = definitions[key] else { throw error("compile.unresolvedSymbol", line.location, symbol: name, phase: .compile) }
+                let values = try args.map { try expression($0.value, r, scope) }
+                stage(values, r)
+                let instruction = r.emit(.call, regs[0], flags: definition.kind == "predicate" ? 0x20 : 0)
+                r.calls.append((instruction, key))
+                r.dependencies.insert(key)
+                return true
+            }
             _ = try expression(line.operands[1], r, scope, destination: regs[0])
             return true
         }

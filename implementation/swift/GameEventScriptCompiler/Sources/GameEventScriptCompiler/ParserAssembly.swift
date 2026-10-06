@@ -38,13 +38,27 @@ extension GesParser {
                 var operands: [GesExpression] = []
                 if current.kind != "newline" && current.syntaxText != ";" && current.syntaxText != "}" {
                     repeat {
-                        if current.kind == "type" && tokens[min(index + 1, tokens.count - 1)].syntaxText != "(" {
+                        if assemblyMessageOperand(name, operands.count), current.kind == "message" {
+                            let message = advance().text
+                            let arguments = current.syntaxText == "(" ? try arguments() : []
+                            operands.append(node(.message(message, arguments), token))
+                        } else if current.syntaxText == "-", peek().text == "9223372036854775808" {
+                            advance()
+                            advance()
+                            operands.append(node(.literal(.integer(Int64.min)), token))
+                        } else if current.kind == "type" && tokens[min(index + 1, tokens.count - 1)].syntaxText != "(" {
                             let type = advance()
                             operands.append(node(.literal(.text(String(type.text.dropFirst()))), type))
                         } else {
                             let value = try expression()
                             if case .unary("-", let number) = value.kind, case .literal(let literal) = number.kind, literal.isNumeric {
-                                if let integer = literal.integerValue, integer != Int64.min { operands.append(node(.literal(.integer(-integer)), token)) } else { operands.append(node(.literal(.float(-literal.asNumber)), token)) }
+                                if literal.kind == .percentage {
+                                    operands.append(node(.literal(.percentage(-literal.asNumber)), token))
+                                } else if let integer = literal.integerValue, integer != Int64.min {
+                                    operands.append(node(.literal(.integer(-integer, unit: literal.unit)), token))
+                                } else {
+                                    operands.append(node(.literal(.float(-literal.asNumber, unit: literal.unit)), token))
+                                }
                             } else {
                                 operands.append(value)
                             }
@@ -59,4 +73,14 @@ extension GesParser {
         try expect("}")
         return .init(output: output, declarations: declarations, lines: lines, predicate: predicate, allowSend: allowSend, location: location(start, previous))
     }
+
+    func assemblyMessageOperand(_ opcode: String, _ index: Int) -> Bool {
+        switch opcode {
+        case "LoadMessage", "EmitInstant", "PublishInstant": return index == 1
+        case "EmitAfter", "PublishAfter": return index == 2
+        case "EmitMessage", "EmitMessageWithTags", "PublishMessage", "PublishMessageWithTags": return index == 0
+        default: return false
+        }
+    }
+
 }

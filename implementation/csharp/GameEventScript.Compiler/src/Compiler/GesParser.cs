@@ -536,7 +536,11 @@ internal sealed partial class GesParser
 
     private StatementNode ParseStatement()
     {
-        if (MatchWord("asm")) return WithRange(new AssemblyStatementNode(ParseAssemblyBlock(null)), Previous);
+        if (MatchWord("asm"))
+        {
+            var block = ParseAssemblyBlock(null);
+            return WithRange(new AssemblyStatementNode(block), block);
+        }
 
         if (IsSeededRandomStatementStart())
         {

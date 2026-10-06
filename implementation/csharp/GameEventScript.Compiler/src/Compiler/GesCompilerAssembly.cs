@@ -236,7 +236,8 @@ internal static partial class GesCompiler
                         {
                             if (IsAssemblyResource(previous[name]) || IsAssemblyResource(kind))
                                 throw AssemblyFailure("Incompatible resource states at assembly join.", name);
-                            if (previous[name] != "value") { previous[name] = "value"; changed = true; }
+                            var merged = previous[name] == "closed" || kind == "closed" ? "closed" : "value";
+                            if (previous[name] != merged) { previous[name] = merged; changed = true; }
                         }
                     }
                     if (changed) pending.Enqueue(target);

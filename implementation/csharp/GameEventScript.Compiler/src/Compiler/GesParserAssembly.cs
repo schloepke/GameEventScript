@@ -9,7 +9,11 @@ namespace GameEventScript.Compiler;
 internal sealed partial class GesParser
 {
     private ExpressionNode ParseAssemblyOrExpression(string output, bool predicate = false, bool allowSend = false)
-        => MatchWord("asm") ? WithRange(new AssemblyExpressionNode(ParseAssemblyBlock(output) with { Predicate = predicate, AllowSend = allowSend }), Previous) : ParseExpression();
+    {
+        if (!MatchWord("asm")) return ParseExpression();
+        var block = ParseAssemblyBlock(output) with { Predicate = predicate, AllowSend = allowSend };
+        return WithRange(new AssemblyExpressionNode(block), block);
+    }
 
     private AssemblyBlockNode ParseAssemblyBlock(string? output)
     {
@@ -50,7 +54,7 @@ internal sealed partial class GesParser
                 var operands = new List<ExpressionNode>();
                 if (!Is(NewLine) && !Is(Semicolon) && !Is(RightBrace))
                 {
-                    do operands.Add(ParseAssemblyOperand()); while (Match(Comma));
+                    do operands.Add(ParseAssemblyOperand(AssemblyMessageOperand(name, operands.Count))); while (Match(Comma));
                 }
                 lines.Add(WithRange(new AssemblyLine(name, false, operands), token));
             }
@@ -61,8 +65,24 @@ internal sealed partial class GesParser
         return WithRange(new AssemblyBlockNode(output, declarations, lines, AllowSend: output is null), start);
     }
 
-    private ExpressionNode ParseAssemblyOperand()
+    private static bool AssemblyMessageOperand(string opcode, int index)
+        => opcode switch
+        {
+            "LoadMessage" or "EmitInstant" or "PublishInstant" => index == 1,
+            "EmitAfter" or "PublishAfter" => index == 2,
+            "EmitMessage" or "EmitMessageWithTags" or "PublishMessage" or "PublishMessageWithTags" => index == 0,
+            _ => false
+        };
+
+    private ExpressionNode ParseAssemblyOperand(bool message)
     {
+        if (message && Is(Message)) return ParseMessageLiteralExpressionCore();
+        if (Is(OperatorMinus) && _reader.Peek(1).Kind == Float && _reader.Peek(1).Text == "9223372036854775808")
+        {
+            var start = Advance();
+            Advance();
+            return WithRange(new IntegerLiteralExpressionNode(long.MinValue), start);
+        }
         if (Is(TypeName) && _reader.Peek(1).Kind != LeftParen)
         {
             var token = Advance();
@@ -75,6 +95,12 @@ internal sealed partial class GesParser
         {
             UnaryExpressionNode { Operator: GesUnaryOperator.Negate, Operand: IntegerLiteralExpressionNode integer } when integer.Value != long.MinValue => WithRange(new IntegerLiteralExpressionNode(-integer.Value), operand),
             UnaryExpressionNode { Operator: GesUnaryOperator.Negate, Operand: FloatLiteralExpressionNode number } => WithRange(new FloatLiteralExpressionNode(-number.Value), operand),
+            UnaryExpressionNode { Operator: GesUnaryOperator.Negate, Operand: UnitIntegerLiteralExpressionNode integer } when integer.Value != long.MinValue
+                => WithRange(new UnitIntegerLiteralExpressionNode(-integer.Value, integer.UnitName), operand),
+            UnaryExpressionNode { Operator: GesUnaryOperator.Negate, Operand: UnitFloatLiteralExpressionNode number }
+                => WithRange(new UnitFloatLiteralExpressionNode(-number.Value, number.UnitName), operand),
+            UnaryExpressionNode { Operator: GesUnaryOperator.Negate, Operand: PercentageLiteralExpressionNode percentage }
+                => WithRange(new PercentageLiteralExpressionNode(-percentage.RatioValue), operand),
             _ => operand
         };
     }

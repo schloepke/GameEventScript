@@ -641,16 +641,19 @@ internal static class GameEventScriptVirtualMachine
                     case GameEventScriptBytecodeOpCode.Single:
                         vmState.GesVmSingle(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                         break;
+                    case Cartesian:
+                        vmState.GesVmCartesian(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), context.RuntimeBudget);
+                        break;
                     case IteratorCreate:
-                        vmState.GesVmIteratorCreate(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
+                        vmState.GesVmIteratorCreate(instruction, context.RuntimeBudget);
                         break;
                     case IteratorCreateOrJump:
-                        vmState.GesVmIteratorCreate(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
+                        vmState.GesVmIteratorCreate(instruction, context.RuntimeBudget);
                         if (vmState.IsRegisterNothing(instruction.DestinationRegister)) vmState.JumpAddress(instruction.TargetAddress);
                         break;
                     case IteratorNext:
                     {
-                        if (vmState.GesVmIteratorNext(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.TargetAddress))
+                        if (instruction.UnitAndFlags != 0 ? vmState.GesVmIteratorNextComponents(instruction) : vmState.GesVmIteratorNext(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.TargetAddress))
                         {
                             context.RuntimeBudget.ConsumeLoopIterationIfAvailable("For loop iteration exceeds the configured limit.");
                         }

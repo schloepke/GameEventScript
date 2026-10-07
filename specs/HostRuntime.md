@@ -375,7 +375,11 @@ without `parse` maintain no parsing state or counters.
 `MaxLoopIterations` counts successful iterator advances across all loops and
 iterator-backed selectors in one handler. A present `nothing` item consumes one
 iteration, just like any other value. Exhaustion and non-iterable sources consume
-no iteration. Exactly the configured number of advances is allowed; attempting
+no successful-advance iteration. Compound intersection/difference additionally
+charge this same counter before visiting each left candidate and before each
+right search slot (including already-used slots). Map compound operations charge
+each left candidate, each key-list validation item and each key search comparison. Failed searches therefore
+cannot perform unlimited work inside one opcode. Exactly the configured number of advances is allowed; attempting
 another successful advance stops the handler before its loop body or selector
 expression executes. Nested and sequential loops share this counter. Frame
 pauses retain it, and starting the next handler resets it.
@@ -385,6 +389,11 @@ by generated lists and iterator-backed selectors. The limit applies to retained
 items, rather than the number of source items visited or a cumulative total
 across separate collections:
 
+- Compound iterator search masks and retained map results are individually
+  bounded before growth. Cartesian pair Lists and entry Maps count their own
+  retained components when materialized; direct register output creates no such
+  collection and does not charge its size. Native Cartesian checks its outer
+  product size using overflow-safe arithmetic before allocation.
 - List projections, filters, and generated lists count every appended result,
   including `nothing`.
 - Map projections count distinct accepted keys. Replacing an existing key's value

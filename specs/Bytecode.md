@@ -1751,3 +1751,14 @@ internal resources cannot be passed through source lists as ordinary values.
 The Cartesian instruction uses 0xE0, writes destination, reads X and Y, and
 requires zero UnitAndFlags and payload. The instruction size and section
 encoding are unchanged. Source/target lists use the existing immutable pool.
+
+Compound iterator execution advances the last Cartesian source fastest and
+lockstep stops at the shortest source. Sources are captured by immutable value;
+restarting a Cartesian inner iterator never reevaluates a script expression.
+Entries reads Map keys in scalar order and yields key/value Maps for ordinary
+Next, or their two components for component Next. Normal component output
+decomposes Lists by position, Maps by sorted values and scalars into a first
+component; absent components are Nothing. One normal Next preserves the whole
+item. Cartesian/lockstep normal output yields a List of all source components.
+Union/intersect/difference preserve the existing binary operator semantics
+from left to right; Map results iterate values, and Dice order is preserved.

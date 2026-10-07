@@ -13,7 +13,7 @@ owning specifications; this plan records sequencing and acceptance criteria.
 2. [x] Extend C# bytecode descriptions, validation, codecs, GESA and fixtures.
    Source ASM emission follows with compiler support in step 5; Swift follows
    in steps 6/7. This checkpoint validates transport, not new execution paths.
-3. [ ] Implement the C# iterator/runtime reference and atomic Conformance cases.
+3. [x] Implement the C# iterator/runtime reference and atomic Conformance cases.
 4. [ ] Extend the C# parser and both canonical editor grammars.
 5. [ ] Implement C# pipeline lowering, binding and register analysis.
 6. [ ] Port the runtime architecture and verification to Swift.

@@ -1687,7 +1687,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+              "pattern": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
               "end": "",
               "name": "meta.keyword-phrase.gameeventscript",
               "contentName": "",
@@ -1737,7 +1737,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+              "pattern": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
               "end": "",
               "name": "meta.keyword-phrase.gameeventscript",
               "contentName": "",
@@ -4244,7 +4244,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+              "pattern": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
               "end": "",
               "name": "meta.keyword-phrase.gameeventscript",
               "contentName": "",
@@ -4294,7 +4294,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+              "pattern": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
               "end": "",
               "name": "meta.keyword-phrase.gameeventscript",
               "contentName": "",

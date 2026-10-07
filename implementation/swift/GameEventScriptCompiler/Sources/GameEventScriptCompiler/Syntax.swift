@@ -42,6 +42,7 @@ final class GesExpression {
         case constant(String)
         case unary(String, GesExpression)
         case binary(String, GesExpression, GesExpression)
+        case between(GesExpression, GesExpression, GesExpression)
         case call(String, [GesArgument])
         case extensionCall(String, String, [GesArgument])
         case constructor(String, [GesArgument])

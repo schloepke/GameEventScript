@@ -17,7 +17,7 @@ extension GesCompiler {
         case .name(let name): return types[name] ?? "unknown"
         case .constant(let name): return constants[name].map(child) ?? "unknown"
         case .cast(_, let type), .constructor(let type, _): return type
-        case .check, .predicate: return "boolean"
+        case .check, .predicate, .between: return "boolean"
         case .member(let value, let name): return records[child(value)]?.fields.first { $0.name == name }?.type ?? "unknown"
         case .selector(_, let selection): return ["any", "all", "contains"].contains(selection.operation) ? "boolean" : "unknown"
         case .call(let name, let args):

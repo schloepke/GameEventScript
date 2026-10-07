@@ -11,6 +11,9 @@
 xcuserdata/
 *.xcuserstate
 
+# Local experiments outside the product sources
+/experiments/
+
 # Generated build, test, report, and package artifacts
 artifacts/
 bin/

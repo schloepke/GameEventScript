@@ -363,14 +363,14 @@
         1: "keyword.operator.word.gameeventscript"
         3: "keyword.operator.word.gameeventscript"
     -
-      "match": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b"
+      "match": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
         1: "keyword.operator.word.gameeventscript"
         3: "keyword.operator.word.gameeventscript"
         5: "keyword.operator.word.gameeventscript"
     -
-      "match": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b"
+      "match": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
         1: "keyword.operator.word.gameeventscript"

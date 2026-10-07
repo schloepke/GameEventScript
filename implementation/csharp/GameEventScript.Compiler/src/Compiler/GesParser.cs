@@ -1214,6 +1214,18 @@ internal sealed partial class GesParser
                     continue;
                 }
 
+                if (MatchWord("between"))
+                {
+                    SkipNewLines();
+                    var minimum = ParseRelationalComparisonOperand();
+                    SkipNewLines();
+                    Expect(OperatorAnd);
+                    SkipNewLines();
+                    var maximum = ParseRelationalComparisonOperand();
+                    expression = ApplyIsNegation(WithRange(new BetweenExpressionNode(expression, minimum, maximum), expression, maximum), negated);
+                    continue;
+                }
+
                 if (MatchWord("at"))
                 {
                     SkipNewLines();

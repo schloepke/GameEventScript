@@ -254,6 +254,9 @@ internal sealed class GesValidationErrors
             RandomExpressionNode random => FindNodeInExpression(random.FromExpression, symbol) ?? FindNodeInExpression(random.ToExpression, symbol),
             SeededRandomExpressionNode seeded => FindNodeInExpression(seeded.SeedExpression, symbol) ?? FindNodeInExpression(seeded.BodyExpression, symbol),
             VariadicTaggedExpressionNode variadic => FindNodeInExpressions(variadic.Arguments, symbol),
+            BetweenExpressionNode between => FindNodeInExpression(between.Value, symbol) ??
+                                         FindNodeInExpression(between.Minimum, symbol) ??
+                                         FindNodeInExpression(between.Maximum, symbol),
             ClampExpressionNode clamp => FindNodeInExpression(clamp.Value, symbol) ??
                                          FindNodeInExpression(clamp.Minimum, symbol) ??
                                          FindNodeInExpression(clamp.Maximum, symbol),

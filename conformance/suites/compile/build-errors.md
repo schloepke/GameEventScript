@@ -2662,3 +2662,63 @@ error:
   phase: "parse"
   code: "parse.syntax"
 ```
+
+---
+
+## Test: between-requires-separator
+
+This case verifies that incomplete range comparisons are rejected while parsing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: between-requires-separator
+kind: compileError
+level: atomic
+```
+
+### Source code under test
+
+```ges
+on Start { let result be 5 is between 1 10 }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: between-requires-upper-bound
+
+This case verifies that incomplete range comparisons are rejected while parsing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: between-requires-upper-bound
+kind: compileError
+level: atomic
+```
+
+### Source code under test
+
+```ges
+on Start { let result be 5 is between 1 and }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```

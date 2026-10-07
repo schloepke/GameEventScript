@@ -1117,3 +1117,388 @@ steps:
               type: ":Text"
               value: "a"
 ```
+
+---
+
+## Test: between-inclusive-boundaries
+
+This case verifies inclusive between semantics, parsing, or observable evaluation order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: between-inclusive-boundaries
+kind: scriptApi
+level: scenario
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(low: 10 is between 10 and 20, middle: 15 is between 10 and 20,
+    high: 20 is between 10 and 20, below: 9 is between 10 and 20,
+    above: 21 is between 10 and 20, equal: 10 is between 10 and 10,
+    reversed: 15 is between 20 and 10, negated: 21 is not between 10 and 20,
+    negatedInside: 15 is not between 10 and 20)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: low
+            value:
+              type: ":Boolean"
+              value: true
+          - name: middle
+            value:
+              type: ":Boolean"
+              value: true
+          - name: high
+            value:
+              type: ":Boolean"
+              value: true
+          - name: below
+            value:
+              type: ":Boolean"
+              value: false
+          - name: above
+            value:
+              type: ":Boolean"
+              value: false
+          - name: equal
+            value:
+              type: ":Boolean"
+              value: true
+          - name: reversed
+            value:
+              type: ":Boolean"
+              value: false
+          - name: negated
+            value:
+              type: ":Boolean"
+              value: true
+          - name: negatedInside
+            value:
+              type: ":Boolean"
+              value: false
+```
+
+---
+
+## Test: between-precedence-and-context
+
+This case verifies inclusive between semantics, parsing, or observable evaluation order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: between-precedence-and-context
+kind: scriptApi
+level: scenario
+```
+
+### Source code under test
+
+```ges
+predicate bounded(value) be value is between 1 + 2 and 3 * 4
+function between(value) be value
+record :Sample as { value: :Boolean computed by 5 is between 1 and 10 }
+on Start {
+  let low be 10
+  let high be 20
+  let selected be [5, 10, 15, 20, 25][:filter item where item is between low and high][:count]
+  let multi be 15 is between
+    low and
+    high
+  emit Done(andTail: 15 is between low and high and false,
+    orTail: 25 is between low and high or true,
+    arithmetic: bounded(value: 12), filtered: selected, multiline: multi,
+    contextual: between(value: 7), computed: (:Sample()).value)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: andTail
+            value:
+              type: ":Boolean"
+              value: false
+          - name: orTail
+            value:
+              type: ":Boolean"
+              value: true
+          - name: arithmetic
+            value:
+              type: ":Boolean"
+              value: true
+          - name: filtered
+            value:
+              type: ":Number.int64"
+              value: "3"
+          - name: multiline
+            value:
+              type: ":Boolean"
+              value: true
+          - name: contextual
+            value:
+              type: ":Number.int64"
+              value: "7"
+          - name: computed
+            value:
+              type: ":Boolean"
+              value: true
+```
+
+---
+
+## Test: between-comparison-semantics
+
+This case verifies inclusive between semantics, parsing, or observable evaluation order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: between-comparison-semantics
+kind: scriptApi
+level: scenario
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(unit: 15m is between 10m and 20m,
+    fraction: 1.5 is between 1 and 2,
+    absent: nothing is between 1 and 2,
+    absentNegated: nothing is not between 1 and 2,
+    absentLower: 15 is between nothing and 20,
+    absentUpper: 15 is between 10 and nothing,
+    falseLower: 5 is between 10 and nothing)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: unit
+            value:
+              type: ":Boolean"
+              value: true
+          - name: fraction
+            value:
+              type: ":Boolean"
+              value: true
+          - name: absent
+            value:
+              type: ":Nothing"
+          - name: absentNegated
+            value:
+              type: ":Nothing"
+          - name: absentLower
+            value:
+              type: ":Nothing"
+          - name: absentUpper
+            value:
+              type: ":Nothing"
+          - name: falseLower
+            value:
+              type: ":Boolean"
+              value: false
+```
+
+---
+
+## Test: between-evaluates-value-once-and-bounds-in-order
+
+This case verifies inclusive between semantics, parsing, or observable evaluation order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: between-evaluates-value-once-and-bounds-in-order
+kind: scriptApi
+level: scenario
+random:
+  sequence: ["50", "10", "90", "77"]
+```
+
+### Source code under test
+
+```ges
+function draw() be random from 1 to 100
+on Start {
+  let result be draw() is between draw() and draw()
+  emit Done(result: result, next: draw())
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: result
+            value:
+              type: ":Boolean"
+              value: true
+          - name: next
+            value:
+              type: ":Number.int64"
+              value: "77"
+```
+
+---
+
+## Test: between-short-circuits-upper-bound
+
+This case verifies inclusive between semantics, parsing, or observable evaluation order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: between-short-circuits-upper-bound
+kind: scriptApi
+level: scenario
+random:
+  sequence: ["5", "10", "77"]
+```
+
+### Source code under test
+
+```ges
+function draw() be random from 1 to 100
+on Start {
+  let result be draw() is not between draw() and :test.failWithRandomScope()
+  emit Done(result: result, next: draw())
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: result
+            value:
+              type: ":Boolean"
+              value: true
+          - name: next
+            value:
+              type: ":Number.int64"
+              value: "77"
+```
+
+---
+
+## Test: between-nothing-does-not-skip-upper-bound
+
+This case verifies inclusive between semantics, parsing, or observable evaluation order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: between-nothing-does-not-skip-upper-bound
+kind: scriptApi
+level: scenario
+random:
+  sequence: ["10", "90", "77"]
+```
+
+### Source code under test
+
+```ges
+function draw() be random from 1 to 100
+on Start {
+  let result be nothing is between draw() and draw()
+  emit Done(result: result, next: draw())
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: result
+            value:
+              type: ":Nothing"
+          - name: next
+            value:
+              type: ":Number.int64"
+              value: "77"
+```

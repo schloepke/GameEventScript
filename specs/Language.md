@@ -787,6 +787,8 @@ The parser accepts several readable comparison forms:
 ```ges
 value is at least 10
 value is at most 10
+value is between 10 and 20
+value is not between 10 and 20
 value is less than 10
 value is more than 10
 value is 10 or less
@@ -794,6 +796,18 @@ value is 10 or more
 value is empty
 value has value
 ```
+
+> **Since: Unreleased** — inclusive range comparisons
+
+`value is between lower and upper` is an inclusive range check with the same
+comparison and three-valued Boolean semantics as `value >= lower and value <= upper`,
+except that `value` is evaluated exactly once. Evaluation is left to right: value,
+lower bound, then (unless the lower comparison is `false`) upper bound. A `nothing`
+lower comparison does not short-circuit. `is not between` negates the complete
+result using ordinary `not` semantics. Bounds are not reordered or clamped.
+Each bound accepts an additive expression; parenthesize more complex expressions.
+The separating `and` belongs to the range check; a following `and` combines the
+completed check with the next condition. `between` remains a contextual word.
 
 ### Prefix Intrinsics and Selectors
 
@@ -2140,6 +2154,7 @@ membership_operator ::= 'in' | '∈' | '∉' | 'has' 'value' | 'in' 'values' 'of
 type_operation_expression ::= relational_expression type_operation*
 type_operation ::= 'as' type_reference |
                    'is' [not_operator] ('nothing' | type_reference | numeric_check | 'empty' | extension_reference | LOWER_NAME |
+                   'between' additive_expression 'and' additive_expression |
                    'at' ('least' | 'most') additive_expression | ('less' | 'more') 'than' additive_expression |
                    additive_expression ['or' ('less' | 'more')])
 relational_expression ::= additive_expression (('<' | '>' | '<=' | '>=' | '≤' | '≥') additive_expression)*

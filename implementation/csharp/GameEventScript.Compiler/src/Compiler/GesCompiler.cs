@@ -633,6 +633,22 @@ internal static partial class GesCompiler
                 case SeriesExpressionNode series:
                     _builder.CreateSeries(destination, series.SeriesKind);
                     return true;
+                case BetweenExpressionNode between:
+                {
+                    var value = EmitExpressionForRead(between.Value, context, state);
+                    var minimum = EmitExpressionForRead(between.Minimum, context, state);
+                    var lower = state.AllocateTemporary(_builder, context);
+                    _builder.GreaterOrEqual(lower, value, minimum);
+                    _builder.And(destination, lower, lower);
+                    var end = _builder.AddLabel("between_end");
+                    _builder.JumpIfFalse(lower, end);
+                    var maximum = EmitExpressionForRead(between.Maximum, context, state);
+                    var upper = state.AllocateTemporary(_builder, context);
+                    _builder.LessOrEqual(upper, value, maximum);
+                    _builder.And(destination, lower, upper);
+                    _builder.MarkLabel(end);
+                    return true;
+                }
                 case ClampExpressionNode clamp:
                     _builder.Clamp(
                         destination,

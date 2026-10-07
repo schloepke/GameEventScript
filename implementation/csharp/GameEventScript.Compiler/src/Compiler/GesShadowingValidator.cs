@@ -160,6 +160,11 @@ internal static class GesShadowingValidator
             case VariadicTaggedExpressionNode variadic:
                 VisitExpressions(variadic.Arguments, scope, script, errors);
                 break;
+            case BetweenExpressionNode between:
+                VisitExpression(between.Value, scope, script, errors);
+                VisitExpression(between.Minimum, scope, script, errors);
+                VisitExpression(between.Maximum, scope, script, errors);
+                break;
             case ClampExpressionNode clamp:
                 VisitExpression(clamp.Value, scope, script, errors);
                 VisitExpression(clamp.Minimum, scope, script, errors);

@@ -685,7 +685,7 @@
 						</dict>
 					</dict>
 					<key>match</key>
-					<string>\b(is)([ \t]+)(not)([ \t]+)(empty|nothing|numeric|integer|fractional)\b</string>
+					<string>\b(is)([ \t]+)(not)([ \t]+)(empty|nothing|numeric|integer|fractional|between)\b</string>
 					<key>name</key>
 					<string>meta.keyword-phrase.gameeventscript</string>
 				</dict>
@@ -704,7 +704,7 @@
 						</dict>
 					</dict>
 					<key>match</key>
-					<string>\b(is)([ \t]+)(empty|nothing|numeric|integer|fractional)\b</string>
+					<string>\b(is)([ \t]+)(empty|nothing|numeric|integer|fractional|between)\b</string>
 					<key>name</key>
 					<string>meta.keyword-phrase.gameeventscript</string>
 				</dict>

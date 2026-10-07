@@ -267,6 +267,12 @@ internal static class GesAstOptimizer
             {
                 Arguments = OptimizeExpressions(intrinsic.Arguments, knownTypeNames)
             },
+            BetweenExpressionNode between => between with
+            {
+                Value = OptimizeExpression(between.Value, knownTypeNames),
+                Minimum = OptimizeExpression(between.Minimum, knownTypeNames),
+                Maximum = OptimizeExpression(between.Maximum, knownTypeNames)
+            },
             ClampExpressionNode clamp => clamp with
             {
                 Value = OptimizeExpression(clamp.Value, knownTypeNames),

@@ -526,7 +526,7 @@ internal static class EmbeddedGrammars
             [new CaptureRule(1, "keyword.operator.word.gameeventscript"), new CaptureRule(3, "keyword.operator.word.gameeventscript")],
             [], false),
         new(
-            "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+            "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
             "",
             "meta.keyword-phrase.gameeventscript",
             "",
@@ -535,7 +535,7 @@ internal static class EmbeddedGrammars
             [new CaptureRule(1, "keyword.operator.word.gameeventscript"), new CaptureRule(3, "keyword.operator.word.gameeventscript"), new CaptureRule(5, "keyword.operator.word.gameeventscript")],
             [], false),
         new(
-            "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+            "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
             "",
             "meta.keyword-phrase.gameeventscript",
             "",
@@ -1273,7 +1273,7 @@ internal static class EmbeddedGrammars
             [new CaptureRule(1, "keyword.operator.word.gameeventscript"), new CaptureRule(3, "keyword.operator.word.gameeventscript")],
             [], false),
         new(
-            "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+            "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
             "",
             "meta.keyword-phrase.gameeventscript",
             "",
@@ -1282,7 +1282,7 @@ internal static class EmbeddedGrammars
             [new CaptureRule(1, "keyword.operator.word.gameeventscript"), new CaptureRule(3, "keyword.operator.word.gameeventscript"), new CaptureRule(5, "keyword.operator.word.gameeventscript")],
             [], false),
         new(
-            "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+            "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
             "",
             "meta.keyword-phrase.gameeventscript",
             "",

@@ -420,6 +420,16 @@ final class GesParser {
         } else if current.kind == "selector" && peek().syntaxText == "." {
             let (ns, function) = try extensionSymbol()
             value = try combined(.unary("predicate", .init(.extensionCall(ns, function, [.init(label: "_", value: input)]), input.location)), input)
+        } else if match("between") {
+            newlines()
+            let minimum = try expression(13)
+            newlines()
+            try expect("and")
+            newlines()
+            let maximum = try expression(13)
+            value = try combined(.between(input, minimum, maximum), input, maximum)
+            value.depth = max(value.depth, minimum.depth + 1)
+            if value.depth > 32 { throw failure("Expression nesting limit exceeded.", code: "parse.sourceNestingExceeded") }
         } else if match("at") {
             let mode = advance().syntaxText
             guard mode == "least" || mode == "most" else { throw failure("Expected least or most.", previous) }

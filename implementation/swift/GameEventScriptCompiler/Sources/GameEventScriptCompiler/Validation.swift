@@ -211,6 +211,7 @@ extension GesCompiler {
             } else {
                 children = s.expressions
             }
+        case .between(let value, let minimum, let maximum): children = [value, minimum, maximum]
         case .range(let a, let b, let c): children = [a, b] + (c.map { [$0] } ?? [])
         case .choice(let branches, let fallback): children = branches.flatMap { [$0.0, $0.1] } + [fallback]
         case .generated(_, let name, let source, _, let predicate, let projection):

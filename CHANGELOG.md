@@ -12,6 +12,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Inclusive `value is between lower and upper` and `is not between` comparisons
+  in C# and Swift, evaluating the value once and preserving short-circuit semantics.
+
 - Parenthesized extension calls now support direct member access and collection
   selectors on their results in C# and Swift, such as `:board.top(zone: #discard).id`.
   Parenthesis-free argument binding is unchanged.

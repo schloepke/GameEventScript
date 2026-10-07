@@ -173,6 +173,18 @@ extension GesCompiler {
                 if op == "not in" { r.emit(.not, d, d) }
             }
             if let short { r.patch(short, target: r.code.count) }
+        case .between(let input, let minimum, let maximum):
+            let value = try expression(input, r, scope)
+            let low = try expression(minimum, r, scope)
+            let lower = r.temporary()
+            r.emit(.greaterOrEqual, lower, value, low)
+            r.emit(.and, d, lower, lower)
+            let end = r.emit(.jumpIfFalse, 0, lower)
+            let high = try expression(maximum, r, scope)
+            let upper = r.temporary()
+            r.emit(.lessOrEqual, upper, value, high)
+            r.emit(.and, d, lower, upper)
+            r.patch(end, target: r.code.count)
         case .cast(let value, let type): try cast(d, expression(value, r, scope), type, r)
         case .check(let value, let type): try cast(d, expression(value, r, scope), type, r, check: true)
         case .call(let name, let arguments):

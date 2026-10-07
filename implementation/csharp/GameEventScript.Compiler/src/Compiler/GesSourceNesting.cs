@@ -29,6 +29,7 @@ internal static class GesSourceNesting
             MapEntryNode value => Depth(value.Value),
             IntrinsicCallExpressionNode value => Maximum(value.Arguments),
             VariadicTaggedExpressionNode value => Maximum(value.Arguments),
+            BetweenExpressionNode value => Math.Max(Depth(value.Value), Math.Max(Depth(value.Minimum), Depth(value.Maximum))),
             ClampExpressionNode value => Math.Max(Depth(value.Value), Math.Max(Depth(value.Minimum), Depth(value.Maximum))),
             RangeExpressionNode value => Math.Max(Depth(value.FromExpression), Math.Max(Depth(value.ToExpression), Depth(value.StepExpression))),
             RandomExpressionNode value => Math.Max(Depth(value.FromExpression), Depth(value.ToExpression)),

@@ -604,7 +604,7 @@
           }
         },
         {
-          "match": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+          "match": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
@@ -619,7 +619,7 @@
           }
         },
         {
-          "match": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+          "match": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {

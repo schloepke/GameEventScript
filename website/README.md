@@ -243,5 +243,5 @@ python3 examples/card-game/scripts/build.py wasm
 This currently requires macOS for the pinned Swift.org toolchain bootstrap.
 Website CI builds and tests the example in a separate macOS job. Website
 preparation rejects missing, modified or stale game output using source and
-asset hashes. The landing page itself never downloads the 63 MB Wasm module.
+asset hashes. The landing page itself never downloads the 67 MB Wasm module.
 The deployment includes the game and its third-party license notices.

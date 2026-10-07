@@ -11,7 +11,7 @@ namespace GameEventScript.Tool;
 
 internal sealed class RunProfiler : IGameEventScriptProfiler
 {
-    internal sealed class Measurement(GameEventScriptProgram program, Func<long> clock) : IGameEventScriptProgramProfiler
+    internal sealed class Measurement(GameEventScriptProgram program, Func<long>? clock = null) : IGameEventScriptProgramProfiler
     {
         internal readonly GameEventScriptProgram Program = program;
         internal readonly long[] Counts = new long[program.Code.Count];
@@ -26,15 +26,17 @@ internal sealed class RunProfiler : IGameEventScriptProfiler
 
         public void PhaseStarting(GameEventScriptProfilePhase phase)
         {
-            ClosePhase();
+            var end = Stopwatch.GetTimestamp();
+            ClosePhase(end);
             if (phase == GameEventScriptProfilePhase.StateCheck) _pending = -1;
             _phase = (int)phase;
-            _start = clock();
+            _start = clock?.Invoke() ?? Stopwatch.GetTimestamp();
         }
 
         public void InstructionStarting(int address)
         {
-            ClosePhase();
+            var end = Stopwatch.GetTimestamp();
+            ClosePhase(end);
             Counts[address]++;
             _pending = address;
             for (var phase = 0; phase < 6; phase++)
@@ -44,13 +46,15 @@ internal sealed class RunProfiler : IGameEventScriptProfiler
                 _prelude[phase] = 0;
             }
             _phase = (int)GameEventScriptProfilePhase.Execute;
-            _start = clock();
+            _start = clock?.Invoke() ?? Stopwatch.GetTimestamp();
         }
 
-        private void ClosePhase()
+        private void ClosePhase(long end)
         {
             if (_phase < 0) return;
-            var end = clock();
+            // The production timestamp is captured at callback entry. Only tests
+            // substitute a deterministic clock, outside the measured interval.
+            if (clock is not null) end = clock();
             var elapsed = Math.Max(0, end - _start);
             PhaseTotals[_phase] += elapsed;
             PhaseCounts[_phase]++;
@@ -65,7 +69,8 @@ internal sealed class RunProfiler : IGameEventScriptProfiler
 
         public void FinishSlice()
         {
-            ClosePhase();
+            var end = Stopwatch.GetTimestamp();
+            ClosePhase(end);
             _pending = -1;
             Array.Clear(_prelude);
         }
@@ -73,12 +78,12 @@ internal sealed class RunProfiler : IGameEventScriptProfiler
 
     internal string Outcome = "Incomplete or failed";
     internal readonly List<Measurement> Programs = [];
-    private readonly Func<long> _clock;
+    private readonly Func<long>? _clock;
     private readonly long _frequency;
 
     internal RunProfiler(Func<long>? clock = null, long? frequency = null)
     {
-        _clock = clock ?? Stopwatch.GetTimestamp;
+        _clock = clock;
         _frequency = frequency ?? Stopwatch.Frequency;
     }
 

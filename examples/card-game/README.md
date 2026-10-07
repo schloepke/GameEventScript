@@ -63,7 +63,7 @@ Xcode selection, and global SDK installations are not changed.
 Xcode's bundled Swift lacks some Wasm linker tools. See the official [Swift Wasm setup](https://www.swift.org/documentation/articles/wasm-getting-started.html).
 The browser uses a small [WASI reactor interface](https://book.swiftwasm.org/examples/exporting-function.html),
 without a JavaScriptKit or SwiftSyntax dependency. The uncompressed prototype
-Wasm including Foundation/ICU for the Swift highlighter is about 63 MB; download/startup optimization is not part of this first pass.
+Wasm including Foundation/ICU for the Swift highlighter is about 67 MB; download/startup optimization is not part of this first pass.
 
 The Wasm build stages Runtime, Compiler, and SyntaxHighlighter sources under
 `artifacts/card-game/wasm-source`. It adds WASILibc imports and a tiny monotonic

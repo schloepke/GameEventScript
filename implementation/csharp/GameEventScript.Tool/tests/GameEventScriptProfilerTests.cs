@@ -49,13 +49,16 @@ public sealed class GameEventScriptProfilerTests
         StringAssert.Contains(profiler.Markdown(), "| 60.000 | 10.000 | 10.000 | 10.000 | 10.000 | 10.000 | 10.000 |");
     }
 
-    /// <summary>Counter and clock callbacks allocate nothing after per-Program storage is prepared.</summary>
+    /// <summary>Production and injected-clock measurements allocate nothing after per-Program storage is prepared.</summary>
+    /// <param name="nativeClock">Whether to use the production clock instead of the deterministic test clock.</param>
     [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
     [TestCategory("Allocation")]
-    public void InstructionMeasurementsDoNotAllocate()
+    public void InstructionMeasurementsDoNotAllocate(bool nativeClock)
     {
         long now = 0;
-        var profiler = new RunProfiler(() => ++now, 1_000_000_000);
+        var profiler = nativeClock ? new RunProfiler() : new RunProfiler(() => ++now, 1_000_000_000);
         var program = GameEventScriptBuilder.Create().AddScript("on Tick { emit Result(10) }").Compile();
         var measurement = profiler.CreateProgramProfiler(program);
         for (var index = 0; index < 1000; index++) RecordInstruction();

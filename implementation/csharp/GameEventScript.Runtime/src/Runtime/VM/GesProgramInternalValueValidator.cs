@@ -50,7 +50,12 @@ internal static class GesProgramInternalValueValidator
                     {
                         if (!Allows(instruction, operand, kind)) Invalid(address);
                     }
-                    else if (operand is ArgumentRegisterList or ItemRegisterList or ValueRegisterList or CaptureRegisterList or TagRegisterList)
+                    else if (operand == TargetRegisterList)
+                    {
+                        var targets = program.UInt16IndexLists.Resolve(instruction.DestinationRegister);
+                        for (var element = 0; element < targets.Length; element++) overwritten |= targets[element] == register;
+                    }
+                    else if (operand is SourceRegisterList or ArgumentRegisterList or ItemRegisterList or ValueRegisterList or CaptureRegisterList or TagRegisterList)
                     {
                         var list = program.UInt16IndexLists.Resolve(GameEventScriptProgramValidator.ReadListOperand(instruction, operand));
                         for (var element = 0; element < list.Length; element++)

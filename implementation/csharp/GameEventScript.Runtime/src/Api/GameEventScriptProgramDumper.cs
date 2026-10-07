@@ -448,6 +448,8 @@ public static class GameEventScriptProgramDumper
             ArgumentNameList => context.ListLabel(instruction.OpCode == GameEventScriptBytecodeOpCode.ConstructData ? instruction.AU : instruction.ListIndex),
             ArgumentRegisterList => context.ListLabel(instruction.ListIndex),
             ItemRegisterList => context.ListLabel(instruction.ListIndex),
+            SourceRegisterList => context.ListLabel(instruction.XRegister),
+            TargetRegisterList => context.ListLabel(instruction.DestinationRegister),
             KeyNameList => context.ListLabel(instruction.SecondaryListIndex),
             ValueRegisterList => context.ListLabel(instruction.ListIndex),
             CaptureRegisterList => context.ListLabel(CaptureRegisterListIndex(instruction)),
@@ -467,6 +469,17 @@ public static class GameEventScriptProgramDumper
 
     private static void AppendInstructionFlags(StringBuilder builder, GameEventScriptBytecodeInstruction instruction)
     {
+        if (instruction.OpCode is GameEventScriptBytecodeOpCode.IteratorCreate or GameEventScriptBytecodeOpCode.IteratorCreateOrJump)
+        {
+            var mode = instruction.UnitAndFlags >> 5;
+            if (mode != 0) builder.Append(" mode=").Append(mode switch { 1 => "Union", 2 => "Intersect", 3 => "Difference", 4 => "Lockstep", 5 => "Cartesian", 6 => "Entries", _ => "Invalid" });
+            return;
+        }
+        if (instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorNext)
+        {
+            if (instruction.UnitAndFlags != 0) builder.Append(" output=Components");
+            return;
+        }
         var flags = GameEventScriptBytecodeInstruction.DecodeInstructionFlags(instruction.UnitAndFlags);
         if (flags != GameEventScriptInstructionFlag.None)
         {
@@ -1345,6 +1358,10 @@ public static class GameEventScriptProgramDumper
                     return (instruction.SecondaryListIndex, "Keys", ListRole.Texts);
                 case ArgumentRegisterList:
                     return (instruction.ListIndex, "Args", ListRole.Registers);
+                case SourceRegisterList:
+                    return (instruction.XRegister, "Sources", ListRole.Registers);
+                case TargetRegisterList:
+                    return (instruction.DestinationRegister, "Targets", ListRole.Registers);
                 case ItemRegisterList:
                     return (instruction.ListIndex, "Items", ListRole.Registers);
                 case ValueRegisterList:

@@ -1374,3 +1374,12 @@ observations using the configured monotonic clock. Their lifecycle, reset and
 absence rules are owned by [Host Runtime](HostRuntime.md#idle-duration-observation).
 Runner reads are serialized through the ownership gate; a disposed/closed runner
 returns no value. Reading does not schedule work or produce notifications.
+
+### Compound collection instruction identifiers
+
+> **Since: Unreleased** — Cartesian opcode
+
+The public bytecode opcode enumeration assigns `Cartesian` the stable value
+0xE0. Its operands and reserved fields are owned by [Bytecode](Bytecode.md).
+Iterator modes and component output reuse existing instruction words and the
+UInt16 list pool; no mutable iterator is added to the portable Program API.

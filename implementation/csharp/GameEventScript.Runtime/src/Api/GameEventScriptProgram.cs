@@ -2135,6 +2135,8 @@ public enum GameEventScriptBytecodeOpCode : byte
     ConstructData = 0xDE,
     /// <summary>Splits Text on a Text delimiter, or on portable whitespace when the delimiter is Nothing.</summary>
     SplitText = 0xDF,
+    /// <summary>Materializes the ordered Cartesian product of two Lists as two-element Lists.</summary>
+    Cartesian = 0xE0,
 
     #endregion
 }

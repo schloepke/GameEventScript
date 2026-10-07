@@ -10,7 +10,9 @@ owning specifications; this plan records sequencing and acceptance criteria.
 ## Delivery sequence
 
 1. [x] Record the language, instruction, ownership and verification decisions.
-2. [ ] Extend bytecode descriptions, validation, codecs, assembly and fixtures.
+2. [x] Extend C# bytecode descriptions, validation, codecs, GESA and fixtures.
+   Source ASM emission follows with compiler support in step 5; Swift follows
+   in steps 6/7. This checkpoint validates transport, not new execution paths.
 3. [ ] Implement the C# iterator/runtime reference and atomic Conformance cases.
 4. [ ] Extend the C# parser and both canonical editor grammars.
 5. [ ] Implement C# pipeline lowering, binding and register analysis.

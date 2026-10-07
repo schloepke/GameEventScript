@@ -174,7 +174,12 @@ public static class GameEventScriptProgramValidator
         var encodedUnit = instruction.UnitAndFlags & 0x1F;
         var encodedFlags = instruction.UnitAndFlags & 0xE0;
         var resultSend = GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode);
-        var allowedFlags = resultSend ? 0xC0 : (byte)GameEventScriptInstructionFlag.NormalizeResultAsPredicate;
+        var iteratorCreate = instruction.OpCode is GameEventScriptBytecodeOpCode.IteratorCreate or GameEventScriptBytecodeOpCode.IteratorCreateOrJump;
+        var iteratorNext = instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorNext;
+        var allowedFlags = iteratorCreate ? 0xE0 : resultSend ? 0xC0 : (byte)GameEventScriptInstructionFlag.NormalizeResultAsPredicate;
+        if ((iteratorCreate || iteratorNext) && (encodedUnit != 0 || instruction.Payload != 0 ||
+            iteratorCreate && (encodedFlags == 0xE0 || instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorCreate && instruction.YRegister != 0)))
+            InvalidOperand("Iterator instruction contains an invalid mode or reserved operands.", instructionIndex);
         if (resultSend && (encodedUnit != 0 || instruction.CU != 0 || instruction.DU != 0 ||
             (encodedFlags & 0x40) == 0 && instruction.AU != 0 ||
             (encodedFlags & 0x80) != 0 && instruction.YRegister != 0 ||
@@ -188,6 +193,8 @@ public static class GameEventScriptProgramValidator
             (instruction.UnitAndFlags != 0 || instruction.BU != 0 || instruction.CU != 0 || instruction.DU != 0
                 || instruction.OpCode == GameEventScriptBytecodeOpCode.SplitText && (instruction.AU > 1 || instruction.AU == 1 && instruction.YRegister != 0)))
             InvalidOperand("Data instruction contains nonzero reserved operands.", instructionIndex);
+        if (instruction.OpCode == GameEventScriptBytecodeOpCode.Cartesian && (instruction.UnitAndFlags != 0 || instruction.Payload != 0))
+            InvalidOperand("Cartesian reserves the unit/flag byte and payload.", instructionIndex);
         if (instruction.OpCode == GameEventScriptBytecodeOpCode.ParseLiteral &&
             (instruction.UnitAndFlags != 0 || instruction.YRegister != 0 || instruction.Payload != 0))
             InvalidOperand("ParseLiteral reserves the unit/flag byte, Y word, and payload.", instructionIndex);
@@ -312,6 +319,8 @@ public static class GameEventScriptProgramValidator
             GameEventScriptOpcodePrinter.OperandPart.MessageShapeList when instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage => instruction.SecondaryListIndex,
             GameEventScriptOpcodePrinter.OperandPart.KeyNameList => instruction.SecondaryListIndex,
             GameEventScriptOpcodePrinter.OperandPart.CaptureRegisterList => instruction.BU,
+            GameEventScriptOpcodePrinter.OperandPart.SourceRegisterList => instruction.XRegister,
+            GameEventScriptOpcodePrinter.OperandPart.TargetRegisterList => instruction.DestinationRegister,
             GameEventScriptOpcodePrinter.OperandPart.TagRegisterList when instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessageWithTags or GameEventScriptBytecodeOpCode.PublishMessageWithTags => instruction.SecondaryListIndex,
             _ => instruction.ListIndex
         };
@@ -319,6 +328,19 @@ public static class GameEventScriptProgramValidator
     private static void ValidateInstructionList(GameEventScriptProgram program, ushort listIndex, GameEventScriptOpcodePrinter.OperandPart role, int instructionIndex)
     {
         var list = program.UInt16IndexLists.Resolve(listIndex);
+        if (role == GameEventScriptOpcodePrinter.OperandPart.SourceRegisterList && list.Length < 2 ||
+            role == GameEventScriptOpcodePrinter.OperandPart.TargetRegisterList && list.Length == 0)
+            InvalidOperand("Iterator register list has an invalid arity.", instructionIndex);
+        if (role == GameEventScriptOpcodePrinter.OperandPart.TargetRegisterList)
+        {
+            for (var index = 0; index < list.Length; index++)
+            {
+                if (list[index] == program.Code[instructionIndex].XRegister)
+                    InvalidOperand("Iterator output cannot overwrite its iterator.", instructionIndex);
+                for (var previous = 0; previous < index; previous++)
+                    if (list[index] == list[previous]) InvalidOperand("Iterator output registers must be distinct.", instructionIndex);
+            }
+        }
         var textIndexes = role is GameEventScriptOpcodePrinter.OperandPart.MessageShapeList or GameEventScriptOpcodePrinter.OperandPart.ArgumentNameList or GameEventScriptOpcodePrinter.OperandPart.KeyNameList;
         var validateUniqueArgumentNames = role is GameEventScriptOpcodePrinter.OperandPart.MessageShapeList or GameEventScriptOpcodePrinter.OperandPart.ArgumentNameList;
         for (var index = 0; index < list.Length; index++)

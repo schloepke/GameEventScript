@@ -236,3 +236,15 @@ Reference-resolving comments may follow an instruction. They show string content
 `compile.program-dumps/parse-literal` covers the `ParseLiteral r1, r0` instruction
 with optional source metadata omitted. Like other instructions, its symbolic
 name and ordered operand roles follow the Bytecode registry.
+
+### Compound iterator operands
+
+> **Since: Unreleased** — compound iterator transport
+
+IteratorCreate and IteratorCreateOrJump print a nonzero mode as `mode=Union`,
+`mode=Intersect`, `mode=Difference`, `mode=Lockstep`, `mode=Cartesian` or
+`mode=Entries`. Normal mode omits the suffix. IteratorNext component output
+prints `output=Components`. These are opcode-specific fields, not predicate
+or message flags. Source and target register lists use `Sources` and `Targets`
+labels and the existing register-list representation. Cartesian uses the
+ordinary destination/left/right register operand representation.

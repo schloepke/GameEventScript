@@ -12,6 +12,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Combined collection sources evaluate all source expressions once from left to
+  right before validation, including invalid combinations. Iterator construction
+  no longer creates and closes preliminary validation iterators.
+
 - Combined collection pipelines in C# and Swift: `cartesian`, `lockstep`/`zip`,
   `union`, `intersect` and `difference`, with source-less or leading-source forms.
   Multiple bindings work in loops and selector projections; compact
@@ -40,6 +44,19 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   instruction reports, including partial results on runtime failures.
 - Add a playable browser card-game example with editable GES rules, linked from
   the website homepage alongside Homebrew and .NET CLI installation.
+
+### Fixed
+
+- Swift implicit `sum` and `average` consume complete Cartesian, lockstep and
+  entry elements, including after filters with multiple bindings.
+
+- Direct `take`, `drop` and `draw` after combined sources preserve Dice results
+  and Map restrictions in both compilers, matching selectors on stored results.
+
+- Compound Dice difference now rejects scalar values outside the positive Int32
+  face range. Selectors after combined sources preserve the result-type checks
+  of ordinary `order`, projected `distinct`, and `group` operations in both ports.
+  Swift also preserves Dice results for unprojected `distinct` after combined sources.
 
 ### Migration
 

@@ -25,7 +25,7 @@ enum GesCompoundSources {
         guard value.kind == .list || value.kind == .dice, var current = GesIterator(value) else { return nil }
         var kind = value.kind
         for right in sources.dropFirst() {
-            let valid = right.kind == .list || right.kind == .dice || mode == 3 && (kind == .list && right.kind != .map || kind == .dice && right.kind == .integer && !right.hasUnit)
+            let valid = right.kind == .list || right.kind == .dice || mode == 3 && (kind == .list && right.kind != .map || kind == .dice && right.kind == .integer && !right.hasUnit && right.asInteger > 0 && right.asInteger <= Int32.max)
             if !valid {
                 current.close()
                 return nil

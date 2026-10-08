@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "55D3A81A67C02387483A675F7AC0C44836516726B1FABA8705663A0D76999086",
+    "sha256": "52B56952E57FCFE825D9E0AAFF981091282EDA71F866450FC42FC083A3AAFC5B",
     "documentCount": 100,
-    "caseCount": 1896
+    "caseCount": 1903
   },
   "cases": [
     {
@@ -15298,6 +15298,91 @@
       "code": "conformance.passed"
     },
     {
+      "id": "runtime.atomic.iterator-core/combined-selector-prefix-produces-list",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/combined-selector-result-type-guards",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/combined-slices-preserve-result-kind",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/combined-sources-evaluate-before-validation-fused",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/combined-sources-evaluate-before-validation-materialized",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "runtime.atomic.iterator-core/compact-selector-boundaries",
       "kind": "scriptApi",
       "level": "atomic",
@@ -15384,6 +15469,40 @@
     },
     {
       "id": "runtime.atomic.iterator-core/component-for",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/component-implicit-aggregates-use-whole-elements",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/dice-difference-face-bounds",
       "kind": "scriptApi",
       "level": "atomic",
       "requires": {
@@ -15605,7 +15724,7 @@
       "code": "conformance.passed"
     },
     {
-      "id": "runtime.atomic.iterator-core/invalid-cartesian-skips-source",
+      "id": "runtime.atomic.iterator-core/invalid-cartesian-evaluates-source",
       "kind": "scriptApi",
       "level": "atomic",
       "requires": {
@@ -15622,7 +15741,7 @@
       "code": "conformance.passed"
     },
     {
-      "id": "runtime.atomic.iterator-core/invalid-union-prefix-skips-source",
+      "id": "runtime.atomic.iterator-core/invalid-union-prefix-evaluates-source",
       "kind": "scriptApi",
       "level": "atomic",
       "requires": {

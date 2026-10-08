@@ -57,11 +57,11 @@ public sealed class ConformanceMarkdownCorpusTests
     {
         var documents = ConformanceCSharpTestEnvironment.Documents;
         Assert.HasCount(100, documents);
-        Assert.AreEqual(1896, documents.Sum(document => document.Cases.Count));
-        Assert.AreEqual(1884, documents.Sum(document => document.Cases.Count(testCase => testCase.Kind != ConformanceTestKind.BytecodeSnapshot)));
+        Assert.AreEqual(1903, documents.Sum(document => document.Cases.Count));
+        Assert.AreEqual(1891, documents.Sum(document => document.Cases.Count(testCase => testCase.Kind != ConformanceTestKind.BytecodeSnapshot)));
         Assert.AreEqual(12, documents.Sum(document => document.Cases.Count(testCase => testCase.Kind == ConformanceTestKind.BytecodeSnapshot)));
         Assert.AreEqual(100, documents.Select(document => document.SuiteId).Distinct(StringComparer.Ordinal).Count());
-        Assert.AreEqual(1896, documents.SelectMany(document => document.Cases).Select(testCase => testCase.FullId).Distinct(StringComparer.Ordinal).Count());
+        Assert.AreEqual(1903, documents.SelectMany(document => document.Cases).Select(testCase => testCase.FullId).Distinct(StringComparer.Ordinal).Count());
         AssertCanonicalReadableLayout();
     }
 

@@ -73,7 +73,7 @@ internal static class GesVmCompoundIterators
         for (var index = 1; index < sources.Length; index++)
         {
             var right = sources[index];
-            var valid = right.Kind is List or Dice || mode == 3 && (kind == List && right.Kind != Map || kind == Dice && right.Kind == Integer && right.Unit == 0);
+            var valid = right.Kind is List or Dice || mode == 3 && (kind == List && right.Kind != Map || kind == Dice && right.Kind == Integer && right.Unit == 0 && right.IntegerValue is > 0 and <= int.MaxValue);
             if (!valid) { Close(current); return null; }
             if (mode == 1)
             {

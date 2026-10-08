@@ -16,6 +16,18 @@ extension GesCompiler {
             try fold(0, s, d, r, scope, sourceExpression: source)
             return
         }
+        if isCombinedSource(root) && s.operation == "distinct" && s.expressions.isEmpty {
+            // The native operation preserves Dice and rejects Map sources.
+            r.emit(.distinct, d, try expression(source, r, scope))
+            return
+        }
+        if prefix.isEmpty, case .combined(let operation, _) = root.kind,
+            ["union", "intersect", "difference"].contains(operation), ["take", "drop", "draw"].contains(s.operation)
+        {
+            // Slices preserve Dice and reject Maps unless a filter/select has produced a List.
+            try slice(s, d, expression(source, r, scope), r)
+            return
+        }
         if isCombinedSource(root) && terminals.contains(s.operation) {
             try pipeline(0, prefix, s, d, r, scope, sourceExpression: root)
             return
@@ -181,7 +193,7 @@ extension GesCompiler {
         }
         let row: GesComponentRow?
         if let sourceExpression {
-            row = try componentIterator(iterator, sourceExpression, &invalid, r, scope)
+            row = try componentIterator(iterator, sourceExpression, &invalid, r, scope, guardedTerminal: prefix.isEmpty ? s : nil)
         } else {
             invalid.append(r.emit(.iteratorCreateOrJump, iterator, source))
             row = nil
@@ -242,6 +254,8 @@ extension GesCompiler {
         }
         let child = GesScope(scope)
         if ["filter", "map", "group", "distinct", "order", "first", "last", "single", "min", "max", "objectMatch", "take", "drop", "draw"].contains(s.operation) { materializeRow(current, r) }
+        // Implicit aggregates consume the whole element, just like an identity projection.
+        if s.expressions.isEmpty && ["sum", "average"].contains(s.operation) { materializeRow(current, r) }
         if !s.expressions.isEmpty { bindComponents(s.names, fallback: s.name, current: current, r, child) }
         let projected: Int
         if ["objectMatch", "take", "drop", "draw"].contains(s.operation) || ["count", "filter"].contains(s.operation) && s.expressions.first.flatMap(scalarConstant) == .boolean(true) {

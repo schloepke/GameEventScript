@@ -35,8 +35,9 @@ approved decisions, sequencing and verification evidence.
    All 38 native Card Lab tests and the Wasm suite pass, including 30 complete
    Mau Mau games, 120 Skat games and 90 Blackjack deals. Editor bundles and
    website asset checks pass; the ASM guide example runs in both CLIs.
-   Final review has no outstanding correctness findings. Runtime-speed parity
-   with nested loops remains unproven, as recorded below.
+   Follow-up review corrections cover Dice-difference operand validation and
+   selector type guards after combined sources, with shared regression cases. Runtime-speed parity with nested loops remains unproven,
+   as recorded below.
 
 Commit a verified checkpoint after each step; do not push automatically.
 Intermediate commits may deliberately precede cross-language support, but must
@@ -57,9 +58,10 @@ identify that status rather than claiming completion of the whole feature.
   Map keys, Dice ordering and result kind. They are not generic concatenators.
   In particular Map/List means keys, not Map values; List/Map remains invalid.
   Difference preserves valid scalar-right cases, including List minus Nothing.
-- Source expressions evaluate once, left to right. Stop before later source
-  expressions when the operation is already invalid. Invalid is distinct from
-  empty: an empty valid collection does not skip later source expressions.
+- Source expressions evaluate once, left to right, before combined validation.
+  Nothing or an invalid combination does not skip later source expressions;
+  ordinary faults and execution limits still stop execution. This supersedes
+  the original short-circuit decision and removes preliminary iterator probes.
   Source validity is operation-dependent, not a blanket iterable requirement.
 - Direct Map iteration retains values in key order. `:entries` retains visible
   `[key: ..., value: ...]` Maps but may pass its components directly internally.
@@ -138,7 +140,7 @@ operator or universal streaming through every source expression.
 - SyntaxHighlighting.md and tools/editors: new selectors and qualified names.
 - PublicApi.md and approved snapshots: public opcode/operand additions.
 - Shared Markdown Conformance: empty/invalid/mixed sources, duplicate counts,
-  Map/List keys and scalar difference, evaluation short-circuit, all binding
+  Map/List keys and scalar difference, complete source evaluation, all binding
   shapes, pipeline preservation, early terminals, effects/randomness, limits,
   malformed Programs and cross-language behavior.
 - Native tests only for implementation-specific register/allocation properties,
@@ -170,7 +172,7 @@ shows roughly 30% more elapsed time at 128 × 128. No automatic rewrite or
 additional performance optimization follows from this measurement. Swift
 shares the iterator architecture; these C# timings are not Swift measurements.
 
-Shared edge cases additionally exercise source evaluation/short-circuit order,
+Shared edge cases additionally exercise source evaluation order,
 `fold` seed ordering, effectful `foreach`, direct binding under low collection
 limits, ASM register safety, and 20,000-source iteration/cleanup without
 recursive iterator nesting. Existing cross-language case results remain

@@ -4194,19 +4194,19 @@ steps:
 
 ---
 
-## Test: invalid-cartesian-skips-source
+## Test: invalid-cartesian-evaluates-source
 
-This case checks invalid cartesian skips source without relying on implementation-specific instruction shapes.
+This case checks invalid cartesian evaluates source without relying on implementation-specific instruction shapes.
 
 ### Case description
 
 ```yaml
 gesBlock: case
-id: invalid-cartesian-skips-source
+id: invalid-cartesian-evaluates-source
 kind: scriptApi
 level: atomic
 sources:
-  - name: "invalid-cartesian-skips-source.ges"
+  - name: "invalid-cartesian-evaluates-source.ges"
     program: main
 ```
 
@@ -4215,7 +4215,7 @@ sources:
 ```ges
 module collectionedges
 on Start {
-    let value be [:cartesian nothing, [emit Unexpected()]]
+    let value be [:cartesian nothing, [emit Source()]]
     emit Done(value: value is nothing)
 }
 ```
@@ -4235,6 +4235,8 @@ steps:
     input:
       args: []
     local:
+      - name: Source
+        args: []
       - name: Done
         args:
           - name: value
@@ -4296,19 +4298,19 @@ steps:
 
 ---
 
-## Test: invalid-union-prefix-skips-source
+## Test: invalid-union-prefix-evaluates-source
 
-This case checks invalid union prefix skips source without relying on implementation-specific instruction shapes.
+This case checks invalid union prefix evaluates source without relying on implementation-specific instruction shapes.
 
 ### Case description
 
 ```yaml
 gesBlock: case
-id: invalid-union-prefix-skips-source
+id: invalid-union-prefix-evaluates-source
 kind: scriptApi
 level: atomic
 sources:
-  - name: "invalid-union-prefix-skips-source.ges"
+  - name: "invalid-union-prefix-evaluates-source.ges"
     program: main
 ```
 
@@ -4317,7 +4319,7 @@ sources:
 ```ges
 module collectionedges
 on Start {
-    let value be [:union [1], [a: 2], [emit Unexpected()]][:count]
+    let value be [:union [1], [a: 2], [emit Source()]][:count]
     emit Done(value: value is nothing)
 }
 ```
@@ -4337,6 +4339,8 @@ steps:
     input:
       args: []
     local:
+      - name: Source
+        args: []
       - name: Done
         args:
           - name: value
@@ -4679,7 +4683,7 @@ sources:
 ```ges
 module collectionedges
 on Start {
-    let value be [:cartesian nothing, [emit Unexpected()]][:fold acc be (emit Seed()), a, b => acc]
+    let value be [:cartesian nothing, [emit Source()]][:fold acc be (emit Seed()), a, b => acc]
     emit Done(value: value is nothing)
 }
 ```
@@ -4699,8 +4703,671 @@ steps:
     input:
       args: []
     local:
+      - name: Source
+        args: []
       - name: Seed
         args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: combined-sources-evaluate-before-validation-materialized
+
+This case checks that all source expressions execute once in order before invalid combinations are rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: combined-sources-evaluate-before-validation-materialized
+kind: scriptApi
+level: atomic
+sources:
+  - name: combined-sources-evaluate-before-validation-materialized.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+    let value_0 be [:cartesian [emit First()], nothing, [emit Last()]]
+    emit Done(value: value_0 is nothing)
+    let value_1 be [:lockstep [emit First()], nothing, [emit Last()]]
+    emit Done(value: value_1 is nothing)
+    let value_2 be [:zip [emit First()], nothing, [emit Last()]]
+    emit Done(value: value_2 is nothing)
+    let value_3 be [:union [emit First()], nothing, [emit Last()]]
+    emit Done(value: value_3 is nothing)
+    let value_4 be [:intersect [emit First()], nothing, [emit Last()]]
+    emit Done(value: value_4 is nothing)
+    let value_5 be [:difference [emit First()], [invalid: 1], [emit Last()]]
+    emit Done(value: value_5 is nothing)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: First
+        args: []
+      - name: Last
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+      - name: First
+        args: []
+      - name: Last
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+      - name: First
+        args: []
+      - name: Last
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+      - name: First
+        args: []
+      - name: Last
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+      - name: First
+        args: []
+      - name: Last
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+      - name: First
+        args: []
+      - name: Last
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: combined-sources-evaluate-before-validation-fused
+
+This case checks that all source expressions execute once in order before invalid combinations are rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: combined-sources-evaluate-before-validation-fused
+kind: scriptApi
+level: atomic
+sources:
+  - name: combined-sources-evaluate-before-validation-fused.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+    let value_0 be [:cartesian [emit First()], nothing, [emit Last()]][:select a, b, c => [a, b, c]]
+    emit Done(value: value_0 is nothing)
+    let value_1 be [:lockstep [emit First()], nothing, [emit Last()]][:select a, b, c => [a, b, c]]
+    emit Done(value: value_1 is nothing)
+    let value_2 be [:zip [emit First()], nothing, [emit Last()]][:select a, b, c => [a, b, c]]
+    emit Done(value: value_2 is nothing)
+    let value_3 be [:union [emit First()], nothing, [emit Last()]][:select a, b, c => [a, b, c]]
+    emit Done(value: value_3 is nothing)
+    let value_4 be [:intersect [emit First()], nothing, [emit Last()]][:select a, b, c => [a, b, c]]
+    emit Done(value: value_4 is nothing)
+    let value_5 be [:difference [emit First()], [invalid: 1], [emit Last()]][:select a, b, c => [a, b, c]]
+    emit Done(value: value_5 is nothing)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: First
+        args: []
+      - name: Last
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+      - name: First
+        args: []
+      - name: Last
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+      - name: First
+        args: []
+      - name: Last
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+      - name: First
+        args: []
+      - name: Last
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+      - name: First
+        args: []
+      - name: Last
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+      - name: First
+        args: []
+      - name: Last
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: dice-difference-face-bounds
+
+This case verifies operand and result-type parity between combined pipelines and the existing collection operators.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: dice-difference-face-bounds
+kind: scriptApi
+level: atomic
+sources:
+  - name: dice-difference-face-bounds.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+    let checks be [
+        [:difference :Dice[1, 2], 0][:select x => x] is nothing,
+        [:difference :Dice[1, 2], -1][:select x => x] is nothing,
+        [:difference :Dice[1, 2], 2147483648][:select x => x] is nothing,
+        [:difference :Dice[1, 2], 1.5][:select x => x] is nothing,
+        [:difference :Dice[1, 2], nothing][:select x => x] is nothing,
+        [:difference :Dice[1, 2], 1][:select x => x] = [2],
+        [:difference :Dice[1, 2147483647], 2147483647][:select x => x] = [1],
+        [:difference :Dice[1, 2], [], 0][:select x => x] = [2, 1]
+    ]
+    emit Done(value: checks[:all check where check])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: combined-selector-result-type-guards
+
+This case verifies operand and result-type parity between combined pipelines and the existing collection operators.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: combined-selector-result-type-guards
+kind: scriptApi
+level: atomic
+sources:
+  - name: combined-selector-result-type-guards.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+    let checks be [
+        [:union [b: 1], [a: 2]][:order by x => x ascending] is nothing,
+        [:union [b: 1], [a: 2]][:distinct by x => x] is nothing,
+        not ([:union [b: 1], [a: 2]][:group by x => x as :Text] is nothing),
+        [:union [b: 1], [#b]][:order by x => x ascending] is nothing,
+        [:union [b: 1], [#b]][:distinct by x => x] is nothing,
+        not ([:union [b: 1], [#b]][:group by x => x as :Text] is nothing),
+        [:union :Dice[1, 2], :Dice[1]][:order by x => x ascending] is nothing,
+        [:union :Dice[1, 2], :Dice[1]][:distinct by x => x] is nothing,
+        [:union :Dice[1, 2], :Dice[1]][:group by x => x as :Text] is nothing,
+        not ([:union :Dice[1, 2], [1]][:order by x => x ascending] is nothing),
+        not ([:union :Dice[1, 2], [1]][:distinct by x => x] is nothing),
+        not ([:union :Dice[1, 2], [1]][:group by x => x as :Text] is nothing),
+        not ([:union [1, 2], :Dice[1]][:order by x => x ascending] is nothing),
+        not ([:union [1, 2], :Dice[1]][:distinct by x => x] is nothing),
+        not ([:union [1, 2], :Dice[1]][:group by x => x as :Text] is nothing),
+        not ([:union :Dice[1, 2], :Dice[1], []][:order by x => x ascending] is nothing),
+        not ([:union :Dice[1, 2], :Dice[1], []][:distinct by x => x] is nothing),
+        not ([:union :Dice[1, 2], :Dice[1], []][:group by x => x as :Text] is nothing),
+        [:intersect [b: 1], [a: 2]][:order by x => x ascending] is nothing,
+        [:intersect [b: 1], [a: 2]][:distinct by x => x] is nothing,
+        not ([:intersect [b: 1], [a: 2]][:group by x => x as :Text] is nothing),
+        [:intersect [b: 1], [#b]][:order by x => x ascending] is nothing,
+        [:intersect [b: 1], [#b]][:distinct by x => x] is nothing,
+        not ([:intersect [b: 1], [#b]][:group by x => x as :Text] is nothing),
+        [:intersect :Dice[1, 2], :Dice[1]][:order by x => x ascending] is nothing,
+        [:intersect :Dice[1, 2], :Dice[1]][:distinct by x => x] is nothing,
+        [:intersect :Dice[1, 2], :Dice[1]][:group by x => x as :Text] is nothing,
+        not ([:intersect :Dice[1, 2], [1]][:order by x => x ascending] is nothing),
+        not ([:intersect :Dice[1, 2], [1]][:distinct by x => x] is nothing),
+        not ([:intersect :Dice[1, 2], [1]][:group by x => x as :Text] is nothing),
+        not ([:intersect [1, 2], :Dice[1]][:order by x => x ascending] is nothing),
+        not ([:intersect [1, 2], :Dice[1]][:distinct by x => x] is nothing),
+        not ([:intersect [1, 2], :Dice[1]][:group by x => x as :Text] is nothing),
+        not ([:intersect :Dice[1, 2], :Dice[1], []][:order by x => x ascending] is nothing),
+        not ([:intersect :Dice[1, 2], :Dice[1], []][:distinct by x => x] is nothing),
+        not ([:intersect :Dice[1, 2], :Dice[1], []][:group by x => x as :Text] is nothing),
+        [:difference [b: 1], [a: 2]][:order by x => x ascending] is nothing,
+        [:difference [b: 1], [a: 2]][:distinct by x => x] is nothing,
+        not ([:difference [b: 1], [a: 2]][:group by x => x as :Text] is nothing),
+        [:difference [b: 1], [#b]][:order by x => x ascending] is nothing,
+        [:difference [b: 1], [#b]][:distinct by x => x] is nothing,
+        not ([:difference [b: 1], [#b]][:group by x => x as :Text] is nothing),
+        [:difference :Dice[1, 2], :Dice[1]][:order by x => x ascending] is nothing,
+        [:difference :Dice[1, 2], :Dice[1]][:distinct by x => x] is nothing,
+        [:difference :Dice[1, 2], :Dice[1]][:group by x => x as :Text] is nothing,
+        not ([:difference :Dice[1, 2], [1]][:order by x => x ascending] is nothing),
+        not ([:difference :Dice[1, 2], [1]][:distinct by x => x] is nothing),
+        not ([:difference :Dice[1, 2], [1]][:group by x => x as :Text] is nothing),
+        not ([:difference [1, 2], :Dice[1]][:order by x => x ascending] is nothing),
+        not ([:difference [1, 2], :Dice[1]][:distinct by x => x] is nothing),
+        not ([:difference [1, 2], :Dice[1]][:group by x => x as :Text] is nothing),
+        not ([:difference :Dice[1, 2], :Dice[1], []][:order by x => x ascending] is nothing),
+        not ([:difference :Dice[1, 2], :Dice[1], []][:distinct by x => x] is nothing),
+        not ([:difference :Dice[1, 2], :Dice[1], []][:group by x => x as :Text] is nothing)
+    ]
+    emit Done(value: checks[:all check where check])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: combined-selector-prefix-produces-list
+
+This case verifies operand and result-type parity between combined pipelines and the existing collection operators.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: combined-selector-prefix-produces-list
+kind: scriptApi
+level: atomic
+sources:
+  - name: combined-selector-prefix-produces-list.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+    let merged be [:union [b: 1], [a: 2]]
+    let checks be [
+        [:union :Dice[1, 2], :Dice[2]][:distinct] is :Dice,
+        [:intersect :Dice[1, 2], :Dice[2]][:distinct] is :Dice,
+        [:difference :Dice[1, 2], :Dice[2]][:distinct] is :Dice,
+        [:union [a: 1], [b: 2]][:distinct] is nothing,
+        [:intersect [a: 1], [b: 2]][:distinct] is nothing,
+        [:difference [a: 1], [b: 2]][:distinct] is nothing,
+        merged[:order by x => x ascending] is nothing,
+        merged[:distinct by x => x] is nothing,
+        [:union [b: 1], [a: 2]][:filter x where true :order by x => x ascending] = [1, 2],
+        [:union [b: 1], [a: 2]][:select x => x :distinct by x => x] = [2, 1],
+        [:cartesian [1], [2]][:order by a, b => a ascending] = [[1, 2]],
+        [a: 1][:entries :order by key, value => value ascending] = [[key: 'a', value: 1]]
+    ]
+    let rejected be [:union [a: 1], [emit Source()]][:order by x => (emit Unexpected()) ascending]
+    emit Done(value: checks[:all check where check] and rejected is nothing)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Source
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: combined-slices-preserve-result-kind
+
+This case verifies that direct slices obey the same Dice and Map rules as slices of a stored combined result.
+Filter/select prefixes still produce Lists.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: combined-slices-preserve-result-kind
+kind: scriptApi
+level: atomic
+sources:
+  - name: combined-slices-preserve-result-kind.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+    let unionDice be [:union :Dice[1,2,3], :Dice[2]]
+    let unionMap be [:union [a: 1, b: 2], [b: 3]]
+    let unionChecks be [
+        [:union :Dice[1,2,3], :Dice[2]][:take first 2] is :Dice,
+        [:union :Dice[1,2,3], :Dice[2]][:take first 2] = unionDice[:take first 2],
+        [:union [a: 1, b: 2], [b: 3]][:take first 2] is nothing,
+        [:union :Dice[1,2,3], :Dice[2]][:take last 2] is :Dice,
+        [:union :Dice[1,2,3], :Dice[2]][:take last 2] = unionDice[:take last 2],
+        [:union [a: 1, b: 2], [b: 3]][:take last 2] is nothing,
+        [:union :Dice[1,2,3], :Dice[2]][:take highest 2] is :Dice,
+        [:union :Dice[1,2,3], :Dice[2]][:take highest 2] = unionDice[:take highest 2],
+        [:union [a: 1, b: 2], [b: 3]][:take highest 2] is nothing,
+        [:union :Dice[1,2,3], :Dice[2]][:take lowest 2] is :Dice,
+        [:union :Dice[1,2,3], :Dice[2]][:take lowest 2] = unionDice[:take lowest 2],
+        [:union [a: 1, b: 2], [b: 3]][:take lowest 2] is nothing,
+        [:union :Dice[1,2,3], :Dice[2]][:drop first 1] is :Dice,
+        [:union :Dice[1,2,3], :Dice[2]][:drop first 1] = unionDice[:drop first 1],
+        [:union [a: 1, b: 2], [b: 3]][:drop first 1] is nothing,
+        [:union :Dice[1,2,3], :Dice[2]][:drop last 1] is :Dice,
+        [:union :Dice[1,2,3], :Dice[2]][:drop last 1] = unionDice[:drop last 1],
+        [:union [a: 1, b: 2], [b: 3]][:drop last 1] is nothing,
+        [:union :Dice[1,2,3], :Dice[2]][:drop highest 1] is :Dice,
+        [:union :Dice[1,2,3], :Dice[2]][:drop highest 1] = unionDice[:drop highest 1],
+        [:union [a: 1, b: 2], [b: 3]][:drop highest 1] is nothing,
+        [:union :Dice[1,2,3], :Dice[2]][:drop lowest 1] is :Dice,
+        [:union :Dice[1,2,3], :Dice[2]][:drop lowest 1] = unionDice[:drop lowest 1],
+        [:union [a: 1, b: 2], [b: 3]][:drop lowest 1] is nothing,
+        [:union :Dice[1,2,3], :Dice[2]][:draw 2] is :Dice,
+        [:union :Dice[1,2,3], :Dice[2]][:draw 2] = unionDice[:draw 2],
+        [:union [a: 1, b: 2], [b: 3]][:draw 2] is nothing,
+        [:union [a: 1, b: 2], [b: 3]][:draw 1] = unionMap[:draw 1],
+        [:union :Dice[1,2,3], :Dice[2]][:filter x where true :take first 2] is :List,
+        [:union [a: 1, b: 2], [b: 3]][:select x => x :take first 2] is :List
+    ]
+    let intersectDice be [:intersect :Dice[1,2,3], :Dice[2]]
+    let intersectMap be [:intersect [a: 1, b: 2], [b: 3]]
+    let intersectChecks be [
+        [:intersect :Dice[1,2,3], :Dice[2]][:take first 2] is :Dice,
+        [:intersect :Dice[1,2,3], :Dice[2]][:take first 2] = intersectDice[:take first 2],
+        [:intersect [a: 1, b: 2], [b: 3]][:take first 2] is nothing,
+        [:intersect :Dice[1,2,3], :Dice[2]][:take last 2] is :Dice,
+        [:intersect :Dice[1,2,3], :Dice[2]][:take last 2] = intersectDice[:take last 2],
+        [:intersect [a: 1, b: 2], [b: 3]][:take last 2] is nothing,
+        [:intersect :Dice[1,2,3], :Dice[2]][:take highest 2] is :Dice,
+        [:intersect :Dice[1,2,3], :Dice[2]][:take highest 2] = intersectDice[:take highest 2],
+        [:intersect [a: 1, b: 2], [b: 3]][:take highest 2] is nothing,
+        [:intersect :Dice[1,2,3], :Dice[2]][:take lowest 2] is :Dice,
+        [:intersect :Dice[1,2,3], :Dice[2]][:take lowest 2] = intersectDice[:take lowest 2],
+        [:intersect [a: 1, b: 2], [b: 3]][:take lowest 2] is nothing,
+        [:intersect :Dice[1,2,3], :Dice[2]][:drop first 1] is :Dice,
+        [:intersect :Dice[1,2,3], :Dice[2]][:drop first 1] = intersectDice[:drop first 1],
+        [:intersect [a: 1, b: 2], [b: 3]][:drop first 1] is nothing,
+        [:intersect :Dice[1,2,3], :Dice[2]][:drop last 1] is :Dice,
+        [:intersect :Dice[1,2,3], :Dice[2]][:drop last 1] = intersectDice[:drop last 1],
+        [:intersect [a: 1, b: 2], [b: 3]][:drop last 1] is nothing,
+        [:intersect :Dice[1,2,3], :Dice[2]][:drop highest 1] is :Dice,
+        [:intersect :Dice[1,2,3], :Dice[2]][:drop highest 1] = intersectDice[:drop highest 1],
+        [:intersect [a: 1, b: 2], [b: 3]][:drop highest 1] is nothing,
+        [:intersect :Dice[1,2,3], :Dice[2]][:drop lowest 1] is :Dice,
+        [:intersect :Dice[1,2,3], :Dice[2]][:drop lowest 1] = intersectDice[:drop lowest 1],
+        [:intersect [a: 1, b: 2], [b: 3]][:drop lowest 1] is nothing,
+        [:intersect :Dice[1,2,3], :Dice[2]][:draw 2] is :Dice,
+        [:intersect :Dice[1,2,3], :Dice[2]][:draw 2] = intersectDice[:draw 2],
+        [:intersect [a: 1, b: 2], [b: 3]][:draw 2] is nothing,
+        [:intersect [a: 1, b: 2], [b: 3]][:draw 1] = intersectMap[:draw 1],
+        [:intersect :Dice[1,2,3], :Dice[2]][:filter x where true :take first 2] is :List,
+        [:intersect [a: 1, b: 2], [b: 3]][:select x => x :take first 2] is :List
+    ]
+    let differenceDice be [:difference :Dice[1,2,3], :Dice[2]]
+    let differenceMap be [:difference [a: 1, b: 2], [b: 3]]
+    let differenceChecks be [
+        [:difference :Dice[1,2,3], :Dice[2]][:take first 2] is :Dice,
+        [:difference :Dice[1,2,3], :Dice[2]][:take first 2] = differenceDice[:take first 2],
+        [:difference [a: 1, b: 2], [b: 3]][:take first 2] is nothing,
+        [:difference :Dice[1,2,3], :Dice[2]][:take last 2] is :Dice,
+        [:difference :Dice[1,2,3], :Dice[2]][:take last 2] = differenceDice[:take last 2],
+        [:difference [a: 1, b: 2], [b: 3]][:take last 2] is nothing,
+        [:difference :Dice[1,2,3], :Dice[2]][:take highest 2] is :Dice,
+        [:difference :Dice[1,2,3], :Dice[2]][:take highest 2] = differenceDice[:take highest 2],
+        [:difference [a: 1, b: 2], [b: 3]][:take highest 2] is nothing,
+        [:difference :Dice[1,2,3], :Dice[2]][:take lowest 2] is :Dice,
+        [:difference :Dice[1,2,3], :Dice[2]][:take lowest 2] = differenceDice[:take lowest 2],
+        [:difference [a: 1, b: 2], [b: 3]][:take lowest 2] is nothing,
+        [:difference :Dice[1,2,3], :Dice[2]][:drop first 1] is :Dice,
+        [:difference :Dice[1,2,3], :Dice[2]][:drop first 1] = differenceDice[:drop first 1],
+        [:difference [a: 1, b: 2], [b: 3]][:drop first 1] is nothing,
+        [:difference :Dice[1,2,3], :Dice[2]][:drop last 1] is :Dice,
+        [:difference :Dice[1,2,3], :Dice[2]][:drop last 1] = differenceDice[:drop last 1],
+        [:difference [a: 1, b: 2], [b: 3]][:drop last 1] is nothing,
+        [:difference :Dice[1,2,3], :Dice[2]][:drop highest 1] is :Dice,
+        [:difference :Dice[1,2,3], :Dice[2]][:drop highest 1] = differenceDice[:drop highest 1],
+        [:difference [a: 1, b: 2], [b: 3]][:drop highest 1] is nothing,
+        [:difference :Dice[1,2,3], :Dice[2]][:drop lowest 1] is :Dice,
+        [:difference :Dice[1,2,3], :Dice[2]][:drop lowest 1] = differenceDice[:drop lowest 1],
+        [:difference [a: 1, b: 2], [b: 3]][:drop lowest 1] is nothing,
+        [:difference :Dice[1,2,3], :Dice[2]][:draw 2] is :Dice,
+        [:difference :Dice[1,2,3], :Dice[2]][:draw 2] = differenceDice[:draw 2],
+        [:difference [a: 1, b: 2], [b: 3]][:draw 2] is nothing,
+        [:difference [a: 1, b: 2], [b: 3]][:draw 1] = differenceMap[:draw 1],
+        [:difference :Dice[1,2,3], :Dice[2]][:filter x where true :take first 2] is :List,
+        [:difference [a: 1, b: 2], [b: 3]][:select x => x :take first 2] is :List
+    ]
+    emit Done(value: unionChecks[:all x where x] and intersectChecks[:all x where x] and differenceChecks[:all x where x])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: component-implicit-aggregates-use-whole-elements
+
+This case verifies that implicit sum and average consume whole elements rather than
+component registers, with and without filters, and retain empty-input semantics.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: component-implicit-aggregates-use-whole-elements
+kind: scriptApi
+level: atomic
+sources:
+  - name: component-implicit-aggregates-use-whole-elements.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+    let checks be [
+        [:cartesian [1], [2]][:sum] = [1, 2],
+        [:cartesian [1], [2]][:average] is nothing,
+        [:cartesian [1], [2]][:filter left, right where true :sum] = [1, 2],
+        [:cartesian [1], [2]][:filter left, right where true :average] is nothing,
+        [:cartesian [1], [2]][:filter left, right where false :sum] = 0,
+        [:cartesian [1], [2]][:filter left, right where false :average] is nothing,
+        [:lockstep [1], [2]][:sum] = [1, 2],
+        [:lockstep [1], [2]][:average] is nothing,
+        [:lockstep [1], [2]][:filter left, right where true :sum] = [1, 2],
+        [:lockstep [1], [2]][:filter left, right where true :average] is nothing,
+        [:lockstep [1], [2]][:filter left, right where false :sum] = 0,
+        [:lockstep [1], [2]][:filter left, right where false :average] is nothing,
+        [a: 1][:entries][:sum] = [key: 'a', value: 1],
+        [a: 1][:entries][:average] is nothing,
+        [a: 1][:entries][:filter left, right where true :sum] = [key: 'a', value: 1],
+        [a: 1][:entries][:filter left, right where true :average] is nothing,
+        [a: 1][:entries][:filter left, right where false :sum] = 0,
+        [a: 1][:entries][:filter left, right where false :average] is nothing,
+        [:cartesian [1, 2], [3, 4]][:sum] = [:cartesian [1, 2], [3, 4]][:sum item => item],
+        [:cartesian [1, 2], [3, 4]][:filter left, right where true :sum] = [:cartesian [1, 2], [3, 4]][:sum item => item],
+        ([:cartesian [1, 2], [3, 4]][:average] is nothing) and ([:cartesian [1, 2], [3, 4]][:average item => item] is nothing),
+        ([:cartesian [1, 2], [3, 4]][:filter left, right where true :average] is nothing) and ([:cartesian [1, 2], [3, 4]][:average item => item] is nothing),
+        [:lockstep [1, 2], [3, 4]][:sum] = [:lockstep [1, 2], [3, 4]][:sum item => item],
+        [:lockstep [1, 2], [3, 4]][:filter left, right where true :sum] = [:lockstep [1, 2], [3, 4]][:sum item => item],
+        ([:lockstep [1, 2], [3, 4]][:average] is nothing) and ([:lockstep [1, 2], [3, 4]][:average item => item] is nothing),
+        ([:lockstep [1, 2], [3, 4]][:filter left, right where true :average] is nothing) and ([:lockstep [1, 2], [3, 4]][:average item => item] is nothing),
+        ([a: 1, b: 2][:entries][:sum] is nothing) and ([a: 1, b: 2][:entries][:sum item => item] is nothing),
+        ([a: 1, b: 2][:entries][:filter left, right where true :sum] is nothing) and ([a: 1, b: 2][:entries][:sum item => item] is nothing),
+        ([a: 1, b: 2][:entries][:average] is nothing) and ([a: 1, b: 2][:entries][:average item => item] is nothing),
+        ([a: 1, b: 2][:entries][:filter left, right where true :average] is nothing) and ([a: 1, b: 2][:entries][:average item => item] is nothing),
+        [:cartesian [1, 2], [3]][:sum left, right => left + right] = 9,
+        [:lockstep [1, 2], [3, 4]][:select left, right => left + right :average] = 5
+    ]
+    emit Done(value: checks[:all check where check])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
       - name: Done
         args:
           - name: value

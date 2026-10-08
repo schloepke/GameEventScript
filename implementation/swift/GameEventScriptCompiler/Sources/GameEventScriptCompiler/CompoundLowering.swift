@@ -70,36 +70,37 @@ extension GesCompiler {
         r.patch(done, target: r.code.count)
     }
 
-    func componentIterator(_ iterator: Int, _ e: GesExpression, _ invalid: inout [Int], _ r: GesRoutine, _ scope: GesScope) throws -> GesComponentRow? {
+    func componentIterator(_ iterator: Int, _ e: GesExpression, _ invalid: inout [Int], _ r: GesRoutine, _ scope: GesScope, guardedTerminal: GesSelector? = nil) throws -> GesComponentRow? {
         if case .selector(let target, let selection) = e.kind, selection.operation == "entries" {
             invalid.append(r.emit(.iteratorCreateOrJump, iterator, try expression(target, r, scope), flags: 6 << 5))
             return .init(components: [r.temporary(), r.temporary()], entry: true)
         }
         guard case .combined(let operation, let expressions) = e.kind else { return nil }
         let mode: UInt8 = ["union": 1, "intersect": 2, "difference": 3, "lockstep": 4, "cartesian": 5][operation]!
-        var sources: [Int] = []
-        var failed: [Int] = []
-        let validation = r.temporary()
-        for (index, value) in expressions.enumerated() {
-            let source = try expression(value, r, scope)
-            sources.append(source)
-            if mode >= 4 {
-                failed.append(r.emit(.iteratorCreateOrJump, validation, source))
-                r.emit(.iteratorClose, 0, validation)
-            } else if index == 0 {
-                sourceGuard(source, &failed, r)
-            } else {
-                failed.append(r.emit(.iteratorCreateOrJump, iterator, list(sources), flags: mode << 5))
-                if index + 1 < expressions.count { r.emit(.iteratorClose, 0, iterator) }
-            }
+        let sources = try expressions.map { try expression($0, r, scope) }
+        if mode < 4, let terminal = guardedTerminal,
+            ["order", "group"].contains(terminal.operation) || terminal.operation == "distinct" && !terminal.expressions.isEmpty
+        {
+            combinedResultGuard(sources, allowMap: terminal.operation == "group", &invalid, r)
         }
-        if mode >= 4 { failed.append(r.emit(.iteratorCreateOrJump, iterator, list(sources), flags: mode << 5)) }
-        let ready = r.emit(.jump)
-        for jump in failed { r.patch(jump, target: r.code.count) }
-        r.emit(.loadNothing, iterator)
-        invalid.append(r.emit(.jump))
-        r.patch(ready, target: r.code.count)
+        invalid.append(r.emit(.iteratorCreateOrJump, iterator, list(sources), flags: mode << 5))
         return mode >= 4 ? .init(components: expressions.map { _ in r.temporary() }, entry: false) : nil
+    }
+
+    func combinedResultGuard(_ sources: [Int], allowMap: Bool, _ invalid: inout [Int], _ r: GesRoutine) {
+        // Map-left operations retain Map; otherwise a List source changes a
+        // valid Dice/List combination to List. All-Dice results stay Dice.
+        let check = r.temporary()
+        var valid: [Int] = []
+        r.emit(.checkType, check, sources[0], Int(GameEventScriptBytecodeTypeKind.map.rawValue))
+        let map = r.emit(.jumpIfTrue, 0, check)
+        if allowMap { valid.append(map) } else { invalid.append(map) }
+        for source in sources {
+            r.emit(.checkType, check, source, Int(GameEventScriptBytecodeTypeKind.list.rawValue))
+            valid.append(r.emit(.jumpIfTrue, 0, check))
+        }
+        invalid.append(r.emit(.jump))
+        for jump in valid { r.patch(jump, target: r.code.count) }
     }
 
     func sourceGuard(_ value: Int, _ invalid: inout [Int], _ r: GesRoutine) {
@@ -120,11 +121,11 @@ extension GesCompiler {
             return
         }
         var invalid: [Int] = []
-        var current = try expression(sources[0], r, scope)
+        let inputs = try sources.map { try expression($0, r, scope) }
+        var current = inputs[0]
         let check = r.temporary()
-        for source in sources.dropFirst() {
+        for right in inputs.dropFirst() {
             sourceGuard(current, &invalid, r)
-            let right = try expression(source, r, scope)
             let result = r.temporary()
             r.emit(operation == "union" ? .union : operation == "intersect" ? .intersect : .subtract, result, current, right)
             r.emit(.checkType, check, result, Int(GameEventScriptBytecodeTypeKind.nothing.rawValue))

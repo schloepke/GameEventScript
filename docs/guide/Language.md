@@ -262,8 +262,10 @@ fold/reduce after the accumulator binding.
 
 `items[:foreach item => expression]` evaluates one expression per item and
 returns `nothing`. Prefer a `for` body when several statements are needed.
-Sources evaluate once, left to right; an invalid source combination returns
-`nothing` and skips later sources, while an empty valid source does not.
+All sources evaluate once, left to right, before the combined operation checks
+them. An invalid source combination returns `nothing`, but effects in later
+source expressions still run. Ordinary faults and execution limits still stop
+execution.
 Early terminals such as `:first` stop a fused pipeline, so effects in later
 projections are not executed for remaining elements.
 

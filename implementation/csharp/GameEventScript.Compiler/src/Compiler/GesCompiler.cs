@@ -1072,6 +1072,13 @@ internal static partial class GesCompiler
                 return true;
             }
 
+            // Slices preserve Dice and reject Maps unless a filter/select has produced a List.
+            if (prefixCount == 0 && source is CombinedCollectionExpressionNode { Operation: "union" or "intersect" or "difference" } &&
+                terminal is SequenceSliceSelectorNode or DrawSelectorNode)
+            {
+                return false;
+            }
+
             if (!CanEmitInlineIteratorPipelineTerminal(terminal, prefixCount > 0 || source is CombinedCollectionExpressionNode || IsEntriesSource(source)))
             {
                 return false;
@@ -1144,7 +1151,7 @@ internal static partial class GesCompiler
                 EmitInlinePipelineSourceGuard(source, terminal, prefixCount, invalidIteratorLabel, context, state);
                 _builder.IteratorCreateOrJump(iterator, source, invalidIteratorLabel);
             }
-            else row = EmitComponentIterator(iterator, iteratorSource, invalidIteratorLabel, context, state);
+            else row = EmitComponentIterator(iterator, iteratorSource, invalidIteratorLabel, context, state, prefixCount == 0 ? terminal : null);
 
             GesRegisterRef? listBuilder = null;
             GesRegisterRef? mapBuilder = null;

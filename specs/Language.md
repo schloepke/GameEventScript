@@ -2320,8 +2320,23 @@ Selectors are not automatically rewritten to the binary Cartesian instruction.
 the existing infix operand rules left to right, including duplicate counts,
 Map keys, Dice ordering and scalar-right subtraction. A standalone result
 retains its operator result kind; a following selector iterates that value.
-Sources evaluate once from left to right. An invalid prefix returns Nothing
-without evaluating later sources; a valid empty prefix does evaluate them.
+Selector source-type restrictions still apply to the combined result: direct
+projected `:distinct` and `:order` require List, while `:group` accepts List
+or Map. A preceding filter/select produces List and changes that boundary.
+Direct `:take`, `:drop` and multi-value `:draw` preserve Dice results and
+reject Map results, just as when the combined result is stored in a binding
+before applying the selector. Single-value `:draw 1` retains `:first` semantics.
+For Dice minus a scalar, only unitless integer faces in `1..2147483647` are
+valid, matching infix subtraction; invalid faces return Nothing. A List
+operand changes a valid Dice/List combination to List, whose ordinary scalar
+subtraction rules then apply.
+All source expressions evaluate once from left to right before the combined
+operation validates them, including when an earlier source is Nothing or empty.
+Invalid source combinations return Nothing; they do not suppress effects in
+later source expressions. Ordinary faults and execution limits still stop
+execution. Short-circuiting inside each source expression is unchanged.
+Iterator creation validates the evaluated sources and releases any partially
+created child iterators on failure; no preliminary validation iterators are needed.
 
 Multiple binding names in loops and selectors bind List positions or Map values
 in ascending key order. Missing components bind Nothing; extra components are
@@ -2330,6 +2345,8 @@ One binding always receives the complete element. Filtering preserves the
 complete element, including unbound components; selecting replaces it.
 `:entries` retains its public `key`/`value` Map elements while allowing direct
 component transfer to multiple bindings without intermediate entry Maps.
+Implicit `:sum` and `:average` consume the complete element, equivalent to an
+explicit identity projection, including after filters with multiple bindings.
 
 `[:foreach item => expression]` evaluates the expression for each element and
 returns Nothing, including for empty input. It accepts component bindings and

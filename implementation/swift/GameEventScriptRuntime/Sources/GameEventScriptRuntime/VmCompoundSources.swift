@@ -46,6 +46,8 @@ enum GesCompoundSources {
                     collected.append(contentsOf: dice)
                     collected.sort(by: >)
                     current = GesIterator(.dice(collected))!
+                } else if let union = current as? GesUnionIterator {
+                    union.append(GesIterator(right)!)
                 } else {
                     current = GesUnionIterator(current, GesIterator(right)!)
                 }
@@ -56,7 +58,11 @@ enum GesCompoundSources {
                     return nil
                 }
                 let values = right.listValue ?? right.diceRolls?.map { GesValue.integer(Int64($0)) } ?? [right]
-                current = GesMultisetIterator(current, values, intersect: mode == 2, budget: budget)
+                if let multiset = current as? GesMultisetIterator {
+                    multiset.append(values)
+                } else {
+                    current = GesMultisetIterator(current, values, intersect: mode == 2, budget: budget)
+                }
             }
             if right.kind == .list { kind = .list }
         }

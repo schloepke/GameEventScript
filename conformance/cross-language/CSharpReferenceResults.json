@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "B223B4786D1AB3FF4D12360DDE60937C8B7707F06E63DFDD03CCCD8A8E3B372D",
+    "sha256": "55D3A81A67C02387483A675F7AC0C44836516726B1FABA8705663A0D76999086",
     "documentCount": 100,
-    "caseCount": 1878
+    "caseCount": 1896
   },
   "cases": [
     {
@@ -3321,6 +3321,71 @@
       "id": "compile.inline-assembly/closed-resource-join",
       "kind": "compileError",
       "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/component-duplicate-target",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/component-iterator-alias",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/component-readonly-target",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/compound-internal-source",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/compound-uninitialized-source",
+      "kind": "compileError",
+      "level": "atomic",
       "requires": {
         "core": [
           "compiler"
@@ -14858,6 +14923,23 @@
       "code": "conformance.passed"
     },
     {
+      "id": "runtime.atomic.iterator-core/cartesian-sources-evaluated-once",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "runtime.atomic.iterator-core/cartesian-sum",
       "kind": "scriptApi",
       "level": "atomic",
@@ -15267,6 +15349,40 @@
       "code": "conformance.passed"
     },
     {
+      "id": "runtime.atomic.iterator-core/component-first-with-one-item-budget",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/component-first-with-one-loop-budget",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "runtime.atomic.iterator-core/component-for",
       "kind": "scriptApi",
       "level": "atomic",
@@ -15301,7 +15417,41 @@
       "code": "conformance.passed"
     },
     {
+      "id": "runtime.atomic.iterator-core/empty-cartesian-evaluates-sources",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "runtime.atomic.iterator-core/entries-components",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/entries-first-with-one-item-budget",
       "kind": "scriptApi",
       "level": "atomic",
       "requires": {
@@ -15335,7 +15485,58 @@
       "code": "conformance.passed"
     },
     {
+      "id": "runtime.atomic.iterator-core/fold-invalid-source-still-evaluates-seed",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/fold-source-before-seed",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "runtime.atomic.iterator-core/foreach-components",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/foreach-emits-in-order",
       "kind": "scriptApi",
       "level": "atomic",
       "requires": {
@@ -15388,6 +15589,40 @@
     },
     {
       "id": "runtime.atomic.iterator-core/intersect-multiset",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/invalid-cartesian-skips-source",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/invalid-union-prefix-skips-source",
       "kind": "scriptApi",
       "level": "atomic",
       "requires": {
@@ -22418,6 +22653,57 @@
     },
     {
       "id": "runtime.compound-iterators/lockstep-three",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/many-sources-difference",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/many-sources-intersect",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/many-sources-union",
       "kind": "programBinary",
       "level": "atomic",
       "requires": {

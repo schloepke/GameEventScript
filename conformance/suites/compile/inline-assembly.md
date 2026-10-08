@@ -3055,3 +3055,197 @@ steps:
               type: ":Number.int64"
               value: "-7"
 ```
+
+---
+
+## Test: component-readonly-target
+
+This case verifies safe register roles for compound iterator assembly.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: component-readonly-target
+kind: compileError
+level: atomic
+sources:
+  - name: component-readonly-target.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(source) {
+    asm {
+        .register iterator, second
+        IteratorCreate iterator, [source, source], #cartesian
+ IteratorNext [source, second], iterator, done
+        done:
+        IteratorClose iterator
+    }
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: component-duplicate-target
+
+This case verifies safe register roles for compound iterator assembly.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: component-duplicate-target
+kind: compileError
+level: atomic
+sources:
+  - name: component-duplicate-target.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(source) {
+    asm {
+        .register iterator, second
+        IteratorCreate iterator, [source, source], #cartesian
+ IteratorNext [second, second], iterator, done
+        done:
+        IteratorClose iterator
+    }
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: component-iterator-alias
+
+This case verifies safe register roles for compound iterator assembly.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: component-iterator-alias
+kind: compileError
+level: atomic
+sources:
+  - name: component-iterator-alias.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(source) {
+    asm {
+        .register iterator, second
+        IteratorCreate iterator, [source, source], #cartesian
+ IteratorNext [second, iterator], iterator, done
+        done:
+        IteratorClose iterator
+    }
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: compound-uninitialized-source
+
+This case verifies safe register roles for compound iterator assembly.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: compound-uninitialized-source
+kind: compileError
+level: atomic
+sources:
+  - name: compound-uninitialized-source.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(source) {
+    asm {
+        .register iterator, second
+        IteratorCreate iterator, [source, second], #cartesian
+        done:
+        IteratorClose iterator
+    }
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```
+
+---
+
+## Test: compound-internal-source
+
+This case verifies safe register roles for compound iterator assembly.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: compound-internal-source
+kind: compileError
+level: atomic
+sources:
+  - name: compound-internal-source.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(source) {
+    asm {
+        .register iterator, second
+        IteratorCreate iterator, source
+ IteratorCreate second, [source, iterator], #cartesian
+        done:
+        IteratorClose iterator
+    }
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```

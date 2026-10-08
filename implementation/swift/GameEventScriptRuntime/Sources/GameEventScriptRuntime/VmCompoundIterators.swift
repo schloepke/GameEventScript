@@ -105,67 +105,74 @@ final class GesProductIterator: GesIterator, GesComponentIterator {
 }
 
 final class GesUnionIterator: GesIterator {
-    private let left: GesIterator
-    private let right: GesIterator
-    private var onRight = false
+    private var sources: [GesIterator]
+    private var position = 0
     private var closed = false
 
     init(_ left: GesIterator, _ right: GesIterator) {
-        self.left = left
-        self.right = right
+        sources = [left, right]
         super.init(patternSequence: false)
     }
 
+    func append(_ source: GesIterator) { sources.append(source) }
+
     override func next<Output: GesValueOutput>(sink: Output) -> Output.Result? {
-        if closed { return nil }
-        if !onRight {
-            if let value = left.next(sink: sink) { return value }
-            onRight = true
+        while !closed && position < sources.count {
+            if let value = sources[position].next(sink: sink) { return value }
+            position += 1
         }
-        return right.next(sink: sink)
+        return nil
     }
 
     override func close() {
+        if closed { return }
         closed = true
-        left.close()
-        right.close()
+        for source in sources { source.close() }
     }
 }
 
 final class GesMultisetIterator: GesIterator {
     private let left: GesIterator
-    private let right: [GesValue]
-    private var used: [Bool]
+    private var stages: [(values: [GesValue], used: [Bool])]
     private let intersect: Bool
     private let budget: GesRuntimeBudget
     private var closed = false
 
     init(_ left: GesIterator, _ right: [GesValue], intersect: Bool, budget: GesRuntimeBudget) {
         self.left = left
-        self.right = right
         self.intersect = intersect
         self.budget = budget
-        used = .init(repeating: false, count: right.count)
+        stages = [(right, .init(repeating: false, count: right.count))]
         super.init(patternSequence: false)
     }
 
+    func append(_ values: [GesValue]) { stages.append((values, .init(repeating: false, count: values.count))) }
+
     override func next<Output: GesValueOutput>(sink: Output) -> Output.Result? {
         while !closed && !budget.isExhausted {
-            guard let candidate = left.next(), budget.loop() else { return nil }
-            var found = false
-            for index in right.indices {
+            guard let candidate = left.next() else { return nil }
+            var accepted = true
+            for stage in stages.indices {
                 guard budget.loop() else { return nil }
-                if used[index] || candidate != right[index] { continue }
-                used[index] = true
-                found = true
+                var found = false
+                for index in stages[stage].values.indices {
+                    guard budget.loop() else { return nil }
+                    if stages[stage].used[index] || candidate != stages[stage].values[index] { continue }
+                    stages[stage].used[index] = true
+                    found = true
+                    break
+                }
+                if found == intersect { continue }
+                accepted = false
                 break
             }
-            if found == intersect { return sink.copy(candidate) }
+            if accepted { return sink.copy(candidate) }
         }
         return nil
     }
 
     override func close() {
+        if closed { return }
         closed = true
         left.close()
     }

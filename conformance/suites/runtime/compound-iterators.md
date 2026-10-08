@@ -2474,3 +2474,201 @@ steps:
                       type: ":Number.int64"
                       value: "4"
 ```
+
+---
+
+## Test: many-sources-union
+
+This case checks that twenty thousand source references execute and close without recursive iterator nesting.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: many-sources-union
+binaryFixture:
+  id: execute-many-sources-union
+  resourceId: gesb-v1.execute-many-sources-union
+  relativePath: GesbV1/execute-many-sources-union.gesb
+  sha256: DAF021BEF930C68492475F27A5735D21527F5084A4468490243979195A627591
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: false
+  derivation: "Replace valid-runtime.gesb Code with words 01000000020000000000000000000000,20000100020000000000000000000000,20000000010000000000000000000000,be200200030000000000000000000000,c0000000020006000000000000000000,0c000000000000000000000000000000,c1000000020000000000000000000000,0a000000000000000000000000000000; UInt16IndexLists are [0], [], [1], and 20000 source registers (0 followed by 19999 copies of 1); update counts, lengths and total size."
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+binary:
+  outcome: "valid"
+  rewriteByteExact: true
+  rewriteSha256: "DAF021BEF930C68492475F27A5735D21527F5084A4468490243979195A627591"
+steps:
+  run:
+    input:
+      args:
+        -
+          name: "value"
+          value:
+            type: ":List"
+            items:
+              -
+                type: ":List"
+                items:
+                  -
+                    type: ":Number.int64"
+                    value: "1"
+              -
+                type: ":List"
+                items: []
+    local:
+      -
+        name: "Done"
+        args:
+          -
+            name: "value"
+            value:
+              type: ":Number.int64"
+              value: "1"
+```
+
+---
+
+## Test: many-sources-intersect
+
+This case checks that twenty thousand source references execute and close without recursive iterator nesting.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: many-sources-intersect
+binaryFixture:
+  id: execute-many-sources-intersect
+  resourceId: gesb-v1.execute-many-sources-intersect
+  relativePath: GesbV1/execute-many-sources-intersect.gesb
+  sha256: 760ED599BC140BE95E69DE1345CEC99F2348611AC3A6A27B166E07E7CEBA7348
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: false
+  derivation: "Replace valid-runtime.gesb Code with words 01000000020000000000000000000000,20000100020000000000000000000000,20000000010000000000000000000000,be400200030000000000000000000000,c0000000020006000000000000000000,0c000000000000000000000000000000,c1000000020000000000000000000000,0a000000000000000000000000000000; UInt16IndexLists are [0], [], [1], and 20000 source registers (all 0); update counts, lengths and total size."
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+binary:
+  outcome: "valid"
+  rewriteByteExact: true
+  rewriteSha256: "760ED599BC140BE95E69DE1345CEC99F2348611AC3A6A27B166E07E7CEBA7348"
+steps:
+  run:
+    input:
+      args:
+        -
+          name: "value"
+          value:
+            type: ":List"
+            items:
+              -
+                type: ":List"
+                items:
+                  -
+                    type: ":Number.int64"
+                    value: "1"
+              -
+                type: ":List"
+                items: []
+    local:
+      -
+        name: "Done"
+        args:
+          -
+            name: "value"
+            value:
+              type: ":Number.int64"
+              value: "1"
+```
+
+---
+
+## Test: many-sources-difference
+
+This case checks that twenty thousand source references execute and close without recursive iterator nesting.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: many-sources-difference
+binaryFixture:
+  id: execute-many-sources-difference
+  resourceId: gesb-v1.execute-many-sources-difference
+  relativePath: GesbV1/execute-many-sources-difference.gesb
+  sha256: A3B224C8DC4BF759106FFD438A8E71A957A06D014AD55234C4163CE2EDE2C2A8
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: false
+  derivation: "Replace valid-runtime.gesb Code with words 01000000020000000000000000000000,20000100020000000000000000000000,20000000010000000000000000000000,be600200030000000000000000000000,c0000000020006000000000000000000,0c000000000000000000000000000000,c1000000020000000000000000000000,0a000000000000000000000000000000; UInt16IndexLists are [0], [], [1], and 20000 source registers (0 followed by 19999 copies of 1); update counts, lengths and total size."
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+binary:
+  outcome: "valid"
+  rewriteByteExact: true
+  rewriteSha256: "A3B224C8DC4BF759106FFD438A8E71A957A06D014AD55234C4163CE2EDE2C2A8"
+steps:
+  run:
+    input:
+      args:
+        -
+          name: "value"
+          value:
+            type: ":List"
+            items:
+              -
+                type: ":List"
+                items:
+                  -
+                    type: ":Number.int64"
+                    value: "1"
+              -
+                type: ":List"
+                items: []
+    local:
+      -
+        name: "Done"
+        args:
+          -
+            name: "value"
+            value:
+              type: ":Number.int64"
+              value: "1"
+```

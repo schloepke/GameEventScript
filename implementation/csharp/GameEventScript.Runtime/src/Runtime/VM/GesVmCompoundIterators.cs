@@ -97,6 +97,7 @@ internal static class GesVmCompoundIterators
                     Array.Reverse(dice);
                     current = new GesIntIterator(dice);
                 }
+                else if (current is GesUnionIterator union) union.Append(right.CreateIterator()!);
                 else current = new GesUnionIterator(current, right.CreateIterator()!);
             }
             else
@@ -112,7 +113,8 @@ internal static class GesVmCompoundIterators
                     for (var item = 0; item < dice.Length; item++) values[item].SetInteger(dice[item]);
                 }
                 else values = [right];
-                current = new GesMultisetIterator(current, values, mode == 2, budget);
+                if (current is GesMultisetIterator multiset) multiset.Append(values);
+                else current = new GesMultisetIterator(current, values, mode == 2, budget);
             }
             if (right.Kind == List) kind = List;
         }

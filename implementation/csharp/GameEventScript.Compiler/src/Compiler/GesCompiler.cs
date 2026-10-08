@@ -1672,15 +1672,25 @@ internal static partial class GesCompiler
             var end = _builder.AddLabel("fold_end");
             var invalid = _builder.AddLabel("fold_invalid");
             var done = _builder.AddLabel("fold_done");
+            ComponentRow? row = null;
+            GesRegisterRef? validSource = null;
+            if (iteratorSource is not null)
+            {
+                validSource = state.AllocateTemporary(_builder, context);
+                var prepared = _builder.AddLabel("fold_source_prepared");
+                _builder.LoadFalse(validSource.Value);
+                row = EmitComponentIterator(iterator, iteratorSource, prepared, context, state);
+                _builder.LoadTrue(validSource.Value);
+                _builder.MarkLabel(prepared);
+            }
             if (fold.Seed is null) _builder.LoadNothing(accumulator);
             else
             {
                 var seed = EmitExpressionForRead(fold.Seed, context, state);
                 _builder.Move(accumulator, seed);
             }
-            ComponentRow? row = null;
-            if (iteratorSource is null) _builder.IteratorCreateOrJump(iterator, source, invalid);
-            else row = EmitComponentIterator(iterator, iteratorSource, invalid, context, state);
+            if (validSource is { } valid) _builder.JumpIfNotTrue(valid, invalid);
+            else _builder.IteratorCreateOrJump(iterator, source, invalid);
             if (fold.Seed is null) _builder.IteratorNext(accumulator, iterator, end);
             _builder.MarkLabel(loop);
             if (row is null) _builder.IteratorNext(item, iterator, end);

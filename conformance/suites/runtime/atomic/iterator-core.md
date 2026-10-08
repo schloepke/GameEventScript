@@ -4191,3 +4191,518 @@ steps:
           - name: value
             value: { type: ':Boolean', value: true }
 ```
+
+---
+
+## Test: invalid-cartesian-skips-source
+
+This case checks invalid cartesian skips source without relying on implementation-specific instruction shapes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-cartesian-skips-source
+kind: scriptApi
+level: atomic
+sources:
+  - name: "invalid-cartesian-skips-source.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionedges
+on Start {
+    let value be [:cartesian nothing, [emit Unexpected()]]
+    emit Done(value: value is nothing)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: empty-cartesian-evaluates-sources
+
+This case checks empty cartesian evaluates sources without relying on implementation-specific instruction shapes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: empty-cartesian-evaluates-sources
+kind: scriptApi
+level: atomic
+sources:
+  - name: "empty-cartesian-evaluates-sources.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionedges
+on Start {
+    let value be [:cartesian [], [emit First()], [emit Second()]]
+    emit Done(value: value = [])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: First
+        args: []
+      - name: Second
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: invalid-union-prefix-skips-source
+
+This case checks invalid union prefix skips source without relying on implementation-specific instruction shapes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-union-prefix-skips-source
+kind: scriptApi
+level: atomic
+sources:
+  - name: "invalid-union-prefix-skips-source.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionedges
+on Start {
+    let value be [:union [1], [a: 2], [emit Unexpected()]][:count]
+    emit Done(value: value is nothing)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: cartesian-sources-evaluated-once
+
+This case checks cartesian sources evaluated once without relying on implementation-specific instruction shapes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: cartesian-sources-evaluated-once
+kind: scriptApi
+level: atomic
+sources:
+  - name: "cartesian-sources-evaluated-once.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionedges
+on Start {
+    let value be [:cartesian [emit First()], [emit Second()]][:count]
+    emit Done(value: value = 1)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: First
+        args: []
+      - name: Second
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: foreach-emits-in-order
+
+This case checks foreach emits in order without relying on implementation-specific instruction shapes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: foreach-emits-in-order
+kind: scriptApi
+level: atomic
+sources:
+  - name: "foreach-emits-in-order.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionedges
+on Start {
+    let value be [[1, 2], [3, 4]][:foreach a, b => emit Item(value: a + b)]
+    emit Done(value: value is nothing)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Item
+        args:
+          - name: value
+            value: { type: ':Number.int64', value: '3' }
+      - name: Item
+        args:
+          - name: value
+            value: { type: ':Number.int64', value: '7' }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: component-first-with-one-item-budget
+
+This case checks component first with one item budget without relying on implementation-specific instruction shapes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: component-first-with-one-item-budget
+kind: scriptApi
+level: atomic
+runtimeLimits: { maxGeneratedCollectionItems: 1 }
+sources:
+  - name: "component-first-with-one-item-budget.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionedges
+on Start {
+    let value be [:cartesian [1], [2]][:select a, b => a + b][:first]
+    emit Done(value: value = 3)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: entries-first-with-one-item-budget
+
+This case checks entries first with one item budget without relying on implementation-specific instruction shapes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: entries-first-with-one-item-budget
+kind: scriptApi
+level: atomic
+runtimeLimits: { maxGeneratedCollectionItems: 1 }
+sources:
+  - name: "entries-first-with-one-item-budget.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionedges
+on Start {
+    let value be [a: 1][:entries :filter key, value where key = 'a' :select key, value => value :first]
+    emit Done(value: value = 1)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: component-first-with-one-loop-budget
+
+This case checks component first with one loop budget without relying on implementation-specific instruction shapes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: component-first-with-one-loop-budget
+kind: scriptApi
+level: atomic
+runtimeLimits: { maxLoopIterations: 1 }
+sources:
+  - name: "component-first-with-one-loop-budget.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionedges
+on Start {
+    let value be [:cartesian [1, 2], [3, 4]][:select a, b => a + b][:first]
+    emit Done(value: value = 4)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: fold-source-before-seed
+
+This case checks fold source before seed without relying on implementation-specific instruction shapes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: fold-source-before-seed
+kind: scriptApi
+level: atomic
+sources:
+  - name: "fold-source-before-seed.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionedges
+on Start {
+    let value be [:cartesian [], [emit Source()]][:fold acc be (emit Seed()), a, b => acc]
+    emit Done(value: value)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Source
+        args: []
+      - name: Seed
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: fold-invalid-source-still-evaluates-seed
+
+This case checks fold invalid source still evaluates seed without relying on implementation-specific instruction shapes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: fold-invalid-source-still-evaluates-seed
+kind: scriptApi
+level: atomic
+sources:
+  - name: "fold-invalid-source-still-evaluates-seed.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionedges
+on Start {
+    let value be [:cartesian nothing, [emit Unexpected()]][:fold acc be (emit Seed()), a, b => acc]
+    emit Done(value: value is nothing)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Seed
+        args: []
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```

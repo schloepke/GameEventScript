@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
+using System.Collections.Generic;
 using GameEventScript.Api;
 using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
@@ -114,33 +115,38 @@ internal sealed class GesProductIterator : IGesComponentIterator, IDisposable
 
 internal sealed class GesUnionIterator(IGesIterator left, IGesIterator right) : IGesIterator, IDisposable
 {
-    private bool _right;
+    private readonly List<IGesIterator> _sources = [left, right];
+    private int _position;
     private bool _closed;
+
+    internal void Append(IGesIterator source) => _sources.Add(source);
 
     public GesIteratorResult Next()
     {
-        if (_closed) return default;
-        if (!_right)
+        while (!_closed && _position < _sources.Count)
         {
-            var next = left.Next();
+            var next = _sources[_position].Next();
             if (next.HasValue) return next;
-            _right = true;
+            _position++;
         }
-        return right.Next();
+        return default;
     }
 
     public void Dispose()
     {
+        if (_closed) return;
         _closed = true;
-        if (left is IDisposable l) l.Dispose();
-        if (right is IDisposable r) r.Dispose();
+        foreach (var source in _sources)
+            if (source is IDisposable disposable) disposable.Dispose();
     }
 }
 
 internal sealed class GesMultisetIterator(IGesIterator left, GesValue[] right, bool intersect, GesRuntimeBudget budget) : IGesIterator, IDisposable
 {
-    private readonly bool[] _used = new bool[right.Length];
+    private readonly List<(GesValue[] Values, bool[] Used)> _stages = [(right, new bool[right.Length])];
     private bool _closed;
+
+    internal void Append(GesValue[] values) => _stages.Add((values, new bool[values.Length]));
 
     public GesIteratorResult Next()
     {
@@ -148,23 +154,31 @@ internal sealed class GesMultisetIterator(IGesIterator left, GesValue[] right, b
         {
             var candidate = left.Next();
             if (!candidate.HasValue) return default;
-            if (!budget.ConsumeLoopIterationIfAvailable("Compound iterator candidate exceeds the configured limit.")) return default;
-            var found = false;
-            for (var index = 0; index < right.Length; index++)
+            var accepted = true;
+            foreach (var stage in _stages)
             {
-                if (!budget.ConsumeLoopIterationIfAvailable("Compound iterator search exceeds the configured limit.")) return default;
-                if (_used[index] || !candidate.Value.EqualsValue(right[index])) continue;
-                _used[index] = true;
-                found = true;
+                if (!budget.ConsumeLoopIterationIfAvailable("Compound iterator candidate exceeds the configured limit.")) return default;
+                var found = false;
+                for (var index = 0; index < stage.Values.Length; index++)
+                {
+                    if (!budget.ConsumeLoopIterationIfAvailable("Compound iterator search exceeds the configured limit.")) return default;
+                    if (stage.Used[index] || !candidate.Value.EqualsValue(stage.Values[index])) continue;
+                    stage.Used[index] = true;
+                    found = true;
+                    break;
+                }
+                if (found == intersect) continue;
+                accepted = false;
                 break;
             }
-            if (found == intersect) return candidate;
+            if (accepted) return candidate;
         }
         return default;
     }
 
     public void Dispose()
     {
+        if (_closed) return;
         _closed = true;
         if (left is IDisposable disposable) disposable.Dispose();
     }

@@ -69,15 +69,20 @@ extension GesCompiler {
         let accumulator = r.temporary()
         let iterator = r.temporary()
         let item = r.temporary()
-        if s.operation == "fold" { _ = try expression(s.expressions[0], r, scope, destination: accumulator) } else { r.emit(.loadNothing, accumulator) }
         var invalid: [Int] = []
-        let row: GesComponentRow?
+        var row: GesComponentRow?
+        var validSource: Int?
         if let sourceExpression {
-            row = try componentIterator(iterator, sourceExpression, &invalid, r, scope)
-        } else {
-            invalid.append(r.emit(.iteratorCreateOrJump, iterator, input))
-            row = nil
+            let valid = r.temporary()
+            r.emit(.loadFalse, valid)
+            var prepared: [Int] = []
+            row = try componentIterator(iterator, sourceExpression, &prepared, r, scope)
+            r.emit(.loadTrue, valid)
+            for jump in prepared { r.patch(jump, target: r.code.count) }
+            validSource = valid
         }
+        if s.operation == "fold" { _ = try expression(s.expressions[0], r, scope, destination: accumulator) } else { r.emit(.loadNothing, accumulator) }
+        if let validSource { invalid.append(r.emit(.jumpIfNotTrue, 0, validSource)) } else { invalid.append(r.emit(.iteratorCreateOrJump, iterator, input)) }
         let first = s.operation == "reduce" ? r.emit(.iteratorNext, accumulator, iterator) : nil
         let loop = r.code.count
         let end = r.emit(.iteratorNext, row.map { list($0.components) } ?? item, iterator, flags: row == nil ? 0 : 32)

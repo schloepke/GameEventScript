@@ -26,7 +26,10 @@ owning specifications; this plan records sequencing and acceptance criteria.
 7. [x] Port source compilation and assembly support to Swift.
    Native strict report: 1,847 passed, 31 optional performance skips, no failures.
    All 32 native Conformance tests and dependency checks pass.
-8. [ ] Complete shared behavioral and native resource/performance verification.
+8. [x] Complete shared behavioral and native resource/performance verification.
+   C#: 2,459 executions including allocation checks; Swift: 1,896 language
+   cases, 1,516 independent Runtime cases, CLI/bridge and interchange checks.
+   Strict report: 1,865 passed, 31 optional performance skips, no failures.
 9. [ ] Update Card Lab/examples, guides and changelog; review the entire branch.
 
 Commit a verified checkpoint after each step; do not push automatically.
@@ -138,3 +141,31 @@ operator or universal streaming through every source expression.
 
 General public lazy collections, automatic Cartesian rewriting and broad VM
 performance redesign are outside this implementation.
+
+## Verification evidence (step 8)
+
+The allocation test `CollectionPipelineAllocationTests` compares the same
+non-eliminated integer addition in nested loops, direct Cartesian component
+iteration, and iteration over a materialized binary Cartesian product. Each
+case uses prepared Programs/hosts, ten warmups, five timing samples of twenty
+runs, and a separate allocation measurement. Timings are informational, not
+portable performance promises or CI thresholds.
+
+Local C# Release observation (2026-10-08, macOS arm64):
+
+| Input | Nested loops | Cartesian components | Materialized product |
+| --- | --- | --- | --- |
+| 8 × 8 | 288 B / 0.0130 ms | 624 B / 0.0227 ms | 7,736 B / 0.0191 ms |
+| 128 × 128 | 4,128 B / 1.8878 ms | 4,464 B / 2.4621 ms | 1,966,136 B / 2.2438 ms |
+
+The resource goal is met: component iteration does not allocate a pair for
+every row. Equal speed to nested loops is **not** established; this observation
+shows roughly 30% more elapsed time at 128 × 128. No automatic rewrite or
+additional performance optimization follows from this measurement. Swift
+shares the iterator architecture; these C# timings are not Swift measurements.
+
+Shared edge cases additionally exercise source evaluation/short-circuit order,
+`fold` seed ordering, effectful `foreach`, direct binding under low collection
+limits, ASM register safety, and 20,000-source iteration/cleanup without
+recursive iterator nesting. Existing cross-language case results remain
+unchanged; 18 additional edge cases pass in C#.

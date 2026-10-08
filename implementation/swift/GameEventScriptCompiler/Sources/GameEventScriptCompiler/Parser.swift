@@ -297,7 +297,7 @@ final class GesParser {
             }
             kind = .condition(conditions, then, otherwise)
         } else if match("for") {
-            let name = try identifier()
+            let names = try bindingNames()
             newlines()
             let range = match("from")
             let sequence: GesExpression
@@ -309,7 +309,7 @@ final class GesParser {
                 if current.syntaxText == "from" { throw failure("Direct range requires 'from'.") }
                 sequence = try expression()
             }
-            kind = .loop(name, sequence, range, try body())
+            kind = .loop(names, sequence, range, try body())
         } else if current.syntaxText == "random" && peek().syntaxText == "with" {
             advance()
             newlines()

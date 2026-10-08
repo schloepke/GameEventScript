@@ -53,6 +53,7 @@ final class GesExpression {
         case map([(String, GesExpression)])
         case member(GesExpression, String)
         case selector(GesExpression, GesSelector)
+        case combined(String, [GesExpression])
         case cast(GesExpression, String)
         case check(GesExpression, String)
         case predicate(GesExpression?, String)
@@ -81,6 +82,8 @@ final class GesExpression {
 struct GesSelector {
     var operation: String
     var name = "value"
+    var names: [String] = []
+    var weightNames: [String] = []
     var expressions: [GesExpression] = []
     var count = 0
     var mode = ""
@@ -95,7 +98,7 @@ struct GesStatement {
         case letBinding(String, GesExpression)
         case publish(Bool, GesExpression, [GesExpression])
         case condition([(String?, GesExpression)], [GesStatement], [GesStatement])
-        case loop(String, GesExpression, Bool, [GesStatement])
+        case loop([String], GesExpression, Bool, [GesStatement])
         case seeded(GesExpression, [GesStatement])
     }
 

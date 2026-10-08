@@ -17,6 +17,7 @@ extension GesCompiler {
     }
 
     func assemblySignature(_ line: GesAssemblyLine) throws -> String {
+        if let signature = try assemblyIteratorSignature(line) { return signature }
         if line.name == "emit" || line.name == "publish" { return String(repeating: "e", count: line.operands.count) }
         if let send = assemblySend(line) {
             let count = (send.result ? 2 : 1) + (send.delayed ? 1 : 0) + (send.tags ? 1 : 0)

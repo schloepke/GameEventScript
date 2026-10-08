@@ -14,6 +14,7 @@ extension GesCompiler {
                 let d = r.local()
                 scope.values[name] = d
                 _ = try expression(value, r, scope, destination: d)
+                if knownNonList(value, r, scope) { r.nonListBindings.insert(d) }
                 r.symbols.append((name, d, max(0, r.code.count - 1), false))
                 if case .handler(_, let parameters) = value.kind { scope.handlers[name] = parameters.map(\.label) }
             case .expression(let value): _ = try expression(value, r, scope)
@@ -48,14 +49,17 @@ extension GesCompiler {
                 for branch in branches { r.patch(branch, target: r.code.count) }
                 try statements(no, r, GesScope(scope))
                 r.patch(end, target: r.code.count)
-            case .loop(let name, let sequence, let range, let body):
+            case .loop(let names, let sequence, let range, let body):
                 let child = GesScope(scope)
-                let item = r.local()
-                child.values[name] = item
-                r.symbols.append((name, item, 0, false))
+                let items = names.map { name in
+                    let item = r.local()
+                    child.values[name] = item
+                    r.symbols.append((name, item, 0, false))
+                    return item
+                }
                 let iterator = try iterator(sequence, range, r, scope)
                 let start = r.code.count
-                let next = r.emit(.iteratorNext, item, iterator)
+                let next = r.emit(.iteratorNext, items.count == 1 ? items[0] : list(items), iterator, flags: items.count == 1 ? 0 : 32)
                 try statements(body, r, child)
                 r.location = statement.location
                 r.emit(.jump, 0, 0, start)
@@ -95,6 +99,10 @@ extension GesCompiler {
             } else {
                 r.emit(.createRangeIterator, target, a, b)
             }
+        } else if isCombinedSource(e) {
+            var invalid: [Int] = []
+            _ = try componentIterator(target, e, &invalid, r, scope)
+            for jump in invalid { r.patch(jump, target: r.code.count) }
         } else {
             let value = try expression(e, r, scope)
             r.emit(.iteratorCreate, target, value)
@@ -169,7 +177,21 @@ extension GesCompiler {
                 "default": .default, "or": .or, "and": .and, "xor": .xor, "->": .implies, "in": .contains, "not in": .contains, "inValues": .containsValue, "startsWith": .startsWith, "endsWith": .endsWith, "|": .union, "&": .intersect, "zip": .zip,
             ]
             if let opcode = mapping[op] {
-                r.emit(opcode, d, a, b)
+                if op == "*" && !knownNonList(left, r, scope) && !knownNonList(right, r, scope) {
+                    let check = r.temporary()
+                    r.emit(.checkType, check, a, Int(GameEventScriptBytecodeTypeKind.list.rawValue))
+                    let first = r.emit(.jumpIfNotTrue, 0, check)
+                    r.emit(.checkType, check, b, Int(GameEventScriptBytecodeTypeKind.list.rawValue))
+                    let second = r.emit(.jumpIfNotTrue, 0, check)
+                    r.emit(.cartesian, d, a, b)
+                    let done = r.emit(.jump)
+                    r.patch(first, target: r.code.count)
+                    r.patch(second, target: r.code.count)
+                    r.emit(.multiply, d, a, b)
+                    r.patch(done, target: r.code.count)
+                } else {
+                    r.emit(opcode, d, a, b)
+                }
                 if op == "not in" { r.emit(.not, d, d) }
             }
             if let short { r.patch(short, target: r.code.count) }
@@ -249,6 +271,7 @@ extension GesCompiler {
         case .member(let value, let name):
             let a = try expression(value, r, scope)
             r.emit(.memberAccess, d, text(name), a)
+        case .combined(let operation, let sources): try combinedCollection(operation, sources, d, r, scope)
         case .selector(let value, let selection): try selector(value, selection, d, r, scope)
         case .intrinsic(let name, let args): try intrinsic(name, args, d, r, scope)
         case .range(let from, let to, let step):

@@ -16,7 +16,11 @@ extension GesCompiler {
                     let register = Int(fields[slot])
                     if slot == 0 { writes[register, default: []].append(index) } else { reads[register, default: 0] += 1 }
                 }
-                for slot in GameEventScriptCompilerSupport.listSlots(instruction, text: false) { for register in lists[Int(fields[slot])] { reads[Int(register), default: 0] += 1 } }
+                for slot in GameEventScriptCompilerSupport.listSlots(instruction, text: false) {
+                    for register in lists[Int(fields[slot])] {
+                        if slot == 0 { writes[Int(register), default: []].append(index) } else { reads[Int(register), default: 0] += 1 }
+                    }
+                }
             }
             let targets = Set(routine.code.filter { branches.contains($0.opcode) }.map { Int($0.word2) })
             var removed: Set<Int> = []

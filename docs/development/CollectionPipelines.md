@@ -23,7 +23,9 @@ owning specifications; this plan records sequencing and acceptance criteria.
 6. [x] Port the runtime architecture and verification to Swift.
    All 1,503 independent Runtime cases pass using C#-compiled inputs;
    native source support remains step 7. The public API gate passes.
-7. [ ] Port source compilation and assembly support to Swift.
+7. [x] Port source compilation and assembly support to Swift.
+   Native strict report: 1,847 passed, 31 optional performance skips, no failures.
+   All 32 native Conformance tests and dependency checks pass.
 8. [ ] Complete shared behavioral and native resource/performance verification.
 9. [ ] Update Card Lab/examples, guides and changelog; review the entire branch.
 

@@ -100,3 +100,7 @@ of full-document and incremental-line results, including every scope and offset.
 ```highlight
 {"name":"inclusive between comparisons","language":"ges","source":"if x is between 1 and 10 or x is not between 20 and 30 {}","expect":[{"text":"is","occurrence":0,"kind":"keyword"},{"text":"between","occurrence":0,"kind":"keyword"},{"text":"and","occurrence":0,"kind":"keyword"},{"text":"not","kind":"keyword"},{"text":"between","occurrence":1,"kind":"keyword"}]}
 ```
+
+```json
+{"name":"combined pipeline selectors","language":"ges","source":"[:cartesian a, b :filter x, y where x = y :select x, y => x][:foreach value => :ext.save(value)]","expect":[{"text":":cartesian","kind":"builtin"},{"text":":filter","kind":"builtin"},{"text":":select","kind":"builtin"},{"text":":foreach","kind":"builtin"}]}
+```

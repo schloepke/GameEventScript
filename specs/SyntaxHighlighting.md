@@ -122,3 +122,11 @@ Native package adapters run those Markdown cases without Runtime or Compiler and
 verify categories, scope stacks, Unicode offsets, whole-document/line equivalence
 and ANSI text preservation. They are presentation conformance, separate from the
 VM capability corpus; optional highlighting does not add a Runtime dependency.
+
+## Combined pipeline selectors
+
+The selector vocabulary includes `cartesian`, `lockstep`, `zip`, `union`,
+`intersect`, `difference` and `foreach`. Colon-prefixed selector steps use the
+existing builtin scope both in separate brackets and in compact chains. The
+GESA opcode vocabulary includes Cartesian. Qualified extension names follow
+the contiguous spelling specified in Language.md.

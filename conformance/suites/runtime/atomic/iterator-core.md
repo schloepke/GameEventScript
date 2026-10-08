@@ -2856,3 +2856,70 @@ steps:
                             type: ":Number.int64"
                             value: "1"
 ```
+
+---
+
+## Test: compact selector boundaries
+
+This case preserves ordinary pipeline results and recognizes argumentless selectors and split boundaries inside a single bracket.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: compact-selector-boundaries
+kind: scriptApi
+level: atomic
+sources:
+  - name: compact.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+    emit Done(value: [1, 2, 3][:filter x where x > 1 :select x => x * 2 :sum])
+    emit Done(value: [1, 2, 3][:reverse :first])
+    emit Done(value: 'a b c'[:split on whitespace :count])
+    emit Done(value: [b: 2, a: 1][:entries :select x => x.value :sum])
+    emit Done(value: [1, 2][:count :select x => x])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Number.int64', value: '10' }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Number.int64', value: '3' }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Number.int64', value: '3' }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Number.int64', value: '3' }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Nothing' }
+```

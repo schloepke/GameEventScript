@@ -219,7 +219,7 @@
         1: "support.function.selector.pipeline.gameeventscript"
         3: "keyword.other.definition.gameeventscript"
     -
-      "match": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b"
+      "match": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|foreach|cartesian|lockstep|zip|union|intersect|difference|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b"
       "scope": "support.function.selector.pipeline.gameeventscript"
   "extensions-and-types":
     -

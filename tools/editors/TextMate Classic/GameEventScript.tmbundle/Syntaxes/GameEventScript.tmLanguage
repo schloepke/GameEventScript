@@ -1452,7 +1452,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>:(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\b</string>
+					<string>:(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|foreach|cartesian|lockstep|zip|union|intersect|difference|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\b</string>
 					<key>name</key>
 					<string>support.function.selector.pipeline.gameeventscript</string>
 				</dict>

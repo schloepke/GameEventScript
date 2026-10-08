@@ -2284,3 +2284,18 @@ source. The normative syntax, binding and safety rules, operand forms and staged
 implementation status are defined in [Inline assembly](InlineAssembly.md).
 Only standalone handler statements, `let` initializers, complete callable bodies
 and computed-field bodies accept this form. Ordinary expressions do not.
+
+### Compact selector chains and extension names
+
+> **Since: Unreleased** — compact selector syntax
+
+A selector bracket may contain multiple colon-prefixed steps. For example,
+`items[:filter x where x > 0 :select x => x * 2]` is equivalent to
+`items[:filter x where x > 0][:select x => x * 2]`. Each step has its own
+ordinary binding scope. Types and qualified extensions inside expressions are
+not selector delimiters. `[:]` remains the empty Map literal.
+
+An extension's qualified name `:namespace.name` must be contiguous. Whitespace,
+comments and line breaks cannot occur between the colon, namespace, dot and
+function name. Whitespace may precede an argument list, as in
+`:board.cards (zone: #draw)`.

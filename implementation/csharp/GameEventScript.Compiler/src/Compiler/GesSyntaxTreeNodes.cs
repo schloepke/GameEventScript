@@ -22,6 +22,8 @@ internal abstract record IterationSourceNode : ScriptNode;
 
 internal abstract record ScriptNode
 {
+    public IReadOnlyList<string> BindingNames { get; init; } = [];
+
     // Parser construction assigns metadata before attaching a fresh node to its
     // parent. Subsequent compiler passes retain copy-on-rewrite semantics.
     public GameEventScriptSourceLocation? SourceRange { get; set; }
@@ -393,6 +395,9 @@ internal sealed record NothingCheckExpressionNode(ExpressionNode Value) : Expres
 internal sealed record TypeCastExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;
 internal sealed record DiceCountPatternNode(int Count, ExpressionNode? Face) : DicePatternNode;
 internal sealed record MemberAccessExpressionNode(ExpressionNode Target, string Member) : ExpressionNode;
+internal sealed record CombinedCollectionExpressionNode(string Operation, IReadOnlyList<ExpressionNode> Sources) : ExpressionNode;
+internal sealed record ForeachSelectorNode(string Identifier, ExpressionNode Expression) : CollectionSelectorNode;
+
 internal sealed record CollectionAccessExpressionNode(ExpressionNode Target, CollectionSelectorNode Selector) : ExpressionNode;
 
 // Collection selector nodes

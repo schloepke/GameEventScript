@@ -1503,3 +1503,169 @@ error:
   phase: "parse"
   code: "parse.syntax"
 ```
+
+---
+
+## Test: extension-space-before-dot
+
+This case rejects an invalid qualified name or combined selector source count.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: extension-space-before-dot
+kind: compileError
+level: atomic
+sources:
+  - name: extension-space-before-dot.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start { let value be :nav .shortestTurn(0, 0) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: parse
+  code: parse.syntax
+```
+
+---
+
+## Test: extension-space-after-dot
+
+This case rejects an invalid qualified name or combined selector source count.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: extension-space-after-dot
+kind: compileError
+level: atomic
+sources:
+  - name: extension-space-after-dot.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start { let value be :nav. shortestTurn(0, 0) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: parse
+  code: parse.syntax
+```
+
+---
+
+## Test: extension-newline
+
+This case rejects an invalid qualified name or combined selector source count.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: extension-newline
+kind: compileError
+level: atomic
+sources:
+  - name: extension-newline.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start { let value be :nav
+.shortestTurn(0, 0) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: parse
+  code: parse.syntax
+```
+
+---
+
+## Test: cartesian-one-source
+
+This case rejects an invalid qualified name or combined selector source count.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: cartesian-one-source
+kind: compileError
+level: atomic
+sources:
+  - name: cartesian-one-source.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start { let value be [:cartesian [1]] }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: parse
+  code: parse.syntax
+```
+
+---
+
+## Test: cartesian-no-source
+
+This case rejects an invalid qualified name or combined selector source count.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: cartesian-no-source
+kind: compileError
+level: atomic
+sources:
+  - name: cartesian-no-source.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start { let value be [:cartesian] }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: parse
+  code: parse.syntax
+```

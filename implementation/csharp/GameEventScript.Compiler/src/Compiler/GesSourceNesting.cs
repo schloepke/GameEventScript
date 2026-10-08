@@ -25,6 +25,8 @@ internal static class GesSourceNesting
             ExtensionCallExpressionNode value => Arguments(value.ArgumentList),
             TypeConstructorExpressionNode value => Arguments(value.ArgumentList),
             ListLiteralExpressionNode value => Maximum(value.Items),
+            CombinedCollectionExpressionNode value => Maximum(value.Sources),
+            ForeachSelectorNode value => Depth(value.Expression),
             MapLiteralExpressionNode value => Maximum(value.Entries),
             MapEntryNode value => Depth(value.Value),
             IntrinsicCallExpressionNode value => Maximum(value.Arguments),

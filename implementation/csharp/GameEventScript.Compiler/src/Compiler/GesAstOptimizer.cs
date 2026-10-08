@@ -334,6 +334,7 @@ internal static class GesAstOptimizer
             {
                 Target = OptimizeExpression(member.Target, knownTypeNames)
             },
+            CombinedCollectionExpressionNode combined => combined with { Sources = OptimizeExpressions(combined.Sources, knownTypeNames) },
             CollectionAccessExpressionNode access => access with
             {
                 Target = OptimizeExpression(access.Target, knownTypeNames),
@@ -411,6 +412,7 @@ internal static class GesAstOptimizer
             {
                 IndexExpression = OptimizeExpression(seriesTermSelector.IndexExpression, knownTypeNames)
             },
+            ForeachSelectorNode each => each with { Expression = OptimizeExpression(each.Expression, knownTypeNames) },
             FilterSelectorNode filterSelector => filterSelector with
             {
                 Predicate = OptimizeExpression(filterSelector.Predicate, knownTypeNames)

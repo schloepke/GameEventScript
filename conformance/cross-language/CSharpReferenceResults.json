@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "64B682AFBC0C553B2A9F907B0140D53C11FFB9758020E2352E636A67C2E091C1",
+    "sha256": "0B866DC45D8A580752FBFC4CCC8933801CCBD9A578E0B21D0674C5A1AEF66CD4",
     "documentCount": 100,
-    "caseCount": 1846
+    "caseCount": 1852
   },
   "cases": [
     {
@@ -5433,6 +5433,32 @@
       "code": "conformance.passed"
     },
     {
+      "id": "compile.syntax-errors/cartesian-no-source",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.syntax-errors/cartesian-one-source",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "compile.syntax-errors/case-0001",
       "kind": "compileError",
       "level": "scenario",
@@ -5967,6 +5993,45 @@
     },
     {
       "id": "compile.syntax-errors/case-0042",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.syntax-errors/extension-newline",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.syntax-errors/extension-space-after-dot",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.syntax-errors/extension-space-before-dot",
       "kind": "compileError",
       "level": "atomic",
       "requires": {
@@ -14938,6 +15003,23 @@
           "host",
           "observer",
           "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/compact-selector-boundaries",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
           "publish-sink",
           "vm"
         ],

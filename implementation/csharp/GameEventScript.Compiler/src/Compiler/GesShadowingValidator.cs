@@ -241,7 +241,7 @@ internal static class GesShadowingValidator
             case CountSelectorNode count: VisitBoundExpression(count.Identifier, count.Predicate, count, scope, script, errors); break;
             case ChooseSelectorNode choose:
                 if (choose.Identifier is not null && choose.Predicate is not null) VisitBoundExpression(choose.Identifier, choose.Predicate, choose, scope, script, errors);
-                if (choose.WeightIdentifier is not null && choose.WeightExpression is not null) VisitBoundExpression(choose.WeightIdentifier, choose.WeightExpression, choose, scope, script, errors);
+                if (choose.WeightIdentifier is not null && choose.WeightExpression is not null) VisitBoundExpression(choose.WeightIdentifier, choose.WeightExpression, choose with { BindingNames = choose.WeightBindingNames }, scope, script, errors);
                 break;
             case EdgeSelectorNode edge when edge.Identifier is not null && edge.Predicate is not null: VisitBoundExpression(edge.Identifier, edge.Predicate, edge, scope, script, errors); break;
             case ForeachSelectorNode each: VisitBoundExpression(each.Identifier, each.Expression, each, scope, script, errors); break;
@@ -283,6 +283,8 @@ internal static class GesShadowingValidator
         var names = node.BindingNames.Count > 0 && node.BindingNames[0] == identifier ? node.BindingNames : new[] { identifier };
         foreach (var name in names)
         {
+            if (name != identifier && !GameEventScript.Runtime.GameEventScriptText.IsVariableName(name))
+                errors.Add(script, "Invalid component binding name", name, GameEventScriptSymbolKind.Variable, GameEventScriptDiagnosticCodes.ValidateInvalidIdentifierCase, node);
             if (parent.ContainsVisible(name)) AddShadowError(script, errors, name, node);
             if (child.ContainsVisible(name) && !parent.ContainsVisible(name))
                 errors.Add(script, "Bindings must be distinct", name, GameEventScriptSymbolKind.Variable, GameEventScriptDiagnosticCodes.ValidateDuplicateVariable, node);

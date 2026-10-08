@@ -410,7 +410,10 @@ internal sealed record SequenceSliceSelectorNode(string Operation, string Scope,
 internal sealed record SeriesTermSelectorNode(ExpressionNode IndexExpression) : CollectionSelectorNode;
 internal sealed record PredicateSelectorNode(string Operator, string Identifier, ExpressionNode Predicate) : CollectionSelectorNode;
 internal sealed record CountSelectorNode(string Identifier, ExpressionNode Predicate) : CollectionSelectorNode;
-internal sealed record ChooseSelectorNode(int Count, bool AtRandom, string? Identifier, ExpressionNode? Predicate, string? WeightIdentifier, ExpressionNode? WeightExpression) : CollectionSelectorNode;
+internal sealed record ChooseSelectorNode(int Count, bool AtRandom, string? Identifier, ExpressionNode? Predicate, string? WeightIdentifier, ExpressionNode? WeightExpression) : CollectionSelectorNode
+{
+    public IReadOnlyList<string> WeightBindingNames { get; init; } = [];
+}
 internal sealed record DrawSelectorNode(int Count) : CollectionSelectorNode;
 internal sealed record ShuffleSelectorNode : CollectionSelectorNode;
 internal sealed record ReverseSelectorNode : CollectionSelectorNode;

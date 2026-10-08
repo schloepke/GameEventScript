@@ -93,7 +93,7 @@ internal static partial class GesCompiler
                 var line = block.Lines[index];
                 if (!block.AllowSend && (line.Name is "emit" or "publish" || line.Name.StartsWith("Emit", StringComparison.Ordinal) || line.Name.StartsWith("Publish", StringComparison.Ordinal)))
                     throw AssemblyFailure("Expression assembly cannot send messages.", line.Name);
-                var signature = line.IsLabel ? "" : AssemblySymbolicSignature(line) ?? AssemblySpecialSignature(line) ?? AssemblySignature(line.Name);
+                var signature = line.IsLabel ? "" : AssemblyIteratorSignature(line) ?? AssemblySymbolicSignature(line) ?? AssemblySpecialSignature(line) ?? AssemblySignature(line.Name);
                 signatures[index] = signature;
                 if (signature.Length != line.Operands.Count) throw AssemblyFailure("Invalid assembly operand count.", line.Name);
                 for (var operandIndex = 0; operandIndex < signature.Length; operandIndex++)
@@ -101,6 +101,10 @@ internal static partial class GesCompiler
                     var operand = line.Operands[operandIndex];
                     switch (signature[operandIndex])
                     {
+                        case 'W':
+                            foreach (var target in AssemblyWriteOperands('W', operand))
+                                if (!writable.Contains(AssemblyName(target))) throw AssemblyFailure("Outer bindings are read-only.", AssemblyName(target));
+                            break;
                         case 'w':
                             if (IsAssemblyResource(AssemblyResultKind(line, new Dictionary<string, string>())) && !locals.Contains(AssemblyName(operand)))
                                 throw AssemblyFailure("Internal resources require a block-local temporary.", AssemblyName(operand));
@@ -157,7 +161,8 @@ internal static partial class GesCompiler
                         registers[operandIndex] = register;
                     }
                 }
-                if (AssemblySymbolicSignature(line) is not null) EmitAssemblySymbolic(line, registers, context);
+                if (AssemblyIteratorSignature(line) is not null) EmitAssemblyIterator(line, registers, context, labels);
+                else if (AssemblySymbolicSignature(line) is not null) EmitAssemblySymbolic(line, registers, context);
                 else if (!EmitAssemblySpecial(line, registers)) EmitAssemblyInstruction(line, registers, labels);
             }
             foreach (var declaration in block.Declarations)
@@ -192,9 +197,11 @@ internal static partial class GesCompiler
                 // carry more initialization than a later loop/join predecessor.
                 for (var operandIndex = 0; operandIndex < signature.Length; operandIndex++)
                 {
-                    if (signature[operandIndex] != 'w') continue;
-                    var destination = AssemblyName(line.Operands[operandIndex]);
-                    state[destination] = AssemblyResultKind(line, state);
+                    foreach (var target in AssemblyWriteOperands(signature[operandIndex], line.Operands[operandIndex]))
+                    {
+                        var destination = AssemblyName(target);
+                        state[destination] = AssemblyResultKind(line, state);
+                    }
                 }
                 if (line.Name == "IteratorClose") state[AssemblyName(line.Operands[0])] = "closed";
                 if (line.Name.Contains("BuilderFinish", StringComparison.Ordinal)) state[AssemblyName(line.Operands[1])] = "closed";
@@ -270,12 +277,14 @@ internal static partial class GesCompiler
                 }
                 for (var operandIndex = 0; operandIndex < signature.Length; operandIndex++)
                 {
-                    if (signature[operandIndex] != 'w') continue;
-                    var name = AssemblyName(line.Operands[operandIndex]);
-                    if (state.TryGetValue(name, out var old) && IsAssemblyResource(old))
-                        throw AssemblyFailure("Cannot overwrite a live assembly resource.", name);
-                    if (IsAssemblyResource(AssemblyResultKind(line, state)) && !locals.Contains(name))
-                        throw AssemblyFailure("Internal resources require a block-local temporary.", name);
+                    foreach (var target in AssemblyWriteOperands(signature[operandIndex], line.Operands[operandIndex]))
+                    {
+                        var name = AssemblyName(target);
+                        if (state.TryGetValue(name, out var old) && IsAssemblyResource(old))
+                            throw AssemblyFailure("Cannot overwrite a live assembly resource.", name);
+                        if (IsAssemblyResource(AssemblyResultKind(line, state)) && !locals.Contains(name))
+                            throw AssemblyFailure("Internal resources require a block-local temporary.", name);
+                    }
                 }
             }
             if (states[^1] is { } exit)

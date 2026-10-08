@@ -472,3 +472,18 @@ source and optionally a separator; omitting it selects whitespace splitting.
 Invalid assembly is reported as `compile.invalidAssembly`; malformed source
 continues to use `parse.syntax`. Ordinary symbol/signature diagnostics remain
 applicable to symbolic operands.
+
+### Compound iterator operands
+
+`IteratorCreate iterator, [sourceA, sourceB], #cartesian` uses symbolic source
+register lists. `IteratorCreateOrJump iterator, [sourceA, sourceB], invalid,
+#cartesian` adds the invalid-source branch. Modes are `#normal`, `#union`,
+`#intersect`, `#difference`, `#lockstep`, `#cartesian` and `#entries`.
+Normal and Entries use one source operand rather than a source list.
+The existing forms without a mode retain Normal behavior.
+
+`IteratorNext [first, second], iterator, exhausted` writes components directly.
+Targets must be nonempty, distinct writable bindings and cannot alias the
+iterator. Missing components and exhausted output are initialized to Nothing.
+The ordinary initialization and resource-lifetime analysis applies to every
+source and target. `Cartesian result, left, right` is the binary List operation.

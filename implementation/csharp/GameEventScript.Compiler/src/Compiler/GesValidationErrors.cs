@@ -247,6 +247,7 @@ internal sealed class GesValidationErrors
             PredicateCallExpressionNode predicateCall => predicateCall.Value is null ? null : FindNodeInExpression(predicateCall.Value, symbol),
             ExtensionPredicateExpressionNode extensionPredicate => FindNodeInExpression(extensionPredicate.Value, symbol),
             MemberAccessExpressionNode member => FindNodeInExpression(member.Target, symbol),
+            CombinedCollectionExpressionNode combined => FindNodeInExpressions(combined.Sources, symbol),
             CollectionAccessExpressionNode collection => FindNodeInExpression(collection.Target, symbol) ?? FindNodeInSelector(collection.Selector, symbol),
             RangeExpressionNode range => FindNodeInExpression(range.FromExpression, symbol) ??
                                          FindNodeInExpression(range.ToExpression, symbol) ??
@@ -318,6 +319,7 @@ internal sealed class GesValidationErrors
             SumSelectorNode sumSelector => FindNodeInExpression(sumSelector.Projection, symbol),
             AverageSelectorNode averageSelector => FindNodeInExpression(averageSelector.Projection, symbol),
             FoldSelectorNode fold => (fold.Seed is null ? null : FindNodeInExpression(fold.Seed, symbol)) ?? FindNodeInExpression(fold.Projection, symbol),
+            ForeachSelectorNode each => FindNodeInExpression(each.Expression, symbol),
             SelectSelectorNode selectSelector => FindNodeInExpression(selectSelector.Projection, symbol),
             MapSelectorNode dictionarySelector => FindNodeInExpression(dictionarySelector.KeyProjection, symbol) ??
                                                          (dictionarySelector.ValueProjection is null ? null : FindNodeInExpression(dictionarySelector.ValueProjection, symbol)),

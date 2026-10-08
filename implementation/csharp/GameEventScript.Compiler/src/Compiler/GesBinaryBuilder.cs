@@ -719,7 +719,7 @@ internal sealed partial class GesBinaryBuilder
             UnitAndFlags = GameEventScriptBytecodeInstruction.EncodeUnitAndFlags(plan.Unit, plan.Flags)
         };
 
-        instruction = ApplyDestination(instruction, plan.Destination, registerMap, bindIds);
+        instruction = ApplyDestination(instruction, plan.Destination, registerMap, bindIds, resolveList);
         instruction = ApplyX(instruction, plan.X, registerMap, labelAddresses, bindIds, resolveText, resolveList, resolveTextList);
         instruction = ApplyY(instruction, plan.Y, registerMap, labelAddresses, resolveText, resolveList, resolveTextList);
         instruction = ApplySecondaryList(instruction, plan.SecondaryList, registerMap, resolveList, resolveTextList);
@@ -734,13 +734,16 @@ internal sealed partial class GesBinaryBuilder
         return instruction;
     }
 
-    private static GameEventScriptBytecodeInstruction ApplyDestination(GameEventScriptBytecodeInstruction instruction, GesOperand operand, IReadOnlyDictionary<int, ushort> registerMap, IReadOnlyList<ushort> bindIds)
+    private static GameEventScriptBytecodeInstruction ApplyDestination(GameEventScriptBytecodeInstruction instruction, GesOperand operand, IReadOnlyDictionary<int, ushort> registerMap, IReadOnlyList<ushort> bindIds, Func<IReadOnlyList<GesRegisterRef>, ushort> resolveList)
     {
         if (operand.Kind == GesOperandKind.None) return instruction;
         switch (operand.Kind)
         {
             case GesOperandKind.Register:
                 instruction.DestinationRegister = ResolveRegister(operand.RegisterRef, registerMap);
+                return instruction;
+            case GesOperandKind.RegisterList:
+                instruction.DestinationRegister = resolveList(operand.RegisterListValue!);
                 return instruction;
             case GesOperandKind.Bind:
                 instruction.MessageDestination = bindIds[operand.BindRef.Id];

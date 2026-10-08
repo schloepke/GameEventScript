@@ -63,6 +63,7 @@ internal static partial class GesCompiler
             "Add" => "wrr",
             "Subtract" => "wrr",
             "Multiply" => "wrr",
+            "Cartesian" => "wrr",
             "Divide" => "wrr",
             "Power" => "wrr",
             "IntegerDivide" => "wrr",
@@ -330,6 +331,9 @@ internal static partial class GesCompiler
                     break;
                 case "Subtract":
                     _builder.Subtract(registers[0], registers[1], registers[2]);
+                    break;
+                case "Cartesian":
+                    _builder.Cartesian(registers[0], registers[1], registers[2]);
                     break;
                 case "Multiply":
                     _builder.Multiply(registers[0], registers[1], registers[2]);

@@ -2923,3 +2923,1271 @@ steps:
           - name: value
             value: { type: ':Nothing' }
 ```
+
+---
+
+## Test: cartesian-projection
+
+This case verifies cartesian projection through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: cartesian-projection
+kind: scriptApi
+level: atomic
+sources:
+  - name: "cartesian-projection.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [:cartesian [1, 2], [3, 4]][:select a, b => a + b] = [4, 5, 5, 6])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: cartesian-materialized
+
+This case verifies cartesian materialized through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: cartesian-materialized
+kind: scriptApi
+level: atomic
+sources:
+  - name: "cartesian-materialized.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [:cartesian [1, 2], [3, 4]] = [[1, 3], [1, 4], [2, 3], [2, 4]])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: cartesian-filter-preserves-extra
+
+This case verifies cartesian filter preserves extra through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: cartesian-filter-preserves-extra
+kind: scriptApi
+level: atomic
+sources:
+  - name: "cartesian-filter-preserves-extra.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [:cartesian [1, 2], [3], [4]][:filter a, b where a = 1][:select a, b, c => c] = [4])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: cartesian-filter-materializes
+
+This case verifies cartesian filter materializes through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: cartesian-filter-materializes
+kind: scriptApi
+level: atomic
+sources:
+  - name: "cartesian-filter-materializes.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [:cartesian [1, 2], [3], [4]][:filter a, b where a = 1] = [[1, 3, 4]])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: cartesian-first
+
+This case verifies cartesian first through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: cartesian-first
+kind: scriptApi
+level: atomic
+sources:
+  - name: "cartesian-first.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [:cartesian [1, 2], [3, 4]][:first] = [1, 3])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: cartesian-count
+
+This case verifies cartesian count through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: cartesian-count
+kind: scriptApi
+level: atomic
+sources:
+  - name: "cartesian-count.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [:cartesian [1, 2], [3, 4]][:count] = 4)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: cartesian-sum
+
+This case verifies cartesian sum through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: cartesian-sum
+kind: scriptApi
+level: atomic
+sources:
+  - name: "cartesian-sum.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [:cartesian [1, 2], [3, 4]][:sum a, b => a + b] = 20)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: cartesian-infix
+
+This case verifies cartesian infix through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: cartesian-infix
+kind: scriptApi
+level: atomic
+sources:
+  - name: "cartesian-infix.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [1, 2] * [3] * [4] = [[[1, 3], 4], [[2, 3], 4]])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: lockstep-shortest
+
+This case verifies lockstep shortest through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: lockstep-shortest
+kind: scriptApi
+level: atomic
+sources:
+  - name: "lockstep-shortest.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [:lockstep [1, 2, 3], [4, 5]][:select a, b => a + b] = [5, 7])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: zip-selector-alias
+
+This case verifies zip selector alias through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: zip-selector-alias
+kind: scriptApi
+level: atomic
+sources:
+  - name: "zip-selector-alias.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [1, 2][:zip [3]][:select a, b => a + b] = [4])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: entries-components
+
+This case verifies entries components through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: entries-components
+kind: scriptApi
+level: atomic
+sources:
+  - name: "entries-components.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [b: 2, a: 1][:entries :filter key, value where key = 'a' :select key, value => value] = [1])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: entries-whole-item
+
+This case verifies entries whole item through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: entries-whole-item
+kind: scriptApi
+level: atomic
+sources:
+  - name: "entries-whole-item.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [b: 2, a: 1][:entries :filter key, value where key = 'a'] = [[key: 'a', value: 1]])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: bindings-missing-and-scalar
+
+This case verifies bindings missing and scalar through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: bindings-missing-and-scalar
+kind: scriptApi
+level: atomic
+sources:
+  - name: "bindings-missing-and-scalar.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [[1, 2], [3], 4][:select a, b => [a, b]] = [[1, 2], [3, nothing], [4, nothing]])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: bindings-map-sorted
+
+This case verifies bindings map sorted through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: bindings-map-sorted
+kind: scriptApi
+level: atomic
+sources:
+  - name: "bindings-map-sorted.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [[z: 9, a: 2]][:select first, second => first - second] = [-7])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: bindings-fold
+
+This case verifies bindings fold through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: bindings-fold
+kind: scriptApi
+level: atomic
+sources:
+  - name: "bindings-fold.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [[1, 2], [3, 4]][:fold acc be 0, a, b => acc + a + b] = 10)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: foreach-empty
+
+This case verifies foreach empty through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: foreach-empty
+kind: scriptApi
+level: atomic
+sources:
+  - name: "foreach-empty.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [][:foreach item => item] is nothing)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: foreach-components
+
+This case verifies foreach components through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: foreach-components
+kind: scriptApi
+level: atomic
+sources:
+  - name: "foreach-components.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [:cartesian [1], [2]][:foreach a, b => a + b] is nothing)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: union-multiset
+
+This case verifies union multiset through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-multiset
+kind: scriptApi
+level: atomic
+sources:
+  - name: "union-multiset.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [:union [1, 2], [2, 3]][:select x => x] = [1, 2, 2, 3])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: intersect-multiset
+
+This case verifies intersect multiset through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: intersect-multiset
+kind: scriptApi
+level: atomic
+sources:
+  - name: "intersect-multiset.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [:intersect [1, 2, 2, 3], [2, 2, 4]][:select x => x] = [2, 2])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: difference-scalar-nothing
+
+This case verifies difference scalar nothing through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: difference-scalar-nothing
+kind: scriptApi
+level: atomic
+sources:
+  - name: "difference-scalar-nothing.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [:difference [1, nothing, nothing], nothing][:select x => x] = [1, nothing])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: union-map-result
+
+This case verifies union map result through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-map-result
+kind: scriptApi
+level: atomic
+sources:
+  - name: "union-map-result.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [:union [a: 1], [a: 2, b: 3]] = [a: 2, b: 3])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: union-map-pipeline-values
+
+This case verifies union map pipeline values through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-map-pipeline-values
+kind: scriptApi
+level: atomic
+sources:
+  - name: "union-map-pipeline-values.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    emit Done(value: [:union [a: 1], [a: 2, b: 3]][:select x => x] = [2, 3])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: component-asm
+
+This case verifies component asm through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: component-asm
+kind: scriptApi
+level: atomic
+sources:
+  - name: "component-asm.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    let a be [1, 2]
+    let b be [3, 4]
+    let total be asm {
+        .register iterator
+        .register left
+        .register right
+        LoadInteger total, 0
+        IteratorCreateOrJump iterator, [a, b], invalid, #cartesian
+        next:
+        IteratorNext [left, right], iterator, done
+        Add total, total, left
+        Add total, total, right
+        Jump next
+        done:
+        IteratorClose iterator
+        Jump exit
+        invalid:
+        LoadNothing total
+        exit:
+    }
+    emit Done(value: total = 20)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: component-for
+
+This case verifies component for through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: component-for
+kind: scriptApi
+level: atomic
+sources:
+  - name: "component-for.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start {
+    for a, b in [:cartesian [1, 2], [3]] emit Done(value: a + b > 3)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: cartesian-fold
+
+This case verifies cartesian fold through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: cartesian-fold
+kind: scriptApi
+level: atomic
+sources:
+  - name: "cartesian-fold.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start { emit Done(value: [:cartesian [1, 2], [3, 4]][:fold acc be 0, a, b => acc + a + b] = 20) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: component-choose
+
+This case verifies component choose through the source compiler and runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: component-choose
+kind: scriptApi
+level: atomic
+sources:
+  - name: "component-choose.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module collectionbindings
+on Start { emit Done(value: [[1, 2], [3, 4]][:choose 1 a, b where a = 3] = [3, 4]) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```

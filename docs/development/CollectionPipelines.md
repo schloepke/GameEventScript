@@ -17,7 +17,9 @@ owning specifications; this plan records sequencing and acceptance criteria.
 4. [x] Extend the C# parser and both canonical editor grammars.
    Compact existing selectors and contiguous extensions execute in C#; new
    combined expressions and binding patterns await lowering in step 5.
-5. [ ] Implement C# pipeline lowering, binding and register analysis.
+5. [x] Implement C# pipeline lowering, binding and register analysis.
+   Includes symbolic ASM source/target lists and 26 shared source cases.
+   Swift parity and resource/performance acceptance remain steps 6–8.
 6. [ ] Port the runtime architecture and verification to Swift.
 7. [ ] Port source compilation and assembly support to Swift.
 8. [ ] Complete shared behavioral and native resource/performance verification.

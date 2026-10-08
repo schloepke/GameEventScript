@@ -550,6 +550,21 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder IteratorNext(GesRegisterRef destination, GesRegisterRef iterator, GesLabelRef exhaustedTarget)
         => AddOpcode(GameEventScriptBytecodeOpCode.IteratorNext, dst: GesOperand.Register(destination), x: GesOperand.Register(iterator), y: GesOperand.Label(exhaustedTarget));
 
+    public GesBinaryBuilder IteratorCreateSources(GesRegisterRef destination, IReadOnlyList<GesRegisterRef> sources, byte mode, GesLabelRef failureTarget)
+        => AddOpcode(GameEventScriptBytecodeOpCode.IteratorCreateOrJump, flags: (GameEventScriptInstructionFlag)(mode << 5), dst: GesOperand.Register(destination),
+            x: GesOperand.RegisterList(sources), y: GesOperand.Label(failureTarget));
+
+    public GesBinaryBuilder IteratorCreateEntries(GesRegisterRef destination, GesRegisterRef source, GesLabelRef failureTarget)
+        => AddOpcode(GameEventScriptBytecodeOpCode.IteratorCreateOrJump, flags: (GameEventScriptInstructionFlag)(6 << 5), dst: GesOperand.Register(destination),
+            x: GesOperand.Register(source), y: GesOperand.Label(failureTarget));
+
+    public GesBinaryBuilder IteratorNextComponents(IReadOnlyList<GesRegisterRef> destinations, GesRegisterRef iterator, GesLabelRef exhaustedTarget)
+        => AddOpcode(GameEventScriptBytecodeOpCode.IteratorNext, flags: (GameEventScriptInstructionFlag)32, dst: GesOperand.RegisterList(destinations),
+            x: GesOperand.Register(iterator), y: GesOperand.Label(exhaustedTarget));
+
+    public GesBinaryBuilder Cartesian(GesRegisterRef destination, GesRegisterRef left, GesRegisterRef right)
+        => AddOpcode(GameEventScriptBytecodeOpCode.Cartesian, dst: GesOperand.Register(destination), x: GesOperand.Register(left), y: GesOperand.Register(right));
+
     public GesBinaryBuilder IteratorClose(GesRegisterRef iterator)
         => AddOpcode(GameEventScriptBytecodeOpCode.IteratorClose, x: GesOperand.Register(iterator));
 

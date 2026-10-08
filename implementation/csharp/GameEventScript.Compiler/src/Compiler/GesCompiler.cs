@@ -374,6 +374,7 @@ internal static partial class GesCompiler
                             if (value.Id != destination.Id) _builder.Move(destination, value);
                         }
 
+                        if (IsKnownNonList(let.Expression, context)) _nonListBindings.Add(destination.Id);
                         if (ClassifyHandlerSignature(let.Expression, context) is { } handlerSignature)
                         {
                             context.DeclareHandlerSignature(let.Identifier, handlerSignature);
@@ -446,14 +447,17 @@ internal static partial class GesCompiler
         private void EmitFor(ForStatementNode forStatement, LoweringContext context)
         {
             var loopContext = context.CreateChild();
-            var item = loopContext.Declare(forStatement.Identifier);
+            var names = forStatement.BindingNames.Count > 0 ? forStatement.BindingNames : new[] { forStatement.Identifier };
+            var items = new GesRegisterRef[names.Count];
+            for (var index = 0; index < names.Count; index++) items[index] = loopContext.Declare(names[index]);
             var state = new ExpressionState(loopContext.RegisterCount);
             var iterator = EmitIterator(forStatement.Source, context, state);
             var loopLabel = _builder.AddLabel("for_next");
             var endLabel = _builder.AddLabel("for_end");
 
             _builder.MarkLabel(loopLabel);
-            _builder.IteratorNext(item, iterator, endLabel);
+            if (items.Length == 1) _builder.IteratorNext(items[0], iterator, endLabel);
+            else _builder.IteratorNextComponents(items, iterator, endLabel);
             EmitStatements(forStatement.Body.Statements, forStatement.Body.IsBlock ? loopContext.CreateChild() : loopContext);
             _builder.Jump(loopLabel);
             _builder.MarkLabel(endLabel);
@@ -583,7 +587,22 @@ internal static partial class GesCompiler
                 {
                     var left = EmitExpressionForRead(binary.Left, context, state);
                     var right = EmitExpressionForRead(binary.Right, context, state);
-                    EmitBinary(destination, binary.Operator, left, right);
+                    if (binary.Operator == GesBinaryOperator.Multiply && !IsKnownNonList(binary.Left, context) && !IsKnownNonList(binary.Right, context))
+                    {
+                        var numeric = _builder.AddLabel("multiply_numeric");
+                        var done = _builder.AddLabel("multiply_done");
+                        var check = state.AllocateTemporary(_builder, context);
+                        _builder.CheckType(check, left, GameEventScriptBytecodeTypeKind.List);
+                        _builder.JumpIfNotTrue(check, numeric);
+                        _builder.CheckType(check, right, GameEventScriptBytecodeTypeKind.List);
+                        _builder.JumpIfNotTrue(check, numeric);
+                        _builder.Cartesian(destination, left, right);
+                        _builder.Jump(done);
+                        _builder.MarkLabel(numeric);
+                        _builder.Multiply(destination, left, right);
+                        _builder.MarkLabel(done);
+                    }
+                    else EmitBinary(destination, binary.Operator, left, right);
                     return true;
                 }
                 case TypeCastExpressionNode cast:
@@ -713,6 +732,9 @@ internal static partial class GesCompiler
                     return true;
                 case MemberAccessExpressionNode member:
                     _builder.MemberAccess(destination, member.Member, EmitExpressionForRead(member.Target, context, state));
+                    return true;
+                case CombinedCollectionExpressionNode combined:
+                    EmitCombinedCollection(destination, combined, context, state);
                     return true;
                 case CollectionAccessExpressionNode access:
                     EmitCollectionAccessInto(access, destination, context, state);
@@ -883,6 +905,12 @@ internal static partial class GesCompiler
 
         private void EmitCollectionAccessInto(CollectionAccessExpressionNode access, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
+            if (access.Selector is FoldSelectorNode directFold && (access.Target is CombinedCollectionExpressionNode || IsEntriesSource(access.Target)))
+            {
+                EmitFold(destination, default, directFold, context, state, access.Target);
+                return;
+            }
+
             if (EmitCollectionPipelineInto(access, destination, context, state))
             {
                 return;
@@ -1014,6 +1042,7 @@ internal static partial class GesCompiler
             ExpressionNode source = access;
             while (source is CollectionAccessExpressionNode collectionAccess)
             {
+                if (collectionAccess.Selector is ExpressionSelectorNode { Expression: TagLiteralExpressionNode { Name: "entries" } }) break;
                 selectors.Add(collectionAccess.Selector);
                 source = collectionAccess.Target;
             }
@@ -1034,7 +1063,7 @@ internal static partial class GesCompiler
                 }
             }
 
-            if (prefixCount == 0 &&
+            if (source is not CombinedCollectionExpressionNode && !IsEntriesSource(source) && prefixCount == 0 &&
                 terminal is CountSelectorNode count &&
                 IsAlwaysTrue(count.Predicate))
             {
@@ -1043,20 +1072,28 @@ internal static partial class GesCompiler
                 return true;
             }
 
-            if (!CanEmitInlineIteratorPipelineTerminal(terminal, prefixCount > 0))
+            if (!CanEmitInlineIteratorPipelineTerminal(terminal, prefixCount > 0 || source is CombinedCollectionExpressionNode || IsEntriesSource(source)))
             {
                 return false;
             }
 
-            var sourceRegister = EmitExpressionForRead(source, context, state);
-            EmitInlineIteratorPipeline(destination, sourceRegister, selectors, prefixCount, terminal, context, state);
+            if (source is CombinedCollectionExpressionNode || IsEntriesSource(source))
+            {
+                EmitInlineIteratorPipeline(destination, default, selectors, prefixCount, terminal, context, state, source);
+            }
+            else
+            {
+                var sourceRegister = EmitExpressionForRead(source, context, state);
+                EmitInlineIteratorPipeline(destination, sourceRegister, selectors, prefixCount, terminal, context, state);
+            }
             return true;
         }
 
         private static bool CanEmitInlineIteratorPipelineTerminal(CollectionSelectorNode terminal, bool hasPrefix)
             => terminal switch
             {
-                FilterSelectorNode or
+                ForeachSelectorNode or
+                    FilterSelectorNode or
                     SelectSelectorNode or
                     PredicateSelectorNode or
                     CountSelectorNode or
@@ -1079,14 +1116,14 @@ internal static partial class GesCompiler
             => prefixCount == 0 &&
                (terminal switch
                {
-                   SumSelectorNode sum => IsIdentityProjection(sum.Identifier, sum.Projection),
-                   AverageSelectorNode average => IsIdentityProjection(average.Identifier, average.Projection),
+                   SumSelectorNode sum => IsIdentityProjection(sum.Identifier, sum.Projection, sum.BindingNames),
+                   AverageSelectorNode average => IsIdentityProjection(average.Identifier, average.Projection, average.BindingNames),
                    _ => false
                });
 
-        private void EmitInlineIteratorPipeline(GesRegisterRef destination, GesRegisterRef source, IReadOnlyList<CollectionSelectorNode> selectors, int prefixCount, CollectionSelectorNode terminal, LoweringContext context, ExpressionState state)
+        private void EmitInlineIteratorPipeline(GesRegisterRef destination, GesRegisterRef source, IReadOnlyList<CollectionSelectorNode> selectors, int prefixCount, CollectionSelectorNode terminal, LoweringContext context, ExpressionState state, ExpressionNode? iteratorSource = null)
         {
-            if (CanEmitFirstValueAggregatePipeline(terminal, prefixCount))
+            if (iteratorSource is null && CanEmitFirstValueAggregatePipeline(terminal, prefixCount))
             {
                 EmitInlineIteratorAggregatePipeline(destination, source, selectors, prefixCount, terminal, context, state);
                 return;
@@ -1101,8 +1138,13 @@ internal static partial class GesCompiler
             var invalidIteratorLabel = _builder.AddLabel("pipeline_invalid_iterator");
             var doneLabel = _builder.AddLabel("pipeline_done");
 
-            EmitInlinePipelineSourceGuard(source, terminal, prefixCount, invalidIteratorLabel, context, state);
-            _builder.IteratorCreateOrJump(iterator, source, invalidIteratorLabel);
+            ComponentRow? row = null;
+            if (iteratorSource is null)
+            {
+                EmitInlinePipelineSourceGuard(source, terminal, prefixCount, invalidIteratorLabel, context, state);
+                _builder.IteratorCreateOrJump(iterator, source, invalidIteratorLabel);
+            }
+            else row = EmitComponentIterator(iterator, iteratorSource, invalidIteratorLabel, context, state);
 
             GesRegisterRef? listBuilder = null;
             GesRegisterRef? mapBuilder = null;
@@ -1179,6 +1221,7 @@ internal static partial class GesCompiler
                     _builder.LoadInteger(one.Value, 1);
                     _builder.LoadNothing(destination);
                     break;
+                case ForeachSelectorNode:
                 case EdgeSelectorNode:
                     _builder.LoadNothing(destination);
                     break;
@@ -1188,7 +1231,12 @@ internal static partial class GesCompiler
             }
 
             _builder.MarkLabel(loopLabel);
-            _builder.IteratorNext(item, iterator, endLabel);
+            if (row is null) _builder.IteratorNext(item, iterator, endLabel);
+            else
+            {
+                _builder.IteratorNextComponents(row.Components, iterator, endLabel);
+                _componentRows.Add(item.Id, row);
+            }
 
             var current = item;
             for (var index = 0; index < prefixCount; index++)
@@ -1196,7 +1244,9 @@ internal static partial class GesCompiler
                 current = EmitInlinePipelineStep(selectors[index], current, nextLabel, context, state);
             }
 
+            if (NeedsWholeRow(terminal)) MaterializeRow(current);
             EmitInlinePipelineTerminal(destination, current, terminal, nextLabel, endLabel, listBuilder, mapBuilder, distinctBuilder, groupBuilder, orderBuilder, count, one, hasSum, sum, extremaKey, extremaCompare, context, state);
+            if (row is not null) _componentRows.Remove(item.Id);
             _builder.MarkLabel(nextLabel);
             _builder.Jump(loopLabel);
 
@@ -1374,12 +1424,12 @@ internal static partial class GesCompiler
         {
             return terminal switch
             {
-                SumSelectorNode sum => IsIdentityProjection(sum.Identifier, sum.Projection)
+                SumSelectorNode sum => IsIdentityProjection(sum.Identifier, sum.Projection, sum.BindingNames)
                     ? current
-                    : EmitSelectorExpressionForRead(sum.Identifier, current, sum.Projection, context, state),
-                AverageSelectorNode average => IsIdentityProjection(average.Identifier, average.Projection)
+                    : EmitSelectorExpressionForRead(sum.Identifier, current, sum.Projection, context, state, sum.BindingNames),
+                AverageSelectorNode average => IsIdentityProjection(average.Identifier, average.Projection, average.BindingNames)
                     ? current
-                    : EmitSelectorExpressionForRead(average.Identifier, current, average.Projection, context, state),
+                    : EmitSelectorExpressionForRead(average.Identifier, current, average.Projection, context, state, average.BindingNames),
                 _ => throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler cannot aggregate terminal selector node '{terminal.GetType().Name}'.")
             };
         }
@@ -1391,14 +1441,15 @@ internal static partial class GesCompiler
                 case FilterSelectorNode filter:
                     if (!IsAlwaysTrue(filter.Predicate))
                     {
-                        var predicate = EmitSelectorExpressionForRead(filter.Identifier, current, filter.Predicate, context, state);
+                        var predicate = EmitSelectorExpressionForRead(filter.Identifier, current, filter.Predicate, context, state, filter.BindingNames);
                         _builder.JumpIfNotTrue(predicate, nextLabel);
                     }
                     return current;
                 case SelectSelectorNode select:
-                    return IsIdentityProjection(select.Identifier, select.Projection)
+                    if (IsIdentityProjection(select.Identifier, select.Projection, select.BindingNames)) MaterializeRow(current);
+                    return IsIdentityProjection(select.Identifier, select.Projection, select.BindingNames)
                         ? current
-                        : EmitSelectorExpressionForRead(select.Identifier, current, select.Projection, context, state);
+                        : EmitSelectorExpressionForRead(select.Identifier, current, select.Projection, context, state, select.BindingNames);
                 default:
                     throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler cannot inline non-terminal selector node '{selector.GetType().Name}'.");
             }
@@ -1426,19 +1477,22 @@ internal static partial class GesCompiler
         {
             switch (terminal)
             {
+                case ForeachSelectorNode each:
+                    _ = EmitSelectorExpressionForRead(each.Identifier, current, each.Expression, context, state, each.BindingNames);
+                    return;
                 case FilterSelectorNode filter:
                     if (!IsAlwaysTrue(filter.Predicate))
                     {
-                        var predicate = EmitSelectorExpressionForRead(filter.Identifier, current, filter.Predicate, context, state);
+                        var predicate = EmitSelectorExpressionForRead(filter.Identifier, current, filter.Predicate, context, state, filter.BindingNames);
                         _builder.JumpIfNotTrue(predicate, nextLabel);
                     }
                     _builder.ListBuilderAdd(listBuilder!.Value, current);
                     return;
                 case SelectSelectorNode select:
                 {
-                    var projected = IsIdentityProjection(select.Identifier, select.Projection)
+                    var projected = IsIdentityProjection(select.Identifier, select.Projection, select.BindingNames)
                         ? current
-                        : EmitSelectorExpressionForRead(select.Identifier, current, select.Projection, context, state);
+                        : EmitSelectorExpressionForRead(select.Identifier, current, select.Projection, context, state, select.BindingNames);
                     _builder.ListBuilderAdd(listBuilder!.Value, projected);
                     return;
                 }
@@ -1447,42 +1501,42 @@ internal static partial class GesCompiler
                     return;
                 case MapSelectorNode map:
                 {
-                    var key = EmitSelectorExpressionForRead(map.Identifier, current, map.KeyProjection, context, state);
+                    var key = EmitSelectorExpressionForRead(map.Identifier, current, map.KeyProjection, context, state, map.BindingNames);
                     var value = map.ValueProjection is null
                         ? current
-                        : EmitSelectorExpressionForRead(map.Identifier, current, map.ValueProjection, context, state);
+                        : EmitSelectorExpressionForRead(map.Identifier, current, map.ValueProjection, context, state, map.BindingNames);
                     _builder.MapBuilderAdd(mapBuilder!.Value, key, value);
                     return;
                 }
                 case DistinctSelectorNode { Identifier: not null, Projection: not null } distinct:
                 {
-                    var key = EmitSelectorExpressionForRead(distinct.Identifier, current, distinct.Projection, context, state);
+                    var key = EmitSelectorExpressionForRead(distinct.Identifier, current, distinct.Projection, context, state, distinct.BindingNames);
                     _builder.DistinctBuilderAdd(distinctBuilder!.Value, key, current);
                     return;
                 }
                 case GroupBySelectorNode groupBy:
                 {
-                    var key = EmitSelectorExpressionForRead(groupBy.Identifier, current, groupBy.Projection, context, state);
+                    var key = EmitSelectorExpressionForRead(groupBy.Identifier, current, groupBy.Projection, context, state, groupBy.BindingNames);
                     _builder.GroupBuilderAdd(groupBuilder!.Value, key, current);
                     return;
                 }
                 case OrderBySelectorNode orderBy:
                 {
-                    var key = EmitSelectorExpressionForRead(orderBy.Identifier, current, orderBy.Projection, context, state);
+                    var key = EmitSelectorExpressionForRead(orderBy.Identifier, current, orderBy.Projection, context, state, orderBy.BindingNames);
                     _builder.OrderBuilderAdd(orderBuilder!.Value, key, current);
                     return;
                 }
                 case CountSelectorNode countSelector:
                     if (!IsAlwaysTrue(countSelector.Predicate))
                     {
-                        var predicate = EmitSelectorExpressionForRead(countSelector.Identifier, current, countSelector.Predicate, context, state);
+                        var predicate = EmitSelectorExpressionForRead(countSelector.Identifier, current, countSelector.Predicate, context, state, countSelector.BindingNames);
                         _builder.JumpIfNotTrue(predicate, nextLabel);
                     }
                     _builder.Add(count!.Value, count.Value, one!.Value);
                     return;
                 case PredicateSelectorNode predicateSelector:
                 {
-                    var predicate = EmitSelectorExpressionForRead(predicateSelector.Identifier, current, predicateSelector.Predicate, context, state);
+                    var predicate = EmitSelectorExpressionForRead(predicateSelector.Identifier, current, predicateSelector.Predicate, context, state, predicateSelector.BindingNames);
                     if (predicateSelector.Operator == "all")
                     {
                         _builder.JumpIfTrue(predicate, nextLabel);
@@ -1498,31 +1552,31 @@ internal static partial class GesCompiler
                 }
                 case SumSelectorNode sumSelector:
                 {
-                    var value = IsIdentityProjection(sumSelector.Identifier, sumSelector.Projection)
+                    var value = IsIdentityProjection(sumSelector.Identifier, sumSelector.Projection, sumSelector.BindingNames)
                         ? current
-                        : EmitSelectorExpressionForRead(sumSelector.Identifier, current, sumSelector.Projection, context, state);
+                        : EmitSelectorExpressionForRead(sumSelector.Identifier, current, sumSelector.Projection, context, state, sumSelector.BindingNames);
                     EmitInlineAccumulateSum(sum!.Value, hasSum!.Value, value, nextLabel);
                     return;
                 }
                 case AverageSelectorNode averageSelector:
                 {
-                    var value = IsIdentityProjection(averageSelector.Identifier, averageSelector.Projection)
+                    var value = IsIdentityProjection(averageSelector.Identifier, averageSelector.Projection, averageSelector.BindingNames)
                         ? current
-                        : EmitSelectorExpressionForRead(averageSelector.Identifier, current, averageSelector.Projection, context, state);
+                        : EmitSelectorExpressionForRead(averageSelector.Identifier, current, averageSelector.Projection, context, state, averageSelector.BindingNames);
                     _builder.Add(count!.Value, count.Value, one!.Value);
                     EmitInlineAccumulateSum(sum!.Value, hasSum!.Value, value, nextLabel);
                     return;
                 }
                 case MinSelectorNode minSelector:
-                    EmitInlineExtremaStep(destination, current, minSelector.Identifier, minSelector.Projection, hasSum!.Value, extremaKey!.Value, extremaCompare!.Value, isMax: false, nextLabel, context, state);
+                    EmitInlineExtremaStep(destination, current, minSelector.Identifier, minSelector.Projection, minSelector.BindingNames, hasSum!.Value, extremaKey!.Value, extremaCompare!.Value, isMax: false, nextLabel, context, state);
                     return;
                 case MaxSelectorNode maxSelector:
-                    EmitInlineExtremaStep(destination, current, maxSelector.Identifier, maxSelector.Projection, hasSum!.Value, extremaKey!.Value, extremaCompare!.Value, isMax: true, nextLabel, context, state);
+                    EmitInlineExtremaStep(destination, current, maxSelector.Identifier, maxSelector.Projection, maxSelector.BindingNames, hasSum!.Value, extremaKey!.Value, extremaCompare!.Value, isMax: true, nextLabel, context, state);
                     return;
                 case EdgeSelectorNode edge:
                     if (edge.Predicate is not null && edge.Identifier is not null)
                     {
-                        var predicate = EmitSelectorExpressionForRead(edge.Identifier, current, edge.Predicate, context, state);
+                        var predicate = EmitSelectorExpressionForRead(edge.Identifier, current, edge.Predicate, context, state, edge.BindingNames);
                         _builder.JumpIfNotTrue(predicate, nextLabel);
                     }
 
@@ -1566,6 +1620,7 @@ internal static partial class GesCompiler
             GesRegisterRef current,
             string identifier,
             ExpressionNode projectionExpression,
+            IReadOnlyList<string> names,
             GesRegisterRef hasWinner,
             GesRegisterRef winnerKey,
             GesRegisterRef isBetter,
@@ -1574,9 +1629,9 @@ internal static partial class GesCompiler
             LoweringContext context,
             ExpressionState state)
         {
-            var projection = IsIdentityProjection(identifier, projectionExpression)
+            var projection = IsIdentityProjection(identifier, projectionExpression, names)
                 ? current
-                : EmitSelectorExpressionForRead(identifier, current, projectionExpression, context, state);
+                : EmitSelectorExpressionForRead(identifier, current, projectionExpression, context, state, names);
             var compareLabel = _builder.AddLabel(isMax ? "pipeline_max_compare" : "pipeline_min_compare");
             _builder.JumpIfTrue(hasWinner, compareLabel);
             if (current.Id != destination.Id) _builder.Move(destination, current);
@@ -1608,7 +1663,7 @@ internal static partial class GesCompiler
             _builder.Add(sum, sum, value);
         }
 
-        private void EmitFold(GesRegisterRef destination, GesRegisterRef source, FoldSelectorNode fold, LoweringContext context, ExpressionState state)
+        private void EmitFold(GesRegisterRef destination, GesRegisterRef source, FoldSelectorNode fold, LoweringContext context, ExpressionState state, ExpressionNode? iteratorSource = null)
         {
             var accumulator = state.AllocateTemporary(_builder, context);
             var iterator = state.AllocateTemporary(_builder, context);
@@ -1623,14 +1678,22 @@ internal static partial class GesCompiler
                 var seed = EmitExpressionForRead(fold.Seed, context, state);
                 _builder.Move(accumulator, seed);
             }
-            _builder.IteratorCreateOrJump(iterator, source, invalid);
+            ComponentRow? row = null;
+            if (iteratorSource is null) _builder.IteratorCreateOrJump(iterator, source, invalid);
+            else row = EmitComponentIterator(iterator, iteratorSource, invalid, context, state);
             if (fold.Seed is null) _builder.IteratorNext(accumulator, iterator, end);
             _builder.MarkLabel(loop);
-            _builder.IteratorNext(item, iterator, end);
+            if (row is null) _builder.IteratorNext(item, iterator, end);
+            else
+            {
+                _builder.IteratorNextComponents(row.Components, iterator, end);
+                _componentRows.Add(item.Id, row);
+            }
             var child = context.CreateChild();
             child.DeclareExisting(fold.Accumulator, accumulator);
-            child.DeclareExisting(fold.Identifier, item);
+            BindComponents(child, fold.Identifier, fold.BindingNames, item, state);
             var result = EmitExpressionForRead(fold.Projection, child, state);
+            if (row is not null) _componentRows.Remove(item.Id);
             if (result.Id != accumulator.Id) _builder.Move(accumulator, result);
             _builder.Jump(loop);
             _builder.MarkLabel(end);
@@ -1642,15 +1705,15 @@ internal static partial class GesCompiler
             _builder.MarkLabel(done);
         }
 
-        private GesRegisterRef EmitSelectorExpressionForRead(string identifier, GesRegisterRef current, ExpressionNode expression, LoweringContext context, ExpressionState state)
+        private GesRegisterRef EmitSelectorExpressionForRead(string identifier, GesRegisterRef current, ExpressionNode expression, LoweringContext context, ExpressionState state, IReadOnlyList<string>? names = null)
         {
             var selectorContext = context.CreateChild();
-            selectorContext.DeclareExisting(identifier, current);
+            BindComponents(selectorContext, identifier, names, current, state);
             return EmitExpressionForRead(expression, selectorContext, state);
         }
 
-        private static bool IsIdentityProjection(string identifier, ExpressionNode expression)
-            => expression is IdentifierExpressionNode projection && string.Equals(projection.Name, identifier, StringComparison.Ordinal);
+        private static bool IsIdentityProjection(string identifier, ExpressionNode expression, IReadOnlyList<string>? names = null)
+            => (names is null || names.Count < 2) && expression is IdentifierExpressionNode projection && string.Equals(projection.Name, identifier, StringComparison.Ordinal);
 
         private static bool IsAlwaysTrue(ExpressionNode expression)
             => expression is BooleanLiteralExpressionNode { Value: true };
@@ -1715,7 +1778,7 @@ internal static partial class GesCompiler
 
             if (choose.Predicate is not null && !string.IsNullOrEmpty(choose.Identifier))
             {
-                var filter = new FilterSelectorNode(choose.Identifier!, choose.Predicate);
+                var filter = new FilterSelectorNode(choose.Identifier!, choose.Predicate) { BindingNames = choose.BindingNames };
                 source = state.AllocateTemporary(_builder, context);
                 EmitInlineIteratorPipeline(source, target, new CollectionSelectorNode[] { filter }, 0, filter, context, state);
             }
@@ -1759,11 +1822,11 @@ internal static partial class GesCompiler
 
             if (choose.Predicate is not null && !string.IsNullOrEmpty(choose.Identifier))
             {
-                var predicate = EmitSelectorExpressionForRead(choose.Identifier!, item, choose.Predicate, context, state);
+                var predicate = EmitSelectorExpressionForRead(choose.Identifier!, item, choose.Predicate, context, state, choose.BindingNames);
                 _builder.JumpIfNotTrue(predicate, skipLabel);
             }
 
-            var weight = EmitSelectorExpressionForRead(choose.WeightIdentifier!, item, choose.WeightExpression!, context, state);
+            var weight = EmitSelectorExpressionForRead(choose.WeightIdentifier!, item, choose.WeightExpression!, context, state, choose.WeightBindingNames);
             _builder.LoadInteger(zero, 0);
             _builder.LoadFloat(infinity, double.PositiveInfinity);
             _builder.Greater(isPositive, weight, zero);
@@ -1967,9 +2030,18 @@ internal static partial class GesCompiler
 
                 case CollectionIterationSourceNode collection:
                 {
-                    var collectionRegister = EmitExpressionForRead(collection.Expression, context, state);
                     var iterator = state.AllocateTemporary(_builder, context);
-                    _builder.IteratorCreate(iterator, collectionRegister);
+                    if (collection.Expression is CombinedCollectionExpressionNode || IsEntriesSource(collection.Expression))
+                    {
+                        var done = _builder.AddLabel("for_source_done");
+                        _ = EmitComponentIterator(iterator, collection.Expression, done, context, state);
+                        _builder.MarkLabel(done);
+                    }
+                    else
+                    {
+                        var collectionRegister = EmitExpressionForRead(collection.Expression, context, state);
+                        _builder.IteratorCreate(iterator, collectionRegister);
+                    }
                     return iterator;
                 }
 

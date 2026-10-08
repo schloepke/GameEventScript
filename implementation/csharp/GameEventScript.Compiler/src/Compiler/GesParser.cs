@@ -2748,13 +2748,16 @@ internal sealed partial class GesParser
         string? identifier = null;
         ExpressionNode? predicate = null;
         string? weightIdentifier = null;
+        IReadOnlyList<string> names = [];
+        IReadOnlyList<string> weightNames = [];
         ExpressionNode? weightExpression = null;
         if (Current.Kind == Identifier)
         {
             var lookahead = _reader.PeekSignificant(1);
-            if (lookahead.Kind == Identifier && string.Equals(lookahead.Text, "where", StringComparison.Ordinal))
+            if (lookahead.Kind == Comma || lookahead.Kind == Identifier && string.Equals(lookahead.Text, "where", StringComparison.Ordinal))
             {
-                identifier = ExpectIdentifier();
+                names = ParseBindingNames();
+                identifier = names[0];
                 ExpectWord("where");
                 predicate = ParseExpression();
             }
@@ -2766,14 +2769,15 @@ internal sealed partial class GesParser
             SkipNewLines();
             ExpectWord("by");
             SkipNewLines();
-            weightIdentifier = ExpectIdentifier();
+            weightNames = ParseBindingNames();
+            weightIdentifier = weightNames[0];
             SkipNewLines();
             Expect(ProjectionArrow);
             SkipNewLines();
             weightExpression = ParseExpression();
         }
 
-        return WithRange(new ChooseSelectorNode(count, atRandom, identifier, predicate, weightIdentifier, weightExpression), startToken);
+        return WithRange(new ChooseSelectorNode(count, atRandom, identifier, predicate, weightIdentifier, weightExpression) { BindingNames = names, WeightBindingNames = weightNames }, startToken);
     }
 
     private ExpressionNode ParseExtensionCallExpression()

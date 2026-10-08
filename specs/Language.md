@@ -2299,3 +2299,32 @@ An extension's qualified name `:namespace.name` must be contiguous. Whitespace,
 comments and line breaks cannot occur between the colon, namespace, dot and
 function name. Whitespace may precede an argument list, as in
 `:board.cards (zone: #draw)`.
+
+### Combined collection sources and component bindings
+
+`[:cartesian A, B, C]` and `A[:cartesian B, C]` enumerate flat component
+Lists, with the last source advancing fastest. `:lockstep` (alias `:zip`)
+advances all sources together and stops at the shortest source. At least two
+sources are required. The infix `A zip B` retains its existing `left`/`right`
+Map elements. List multiplication `A * B` produces two-component Lists;
+ordinary left associativity makes `A * B * C` produce `[[a, b], c]` elements.
+Selectors are not automatically rewritten to the binary Cartesian instruction.
+
+`:union`, `:intersect` and `:difference` accept the same source forms and apply
+the existing infix operand rules left to right, including duplicate counts,
+Map keys, Dice ordering and scalar-right subtraction. A standalone result
+retains its operator result kind; a following selector iterates that value.
+Sources evaluate once from left to right. An invalid prefix returns Nothing
+without evaluating later sources; a valid empty prefix does evaluate them.
+
+Multiple binding names in loops and selectors bind List positions or Map values
+in ascending key order. Missing components bind Nothing; extra components are
+ignored. A scalar supplies the first component and Nothing for the rest.
+One binding always receives the complete element. Filtering preserves the
+complete element, including unbound components; selecting replaces it.
+`:entries` retains its public `key`/`value` Map elements while allowing direct
+component transfer to multiple bindings without intermediate entry Maps.
+
+`[:foreach item => expression]` evaluates the expression for each element and
+returns Nothing, including for empty input. It accepts component bindings and
+follows the same short-circuit and effect ordering as other terminal selectors.

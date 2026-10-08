@@ -237,10 +237,14 @@ internal sealed partial class GesBinaryBuilder
             for (var index = 0; index < _items.Count; index++)
             {
                 var item = _items[index];
-                if (item.Instruction?.Destination.Kind == GesOperandKind.Register &&
-                    item.Instruction.Destination.RegisterRef.Id == register.Id)
+                if (item.Instruction is not { } instruction) continue;
+                if (instruction.Destination.Kind == GesOperandKind.Register && instruction.Destination.RegisterRef.Id == register.Id) count++;
+                else if (instruction.Destination.Kind == GesOperandKind.RegisterList)
                 {
-                    count++;
+                    foreach (var target in instruction.Destination.RegisterListValue!)
+                    {
+                        if (target.Id == register.Id) count++;
+                    }
                 }
             }
 
@@ -767,6 +771,14 @@ internal sealed partial class GesBinaryBuilder
                     writeCounts[registerId]++;
                     writeIndexes[registerId] = index;
                 }
+                else if (instruction.Destination.Kind == GesOperandKind.RegisterList)
+                {
+                    foreach (var target in instruction.Destination.RegisterListValue!)
+                    {
+                        writeCounts[target.Id]++;
+                        writeIndexes[target.Id] = index;
+                    }
+                }
 
                 CountOperandReads(readCounts, instruction.X);
                 CountOperandReads(readCounts, instruction.Y);
@@ -1059,6 +1071,14 @@ internal sealed partial class GesBinaryBuilder
                     writeCounts[registerId]++;
                     writeIndexes[registerId] = index;
                 }
+                else if (instruction.Destination.Kind == GesOperandKind.RegisterList)
+                {
+                    foreach (var target in instruction.Destination.RegisterListValue!)
+                    {
+                        writeCounts[target.Id]++;
+                        writeIndexes[target.Id] = index;
+                    }
+                }
 
                 CountOperandReads(readCounts, instruction.X);
                 CountOperandReads(readCounts, instruction.Y);
@@ -1219,6 +1239,10 @@ internal sealed partial class GesBinaryBuilder
                 if (instruction.Destination.Kind == GesOperandKind.Register)
                 {
                     writeCounts[instruction.Destination.RegisterRef.Id]++;
+                }
+                else if (instruction.Destination.Kind == GesOperandKind.RegisterList)
+                {
+                    foreach (var target in instruction.Destination.RegisterListValue!) writeCounts[target.Id]++;
                 }
 
                 CountOperandReads(readCounts, instruction.X);

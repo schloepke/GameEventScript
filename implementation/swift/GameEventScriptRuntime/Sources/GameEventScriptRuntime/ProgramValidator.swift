@@ -70,9 +70,14 @@ public enum GameEventScriptProgramValidator {
             {
                 throw failure(.invalidOperand, 16, index)
             }
+        } else if [.iteratorCreate, .iteratorCreateOrJump].contains(i.opcode) {
+            if i.unitAndFlags & 31 != 0 || i.unitAndFlags >> 5 > 6 || i.payload != 0 || i.opcode == .iteratorCreate && i.word2 != 0 { throw failure(.invalidOperand, 16, index) }
+        } else if i.opcode == .iteratorNext {
+            if i.unitAndFlags & ~UInt8(32) != 0 || i.payload != 0 { throw failure(.invalidOperand, 16, index) }
         } else if i.unitAndFlags & 0x1f > 3 || i.unitAndFlags & 0xc0 != 0 {
             throw failure(.invalidOperand, 16, index)
         }
+        if i.opcode == .cartesian && (i.unitAndFlags != 0 || i.payload != 0) { throw failure(.invalidOperand, 16, index) }
         if i.opcode == .parseLiteral && (i.unitAndFlags != 0 || i.word2 != 0 || i.payload != 0) { throw failure(.invalidOperand, 16, index) }
         if [.constructData, .splitText].contains(i.opcode) && (i.unitAndFlags != 0 || i.b != 0 || i.c != 0 || i.d != 0 || i.opcode == .splitText && (i.a > 1 || i.a == 1 && i.word2 != 0)) { throw failure(.invalidOperand, 16, index) }
         for (position, operand) in i.operands.enumerated() {
@@ -88,6 +93,8 @@ public enum GameEventScriptProgramValidator {
             } else if operand.isList {
                 let listIndex = Int(i.list(operand))
                 if listIndex >= p.uint16IndexLists.count { throw failure(.invalidListIndex, 16, index) }
+                let values = p.uint16IndexLists[listIndex]
+                if operand == .sourceRegisterList && values.count < 2 || operand == .targetRegisterList && (values.isEmpty || Set(values).count != values.count || values.contains(i.word1)) { throw failure(.invalidOperand, 16, index) }
                 var seen: Set<String> = []
                 for (element, value) in p.uint16IndexLists[listIndex].enumerated() {
                     if !operand.isTextList {
@@ -142,6 +149,12 @@ extension GesOperand {
 
 extension GameEventScriptBytecodeInstruction {
     var operands: [GesOperand] {
+        if [.iteratorCreate, .iteratorCreateOrJump].contains(opcode) {
+            let mode = unitAndFlags >> 5
+            let source: GesOperand = mode == 0 || mode == 6 ? .collectionRegister : .sourceRegisterList
+            return opcode == .iteratorCreate ? [.targetRegister, source] : [.targetRegister, source, .jumpTarget]
+        }
+        if opcode == .iteratorNext && unitAndFlags & 32 != 0 { return [.targetRegisterList, .iteratorRegister, .jumpTarget] }
         if opcode.isResultSend {
             var result: [GesOperand] = [.targetRegister]
             result += unitAndFlags & 0x80 != 0 ? [.messageRegister] : [.outboundMessage, .argumentRegisterList]
@@ -180,6 +193,8 @@ extension GameEventScriptBytecodeInstruction {
 
     func list(_ operand: GesOperand) -> UInt16 {
         switch operand {
+        case .sourceRegisterList: word1
+        case .targetRegisterList: word0
         case .messageShapeList where opcode == .loadMessage: word1
         case .keyNameList: word1
         case .argumentNameList where opcode == .constructData: a

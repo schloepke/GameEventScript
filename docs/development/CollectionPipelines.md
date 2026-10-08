@@ -20,7 +20,9 @@ owning specifications; this plan records sequencing and acceptance criteria.
 5. [x] Implement C# pipeline lowering, binding and register analysis.
    Includes symbolic ASM source/target lists and 26 shared source cases.
    Swift parity and resource/performance acceptance remain steps 6–8.
-6. [ ] Port the runtime architecture and verification to Swift.
+6. [x] Port the runtime architecture and verification to Swift.
+   All 1,503 independent Runtime cases pass using C#-compiled inputs;
+   native source support remains step 7. The public API gate passes.
 7. [ ] Port source compilation and assembly support to Swift.
 8. [ ] Complete shared behavioral and native resource/performance verification.
 9. [ ] Update Card Lab/examples, guides and changelog; review the entire branch.

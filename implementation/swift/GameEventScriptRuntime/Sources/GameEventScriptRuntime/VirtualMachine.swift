@@ -181,8 +181,12 @@ enum GameEventScriptVirtualMachine {
                 case .randomPushConstant: if !context.random.push(seed: instruction.integer) { context.budget.exhaust("MaxRandomScopeDepth", context.runtimeLimits.maxRandomScopeDepth) }
                 case .randomPop: if !context.random.pop() && !context.budget.isExhausted { state.fail("runtime.randomStackUnderflow") }
                 case .iteratorCreate, .iteratorCreateOrJump:
-                    iterator(state, d, state.value(x), context)
+                    try compoundIterator(state, instruction, context)
                     if instruction.opcode == .iteratorCreateOrJump, state.slot(d).isRegisterData { state.ip = y }
+                case .cartesian:
+                    cartesian(state, d, state.value(x), state.value(y), context.budget)
+                case .iteratorNext where instruction.unitAndFlags & 32 != 0:
+                    if nextComponents(state, instruction) { _ = context.budget.loop() }
                 case .iteratorNext:
                     if let iterator = state.slot(x).iteratorValue, iterator.next(sink: state.output(d)) != nil {
                         _ = context.budget.loop()

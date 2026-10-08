@@ -204,6 +204,7 @@ symbol {"access":"public","declaration":"case budgetCheck","kind":"swift.enum.ca
 symbol {"access":"public","declaration":"case buildMetadata","kind":"swift.enum.case","path":"GameEventScriptRuntime.GameEventScriptSectionType.buildMetadata"}
 symbol {"access":"public","declaration":"case call","kind":"swift.enum.case","path":"GameEventScriptRuntime.GameEventScriptBytecodeOpCode.call"}
 symbol {"access":"public","declaration":"case callExternal","kind":"swift.enum.case","path":"GameEventScriptRuntime.GameEventScriptBytecodeOpCode.callExternal"}
+symbol {"access":"public","declaration":"case cartesian","kind":"swift.enum.case","path":"GameEventScriptRuntime.GameEventScriptBytecodeOpCode.cartesian"}
 symbol {"access":"public","declaration":"case cast","kind":"swift.enum.case","path":"GameEventScriptRuntime.GameEventScriptBytecodeOpCode.cast"}
 symbol {"access":"public","declaration":"case castCustom","kind":"swift.enum.case","path":"GameEventScriptRuntime.GameEventScriptBytecodeOpCode.castCustom"}
 symbol {"access":"public","declaration":"case castNumeric","kind":"swift.enum.case","path":"GameEventScriptRuntime.GameEventScriptBytecodeOpCode.castNumeric"}

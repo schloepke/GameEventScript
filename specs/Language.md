@@ -2131,7 +2131,8 @@ send_tag_clause ::= 'with' unary_expression (',' unary_expression)*
 let_statement ::= 'let' VARIABLE_NAME 'be' expression
 if_statement ::= 'if' if_check (';' if_check)* [';'] statement_body ['else' statement_body]
 if_check ::= expression | 'let' VARIABLE_NAME 'be' expression
-for_statement ::= 'for' VARIABLE_NAME ('in' expression | range_source) statement_body
+binding_names ::= VARIABLE_NAME (',' VARIABLE_NAME)*
+for_statement ::= 'for' binding_names ('in' expression | range_source) statement_body
 seeded_random_statement ::= 'random' 'with' expression statement_body
 expression_statement ::= expression
 statement_body ::= statement | '{' separators [statement (statement_separator statement)*] separators '}'
@@ -2178,10 +2179,10 @@ clamp_expression ::= 'clamp' unary_expression 'between' expression 'and' express
 variadic_expression ::= ('min' | 'max') 'of' expression ('and' expression)*
 
 postfix_expression ::= primary_expression postfix_suffix*
-postfix_suffix ::= '.' LOWER_NAME | '[' collection_selector ']'
+postfix_suffix ::= '.' LOWER_NAME | '[' collection_selector structured_selector* ']'
 primary_expression ::= nullary_predicate_expression | literal | CONSTANT_REFERENCE | call_expression | uppercase_call_expression |
                        type_constructor_expression | VARIABLE_NAME |
-                       '(' expression ')' | bracket_literal | generated_list_expression |
+                       '(' expression ')' | bracket_literal | generated_list_expression | combined_source_expression |
                        range_expression | random_expression | seeded_random_expression | dice_expression | send_expression
 nullary_predicate_expression ::= 'is' [not_operator] LOWER_NAME
 call_expression ::= LOWER_NAME parenthesized_arguments
@@ -2212,38 +2213,41 @@ extension_call_expression ::= extension_reference (parenthesized_arguments postf
                               argument_label ':' expression (argument_label ':' expression)* |
                               unary_expression])
 
+combined_source_expression ::= '[' combined_selector structured_selector* ']'
+combined_selector ::= (':cartesian' | ':lockstep' | ':zip' | ':union' | ':intersect' | ':difference') expression (',' expression)*
 collection_selector ::= structured_selector | expression
 structured_selector ::= quantified_selector | pattern_selector | take_selector | drop_selector |
                         term_selector | count_selector | choose_selector | draw_selector |
                         shuffle_selector | reverse_selector | edge_selector | filter_selector |
                         sum_selector | average_selector | extrema_selector | projection_selector |
                         map_selector | contains_selector | distinct_selector | group_selector |
-                        sort_selector | order_selector | fold_selector | reduce_selector | split_selector | ':keys' | ':values' | ':entries'
-quantified_selector ::= (':any' | ':all') VARIABLE_NAME 'where' expression
+                        sort_selector | order_selector | fold_selector | reduce_selector | split_selector | foreach_selector | combined_selector | ':keys' | ':values' | ':entries'
+quantified_selector ::= (':any' | ':all') binding_names 'where' expression
 pattern_selector ::= ':has' (object_pattern | dice_pattern)
 take_selector ::= ':take' (slice | dice_pattern)
 drop_selector ::= ':drop' slice
 term_selector ::= ':term' expression
-count_selector ::= ':count' [VARIABLE_NAME 'where' expression]
-choose_selector ::= ':choose' POSITIVE_INTEGER ['at' 'random'] [VARIABLE_NAME 'where' expression] ['weighted' 'by' VARIABLE_NAME projection_arrow expression]
+count_selector ::= ':count' [binding_names 'where' expression]
+choose_selector ::= ':choose' POSITIVE_INTEGER ['at' 'random'] [binding_names 'where' expression] ['weighted' 'by' binding_names projection_arrow expression]
 draw_selector ::= ':draw' POSITIVE_INTEGER
 shuffle_selector ::= ':shuffle'
 reverse_selector ::= ':reverse'
-edge_selector ::= (':first' | ':last' | ':single') [VARIABLE_NAME 'where' expression]
-filter_selector ::= ':filter' VARIABLE_NAME 'where' expression
-sum_selector ::= ':sum' [VARIABLE_NAME projection_arrow expression]
-average_selector ::= ':average' [VARIABLE_NAME projection_arrow expression]
-extrema_selector ::= (':min' | ':max' | ':highest' | ':lowest') VARIABLE_NAME projection_arrow expression
-projection_selector ::= ':select' VARIABLE_NAME projection_arrow expression
-map_selector ::= ':map' VARIABLE_NAME 'by' expression [projection_arrow expression]
+edge_selector ::= (':first' | ':last' | ':single') [binding_names 'where' expression]
+filter_selector ::= ':filter' binding_names 'where' expression
+sum_selector ::= ':sum' [binding_names projection_arrow expression]
+average_selector ::= ':average' [binding_names projection_arrow expression]
+extrema_selector ::= (':min' | ':max' | ':highest' | ':lowest') binding_names projection_arrow expression
+projection_selector ::= ':select' binding_names projection_arrow expression
+map_selector ::= ':map' binding_names 'by' expression [projection_arrow expression]
 contains_selector ::= ':contains' ['all' | 'any'] expression
-distinct_selector ::= ':distinct' ['by' VARIABLE_NAME projection_arrow expression]
-group_selector ::= ':group' 'by' VARIABLE_NAME projection_arrow expression
+distinct_selector ::= ':distinct' ['by' binding_names projection_arrow expression]
+group_selector ::= ':group' 'by' binding_names projection_arrow expression
 sort_selector ::= ':sort' sort_direction
-order_selector ::= ':order' 'by' VARIABLE_NAME projection_arrow expression sort_direction
-fold_selector ::= ':fold' VARIABLE_NAME 'be' expression ',' VARIABLE_NAME projection_arrow expression
-reduce_selector ::= ':reduce' VARIABLE_NAME ',' VARIABLE_NAME projection_arrow expression
+order_selector ::= ':order' 'by' binding_names projection_arrow expression sort_direction
+fold_selector ::= ':fold' VARIABLE_NAME 'be' expression ',' binding_names projection_arrow expression
+reduce_selector ::= ':reduce' VARIABLE_NAME ',' binding_names projection_arrow expression
 split_selector ::= ':split' 'on' ('whitespace' | expression)
+foreach_selector ::= ':foreach' binding_names projection_arrow expression
 projection_arrow ::= '=>' | '↦'
 sort_direction ::= 'ascending' | 'descending'
 slice ::= ('first' | 'last' | 'highest' | 'lowest') POSITIVE_INTEGER
@@ -2285,7 +2289,7 @@ implementation status are defined in [Inline assembly](InlineAssembly.md).
 Only standalone handler statements, `let` initializers, complete callable bodies
 and computed-field bodies accept this form. Ordinary expressions do not.
 
-### Compact selector chains and extension names
+## Compact selector chains and extension names
 
 > **Since: Unreleased** — compact selector syntax
 
@@ -2300,12 +2304,14 @@ comments and line breaks cannot occur between the colon, namespace, dot and
 function name. Whitespace may precede an argument list, as in
 `:board.cards (zone: #draw)`.
 
-### Combined collection sources and component bindings
+## Combined collection sources and component bindings
 
 `[:cartesian A, B, C]` and `A[:cartesian B, C]` enumerate flat component
 Lists, with the last source advancing fastest. `:lockstep` (alias `:zip`)
 advances all sources together and stops at the shortest source. At least two
-sources are required. The infix `A zip B` retains its existing `left`/`right`
+sources are required, counting a leading source. Cartesian and lockstep accept
+normal iterable values under the existing `for`/iterator contract. Invalid
+source types yield Nothing; Maps supply values in key order. The infix `A zip B` retains its existing `left`/`right`
 Map elements. List multiplication `A * B` produces two-component Lists;
 ordinary left associativity makes `A * B * C` produce `[[a, b], c]` elements.
 Selectors are not automatically rewritten to the binary Cartesian instruction.

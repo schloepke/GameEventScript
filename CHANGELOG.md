@@ -12,6 +12,18 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Combined collection pipelines in C# and Swift: `cartesian`, `lockstep`/`zip`,
+  `union`, `intersect` and `difference`, with source-less or leading-source forms.
+  Multiple bindings work in loops and selector projections; compact
+  `[:entries :filter ... :select ...]` chains avoid repeated brackets.
+- List `A * B` materializes a binary Cartesian product; pipeline component
+  iteration avoids allocating an intermediate pair per row. `:foreach`
+  evaluates an expression for each item and returns `nothing`.
+- Compound iterator modes, component register outputs and the Cartesian opcode
+  (`0xE0`) are supported by both runtimes, validators, GESA and inline ASM.
+  Mau Mau, Blackjack and Skat now build decks with Cartesian projections.
+
+
 - Inclusive `value is between lower and upper` and `is not between` comparisons
   in C# and Swift, evaluating the value once and preserving short-circuit semantics.
 
@@ -28,6 +40,15 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   instruction reports, including partial results on runtime failures.
 - Add a playable browser card-game example with editable GES rules, linked from
   the website homepage alongside Homebrew and .NET CLI installation.
+
+### Migration
+
+- Extension names must be contiguous (`:namespace.name`); remove spaces or
+  comments inside qualified extension names. Whitespace before arguments is
+  still accepted.
+- Programs using the new iterator modes or Cartesian opcode require an updated
+  runtime. Recompile sources with the matching compiler/runtime version; older
+  runtimes reject these instruction forms rather than interpreting them differently.
 
 ### Performance
 

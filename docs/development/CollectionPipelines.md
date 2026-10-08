@@ -3,9 +3,9 @@
 
 # Collection pipeline implementation plan
 
-Status: approved design, implementation in progress. This document is not a
-claim of implemented language support. Completed contracts move into their
-owning specifications; this plan records sequencing and acceptance criteria.
+Status: all nine implementation checkpoints completed and verified. The owning
+specifications define the implemented contract; this document records the
+approved decisions, sequencing and verification evidence.
 
 ## Delivery sequence
 
@@ -30,7 +30,13 @@ owning specifications; this plan records sequencing and acceptance criteria.
    C#: 2,459 executions including allocation checks; Swift: 1,896 language
    cases, 1,516 independent Runtime cases, CLI/bridge and interchange checks.
    Strict report: 1,865 passed, 31 optional performance skips, no failures.
-9. [ ] Update Card Lab/examples, guides and changelog; review the entire branch.
+9. [x] Update Card Lab/examples, guides and changelog; review the entire branch.
+   Cartesian deck projections preserve Mau Mau, Blackjack and Skat behavior.
+   All 38 native Card Lab tests and the Wasm suite pass, including 30 complete
+   Mau Mau games, 120 Skat games and 90 Blackjack deals. Editor bundles and
+   website asset checks pass; the ASM guide example runs in both CLIs.
+   Final review has no outstanding correctness findings. Runtime-speed parity
+   with nested loops remains unproven, as recorded below.
 
 Commit a verified checkpoint after each step; do not push automatically.
 Intermediate commits may deliberately precede cross-language support, but must

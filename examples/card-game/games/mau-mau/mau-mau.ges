@@ -20,8 +20,10 @@ predicate drawable() be :board.cards(zone: #draw)[:count] is more than 0 or :boa
 
 function hand(player) be ('hand' + (player as :Text)) as :Tag
 
-function deck() be ['clubs', 'spades', 'hearts', 'diamonds'][:fold cards be [], suit =>
-    cards | ['7', '8', '9', '10', 'J', 'Q', 'K', 'A'][:select rank => [suit: suit, rank: rank]]
+function deck() be [:cartesian
+    ['clubs', 'spades', 'hearts', 'diamonds'],
+    ['7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+    :select suit, rank => [suit: suit, rank: rank]
 ]
 
 function board(players) be [

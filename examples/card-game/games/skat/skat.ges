@@ -36,14 +36,14 @@ function suits() be [
     [suit: 'clubs', jack: 3]
 ]
 
-function deck() be suits()[:fold cards be [], suit =>
-    cards | ranks()[:select rank => [
+function deck() be [:cartesian suits(), ranks()
+    :select suit, rank => [
         suit: suit.suit,
         rank: rank.rank,
         eyes: rank.eyes,
         nullPower: rank.nullPower,
         power: (10 + suit.jack) when rank.rank = 'J' otherwise rank.power
-    ]]
+    ]
 ]
 
 function privateHand(player) be ('hand' + (player as :Text)) as :Tag

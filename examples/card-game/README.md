@@ -10,6 +10,14 @@ The source lives here in version control. The Website workflow builds and tests
 the example and publishes its static output at `/examples/card-game/`.
 All generated files and downloaded tools live below `artifacts/card-game`.
 
+## Deck definitions
+
+Mau Mau, Blackjack and Skat combine suits and ranks with
+`[:cartesian suits, ranks :select suit, rank => ...]`. The projection builds
+one card Map per combination without an intermediate List of pairs. The
+example uses the repository's current compiler/runtime; released versions
+without collection-source support cannot compile these scripts.
+
 ## Mau Mau
 
 Mau Mau uses a 32-card deck (7–A, four suits), five cards each, and a

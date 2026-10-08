@@ -18,8 +18,8 @@ function value(rank) be
     10 when rank in ['J', 'Q', 'K']
     otherwise rank as :Number
 
-function deck() be ['clubs', 'spades', 'hearts', 'diamonds'][:fold cards be [], suit =>
-    cards | ranks()[:select rank => [suit: suit, rank: rank, value: value(rank: rank)]]
+function deck() be [:cartesian ['clubs', 'spades', 'hearts', 'diamonds'], ranks()
+    :select suit, rank => [suit: suit, rank: rank, value: value(rank: rank)]
 ]
 
 function hand(player) be ('hand' + (player as :Text)) as :Tag

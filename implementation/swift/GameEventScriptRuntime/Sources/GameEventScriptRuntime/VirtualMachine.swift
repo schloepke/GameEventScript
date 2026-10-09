@@ -51,7 +51,9 @@ enum GameEventScriptVirtualMachine {
                 let y = Int(instruction.word2)
                 switch instruction.opcode {
                 case .add, .subtract, .multiply, .divide, .integerDivide, .modulo, .remainder:
-                    try state.setArithmeticResult(instruction, context)
+                    if instruction.unitAndFlags & 0x40 != 0 { try state.setNumericArithmeticResult(instruction, context) } else { try state.setArithmeticResult(instruction, context) }
+                case .power, .min, .max, .negate, .abs, .clamp:
+                    if instruction.unitAndFlags & 0x40 != 0 { try state.setNumericArithmeticResult(instruction, context) } else { try GesMath.execute(instruction, state, context, sink: state.output(d)) }
                 case .nop: break
                 case .registerLocals: state.modifyLocals(Int(instruction.signedWord1))
                 case .jump: state.ip = y
@@ -97,7 +99,8 @@ enum GameEventScriptVirtualMachine {
                     let v = state.value(x)
                     let n = v.asNumber
                     state.setBoolean(d, v.isNumeric && n.isFinite && n != n.rounded(.towardZero))
-                case .move: state.move(d, x)
+                case .move:
+                    if instruction.unitAndFlags & 0x40 != 0 { state.numericCopy(d, x) } else { state.move(d, x) }
                 case .memberAccess: try state.value(y).member(state.text(instruction.word1), sink: state.output(d))
                 case .indexAccess: state.value(y).index(Int64(instruction.word1), sink: state.output(d))
                 case .propertyAccess:

@@ -443,6 +443,12 @@ incompatible kind follows the public value conversion contract and must never
 expose uninitialized native storage. `AsList` and `AsMap` return immutable
 views; `AsDice` returns an independent ordered copy in the C# mapping.
 
+Numeric register storage is a numeric projection only. Boolean stores 0/1 and Dice
+stores its exact Int64 roll sum (zero for empty Dice). Nonnumeric values have no
+numeric projection; their numeric storage is cleared. Collection counts and cached
+Unicode scalar/range lengths belong to the immutable payload. `GesValue.Length`
+returns zero for scalar values and saturates collection lengths at Int32.MaxValue.
+
 Value equality is the strict structural equality in [Determinism](Semantics/Determinism.md),
 including numeric rules in [Numbers](Semantics/Numbers.md). Hashing must be
 consistent with this equality. `ToString` is nonnormative diagnostic formatting.
@@ -1383,3 +1389,7 @@ The public bytecode opcode enumeration assigns `Cartesian` the stable value
 0xE0. Its operands and reserved fields are owned by [Bytecode](Bytecode.md).
 Iterator modes and component output reuse existing instruction words and the
 UInt16 list pool; no mutable iterator is added to the portable Program API.
+
+`GameEventScriptInstructionFlag.Numeric` aliases bit `0x40` for Move, Add, Subtract,
+Multiply, Divide, Power, IntegerDivide, Modulo, Remainder, Min, Max, Negate, Abs and Clamp only. The same bit retains WithTags semantics on result-bearing sends;
+interpret flags by opcode.

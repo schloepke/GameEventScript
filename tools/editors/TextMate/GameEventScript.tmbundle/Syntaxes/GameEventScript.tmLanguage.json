@@ -879,6 +879,10 @@
               "include": "#strings"
             },
             {
+              "match": "#numeric\\b",
+              "name": "entity.name.tag.gameeventscript"
+            },
+            {
               "match": "\\.register\\b",
               "name": "keyword.other.declaration.gameeventscript"
             },

@@ -74,6 +74,8 @@ public enum GameEventScriptProgramValidator {
             if i.unitAndFlags & 31 != 0 || i.unitAndFlags >> 5 > 6 || i.payload != 0 || i.opcode == .iteratorCreate && i.word2 != 0 { throw failure(.invalidOperand, 16, index) }
         } else if i.opcode == .iteratorNext {
             if i.unitAndFlags & ~UInt8(32) != 0 || i.payload != 0 { throw failure(.invalidOperand, 16, index) }
+        } else if [.move, .add, .subtract, .multiply, .divide, .power, .integerDivide, .modulo, .remainder, .min, .max, .negate, .abs, .clamp].contains(i.opcode) {
+            if i.unitAndFlags & ~UInt8(64) != 0 || (i.opcode == .clamp ? i.payload & ~UInt64(0xffff) != 0 : i.payload != 0) { throw failure(.invalidOperand, 16, index) }
         } else if i.unitAndFlags & 0x1f > 3 || i.unitAndFlags & 0xc0 != 0 {
             throw failure(.invalidOperand, 16, index)
         }

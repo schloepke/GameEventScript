@@ -258,6 +258,15 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder GreaterOrEqual(GesRegisterRef destination, GesRegisterRef left, GesRegisterRef right)
         => BinaryOpcode(GameEventScriptBytecodeOpCode.GreaterOrEqual, destination, left, right);
 
+    public GesBinaryBuilder NumericBinary(GameEventScriptBytecodeOpCode opcode, GesRegisterRef destination, GesRegisterRef left, GesRegisterRef right)
+        => AddOpcode(opcode, flags: GameEventScriptInstructionFlag.Numeric, dst: GesOperand.Register(destination), x: GesOperand.Register(left), y: GesOperand.Register(right));
+
+    public GesBinaryBuilder NumericUnary(GameEventScriptBytecodeOpCode opcode, GesRegisterRef destination, GesRegisterRef operand)
+        => AddOpcode(opcode, flags: GameEventScriptInstructionFlag.Numeric, dst: GesOperand.Register(destination), x: GesOperand.Register(operand));
+
+    public GesBinaryBuilder NumericClamp(GesRegisterRef destination, GesRegisterRef value, GesRegisterRef minimum, GesRegisterRef maximum)
+        => AddOpcode(GameEventScriptBytecodeOpCode.Clamp, flags: GameEventScriptInstructionFlag.Numeric, dst: GesOperand.Register(destination), x: GesOperand.Register(value), y: GesOperand.Register(minimum), a: GesOperand.Register(maximum));
+
     public GesBinaryBuilder Add(GesRegisterRef destination, GesRegisterRef left, GesRegisterRef right)
         => BinaryOpcode(GameEventScriptBytecodeOpCode.Add, destination, left, right);
 

@@ -242,7 +242,7 @@
           "name": "support.type.bind-kind.gameeventscript.assembler"
         },
         {
-          "match": "\\bNormalizeResultAsPredicate\\b",
+          "match": "\\b(?:NormalizeResultAsPredicate|Numeric)\\b",
           "name": "constant.language.flag.gameeventscript.assembler"
         },
         {
@@ -250,7 +250,7 @@
           "name": "constant.language.gameeventscript.assembler"
         },
         {
-          "match": "\\b(?:id|name|args|entry|requiredTags|excludedTags|flags)\\b(?=\\s*=)",
+          "match": "\\b(?:id|name|args|entry|requiredTags|excludedTags|flags|mode)\\b(?=\\s*=)",
           "name": "variable.parameter.attribute.gameeventscript.assembler"
         },
         {

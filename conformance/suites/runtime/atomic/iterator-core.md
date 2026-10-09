@@ -5296,8 +5296,8 @@ steps:
 
 ## Test: component-implicit-aggregates-use-whole-elements
 
-This case verifies that implicit sum and average consume whole elements rather than
-component registers, with and without filters, and retain empty-input semantics.
+This case verifies that implicit sum and average reject whole nonnumeric elements rather than accepting
+individual numeric component registers, with and without filters, and retain empty-input semantics.
 
 ### Case description
 
@@ -5316,30 +5316,30 @@ sources:
 ```ges
 on Start {
     let checks be [
-        [:cartesian [1], [2]][:sum] = [1, 2],
+        [:cartesian [1], [2]][:sum] is nothing,
         [:cartesian [1], [2]][:average] is nothing,
-        [:cartesian [1], [2]][:filter left, right where true :sum] = [1, 2],
+        [:cartesian [1], [2]][:filter left, right where true :sum] is nothing,
         [:cartesian [1], [2]][:filter left, right where true :average] is nothing,
         [:cartesian [1], [2]][:filter left, right where false :sum] = 0,
         [:cartesian [1], [2]][:filter left, right where false :average] is nothing,
-        [:lockstep [1], [2]][:sum] = [1, 2],
+        [:lockstep [1], [2]][:sum] is nothing,
         [:lockstep [1], [2]][:average] is nothing,
-        [:lockstep [1], [2]][:filter left, right where true :sum] = [1, 2],
+        [:lockstep [1], [2]][:filter left, right where true :sum] is nothing,
         [:lockstep [1], [2]][:filter left, right where true :average] is nothing,
         [:lockstep [1], [2]][:filter left, right where false :sum] = 0,
         [:lockstep [1], [2]][:filter left, right where false :average] is nothing,
-        [a: 1][:entries][:sum] = [key: 'a', value: 1],
+        [a: 1][:entries][:sum] is nothing,
         [a: 1][:entries][:average] is nothing,
-        [a: 1][:entries][:filter left, right where true :sum] = [key: 'a', value: 1],
+        [a: 1][:entries][:filter left, right where true :sum] is nothing,
         [a: 1][:entries][:filter left, right where true :average] is nothing,
         [a: 1][:entries][:filter left, right where false :sum] = 0,
         [a: 1][:entries][:filter left, right where false :average] is nothing,
-        [:cartesian [1, 2], [3, 4]][:sum] = [:cartesian [1, 2], [3, 4]][:sum item => item],
-        [:cartesian [1, 2], [3, 4]][:filter left, right where true :sum] = [:cartesian [1, 2], [3, 4]][:sum item => item],
+        ([:cartesian [1, 2], [3, 4]][:sum] is nothing) and ([:cartesian [1, 2], [3, 4]][:sum item => item] is nothing),
+        ([:cartesian [1, 2], [3, 4]][:filter left, right where true :sum] is nothing) and ([:cartesian [1, 2], [3, 4]][:sum item => item] is nothing),
         ([:cartesian [1, 2], [3, 4]][:average] is nothing) and ([:cartesian [1, 2], [3, 4]][:average item => item] is nothing),
         ([:cartesian [1, 2], [3, 4]][:filter left, right where true :average] is nothing) and ([:cartesian [1, 2], [3, 4]][:average item => item] is nothing),
-        [:lockstep [1, 2], [3, 4]][:sum] = [:lockstep [1, 2], [3, 4]][:sum item => item],
-        [:lockstep [1, 2], [3, 4]][:filter left, right where true :sum] = [:lockstep [1, 2], [3, 4]][:sum item => item],
+        ([:lockstep [1, 2], [3, 4]][:sum] is nothing) and ([:lockstep [1, 2], [3, 4]][:sum item => item] is nothing),
+        ([:lockstep [1, 2], [3, 4]][:filter left, right where true :sum] is nothing) and ([:lockstep [1, 2], [3, 4]][:sum item => item] is nothing),
         ([:lockstep [1, 2], [3, 4]][:average] is nothing) and ([:lockstep [1, 2], [3, 4]][:average item => item] is nothing),
         ([:lockstep [1, 2], [3, 4]][:filter left, right where true :average] is nothing) and ([:lockstep [1, 2], [3, 4]][:average item => item] is nothing),
         ([a: 1, b: 2][:entries][:sum] is nothing) and ([a: 1, b: 2][:entries][:sum item => item] is nothing),
@@ -5368,6 +5368,264 @@ steps:
     input:
       args: []
     local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: numeric-arithmetic-mode
+
+This case verifies strict numeric arithmetic and aggregate semantics without implicit coercion.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: numeric-arithmetic-mode
+kind: scriptApi
+level: atomic
+sources:
+  - name: numeric-arithmetic-mode.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+function numericadd(a, b) be asm { Add numericadd, a, b, #numeric }
+function numericsubtract(a, b) be asm { Subtract numericsubtract, a, b, #numeric }
+function numericmultiply(a, b) be asm { Multiply numericmultiply, a, b, #numeric }
+function numericdivide(a, b) be asm { Divide numericdivide, a, b, #numeric }
+function numericpower(a, b) be asm { Power numericpower, a, b, #numeric }
+function numericintegerdivide(a, b) be asm { IntegerDivide numericintegerdivide, a, b, #numeric }
+function numericmodulo(a, b) be asm { Modulo numericmodulo, a, b, #numeric }
+function numericremainder(a, b) be asm { Remainder numericremainder, a, b, #numeric }
+function numericmin(a, b) be asm { Min numericmin, a, b, #numeric }
+function numericmax(a, b) be asm { Max numericmax, a, b, #numeric }
+function numericnegate(a) be asm { Negate numericnegate, a, #numeric }
+function numericabs(a) be asm { Abs numericabs, a, #numeric }
+function numericclamp(a, b, c) be asm { Clamp numericclamp, a, b, c, #numeric }
+function numericcopy(value) be asm {
+    Move numericcopy, value
+    Move numericcopy, numericcopy, #numeric
+}
+function addleft(a, b) be asm {
+    Move addleft, a
+    Add addleft, addleft, b, #numeric
+}
+function addright(a, b) be asm {
+    Move addright, b
+    Add addright, a, addright, #numeric
+}
+on Start {
+    let invalid be [nothing, '2', #two, [2], [value: 2], :Vector(1, 2), :Point(1, 2)]
+    let rejected be invalid[:all item where
+        numericcopy(value: item) is nothing and numericadd(a: item, b: 1) is nothing and numericadd(a: 1, b: item) is nothing and
+        numericsubtract(a: item, b: 1) is nothing and numericsubtract(a: 1, b: item) is nothing and
+        numericmultiply(a: item, b: 1) is nothing and numericmultiply(a: 1, b: item) is nothing and
+        numericdivide(a: item, b: 1) is nothing and numericdivide(a: 1, b: item) is nothing and
+        numericpower(a: item, b: 1) is nothing and
+        numericpower(a: 1, b: item) is nothing and
+        numericintegerdivide(a: item, b: 1) is nothing and
+        numericintegerdivide(a: 1, b: item) is nothing and
+        numericmodulo(a: item, b: 1) is nothing and
+        numericmodulo(a: 1, b: item) is nothing and
+        numericremainder(a: item, b: 1) is nothing and
+        numericremainder(a: 1, b: item) is nothing and
+        numericmin(a: item, b: 1) is nothing and
+        numericmin(a: 1, b: item) is nothing and
+        numericmax(a: item, b: 1) is nothing and
+        numericmax(a: 1, b: item) is nothing and
+        numericnegate(a: item) is nothing and
+        numericabs(a: item) is nothing and
+        numericclamp(a: item, b: 1, c: 1) is nothing and
+        numericclamp(a: 1, b: item, c: 1) is nothing and
+        numericclamp(a: 1, b: 1, c: item) is nothing]
+    let checks be [
+        :Dice[6, 4, 2][:count] = 3,
+        :Dice[6, 4, 2][:last] = 2,
+        :Dice[6][:single] = 6,
+        :Dice[6, 4, 2] starts with :Dice[6, 4],
+        :Dice[6, 4, 2] ends with :Dice[4, 2],
+        [1, 2, 3][:count] = 3, [a: 1, b: 2][:count] = 2,
+        'a😀b'[:count] = 3, 'a😀b'[:last] = 'b',
+        (from 1 to 5)[:count] = 5,
+        numericcopy(value: true) = 1, numericcopy(value: :Dice[2, 3]) = 5,
+        numericcopy(value: :Dice[]) = 0, numericcopy(value: '3') is nothing,
+        numericcopy(value: 9007199254740993) = 9007199254740993,
+        numericcopy(value: 10%) = 10%, numericcopy(value: 1.5m) = 1.5m,
+        addleft(a: 1.25m, b: 2.5m) = 3.75m, addright(a: 1.25m, b: 2.5m) = 3.75m,
+        addleft(a: 100, b: 10%) = 110, addright(a: 100, b: 10%) = 110,
+        addright(a: 10%, b: 20%) = 30%,
+        addleft(a: 1.25m, b: 1.5s) is nothing,
+        numericadd(a: 2, b: 1.25) = 3.25, numericadd(a: 1.25, b: 2) = 3.25,
+        numericadd(a: 10%, b: 2) is nothing,
+        numericsubtract(a: 100, b: 10%) = 90,
+        numericsubtract(a: 10%, b: 20%) = -10%,
+        numericadd(a: 9223372036854775807, b: 1) = 9223372036854775808,
+        numericadd(a: '1e308' as :Number, b: '1e308' as :Number) = ('Infinity' as :Number),
+        [true, false, :Dice[], :Dice[2, 3], 2, 0.5, 10%][:all item where item is numeric],
+        numericadd(a: :Dice[2, 3], b: true) = 6,
+        numericadd(a: true, b: :Dice[2, 3]) = 6,
+        numericsubtract(a: :Dice[2, 3], b: true) = 4,
+        numericmultiply(a: :Dice[2, 3], b: true) = 5,
+        numericdivide(a: :Dice[2, 3], b: true) = 5,
+        numericpower(a: :Dice[2, 3], b: true) = 5,
+        numericintegerdivide(a: :Dice[2, 3], b: :Dice[2]) = 2,
+        numericmodulo(a: :Dice[2, 3], b: :Dice[2]) = 1,
+        numericremainder(a: :Dice[2, 3], b: :Dice[2]) = 1,
+        numericmin(a: true, b: :Dice[2, 3]) = 1,
+        numericmax(a: true, b: :Dice[2, 3]) = 5,
+        numericnegate(a: :Dice[2, 3]) = -5,
+        numericabs(a: true) = 1,
+        numericclamp(a: :Dice[2, 3], b: false, c: true) = 1,
+        numericadd(a: :Dice[], b: false) = 0,
+        :Dice[2, 3] + 1 = :Dice[1, 2, 3],
+        numericpower(a: 2, b: 3) = 8,
+        numericintegerdivide(a: 7, b: 2) = 3,
+        numericmodulo(a: -7, b: 3) = 2,
+        numericremainder(a: -7, b: 3) = -1,
+        numericmin(a: 2m, b: 3m) = 2m,
+        numericmax(a: 2m, b: 3m) = 3m,
+        numericnegate(a: 2m) = -2m,
+        numericabs(a: -2m) = 2m,
+        numericclamp(a: 5m, b: 1m, c: 3m) = 3m,
+        numericmin(a: 1m, b: 1s) is nothing,
+        numericclamp(a: 1m, b: 1m, c: 2s) is nothing,
+        numericadd(a: 2, b: 3) = 5,
+        numericsubtract(a: 5m, b: 2m) = 3m,
+        numericmultiply(a: 5m, b: 2) = 10m,
+        numericdivide(a: 5m, b: 2) = 2.5m,
+        numericadd(a: 1m, b: 0) is nothing,
+        numericadd(a: 1m, b: 1s) is nothing,
+        numericmultiply(a: 1m, b: 1m) is nothing,
+        numericdivide(a: 0, b: 0) is nothing,
+        numericadd(a: 100, b: 10%) = 110,
+        numericadd(a: 10%, b: 20%) = 30%,
+        numericdivide(a: 30%, b: 2) = 15%,
+        'a' + 'b' = 'ab',
+        [1, 2] - 1 = [2],
+        [1] * [2] = [[1, 2]]
+    ]
+    emit Done(value: rejected and checks[:all check where check])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ':Boolean', value: true }
+```
+
+---
+
+## Test: strict-numeric-aggregates
+
+This case verifies strict numeric arithmetic and aggregate semantics using the same numeric domain as CheckNumeric.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: strict-numeric-aggregates
+kind: scriptApi
+level: atomic
+sources:
+  - name: strict-numeric-aggregates.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+function invalidvalue(value) be value
+on Start {
+    let invalid be [nothing, '2', #two, [2], [value: 2], :Vector(1, 2), :Point(1, 2)]
+    let rejected be invalid[:all item where
+        [item][:sum] is nothing and [item][:average] is nothing and
+        [1, item, 2][:sum] is nothing and [1, item, 2][:average] is nothing and
+        [item, 2][:sum] is nothing and [item, 2][:average] is nothing and
+        [item][:select value => value :sum] is nothing and
+        [item][:average value => value] is nothing]
+    let checks be [
+        [true][:sum] is :Number,
+        [:Dice[2, 3]][:sum] is :Number,
+        [true][:sum] = 1, [false][:sum] = 0,
+        [:Dice[2, 3]][:sum] = 5, [:Dice[]][:sum] = 0,
+        [true, false, :Dice[2, 3]][:sum] = 6,
+        [true, false, :Dice[2, 3]][:average] = 2,
+        [true, false][:average] = 0.5,
+        [true, :Dice[2, 3]][:select item => item :sum] = 6,
+        [false, true][:sum item => item] = 1,
+        [:Dice[2, 3]][:sum item => item] = 5,
+        [true, :Dice[2, 3]][:average item => item] = 3,
+        [][:sum] = 0, [][:average] is nothing,
+        nothing[:sum] is nothing, nothing[:average] is nothing,
+        [1, 2, 3][:sum] = 6, [1, 2, 3][:average] = 2,
+        [1m, 2m][:sum] = 3m, [1m, 2m][:average] = 1.5m,
+        [1m, 0][:sum] is nothing, [0, 1m][:average] is nothing,
+        [1m, 1s][:sum] is nothing,
+        [10%, 20%][:sum] = 30%, [10%, 20%][:average] = 15%,
+        [9007199254740993][:sum] = 9007199254740993,
+        [:cartesian [1, 2], [3, 4] :sum left, right => left + right] = 20,
+        [a: 1, b: 2][:entries :average key, value => value] = 1.5,
+        ['a', 'b'][:fold text be '', value => text + value] = 'ab'
+    ]
+    let effectSum be [1, 2][:sum item => 'invalid' when (emit Effect(value: item)) otherwise nothing]
+    let effectAverage be [3, 4][:average item => 'invalid' when (emit Effect(value: item)) otherwise nothing]
+    emit Done(value: rejected and checks[:all check where check] and effectSum is nothing and effectAverage is nothing)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Effect
+        args:
+          - name: value
+            value: { type: ':Number.int64', value: '1' }
+      - name: Effect
+        args:
+          - name: value
+            value: { type: ':Number.int64', value: '2' }
+      - name: Effect
+        args:
+          - name: value
+            value: { type: ':Number.int64', value: '3' }
+      - name: Effect
+        args:
+          - name: value
+            value: { type: ':Number.int64', value: '4' }
       - name: Done
         args:
           - name: value

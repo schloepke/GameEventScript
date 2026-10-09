@@ -10,6 +10,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+- Cache Dice sums in numeric storage; keep counts in collection payloads and use
+  register-oriented numeric dispatch with strict `Move mode=Numeric` for aggregates.
+
+
 ### Added
 
 - Combined collection sources evaluate all source expressions once from left to
@@ -46,6 +50,16 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   the website homepage alongside Homebrew and .NET CLI installation.
 
 ### Fixed
+
+- `sum` and `average` now reject nonnumeric projected values, including singletons,
+  while continuing later projections. Use `fold` for text concatenation.
+  Recompile existing binaries to adopt this contract.
+- Arithmetic, Min/Max, Negate/Abs and Clamp support Numeric mode (`0x40`),
+  exposed in inline assembly through a final `#numeric` operand and displayed
+  as `mode=Numeric`. Its accepted values match `is numeric`, including Boolean
+  as 0/1 and Dice as the roll sum. Numeric addition and aggregate first-value
+  initialization use direct register fast paths in C# and Swift.
+
 
 - Swift implicit `sum` and `average` consume complete Cartesian, lockstep and
   entry elements, including after filters with multiple bindings.

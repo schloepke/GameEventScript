@@ -9,16 +9,20 @@ public struct GesIntegerRange: Hashable {
     public let to: Int64
     /// Signed increment; zero or a direction incompatible with the bounds gives an empty range.
     public let step: Int64
+    private let cachedCount: Int64
 
     /// Creates a lazy range descriptor without enumerating its terms. The default step is one.
     public init(from: Int64, to: Int64, step: Int64 = 1) {
         self.from = from
         self.to = to
         self.step = step
+        cachedCount = Self.computeCount(from: from, to: to, step: step)
     }
 
     /// Inclusive length, saturated at Int64.max.
-    public var count: Int64 {
+    public var count: Int64 { cachedCount }
+
+    private static func computeCount(from: Int64, to: Int64, step: Int64) -> Int64 {
         guard step != 0, step > 0 ? from <= to : from >= to else { return 0 }
         let distance = step > 0 ? UInt64(bitPattern: to) &- UInt64(bitPattern: from) : UInt64(bitPattern: from) &- UInt64(bitPattern: to)
         let magnitude = step > 0 ? UInt64(step) : 0 &- UInt64(bitPattern: step)
@@ -53,16 +57,20 @@ public struct GesFloatRange: Hashable {
     public let to: Double
     /// Signed increment; zero or a direction incompatible with the bounds gives an empty range.
     public let step: Double
+    private let cachedCount: Int64
 
     /// Creates a lazy range descriptor without enumerating its terms. The default step is one.
     public init(from: Double, to: Double, step: Double = 1) {
         self.from = GesNumber.canonicalZero(from)
         self.to = GesNumber.canonicalZero(to)
         self.step = GesNumber.canonicalZero(step)
+        cachedCount = Self.computeCount(from: self.from, to: self.to, step: self.step)
     }
 
     /// Inclusive length, saturated at Int64.max; invalid descriptors have length zero.
-    public var count: Int64 {
+    public var count: Int64 { cachedCount }
+
+    private static func computeCount(from: Double, to: Double, step: Double) -> Int64 {
         guard from.isFinite, to.isFinite, step.isFinite, step != 0, step > 0 ? from <= to : from >= to else { return 0 }
         let distance = step > 0 ? (to - from) / step : (from - to) / -step
         if distance >= 9223372036854775808.0 { return .max }

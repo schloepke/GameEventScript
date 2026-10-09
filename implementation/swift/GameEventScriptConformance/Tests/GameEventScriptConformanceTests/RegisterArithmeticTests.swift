@@ -14,6 +14,26 @@ final class RegisterArithmeticTests: XCTestCase {
         XCTAssertEqual(MemoryLayout<GameEventScriptMessageSignature>.stride, MemoryLayout<AnyObject>.stride)
     }
 
+    func testNumericProjectionIsIndependentOfCollectionCount() {
+        var value = GesValue.dice([Int32.max, Int32.max, 1])
+        XCTAssertEqual(value.numericIntegerValue, 4_294_967_295)
+        XCTAssertEqual(value.length, 3)
+        let retained = value
+        value.setList([.integer(7)])
+        XCTAssertNil(value.numericIntegerValue)
+        XCTAssertEqual(value.length, 1)
+        XCTAssertEqual(retained.numericIntegerValue, 4_294_967_295)
+        value.setText("a😀b")
+        XCTAssertFalse(value.isNumeric)
+        XCTAssertEqual(value.length, 3)
+        value.setIntegerRange(from: 1, to: Int64.max)
+        XCTAssertNil(value.numericIntegerValue)
+        XCTAssertEqual(value.length, Int(Int32.max))
+        value.setDice([])
+        XCTAssertEqual(value.numericIntegerValue, 0)
+        XCTAssertEqual(value.length, 0)
+    }
+
     func testDirectArrayMutationPreservesCopiesAndResetsMetadata() throws {
         var values: [GesValue] = [.list([.text("original")])]
         let retained = values[0]

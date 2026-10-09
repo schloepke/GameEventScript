@@ -118,6 +118,11 @@ final class GesValueObject<Value> {
     init(_ value: Value) { self.value = value }
 }
 
+private struct GesTextPayload {
+    let text: String
+    let count: Int
+}
+
 private struct GesRecordPayload {
     let name: String
     let fields: GesValueMap
@@ -216,17 +221,17 @@ public struct GesValue: Hashable, CustomStringConvertible {
         object = nil
     }
 
-    private mutating func setObject(_ kind: GesValueKind, _ value: AnyObject, count: Int64 = 0, unit: GesUnit = .none, hasValue: Bool = true, truth: Bool? = nil, numeric: Bool = false) {
+    private mutating func setObject(_ kind: GesValueKind, _ value: AnyObject, unit: GesUnit = .none, hasValue: Bool = true, truth: Bool? = nil, numeric: Bool = false) {
         valueKind = kind
         valueUnit = unit
         flags = Self.objectFlag | (hasValue ? Self.hasValueFlag : 0) | (truth == true ? Self.trueFlag : truth == false ? Self.falseFlag : 0) | (numeric ? Self.numericFlag : 0)
-        numericBits = UInt64(bitPattern: count)
+        numericBits = 0
         object = value
     }
 
     mutating func setText(_ value: String) {
         let truth = value.utf8.elementsEqual("1".utf8) || value.utf8.lazy.map { $0 >= 65 && $0 <= 90 ? $0 + 32 : $0 }.elementsEqual("true".utf8)
-        setObject(.text, GesValueObject(value), count: Int64(value.unicodeScalars.count), hasValue: !value.isEmpty, truth: truth)
+        setObject(.text, GesValueObject(GesTextPayload(text: value, count: value.unicodeScalars.count)), hasValue: !value.isEmpty, truth: truth)
     }
 
     // Linked string constants already own their immutable payload; loading or staging must not box again.
@@ -240,7 +245,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
 
     mutating func setTag(_ value: String) throws {
         guard GesText.isLowerName(value) else { throw GesValueError.invalidTag(value) }
-        setObject(.tag, GesValueObject(value), count: Int64(value.unicodeScalars.count), truth: false)
+        setObject(.tag, GesValueObject(GesTextPayload(text: value, count: value.unicodeScalars.count)), truth: false)
     }
 
     mutating func setVector(x: Double, y: Double = 0, z: Double = 0, unit: GesUnit = .none) {
@@ -260,16 +265,17 @@ public struct GesValue: Hashable, CustomStringConvertible {
     }
 
     mutating func setDice(_ value: [Int32]) {
-        setObject(.dice, value.isEmpty ? Self.emptyDice : GesValueObject(value.sorted(by: >)), count: Int64(value.count), hasValue: !value.isEmpty, numeric: true)
+        setObject(.dice, value.isEmpty ? Self.emptyDice : GesValueObject(value.sorted(by: >)), hasValue: !value.isEmpty, numeric: true)
+        numericBits = UInt64(bitPattern: value.reduce(Int64(0)) { $0 + Int64($1) })
     }
 
     mutating func setList(_ value: [GesValue]) {
-        setObject(.list, value.isEmpty ? Self.emptyList : GesValueObject(value), count: Int64(value.count), hasValue: !value.isEmpty)
+        setObject(.list, value.isEmpty ? Self.emptyList : GesValueObject(value), hasValue: !value.isEmpty)
     }
 
     mutating func setMap(_ entries: [GesMapEntry]) {
         let map = GesValueMap(entries)
-        setObject(.map, GesValueObject(map), count: Int64(map.length), hasValue: map.length != 0)
+        setObject(.map, GesValueObject(map), hasValue: map.length != 0)
     }
 
     mutating func setRecord(typeName: String, entries: [GesMapEntry]) {
@@ -277,13 +283,13 @@ public struct GesValue: Hashable, CustomStringConvertible {
     }
 
     mutating func setRecord(typeName: String, fields: GesValueMap) {
-        setObject(.record, GesValueObject(GesRecordPayload(name: typeName, fields: fields)), count: Int64(fields.length), hasValue: fields.length != 0)
+        setObject(.record, GesValueObject(GesRecordPayload(name: typeName, fields: fields)), hasValue: fields.length != 0)
     }
 
     mutating func setIntegerRange(from: Int64, to: Int64, step: Int64 = 1) {
         let range = GesIntegerRange(from: from, to: to, step: step)
         let count = range.count
-        setObject(.integerRange, count == 0 ? Self.emptyRange : GesValueObject(range), count: count, hasValue: count != 0)
+        setObject(.integerRange, count == 0 ? Self.emptyRange : GesValueObject(range), hasValue: count != 0)
     }
 
     mutating func setFloatRange(from: Double, to: Double, step: Double = 1) {
@@ -301,7 +307,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
             setIntegerRange(from: 0, to: 0, step: 0)
             return
         }
-        setObject(.floatRange, GesValueObject(range), count: count)
+        setObject(.floatRange, GesValueObject(range))
     }
 
     mutating func setMessage(_ value: GameEventScriptMessage) { setObject(.message, value.storage) }
@@ -312,7 +318,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
 
     mutating func setExternal(_ value: any GameEventScriptExternalValue) {
         let storage = GesExternalStorage(value: value)
-        setObject(.external, storage, count: Int64(storage.definition.fields.count))
+        setObject(.external, storage)
     }
 
     mutating func setIterator(_ value: GesIterator) {
@@ -501,23 +507,36 @@ public struct GesValue: Hashable, CustomStringConvertible {
     /// Numeric projection of Boolean, Number, Percentage or summed Dice; other storage yields NaN. Text parsing belongs to the language cast operation.
     public var asNumber: Double {
         switch kind {
-        case .boolean, .integer: Double(Int64(bitPattern: numericBits))
+        case .boolean, .integer, .dice: Double(Int64(bitPattern: numericBits))
         case .float, .percentage: Double(bitPattern: numericBits)
-        case .dice: Double(diceRolls!.reduce(Int64(0)) { $0 + Int64($1) })
         default: .nan
         }
     }
 
     /// Preserves exact integer storage; otherwise saturates the numeric projection to Int64, with NaN becoming zero.
-    public var asInteger: Int64 { integerValue ?? GesNumber.saturatedInteger(asNumber) }
+    public var asInteger: Int64 { numericIntegerValue ?? GesNumber.saturatedInteger(asNumber) }
     /// Number of Unicode scalars or collection entries; range lengths saturate at Int32.max like the API. Numeric payload bits never define a length.
-    public var length: Int { flags & Self.objectFlag != 0 ? Int(min(Int64(bitPattern: numericBits), Int64(Int32.max))) : 0 }
+    public var length: Int {
+        switch kind {
+        case .text, .tag: payload(GesTextPayload.self).count
+        case .list: listValue!.count
+        case .dice: diceRolls!.count
+        case .map, .record: asMap!.length
+        case .external: externalStorage!.definition.fields.count
+        case .integerRange: Int(min(integerRangeValue!.count, Int64(Int32.max)))
+        case .floatRange: Int(min(floatRangeValue!.count, Int64(Int32.max)))
+        default: 0
+        }
+    }
+
+    @inline(__always)
+    var numericIntegerValue: Int64? { kind == .integer || kind == .boolean || kind == .dice ? Int64(bitPattern: numericBits) : nil }
     /// Exact Int64 payload when stored as integer, otherwise nil.
     public var integerValue: Int64? { kind == .integer ? Int64(bitPattern: numericBits) : nil }
     /// Binary64 payload for Number or Percentage storage, otherwise nil.
     public var floatValue: Double? { kind == .float || kind == .percentage ? Double(bitPattern: numericBits) : nil }
     /// Unquoted text or bare tag name, otherwise nil.
-    public var textValue: String? { kind == .text || kind == .tag ? payload(String.self) : nil }
+    public var textValue: String? { kind == .text || kind == .tag ? payload(GesTextPayload.self).text : nil }
     /// Coordinates for a Vector or Point, otherwise nil.
     public var spatialValue: GesSpatialValue? { kind == .vector || kind == .point ? payload(GesSpatialValue.self) : nil }
     /// Spatial x coordinate, or zero for non-spatial values.

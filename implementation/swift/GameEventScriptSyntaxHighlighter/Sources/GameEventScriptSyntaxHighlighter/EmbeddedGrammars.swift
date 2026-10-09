@@ -10,7 +10,6 @@ enum EmbeddedGrammars {
             0,
             2,
             4,
-            94,
             95,
             96,
             97,
@@ -92,13 +91,13 @@ enum EmbeddedGrammars {
             173,
             174,
             175,
-            176
+            176,
+            177
           ],
           "assembly": [
-            177,
-            182,
+            178,
             183,
-            185,
+            184,
             186,
             187,
             188,
@@ -118,7 +117,8 @@ enum EmbeddedGrammars {
             202,
             203,
             204,
-            205
+            205,
+            206
           ],
           "rules": [
             {
@@ -238,6 +238,17 @@ enum EmbeddedGrammars {
                 8
               ],
               "endLast": true
+            },
+            {
+              "pattern": "#numeric\\b",
+              "end": "",
+              "name": "entity.name.tag.gameeventscript",
+              "contentName": "",
+              "captures": [],
+              "beginCaptures": [],
+              "endCaptures": [],
+              "children": [],
+              "endLast": false
             },
             {
               "pattern": "\\.register\\b",
@@ -2814,7 +2825,8 @@ enum EmbeddedGrammars {
                 90,
                 91,
                 92,
-                93
+                93,
+                94
               ],
               "endLast": false
             },
@@ -5296,7 +5308,6 @@ enum EmbeddedGrammars {
                 0,
                 2,
                 4,
-                94,
                 95,
                 96,
                 97,
@@ -5378,7 +5389,8 @@ enum EmbeddedGrammars {
                 173,
                 174,
                 175,
-                176
+                176,
+                177
               ],
               "endLast": false
             },
@@ -5402,7 +5414,7 @@ enum EmbeddedGrammars {
               "beginCaptures": [],
               "endCaptures": [],
               "children": [
-                178
+                179
               ],
               "endLast": true
             },
@@ -5426,7 +5438,7 @@ enum EmbeddedGrammars {
               "beginCaptures": [],
               "endCaptures": [],
               "children": [
-                180
+                181
               ],
               "endLast": true
             },
@@ -5456,12 +5468,11 @@ enum EmbeddedGrammars {
               ],
               "endCaptures": [],
               "children": [
-                179,
-                181,
+                180,
+                182,
                 0,
                 2,
                 4,
-                94,
                 95,
                 96,
                 97,
@@ -5543,7 +5554,8 @@ enum EmbeddedGrammars {
                 173,
                 174,
                 175,
-                176
+                176,
+                177
               ],
               "endLast": false
             },
@@ -5578,7 +5590,7 @@ enum EmbeddedGrammars {
               "beginCaptures": [],
               "endCaptures": [],
               "children": [
-                184
+                185
               ],
               "endLast": false
             },
@@ -5923,7 +5935,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\bNormalizeResultAsPredicate\\b",
+              "pattern": "\\b(?:NormalizeResultAsPredicate|Numeric)\\b",
               "end": "",
               "name": "constant.language.flag.gameeventscript.assembler",
               "contentName": "",
@@ -5945,7 +5957,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\b(?:id|name|args|entry|requiredTags|excludedTags|flags)\\b(?=\\s*=)",
+              "pattern": "\\b(?:id|name|args|entry|requiredTags|excludedTags|flags|mode)\\b(?=\\s*=)",
               "end": "",
               "name": "variable.parameter.attribute.gameeventscript.assembler",
               "contentName": "",

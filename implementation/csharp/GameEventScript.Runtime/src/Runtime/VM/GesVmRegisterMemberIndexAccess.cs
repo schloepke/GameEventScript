@@ -119,8 +119,8 @@ internal static class GesVmRegisterMemberIndexAccess
                 if (GameEventScriptRangeMath.GetTerm(floatRange.From, floatRange.To, floatRange.Step, indexIn) is { } floatRangeValue) vmState.SetFloat(destinationRegister, floatRangeValue);
                 else vmState.SetNothing(destinationRegister);
                 return;
-            case Text or Tag when obj is { IsStorageObject: true, ObjectValue: string text }:
-                if (GameEventScriptText.ScalarAt(text, index) is { } scalar) vmState.SetText(destinationRegister, scalar);
+            case Text or Tag:
+                if (GameEventScriptText.ScalarAt(obj.TextValue, index) is { } scalar) vmState.SetText(destinationRegister, scalar);
                 else vmState.SetNothing(destinationRegister);
                 return;
             default:
@@ -136,8 +136,8 @@ internal static class GesVmRegisterMemberIndexAccess
             case Integer:
                 vmState.GesVmIndexAccess(destinationRegister, property.IntegerValue, in obj);
                 return;
-            case Text or Tag when property.ObjectValue is string key:
-                vmState.GesVmMemberAccess(destinationRegister, key, in obj);
+            case Text or Tag:
+                vmState.GesVmMemberAccess(destinationRegister, property.TextValue, in obj);
                 return;
             default:
                 vmState.SetNothing(destinationRegister);

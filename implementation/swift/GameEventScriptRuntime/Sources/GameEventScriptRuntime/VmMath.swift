@@ -10,14 +10,32 @@
 #endif
 
 enum GesMath {
+    private static func numericOperand(_ value: GesValue) -> GesValue {
+        if value.kind == .boolean { return .integer(value.truth == true ? 1 : 0) }
+        if value.kind == .dice { return .integer(value.numericIntegerValue!) }
+        return value
+    }
+
     static func execute<Output: GesValueOutput>(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext, sink: Output) throws -> Output.Result {
-        let a = s.value(Int(i.word1))
+        var a = s.value(Int(i.word1))
         // Read the second register only for instructions which actually have one.
-        let b: GesValue
+        var b: GesValue
         switch i.opcode {
         case .or, .and, .implies, .xor, .equal, .notEqual, .less, .greater, .lessOrEqual, .greaterOrEqual, .add, .subtract, .multiply, .divide, .integerDivide, .modulo, .remainder, .power, .min, .max, .clamp, .randomTake, .randomTakeFloat, .term:
             b = s.value(Int(i.word2))
         default: b = .nothing
+        }
+        if i.unitAndFlags & 0x40 != 0 {
+            switch i.opcode {
+            case .add, .subtract, .multiply, .divide, .power, .integerDivide, .modulo, .remainder, .min, .max, .clamp:
+                guard a.isNumeric, b.isNumeric else { return sink.nothing }
+                if a.kind == .boolean || a.kind == .dice { a = numericOperand(a) }
+                if b.kind == .boolean || b.kind == .dice { b = numericOperand(b) }
+            case .negate, .abs:
+                guard a.isNumeric else { return sink.nothing }
+                if a.kind == .boolean || a.kind == .dice { a = numericOperand(a) }
+            default: break
+            }
         }
         switch i.opcode {
         case .or:
@@ -65,7 +83,8 @@ enum GesMath {
             let number = i.opcode == .abs ? Swift.abs(a.asNumber) : -a.asNumber
             return a.kind == .percentage ? sink.percentage(number) : sink.float(number, unit: a.unit)
         case .clamp:
-            let upper = s.value(Int(i.a))
+            var upper = s.value(Int(i.a))
+            if i.unitAndFlags & 0x40 != 0 && (upper.kind == .boolean || upper.kind == .dice) { upper = numericOperand(upper) }
             guard a.unit == b.unit, b.unit == upper.unit, a.isNumeric, b.isNumeric, upper.isNumeric else { return sink.nothing }
             if let av = a.integerValue, let bv = b.integerValue, let cv = upper.integerValue { return sink.integer(Swift.min(Swift.max(av, Swift.min(bv, cv)), Swift.max(bv, cv)), unit: a.unit) }
             return sink.float(Swift.min(Swift.max(a.asNumber, Swift.min(b.asNumber, upper.asNumber)), Swift.max(b.asNumber, upper.asNumber)), unit: a.unit)

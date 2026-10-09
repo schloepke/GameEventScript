@@ -282,11 +282,11 @@ extension GesCompiler {
         case "sum", "average":
             if s.operation == "average" { r.emit(.add, count, count, one) }
             let add = r.emit(.jumpIfTrue, 0, seen)
-            r.emit(.move, sum, projected)
+            numericCopy(sum, projected, r)
             r.emit(.loadTrue, seen)
             nextJumps.append(r.emit(.jump))
             r.patch(add, target: r.code.count)
-            r.emit(.add, sum, sum, projected)
+            r.emit(.add, sum, sum, projected, flags: 64)
         case "min", "max":
             let compareJump = r.emit(.jumpIfTrue, 0, seen)
             r.emit(.move, d, current)
@@ -349,7 +349,7 @@ extension GesCompiler {
         }
         if s.operation == "average" {
             let empty = r.emit(.jumpIfNotTrue, 0, count)
-            r.emit(.divide, d, sum, count)
+            r.emit(.divide, d, sum, count, flags: 64)
             close.append(r.emit(.jump))
             r.patch(empty, target: r.code.count)
             r.emit(.loadNothing, d)
@@ -361,6 +361,11 @@ extension GesCompiler {
         r.patch(done, target: r.code.count)
     }
 
+    func numericCopy(_ destination: Int, _ source: Int, _ r: GesRoutine) {
+        // Copy the strict numeric view without parsing text or losing units.
+        r.emit(.move, destination, source, flags: 64)
+    }
+
     func aggregate(_ source: Int, average: Bool, _ d: Int, _ r: GesRoutine) {
         let iterator = r.temporary()
         let item = r.temporary()
@@ -369,7 +374,7 @@ extension GesCompiler {
         let one = average ? r.temporary() : d
         let invalid = r.emit(.iteratorCreateOrJump, iterator, source)
         let empty = r.emit(.iteratorNext, item, iterator)
-        r.emit(.move, accumulator, item)
+        numericCopy(accumulator, item, r)
         if average {
             r.emit(.loadInteger, count, payload: 1)
             r.emit(.loadInteger, one, payload: 1)
@@ -377,7 +382,7 @@ extension GesCompiler {
         let loop = r.code.count
         let end = r.emit(.iteratorNext, item, iterator)
         if average { r.emit(.add, count, count, one) }
-        r.emit(.add, accumulator, accumulator, item)
+        r.emit(.add, accumulator, accumulator, item, flags: 64)
         r.emit(.jump, 0, 0, loop)
         r.patch(empty, target: r.code.count)
         r.emit(.iteratorClose, 0, iterator)
@@ -385,7 +390,7 @@ extension GesCompiler {
         let done1 = r.emit(.jump)
         r.patch(end, target: r.code.count)
         r.emit(.iteratorClose, 0, iterator)
-        if average { r.emit(.divide, d, accumulator, count) }
+        if average { r.emit(.divide, d, accumulator, count, flags: 64) }
         let done2 = r.emit(.jump)
         r.patch(invalid, target: r.code.count)
         r.emit(.loadNothing, d)

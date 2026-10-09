@@ -248,3 +248,14 @@ prints `output=Components`. These are opcode-specific fields, not predicate
 or message flags. Source and target register lists use `Sources` and `Targets`
 labels and the existing register-list representation. Cartesian uses the
 ordinary destination/left/right register operand representation.
+
+### Numeric arithmetic annotation
+
+GESA renders Move/Add/Subtract/Multiply/Divide/Power/IntegerDivide/Modulo/Remainder/Min/Max/Negate/Abs/Clamp with flag `0x40` as `mode=Numeric`.
+Inline source assembly accepts an optional final operand `#numeric`, for example
+`Add result, left, right, #numeric`. Other mode names are invalid; forms without the mode
+retain overloaded semantics. Register read/write and initialization rules
+are unchanged.
+
+Unary forms include `Move result, value, #numeric`, `Negate result, value, #numeric` and `Abs result, value, #numeric`.
+Clamp uses `Clamp result, value, minimum, maximum, #numeric`.

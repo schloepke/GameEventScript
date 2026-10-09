@@ -1128,7 +1128,15 @@ internal static partial class GesCompiler
                    _ => false
                });
 
-        private void EmitInlineIteratorPipeline(GesRegisterRef destination, GesRegisterRef source, IReadOnlyList<CollectionSelectorNode> selectors, int prefixCount, CollectionSelectorNode terminal, LoweringContext context, ExpressionState state, ExpressionNode? iteratorSource = null)
+        private void EmitInlineIteratorPipeline(
+            GesRegisterRef destination,
+            GesRegisterRef source,
+            IReadOnlyList<CollectionSelectorNode> selectors,
+            int prefixCount,
+            CollectionSelectorNode terminal,
+            LoweringContext context,
+            ExpressionState state,
+            ExpressionNode? iteratorSource = null)
         {
             if (iteratorSource is null && CanEmitFirstValueAggregatePipeline(terminal, prefixCount))
             {
@@ -1301,7 +1309,7 @@ internal static partial class GesCompiler
                 {
                     var noAverageLabel = _builder.AddLabel("pipeline_average_empty");
                     _builder.JumpIfNotTrue(count!.Value, noAverageLabel);
-                    _builder.Divide(destination, sum!.Value, count.Value);
+                    _builder.NumericBinary(GameEventScriptBytecodeOpCode.Divide, destination, sum!.Value, count.Value);
                     _builder.Jump(closeLabel);
                     _builder.MarkLabel(noAverageLabel);
                     _builder.LoadNothing(destination);
@@ -1389,7 +1397,7 @@ internal static partial class GesCompiler
             }
 
             var firstValue = EmitInlineAggregateValue(terminal, current, context, state);
-            if (firstValue.Id != accumulator.Id) _builder.Move(accumulator, firstValue);
+            EmitNumericCopy(accumulator, firstValue);
             if (isAverage)
             {
                 _builder.LoadInteger(count!.Value, 1);
@@ -1408,7 +1416,7 @@ internal static partial class GesCompiler
 
             var value = EmitInlineAggregateValue(terminal, current, context, state);
             if (isAverage) _builder.Add(count!.Value, count.Value, one!.Value);
-            _builder.Add(accumulator, accumulator, value);
+            _builder.NumericBinary(GameEventScriptBytecodeOpCode.Add, accumulator, accumulator, value);
             _builder.Jump(loopLabel);
 
             _builder.MarkLabel(emptyLabel);
@@ -1419,7 +1427,7 @@ internal static partial class GesCompiler
 
             _builder.MarkLabel(endLabel);
             _builder.IteratorClose(iterator);
-            if (isAverage) _builder.Divide(destination, accumulator, count!.Value);
+            if (isAverage) _builder.NumericBinary(GameEventScriptBytecodeOpCode.Divide, destination, accumulator, count!.Value);
             _builder.Jump(doneLabel);
 
             _builder.MarkLabel(invalidIteratorLabel);
@@ -1562,7 +1570,7 @@ internal static partial class GesCompiler
                     var value = IsIdentityProjection(sumSelector.Identifier, sumSelector.Projection, sumSelector.BindingNames)
                         ? current
                         : EmitSelectorExpressionForRead(sumSelector.Identifier, current, sumSelector.Projection, context, state, sumSelector.BindingNames);
-                    EmitInlineAccumulateSum(sum!.Value, hasSum!.Value, value, nextLabel);
+                    EmitInlineAccumulateSum(sum!.Value, hasSum!.Value, value, nextLabel, context, state);
                     return;
                 }
                 case AverageSelectorNode averageSelector:
@@ -1571,7 +1579,7 @@ internal static partial class GesCompiler
                         ? current
                         : EmitSelectorExpressionForRead(averageSelector.Identifier, current, averageSelector.Projection, context, state, averageSelector.BindingNames);
                     _builder.Add(count!.Value, count.Value, one!.Value);
-                    EmitInlineAccumulateSum(sum!.Value, hasSum!.Value, value, nextLabel);
+                    EmitInlineAccumulateSum(sum!.Value, hasSum!.Value, value, nextLabel, context, state);
                     return;
                 }
                 case MinSelectorNode minSelector:
@@ -1659,15 +1667,20 @@ internal static partial class GesCompiler
             _builder.LoadTrue(hasWinner);
         }
 
-        private void EmitInlineAccumulateSum(GesRegisterRef sum, GesRegisterRef hasSum, GesRegisterRef value, GesLabelRef nextLabel)
+        private void EmitNumericCopy(GesRegisterRef destination, GesRegisterRef value)
+        {
+            _builder.NumericUnary(GameEventScriptBytecodeOpCode.Move, destination, value);
+        }
+
+        private void EmitInlineAccumulateSum(GesRegisterRef sum, GesRegisterRef hasSum, GesRegisterRef value, GesLabelRef nextLabel, LoweringContext context, ExpressionState state)
         {
             var addLabel = _builder.AddLabel("pipeline_sum_add");
             _builder.JumpIfTrue(hasSum, addLabel);
-            if (value.Id != sum.Id) _builder.Move(sum, value);
+            EmitNumericCopy(sum, value);
             _builder.LoadTrue(hasSum);
             _builder.Jump(nextLabel);
             _builder.MarkLabel(addLabel);
-            _builder.Add(sum, sum, value);
+            _builder.NumericBinary(GameEventScriptBytecodeOpCode.Add, sum, sum, value);
         }
 
         private void EmitFold(GesRegisterRef destination, GesRegisterRef source, FoldSelectorNode fold, LoweringContext context, ExpressionState state, ExpressionNode? iteratorSource = null)

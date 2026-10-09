@@ -134,3 +134,17 @@ better initial candidates for comparisons with explicit iterator loops.
 
 The [measured comparison](InlineAssemblyBenchmarks.md) includes a reproducible
 C# harness, List workloads, allocation and frame-budget observations.
+
+### Numeric arithmetic
+
+Use `Add result, left, right, #numeric` (also Subtract, Multiply, Divide, Power, IntegerDivide, Modulo, Remainder, Min and Max)
+to require operands recognized by `is numeric`. Boolean uses 0/1 and Dice uses
+the roll sum, bypassing collection overloads.
+Numbers with units and percentages retain their usual arithmetic rules.
+
+`Move`, `Negate` and `Abs` accept `#numeric` after their source; `Clamp` accepts it after
+value, minimum and maximum.
+
+`Move result, value, #numeric` copies an existing numeric value, preserving units
+and Percentage. Boolean becomes 0/1 and Dice becomes its roll sum. Text is not
+parsed; nonnumeric inputs become Nothing.

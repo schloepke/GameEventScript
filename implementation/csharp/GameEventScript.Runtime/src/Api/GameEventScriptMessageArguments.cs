@@ -142,7 +142,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
         ref readonly var value = ref _values[index];
         return value.Kind switch
         {
-            GameEventScriptBytecodeTypeKind.Integer => value.IntegerValue,
+            GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Dice => value.IntegerValue,
             Float or Percentage => ToIntegerSaturated(value.FloatValue),
             GameEventScriptBytecodeTypeKind.Boolean => value.IsTrue ? 1 : 0,
             _ => ToIntegerSaturated(value.AsNumeric)
@@ -166,7 +166,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
         ref readonly var value = ref _values[index];
         return value.Kind switch
         {
-            GameEventScriptBytecodeTypeKind.Integer => value.IntegerValue,
+            GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Dice => value.IntegerValue,
             Float or Percentage => value.FloatValue,
             GameEventScriptBytecodeTypeKind.Boolean => value.IsTrue ? 1d : 0d,
             _ => value.AsNumeric

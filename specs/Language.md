@@ -1552,6 +1552,20 @@ counts all finite items, `items[:sum]` is equivalent to
 `items[:sum item => item]`, and `items[:average]` is equivalent to
 `items[:average item => item]`.
 
+`sum` and `average` accept exactly the values recognized by `is numeric` after
+projection: Number/Quantity, Percentage, Boolean and Dice. Boolean contributes
+integer 0/1; Dice contributes the exact integer sum of its rolls (zero for empty
+Dice), including singleton input. Number/Quantity and Percentage retain their
+existing numeric, unit and percentage arithmetic rules. Text, tags and other
+nonnumeric values are not converted.
+A nonnumeric value (including Nothing) or incompatible units makes the result
+Nothing, even for a singleton. Remaining projections still execute in order;
+an invalid intermediate result cannot recover. Empty valid input gives integer
+zero for `sum` and Nothing for `average`; invalid input gives Nothing for both.
+String concatenation and other overloaded additions remain available via `fold`.
+The first Number/Quantity or Percentage retains its storage kind and unit; no unitless-zero
+identity exception is introduced.
+
 `min`/`max` and `highest`/`lowest` return the winning source item, selected by
 the projection.
 

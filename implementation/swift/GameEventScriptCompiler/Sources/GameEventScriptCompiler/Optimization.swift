@@ -24,7 +24,7 @@ extension GesCompiler {
             }
             let targets = Set(routine.code.filter { branches.contains($0.opcode) }.map { Int($0.word2) })
             var removed: Set<Int> = []
-            for (index, move) in routine.code.enumerated() where move.opcode == .move {
+            for (index, move) in routine.code.enumerated() where move.opcode == .move && move.unitAndFlags == 0 {
                 let source = Int(move.word1)
                 let destination = move.word0
                 guard !routine.pinned.contains(source), reads[source] == 1, writes[source]?.count == 1, let writer = writes[source]?.first, writer < index, !removed.contains(writer) else { continue }

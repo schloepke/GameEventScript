@@ -1438,7 +1438,7 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x1B | `CheckNumeric` | - | result register | `XRegister`=source | - | - | Writes whether `X` has a runtime numeric view. Numbers, percentages, booleans (`false` = `0`, `true` = `1`), and dice sums are numeric. Text and tags are not parsed here. |
 | 0x1C | `CheckInteger` | - | result register | `XRegister`=source | - | - | Writes whether `X` has a finite integral numeric view. Booleans and dice are integer. Text is not parsed here. |
 | 0x1D | `CheckFractional` | - | result register | `XRegister`=source | - | - | Writes whether `X` has a finite non-integral numeric view. Text is not parsed here. |
-| 0x1E | `Move` | - | result register | `XRegister`=source | - | - | Copies a register value/reference; the source register remains unchanged. |
+| 0x1E | `Move` | Numeric (0x40) | result register | `XRegister`=source | - | - | Copies a register value/reference; the source register remains unchanged. |
 | 0x1F | `MemberAccess` | - | result register | `StringIndex`=member name | `YRegister`=object | - | Reads a named member. |
 | 0x20 | `IndexAccess` | - | result register | `Index`=1-based index | `YRegister`=object | - | Reads a statically known positional element. |
 | 0x21 | `PropertyAccess` | - | result register | `XRegister`=property/index selector | `YRegister`=object | - | Reads a dynamic property: integer selectors use index semantics; text/tag selectors use member semantics. |
@@ -1528,21 +1528,21 @@ separate approximate-equality opcode.
 | 0x58 | `Greater` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary comparison. |
 | 0x59 | `LessOrEqual` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary comparison. |
 | 0x5A | `GreaterOrEqual` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary comparison. |
-| 0x5B | `Add` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
-| 0x5C | `Subtract` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
-| 0x5D | `Multiply` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
-| 0x5E | `Divide` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
-| 0x5F | `Power` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
-| 0x60 | `IntegerDivide` | - | result register | `XRegister`=left | `YRegister`=right | - | Floor-like integer division operation. |
-| 0x61 | `Modulo` | - | result register | `XRegister`=left | `YRegister`=right | - | Numeric modulo operation. |
-| 0x62 | `Remainder` | - | result register | `XRegister`=left | `YRegister`=right | - | Numeric remainder operation. |
-| 0x63 | `Min` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary extrema reduce step. |
-| 0x64 | `Max` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary extrema reduce step. |
-| 0x65 | `Negate` | - | result register | `XRegister`=operand | - | - | Numeric negation. |
-| 0x66 | `Abs` | - | result register | `XRegister`=operand | - | - | Absolute value. |
+| 0x5B | `Add` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
+| 0x5C | `Subtract` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
+| 0x5D | `Multiply` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
+| 0x5E | `Divide` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
+| 0x5F | `Power` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
+| 0x60 | `IntegerDivide` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Floor-like integer division operation. |
+| 0x61 | `Modulo` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Numeric modulo operation. |
+| 0x62 | `Remainder` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Numeric remainder operation. |
+| 0x63 | `Min` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Binary extrema reduce step. |
+| 0x64 | `Max` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Binary extrema reduce step. |
+| 0x65 | `Negate` | Numeric (0x40) | result register | `XRegister`=operand | - | - | Numeric negation. |
+| 0x66 | `Abs` | Numeric (0x40) | result register | `XRegister`=operand | - | - | Absolute value. |
 | 0x67 | `LogN` | - | result register | `XRegister`=operand | - | - | Natural logarithm. |
 | 0x68 | `Chance` | - | result register | `XRegister`=operand | - | - | Chance evaluation. |
-| 0x69 | `Clamp` | - | result register | `XRegister`=value | `YRegister`=minimum | `AU`=maximum register | The only opcode with three direct source registers. |
+| 0x69 | `Clamp` | Numeric (0x40) | result register | `XRegister`=value | `YRegister`=minimum | `AU`=maximum register | The only opcode with three direct source registers. |
 | 0x6A | `RandomTake` | - | result register | `XRegister`=from | `YRegister`=to | - | Takes an integer random value from integer bounds using the current random scope. |
 | 0x6B | `RandomTakeFloat` | - | result register | `XRegister`=from | `YRegister`=to | - | Takes a float random value from numeric bounds using the current random scope. |
 | 0x6C | `RandomPush` | - | - | `XRegister`=seed | - | - | Saves the active random state and resets it from a valid dynamic unitless integer seed; an invalid seed retains the copied state. |
@@ -1762,3 +1762,27 @@ component; absent components are Nothing. One normal Next preserves the whole
 item. Cartesian/lockstep normal output yields a List of all source components.
 Union/intersect/difference preserve the existing binary operator semantics
 from left to right; Map results iterate values, and Dice order is preserved.
+
+### Numeric arithmetic mode
+
+`Move`, `Add`, `Subtract`, `Multiply`, `Divide`, `Power`, `IntegerDivide`, `Modulo`,
+`Remainder`, `Min`, `Max`, `Negate`, `Abs` and `Clamp` interpret flag bit `0x40` as
+`Numeric`. With the bit clear their existing
+overloaded behavior is unchanged. With the bit set every source operand must satisfy
+`CheckNumeric`: Integer, Float (including quantities), Percentage, Boolean or Dice.
+Otherwise the instruction writes Nothing. Boolean is evaluated as integer 0/1;
+Dice is evaluated as its exact Int64 roll sum, including zero for empty Dice.
+These numeric views bypass collection overloads. Integer/Float and Percentage
+retain their existing exact-integer, binary64, unit, percentage, overflow and
+nonfinite-result rules. Text, tags, lists, maps, vectors and points are rejected.
+Nothing propagates.
+The unit bits and other flag bits are reserved zero. The payload is reserved zero
+except for Clamp, whose low 16 bits hold its third source register; its upper
+48 bits remain zero.
+Destination/source aliasing is supported. This does not add a zero-unit exception.
+
+`Move mode=Numeric` copies the numeric view: Number/Quantity/Percentage retain
+their kind and unit, Boolean and Dice become an exact Int64 Number, and other
+values produce Nothing. It never parses text. Source/destination may be identical.
+Compilers lower numeric aggregates using this mode and use Numeric Move for the
+first projected value. An invalid aggregate does not suppress later projections.

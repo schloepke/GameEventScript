@@ -176,7 +176,23 @@ public static class GameEventScriptProgramValidator
         var resultSend = GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode);
         var iteratorCreate = instruction.OpCode is GameEventScriptBytecodeOpCode.IteratorCreate or GameEventScriptBytecodeOpCode.IteratorCreateOrJump;
         var iteratorNext = instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorNext;
-        var allowedFlags = iteratorCreate ? 0xE0 : resultSend ? 0xC0 : (byte)GameEventScriptInstructionFlag.NormalizeResultAsPredicate;
+        var numericArithmetic = instruction.OpCode is GameEventScriptBytecodeOpCode.Move
+            or GameEventScriptBytecodeOpCode.Add
+            or GameEventScriptBytecodeOpCode.Subtract
+            or GameEventScriptBytecodeOpCode.Multiply
+            or GameEventScriptBytecodeOpCode.Divide
+            or GameEventScriptBytecodeOpCode.Power
+            or GameEventScriptBytecodeOpCode.IntegerDivide
+            or GameEventScriptBytecodeOpCode.Modulo
+            or GameEventScriptBytecodeOpCode.Remainder
+            or GameEventScriptBytecodeOpCode.Min
+            or GameEventScriptBytecodeOpCode.Max
+            or GameEventScriptBytecodeOpCode.Negate
+            or GameEventScriptBytecodeOpCode.Abs
+            or GameEventScriptBytecodeOpCode.Clamp;
+        if (numericArithmetic && (encodedUnit != 0 || (instruction.OpCode == GameEventScriptBytecodeOpCode.Clamp ? (instruction.Payload & ~0xFFFFUL) != 0 : instruction.Payload != 0)))
+            InvalidOperand("Arithmetic instruction contains reserved unit or payload bits.", instructionIndex);
+        var allowedFlags = numericArithmetic ? 0x40 : iteratorCreate ? 0xE0 : resultSend ? 0xC0 : (byte)GameEventScriptInstructionFlag.NormalizeResultAsPredicate;
         if ((iteratorCreate || iteratorNext) && (encodedUnit != 0 || instruction.Payload != 0 ||
             iteratorCreate && (encodedFlags == 0xE0 || instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorCreate && instruction.YRegister != 0)))
             InvalidOperand("Iterator instruction contains an invalid mode or reserved operands.", instructionIndex);

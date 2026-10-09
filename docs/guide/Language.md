@@ -316,3 +316,18 @@ For message ordering, initialization, limits and timing, read the
 [host runtime contract](../../specs/HostRuntime.md). The
 [CLI guide](../../implementation/csharp/GameEventScript.Tool/README.md) covers
 commands and terminal behavior in full.
+
+### Numeric sums and averages
+
+`values[:sum]` and `values[:average]` aggregate numbers, quantities with compatible
+units, percentages, Boolean (0/1), and Dice (sum of rolls), matching `is numeric`.
+They do not parse text or concatenate lists or strings. A nonnumeric projected value makes the result
+`nothing`, including when it is the only element. Later projections still run.
+Empty input gives `0` for sum and `nothing` for average.
+
+```ges
+[1m, 2m][:sum]                         // 3m
+[1m, 2m][:average]                     // 1.5m
+['a', 'b'][:sum]                       // nothing
+['a', 'b'][:fold text be '', x => text + x] // 'ab'
+```

@@ -104,7 +104,7 @@ public readonly struct GesValueSlice
         ref readonly var value = ref _values![Start + index];
         return value.Kind switch
         {
-            GameEventScriptBytecodeTypeKind.Integer => value.IntegerValue,
+            GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Dice => value.IntegerValue,
             GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage => GameEventScriptNumber.ToIntegerSaturated(value.FloatValue),
             GameEventScriptBytecodeTypeKind.Boolean => value.IsTrue ? 1 : 0,
             _ => GameEventScriptNumber.ToIntegerSaturated(value.AsNumeric)
@@ -121,7 +121,7 @@ public readonly struct GesValueSlice
         ref readonly var value = ref _values![Start + index];
         return value.Kind switch
         {
-            GameEventScriptBytecodeTypeKind.Integer => value.IntegerValue,
+            GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Dice => value.IntegerValue,
             GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage => value.FloatValue,
             GameEventScriptBytecodeTypeKind.Boolean => value.IsTrue ? 1d : 0d,
             _ => value.AsNumeric

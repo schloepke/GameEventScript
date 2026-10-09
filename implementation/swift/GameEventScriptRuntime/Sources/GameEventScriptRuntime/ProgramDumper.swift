@@ -157,6 +157,8 @@ private final class GesProgramDump {
             if !operands.isEmpty { output += " " + operands.joined(separator: ", ") }
             if [.iteratorCreate, .iteratorCreateOrJump].contains(i.opcode), i.unitAndFlags >> 5 != 0 {
                 output += " mode=" + ["Normal", "Union", "Intersect", "Difference", "Lockstep", "Cartesian", "Entries"][Int(i.unitAndFlags >> 5)]
+            } else if [.move, .add, .subtract, .multiply, .divide, .power, .integerDivide, .modulo, .remainder, .min, .max, .negate, .abs, .clamp].contains(i.opcode), i.unitAndFlags & 64 != 0 {
+                output += " mode=Numeric"
             } else if i.opcode == .iteratorNext && i.unitAndFlags & 32 != 0 {
                 output += " output=Components"
             } else {

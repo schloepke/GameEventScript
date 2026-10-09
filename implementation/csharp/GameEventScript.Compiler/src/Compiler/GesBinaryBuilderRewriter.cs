@@ -1018,7 +1018,7 @@ internal sealed partial class GesBinaryBuilder
             var remove = new bool[context.Count];
             for (var moveIndex = 0; moveIndex < context.Count; moveIndex++)
             {
-                if (context.GetInstruction(moveIndex) is not { OpCode: GameEventScriptBytecodeOpCode.Move } move ||
+                if (context.GetInstruction(moveIndex) is not { OpCode: GameEventScriptBytecodeOpCode.Move, Flags: GameEventScriptInstructionFlag.None } move ||
                     move.X.Kind != GesOperandKind.Register ||
                     move.Destination.Kind != GesOperandKind.Register ||
                     !context.IsTemporary(move.X.RegisterRef))
@@ -1202,6 +1202,7 @@ internal sealed partial class GesBinaryBuilder
                     instruction.OpCode is GameEventScriptBytecodeOpCode.IteratorNext or GameEventScriptBytecodeOpCode.IteratorCreateOrJump ||
                     context.GetInstruction(index + 1) is not { } move ||
                     move.OpCode != GameEventScriptBytecodeOpCode.Move ||
+                    move.Flags != GameEventScriptInstructionFlag.None ||
                     instruction.Destination.Kind != GesOperandKind.Register ||
                     move.X.Kind != GesOperandKind.Register ||
                     move.Destination.Kind != GesOperandKind.Register ||

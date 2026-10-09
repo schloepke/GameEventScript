@@ -335,3 +335,8 @@ not original byte identity, remains the product contract.
 Compression codec bits and security section IDs are reserved only. V1 implements no
 compression, signatures, certificates, key registry, trust policy, rollback policy,
 or authenticity guarantee. Adding those features requires separate specifications.
+
+Numeric arithmetic uses the existing 128-bit V1 instruction layout: bit `0x40`
+on Move/Add/Subtract/Multiply/Divide/Power/IntegerDivide/Modulo/Remainder/Min/Max/Negate/Abs/Clamp selects strict numeric operands. Recompile source
+for the new numeric sum/average contract; previously compiled aggregates may still
+contain ordinary overloaded arithmetic. Pre-1.0 compatibility guarantees apply.

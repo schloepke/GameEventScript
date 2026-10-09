@@ -34,13 +34,13 @@ internal static class GesVmRegisterCompare
                        GameEventScriptNumber.EqualsWithinUlps(av.X, bv.X, GameEventScriptNumber.RuntimeEqualityUlps) && GameEventScriptNumber.EqualsWithinUlps(av.Y, bv.Y, GameEventScriptNumber.RuntimeEqualityUlps) &&
                        GameEventScriptNumber.EqualsWithinUlps(av.Z, bv.Z, GameEventScriptNumber.RuntimeEqualityUlps);
             case Dice when b.Kind is Dice && a.ObjectValue is int[] al && b.ObjectValue is int[] bl:
-                return Sum(al) == Sum(bl);
+                return a.IntegerValue == b.IntegerValue;
             case Dice when b.Kind == Integer && a.ObjectValue is int[] al:
-                return !b.HasUnit && Sum(al) == b.IntegerValue;
+                return !b.HasUnit && a.IntegerValue == b.IntegerValue;
             case Dice when b.IsNumeric && a.ObjectValue is int[] al:
-                return !b.HasUnit && GameEventScriptNumber.EqualsWithinUlps(Sum(al), b.AsNumeric, GameEventScriptNumber.RuntimeEqualityUlps);
+                return !b.HasUnit && GameEventScriptNumber.EqualsWithinUlps(a.IntegerValue, b.AsNumeric, GameEventScriptNumber.RuntimeEqualityUlps);
             case not Dice when a.IsNumeric && b.Kind is Dice && b.ObjectValue is int[] bl:
-                return !a.HasUnit && GameEventScriptNumber.EqualsWithinUlps(Sum(bl), a.AsNumeric, GameEventScriptNumber.RuntimeEqualityUlps);
+                return !a.HasUnit && GameEventScriptNumber.EqualsWithinUlps(b.IntegerValue, a.AsNumeric, GameEventScriptNumber.RuntimeEqualityUlps);
             case Handler when b.Kind is Handler && a.ObjectValue is GameEventScriptMessageSignature asig && b.ObjectValue is GameEventScriptMessageSignature bsig:
                 return asig.Equals(bsig);
             case Message when b.Kind is Message && a.ObjectValue is GameEventScriptMessage amsg && b.ObjectValue is GameEventScriptMessage bmsg:
@@ -92,12 +92,6 @@ internal static class GesVmRegisterCompare
         }
 
         return true;
-    }
-    private static long Sum(int[] arr)
-    {
-        long sum = 0;
-        foreach (var v in arr) sum += v;
-        return sum;
     }
     internal static void GesVmNotEqual(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {

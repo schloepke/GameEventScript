@@ -7,6 +7,9 @@ final class GesParser {
     let source: GesSource
     var tokens: [GesToken] = []
     var index = 0, expressionDepth = 0, statementDepth = 0
+    var delimiterDepth = 0
+    var forSourceDepth: Int?
+    var choiceConditionDepth: Int?
     var module = ""
 
     init(source: GesSource) {
@@ -20,6 +23,7 @@ final class GesParser {
 
     @discardableResult func advance() -> GesToken {
         let t = current
+        if ["(", "[", "{"].contains(t.syntaxText) { delimiterDepth += 1 } else if [")", "]", "}"].contains(t.syntaxText) { delimiterDepth -= 1 }
         if t.kind != "eof" { index += 1 }
         return t
     }
@@ -297,19 +301,7 @@ final class GesParser {
             }
             kind = .condition(conditions, then, otherwise)
         } else if match("for") {
-            let names = try bindingNames()
-            newlines()
-            let range = match("from")
-            let sequence: GesExpression
-            if range {
-                sequence = try rangeExpression(start)
-            } else {
-                try expect("in")
-                newlines()
-                if current.syntaxText == "from" { throw failure("Direct range requires 'from'.") }
-                sequence = try expression()
-            }
-            kind = .loop(names, sequence, range, try body())
+            kind = try forClause(start)
         } else if current.syntaxText == "random" && peek().syntaxText == "with" {
             advance()
             newlines()
@@ -320,6 +312,53 @@ final class GesParser {
             kind = .expression(try expression())
         }
         return .init(kind: kind, location: location(start, previous))
+    }
+
+    func forClause(_ start: GesToken) throws -> GesStatement.Kind {
+        let names = try bindingNames()
+        newlines()
+        let range = match("from")
+        let sequence = try forSource(start, range: range)
+        newlines()
+        if isForClauseStart(requireSourceContext: false) {
+            if statementDepth >= 32 { throw failure("Statement nesting limit exceeded.", code: "parse.sourceNestingExceeded") }
+            let next = advance()
+            newlines()
+            statementDepth += 1
+            defer { statementDepth -= 1 }
+            let inner = try forClause(next)
+            return .loop(names, sequence, range, [.init(kind: inner, location: location(next, previous))])
+        }
+        return .loop(names, sequence, range, try body())
+    }
+
+    func forSource(_ start: GesToken, range: Bool) throws -> GesExpression {
+        let saved = forSourceDepth
+        forSourceDepth = delimiterDepth
+        defer { forSourceDepth = saved }
+        if range { return try rangeExpression(start) }
+        try expect("in")
+        newlines()
+        if current.syntaxText == "from" { throw failure("Direct range requires 'from'.") }
+        return try expression()
+    }
+
+    func isForClauseStart(requireSourceContext: Bool = true) -> Bool {
+        if requireSourceContext && forSourceDepth != delimiterDepth || current.syntaxText != "and" { return false }
+        var offset = 1
+
+        func binding() -> Bool {
+            let token = peek(offset)
+            offset += 1
+            return token.kind == "word" && !Self.reserved.contains(token.syntaxText)
+        }
+
+        guard binding() else { return false }
+        while peek(offset).syntaxText == "," {
+            offset += 1
+            guard binding() else { return false }
+        }
+        return ["in", "from"].contains(peek(offset).syntaxText)
     }
 
     func node(_ kind: GesExpression.Kind, _ start: GesToken) -> GesExpression { .init(kind, location(start, previous)) }
@@ -342,8 +381,10 @@ final class GesParser {
         expressionDepth += 1
         defer { expressionDepth -= 1 }
         newlines()
+        if minimum == 0 && match("when") { return try conditionFirstChoice(previous) }
         var left = try prefix()
         while true {
+            if isForClauseStart() { break }
             if minimum <= 16 && current.kind == "superscript" {
                 let exponent = node(.literal(.integer(Int64(advance().text)!)), previous)
                 left = try combined(.binary("^", left, exponent), left, exponent)
@@ -401,9 +442,45 @@ final class GesParser {
             newlines()
             try expect("otherwise")
             let fallback = try expression(1)
+            let depth = try guardedChoiceDepth(branches, fallback: fallback)
             left = try combined(.choice(branches, fallback), left, fallback)
+            left.depth = depth
         }
         return left
+    }
+
+    func conditionFirstChoice(_ start: GesToken) throws -> GesExpression {
+        var branches: [(GesExpression, GesExpression)] = []
+        while true {
+            let condition = try choiceCondition()
+            newlines()
+            try expect("then")
+            let value = try expression(1)
+            branches.append((value, condition))
+            if !match(",") { break }
+            newlines()
+            if current.syntaxText == "otherwise" { break }
+            _ = match("or")
+            newlines()
+            try expect("when")
+        }
+        newlines()
+        try expect("otherwise")
+        let fallback = try expression(1)
+        return .init(.choice(branches, fallback), location(start, previous), depth: try guardedChoiceDepth(branches, fallback: fallback))
+    }
+
+    func guardedChoiceDepth(_ branches: [(GesExpression, GesExpression)], fallback: GesExpression) throws -> Int {
+        let depth = branches.reduce(fallback.depth) { max($0, max($1.0.depth, $1.1.depth)) } + 1
+        if depth > 32 { throw failure("Expression nesting limit exceeded.", code: "parse.sourceNestingExceeded") }
+        return depth
+    }
+
+    func choiceCondition() throws -> GesExpression {
+        let saved = choiceConditionDepth
+        choiceConditionDepth = delimiterDepth
+        defer { choiceConditionDepth = saved }
+        return try expression(1)
     }
 
     func isExpression(_ input: GesExpression) throws -> GesExpression {

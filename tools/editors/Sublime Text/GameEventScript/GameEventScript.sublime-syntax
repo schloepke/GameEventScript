@@ -71,7 +71,7 @@
       "match": "\\b(?:let|record|function|predicate)\\b"
       "scope": "keyword.other.definition.gameeventscript"
     -
-      "match": "\\b(?:if|else|for|in|from|to|when|otherwise|matching|without|with)\\b"
+      "match": "\\b(?:if|else|for|in|from|to|when|then|otherwise|matching|without|with)\\b"
       "scope": "keyword.control.gameeventscript"
     -
       "match": "\\b(?:as|be|where|nothing|constant)\\b"
@@ -498,6 +498,9 @@
           "include": "comments"
         -
           "include": "strings"
+        -
+          "match": "#numeric\\b"
+          "scope": "entity.name.tag.gameeventscript"
         -
           "match": "\\.register\\b"
           "scope": "keyword.other.declaration.gameeventscript"

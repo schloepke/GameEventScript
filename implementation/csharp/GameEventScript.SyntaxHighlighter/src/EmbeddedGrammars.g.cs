@@ -733,7 +733,7 @@ internal static class EmbeddedGrammars
             [],
             [], false),
         new(
-            "\\b(?:if|else|for|in|from|to|when|otherwise|matching|without|with)\\b",
+            "\\b(?:if|else|for|in|from|to|when|then|otherwise|matching|without|with)\\b",
             "",
             "keyword.control.gameeventscript",
             "",
@@ -1480,7 +1480,7 @@ internal static class EmbeddedGrammars
             [],
             [], false),
         new(
-            "\\b(?:if|else|for|in|from|to|when|otherwise|matching|without|with)\\b",
+            "\\b(?:if|else|for|in|from|to|when|then|otherwise|matching|without|with)\\b",
             "",
             "keyword.control.gameeventscript",
             "",

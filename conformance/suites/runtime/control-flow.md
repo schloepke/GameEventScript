@@ -1502,3 +1502,688 @@ steps:
               type: ":Number.int64"
               value: "77"
 ```
+
+---
+
+## Test: compact-dependent-loops
+
+This case verifies that compact loop clauses preserve explicit nested-loop semantics.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: compact-dependent-loops
+kind: scriptApi
+level: scenario
+sources:
+  - name: compact-dependent-loops.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  for x in [1, 2]
+    and y in [x, x + 10]
+    and z from 1 to x {
+    emit Done(value: x * 100 + y * 10 + z)
+  }
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "111" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "211" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "221" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "222" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "321" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "322" }
+```
+
+---
+
+## Test: compact-component-bindings
+
+This case verifies that compact loop clauses preserve explicit nested-loop semantics.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: compact-component-bindings
+kind: scriptApi
+level: scenario
+sources:
+  - name: compact-component-bindings.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  for x, y in [[1, 2], [3, 4]] and a, b in [[x + y, 10]] emit Done(value: a * b)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "30" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "70" }
+```
+
+---
+
+## Test: compact-empty-outer-skips-inner-effects
+
+This case verifies that compact loop clauses preserve explicit nested-loop semantics.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: compact-empty-outer-skips-inner-effects
+kind: scriptApi
+level: scenario
+sources:
+  - name: compact-empty-outer-skips-inner-effects.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  for x in [] and y in :test.fail() emit Done(value: 0)
+  for x in nothing and y in :test.fail() emit Done(value: 0)
+  for x in 123 and y in :test.fail() emit Done(value: 0)
+  for x in [1, 2] and y in [] and z in :test.fail() emit Done(value: 0)
+  emit Done(value: 1)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "1" }
+```
+
+---
+
+## Test: compact-source-expression-boundaries
+
+This case verifies that compact loop clauses preserve explicit nested-loop semantics.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: compact-source-expression-boundaries
+kind: scriptApi
+level: scenario
+sources:
+  - name: compact-source-expression-boundaries.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  let key be 1
+  for x in ([7] when true and key in [1] otherwise []) and y in [x] emit Done(value: y)
+  for x in [1, 2][:filter value where value > 0 and value in [2]] and y in [x] emit Done(value: y)
+  for x in :test.echo([5] when true and key in [1] otherwise []) and y in [x] emit Done(value: y)
+  for x from 1 to min of 1 and 2 and y from 1 to 2 step 1 and z in [x + y] emit Done(value: z)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "7" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "2" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "5" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "2" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "3" }
+```
+
+---
+
+## Test: compact-loop-sibling-scopes
+
+This case verifies that compact loop clauses preserve explicit nested-loop semantics.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: compact-loop-sibling-scopes
+kind: scriptApi
+level: scenario
+sources:
+  - name: compact-loop-sibling-scopes.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  for x in [1] and y in [x] { let z be y + 1; emit Done(value: z) }
+  for x in [3] and y in [x] { let z be y + 1; emit Done(value: z) }
+  let x be 5
+  let y be 6
+  emit Done(value: x + y)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "2" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "4" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "11" }
+```
+
+---
+
+## Test: compact-loop-depth-boundary
+
+This case verifies that compact loop clauses preserve explicit nested-loop semantics.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: compact-loop-depth-boundary
+kind: scriptApi
+level: scenario
+sources:
+  - name: compact-loop-depth-boundary.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  for x0 in [1] and x1 in [1] and x2 in [1] and x3 in [1] and x4 in [1] and x5 in [1] and x6 in [1] and x7 in [1] and x8 in [1] and x9 in [1] and x10 in [1] and x11 in [1] and x12 in [1] and x13 in [1] and x14 in [1] and x15 in [1] and x16 in [1] and x17 in [1] and x18 in [1] and x19 in [1] and x20 in [1] and x21 in [1] and x22 in [1] and x23 in [1] and x24 in [1] and x25 in [1] and x26 in [1] and x27 in [1] and x28 in [1] and x29 in [1] and x30 in [1] and x31 in [1] emit Done(value: 1)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "1" }
+```
+
+---
+
+## Test: condition-first-choice-parity
+
+This case verifies the equivalent condition-first guarded-choice expression.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: condition-first-choice-parity
+kind: scriptApi
+level: scenario
+sources:
+  - name: condition-first-choice-parity.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+function before(value) be 10 when value < 0, 20 when value = 0 otherwise 30
+function after(value) be
+  when value < 0 then 10,
+  when value = 0 then 20
+  otherwise 30
+on Start() {
+  for value in [-1, 0, 1] {
+    emit Done(value: after(value: value))
+    emit Done(value: (after(value: value) = before(value: value)) as :Number)
+  }
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "10" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "1" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "20" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "1" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "30" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "1" }
+```
+
+---
+
+## Test: condition-first-choice-short-circuit
+
+This case verifies the equivalent condition-first guarded-choice expression.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: condition-first-choice-short-circuit
+kind: scriptApi
+level: scenario
+sources:
+  - name: condition-first-choice-short-circuit.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  let value be
+    when false then :test.fail(),
+    when nothing then :test.fail(),
+    when true then 7,
+    when :test.fail() then :test.fail()
+    otherwise :test.fail()
+  emit Done(value: value)
+  emit Done(value: when false then :test.fail() otherwise 8)
+  emit Done(value: when 0 then :test.fail(), when 2 then 9 otherwise :test.fail())
+  emit Done(value: (when true then nothing otherwise :test.fail()) is nothing as :Number)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "7" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "8" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "9" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "1" }
+```
+
+---
+
+## Test: condition-first-choice-expression-contexts
+
+This case verifies the equivalent condition-first guarded-choice expression.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: condition-first-choice-expression-contexts
+kind: scriptApi
+level: scenario
+sources:
+  - name: condition-first-choice-expression-contexts.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+predicate allowed(value) be when value > 0 then true otherwise false
+function choice(value) be when value is allowed then value otherwise 0
+record :Score as { value: :Number, points: :Number computed by when value > 0 then value otherwise 0 }
+on Start() {
+  let items be [1, 2, 3][:select value => when value = 2 then 20 otherwise value]
+  emit Done(value: items[:sum])
+  emit Done(value: choice(value: -1))
+  emit Done(value: :Score(value: 5).points)
+  emit Done(value: when :test.truth then 10 otherwise 0)
+  let then be 7
+  emit Done(value: when then > 0 then then otherwise 0)
+  let mapping be [number: when true then 4 otherwise 0]
+  emit Done(value: mapping.number)
+  for x in (when true then [1, 2] otherwise []) and y in [x] emit Done(value: y)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "24" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "0" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "5" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "10" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "7" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "4" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "1" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "2" }
+```
+
+---
+
+## Test: condition-first-choice-nested-spellings
+
+This case verifies the equivalent condition-first guarded-choice expression.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: condition-first-choice-nested-spellings
+kind: scriptApi
+level: scenario
+sources:
+  - name: condition-first-choice-nested-spellings.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  emit Done(value: 10 + (when false then 0 otherwise (when true then 2 otherwise 0)))
+  emit Done(value: when (true when true otherwise false) then (3 when true otherwise 0) otherwise 0)
+  emit Done(value: (when true then 4 otherwise 0) when true otherwise 0)
+  emit Done(value: when false then 0, or when true then 5, otherwise 0)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "12" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "3" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "4" }
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "5" }
+```
+
+---
+
+## Test: condition-first-choice-multiline
+
+This case verifies the equivalent condition-first guarded-choice expression.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: condition-first-choice-multiline
+kind: scriptApi
+level: scenario
+sources:
+  - name: condition-first-choice-multiline.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  let value be
+    when // condition follows on another line
+      false
+    then
+      0,
+    when
+      true
+    then
+      6
+    otherwise
+      0
+  emit Done(value: value)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "6" }
+```

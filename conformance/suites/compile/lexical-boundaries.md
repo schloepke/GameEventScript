@@ -666,3 +666,344 @@ steps:
                 - { type: ":Text", value: "}" }
                 - { type: ":Text", value: "be" }
 ```
+
+---
+
+## Test: compact-loop-shadow
+
+This case verifies that compact clauses retain ordinary loop scope and nesting validation.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: compact-loop-shadow
+kind: compileError
+level: scenario
+sources:
+  - name: compact-loop-shadow.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { for x in [1] and x in [2] emit Done(value: x) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: {"phase": "validate", "code": "validate.shadowedVariable", "symbol": "x"}
+```
+
+---
+
+## Test: compact-loop-depth-exceeded
+
+This case verifies that compact clauses retain ordinary loop scope and nesting validation.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: compact-loop-depth-exceeded
+kind: compileError
+level: scenario
+sources:
+  - name: compact-loop-depth-exceeded.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { for x0 in [1] and x1 in [1] and x2 in [1] and x3 in [1] and x4 in [1] and x5 in [1] and x6 in [1] and x7 in [1] and x8 in [1] and x9 in [1] and x10 in [1] and x11 in [1] and x12 in [1] and x13 in [1] and x14 in [1] and x15 in [1] and x16 in [1] and x17 in [1] and x18 in [1] and x19 in [1] and x20 in [1] and x21 in [1] and x22 in [1] and x23 in [1] and x24 in [1] and x25 in [1] and x26 in [1] and x27 in [1] and x28 in [1] and x29 in [1] and x30 in [1] and x31 in [1] and x32 in [1] emit Done() }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: {"phase": "parse", "code": "parse.sourceNestingExceeded"}
+```
+
+---
+
+## Test: compact-loop-direct-range-after-in
+
+This case verifies that compact clauses retain ordinary loop scope and nesting validation.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: compact-loop-direct-range-after-in
+kind: compileError
+level: scenario
+sources:
+  - name: compact-loop-direct-range-after-in.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { for x in [1] and y in from 1 to 2 emit Done() }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: {"phase": "parse", "code": "parse.syntax"}
+```
+
+---
+
+## Test: compact-loop-binding-does-not-escape
+
+This case verifies that compact clauses retain ordinary loop scope and nesting validation.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: compact-loop-binding-does-not-escape
+kind: compileError
+level: scenario
+sources:
+  - name: compact-loop-binding-does-not-escape.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { for x in [1] and y in [x] emit Done(value: y); emit Done(value: y) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: {"phase": "compile", "code": "compile.unresolvedSymbol", "symbol": "y"}
+```
+
+---
+
+## Test: compact-loop-source-cannot-see-later-binding
+
+This case verifies that compact clauses retain ordinary loop scope and nesting validation.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: compact-loop-source-cannot-see-later-binding
+kind: compileError
+level: scenario
+sources:
+  - name: compact-loop-source-cannot-see-later-binding.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { for x in [y] and y in [1] emit Done(value: x) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: {"phase": "compile", "code": "compile.unresolvedSymbol", "symbol": "y"}
+```
+
+---
+
+## Test: condition-first-missing-then
+
+This case rejects an incomplete or mixed guarded-choice spelling.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: condition-first-missing-then
+kind: compileError
+level: scenario
+sources:
+  - name: condition-first-missing-then.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { let result be when true 1 otherwise 0 }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: parse, code: parse.syntax }
+```
+
+---
+
+## Test: condition-first-missing-otherwise
+
+This case rejects an incomplete or mixed guarded-choice spelling.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: condition-first-missing-otherwise
+kind: compileError
+level: scenario
+sources:
+  - name: condition-first-missing-otherwise.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { let result be when true then 1 }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: parse, code: parse.syntax }
+```
+
+---
+
+## Test: condition-first-mixed-value-branch
+
+This case rejects an incomplete or mixed guarded-choice spelling.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: condition-first-mixed-value-branch
+kind: compileError
+level: scenario
+sources:
+  - name: condition-first-mixed-value-branch.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { let result be when true then 1, 2 when false otherwise 0 }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: parse, code: parse.syntax }
+```
+
+---
+
+## Test: value-first-mixed-condition-branch
+
+This case rejects an incomplete or mixed guarded-choice spelling.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: value-first-mixed-condition-branch
+kind: compileError
+level: scenario
+sources:
+  - name: value-first-mixed-condition-branch.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { let result be 1 when true, when false then 2 otherwise 0 }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: parse, code: parse.syntax }
+```
+
+---
+
+## Test: condition-first-quoted-then
+
+This case rejects an incomplete or mixed guarded-choice spelling.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: condition-first-quoted-then
+kind: compileError
+level: scenario
+sources:
+  - name: condition-first-quoted-then.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { let result be when true "then" 1 otherwise 0 }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: parse, code: parse.syntax }
+```
+
+---
+
+## Test: condition-first-statement-block
+
+This case rejects an incomplete or mixed guarded-choice spelling.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: condition-first-statement-block
+kind: compileError
+level: scenario
+sources:
+  - name: condition-first-statement-block.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() { let result be when true then { emit Done() } otherwise 0 }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: parse, code: parse.syntax }
+```

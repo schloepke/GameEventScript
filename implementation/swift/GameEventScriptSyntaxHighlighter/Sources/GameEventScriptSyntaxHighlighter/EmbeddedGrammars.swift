@@ -2561,7 +2561,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\b(?:if|else|for|in|from|to|when|otherwise|matching|without|with)\\b",
+              "pattern": "\\b(?:if|else|for|in|from|to|when|then|otherwise|matching|without|with)\\b",
               "end": "",
               "name": "keyword.control.gameeventscript",
               "contentName": "",
@@ -5119,7 +5119,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\b(?:if|else|for|in|from|to|when|otherwise|matching|without|with)\\b",
+              "pattern": "\\b(?:if|else|for|in|from|to|when|then|otherwise|matching|without|with)\\b",
               "end": "",
               "name": "keyword.control.gameeventscript",
               "contentName": "",

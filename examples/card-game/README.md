@@ -22,6 +22,8 @@ Skat also uses Cartesian projection for bid values and multiple bindings through
 `filter` and `select` to arrange cards by suit and rank. Numeric point totals use
 `[:sum card => ...]`; text summaries and stateful accumulations retain `fold`.
 Adjacent selectors can share one bracket pair, such as `[:distinct :sort ascending]`.
+Mau Mau deals in rounds with `for amount in [1, 1, 1, 1, 1] and player in players`,
+which runs the same nested loops without constructing a Cartesian-product list.
 
 ## Mau Mau
 

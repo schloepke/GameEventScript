@@ -61,7 +61,7 @@ extension GesParser {
             newlines()
             try expect("of")
             var args = [try expression(9)]
-            while match("and") { args.append(try expression(9)) }
+            while !isForClauseStart() && match("and") { args.append(try expression(9)) }
             return node(.intrinsic(op, args), start)
         }
         if current.kind == "selector" && peek().syntaxText == "." {
@@ -73,11 +73,12 @@ extension GesParser {
                 args = try arguments()
             } else if match("of") {
                 args = [.init(label: "_", value: try expression(9))]
-                while match("and") { args.append(.init(label: "_", value: try expression(9))) }
+                while !isForClauseStart() && match("and") { args.append(.init(label: "_", value: try expression(9))) }
             } else if argumentLabel() {
                 repeat { args.append(try argument()) } while argumentLabel()
-            } else if ["number", "text", "tag", "constant", "type"].contains(current.kind) || current.kind == "word" && !Self.reserved.contains(current.syntaxText)
-                || ["-", "!", "[", "true", "false", "nothing", "parse", "random", "roll", "abs", "ln", "exp", "sqrt", "cbrt"].contains(current.syntaxText)
+            } else if !(choiceConditionDepth == delimiterDepth && current.syntaxText == "then")
+                && (["number", "text", "tag", "constant", "type"].contains(current.kind) || current.kind == "word" && !Self.reserved.contains(current.syntaxText)
+                    || ["-", "!", "[", "true", "false", "nothing", "parse", "random", "roll", "abs", "ln", "exp", "sqrt", "cbrt"].contains(current.syntaxText))
             {
                 args = [.init(label: "_", value: try expression(15))]
             }

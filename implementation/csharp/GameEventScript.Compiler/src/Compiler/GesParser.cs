@@ -50,6 +50,9 @@ internal sealed partial class GesParser
     private string? _sourceName;
     private int _expressionNesting;
     private int _statementNesting;
+    private int _delimiterDepth;
+    private int? _forSourceDepth;
+    private int? _choiceConditionDepth;
 
     private GesParser(GesTokenReader reader, string? sourceName, uint? sourceId)
     {
@@ -705,7 +708,7 @@ internal sealed partial class GesParser
         Expect(Of);
         SkipNewLines();
         arguments.Add(new ArgumentNode(null, ParseEqualityExpression()));
-        while (Match(OperatorAnd))
+        while (!IsForClauseStart() && Match(OperatorAnd))
         {
             SkipNewLines();
             arguments.Add(new ArgumentNode(null, ParseEqualityExpression()));
@@ -765,30 +768,61 @@ internal sealed partial class GesParser
         var identifier = bindings[0];
         SkipNewLines();
         IterationSourceNode source;
-        if (Match(In))
+        var previousSourceDepth = _forSourceDepth;
+        _forSourceDepth = _delimiterDepth;
+        try
         {
-            SkipNewLines();
-            if (Current.Kind == Identifier && string.Equals(Current.Text, "from", StringComparison.Ordinal))
+            if (Match(In))
             {
-                throw new GameEventScriptParseException("Direct ranges are not allowed after 'in'; use 'for item from ... to ...' or iterate a range variable", Current.Line, Current.Column);
+                SkipNewLines();
+                if (Current.Kind == Identifier && string.Equals(Current.Text, "from", StringComparison.Ordinal))
+                {
+                    throw new GameEventScriptParseException("Direct ranges are not allowed after 'in'; use 'for item from ... to ...' or iterate a range variable", Current.Line, Current.Column);
+                }
+
+                var sourceStart = Current;
+                source = WithRange(new CollectionIterationSourceNode(ParseExpression()), sourceStart);
             }
+            else if (MatchWord("from"))
+            {
+                var fromToken = Previous;
+                source = WithRange(new RangeIterationSourceNode(ParseRangeExpressionCore()), fromToken);
+            }
+            else
+            {
+                var token = Current;
+                throw new GameEventScriptParseException($"Expected {In} or 'from' but found {token.Text}", token.Line, token.Column);
+            }
+        }
+        finally { _forSourceDepth = previousSourceDepth; }
 
-            var sourceStart = Current;
-            source = WithRange(new CollectionIterationSourceNode(ParseExpression()), sourceStart);
-        }
-        else if (MatchWord("from"))
+        SkipNewLines();
+        StatementBodyNode body;
+        if (IsForClauseStart(requireSourceContext: false))
         {
-            var fromToken = Previous;
-            source = WithRange(new RangeIterationSourceNode(ParseRangeExpressionCore()), fromToken);
+            if (_statementNesting >= GesSourceNesting.MaximumStatementDepth) ThrowNestingLimit(CreateRange(Current));
+            Advance();
+            SkipNewLines();
+            _statementNesting++;
+            try { body = WithRange(new StatementBodyNode(false, [ParseForStatement()]), startToken); }
+            finally { _statementNesting--; }
         }
-        else
-        {
-            var token = Current;
-            throw new GameEventScriptParseException($"Expected {In} or 'from' but found {token.Text}", token.Line, token.Column);
-        }
-
-        var body = ParseStatementBody();
+        else body = ParseStatementBody();
         return WithRange(new ForStatementNode(identifier, source, body) { BindingNames = bindings }, startToken);
+    }
+
+    private bool IsForClauseStart(bool requireSourceContext = true)
+    {
+        if (requireSourceContext && _forSourceDepth != _delimiterDepth || !Is(OperatorAnd)) return false;
+        var offset = 1;
+        if (_reader.PeekSignificant(offset++).Kind != Identifier) return false;
+        while (_reader.PeekSignificant(offset).Kind == Comma)
+        {
+            offset++;
+            if (_reader.PeekSignificant(offset++).Kind != Identifier) return false;
+        }
+        var token = _reader.PeekSignificant(offset);
+        return token.Kind == In || token.Kind == Identifier && token.Text == "from";
     }
 
     private SeededRandomStatementNode ParseSeededRandomStatement()
@@ -829,6 +863,8 @@ internal sealed partial class GesParser
 
     private ExpressionNode ParseGuardedChoiceExpression()
     {
+        SkipNewLines();
+        if (Match(When)) return ParseConditionFirstChoiceExpression();
         var expression = ParseImplicationExpression();
         if (Match(When))
         {
@@ -863,6 +899,37 @@ internal sealed partial class GesParser
         }
 
         return expression;
+    }
+
+    private ExpressionNode ParseConditionFirstChoiceExpression()
+    {
+        var startToken = Previous;
+        var branches = new List<GuardedChoiceBranchNode>();
+        while (true)
+        {
+            SkipNewLines();
+            var savedConditionDepth = _choiceConditionDepth;
+            _choiceConditionDepth = _delimiterDepth;
+            ExpressionNode condition;
+            try { condition = ParseImplicationExpression(); }
+            finally { _choiceConditionDepth = savedConditionDepth; }
+            SkipNewLines();
+            ExpectWord("then");
+            SkipNewLines();
+            var value = ParseImplicationExpression();
+            branches.Add(new GuardedChoiceBranchNode(value, condition));
+            if (!Match(Comma)) break;
+            SkipNewLines();
+            if (Is(Otherwise)) break;
+            Match(OperatorOr);
+            SkipNewLines();
+            Expect(When);
+        }
+        SkipNewLines();
+        Expect(Otherwise);
+        SkipNewLines();
+        var fallback = ParseImplicationExpression();
+        return WithRange(new GuardedChoiceExpressionNode(branches, fallback), startToken);
     }
 
     private ExpressionNode ParseImplicationExpression()
@@ -971,7 +1038,7 @@ internal sealed partial class GesParser
     {
         var expression = ParseEqualityExpression();
 
-        while (Match(OperatorAnd))
+        while (!IsForClauseStart() && Match(OperatorAnd))
         {
             SkipNewLines();
             var right = ParseEqualityExpression();
@@ -2805,7 +2872,7 @@ internal sealed partial class GesParser
         {
             arguments = ParseUngroupedLabeledArgumentList();
         }
-        else if (IsExtensionUnaryArgumentStart())
+        else if (IsExtensionUnaryArgumentStart() && !(_choiceConditionDepth == _delimiterDepth && Current.Kind == Identifier && Current.Text == "then"))
         {
             arguments = new ArgumentListNode([new ArgumentNode(null, ParseUnaryExpression())]);
         }
@@ -2894,7 +2961,7 @@ internal sealed partial class GesParser
         Expect(Of);
         SkipNewLines();
         var arguments = new List<ExpressionNode> { ParseEqualityExpression() };
-        while (Match(OperatorAnd))
+        while (!IsForClauseStart() && Match(OperatorAnd))
         {
             SkipNewLines();
             arguments.Add(ParseEqualityExpression());
@@ -3353,7 +3420,12 @@ internal sealed partial class GesParser
     }
 
     private GesToken Advance()
-        => _reader.Advance();
+    {
+        var token = _reader.Advance();
+        if (token.Kind is LeftParen or LeftBracket or LeftBrace) _delimiterDepth++;
+        else if (token.Kind is RightParen or RightBracket or RightBrace) _delimiterDepth--;
+        return token;
+    }
 
     private GesToken Current => _reader.Current;
 

@@ -104,3 +104,7 @@ of full-document and incremental-line results, including every scope and offset.
 ```json
 {"name":"combined pipeline selectors","language":"ges","source":"[:cartesian a, b :filter x, y where x = y :select x, y => x][:foreach value => :ext.save(value)]","expect":[{"text":":cartesian","kind":"builtin"},{"text":":filter","kind":"builtin"},{"text":":select","kind":"builtin"},{"text":":foreach","kind":"builtin"}]}
 ```
+
+```highlight
+{"name":"condition-first guarded choice","language":"ges","source":"let rank be\n  when value = 14 then 'A',\n  when value = 13 then 'K'\n  otherwise value as :Text","expect":[{"text":"when","kind":"keyword"},{"text":"then","kind":"keyword"},{"text":"when","occurrence":1,"kind":"keyword"},{"text":"then","occurrence":1,"kind":"keyword"},{"text":"otherwise","kind":"keyword"}]}
+```

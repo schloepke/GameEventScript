@@ -582,6 +582,30 @@ defined for their value kind. A non-iterable or `nothing` source performs zero
 iterations. Each iteration assigns the next value to the immutable loop binding;
 bindings created inside a braced loop body do not escape the iteration body.
 
+A compact chain is equivalent to nested loops, with the leftmost clause outermost:
+
+```ges
+for suit in suits and rank in ranks {
+  emit Card(suit: suit, rank: rank)
+}
+
+for row from 1 to 3 and column from 1 to row emit Cell(row: row, column: column)
+```
+
+Each clause supports the existing collection/range syntax and component bindings.
+The inner source is evaluated once **per outer iteration**, may refer to preceding
+bindings, and is never evaluated if an outer source has no items. This does not
+construct a Cartesian-product list. Every clause introduces the same lexical
+scope and counts toward the same statement nesting limit as an explicit nested
+loop; bindings cannot shadow one another and do not escape the loop.
+
+At the outer level of a loop source, `and` followed by binding names and `in` or
+`from` starts another loop clause. Parenthesize a source expression containing
+that token pattern when it is intended as Boolean conjunction/membership instead.
+Inside parentheses (including argument lists), list/map literals and pipeline
+selectors, `and` retains its ordinary expression meaning. Clauses may span lines,
+and the final body may be braced or a single statement.
+
 ### Expression statements
 
 Any expression may be used as a statement. It is evaluated for its observable
@@ -733,8 +757,8 @@ true; it is false when `A` is true and `B` is false; unresolved cases produce
 
 ### Guarded Choice
 
-Guarded choices select the first value whose condition is true. `otherwise` is a
-keyword.
+Guarded choices select the first value whose condition is true. `when` and
+`otherwise` are keywords; `then` is a contextual keyword in condition-first choices.
 
 ```ges
 let status be
@@ -742,6 +766,24 @@ let status be
   #wounded when hp < maxHp,
   otherwise #healthy
 ```
+
+The condition-first spelling is an equivalent expression:
+
+```ges
+let status be
+  when hp <= 0 then #dead,
+  when hp < maxHp then #wounded
+  otherwise #healthy
+```
+
+Both spellings have the same precedence, evaluation order and result. Choose one
+spelling for an entire choice; mixing value-first and condition-first branches
+in the same chain is invalid. Separate branches with commas, optionally followed
+by `or`, as in the value-first form. A comma before `otherwise` is optional.
+Newlines may separate the keywords and expressions. `then` separates each
+condition from its result; `otherwise` is required. Branch results are expressions,
+not statement blocks. Use parentheses to nest either spelling inside a condition,
+branch result, fallback or higher-precedence expression.
 
 Branch conditions are evaluated in source order. The first condition whose truth
 view is true selects its associated value; false and indeterminate conditions are
@@ -2146,13 +2188,16 @@ let_statement ::= 'let' VARIABLE_NAME 'be' expression
 if_statement ::= 'if' if_check (';' if_check)* [';'] statement_body ['else' statement_body]
 if_check ::= expression | 'let' VARIABLE_NAME 'be' expression
 binding_names ::= VARIABLE_NAME (',' VARIABLE_NAME)*
-for_statement ::= 'for' binding_names ('in' expression | range_source) statement_body
+for_statement ::= 'for' for_clause ('and' for_clause)* statement_body
+for_clause ::= binding_names ('in' expression | range_source)
 seeded_random_statement ::= 'random' 'with' expression statement_body
 expression_statement ::= expression
 statement_body ::= statement | '{' separators [statement (statement_separator statement)*] separators '}'
 
 expression ::= guarded_choice_expression
-guarded_choice_expression ::= implication_expression ['when' implication_expression (',' ['or'] implication_expression 'when' implication_expression)* 'otherwise' implication_expression]
+guarded_choice_expression ::= value_first_choice | condition_first_choice
+value_first_choice ::= implication_expression ['when' implication_expression (',' ['or'] implication_expression 'when' implication_expression)* [','] 'otherwise' implication_expression]
+condition_first_choice ::= 'when' implication_expression 'then' implication_expression (',' ['or'] 'when' implication_expression 'then' implication_expression)* [','] 'otherwise' implication_expression
 implication_expression ::= default_expression [implication_arrow implication_expression]
 implication_arrow ::= '->' | '→' | '⇒'
 default_expression ::= collection_union_expression ('default' collection_union_expression)*

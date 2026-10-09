@@ -152,13 +152,13 @@
       "match": "\\b(?:MessageHandler|MessageNameHandler|Function|Predicate|ExtensionCall|OutboundMessage|Record|ExternalType)\\b"
       "scope": "support.type.bind-kind.gameeventscript.assembler"
     -
-      "match": "\\bNormalizeResultAsPredicate\\b"
+      "match": "\\b(?:NormalizeResultAsPredicate|Numeric)\\b"
       "scope": "constant.language.flag.gameeventscript.assembler"
     -
       "match": "\\b(?:CountAny|CountFace|FullHouse|Straight|Fibonacci|Factorial|none)\\b"
       "scope": "constant.language.gameeventscript.assembler"
     -
-      "match": "\\b(?:id|name|args|entry|requiredTags|excludedTags|flags)\\b(?=\\s*=)"
+      "match": "\\b(?:id|name|args|entry|requiredTags|excludedTags|flags|mode)\\b(?=\\s*=)"
       "scope": "variable.parameter.attribute.gameeventscript.assembler"
     -
       "match": "(?<![#A-Za-z0-9_])\\d+\\b"

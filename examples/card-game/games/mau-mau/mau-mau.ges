@@ -7,7 +7,7 @@ module examples.maumau
 
 // A jack chooses a suit, but never follows another jack. Other cards obey the wish or match suit/rank.
 predicate matches(card, top, wish) be
-    card.properties.suit = wish when not (wish is nothing)
+    card.properties.suit = wish when wish is not nothing
     otherwise (card.properties.suit = top.properties.suit or card.properties.rank = top.properties.rank)
 
 predicate fits(card, top) be
@@ -61,10 +61,8 @@ function penaltyLeft(player) be :board.actions(player: player)[:first item where
 
 on PrepareGame(players) {
     :board.create(setup: board(players: players))
-    for amount in [1, 1, 1, 1, 1] {
-        for player in players {
-            :board.take(source: #draw, destination: hand(player: player), count: amount)
-        }
+    for amount in [1, 1, 1, 1, 1] and player in players {
+        :board.take(source: #draw, destination: hand(player: player), count: amount)
     }
     :board.take(source: #draw, destination: #discard, count: 1)
 }

@@ -1013,6 +1013,12 @@ references:
   commentId: F:GameEventScript.Api.GameEventScriptBytecodeOpCode.CallExternal
   fullName: GameEventScript.Api.GameEventScriptBytecodeOpCode.CallExternal
   nameWithType: GameEventScriptBytecodeOpCode.CallExternal
+- uid: GameEventScript.Api.GameEventScriptBytecodeOpCode.Cartesian
+  name: Cartesian
+  href: api/GameEventScript.Api.GameEventScriptBytecodeOpCode.html#GameEventScript_Api_GameEventScriptBytecodeOpCode_Cartesian
+  commentId: F:GameEventScript.Api.GameEventScriptBytecodeOpCode.Cartesian
+  fullName: GameEventScript.Api.GameEventScriptBytecodeOpCode.Cartesian
+  nameWithType: GameEventScriptBytecodeOpCode.Cartesian
 - uid: GameEventScript.Api.GameEventScriptBytecodeOpCode.Cast
   name: Cast
   href: api/GameEventScript.Api.GameEventScriptBytecodeOpCode.html#GameEventScript_Api_GameEventScriptBytecodeOpCode_Cast
@@ -4790,6 +4796,12 @@ references:
   commentId: F:GameEventScript.Api.GameEventScriptInstructionFlag.NormalizeResultAsPredicate
   fullName: GameEventScript.Api.GameEventScriptInstructionFlag.NormalizeResultAsPredicate
   nameWithType: GameEventScriptInstructionFlag.NormalizeResultAsPredicate
+- uid: GameEventScript.Api.GameEventScriptInstructionFlag.Numeric
+  name: Numeric
+  href: api/GameEventScript.Api.GameEventScriptInstructionFlag.html#GameEventScript_Api_GameEventScriptInstructionFlag_Numeric
+  commentId: F:GameEventScript.Api.GameEventScriptInstructionFlag.Numeric
+  fullName: GameEventScript.Api.GameEventScriptInstructionFlag.Numeric
+  nameWithType: GameEventScriptInstructionFlag.Numeric
 - uid: GameEventScript.Api.GameEventScriptInstructionFlag.WithTags
   name: WithTags
   href: api/GameEventScript.Api.GameEventScriptInstructionFlag.html#GameEventScript_Api_GameEventScriptInstructionFlag_WithTags

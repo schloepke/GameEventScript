@@ -18,8 +18,8 @@ function value(rank) be
     10 when rank in ['J', 'Q', 'K']
     otherwise rank as :Number
 
-function deck() be ['clubs', 'spades', 'hearts', 'diamonds'][:fold cards be [], suit =>
-    cards | ranks()[:select rank => [suit: suit, rank: rank, value: value(rank: rank)]]
+function deck() be [:cartesian ['clubs', 'spades', 'hearts', 'diamonds'], ranks()
+    :select suit, rank => [suit: suit, rank: rank, value: value(rank: rank)]
 ]
 
 function hand(player) be ('hand' + (player as :Text)) as :Tag
@@ -28,7 +28,7 @@ function cards(player) be :board.cards(zone: hand(player: player))
 
 function dealer() be :board.cards(zone: #dealer) | :board.cards(zone: #hole)
 
-function low(cards) be cards[:fold points be 0, card => points + card.properties.value]
+function low(cards) be cards[:sum card => card.properties.value]
 
 function total(cards) be low(cards: cards) + (
     10 when low(cards: cards) is at most 11 and cards[:any card where card.properties.rank = 'A']

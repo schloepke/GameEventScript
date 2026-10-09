@@ -7,7 +7,7 @@ module examples.maumau
 
 // A jack chooses a suit, but never follows another jack. Other cards obey the wish or match suit/rank.
 predicate matches(card, top, wish) be
-    card.properties.suit = wish when not (wish is nothing)
+    card.properties.suit = wish when wish is not nothing
     otherwise (card.properties.suit = top.properties.suit or card.properties.rank = top.properties.rank)
 
 predicate fits(card, top) be
@@ -20,8 +20,10 @@ predicate drawable() be :board.cards(zone: #draw)[:count] is more than 0 or :boa
 
 function hand(player) be ('hand' + (player as :Text)) as :Tag
 
-function deck() be ['clubs', 'spades', 'hearts', 'diamonds'][:fold cards be [], suit =>
-    cards | ['7', '8', '9', '10', 'J', 'Q', 'K', 'A'][:select rank => [suit: suit, rank: rank]]
+function deck() be [:cartesian
+    ['clubs', 'spades', 'hearts', 'diamonds'],
+    ['7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+    :select suit, rank => [suit: suit, rank: rank]
 ]
 
 function board(players) be [
@@ -44,9 +46,10 @@ function board(players) be [
 function playable(player) be :board.cards(zone: hand(player: player))[:filter item where fits(card: item, top: :board.top(zone: #discard))]
 
 // Keep the top discard; GES owns both the selection and random order.
-function recycled() be :board.cards(zone: #discard)[:filter card where
-    card.id <> :board.top(zone: #discard).id
-][:select card => card.id][:shuffle]
+function recycled() be :board.cards(zone: #discard)[:filter card where card.id <> :board.top(zone: #discard).id
+    :select card => card.id
+    :shuffle
+]
 
 function offers(player, id) be :board.actions(player: player)[:filter item where item.id = id]
 
@@ -58,10 +61,8 @@ function penaltyLeft(player) be :board.actions(player: player)[:first item where
 
 on PrepareGame(players) {
     :board.create(setup: board(players: players))
-    for amount in [1, 1, 1, 1, 1] {
-        for player in players {
-            :board.take(source: #draw, destination: hand(player: player), count: amount)
-        }
+    for amount in [1, 1, 1, 1, 1] and player in players {
+        :board.take(source: #draw, destination: hand(player: player), count: amount)
     }
     :board.take(source: #draw, destination: #discard, count: 1)
 }
@@ -194,7 +195,7 @@ on QueuePenalty(player, count) {
         otherwise [action: #penalty, label: 'No penalty cards available', handler: WaivePenalty(action, player), area: player]
     emit ActionGroup(spec: [group: #sevenPenalty, player: player, priority: 10, data: count, actions: [
         [action: #stack, label: 'Stack 7', handler: StackSeven(action, player, card),
-            cards: :board.cards(zone: hand(player: player))[:filter card where card.properties.rank = '7'][:select card => card.id]],
+            cards: :board.cards(zone: hand(player: player))[:filter card where card.properties.rank = '7' :select card => card.id]],
         draw
     ]])
 }

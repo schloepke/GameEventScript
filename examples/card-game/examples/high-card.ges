@@ -12,15 +12,16 @@ function suit(player) be
     otherwise 'diamonds'
 
 function rank(value) be
-    'A' when value = 14,
-    'K' when value = 13,
-    'Q' when value = 12,
-    'J' when value = 11
+    when value = 14 then 'A',
+    when value = 13 then 'K',
+    when value = 12 then 'Q',
+    when value = 11 then 'J'
     otherwise value as :Text
 
 function deck(player) be (from 2 to 14)[:select value =>
     [suit: suit(player: player), rank: rank(value: value), value: value]
-][:shuffle]
+    :shuffle
+]
 
 function pile(player) be ('pile' + (player as :Text)) as :Tag
 

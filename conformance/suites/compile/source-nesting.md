@@ -1421,3 +1421,233 @@ steps:
     runtimeLimits:
       exclude: [{ any: true }]
 ```
+
+---
+
+## Test: choice-value-first-condition-boundary
+
+This case verifies that both choice spellings count every condition and branch toward the expression depth limit before optimization.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: choice-value-first-condition-boundary
+kind: scriptApi
+level: scenario
+sources:
+  - name: nesting.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  let value be 1 when true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true otherwise 0
+  emit Done(value: value)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "1" }
+```
+
+---
+
+## Test: choice-value-first-condition-exceeded
+
+This case verifies that both choice spellings count every condition and branch toward the expression depth limit before optimization.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: choice-value-first-condition-exceeded
+kind: compileError
+level: scenario
+sources:
+  - name: nesting.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  let value be 1 when true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true otherwise 0
+  emit Done(value: value)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: parse, code: parse.sourceNestingExceeded }
+```
+
+---
+
+## Test: choice-value-first-later-result-exceeded
+
+This case verifies that both choice spellings count every condition and branch toward the expression depth limit before optimization.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: choice-value-first-later-result-exceeded
+kind: compileError
+level: scenario
+sources:
+  - name: nesting.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  let value be 1 when false, 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 when false otherwise 0
+  emit Done(value: value)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: parse, code: parse.sourceNestingExceeded }
+```
+
+---
+
+## Test: choice-condition-first-condition-boundary
+
+This case verifies that both choice spellings count every condition and branch toward the expression depth limit before optimization.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: choice-condition-first-condition-boundary
+kind: scriptApi
+level: scenario
+sources:
+  - name: nesting.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  let value be when true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true then 1 otherwise 0
+  emit Done(value: value)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "1" }
+```
+
+---
+
+## Test: choice-condition-first-condition-exceeded
+
+This case verifies that both choice spellings count every condition and branch toward the expression depth limit before optimization.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: choice-condition-first-condition-exceeded
+kind: compileError
+level: scenario
+sources:
+  - name: nesting.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  let value be when true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true and true then 1 otherwise 0
+  emit Done(value: value)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: parse, code: parse.sourceNestingExceeded }
+```
+
+---
+
+## Test: choice-condition-first-later-result-exceeded
+
+This case verifies that both choice spellings count every condition and branch toward the expression depth limit before optimization.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: choice-condition-first-later-result-exceeded
+kind: compileError
+level: scenario
+sources:
+  - name: nesting.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start() {
+  let value be when false then 1, when false then 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 otherwise 0
+  emit Done(value: value)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: parse, code: parse.sourceNestingExceeded }
+```

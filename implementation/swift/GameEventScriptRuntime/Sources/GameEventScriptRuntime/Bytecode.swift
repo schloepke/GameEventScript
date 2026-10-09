@@ -486,6 +486,8 @@ public enum GameEventScriptBytecodeOpCode: UInt8, Sendable, CaseIterable {
     case constructData = 0xDE
     /// Splits Text on an explicit separator or runs of whitespace.
     case splitText = 0xDF
+    /// Materializes ordered two-element Lists from two List operands; invalid operands produce Nothing.
+    case cartesian = 0xE0
 }
 
 /// Portable value and VM-internal storage identifiers used as bytecode operands.

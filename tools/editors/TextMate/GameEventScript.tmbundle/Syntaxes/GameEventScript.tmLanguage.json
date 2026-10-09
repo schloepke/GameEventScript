@@ -63,9 +63,9 @@
           "name": "keyword.other.definition.gameeventscript"
         },
         {
-          "match": "\\b(?:if|else|for|in|from|to|when|otherwise|matching|without|with)\\b",
+          "match": "\\b(?:if|else|for|in|from|to|when|then|otherwise|matching|without|with)\\b",
           "name": "keyword.control.gameeventscript",
-          "comment": "if headers and then bodies share a local scope; else has a sibling scope, with or without braces."
+          "comment": "if headers and then bodies share a local scope; else has a sibling scope. Compact for x in A and y in B uses the existing control and word-operator scopes."
         },
         {
           "match": "\\b(?:as|be|where|nothing|constant)\\b",
@@ -343,7 +343,7 @@
           }
         },
         {
-          "match": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b",
+          "match": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|foreach|cartesian|lockstep|zip|union|intersect|difference|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b",
           "name": "support.function.selector.pipeline.gameeventscript"
         }
       ]
@@ -604,7 +604,7 @@
           }
         },
         {
-          "match": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+          "match": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
@@ -619,7 +619,7 @@
           }
         },
         {
-          "match": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+          "match": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
           "name": "meta.keyword-phrase.gameeventscript",
           "captures": {
             "1": {
@@ -877,6 +877,10 @@
             },
             {
               "include": "#strings"
+            },
+            {
+              "match": "#numeric\\b",
+              "name": "entity.name.tag.gameeventscript"
             },
             {
               "match": "\\.register\\b",

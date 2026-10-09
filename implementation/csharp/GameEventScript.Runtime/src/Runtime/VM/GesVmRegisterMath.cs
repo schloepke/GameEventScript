@@ -137,6 +137,7 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmSubtract(this GesVmState vmState, ushort dst, in GesValue a, in GesValue b)
     {
+
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
@@ -474,6 +475,7 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmMultiply(this GesVmState vmState, ushort dst, in GesValue a, in GesValue b)
     {
+
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
@@ -615,6 +617,7 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmDivide(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
+
         var dst = GesVmDivide(in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -749,11 +752,13 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmPower(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
+
         var dst = GameEventScriptNumber.Power(in a, in b);
         vmState.SetValue(destinationRegister, in dst);
     }
     internal static void GesVmFloorDivide(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
+
         var dst = GesVmFloorDivide(in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -851,6 +856,7 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmModulo(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
+
         var dst = GesVmModulo(in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -966,6 +972,7 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmRemainder(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
+
         var dst = GesVmRemainder(in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1057,6 +1064,7 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmMin(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
+
         var dst = GesVmMin(in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1277,6 +1285,7 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmMax(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
+
         var dst = GesVmMax(in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1497,6 +1506,7 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmNegate(this GesVmState vmState, ushort destinationRegister, in GesValue a)
     {
+
         var dst = GesVmNegate(in a, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1538,6 +1548,7 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmAbs(this GesVmState vmState, ushort destinationRegister, in GesValue a)
     {
+
         var dst = GesVmAbs(in a, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1581,6 +1592,7 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmClamp(this GesVmState vmState, ushort destinationRegister, in GesValue value, in GesValue min, in GesValue max)
     {
+
         var dst = GesVmClamp(in value, in min, in max, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }

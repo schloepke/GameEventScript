@@ -247,6 +247,7 @@ internal sealed class GesValidationErrors
             PredicateCallExpressionNode predicateCall => predicateCall.Value is null ? null : FindNodeInExpression(predicateCall.Value, symbol),
             ExtensionPredicateExpressionNode extensionPredicate => FindNodeInExpression(extensionPredicate.Value, symbol),
             MemberAccessExpressionNode member => FindNodeInExpression(member.Target, symbol),
+            CombinedCollectionExpressionNode combined => FindNodeInExpressions(combined.Sources, symbol),
             CollectionAccessExpressionNode collection => FindNodeInExpression(collection.Target, symbol) ?? FindNodeInSelector(collection.Selector, symbol),
             RangeExpressionNode range => FindNodeInExpression(range.FromExpression, symbol) ??
                                          FindNodeInExpression(range.ToExpression, symbol) ??
@@ -254,6 +255,9 @@ internal sealed class GesValidationErrors
             RandomExpressionNode random => FindNodeInExpression(random.FromExpression, symbol) ?? FindNodeInExpression(random.ToExpression, symbol),
             SeededRandomExpressionNode seeded => FindNodeInExpression(seeded.SeedExpression, symbol) ?? FindNodeInExpression(seeded.BodyExpression, symbol),
             VariadicTaggedExpressionNode variadic => FindNodeInExpressions(variadic.Arguments, symbol),
+            BetweenExpressionNode between => FindNodeInExpression(between.Value, symbol) ??
+                                         FindNodeInExpression(between.Minimum, symbol) ??
+                                         FindNodeInExpression(between.Maximum, symbol),
             ClampExpressionNode clamp => FindNodeInExpression(clamp.Value, symbol) ??
                                          FindNodeInExpression(clamp.Minimum, symbol) ??
                                          FindNodeInExpression(clamp.Maximum, symbol),
@@ -315,6 +319,7 @@ internal sealed class GesValidationErrors
             SumSelectorNode sumSelector => FindNodeInExpression(sumSelector.Projection, symbol),
             AverageSelectorNode averageSelector => FindNodeInExpression(averageSelector.Projection, symbol),
             FoldSelectorNode fold => (fold.Seed is null ? null : FindNodeInExpression(fold.Seed, symbol)) ?? FindNodeInExpression(fold.Projection, symbol),
+            ForeachSelectorNode each => FindNodeInExpression(each.Expression, symbol),
             SelectSelectorNode selectSelector => FindNodeInExpression(selectSelector.Projection, symbol),
             MapSelectorNode dictionarySelector => FindNodeInExpression(dictionarySelector.KeyProjection, symbol) ??
                                                          (dictionarySelector.ValueProjection is null ? null : FindNodeInExpression(dictionarySelector.ValueProjection, symbol)),

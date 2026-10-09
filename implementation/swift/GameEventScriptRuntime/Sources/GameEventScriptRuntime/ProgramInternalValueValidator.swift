@@ -36,9 +36,11 @@ enum GesProgramInternalValueValidator {
                 for (position, operand) in i.operands.enumerated() {
                     if operand == .targetRegister {
                         overwritten = overwritten || i.word0 == register
+                    } else if operand == .targetRegisterList {
+                        overwritten = overwritten || p.uint16IndexLists[Int(i.word0)].contains(register)
                     } else if operand.isRegister && i.register(operand, position) == register {
                         if !allows(i, operand, kind) { throw GameEventScriptProgramValidator.failure(.invalidOperand, 16, address) }
-                    } else if [.argumentRegisterList, .itemRegisterList, .valueRegisterList, .captureRegisterList, .tagRegisterList].contains(operand) {
+                    } else if [.argumentRegisterList, .itemRegisterList, .valueRegisterList, .captureRegisterList, .sourceRegisterList, .tagRegisterList].contains(operand) {
                         if p.uint16IndexLists[Int(i.list(operand))].contains(register) { throw GameEventScriptProgramValidator.failure(.invalidOperand, 16, address) }
                     }
                 }

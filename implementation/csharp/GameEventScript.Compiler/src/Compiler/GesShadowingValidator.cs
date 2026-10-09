@@ -140,6 +140,9 @@ internal static class GesShadowingValidator
             case TypeConstructorExpressionNode constructor:
                 VisitArguments(constructor.ArgumentList.Arguments, scope, script, errors);
                 break;
+            case CombinedCollectionExpressionNode combined:
+                VisitExpressions(combined.Sources, scope, script, errors);
+                break;
             case ListLiteralExpressionNode list:
                 VisitExpressions(list.Items, scope, script, errors);
                 break;
@@ -159,6 +162,11 @@ internal static class GesShadowingValidator
                 break;
             case VariadicTaggedExpressionNode variadic:
                 VisitExpressions(variadic.Arguments, scope, script, errors);
+                break;
+            case BetweenExpressionNode between:
+                VisitExpression(between.Value, scope, script, errors);
+                VisitExpression(between.Minimum, scope, script, errors);
+                VisitExpression(between.Maximum, scope, script, errors);
                 break;
             case ClampExpressionNode clamp:
                 VisitExpression(clamp.Value, scope, script, errors);
@@ -233,9 +241,10 @@ internal static class GesShadowingValidator
             case CountSelectorNode count: VisitBoundExpression(count.Identifier, count.Predicate, count, scope, script, errors); break;
             case ChooseSelectorNode choose:
                 if (choose.Identifier is not null && choose.Predicate is not null) VisitBoundExpression(choose.Identifier, choose.Predicate, choose, scope, script, errors);
-                if (choose.WeightIdentifier is not null && choose.WeightExpression is not null) VisitBoundExpression(choose.WeightIdentifier, choose.WeightExpression, choose, scope, script, errors);
+                if (choose.WeightIdentifier is not null && choose.WeightExpression is not null) VisitBoundExpression(choose.WeightIdentifier, choose.WeightExpression, choose with { BindingNames = choose.WeightBindingNames }, scope, script, errors);
                 break;
             case EdgeSelectorNode edge when edge.Identifier is not null && edge.Predicate is not null: VisitBoundExpression(edge.Identifier, edge.Predicate, edge, scope, script, errors); break;
+            case ForeachSelectorNode each: VisitBoundExpression(each.Identifier, each.Expression, each, scope, script, errors); break;
             case FilterSelectorNode filter: VisitBoundExpression(filter.Identifier, filter.Predicate, filter, scope, script, errors); break;
             case SumSelectorNode sum: VisitBoundExpression(sum.Identifier, sum.Projection, sum, scope, script, errors); break;
             case AverageSelectorNode average: VisitBoundExpression(average.Identifier, average.Projection, average, scope, script, errors); break;
@@ -270,9 +279,17 @@ internal static class GesShadowingValidator
 
     private static Scope CreateBinderScope(Scope parent, string identifier, ScriptNode node, ParsedScript script, GesValidationErrors errors)
     {
-        if (parent.ContainsVisible(identifier)) AddShadowError(script, errors, identifier, node);
         var child = new Scope(parent);
-        child.Declare(identifier);
+        var names = node.BindingNames.Count > 0 && node.BindingNames[0] == identifier ? node.BindingNames : new[] { identifier };
+        foreach (var name in names)
+        {
+            if (name != identifier && !GameEventScript.Runtime.GameEventScriptText.IsVariableName(name))
+                errors.Add(script, "Invalid component binding name", name, GameEventScriptSymbolKind.Variable, GameEventScriptDiagnosticCodes.ValidateInvalidIdentifierCase, node);
+            if (parent.ContainsVisible(name)) AddShadowError(script, errors, name, node);
+            if (child.ContainsVisible(name) && !parent.ContainsVisible(name))
+                errors.Add(script, "Bindings must be distinct", name, GameEventScriptSymbolKind.Variable, GameEventScriptDiagnosticCodes.ValidateDuplicateVariable, node);
+            child.Declare(name);
+        }
         return child;
     }
 

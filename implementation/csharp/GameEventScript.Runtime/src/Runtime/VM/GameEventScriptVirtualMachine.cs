@@ -178,7 +178,8 @@ internal static class GameEventScriptVirtualMachine
                         break;
 
                     case Move:
-                        vmState.SetValue(instruction.DestinationRegister, in vmState.Register(instruction.XRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) vmState.MoveNumeric(instruction.DestinationRegister, instruction.XRegister);
+                        else vmState.SetValue(instruction.DestinationRegister, in vmState.Register(instruction.XRegister));
                         break;
                     case MemberAccess:
                         vmState.GesVmMemberAccess(instruction.DestinationRegister, vmState.FetchStringByPointer(instruction.StringIndex), vmState.Register(instruction.YRegister));
@@ -360,40 +361,53 @@ internal static class GameEventScriptVirtualMachine
                         vmState.GesVmGreaterOrEqual(instruction.DestinationRegister, in vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister));
                         break;
                     case Add:
-                        vmState.GesVmAdd(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0)
+                            vmState.AddNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else vmState.GesVmAdd(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                         break;
                     case Subtract:
-                        vmState.GesVmSubtract(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) vmState.SubtractNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else vmState.GesVmSubtract(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                         break;
                     case Multiply:
-                        vmState.GesVmMultiply(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) vmState.MultiplyNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else vmState.GesVmMultiply(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                         break;
                     case Divide:
-                        vmState.GesVmDivide(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) vmState.DivideNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else vmState.GesVmDivide(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                         break;
                     case Power:
-                        vmState.GesVmPower(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) vmState.PowerNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else vmState.GesVmPower(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                         break;
                     case IntegerDivide:
-                        vmState.GesVmFloorDivide(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) vmState.FloorDivideNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else vmState.GesVmFloorDivide(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                         break;
                     case Modulo:
-                        vmState.GesVmModulo(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) vmState.ModuloNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else vmState.GesVmModulo(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                         break;
                     case Remainder:
-                        vmState.GesVmRemainder(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) vmState.RemainderNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else vmState.GesVmRemainder(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                         break;
                     case Min:
-                        vmState.GesVmMin(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) vmState.MinNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else vmState.GesVmMin(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                         break;
                     case Max:
-                        vmState.GesVmMax(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) vmState.MaxNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else vmState.GesVmMax(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                         break;
                     case Negate:
-                        vmState.GesVmNegate(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) vmState.NegateNumeric(instruction.DestinationRegister, instruction.XRegister);
+                        else vmState.GesVmNegate(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                         break;
                     case Abs:
-                        vmState.GesVmAbs(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) vmState.AbsNumeric(instruction.DestinationRegister, instruction.XRegister);
+                        else vmState.GesVmAbs(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                         break;
                     case LogN:
                         vmState.GesVmNaturalLog(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
@@ -402,7 +416,8 @@ internal static class GameEventScriptVirtualMachine
                         vmState.GesVmChance(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                         break;
                     case Clamp:
-                        vmState.GesVmClamp(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) vmState.ClampNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister, instruction.AU);
+                        else vmState.GesVmClamp(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU));
                         break;
                     case RandomTake:
                         vmState.GesVmRandom(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.RandomGenerator);
@@ -641,16 +656,19 @@ internal static class GameEventScriptVirtualMachine
                     case GameEventScriptBytecodeOpCode.Single:
                         vmState.GesVmSingle(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                         break;
+                    case Cartesian:
+                        vmState.GesVmCartesian(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), context.RuntimeBudget);
+                        break;
                     case IteratorCreate:
-                        vmState.GesVmIteratorCreate(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
+                        vmState.GesVmIteratorCreate(instruction, context.RuntimeBudget);
                         break;
                     case IteratorCreateOrJump:
-                        vmState.GesVmIteratorCreate(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
+                        vmState.GesVmIteratorCreate(instruction, context.RuntimeBudget);
                         if (vmState.IsRegisterNothing(instruction.DestinationRegister)) vmState.JumpAddress(instruction.TargetAddress);
                         break;
                     case IteratorNext:
                     {
-                        if (vmState.GesVmIteratorNext(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.TargetAddress))
+                        if (instruction.UnitAndFlags != 0 ? vmState.GesVmIteratorNextComponents(instruction) : vmState.GesVmIteratorNext(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.TargetAddress))
                         {
                             context.RuntimeBudget.ConsumeLoopIterationIfAvailable("For loop iteration exceeds the configured limit.");
                         }

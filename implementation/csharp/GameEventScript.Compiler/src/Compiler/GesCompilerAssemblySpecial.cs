@@ -12,6 +12,9 @@ internal static partial class GesCompiler
     {
         private static string? AssemblySpecialSignature(AssemblyLine line) => line.Name switch
         {
+            "Add" or "Subtract" or "Multiply" or "Divide" or "Power" or "IntegerDivide" or "Modulo" or "Remainder" or "Min" or "Max" when line.Operands.Count == 4 => "wrrt",
+            "Move" or "Negate" or "Abs" when line.Operands.Count == 3 => "wrt",
+            "Clamp" when line.Operands.Count == 5 => "wrrrt",
             "LoadInteger" when line.Operands.Count == 3 => "wiq",
             "LoadFloat" when line.Operands.Count == 3 => "wfq",
             "Cast" or "CheckType" => "wry",
@@ -64,6 +67,18 @@ internal static partial class GesCompiler
             var args = line.Operands;
             switch (line.Name)
             {
+                case "Add" or "Subtract" or "Multiply" or "Divide" or "Power" or "IntegerDivide" or "Modulo" or "Remainder" or "Min" or "Max" when args.Count == 4:
+                    if (AssemblyText(args[3]) != "numeric") throw AssemblyFailure("Unknown arithmetic mode.");
+                    _builder.NumericBinary(Enum.Parse<GameEventScriptBytecodeOpCode>(line.Name), registers[0], registers[1], registers[2]);
+                    break;
+                case "Move" or "Negate" or "Abs" when args.Count == 3:
+                    if (AssemblyText(args[2]) != "numeric") throw AssemblyFailure("Unknown arithmetic mode.");
+                    _builder.NumericUnary(Enum.Parse<GameEventScriptBytecodeOpCode>(line.Name), registers[0], registers[1]);
+                    break;
+                case "Clamp" when args.Count == 5:
+                    if (AssemblyText(args[4]) != "numeric") throw AssemblyFailure("Unknown arithmetic mode.");
+                    _builder.NumericClamp(registers[0], registers[1], registers[2], registers[3]);
+                    break;
                 case "LoadInteger" when args.Count == 3: _builder.LoadInteger(registers[0], AssemblyInteger(args[1], long.MinValue, long.MaxValue), AssemblyUnit(args[2])); break;
                 case "LoadFloat" when args.Count == 3: _builder.LoadFloat(registers[0], AssemblyNumber(args[1]), AssemblyUnit(args[2])); break;
                 case "Cast": _builder.Cast(registers[0], registers[1], AssemblyType(args[2])); break;

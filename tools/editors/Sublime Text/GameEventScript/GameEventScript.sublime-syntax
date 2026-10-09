@@ -71,7 +71,7 @@
       "match": "\\b(?:let|record|function|predicate)\\b"
       "scope": "keyword.other.definition.gameeventscript"
     -
-      "match": "\\b(?:if|else|for|in|from|to|when|otherwise|matching|without|with)\\b"
+      "match": "\\b(?:if|else|for|in|from|to|when|then|otherwise|matching|without|with)\\b"
       "scope": "keyword.control.gameeventscript"
     -
       "match": "\\b(?:as|be|where|nothing|constant)\\b"
@@ -219,7 +219,7 @@
         1: "support.function.selector.pipeline.gameeventscript"
         3: "keyword.other.definition.gameeventscript"
     -
-      "match": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b"
+      "match": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|foreach|cartesian|lockstep|zip|union|intersect|difference|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b"
       "scope": "support.function.selector.pipeline.gameeventscript"
   "extensions-and-types":
     -
@@ -363,14 +363,14 @@
         1: "keyword.operator.word.gameeventscript"
         3: "keyword.operator.word.gameeventscript"
     -
-      "match": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b"
+      "match": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
         1: "keyword.operator.word.gameeventscript"
         3: "keyword.operator.word.gameeventscript"
         5: "keyword.operator.word.gameeventscript"
     -
-      "match": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b"
+      "match": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b"
       "scope": "meta.keyword-phrase.gameeventscript"
       "captures":
         1: "keyword.operator.word.gameeventscript"
@@ -498,6 +498,9 @@
           "include": "comments"
         -
           "include": "strings"
+        -
+          "match": "#numeric\\b"
+          "scope": "entity.name.tag.gameeventscript"
         -
           "match": "\\.register\\b"
           "scope": "keyword.other.declaration.gameeventscript"

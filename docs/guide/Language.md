@@ -192,6 +192,86 @@ on Main(args) {
 This prints `160, 60`. An empty fold returns its seed; an empty reduce returns
 `nothing`.
 
+### Combine sources and bind components
+
+> **Unreleased:** these forms require the current development compiler and runtime.
+
+Use a Cartesian selector when every item from one source should be combined
+with every item from another. Bind the components directly and project the
+result into the data you need:
+
+```ges
+function deck() be [:cartesian
+    ['clubs', 'spades', 'hearts', 'diamonds'],
+    ['7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+    :select suit, rank => [suit: suit, rank: rank]
+]
+```
+
+This produces 32 card Maps in suit order, with ranks advancing inside each
+suit. `suits[:cartesian ranks][:select suit, rank => ...]` is the same form with
+a leading source. Separate brackets and compact `:selector` boundaries are
+interchangeable. For three sources, `[:cartesian A, B, C]` supplies three flat
+components.
+
+A `for` can bind components without creating a pair List for each iteration:
+
+```ges
+on Main(args) {
+    for suit, rank in [:cartesian ['clubs', 'hearts'], ['7', 'A']] {
+        emit ConsoleOut(suit, " ", rank)
+    }
+}
+```
+
+Binary List multiplication also forms a Cartesian product: `[1, 2] * [3, 4]`
+returns `[[1, 3], [1, 4], [2, 3], [2, 4]]`. It materializes the product and stays
+left-associative: `A * B * C` produces `[[a, b], c]` items. Selectors are not
+automatically rewritten into this binary opcode.
+
+| Selector | Meaning |
+| --- | --- |
+| `[:cartesian A, B, C]` | Every combination, last source advances fastest |
+| `[:lockstep A, B, C]` or `[:zip A, B, C]` | Corresponding items, stops at the shortest source |
+| `[:union A, B, C]` | Existing `\|` behavior, applied left to right |
+| `[:intersect A, B, C]` | Existing `&` behavior, applied left to right |
+| `[:difference A, B, C]` | Existing `-` behavior, applied left to right |
+
+All these forms require at least two sources, including a leading source.
+They preserve the language's sequence and type-specific behavior: List union
+retains duplicates; Map union merges keys with right-hand overrides. Infix
+`A zip B` still produces Maps with `left` and `right` fields; the selector
+produces positional Lists.
+
+One binding receives the whole item. Multiple bindings take List positions or
+Map values in key order; missing components become `nothing`, excess components
+are ignored. A scalar fills only the first binding. Direct Map iteration yields
+values; use `:entries` to bind keys too:
+
+```ges
+function greetingValues(data) be data[:entries
+    :filter key, value where key = 'hello'
+    :select key, value => value
+]
+```
+
+The filter retains each complete entry; the select then projects its value.
+The compiler can pass components directly through this pipeline. The same
+binding form works in projections such as `:sum key, value => value`, and in
+fold/reduce after the accumulator binding.
+
+`items[:foreach item => expression]` evaluates one expression per item and
+returns `nothing`. Prefer a `for` body when several statements are needed.
+All sources evaluate once, left to right, before the combined operation checks
+them. An invalid source combination returns `nothing`, but effects in later
+source expressions still run. Ordinary faults and execution limits still stop
+execution.
+Early terminals such as `:first` stop a fused pipeline, so effects in later
+projections are not executed for remaining elements.
+
+Extension names are contiguous: write `:board.cards(...)`, never
+`:board . cards(...)`. Whitespace before the argument list remains allowed.
+
 ## Schedule work and communicate
 
 `emit` delivers locally. `publish` also crosses the configured host publish
@@ -236,3 +316,18 @@ For message ordering, initialization, limits and timing, read the
 [host runtime contract](../../specs/HostRuntime.md). The
 [CLI guide](../../implementation/csharp/GameEventScript.Tool/README.md) covers
 commands and terminal behavior in full.
+
+### Numeric sums and averages
+
+`values[:sum]` and `values[:average]` aggregate numbers, quantities with compatible
+units, percentages, Boolean (0/1), and Dice (sum of rolls), matching `is numeric`.
+They do not parse text or concatenate lists or strings. A nonnumeric projected value makes the result
+`nothing`, including when it is the only element. Later projections still run.
+Empty input gives `0` for sum and `nothing` for average.
+
+```ges
+[1m, 2m][:sum]                         // 3m
+[1m, 2m][:average]                     // 1.5m
+['a', 'b'][:sum]                       // nothing
+['a', 'b'][:fold text be '', x => text + x] // 'ab'
+```

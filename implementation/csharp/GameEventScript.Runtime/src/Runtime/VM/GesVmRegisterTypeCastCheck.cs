@@ -278,19 +278,19 @@ internal static class GesVmRegisterTypeCastCheck
             }
             case GameEventScriptBytecodeTypeKind.Range when xValue.ObjectValue is GesValueRangeInteger range:
             {
-                if (xValue.IntegerValue > int.MaxValue)
+                if (xValue.CollectionCount > int.MaxValue)
                 {
                     dst.SetNothing();
                     return dst;
                 }
 
-                if (context is not null && !context.RuntimeBudget.CheckRangeLengthWithinLimit(xValue.IntegerValue, "Range length exceeds the configured limit."))
+                if (context is not null && !context.RuntimeBudget.CheckRangeLengthWithinLimit(xValue.CollectionCount, "Range length exceeds the configured limit."))
                 {
                     dst.SetList(vmState.EmptyList);
                     return dst;
                 }
 
-                var list = new GesValue[(int)xValue.IntegerValue];
+                var list = new GesValue[(int)xValue.CollectionCount];
                 var current = range.From;
                 for (var i = 0; i < list.Length; i++)
                 {
@@ -303,19 +303,19 @@ internal static class GesVmRegisterTypeCastCheck
             }
             case GameEventScriptBytecodeTypeKind.Range when xValue.ObjectValue is GesValueRangeFloat range:
             {
-                if (xValue.IntegerValue > int.MaxValue)
+                if (xValue.CollectionCount > int.MaxValue)
                 {
                     dst.SetNothing();
                     return dst;
                 }
 
-                if (context is not null && !context.RuntimeBudget.CheckRangeLengthWithinLimit(xValue.IntegerValue, "Range length exceeds the configured limit."))
+                if (context is not null && !context.RuntimeBudget.CheckRangeLengthWithinLimit(xValue.CollectionCount, "Range length exceeds the configured limit."))
                 {
                     dst.SetList(vmState.EmptyList);
                     return dst;
                 }
 
-                var list = new GesValue[(int)xValue.IntegerValue];
+                var list = new GesValue[(int)xValue.CollectionCount];
                 for (var i = 0; i < list.Length; i++)
                 {
                     list[i].SetFloat(GameEventScriptRangeMath.GetFloatTerm(range.From, range.To, range.Step, i));
@@ -522,7 +522,7 @@ internal static class GesVmRegisterTypeCastCheck
             case GameEventScriptBytecodeTypeKind.Range when xValue.ObjectValue is GesValueRangeInteger range:
             {
                 var current = range.From;
-                for (var i = 0; i < xValue.IntegerValue && i < 3; i++)
+                for (var i = 0; i < xValue.CollectionCount && i < 3; i++)
                 {
                     if (i == 0) x = current;
                     else if (i == 1) y = current;
@@ -534,7 +534,7 @@ internal static class GesVmRegisterTypeCastCheck
             }
             case GameEventScriptBytecodeTypeKind.Range when xValue.ObjectValue is GesValueRangeFloat range:
             {
-                for (var i = 0; i < xValue.IntegerValue && i < 3; i++)
+                for (var i = 0; i < xValue.CollectionCount && i < 3; i++)
                 {
                     var current = GameEventScriptRangeMath.GetFloatTerm(range.From, range.To, range.Step, i);
                     if (i == 0) x = current;
@@ -562,8 +562,8 @@ internal static class GesVmRegisterTypeCastCheck
                 if (GameEventScriptTagRules.IsValidTagName(xValue.TextValue)) return xValue;
                 else dst.SetNothing();
                 return dst;
-            case Text when xValue.ObjectValue is string text:
-                if (GameEventScriptTagRules.NormalizeTextCast(text) is { } tag) dst.SetTag(tag);
+            case Text:
+                if (GameEventScriptTagRules.NormalizeTextCast(xValue.TextValue) is { } tag) dst.SetTag(tag);
                 else dst.SetNothing();
                 return dst;
             case GameEventScriptBytecodeTypeKind.Boolean:

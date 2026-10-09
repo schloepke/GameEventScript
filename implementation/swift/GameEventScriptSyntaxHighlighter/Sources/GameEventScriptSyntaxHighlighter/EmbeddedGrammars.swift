@@ -10,7 +10,6 @@ enum EmbeddedGrammars {
             0,
             2,
             4,
-            94,
             95,
             96,
             97,
@@ -92,13 +91,13 @@ enum EmbeddedGrammars {
             173,
             174,
             175,
-            176
+            176,
+            177
           ],
           "assembly": [
-            177,
-            182,
+            178,
             183,
-            185,
+            184,
             186,
             187,
             188,
@@ -118,7 +117,8 @@ enum EmbeddedGrammars {
             202,
             203,
             204,
-            205
+            205,
+            206
           ],
           "rules": [
             {
@@ -238,6 +238,17 @@ enum EmbeddedGrammars {
                 8
               ],
               "endLast": true
+            },
+            {
+              "pattern": "#numeric\\b",
+              "end": "",
+              "name": "entity.name.tag.gameeventscript",
+              "contentName": "",
+              "captures": [],
+              "beginCaptures": [],
+              "endCaptures": [],
+              "children": [],
+              "endLast": false
             },
             {
               "pattern": "\\.register\\b",
@@ -953,7 +964,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b",
+              "pattern": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|foreach|cartesian|lockstep|zip|union|intersect|difference|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b",
               "end": "",
               "name": "support.function.selector.pipeline.gameeventscript",
               "contentName": "",
@@ -1687,7 +1698,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+              "pattern": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
               "end": "",
               "name": "meta.keyword-phrase.gameeventscript",
               "contentName": "",
@@ -1737,7 +1748,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+              "pattern": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
               "end": "",
               "name": "meta.keyword-phrase.gameeventscript",
               "contentName": "",
@@ -2550,7 +2561,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\b(?:if|else|for|in|from|to|when|otherwise|matching|without|with)\\b",
+              "pattern": "\\b(?:if|else|for|in|from|to|when|then|otherwise|matching|without|with)\\b",
               "end": "",
               "name": "keyword.control.gameeventscript",
               "contentName": "",
@@ -2814,7 +2825,8 @@ enum EmbeddedGrammars {
                 90,
                 91,
                 92,
-                93
+                93,
+                94
               ],
               "endLast": false
             },
@@ -3510,7 +3522,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b",
+              "pattern": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|foreach|cartesian|lockstep|zip|union|intersect|difference|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b",
               "end": "",
               "name": "support.function.selector.pipeline.gameeventscript",
               "contentName": "",
@@ -4244,7 +4256,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+              "pattern": "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
               "end": "",
               "name": "meta.keyword-phrase.gameeventscript",
               "contentName": "",
@@ -4294,7 +4306,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+              "pattern": "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
               "end": "",
               "name": "meta.keyword-phrase.gameeventscript",
               "contentName": "",
@@ -5107,7 +5119,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\b(?:if|else|for|in|from|to|when|otherwise|matching|without|with)\\b",
+              "pattern": "\\b(?:if|else|for|in|from|to|when|then|otherwise|matching|without|with)\\b",
               "end": "",
               "name": "keyword.control.gameeventscript",
               "contentName": "",
@@ -5296,7 +5308,6 @@ enum EmbeddedGrammars {
                 0,
                 2,
                 4,
-                94,
                 95,
                 96,
                 97,
@@ -5378,7 +5389,8 @@ enum EmbeddedGrammars {
                 173,
                 174,
                 175,
-                176
+                176,
+                177
               ],
               "endLast": false
             },
@@ -5402,7 +5414,7 @@ enum EmbeddedGrammars {
               "beginCaptures": [],
               "endCaptures": [],
               "children": [
-                178
+                179
               ],
               "endLast": true
             },
@@ -5426,7 +5438,7 @@ enum EmbeddedGrammars {
               "beginCaptures": [],
               "endCaptures": [],
               "children": [
-                180
+                181
               ],
               "endLast": true
             },
@@ -5456,12 +5468,11 @@ enum EmbeddedGrammars {
               ],
               "endCaptures": [],
               "children": [
-                179,
-                181,
+                180,
+                182,
                 0,
                 2,
                 4,
-                94,
                 95,
                 96,
                 97,
@@ -5543,7 +5554,8 @@ enum EmbeddedGrammars {
                 173,
                 174,
                 175,
-                176
+                176,
+                177
               ],
               "endLast": false
             },
@@ -5578,7 +5590,7 @@ enum EmbeddedGrammars {
               "beginCaptures": [],
               "endCaptures": [],
               "children": [
-                184
+                185
               ],
               "endLast": false
             },
@@ -5692,7 +5704,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "^\\s*(?:([A-Za-z_][A-Za-z0-9_]*):\\s*)?(@\\d{4,5}\\b\\s*)?(Nop|RegisterLocals|Jump|JumpIfTrue|JumpIfFalse|JumpIfNotTrue|JumpIfNothing|Call|CreateSeries|CallExternal|ReturnVoid|ReturnValue|EmitMessage|EmitMessageWithTags|EmitMessageValue|EmitMessageValueWithTags|PublishMessage|PublishMessageWithTags|PublishMessageValue|PublishMessageValueWithTags|Cast|CastCustom|CastUnit|CastNumeric|CheckType|CheckCustomType|CheckUnit|CheckNumeric|CheckInteger|CheckFractional|Move|MemberAccess|IndexAccess|PropertyAccess|BindHandler|LoadNothing|LoadTrue|LoadFalse|LoadInteger|LoadFloat|LoadPercentage|LoadText|LoadTag|LoadHandler|LoadMessage|StageRegister|StageNothing|StageTrue|StageFalse|StageInteger|StageFloat|StageText|StageTag|StagePercentage|CreateDice|CreateVector|CreatePoint|CreateList|CreateMap|CreateRange|CreateRangeWithStep|CreateRangeIterator|CreateRangeIteratorWithStep|CreateRangeIteratorShort|CreateRecord|CreateRecordValue|CreateExternalType|HasValue|IsEmpty|Default|Or|And|Xor|Implies|Not|Equal|NotEqual|Less|Greater|LessOrEqual|GreaterOrEqual|Add|Subtract|Multiply|Divide|Power|IntegerDivide|Modulo|Remainder|Min|Max|Negate|Abs|LogN|Chance|Clamp|RandomTake|RandomTakeFloat|RandomPush|RandomPushConstant|RandomPop|Term|Exp|Floor|Ceil|Truncate|RoundHalfEven|RoundHalfUp|RoundHalfDown|DegreeToRadians|DegreeFromRadians|WrapDegree|Sin|Cos|Tan|Asin|Acos|Atan|Atan2|Hypot2D|Hypot3D|Distance|Distance2D|Distance3D|DistanceSquared|DistanceSquared2D|DistanceSquared3D|LengthSquared|LengthSquared2D|LengthSquared3D|Normalize|Normalize2D|Normalize3D|Dot|Dot2D|Dot3D|Cross|Cross2D|Cross3D|AngleBetween|AngleBetween2D|AngleBetween3D|TakeFirst|DropFirst|TakeLast|DropLast|TakeHighest|TakeLowest|DropHighest|DropLowest|OneRandom|TakeRandom|OneWeighted|TakeWeighted|Count|StartsWith|EndsWith|Contains|ContainsAny|ContainsAll|HasAny|HasAll|ContainsValue|Union|Intersect|Zip|KeysOfMap|ValuesOfMap|EntriesOfMap|First|Last|Single|IteratorCreate|IteratorCreateOrJump|IteratorNext|IteratorClose|MapBuilderCreate|MapBuilderAdd|MapBuilderFinish|DistinctBuilderCreate|DistinctBuilderAdd|DistinctBuilderFinish|GroupBuilderCreate|GroupBuilderAdd|GroupBuilderFinish|OrderBuilderCreate|OrderBuilderAdd|OrderBuilderFinishAscending|OrderBuilderFinishDescending|Distinct|SortAscending|SortDescending|Reverse|Shuffle|ListBuilderCreate|ListBuilderAdd|ListBuilderFinish|HasPattern|TakePattern|ParseLiteral|EmitInstant|EmitAfter|PublishInstant|PublishAfter|ConstructData|SplitText)\\b",
+              "pattern": "^\\s*(?:([A-Za-z_][A-Za-z0-9_]*):\\s*)?(@\\d{4,5}\\b\\s*)?(Nop|RegisterLocals|Jump|JumpIfTrue|JumpIfFalse|JumpIfNotTrue|JumpIfNothing|Call|CreateSeries|CallExternal|ReturnVoid|ReturnValue|EmitMessage|EmitMessageWithTags|EmitMessageValue|EmitMessageValueWithTags|PublishMessage|PublishMessageWithTags|PublishMessageValue|PublishMessageValueWithTags|Cast|CastCustom|CastUnit|CastNumeric|CheckType|CheckCustomType|CheckUnit|CheckNumeric|CheckInteger|CheckFractional|Move|MemberAccess|IndexAccess|PropertyAccess|BindHandler|LoadNothing|LoadTrue|LoadFalse|LoadInteger|LoadFloat|LoadPercentage|LoadText|LoadTag|LoadHandler|LoadMessage|StageRegister|StageNothing|StageTrue|StageFalse|StageInteger|StageFloat|StageText|StageTag|StagePercentage|CreateDice|CreateVector|CreatePoint|CreateList|CreateMap|CreateRange|CreateRangeWithStep|CreateRangeIterator|CreateRangeIteratorWithStep|CreateRangeIteratorShort|CreateRecord|CreateRecordValue|CreateExternalType|HasValue|IsEmpty|Default|Or|And|Xor|Implies|Not|Equal|NotEqual|Less|Greater|LessOrEqual|GreaterOrEqual|Add|Subtract|Multiply|Divide|Power|IntegerDivide|Modulo|Remainder|Min|Max|Negate|Abs|LogN|Chance|Clamp|RandomTake|RandomTakeFloat|RandomPush|RandomPushConstant|RandomPop|Term|Exp|Floor|Ceil|Truncate|RoundHalfEven|RoundHalfUp|RoundHalfDown|DegreeToRadians|DegreeFromRadians|WrapDegree|Sin|Cos|Tan|Asin|Acos|Atan|Atan2|Hypot2D|Hypot3D|Distance|Distance2D|Distance3D|DistanceSquared|DistanceSquared2D|DistanceSquared3D|LengthSquared|LengthSquared2D|LengthSquared3D|Normalize|Normalize2D|Normalize3D|Dot|Dot2D|Dot3D|Cross|Cross2D|Cross3D|AngleBetween|AngleBetween2D|AngleBetween3D|TakeFirst|DropFirst|TakeLast|DropLast|TakeHighest|TakeLowest|DropHighest|DropLowest|OneRandom|TakeRandom|OneWeighted|TakeWeighted|Count|StartsWith|EndsWith|Contains|ContainsAny|ContainsAll|HasAny|HasAll|ContainsValue|Union|Intersect|Zip|KeysOfMap|ValuesOfMap|EntriesOfMap|First|Last|Single|IteratorCreate|IteratorCreateOrJump|IteratorNext|IteratorClose|MapBuilderCreate|MapBuilderAdd|MapBuilderFinish|DistinctBuilderCreate|DistinctBuilderAdd|DistinctBuilderFinish|GroupBuilderCreate|GroupBuilderAdd|GroupBuilderFinish|OrderBuilderCreate|OrderBuilderAdd|OrderBuilderFinishAscending|OrderBuilderFinishDescending|Distinct|SortAscending|SortDescending|Reverse|Shuffle|ListBuilderCreate|ListBuilderAdd|ListBuilderFinish|HasPattern|TakePattern|ParseLiteral|EmitInstant|EmitAfter|PublishInstant|PublishAfter|ConstructData|SplitText|Cartesian)\\b",
               "end": "",
               "name": "meta.instruction.gameeventscript.assembler",
               "contentName": "",
@@ -5923,7 +5935,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\bNormalizeResultAsPredicate\\b",
+              "pattern": "\\b(?:NormalizeResultAsPredicate|Numeric)\\b",
               "end": "",
               "name": "constant.language.flag.gameeventscript.assembler",
               "contentName": "",
@@ -5945,7 +5957,7 @@ enum EmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\b(?:id|name|args|entry|requiredTags|excludedTags|flags)\\b(?=\\s*=)",
+              "pattern": "\\b(?:id|name|args|entry|requiredTags|excludedTags|flags|mode)\\b(?=\\s*=)",
               "end": "",
               "name": "variable.parameter.attribute.gameeventscript.assembler",
               "contentName": "",

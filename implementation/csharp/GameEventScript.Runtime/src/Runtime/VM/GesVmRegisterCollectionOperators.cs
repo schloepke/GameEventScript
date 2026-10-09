@@ -79,7 +79,7 @@ internal static class GesVmRegisterCollectionOperators
                 return;
         }
 
-        if (b.IntegerValue > a.IntegerValue)
+        if (b.CollectionCount > a.CollectionCount)
         {
             vmState.SetBoolean(dst, false);
             return;
@@ -88,7 +88,7 @@ internal static class GesVmRegisterCollectionOperators
         var leftInteger = leftRange?.From ?? 0;
         var rightInteger = rightRange?.From ?? 0;
 
-        for (var i = 0L; i < b.IntegerValue; i++)
+        for (var i = 0L; i < b.CollectionCount; i++)
         {
             var left = new GesValue();
             if (leftList is not null) left = leftList[i];
@@ -192,17 +192,17 @@ internal static class GesVmRegisterCollectionOperators
                 return;
         }
 
-        if (b.IntegerValue > a.IntegerValue)
+        if (b.CollectionCount > a.CollectionCount)
         {
             vmState.SetBoolean(dst, false);
             return;
         }
 
-        var leftOffset = a.IntegerValue - b.IntegerValue;
+        var leftOffset = a.CollectionCount - b.CollectionCount;
         var leftInteger = leftRange is not null ? leftRange.From + leftRange.Step * leftOffset : 0;
         var rightInteger = rightRange?.From ?? 0;
 
-        for (var i = 0L; i < b.IntegerValue; i++)
+        for (var i = 0L; i < b.CollectionCount; i++)
         {
             var leftIndex = leftOffset + i;
             var left = new GesValue();

@@ -61,7 +61,7 @@ extension GesParser {
             newlines()
             try expect("of")
             var args = [try expression(9)]
-            while match("and") { args.append(try expression(9)) }
+            while !isForClauseStart() && match("and") { args.append(try expression(9)) }
             return node(.intrinsic(op, args), start)
         }
         if current.kind == "selector" && peek().syntaxText == "." {
@@ -73,11 +73,12 @@ extension GesParser {
                 args = try arguments()
             } else if match("of") {
                 args = [.init(label: "_", value: try expression(9))]
-                while match("and") { args.append(.init(label: "_", value: try expression(9))) }
+                while !isForClauseStart() && match("and") { args.append(.init(label: "_", value: try expression(9))) }
             } else if argumentLabel() {
                 repeat { args.append(try argument()) } while argumentLabel()
-            } else if ["number", "text", "tag", "constant", "type"].contains(current.kind) || current.kind == "word" && !Self.reserved.contains(current.syntaxText)
-                || ["-", "!", "[", "true", "false", "nothing", "parse", "random", "roll", "abs", "ln", "exp", "sqrt", "cbrt"].contains(current.syntaxText)
+            } else if !(choiceConditionDepth == delimiterDepth && current.syntaxText == "then")
+                && (["number", "text", "tag", "constant", "type"].contains(current.kind) || current.kind == "word" && !Self.reserved.contains(current.syntaxText)
+                    || ["-", "!", "[", "true", "false", "nothing", "parse", "random", "roll", "abs", "ln", "exp", "sqrt", "cbrt"].contains(current.syntaxText))
             {
                 args = [.init(label: "_", value: try expression(15))]
             }
@@ -95,21 +96,9 @@ extension GesParser {
                 result = try combined(.member(result, identifier()), result)
             } else if match("[") {
                 newlines()
-                if match(":split") {
-                    newlines()
-                    try expect("on")
-                    newlines()
-                    let whitespace = match("whitespace")
-                    let delimiter = whitespace ? node(.literal(.nothing), previous) : try expression()
-                    newlines()
-                    try expect("]")
-                    result = try combined(.constructor(whitespace ? "__splitWhitespace" : "__split", whitespace ? [.init(label: "_", value: result)] : [.init(label: "_", value: result), .init(label: "_", value: delimiter)]), result)
-                    continue
-                }
-                let selection = try selector()
+                result = try pipelineSteps(result)
                 newlines()
                 try expect("]")
-                result = try combined(.selector(result, selection), result)
             } else {
                 break
             }
@@ -380,6 +369,13 @@ extension GesParser {
 
     func collection(_ start: GesToken) throws -> GesExpression {
         newlines()
+        if isCombinedSelector {
+            let result = try pipelineSteps(nil)
+            newlines()
+            try expect("]")
+            return result
+        }
+        newlines()
         if match(":") {
             newlines()
             try expect("]")
@@ -414,10 +410,13 @@ extension GesParser {
         let t = advance()
         let ns = String(t.text.dropFirst())
         newlines()
+        let dot = current
         try expect(".")
         newlines()
         guard current.kind == "word" else { throw failure("Expected extension function.") }
-        let function = advance().text
+        let functionToken = advance()
+        if t.endLine != dot.line || t.endColumn != dot.column || dot.endLine != functionToken.line || dot.endColumn != functionToken.column { throw failure("Extension names must be contiguous.", t) }
+        let function = functionToken.text
         if ["integer", "degree"].contains(ns) { throw failure("Use direct math intrinsics.", t) }
         return (ns, function)
     }
@@ -431,12 +430,14 @@ extension GesParser {
         switch op {
         case "keys", "values", "entries", "shuffle", "reverse": break
         case "any", "all", "filter":
-            s.name = try identifier()
+            s.names = try bindingNames()
+            s.name = s.names[0]
             try expect("where")
             s.expressions = [try expression()]
         case "count", "sum", "average":
-            if current.syntaxText == "]" { break }
-            s.name = try identifier()
+            if current.syntaxText == "]" || isPipelineSelector { break }
+            s.names = try bindingNames()
+            s.name = s.names[0]
             try expect(op == "count" ? "where" : "=>")
             s.expressions = [try expression()]
         case "fold", "reduce":
@@ -447,29 +448,34 @@ extension GesParser {
             }
             try expect(",")
             newlines()
-            s.name = try identifier()
+            s.names = try bindingNames()
+            s.name = s.names[0]
             try expect("=>")
             newlines()
             s.expressions.append(try expression())
-        case "select", "min", "max", "highest", "lowest":
-            s.name = try identifier()
+        case "foreach", "select", "min", "max", "highest", "lowest":
+            s.names = try bindingNames()
+            s.name = s.names[0]
             try expect("=>")
             s.expressions = [try expression()]
             if op == "highest" { s.operation = "max" }
             if op == "lowest" { s.operation = "min" }
         case "first", "last", "single":
-            if current.syntaxText == "]" { break }
-            s.name = try identifier()
+            if current.syntaxText == "]" || isPipelineSelector { break }
+            s.names = try bindingNames()
+            s.name = s.names[0]
             try expect("where")
             s.expressions = [try expression()]
         case "map", "group", "order", "distinct":
-            if op == "distinct" && current.syntaxText == "]" { break }
+            if op == "distinct" && (current.syntaxText == "]" || isPipelineSelector) { break }
             if op == "map" {
-                s.name = try identifier()
+                s.names = try bindingNames()
+                s.name = s.names[0]
                 try expect("by")
             } else {
                 try expect("by")
-                s.name = try identifier()
+                s.names = try bindingNames()
+                s.name = s.names[0]
                 try expect("=>")
             }
             s.expressions = [try expression()]
@@ -490,15 +496,17 @@ extension GesParser {
                 s.mode = "random"
             }
             newlines()
-            if peek().syntaxText == "where" {
-                s.name = try identifier()
+            if current.kind == "word" && (peek().syntaxText == "where" || peek().syntaxText == ",") {
+                s.names = try bindingNames()
+                s.name = s.names[0]
                 try expect("where")
                 s.expressions = [try expression()]
             }
             newlines()
             if match("weighted") {
                 try expect("by")
-                s.weightName = try identifier()
+                s.weightNames = try bindingNames()
+                s.weightName = s.weightNames[0]
                 try expect("=>")
                 if s.expressions.isEmpty { s.expressions = [node(.literal(.boolean(true)), start)] }
                 s.expressions.append(try expression())

@@ -11,7 +11,27 @@ extension GesCompiler {
             prefix.insert(selector, at: 0)
             root = parent
         }
-        let terminals = ["filter", "select", "any", "all", "count", "sum", "average", "min", "max", "map", "group", "order", "distinct", "first", "last", "single", "objectMatch", "take", "drop", "draw"]
+        let terminals = ["foreach", "filter", "select", "any", "all", "count", "sum", "average", "min", "max", "map", "group", "order", "distinct", "first", "last", "single", "objectMatch", "take", "drop", "draw"]
+        if isCombinedSource(source) && ["fold", "reduce"].contains(s.operation) {
+            try fold(0, s, d, r, scope, sourceExpression: source)
+            return
+        }
+        if isCombinedSource(root) && s.operation == "distinct" && s.expressions.isEmpty {
+            // The native operation preserves Dice and rejects Map sources.
+            r.emit(.distinct, d, try expression(source, r, scope))
+            return
+        }
+        if prefix.isEmpty, case .combined(let operation, _) = root.kind,
+            ["union", "intersect", "difference"].contains(operation), ["take", "drop", "draw"].contains(s.operation)
+        {
+            // Slices preserve Dice and reject Maps unless a filter/select has produced a List.
+            try slice(s, d, expression(source, r, scope), r)
+            return
+        }
+        if isCombinedSource(root) && terminals.contains(s.operation) {
+            try pipeline(0, prefix, s, d, r, scope, sourceExpression: root)
+            return
+        }
         if !prefix.isEmpty && terminals.contains(s.operation) {
             try pipeline(expression(root, r, scope), prefix, s, d, r, scope)
             return
@@ -49,7 +69,7 @@ extension GesCompiler {
                 var values = input
                 if let condition = s.expressions.first {
                     values = r.temporary()
-                    try pipeline(input, [], .init(operation: "filter", name: s.name, expressions: [condition]), values, r, scope)
+                    try pipeline(input, [], .init(operation: "filter", name: s.name, names: s.names, expressions: [condition]), values, r, scope)
                 }
                 if s.mode == "random" { r.emit(s.count == 1 ? .oneRandom : .takeRandom, d, values, s.count == 1 ? 0 : s.count) } else { r.emit(s.count == 1 ? .first : .takeFirst, d, values, s.count == 1 ? 0 : s.count) }
             }
@@ -57,19 +77,33 @@ extension GesCompiler {
         }
     }
 
-    func fold(_ input: Int, _ s: GesSelector, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
+    func fold(_ input: Int, _ s: GesSelector, _ d: Int, _ r: GesRoutine, _ scope: GesScope, sourceExpression: GesExpression? = nil) throws {
         let accumulator = r.temporary()
         let iterator = r.temporary()
         let item = r.temporary()
+        var invalid: [Int] = []
+        var row: GesComponentRow?
+        var validSource: Int?
+        if let sourceExpression {
+            let valid = r.temporary()
+            r.emit(.loadFalse, valid)
+            var prepared: [Int] = []
+            row = try componentIterator(iterator, sourceExpression, &prepared, r, scope)
+            r.emit(.loadTrue, valid)
+            for jump in prepared { r.patch(jump, target: r.code.count) }
+            validSource = valid
+        }
         if s.operation == "fold" { _ = try expression(s.expressions[0], r, scope, destination: accumulator) } else { r.emit(.loadNothing, accumulator) }
-        let invalid = r.emit(.iteratorCreateOrJump, iterator, input)
+        if let validSource { invalid.append(r.emit(.jumpIfNotTrue, 0, validSource)) } else { invalid.append(r.emit(.iteratorCreateOrJump, iterator, input)) }
         let first = s.operation == "reduce" ? r.emit(.iteratorNext, accumulator, iterator) : nil
         let loop = r.code.count
-        let end = r.emit(.iteratorNext, item, iterator)
+        let end = r.emit(.iteratorNext, row.map { list($0.components) } ?? item, iterator, flags: row == nil ? 0 : 32)
+        if let row { r.componentRows[item] = row }
         let child = GesScope(scope)
         child.values[s.accumulator] = accumulator
-        child.values[s.name] = item
+        bindComponents(s.names, fallback: s.name, current: item, r, child)
         let value = try expression(s.expressions.last!, r, child)
+        r.componentRows.removeValue(forKey: item)
         if value != accumulator { r.emit(.move, accumulator, value) }
         r.emit(.jump, 0, 0, loop)
         r.patch(end, target: r.code.count)
@@ -77,7 +111,7 @@ extension GesCompiler {
         r.emit(.iteratorClose, 0, iterator)
         r.emit(.move, d, accumulator)
         let done = r.emit(.jump)
-        r.patch(invalid, target: r.code.count)
+        for jump in invalid { r.patch(jump, target: r.code.count) }
         r.emit(.loadNothing, d)
         r.patch(done, target: r.code.count)
     }
@@ -98,11 +132,11 @@ extension GesCompiler {
         let begin = r.code.count
         let end = r.emit(.iteratorNext, item, iterator)
         let predicateScope = GesScope(scope)
-        predicateScope.values[s.name] = item
+        bindComponents(s.names, fallback: s.name, current: item, r, predicateScope)
         var skips: [Int] = []
         if let condition = s.expressions.first { skips.append(r.emit(.jumpIfNotTrue, 0, try expression(condition, r, predicateScope))) }
         let weightScope = GesScope(scope)
-        weightScope.values[s.weightName] = item
+        bindComponents(s.weightNames, fallback: s.weightName, current: item, r, weightScope)
         let weight = try expression(s.expressions[1], r, weightScope)
         r.emit(.loadInteger, zero)
         r.emit(.loadFloat, infinity, payload: Double.infinity.bitPattern)
@@ -136,10 +170,10 @@ extension GesCompiler {
         r.emit(op, d, source, s.count)
     }
 
-    func pipeline(_ source: Int, _ prefix: [GesSelector], _ s: GesSelector, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
+    func pipeline(_ source: Int, _ prefix: [GesSelector], _ s: GesSelector, _ d: Int, _ r: GesRoutine, _ scope: GesScope, sourceExpression: GesExpression? = nil) throws {
         let identity: Bool
         if s.expressions.isEmpty { identity = true } else if case .name(let name) = s.expressions[0].kind { identity = name == s.name } else { identity = false }
-        if prefix.isEmpty && ["sum", "average"].contains(s.operation) && identity {
+        if sourceExpression == nil && s.names.count < 2 && prefix.isEmpty && ["sum", "average"].contains(s.operation) && identity {
             aggregate(source, average: s.operation == "average", d, r)
             return
         }
@@ -147,7 +181,7 @@ extension GesCompiler {
         let item = r.temporary()
         var invalid: [Int] = []
         var guardOK: [Int] = []
-        if prefix.isEmpty && ["distinct", "order", "group"].contains(s.operation) {
+        if sourceExpression == nil && prefix.isEmpty && ["distinct", "order", "group"].contains(s.operation) {
             let compare = r.temporary()
             let types: [GameEventScriptBytecodeTypeKind] = s.operation == "group" ? [.list, .map, .custom] : [.list]
             for type in types {
@@ -157,7 +191,13 @@ extension GesCompiler {
             invalid.append(r.emit(.jump))
             for i in guardOK { r.patch(i, target: r.code.count) }
         }
-        invalid.append(r.emit(.iteratorCreateOrJump, iterator, source))
+        let row: GesComponentRow?
+        if let sourceExpression {
+            row = try componentIterator(iterator, sourceExpression, &invalid, r, scope, guardedTerminal: prefix.isEmpty ? s : nil)
+        } else {
+            invalid.append(r.emit(.iteratorCreateOrJump, iterator, source))
+            row = nil
+        }
         let collection = ["filter", "select", "map", "group", "distinct", "order", "take", "drop", "draw"].contains(s.operation)
         var builder = 0
         var count = d
@@ -203,16 +243,20 @@ extension GesCompiler {
         default: r.emit(.loadNothing, d)
         }
         let start = r.code.count
-        var endJumps = [r.emit(.iteratorNext, item, iterator)]
+        var endJumps = [r.emit(.iteratorNext, row.map { list($0.components) } ?? item, iterator, flags: row == nil ? 0 : 32)]
+        if let row { r.componentRows[item] = row }
         var nextJumps: [Int] = []
         var current = item
         for p in prefix {
             let child = GesScope(scope)
-            child.values[p.name] = current
+            bindComponents(p.names, fallback: p.name, current: current, r, child)
             if p.operation == "filter" { if scalarConstant(p.expressions[0]) != .boolean(true) { nextJumps.append(r.emit(.jumpIfNotTrue, 0, try expression(p.expressions[0], r, child))) } } else { current = try expression(p.expressions[0], r, child) }
         }
         let child = GesScope(scope)
-        child.values[s.name] = current
+        if ["filter", "map", "group", "distinct", "order", "first", "last", "single", "min", "max", "objectMatch", "take", "drop", "draw"].contains(s.operation) { materializeRow(current, r) }
+        // Implicit aggregates consume the whole element, just like an identity projection.
+        if s.expressions.isEmpty && ["sum", "average"].contains(s.operation) { materializeRow(current, r) }
+        if !s.expressions.isEmpty { bindComponents(s.names, fallback: s.name, current: current, r, child) }
         let projected: Int
         if ["objectMatch", "take", "drop", "draw"].contains(s.operation) || ["count", "filter"].contains(s.operation) && s.expressions.first.flatMap(scalarConstant) == .boolean(true) {
             projected = current
@@ -220,6 +264,7 @@ extension GesCompiler {
             projected = try s.expressions.first.map { try expression($0, r, child) } ?? current
         }
         switch s.operation {
+        case "foreach": break
         case "filter", "select", "take", "drop", "draw":
             if s.operation == "filter" && s.expressions.first.flatMap(scalarConstant) != .boolean(true) { nextJumps.append(r.emit(.jumpIfNotTrue, 0, projected)) }
             r.emit(.listBuilderAdd, 0, builder, s.operation == "select" ? projected : current)
@@ -237,11 +282,11 @@ extension GesCompiler {
         case "sum", "average":
             if s.operation == "average" { r.emit(.add, count, count, one) }
             let add = r.emit(.jumpIfTrue, 0, seen)
-            r.emit(.move, sum, projected)
+            numericCopy(sum, projected, r)
             r.emit(.loadTrue, seen)
             nextJumps.append(r.emit(.jump))
             r.patch(add, target: r.code.count)
-            r.emit(.add, sum, sum, projected)
+            r.emit(.add, sum, sum, projected, flags: 64)
         case "min", "max":
             let compareJump = r.emit(.jumpIfTrue, 0, seen)
             r.emit(.move, d, current)
@@ -278,6 +323,7 @@ extension GesCompiler {
             endJumps.append(r.emit(.jump))
         default: throw error("compile.unsupportedConstruct", r.location, symbol: s.operation, phase: .compile)
         }
+        r.componentRows.removeValue(forKey: item)
         for jump in nextJumps { r.patch(jump, target: r.code.count) }
         r.emit(.jump, 0, 0, start)
         for jump in endJumps { r.patch(jump, target: r.code.count) }
@@ -303,7 +349,7 @@ extension GesCompiler {
         }
         if s.operation == "average" {
             let empty = r.emit(.jumpIfNotTrue, 0, count)
-            r.emit(.divide, d, sum, count)
+            r.emit(.divide, d, sum, count, flags: 64)
             close.append(r.emit(.jump))
             r.patch(empty, target: r.code.count)
             r.emit(.loadNothing, d)
@@ -315,6 +361,11 @@ extension GesCompiler {
         r.patch(done, target: r.code.count)
     }
 
+    func numericCopy(_ destination: Int, _ source: Int, _ r: GesRoutine) {
+        // Copy the strict numeric view without parsing text or losing units.
+        r.emit(.move, destination, source, flags: 64)
+    }
+
     func aggregate(_ source: Int, average: Bool, _ d: Int, _ r: GesRoutine) {
         let iterator = r.temporary()
         let item = r.temporary()
@@ -323,7 +374,7 @@ extension GesCompiler {
         let one = average ? r.temporary() : d
         let invalid = r.emit(.iteratorCreateOrJump, iterator, source)
         let empty = r.emit(.iteratorNext, item, iterator)
-        r.emit(.move, accumulator, item)
+        numericCopy(accumulator, item, r)
         if average {
             r.emit(.loadInteger, count, payload: 1)
             r.emit(.loadInteger, one, payload: 1)
@@ -331,7 +382,7 @@ extension GesCompiler {
         let loop = r.code.count
         let end = r.emit(.iteratorNext, item, iterator)
         if average { r.emit(.add, count, count, one) }
-        r.emit(.add, accumulator, accumulator, item)
+        r.emit(.add, accumulator, accumulator, item, flags: 64)
         r.emit(.jump, 0, 0, loop)
         r.patch(empty, target: r.code.count)
         r.emit(.iteratorClose, 0, iterator)
@@ -339,7 +390,7 @@ extension GesCompiler {
         let done1 = r.emit(.jump)
         r.patch(end, target: r.code.count)
         r.emit(.iteratorClose, 0, iterator)
-        if average { r.emit(.divide, d, accumulator, count) }
+        if average { r.emit(.divide, d, accumulator, count, flags: 64) }
         let done2 = r.emit(.jump)
         r.patch(invalid, target: r.code.count)
         r.emit(.loadNothing, d)

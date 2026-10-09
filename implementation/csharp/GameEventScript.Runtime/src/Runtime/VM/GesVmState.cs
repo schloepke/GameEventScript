@@ -13,7 +13,7 @@ using static GameEventScript.Runtime.VM.GesVmState.StateValue;
 namespace GameEventScript.Runtime.VM;
 
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-internal class GesVmState
+internal partial class GesVmState
 {
     private const int InitialRegisterCapacity = 32;
 
@@ -142,9 +142,9 @@ internal class GesVmState
     internal void SetInteger(ushort index, long value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetInteger(value, unit);
     internal void SetFloat(ushort index, double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetFloat(value, unit);
     internal void SetPercentage(ushort index, double ratio) => RegisterValues[index + RegisterFrameStart].SetPercentage(ratio);
-    internal void SetTextPointer(ushort index, ushort pointer) => RegisterValues[index + RegisterFrameStart].SetText(FetchStringByPointer(pointer), ActiveProgram!.FetchStringScalarCount(pointer));
+    internal void SetTextPointer(ushort index, ushort pointer) => RegisterValues[index + RegisterFrameStart].SetTextConstant(ActiveProgram!.TextConstants[pointer]);
     internal void SetText(ushort index, string text) => RegisterValues[index + RegisterFrameStart].SetText(text);
-    internal void SetTagPointer(ushort index, ushort pointer) => RegisterValues[index + RegisterFrameStart].SetTag(FetchStringByPointer(pointer));
+    internal void SetTagPointer(ushort index, ushort pointer) => RegisterValues[index + RegisterFrameStart].SetTextConstant(ActiveProgram!.TextConstants[pointer], tag: true);
     internal void SetTag(ushort index, string tag) => RegisterValues[index + RegisterFrameStart].SetTag(tag);
     internal void SetVector(ushort index, double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetVector(x, y, z, unit);
     internal void SetVector(ushort index, GesValueVectorPoint vector, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetVector(vector, unit);
@@ -378,12 +378,12 @@ internal class GesVmState
     internal void StageTextConstant(ushort constantIndex)
     {
         var stageRegisterIndex = AddStageRegister();
-        if (stageRegisterIndex >= 0) RegisterValues[stageRegisterIndex].SetText(FetchStringByPointer(constantIndex), ActiveProgram!.FetchStringScalarCount(constantIndex));
+        if (stageRegisterIndex >= 0) RegisterValues[stageRegisterIndex].SetTextConstant(ActiveProgram!.TextConstants[constantIndex]);
     }
     internal void StageTagConstant(ushort constantIndex)
     {
         var stageRegisterIndex = AddStageRegister();
-        if (stageRegisterIndex >= 0) RegisterValues[stageRegisterIndex].SetTag(FetchStringByPointer(constantIndex));
+        if (stageRegisterIndex >= 0) RegisterValues[stageRegisterIndex].SetTextConstant(ActiveProgram!.TextConstants[constantIndex], tag: true);
     }
     private int AddStageRegister()
     {

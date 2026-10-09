@@ -10,7 +10,30 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+- Cache Dice sums in numeric storage; keep counts in collection payloads and use
+  register-oriented numeric dispatch with strict `Move mode=Numeric` for aggregates.
+
+
 ### Added
+
+- Combined collection sources evaluate all source expressions once from left to
+  right before validation, including invalid combinations. Iterator construction
+  no longer creates and closes preliminary validation iterators.
+
+- Combined collection pipelines in C# and Swift: `cartesian`, `lockstep`/`zip`,
+  `union`, `intersect` and `difference`, with source-less or leading-source forms.
+  Multiple bindings work in loops and selector projections; compact
+  `[:entries :filter ... :select ...]` chains avoid repeated brackets.
+- List `A * B` materializes a binary Cartesian product; pipeline component
+  iteration avoids allocating an intermediate pair per row. `:foreach`
+  evaluates an expression for each item and returns `nothing`.
+- Compound iterator modes, component register outputs and the Cartesian opcode
+  (`0xE0`) are supported by both runtimes, validators, GESA and inline ASM.
+  Mau Mau, Blackjack and Skat now build decks with Cartesian projections.
+
+
+- Inclusive `value is between lower and upper` and `is not between` comparisons
+  in C# and Swift, evaluating the value once and preserving short-circuit semantics.
 
 - Parenthesized extension calls now support direct member access and collection
   selectors on their results in C# and Swift, such as `:board.top(zone: #discard).id`.
@@ -25,6 +48,38 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   instruction reports, including partial results on runtime failures.
 - Add a playable browser card-game example with editable GES rules, linked from
   the website homepage alongside Homebrew and .NET CLI installation.
+
+### Fixed
+
+- `sum` and `average` now reject nonnumeric projected values, including singletons,
+  while continuing later projections. Use `fold` for text concatenation.
+  Recompile existing binaries to adopt this contract.
+- Arithmetic, Min/Max, Negate/Abs and Clamp support Numeric mode (`0x40`),
+  exposed in inline assembly through a final `#numeric` operand and displayed
+  as `mode=Numeric`. Its accepted values match `is numeric`, including Boolean
+  as 0/1 and Dice as the roll sum. Numeric addition and aggregate first-value
+  initialization use direct register fast paths in C# and Swift.
+
+
+- Swift implicit `sum` and `average` consume complete Cartesian, lockstep and
+  entry elements, including after filters with multiple bindings.
+
+- Direct `take`, `drop` and `draw` after combined sources preserve Dice results
+  and Map restrictions in both compilers, matching selectors on stored results.
+
+- Compound Dice difference now rejects scalar values outside the positive Int32
+  face range. Selectors after combined sources preserve the result-type checks
+  of ordinary `order`, projected `distinct`, and `group` operations in both ports.
+  Swift also preserves Dice results for unprojected `distinct` after combined sources.
+
+### Migration
+
+- Extension names must be contiguous (`:namespace.name`); remove spaces or
+  comments inside qualified extension names. Whitespace before arguments is
+  still accepted.
+- Programs using the new iterator modes or Cartesian opcode require an updated
+  runtime. Recompile sources with the matching compiler/runtime version; older
+  runtimes reject these instruction forms rather than interpreting them differently.
 
 ### Performance
 

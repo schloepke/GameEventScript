@@ -54,6 +54,7 @@ extension GesCompiler {
         "GreaterOrEqual": (.greaterOrEqual, "wrr", [0, 1, 2]),
         "Add": (.add, "wrr", [0, 1, 2]),
         "Subtract": (.subtract, "wrr", [0, 1, 2]),
+        "Cartesian": (.cartesian, "wrr", [0, 1, 2]),
         "Multiply": (.multiply, "wrr", [0, 1, 2]),
         "Divide": (.divide, "wrr", [0, 1, 2]),
         "Power": (.power, "wrr", [0, 1, 2]),

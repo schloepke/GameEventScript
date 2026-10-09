@@ -8,20 +8,26 @@ predicate positive(value) be asm {
 }
 
 function square(value) be asm {
-    Multiply square, value, value
+    Multiply square, value, value, #numeric
 }
 
-// This example expects a List of ordinary numbers.
+// Match [:sum]: numeric values only, preserving units and exact integers.
+// The first value establishes the unit; only an empty collection starts at zero.
 function total(items) be asm {
     .register iterator, item
-    LoadInteger total, 0
-    IteratorCreate iterator, items
+    LoadNothing total
+    IteratorCreateOrJump iterator, items, done
+    IteratorNext item, iterator, noItems
+    Move total, item, #numeric
     next:
-    IteratorNext item, iterator, done
-    Add total, total, item
+    IteratorNext item, iterator, close
+    Add total, total, item, #numeric
     Jump next
-    done:
+    noItems:
+    LoadInteger total, 0
+    close:
     IteratorClose iterator
+    done:
 }
 
 on Main(args) {
@@ -31,7 +37,7 @@ on Main(args) {
         LoadInteger second, 7
     }
     let product be asm {
-        Multiply product, first, second
+        Multiply product, first, second, #numeric
     }
     emit ConsoleOut(product: product, square: square(value: second), total: total(items: [10, 20, 12]), positive: positive(value: product))
 }

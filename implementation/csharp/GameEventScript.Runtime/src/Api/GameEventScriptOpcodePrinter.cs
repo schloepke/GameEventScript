@@ -92,6 +92,8 @@ internal static class GameEventScriptOpcodePrinter
         KeyNameList,
         ValueRegisterList,
         CaptureRegisterList,
+        SourceRegisterList,
+        TargetRegisterList,
         TagRegisterList,
         RecordReference,
         ExternalReference
@@ -301,9 +303,10 @@ internal static class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.First => [TargetRegister, OperandRegister],
             GameEventScriptBytecodeOpCode.Last => [TargetRegister, OperandRegister],
             GameEventScriptBytecodeOpCode.Single => [TargetRegister, OperandRegister],
-            GameEventScriptBytecodeOpCode.IteratorCreate => [TargetRegister, CollectionRegister],
-            GameEventScriptBytecodeOpCode.IteratorCreateOrJump => [TargetRegister, CollectionRegister, JumpTarget],
-            GameEventScriptBytecodeOpCode.IteratorNext => [TargetRegister, IteratorRegister, JumpTarget],
+            GameEventScriptBytecodeOpCode.Cartesian => [TargetRegister, LeftRegister, RightRegister],
+            GameEventScriptBytecodeOpCode.IteratorCreate => (instruction.UnitAndFlags >> 5) is 0 or 6 ? [TargetRegister, CollectionRegister] : [TargetRegister, SourceRegisterList],
+            GameEventScriptBytecodeOpCode.IteratorCreateOrJump => (instruction.UnitAndFlags >> 5) is 0 or 6 ? [TargetRegister, CollectionRegister, JumpTarget] : [TargetRegister, SourceRegisterList, JumpTarget],
+            GameEventScriptBytecodeOpCode.IteratorNext => instruction.UnitAndFlags == 0 ? [TargetRegister, IteratorRegister, JumpTarget] : [TargetRegisterList, IteratorRegister, JumpTarget],
             GameEventScriptBytecodeOpCode.IteratorClose => [IteratorRegister],
 
             GameEventScriptBytecodeOpCode.HasAny => [TargetRegister, SourceRegister],

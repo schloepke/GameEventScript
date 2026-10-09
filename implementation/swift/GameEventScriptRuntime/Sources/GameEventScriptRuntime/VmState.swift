@@ -138,7 +138,88 @@ final class GesVmState {
 
     @inline(__always)
     func setArithmeticResult(_ instruction: GameEventScriptBytecodeInstruction, _ context: GameEventScriptContext) throws {
-        if !setIntegerArithmeticResult(instruction) { try GesMath.execute(instruction, self, context, sink: output(Int(instruction.word0))) }
+        if setIntegerArithmeticResult(instruction) { return }
+        try GesMath.execute(instruction, self, context, sink: output(Int(instruction.word0)))
+    }
+
+    @inline(__always)
+    func setNumericArithmeticResult(_ instruction: GameEventScriptBytecodeInstruction, _ context: GameEventScriptContext) throws {
+        let op = instruction.opcode
+        if op == .add || op == .subtract || op == .multiply || op == .divide || op == .integerDivide || op == .modulo || op == .remainder {
+            if setNumericIntegerArithmeticResult(instruction) { return }
+        }
+        if op == .add || op == .subtract {
+            let x = frameStart + Int(instruction.word1)
+            let y = frameStart + Int(instruction.word2)
+            guard registers[x].isNumeric, registers[y].isNumeric else {
+                setNothing(Int(instruction.word0))
+                return
+            }
+            setNumericFractionalAddResult(instruction)
+            return
+        }
+        try GesMath.execute(instruction, self, context, sink: output(Int(instruction.word0)))
+    }
+
+    @inline(__always)
+    private func setNumericIntegerArithmeticResult(_ instruction: GameEventScriptBytecodeInstruction) -> Bool {
+        let start = frameStart
+        return registers.withUnsafeMutableBufferPointer { slots in
+            let x = start + Int(instruction.word1)
+            let y = start + Int(instruction.word2)
+            guard let a = slots[x].numericIntegerValue, let b = slots[y].numericIntegerValue else { return false }
+            let destination = start + Int(instruction.word0)
+            switch GesMath.integerArithmeticResult(instruction.opcode, a, b, slots[x].unit, slots[y].unit) {
+            case .nothing: slots[destination].setNothing()
+            case .integer(let value, let unit): slots[destination].setInteger(value, unit: unit)
+            case .float(let value, let unit): slots[destination].setFloat(value, unit: unit)
+            }
+            return true
+        }
+    }
+
+    @inline(__always)
+    func numericCopy(_ destination: Int, _ source: Int) {
+        let src = frameStart + source
+        let dst = frameStart + destination
+        if !registers[src].isNumeric {
+            registers[dst].setNothing()
+        } else if registers[src].kind == .boolean {
+            registers[dst].setInteger(registers[src].truth == true ? 1 : 0)
+        } else if registers[src].kind == .dice {
+            let sum = registers[src].numericIntegerValue!
+            registers[dst].setInteger(sum)
+        } else if dst != src {
+            registers[dst] = registers[src]
+        }
+    }
+
+    @inline(never)
+    private func setNumericFractionalAddResult(_ instruction: GameEventScriptBytecodeInstruction) {
+        let start = frameStart
+        // Read scalar fields only; no full GesValue copies or collection dispatch.
+        registers.withUnsafeMutableBufferPointer { slots in
+            let x = start + Int(instruction.word1)
+            let y = start + Int(instruction.word2)
+            let left = slots[x].asNumber
+            let right = slots[y].asNumber
+            let leftPercentage = slots[x].kind == .percentage
+            let rightPercentage = slots[y].kind == .percentage
+            let unit = slots[x].unit
+            let sameUnit = unit == slots[y].unit
+            let destination = start + Int(instruction.word0)
+            let subtract = instruction.opcode == .subtract
+            if leftPercentage {
+                if rightPercentage { slots[destination].setPercentage(subtract ? left - right : left + right) } else { slots[destination].setNothing() }
+            } else if rightPercentage {
+                let delta = left * right
+                slots[destination].setFloat(subtract ? left - delta : left + delta, unit: unit)
+            } else if sameUnit {
+                slots[destination].setFloat(subtract ? left - right : left + right, unit: unit)
+            } else {
+                slots[destination].setNothing()
+            }
+        }
     }
 
     @inline(__always)

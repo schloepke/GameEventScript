@@ -75,6 +75,8 @@ enum GesOperand: Int, Sendable {
     case keyNameList
     case valueRegisterList
     case captureRegisterList
+    case sourceRegisterList
+    case targetRegisterList
     case tagRegisterList
     case recordReference
     case externalReference
@@ -173,6 +175,7 @@ extension GameEventScriptBytecodeOpCode {
         case .`greaterOrEqual`: [.targetRegister, .leftRegister, .rightRegister]
         case .`add`: [.targetRegister, .leftRegister, .rightRegister]
         case .`subtract`: [.targetRegister, .leftRegister, .rightRegister]
+        case .cartesian: [.targetRegister, .leftRegister, .rightRegister]
         case .`multiply`: [.targetRegister, .leftRegister, .rightRegister]
         case .`divide`: [.targetRegister, .leftRegister, .rightRegister]
         case .`power`: [.targetRegister, .leftRegister, .rightRegister]

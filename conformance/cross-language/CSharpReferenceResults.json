@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "8D19FF24B5C224CA660C9D20C6A58D284CDF42578A38DE56BB88F93F370855A3",
-    "documentCount": 98,
-    "caseCount": 1791
+    "sha256": "8ADEB68552BFF50134D7840910E1844F0178B3368A06324EBDC2E0E3271419C7",
+    "documentCount": 100,
+    "caseCount": 1953
   },
   "cases": [
     {
@@ -2043,6 +2043,32 @@
       "code": "conformance.passed"
     },
     {
+      "id": "compile.build-errors/between-requires-separator",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/between-requires-upper-bound",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "compile.build-errors/case-0001",
       "kind": "compileError",
       "level": "scenario",
@@ -3305,6 +3331,71 @@
       "code": "conformance.passed"
     },
     {
+      "id": "compile.inline-assembly/component-duplicate-target",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/component-iterator-alias",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/component-readonly-target",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/compound-internal-source",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.inline-assembly/compound-uninitialized-source",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "compile.inline-assembly/computed",
       "kind": "scriptApi",
       "level": "scenario",
@@ -4369,6 +4460,136 @@
       "code": "conformance.passed"
     },
     {
+      "id": "compile.lexical-boundaries/compact-loop-binding-does-not-escape",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/compact-loop-depth-exceeded",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/compact-loop-direct-range-after-in",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/compact-loop-shadow",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/compact-loop-source-cannot-see-later-binding",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/condition-first-missing-otherwise",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/condition-first-missing-then",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/condition-first-mixed-value-branch",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/condition-first-quoted-then",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/condition-first-statement-block",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "compile.lexical-boundaries/function-parameter-shadow",
       "kind": "compileError",
       "level": "scenario",
@@ -4621,6 +4842,19 @@
           "observer",
           "publish-sink",
           "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.lexical-boundaries/value-first-mixed-condition-branch",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
         ],
         "optional": []
       },
@@ -5002,6 +5236,92 @@
           "observer",
           "publish-sink",
           "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.source-nesting/choice-condition-first-condition-boundary",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.source-nesting/choice-condition-first-condition-exceeded",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.source-nesting/choice-condition-first-later-result-exceeded",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.source-nesting/choice-value-first-condition-boundary",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.source-nesting/choice-value-first-condition-exceeded",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.source-nesting/choice-value-first-later-result-exceeded",
+      "kind": "compileError",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
         ],
         "optional": []
       },
@@ -5400,6 +5720,32 @@
           "observer",
           "publish-sink",
           "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.syntax-errors/cartesian-no-source",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.syntax-errors/cartesian-one-source",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
         ],
         "optional": []
       },
@@ -5941,6 +6287,45 @@
     },
     {
       "id": "compile.syntax-errors/case-0042",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.syntax-errors/extension-newline",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.syntax-errors/extension-space-after-dot",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.syntax-errors/extension-space-before-dot",
       "kind": "compileError",
       "level": "atomic",
       "requires": {
@@ -6838,7 +7223,7 @@
       "code": "conformance.passed"
     },
     {
-      "id": "program.binary-format/invalid-reserved-opcode-e0",
+      "id": "program.binary-format/invalid-reserved-opcode-e1",
       "kind": "programBinary",
       "level": "atomic",
       "requires": {
@@ -7511,6 +7896,526 @@
       "id": "program.call-graph-depth/valid-shallow-call-chain",
       "kind": "programBinary",
       "level": "scenario",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/cartesian",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/cartesian-flags",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/duplicate-targets",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/empty-targets",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/frame-target",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/iterator-target",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/missing-sources",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/mode-0",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/mode-1",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/mode-2",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/mode-3",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/mode-4",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/mode-5",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/mode-6",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/next-reserved-flag",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-abs",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-add",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-clamp",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-divide",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-integer-divide",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-invalid-flag",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-invalid-high-flag",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-invalid-payload",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-invalid-unit",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-max",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-min",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-modulo",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-move",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-move-invalid-payload",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-move-invalid-unit",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-multiply",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-negate",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-power",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-remainder",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/numeric-subtract",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/payload",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/reserved-mode",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/source-arity",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/source-resource",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "program-binary"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "program.compound-iterators/unit",
+      "kind": "programBinary",
+      "level": "atomic",
       "requires": {
         "core": [
           "program-binary"
@@ -14320,6 +15225,227 @@
       "code": "conformance.passed"
     },
     {
+      "id": "runtime.atomic.iterator-core/bindings-fold",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/bindings-map-sorted",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/bindings-missing-and-scalar",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/cartesian-count",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/cartesian-filter-materializes",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/cartesian-filter-preserves-extra",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/cartesian-first",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/cartesian-fold",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/cartesian-infix",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/cartesian-materialized",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/cartesian-projection",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/cartesian-sources-evaluated-once",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/cartesian-sum",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "runtime.atomic.iterator-core/case-0001",
       "kind": "scriptApi",
       "level": "atomic",
@@ -14661,6 +15787,397 @@
       "code": "conformance.passed"
     },
     {
+      "id": "runtime.atomic.iterator-core/combined-selector-prefix-produces-list",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/combined-selector-result-type-guards",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/combined-slices-preserve-result-kind",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/combined-sources-evaluate-before-validation-fused",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/combined-sources-evaluate-before-validation-materialized",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/compact-selector-boundaries",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/component-asm",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/component-choose",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/component-first-with-one-item-budget",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/component-first-with-one-loop-budget",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/component-for",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/component-implicit-aggregates-use-whole-elements",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/dice-difference-face-bounds",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/difference-scalar-nothing",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/empty-cartesian-evaluates-sources",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/entries-components",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/entries-first-with-one-item-budget",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/entries-whole-item",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/fold-invalid-source-still-evaluates-seed",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/fold-source-before-seed",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/foreach-components",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/foreach-emits-in-order",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/foreach-empty",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "runtime.atomic.iterator-core/fused-projection-capture",
       "kind": "scriptApi",
       "level": "scenario",
@@ -14670,6 +16187,74 @@
           "host",
           "observer",
           "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/intersect-multiset",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/invalid-cartesian-evaluates-source",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/invalid-union-prefix-evaluates-source",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/lockstep-shortest",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
           "publish-sink",
           "vm"
         ],
@@ -14706,6 +16291,40 @@
           "host",
           "observer",
           "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/numeric-arithmetic-mode",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/strict-numeric-aggregates",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
           "publish-sink",
           "vm"
         ],
@@ -14758,6 +16377,74 @@
           "host",
           "observer",
           "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/union-map-pipeline-values",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/union-map-result",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/union-multiset",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.atomic.iterator-core/zip-selector-alias",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
           "publish-sink",
           "vm"
         ],
@@ -21335,6 +23022,618 @@
       "code": "conformance.passed"
     },
     {
+      "id": "runtime.compound-iterators/binary-cartesian",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/binary-limit",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/cartesian",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/cartesian-components",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/cartesian-three",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/components-limit",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/difference-list",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/difference-nothing",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/empty-cartesian",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/entries",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/entries-components",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/intersect-list",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/invalid-list-map",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/invalid-map-key",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/lockstep",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/lockstep-components",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/lockstep-three",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/many-sources-difference",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/many-sources-intersect",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/many-sources-union",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/map-difference",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/map-intersect",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/map-keys-union",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/map-union",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/normal-components",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/row-limit",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/search-exact",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/search-limit",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/union-list",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.compound-iterators/union-three",
+      "kind": "programBinary",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/between-comparison-semantics",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/between-evaluates-value-once-and-bounds-in-order",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/between-inclusive-boundaries",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/between-nothing-does-not-skip-upper-bound",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/between-precedence-and-context",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/between-short-circuits-upper-bound",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "runtime.control-flow/case-0001",
       "kind": "scriptApi",
       "level": "scenario",
@@ -21591,6 +23890,193 @@
     },
     {
       "id": "runtime.control-flow/case-0016",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/compact-component-bindings",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/compact-dependent-loops",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/compact-empty-outer-skips-inner-effects",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/compact-loop-depth-boundary",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/compact-loop-sibling-scopes",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/compact-source-expression-boundaries",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/condition-first-choice-expression-contexts",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/condition-first-choice-multiline",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/condition-first-choice-nested-spellings",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/condition-first-choice-parity",
+      "kind": "scriptApi",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.control-flow/condition-first-choice-short-circuit",
       "kind": "scriptApi",
       "level": "scenario",
       "requires": {

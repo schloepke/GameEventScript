@@ -345,7 +345,9 @@ public struct GesValue : IEquatable<GesValue>
     public readonly bool HasUnit => Unit.IsNumericUnit();
     internal readonly bool IsStorageObject => (Flags & StorageObjectFlag) != 0;
 
-    internal readonly string TextValue => ObjectValue as string ?? string.Empty;
+    internal readonly GameEventScriptBytecodeTypeKind NumericKind => Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice ? Integer : Kind;
+
+    internal readonly string TextValue => ObjectValue as string ?? (ObjectValue as GesTextPayload)?.Text ?? string.Empty;
 
     /// <summary>
     /// Gets the value kind.
@@ -363,7 +365,7 @@ public struct GesValue : IEquatable<GesValue>
     /// <returns>The result of the operation.</returns>
     public readonly long AsInteger() => Kind switch
     {
-        GameEventScriptBytecodeTypeKind.Integer => IntegerValue,
+        GameEventScriptBytecodeTypeKind.Integer or Dice => IntegerValue,
         Float or Percentage => ToIntegerSaturated(FloatValue),
         GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? 1 : 0,
         _ => ToIntegerSaturated(AsNumeric)
@@ -375,7 +377,7 @@ public struct GesValue : IEquatable<GesValue>
     /// <returns>The result of the operation.</returns>
     public readonly double AsNumber() => Kind switch
     {
-        GameEventScriptBytecodeTypeKind.Integer => IntegerValue,
+        GameEventScriptBytecodeTypeKind.Integer or Dice => IntegerValue,
         Float or Percentage => FloatValue,
         GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? 1d : 0d,
         _ => AsNumeric
@@ -416,9 +418,23 @@ public struct GesValue : IEquatable<GesValue>
     public readonly double Z => ObjectValue is GesValueVectorPoint vector ? vector.Z : 0d;
 
     /// <summary>
-    /// Gets the length.
+    /// Gets the Unicode scalar or collection count, saturated at Int32.MaxValue; scalar values have length zero.
     /// </summary>
-    public readonly int Length => IntegerValue < 0 ? 0 : IntegerValue > int.MaxValue ? int.MaxValue : (int)IntegerValue;
+    public readonly int Length => (int)Math.Min(CollectionCount, int.MaxValue);
+
+    internal readonly long CollectionCount => ObjectValue switch
+    {
+        GesTextPayload text => text.Count,
+        string text => text.Length,
+        int[] dice => dice.Length,
+        GesValue[] list => list.Length,
+        GesValueMap map => map.Length,
+        GesCustomObject record => record.Map.Length,
+        GesExternalValue external => external.Definition.Fields.Count,
+        GesValueRangeInteger range => range.Count,
+        GesValueRangeFloat range => range.Count,
+        _ => 0,
+    };
 
     /// <summary>
     /// Gets the message.
@@ -603,8 +619,8 @@ public struct GesValue : IEquatable<GesValue>
                 (text.Length == 0 ? None : HasValueFlag) |
                 (GameEventScriptText.EqualsAsciiIgnoreCase(text, "true") || text == "1" ? IsTrueFlag : IsFalseFlag);
         Unit = UnitNone;
-        IntegerValue = scalarCount;
-        ObjectValue = text;
+        IntegerValue = 0;
+        ObjectValue = scalarCount == text.Length ? text : new GesTextPayload(text, scalarCount);
     }
 
     internal void SetTag(string tag)
@@ -614,8 +630,16 @@ public struct GesValue : IEquatable<GesValue>
                 HasValueFlag |
                 IsFalseFlag;
         Unit = UnitNone;
-        IntegerValue = GameEventScriptText.CountScalars(tag);
+        IntegerValue = 0;
         ObjectValue = tag;
+    }
+
+    internal void SetTextConstant(in GesValue value, bool tag = false)
+    {
+        this = value;
+        if (!tag) return;
+        Kind = Tag;
+        Flags = StorageObjectFlag | HasValueFlag | IsFalseFlag;
     }
 
     internal void SetVector(double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
@@ -665,7 +689,7 @@ public struct GesValue : IEquatable<GesValue>
         Kind = Dice;
         Flags = values.Length > 0 ? HasValueFlag | StorageObjectFlag | IsNumericFlag : StorageObjectFlag | IsNumericFlag;
         Unit = UnitNone;
-        IntegerValue = values.Length;
+        IntegerValue = SumDices(values);
         Array.Sort(values);
         Array.Reverse(values);
         ObjectValue = values;
@@ -676,7 +700,7 @@ public struct GesValue : IEquatable<GesValue>
         Kind = List;
         Flags = list.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
         Unit = UnitNone;
-        IntegerValue = list.Length;
+        IntegerValue = 0;
         ObjectValue = list;
     }
 
@@ -685,7 +709,7 @@ public struct GesValue : IEquatable<GesValue>
         Kind = Map;
         Flags = valueMap.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
         Unit = UnitNone;
-        IntegerValue = valueMap.Length;
+        IntegerValue = 0;
         ObjectValue = valueMap;
     }
 
@@ -694,7 +718,7 @@ public struct GesValue : IEquatable<GesValue>
         Kind = Custom;
         Flags = record.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
         Unit = UnitNone;
-        IntegerValue = record.Length;
+        IntegerValue = 0;
         ObjectValue = new GesCustomObject(typeName, record);
     }
 
@@ -704,7 +728,7 @@ public struct GesValue : IEquatable<GesValue>
         Kind = Custom;
         Flags = StorageObjectFlag | HasValueFlag;
         Unit = UnitNone;
-        IntegerValue = externalValue.Definition.Fields.Count;
+        IntegerValue = 0;
         ObjectValue = externalValue;
     }
 
@@ -720,11 +744,10 @@ public struct GesValue : IEquatable<GesValue>
         else
         {
             ObjectValue = new GesValueRangeInteger(from, to, step);
-            if (step > 0) IntegerValue = unchecked((ulong)to - (ulong)from) / (ulong)step >= long.MaxValue ? long.MaxValue : (long)(unchecked((ulong)to - (ulong)from) / (ulong)step + 1UL);
-            else IntegerValue = unchecked((ulong)from - (ulong)to) / unchecked(0UL - (ulong)step) >= long.MaxValue ? long.MaxValue : (long)(unchecked((ulong)from - (ulong)to) / unchecked(0UL - (ulong)step) + 1UL);
+            IntegerValue = 0;
         }
 
-        Flags = IntegerValue > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
+        Flags = CollectionCount > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
     }
 
     internal void SetRange(double from, double to, double step)
@@ -753,10 +776,10 @@ public struct GesValue : IEquatable<GesValue>
         else
         {
             ObjectValue = new GesValueRangeFloat(from, to, step);
-            IntegerValue = GameEventScriptRangeMath.GetLength(from, to, step);
+            IntegerValue = 0;
         }
 
-        Flags = IntegerValue > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
+        Flags = CollectionCount > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
     }
 
     private static GesValueRangeInteger _emptyValueRangeInteger = new(0, 0, 0);
@@ -850,7 +873,7 @@ public struct GesValue : IEquatable<GesValue>
         Integer => IntegerValue,
         Float or Percentage => FloatValue,
         GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? 1d : 0d,
-        Dice when ObjectValue is int[] dices => SumDices(dices),
+        Dice => IntegerValue,
         _ => double.NaN,
     };
     private static long SumDices(int[] values)
@@ -1039,8 +1062,8 @@ public struct GesValue : IEquatable<GesValue>
                 return new GesListIterator(custom.Map.ValueList);
             case Vector or Point when ObjectValue is GesValueVectorPoint vp:
                 return new GesTripletIterator(vp);
-            case Text or Tag when this is { IsStorageObject: true, ObjectValue: string text }:
-                return new GesStringIterator(text);
+            case Text or Tag:
+                return new GesStringIterator(TextValue);
             case Series:
             default:
                 return null;

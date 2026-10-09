@@ -448,6 +448,8 @@ public static class GameEventScriptProgramDumper
             ArgumentNameList => context.ListLabel(instruction.OpCode == GameEventScriptBytecodeOpCode.ConstructData ? instruction.AU : instruction.ListIndex),
             ArgumentRegisterList => context.ListLabel(instruction.ListIndex),
             ItemRegisterList => context.ListLabel(instruction.ListIndex),
+            SourceRegisterList => context.ListLabel(instruction.XRegister),
+            TargetRegisterList => context.ListLabel(instruction.DestinationRegister),
             KeyNameList => context.ListLabel(instruction.SecondaryListIndex),
             ValueRegisterList => context.ListLabel(instruction.ListIndex),
             CaptureRegisterList => context.ListLabel(CaptureRegisterListIndex(instruction)),
@@ -467,10 +469,45 @@ public static class GameEventScriptProgramDumper
 
     private static void AppendInstructionFlags(StringBuilder builder, GameEventScriptBytecodeInstruction instruction)
     {
+        if (instruction.OpCode is GameEventScriptBytecodeOpCode.IteratorCreate or GameEventScriptBytecodeOpCode.IteratorCreateOrJump)
+        {
+            var mode = instruction.UnitAndFlags >> 5;
+            if (mode != 0) builder.Append(" mode=").Append(mode switch { 1 => "Union", 2 => "Intersect", 3 => "Difference", 4 => "Lockstep", 5 => "Cartesian", 6 => "Entries", _ => "Invalid" });
+            return;
+        }
+        if (instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorNext)
+        {
+            if (instruction.UnitAndFlags != 0) builder.Append(" output=Components");
+            return;
+        }
+        if (instruction.OpCode is GameEventScriptBytecodeOpCode.Move
+            or GameEventScriptBytecodeOpCode.Add
+            or GameEventScriptBytecodeOpCode.Subtract
+            or GameEventScriptBytecodeOpCode.Multiply
+            or GameEventScriptBytecodeOpCode.Divide
+            or GameEventScriptBytecodeOpCode.Power
+            or GameEventScriptBytecodeOpCode.IntegerDivide
+            or GameEventScriptBytecodeOpCode.Modulo
+            or GameEventScriptBytecodeOpCode.Remainder
+            or GameEventScriptBytecodeOpCode.Min
+            or GameEventScriptBytecodeOpCode.Max
+            or GameEventScriptBytecodeOpCode.Negate
+            or GameEventScriptBytecodeOpCode.Abs
+            or GameEventScriptBytecodeOpCode.Clamp)
+        {
+            if ((instruction.UnitAndFlags & 0x40) != 0) builder.Append(" mode=Numeric");
+            return;
+        }
+        if (GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode))
+        {
+            var sendFlags = instruction.UnitAndFlags & 0xC0;
+            if (sendFlags != 0) builder.Append(" flags=").Append(sendFlags == 0x40 ? "WithTags" : sendFlags == 0x80 ? "Indirect" : "WithTags, Indirect");
+            return;
+        }
         var flags = GameEventScriptBytecodeInstruction.DecodeInstructionFlags(instruction.UnitAndFlags);
         if (flags != GameEventScriptInstructionFlag.None)
         {
-            builder.Append(" flags=").Append(flags);
+            builder.Append(" flags=").Append(flags == GameEventScriptInstructionFlag.NormalizeResultAsPredicate ? "NormalizeResultAsPredicate" : flags.ToString());
         }
     }
 
@@ -1345,6 +1382,10 @@ public static class GameEventScriptProgramDumper
                     return (instruction.SecondaryListIndex, "Keys", ListRole.Texts);
                 case ArgumentRegisterList:
                     return (instruction.ListIndex, "Args", ListRole.Registers);
+                case SourceRegisterList:
+                    return (instruction.XRegister, "Sources", ListRole.Registers);
+                case TargetRegisterList:
+                    return (instruction.DestinationRegister, "Targets", ListRole.Registers);
                 case ItemRegisterList:
                     return (instruction.ListIndex, "Items", ListRole.Registers);
                 case ValueRegisterList:

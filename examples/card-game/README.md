@@ -10,6 +10,21 @@ The source lives here in version control. The Website workflow builds and tests
 the example and publishes its static output at `/examples/card-game/`.
 All generated files and downloaded tools live below `artifacts/card-game`.
 
+## Deck definitions
+
+Mau Mau, Blackjack and Skat combine suits and ranks with
+`[:cartesian suits, ranks :select suit, rank => ...]`. The projection builds
+one card Map per combination without an intermediate List of pairs. The
+example uses the repository's current compiler/runtime; released versions
+without collection-source support cannot compile these scripts.
+
+Skat also uses Cartesian projection for bid values and multiple bindings through
+`filter` and `select` to arrange cards by suit and rank. Numeric point totals use
+`[:sum card => ...]`; text summaries and stateful accumulations retain `fold`.
+Adjacent selectors can share one bracket pair, such as `[:distinct :sort ascending]`.
+Mau Mau deals in rounds with `for amount in [1, 1, 1, 1, 1] and player in players`,
+which runs the same nested loops without constructing a Cartesian-product list.
+
 ## Mau Mau
 
 Mau Mau uses a 32-card deck (7–A, four suits), five cards each, and a

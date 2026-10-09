@@ -199,8 +199,9 @@ bits 6     WithTags (result-bearing sends only)
 bits 7     Indirect (result-bearing sends only)
 ```
 
-Flag meanings are opcode-specific. Result-bearing sends reject bit 5; existing
-instructions reject bits 6 and 7. Undefined flag combinations are invalid.
+Flag meanings are opcode-specific. Result-bearing sends reject bit 5; instructions other than iterator creation reject bits 6 and 7. Iterator creation
+uses bits 5..7 as the mode field defined below; IteratorNext uses bit 5 for
+component output. Iterator instructions require zero UnitId. Undefined flag combinations are invalid.
 
 The UnitId map keeps the defined ids stable and reserves
 room for likely game-domain units:
@@ -384,7 +385,7 @@ groups are:
 0xA0 Group 3: collection slicing, text/collection operators, map projections
 0xB0 Group 3 membership, collection algebra, map projections, element terminals
 0xC0 Group 3 iterators, aggregations, weighted terminals, collect terminals
-0xD0 Group 3 generated collection/order/group/distinct builders, pattern operators, literal parsing, result-bearing sends, reserved tail 0xE0..0xFF
+0xD0 Group 3 generated collection/order/group/distinct builders, pattern operators, literal parsing, result-bearing sends, Cartesian, reserved tail 0xE1..0xFF
 ```
 
 The exhaustive [canonical opcode field map](#canonical-opcode-field-map) in this document lists every defined opcode as its own row, and every group ends with one `reserved` row for its unused tail range.
@@ -393,7 +394,7 @@ The exhaustive [canonical opcode field map](#canonical-opcode-field-map) in this
 
 `0xF8..0xFF` (eight values) is reserved exclusively for local experimental
 opcodes, within the reserved tail of Group 3. It must not be allocated to
-permanent standard opcodes. `0xE0..0xF7` remains available for future standard
+permanent standard opcodes. `0xE1..0xF7` remains available for future standard
 allocations.
 
 This reservation defines no executable instructions or operand layouts.
@@ -1437,7 +1438,7 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x1B | `CheckNumeric` | - | result register | `XRegister`=source | - | - | Writes whether `X` has a runtime numeric view. Numbers, percentages, booleans (`false` = `0`, `true` = `1`), and dice sums are numeric. Text and tags are not parsed here. |
 | 0x1C | `CheckInteger` | - | result register | `XRegister`=source | - | - | Writes whether `X` has a finite integral numeric view. Booleans and dice are integer. Text is not parsed here. |
 | 0x1D | `CheckFractional` | - | result register | `XRegister`=source | - | - | Writes whether `X` has a finite non-integral numeric view. Text is not parsed here. |
-| 0x1E | `Move` | - | result register | `XRegister`=source | - | - | Copies a register value/reference; the source register remains unchanged. |
+| 0x1E | `Move` | Numeric (0x40) | result register | `XRegister`=source | - | - | Copies a register value/reference; the source register remains unchanged. |
 | 0x1F | `MemberAccess` | - | result register | `StringIndex`=member name | `YRegister`=object | - | Reads a named member. |
 | 0x20 | `IndexAccess` | - | result register | `Index`=1-based index | `YRegister`=object | - | Reads a statically known positional element. |
 | 0x21 | `PropertyAccess` | - | result register | `XRegister`=property/index selector | `YRegister`=object | - | Reads a dynamic property: integer selectors use index semantics; text/tag selectors use member semantics. |
@@ -1527,21 +1528,21 @@ separate approximate-equality opcode.
 | 0x58 | `Greater` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary comparison. |
 | 0x59 | `LessOrEqual` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary comparison. |
 | 0x5A | `GreaterOrEqual` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary comparison. |
-| 0x5B | `Add` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
-| 0x5C | `Subtract` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
-| 0x5D | `Multiply` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
-| 0x5E | `Divide` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
-| 0x5F | `Power` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
-| 0x60 | `IntegerDivide` | - | result register | `XRegister`=left | `YRegister`=right | - | Floor-like integer division operation. |
-| 0x61 | `Modulo` | - | result register | `XRegister`=left | `YRegister`=right | - | Numeric modulo operation. |
-| 0x62 | `Remainder` | - | result register | `XRegister`=left | `YRegister`=right | - | Numeric remainder operation. |
-| 0x63 | `Min` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary extrema reduce step. |
-| 0x64 | `Max` | - | result register | `XRegister`=left | `YRegister`=right | - | Binary extrema reduce step. |
-| 0x65 | `Negate` | - | result register | `XRegister`=operand | - | - | Numeric negation. |
-| 0x66 | `Abs` | - | result register | `XRegister`=operand | - | - | Absolute value. |
+| 0x5B | `Add` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
+| 0x5C | `Subtract` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
+| 0x5D | `Multiply` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
+| 0x5E | `Divide` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
+| 0x5F | `Power` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Binary numeric operation. |
+| 0x60 | `IntegerDivide` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Floor-like integer division operation. |
+| 0x61 | `Modulo` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Numeric modulo operation. |
+| 0x62 | `Remainder` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Numeric remainder operation. |
+| 0x63 | `Min` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Binary extrema reduce step. |
+| 0x64 | `Max` | Numeric (0x40) | result register | `XRegister`=left | `YRegister`=right | - | Binary extrema reduce step. |
+| 0x65 | `Negate` | Numeric (0x40) | result register | `XRegister`=operand | - | - | Numeric negation. |
+| 0x66 | `Abs` | Numeric (0x40) | result register | `XRegister`=operand | - | - | Absolute value. |
 | 0x67 | `LogN` | - | result register | `XRegister`=operand | - | - | Natural logarithm. |
 | 0x68 | `Chance` | - | result register | `XRegister`=operand | - | - | Chance evaluation. |
-| 0x69 | `Clamp` | - | result register | `XRegister`=value | `YRegister`=minimum | `AU`=maximum register | The only opcode with three direct source registers. |
+| 0x69 | `Clamp` | Numeric (0x40) | result register | `XRegister`=value | `YRegister`=minimum | `AU`=maximum register | The only opcode with three direct source registers. |
 | 0x6A | `RandomTake` | - | result register | `XRegister`=from | `YRegister`=to | - | Takes an integer random value from integer bounds using the current random scope. |
 | 0x6B | `RandomTakeFloat` | - | result register | `XRegister`=from | `YRegister`=to | - | Takes a float random value from numeric bounds using the current random scope. |
 | 0x6C | `RandomPush` | - | - | `XRegister`=seed | - | - | Saves the active random state and resets it from a valid dynamic unitless integer seed; an invalid seed retains the copied state. |
@@ -1635,9 +1636,9 @@ remain protection limits, not additional optimizer-observable effects.
 | 0xBB | `First` | - | result register | `XRegister`=source | - | - | Returns the first element from list, dice, range, map/custom values, text/tag, or iterator; invalid/empty sources -> `nothing`. |
 | 0xBC | `Last` | - | result register | `XRegister`=source | - | - | Returns the last element from list, dice, range, map/custom values, text/tag, or iterator; invalid/empty sources -> `nothing`. |
 | 0xBD | `Single` | - | result register | `XRegister`=source | - | - | Returns the only element from list, dice, range, map/custom values, text/tag, or iterator; invalid/empty/multiple-element sources -> `nothing`. |
-| 0xBE | `IteratorCreate` | - | iterator register | `XRegister`=collection | - | - | Creates a VM-internal iterator over a collection or range value. Non-iterable sources write `nothing`. |
-| 0xBF | `IteratorCreateOrJump` | - | iterator register | `XRegister`=collection | `TargetAddress`=not-iterable | - | Creates a VM-internal iterator, or writes `nothing` and jumps to `Y` when no iterator can be created. |
-| 0xC0 | `IteratorNext` | - | item register | `XRegister`=iterator | `TargetAddress`=no-more | - | Writes the next item and continues, or jumps to `Y` when exhausted. |
+| 0xBE | `IteratorCreate` | mode in bits 5..7 | iterator register | source register (modes 0, 6), source-register-list index otherwise | zero | zero | Creates an internal iterator, or Nothing for invalid input. |
+| 0xBF | `IteratorCreateOrJump` | mode in bits 5..7 | iterator register | source register (modes 0, 6), source-register-list index otherwise | not-iterable target | zero | Same as IteratorCreate; jumps on invalid input. |
+| 0xC0 | `IteratorNext` | bit 5: component output | item register or target-register-list index | iterator register | exhausted target | zero | Writes the next item/components; exhaustion clears destinations and jumps. |
 | 0xC1 | `IteratorClose` | - | - | `XRegister`=iterator | - | - | Disposes/closes a VM-internal iterator. |
 | 0xC2 | `Distinct` | - | result register | `XRegister`=source | - | - | Materializes distinct source items in source order. Supports direct collection fast paths and iterators. |
 | 0xC3 | `SortAscending` | - | result register | `XRegister`=source | - | - | Sorts source items ascending. Supports direct list, dice, range, and iterator sources. |
@@ -1669,7 +1670,8 @@ remain protection limits, not additional optimizer-observable effects.
 | 0xDD | `PublishAfter` | WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged, `BU`=duration register | Accepts delayed dispatch; see result-bearing sends below. |
 | 0xDE | `ConstructData` | - | result register | type-name Text index | argument-register list | `AU`=argument-label Text list | Constructs explicit built-in data. |
 | 0xDF | `SplitText` | - | result register | input register | delimiter register, zero in whitespace mode | `AU`=mode: 0 explicit separator, 1 whitespace | Produces a Text/Nothing List. |
-| 0xE0..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3: 0xE0..0xF7 for future standard opcodes; 0xF8..0xFF exclusively for local experiments. |
+| 0xE0 | `Cartesian` | zero | result register | left List register | right List register | zero | Binary materialized Cartesian product; non-List operands produce Nothing. |
+| 0xE1..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3: 0xE1..0xF7 for future standard opcodes; 0xF8..0xFF exclusively for local experiments. |
 
 ## Side-Table Summary
 
@@ -1728,3 +1730,59 @@ constructor; `ParseLiteral` manages those calls after full recognition.
 Y=0 and ignores that register. Its GESA final immediate displays AU. Mode 0
 requires a nonempty Text delimiter; Nothing is not a whitespace request.
 Neither instruction charges synthetic opcode work per item.
+
+### Compound iterator operand encoding
+
+> **Since: Unreleased** — compound iterator transport
+
+Iterator creation modes are Normal=0, Union=1, Intersect=2, Difference=3,
+Lockstep=4, Cartesian=5, Entries=6. Mode 7 is invalid. The mode is encoded as
+`mode << 5`; low bits 0..4 and the payload are zero. IteratorCreate also
+requires zero Y. Modes 0 and 6 read X as one register; modes 1..5 read X
+as a UInt16IndexLists index containing at least two source registers.
+
+IteratorNext allows only flag 0x20. Without it destination is a register;
+with it destination indexes a nonempty UInt16IndexLists list of distinct
+output registers. No output may alias the iterator in X. Every output is a
+write operand, not a read, including on exhaustion (Nothing is written).
+All source and output register indices must fit the active frame. Mutable
+internal resources cannot be passed through source lists as ordinary values.
+
+The Cartesian instruction uses 0xE0, writes destination, reads X and Y, and
+requires zero UnitAndFlags and payload. The instruction size and section
+encoding are unchanged. Source/target lists use the existing immutable pool.
+
+Compound iterator execution advances the last Cartesian source fastest and
+lockstep stops at the shortest source. Sources are captured by immutable value;
+restarting a Cartesian inner iterator never reevaluates a script expression.
+Entries reads Map keys in scalar order and yields key/value Maps for ordinary
+Next, or their two components for component Next. Normal component output
+decomposes Lists by position, Maps by sorted values and scalars into a first
+component; absent components are Nothing. One normal Next preserves the whole
+item. Cartesian/lockstep normal output yields a List of all source components.
+Union/intersect/difference preserve the existing binary operator semantics
+from left to right; Map results iterate values, and Dice order is preserved.
+
+### Numeric arithmetic mode
+
+`Move`, `Add`, `Subtract`, `Multiply`, `Divide`, `Power`, `IntegerDivide`, `Modulo`,
+`Remainder`, `Min`, `Max`, `Negate`, `Abs` and `Clamp` interpret flag bit `0x40` as
+`Numeric`. With the bit clear their existing
+overloaded behavior is unchanged. With the bit set every source operand must satisfy
+`CheckNumeric`: Integer, Float (including quantities), Percentage, Boolean or Dice.
+Otherwise the instruction writes Nothing. Boolean is evaluated as integer 0/1;
+Dice is evaluated as its exact Int64 roll sum, including zero for empty Dice.
+These numeric views bypass collection overloads. Integer/Float and Percentage
+retain their existing exact-integer, binary64, unit, percentage, overflow and
+nonfinite-result rules. Text, tags, lists, maps, vectors and points are rejected.
+Nothing propagates.
+The unit bits and other flag bits are reserved zero. The payload is reserved zero
+except for Clamp, whose low 16 bits hold its third source register; its upper
+48 bits remain zero.
+Destination/source aliasing is supported. This does not add a zero-unit exception.
+
+`Move mode=Numeric` copies the numeric view: Number/Quantity/Percentage retain
+their kind and unit, Boolean and Dice become an exact Int64 Number, and other
+values produce Nothing. It never parses text. Source/destination may be identical.
+Compilers lower numeric aggregates using this mode and use Numeric Move for the
+first projected value. An invalid aggregate does not suppress later projections.

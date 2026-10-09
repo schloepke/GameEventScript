@@ -17,6 +17,7 @@ extension GesCompiler {
     }
 
     func assemblySignature(_ line: GesAssemblyLine) throws -> String {
+        if let signature = try assemblyIteratorSignature(line) { return signature }
         if line.name == "emit" || line.name == "publish" { return String(repeating: "e", count: line.operands.count) }
         if let send = assemblySend(line) {
             let count = (send.result ? 2 : 1) + (send.delayed ? 1 : 0) + (send.tags ? 1 : 0)
@@ -39,6 +40,9 @@ extension GesCompiler {
             if !valid { throw assemblyFailure(line.location, "Operand does not match symbolic instruction.", line.name) }
             return "we"
         }
+        if ["Add", "Subtract", "Multiply", "Divide", "Power", "IntegerDivide", "Modulo", "Remainder", "Min", "Max"].contains(line.name) && line.operands.count == 4 { return "wrrt" }
+        if ["Move", "Negate", "Abs"].contains(line.name) && line.operands.count == 3 { return "wrt" }
+        if line.name == "Clamp" && line.operands.count == 5 { return "wrrrt" }
         switch line.name {
         case "LoadInteger" where line.operands.count == 3: return "wiq"
         case "LoadFloat" where line.operands.count == 3: return "wfq"
@@ -159,6 +163,22 @@ extension GesCompiler {
 
     func assemblySpecial(_ line: GesAssemblyLine, _ regs: [Int], _ r: GesRoutine) throws -> Bool {
         let args = line.operands
+        if ["Add", "Subtract", "Multiply", "Divide", "Power", "IntegerDivide", "Modulo", "Remainder", "Min", "Max"].contains(line.name) && args.count == 4 {
+            guard try assemblyText(args[3]) == "numeric" else { throw assemblyFailure(line.location, "Unknown arithmetic mode.") }
+            let op: Op = ["Add": .add, "Subtract": .subtract, "Multiply": .multiply, "Divide": .divide, "Power": .power, "IntegerDivide": .integerDivide, "Modulo": .modulo, "Remainder": .remainder, "Min": .min, "Max": .max][line.name]!
+            r.emit(op, regs[0], regs[1], regs[2], flags: 64)
+            return true
+        }
+        if ["Move", "Negate", "Abs"].contains(line.name) && args.count == 3 {
+            guard try assemblyText(args[2]) == "numeric" else { throw assemblyFailure(line.location, "Unknown arithmetic mode.") }
+            r.emit(line.name == "Move" ? .move : line.name == "Negate" ? .negate : .abs, regs[0], regs[1], flags: 64)
+            return true
+        }
+        if line.name == "Clamp" && args.count == 5 {
+            guard try assemblyText(args[4]) == "numeric" else { throw assemblyFailure(line.location, "Unknown arithmetic mode.") }
+            r.emit(.clamp, regs[0], regs[1], regs[2], payload: UInt64(regs[3]), flags: 64)
+            return true
+        }
         switch line.name {
         case "LoadInteger" where args.count == 3: r.emit(.loadInteger, regs[0], payload: UInt64(bitPattern: try assemblyInteger(args[1])), flags: try assemblyUnit(args[2]))
         case "LoadFloat" where args.count == 3: r.emit(.loadFloat, regs[0], payload: try assemblyNumber(args[1]).bitPattern, flags: try assemblyUnit(args[2]))

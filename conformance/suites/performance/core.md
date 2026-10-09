@@ -632,9 +632,9 @@ Start_8:			IteratorClose r5
 .source-line "range select and aggregate.ges" 5 |   let total be values[:sum value => value]
 					IteratorCreateOrJump r4, r0(values), Start_21
 					IteratorNext r5, r4, Start_16
-					Move r2(total), r5
+					Move r2(total), r5 mode=Numeric
 Start_13:			IteratorNext r5, r4, Start_19
-					Add r2(total), r2(total), r5
+					Add r2(total), r2(total), r5 mode=Numeric
 					Jump Start_13
 Start_16:			IteratorClose r4
 					LoadInteger r2(total), #0
@@ -1305,9 +1305,9 @@ Start:				 // handler Start()
 .source-line "pipeline filter select sum and direct list slice.ges" 6 |   let directTotal be firstTen[:sum value => value]
 					IteratorCreateOrJump r5, r1(firstTen), Start_34
 					IteratorNext r6, r5, Start_29
-					Move r2(directTotal), r6
+					Move r2(directTotal), r6 mode=Numeric
 Start_26:			IteratorNext r6, r5, Start_32
-					Add r2(directTotal), r2(directTotal), r6
+					Add r2(directTotal), r2(directTotal), r6 mode=Numeric
 					Jump Start_26
 Start_29:			IteratorClose r5
 					LoadInteger r2(directTotal), #0
@@ -1329,10 +1329,10 @@ Start_38:			IteratorNext r7, r5, Start_52
 					LoadInteger r9, #2
 					Multiply r8, r7, r9
 					JumpIfTrue r6, Start_50
-					Move r3(streamTotal), r8
+					Move r3(streamTotal), r8 mode=Numeric
 					LoadTrue r6
 					Jump Start_38
-Start_50:			Add r3(streamTotal), r3(streamTotal), r8
+Start_50:			Add r3(streamTotal), r3(streamTotal), r8 mode=Numeric
 					Jump Start_38
 Start_52:			IteratorClose r5
 					JumpIfTrue r6, Start_57
@@ -1843,10 +1843,10 @@ Start_4:			IteratorNext r18, r16, Start_17
 					Add r20, r18, r19
 					Floor r18, r20
 					JumpIfTrue r17, Start_15
-					Move r1(total), r18
+					Move r1(total), r18 mode=Numeric
 					LoadTrue r17
 					Jump Start_4
-Start_15:			Add r1(total), r1(total), r18
+Start_15:			Add r1(total), r1(total), r18 mode=Numeric
 					Jump Start_4
 Start_17:			IteratorClose r16
 					JumpIfTrue r17, Start_22
@@ -1869,14 +1869,14 @@ Start_27:			IteratorNext r19, r16, Start_41
 					Floor r19, r22
 					Add r2(average), r2(average), r17
 					JumpIfTrue r20, Start_39
-					Move r18, r19
+					Move r18, r19 mode=Numeric
 					LoadTrue r20
 					Jump Start_27
-Start_39:			Add r18, r18, r19
+Start_39:			Add r18, r18, r19 mode=Numeric
 					Jump Start_27
 Start_41:			IteratorClose r16
 					JumpIfNotTrue r2(average), Start_45
-					Divide r2(average), r18, r2(average)
+					Divide r2(average), r18, r2(average) mode=Numeric
 					Jump Start_48
 Start_45:			LoadNothing r2(average)
 					Jump Start_48
@@ -1982,10 +1982,10 @@ Start_112:			IteratorNext r22, r17, Start_128
 					LoadInteger r22, #2
 					Multiply r18, r21, r22
 					JumpIfTrue r20, Start_126
-					Move r14(foldedBucket), r18
+					Move r14(foldedBucket), r18 mode=Numeric
 					LoadTrue r20
 					Jump Start_112
-Start_126:			Add r14(foldedBucket), r14(foldedBucket), r18
+Start_126:			Add r14(foldedBucket), r14(foldedBucket), r18 mode=Numeric
 					Jump Start_112
 Start_128:			IteratorClose r17
 					JumpIfTrue r20, Start_108
@@ -2010,10 +2010,10 @@ Start_138:			IteratorNext r20, r16, Start_152
 					LoadInteger r20, #2
 					Multiply r21, r22, r20
 					JumpIfTrue r17, Start_150
-					Move r15(workTotal), r21
+					Move r15(workTotal), r21 mode=Numeric
 					LoadTrue r17
 					Jump Start_138
-Start_150:			Add r15(workTotal), r15(workTotal), r21
+Start_150:			Add r15(workTotal), r15(workTotal), r21 mode=Numeric
 					Jump Start_138
 Start_152:			IteratorClose r16
 					JumpIfTrue r17, Start_157

@@ -1,12 +1,17 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-final class GesIterator {
+class GesIterator {
     private var source: GesValue
     private var index: Int64 = 0
     private var textIndex: String.UnicodeScalarView.Index?
     private var closed = false
     let isPatternSequence: Bool
+
+    init(patternSequence: Bool) {
+        source = .nothing
+        isPatternSequence = patternSequence
+    }
 
     init?(_ source: GesValue) {
         switch source.kind {

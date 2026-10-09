@@ -34,7 +34,7 @@ internal static class GesVmRegisterIteratorTerminals
                 vmState.SetInteger(destinationRegister, 3);
                 return;
             case Text or Tag:
-                vmState.SetInteger(destinationRegister, source.IntegerValue);
+                vmState.SetInteger(destinationRegister, source.CollectionCount);
                 return;
             case Nothing:
                 vmState.SetInteger(destinationRegister, 0);

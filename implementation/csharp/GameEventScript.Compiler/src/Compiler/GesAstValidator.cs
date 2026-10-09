@@ -648,6 +648,7 @@ internal static class GesAstValidator
             case TypeConstructorExpressionNode typeConstructor:
                 return FromDeclaredType(typeConstructor.TypeName);
 
+            case BetweenExpressionNode:
             case SendExpressionNode:
                 return StaticExpressionInfo.Boolean;
             case UnaryExpressionNode unary:
@@ -1100,6 +1101,12 @@ internal static class GesAstValidator
 
                     return;
 
+                case BetweenExpressionNode between:
+                    ValidateExpressionReferences(parsedScriptContext, between.Value, callables, typeDefinitions, errors, declaredTypes);
+                    ValidateExpressionReferences(parsedScriptContext, between.Minimum, callables, typeDefinitions, errors, declaredTypes);
+                    expression = between.Maximum;
+                    continue;
+
                 case ClampExpressionNode clamp:
                     ValidateExpressionReferences(parsedScriptContext, clamp.Value, callables, typeDefinitions, errors, declaredTypes);
                     ValidateExpressionReferences(parsedScriptContext, clamp.Minimum, callables, typeDefinitions, errors, declaredTypes);
@@ -1186,6 +1193,9 @@ internal static class GesAstValidator
                     ValidateCollectionSelectorReferences(parsedScriptContext, collectionAccess.Selector, callables, typeDefinitions, errors, declaredTypes);
                     return;
 
+                case CombinedCollectionExpressionNode combined:
+                    foreach (var source in combined.Sources) ValidateExpressionReferences(parsedScriptContext, source, callables, typeDefinitions, errors, declaredTypes);
+                    return;
                 case ListLiteralExpressionNode list:
                     for (var itemIndex = 0; itemIndex < list.Items.Count; itemIndex++)
                     {
@@ -1313,6 +1323,9 @@ internal static class GesAstValidator
                 }
 
                 ValidateExpressionReferences(parsedScriptContext, edgeSelector.Predicate, callables, typeDefinitions, errors, declaredTypes);
+                return;
+            case ForeachSelectorNode each:
+                ValidateExpressionReferences(parsedScriptContext, each.Expression, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case FilterSelectorNode filterSelector:
                 ValidateIdentifierCase(

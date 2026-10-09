@@ -7,8 +7,8 @@ namespace GameEventScript.SyntaxHighlighter;
 
 internal static class EmbeddedGrammars
 {
-    internal static readonly int[] Source = [0, 2, 4, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176];
-    internal static readonly int[] Assembly = [177, 182, 183, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205];
+    internal static readonly int[] Source = [0, 2, 4, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177];
+    internal static readonly int[] Assembly = [178, 183, 184, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206];
 
     internal static GrammarRule[] CreateRules() =>
     [
@@ -102,6 +102,15 @@ internal static class EmbeddedGrammars
             [],
             [],
             [8], true),
+        new(
+            "#numeric\\b",
+            "",
+            "entity.name.tag.gameeventscript",
+            "",
+            [],
+            [],
+            [],
+            [], false),
         new(
             "\\.register\\b",
             "",
@@ -274,7 +283,7 @@ internal static class EmbeddedGrammars
             [new CaptureRule(1, "support.function.selector.pipeline.gameeventscript"), new CaptureRule(3, "keyword.other.definition.gameeventscript")],
             [], false),
         new(
-            ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b",
+            ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|foreach|cartesian|lockstep|zip|union|intersect|difference|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b",
             "",
             "support.function.selector.pipeline.gameeventscript",
             "",
@@ -526,7 +535,7 @@ internal static class EmbeddedGrammars
             [new CaptureRule(1, "keyword.operator.word.gameeventscript"), new CaptureRule(3, "keyword.operator.word.gameeventscript")],
             [], false),
         new(
-            "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+            "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
             "",
             "meta.keyword-phrase.gameeventscript",
             "",
@@ -535,7 +544,7 @@ internal static class EmbeddedGrammars
             [new CaptureRule(1, "keyword.operator.word.gameeventscript"), new CaptureRule(3, "keyword.operator.word.gameeventscript"), new CaptureRule(5, "keyword.operator.word.gameeventscript")],
             [], false),
         new(
-            "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+            "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
             "",
             "meta.keyword-phrase.gameeventscript",
             "",
@@ -724,7 +733,7 @@ internal static class EmbeddedGrammars
             [],
             [], false),
         new(
-            "\\b(?:if|else|for|in|from|to|when|otherwise|matching|without|with)\\b",
+            "\\b(?:if|else|for|in|from|to|when|then|otherwise|matching|without|with)\\b",
             "",
             "keyword.control.gameeventscript",
             "",
@@ -866,7 +875,7 @@ internal static class EmbeddedGrammars
             [],
             [new CaptureRule(0, "keyword.other.assembly.gameeventscript")],
             [],
-            [5, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93], false),
+            [5, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94], false),
         new(
             "\\b(module)\\s+([a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)*)\\b",
             "",
@@ -1021,7 +1030,7 @@ internal static class EmbeddedGrammars
             [new CaptureRule(1, "support.function.selector.pipeline.gameeventscript"), new CaptureRule(3, "keyword.other.definition.gameeventscript")],
             [], false),
         new(
-            ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b",
+            ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|foreach|cartesian|lockstep|zip|union|intersect|difference|fold|reduce|split|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b",
             "",
             "support.function.selector.pipeline.gameeventscript",
             "",
@@ -1273,7 +1282,7 @@ internal static class EmbeddedGrammars
             [new CaptureRule(1, "keyword.operator.word.gameeventscript"), new CaptureRule(3, "keyword.operator.word.gameeventscript")],
             [], false),
         new(
-            "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+            "\\b(is)([ \\t]+)(not)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
             "",
             "meta.keyword-phrase.gameeventscript",
             "",
@@ -1282,7 +1291,7 @@ internal static class EmbeddedGrammars
             [new CaptureRule(1, "keyword.operator.word.gameeventscript"), new CaptureRule(3, "keyword.operator.word.gameeventscript"), new CaptureRule(5, "keyword.operator.word.gameeventscript")],
             [], false),
         new(
-            "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional)\\b",
+            "\\b(is)([ \\t]+)(empty|nothing|numeric|integer|fractional|between)\\b",
             "",
             "meta.keyword-phrase.gameeventscript",
             "",
@@ -1471,7 +1480,7 @@ internal static class EmbeddedGrammars
             [],
             [], false),
         new(
-            "\\b(?:if|else|for|in|from|to|when|otherwise|matching|without|with)\\b",
+            "\\b(?:if|else|for|in|from|to|when|then|otherwise|matching|without|with)\\b",
             "",
             "keyword.control.gameeventscript",
             "",
@@ -1613,7 +1622,7 @@ internal static class EmbeddedGrammars
             [],
             [new CaptureRule(1, "keyword.control.directive.segment.gameeventscript.assembler"), new CaptureRule(2, "entity.other.attribute-name.tag.gameeventscript"), new CaptureRule(3, "string.quoted.double.source-name.gameeventscript.assembler")],
             [],
-            [0, 2, 4, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176], false),
+            [0, 2, 4, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177], false),
         new(
             "''",
             "",
@@ -1631,7 +1640,7 @@ internal static class EmbeddedGrammars
             [],
             [],
             [],
-            [178], true),
+            [179], true),
         new(
             "\"\"",
             "",
@@ -1649,7 +1658,7 @@ internal static class EmbeddedGrammars
             [],
             [],
             [],
-            [180], true),
+            [181], true),
         new(
             "^\\s*(\\.source-line)\\s+(\"(?:\\\\.|[^\"\\\\])*\")\\s+(\\d+)\\s+(\\|)\\s?",
             "$",
@@ -1658,7 +1667,7 @@ internal static class EmbeddedGrammars
             [],
             [new CaptureRule(1, "keyword.control.directive.source.gameeventscript.assembler"), new CaptureRule(2, "string.quoted.double.source-name.gameeventscript.assembler"), new CaptureRule(3, "constant.numeric.line.gameeventscript.assembler"), new CaptureRule(4, "punctuation.separator.embedded.gameeventscript.assembler")],
             [],
-            [179, 181, 0, 2, 4, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176], false),
+            [180, 182, 0, 2, 4, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177], false),
         new(
             "//.*$",
             "",
@@ -1685,7 +1694,7 @@ internal static class EmbeddedGrammars
             [],
             [],
             [],
-            [184], false),
+            [185], false),
         new(
             "^\\s*\\.region\\s+\"(?:\\\\.|[^\"\\\\])*\"\\s*$",
             "",
@@ -1732,7 +1741,7 @@ internal static class EmbeddedGrammars
             [],
             [], false),
         new(
-            "^\\s*(?:([A-Za-z_][A-Za-z0-9_]*):\\s*)?(@\\d{4,5}\\b\\s*)?(Nop|RegisterLocals|Jump|JumpIfTrue|JumpIfFalse|JumpIfNotTrue|JumpIfNothing|Call|CreateSeries|CallExternal|ReturnVoid|ReturnValue|EmitMessage|EmitMessageWithTags|EmitMessageValue|EmitMessageValueWithTags|PublishMessage|PublishMessageWithTags|PublishMessageValue|PublishMessageValueWithTags|Cast|CastCustom|CastUnit|CastNumeric|CheckType|CheckCustomType|CheckUnit|CheckNumeric|CheckInteger|CheckFractional|Move|MemberAccess|IndexAccess|PropertyAccess|BindHandler|LoadNothing|LoadTrue|LoadFalse|LoadInteger|LoadFloat|LoadPercentage|LoadText|LoadTag|LoadHandler|LoadMessage|StageRegister|StageNothing|StageTrue|StageFalse|StageInteger|StageFloat|StageText|StageTag|StagePercentage|CreateDice|CreateVector|CreatePoint|CreateList|CreateMap|CreateRange|CreateRangeWithStep|CreateRangeIterator|CreateRangeIteratorWithStep|CreateRangeIteratorShort|CreateRecord|CreateRecordValue|CreateExternalType|HasValue|IsEmpty|Default|Or|And|Xor|Implies|Not|Equal|NotEqual|Less|Greater|LessOrEqual|GreaterOrEqual|Add|Subtract|Multiply|Divide|Power|IntegerDivide|Modulo|Remainder|Min|Max|Negate|Abs|LogN|Chance|Clamp|RandomTake|RandomTakeFloat|RandomPush|RandomPushConstant|RandomPop|Term|Exp|Floor|Ceil|Truncate|RoundHalfEven|RoundHalfUp|RoundHalfDown|DegreeToRadians|DegreeFromRadians|WrapDegree|Sin|Cos|Tan|Asin|Acos|Atan|Atan2|Hypot2D|Hypot3D|Distance|Distance2D|Distance3D|DistanceSquared|DistanceSquared2D|DistanceSquared3D|LengthSquared|LengthSquared2D|LengthSquared3D|Normalize|Normalize2D|Normalize3D|Dot|Dot2D|Dot3D|Cross|Cross2D|Cross3D|AngleBetween|AngleBetween2D|AngleBetween3D|TakeFirst|DropFirst|TakeLast|DropLast|TakeHighest|TakeLowest|DropHighest|DropLowest|OneRandom|TakeRandom|OneWeighted|TakeWeighted|Count|StartsWith|EndsWith|Contains|ContainsAny|ContainsAll|HasAny|HasAll|ContainsValue|Union|Intersect|Zip|KeysOfMap|ValuesOfMap|EntriesOfMap|First|Last|Single|IteratorCreate|IteratorCreateOrJump|IteratorNext|IteratorClose|MapBuilderCreate|MapBuilderAdd|MapBuilderFinish|DistinctBuilderCreate|DistinctBuilderAdd|DistinctBuilderFinish|GroupBuilderCreate|GroupBuilderAdd|GroupBuilderFinish|OrderBuilderCreate|OrderBuilderAdd|OrderBuilderFinishAscending|OrderBuilderFinishDescending|Distinct|SortAscending|SortDescending|Reverse|Shuffle|ListBuilderCreate|ListBuilderAdd|ListBuilderFinish|HasPattern|TakePattern|ParseLiteral|EmitInstant|EmitAfter|PublishInstant|PublishAfter|ConstructData|SplitText)\\b",
+            "^\\s*(?:([A-Za-z_][A-Za-z0-9_]*):\\s*)?(@\\d{4,5}\\b\\s*)?(Nop|RegisterLocals|Jump|JumpIfTrue|JumpIfFalse|JumpIfNotTrue|JumpIfNothing|Call|CreateSeries|CallExternal|ReturnVoid|ReturnValue|EmitMessage|EmitMessageWithTags|EmitMessageValue|EmitMessageValueWithTags|PublishMessage|PublishMessageWithTags|PublishMessageValue|PublishMessageValueWithTags|Cast|CastCustom|CastUnit|CastNumeric|CheckType|CheckCustomType|CheckUnit|CheckNumeric|CheckInteger|CheckFractional|Move|MemberAccess|IndexAccess|PropertyAccess|BindHandler|LoadNothing|LoadTrue|LoadFalse|LoadInteger|LoadFloat|LoadPercentage|LoadText|LoadTag|LoadHandler|LoadMessage|StageRegister|StageNothing|StageTrue|StageFalse|StageInteger|StageFloat|StageText|StageTag|StagePercentage|CreateDice|CreateVector|CreatePoint|CreateList|CreateMap|CreateRange|CreateRangeWithStep|CreateRangeIterator|CreateRangeIteratorWithStep|CreateRangeIteratorShort|CreateRecord|CreateRecordValue|CreateExternalType|HasValue|IsEmpty|Default|Or|And|Xor|Implies|Not|Equal|NotEqual|Less|Greater|LessOrEqual|GreaterOrEqual|Add|Subtract|Multiply|Divide|Power|IntegerDivide|Modulo|Remainder|Min|Max|Negate|Abs|LogN|Chance|Clamp|RandomTake|RandomTakeFloat|RandomPush|RandomPushConstant|RandomPop|Term|Exp|Floor|Ceil|Truncate|RoundHalfEven|RoundHalfUp|RoundHalfDown|DegreeToRadians|DegreeFromRadians|WrapDegree|Sin|Cos|Tan|Asin|Acos|Atan|Atan2|Hypot2D|Hypot3D|Distance|Distance2D|Distance3D|DistanceSquared|DistanceSquared2D|DistanceSquared3D|LengthSquared|LengthSquared2D|LengthSquared3D|Normalize|Normalize2D|Normalize3D|Dot|Dot2D|Dot3D|Cross|Cross2D|Cross3D|AngleBetween|AngleBetween2D|AngleBetween3D|TakeFirst|DropFirst|TakeLast|DropLast|TakeHighest|TakeLowest|DropHighest|DropLowest|OneRandom|TakeRandom|OneWeighted|TakeWeighted|Count|StartsWith|EndsWith|Contains|ContainsAny|ContainsAll|HasAny|HasAll|ContainsValue|Union|Intersect|Zip|KeysOfMap|ValuesOfMap|EntriesOfMap|First|Last|Single|IteratorCreate|IteratorCreateOrJump|IteratorNext|IteratorClose|MapBuilderCreate|MapBuilderAdd|MapBuilderFinish|DistinctBuilderCreate|DistinctBuilderAdd|DistinctBuilderFinish|GroupBuilderCreate|GroupBuilderAdd|GroupBuilderFinish|OrderBuilderCreate|OrderBuilderAdd|OrderBuilderFinishAscending|OrderBuilderFinishDescending|Distinct|SortAscending|SortDescending|Reverse|Shuffle|ListBuilderCreate|ListBuilderAdd|ListBuilderFinish|HasPattern|TakePattern|ParseLiteral|EmitInstant|EmitAfter|PublishInstant|PublishAfter|ConstructData|SplitText|Cartesian)\\b",
             "",
             "meta.instruction.gameeventscript.assembler",
             "",
@@ -1813,7 +1822,7 @@ internal static class EmbeddedGrammars
             [],
             [], false),
         new(
-            "\\bNormalizeResultAsPredicate\\b",
+            "\\b(?:NormalizeResultAsPredicate|Numeric)\\b",
             "",
             "constant.language.flag.gameeventscript.assembler",
             "",
@@ -1831,7 +1840,7 @@ internal static class EmbeddedGrammars
             [],
             [], false),
         new(
-            "\\b(?:id|name|args|entry|requiredTags|excludedTags|flags)\\b(?=\\s*=)",
+            "\\b(?:id|name|args|entry|requiredTags|excludedTags|flags|mode)\\b(?=\\s*=)",
             "",
             "variable.parameter.attribute.gameeventscript.assembler",
             "",

@@ -29,8 +29,8 @@ final class ConformanceCorpusTests: XCTestCase {
 
     func testSharedCorpusIdentityCapabilitiesAndAPIs() throws {
         let documents = try documents()
-        XCTAssertEqual(documents.count, 98)
-        XCTAssertEqual(documents.flatMap(\.cases).count, 1791)
+        XCTAssertEqual(documents.count, 100)
+        XCTAssertEqual(documents.flatMap(\.cases).count, 1953)
         let report = ConformanceRunner.runCorpus(documents, environment: apiEnvironment)
         let compact = try ConformanceReportWriter.crossLanguage(documents, report: report)
         let actual = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(compact.utf8)) as? [String: Any])

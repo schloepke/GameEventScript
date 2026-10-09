@@ -582,6 +582,30 @@ defined for their value kind. A non-iterable or `nothing` source performs zero
 iterations. Each iteration assigns the next value to the immutable loop binding;
 bindings created inside a braced loop body do not escape the iteration body.
 
+A compact chain is equivalent to nested loops, with the leftmost clause outermost:
+
+```ges
+for suit in suits and rank in ranks {
+  emit Card(suit: suit, rank: rank)
+}
+
+for row from 1 to 3 and column from 1 to row emit Cell(row: row, column: column)
+```
+
+Each clause supports the existing collection/range syntax and component bindings.
+The inner source is evaluated once **per outer iteration**, may refer to preceding
+bindings, and is never evaluated if an outer source has no items. This does not
+construct a Cartesian-product list. Every clause introduces the same lexical
+scope and counts toward the same statement nesting limit as an explicit nested
+loop; bindings cannot shadow one another and do not escape the loop.
+
+At the outer level of a loop source, `and` followed by binding names and `in` or
+`from` starts another loop clause. Parenthesize a source expression containing
+that token pattern when it is intended as Boolean conjunction/membership instead.
+Inside parentheses (including argument lists), list/map literals and pipeline
+selectors, `and` retains its ordinary expression meaning. Clauses may span lines,
+and the final body may be braced or a single statement.
+
 ### Expression statements
 
 Any expression may be used as a statement. It is evaluated for its observable
@@ -733,8 +757,8 @@ true; it is false when `A` is true and `B` is false; unresolved cases produce
 
 ### Guarded Choice
 
-Guarded choices select the first value whose condition is true. `otherwise` is a
-keyword.
+Guarded choices select the first value whose condition is true. `when` and
+`otherwise` are keywords; `then` is a contextual keyword in condition-first choices.
 
 ```ges
 let status be
@@ -742,6 +766,24 @@ let status be
   #wounded when hp < maxHp,
   otherwise #healthy
 ```
+
+The condition-first spelling is an equivalent expression:
+
+```ges
+let status be
+  when hp <= 0 then #dead,
+  when hp < maxHp then #wounded
+  otherwise #healthy
+```
+
+Both spellings have the same precedence, evaluation order and result. Choose one
+spelling for an entire choice; mixing value-first and condition-first branches
+in the same chain is invalid. Separate branches with commas, optionally followed
+by `or`, as in the value-first form. A comma before `otherwise` is optional.
+Newlines may separate the keywords and expressions. `then` separates each
+condition from its result; `otherwise` is required. Branch results are expressions,
+not statement blocks. Use parentheses to nest either spelling inside a condition,
+branch result, fallback or higher-precedence expression.
 
 Branch conditions are evaluated in source order. The first condition whose truth
 view is true selects its associated value; false and indeterminate conditions are
@@ -787,6 +829,8 @@ The parser accepts several readable comparison forms:
 ```ges
 value is at least 10
 value is at most 10
+value is between 10 and 20
+value is not between 10 and 20
 value is less than 10
 value is more than 10
 value is 10 or less
@@ -794,6 +838,18 @@ value is 10 or more
 value is empty
 value has value
 ```
+
+> **Since: Unreleased** — inclusive range comparisons
+
+`value is between lower and upper` is an inclusive range check with the same
+comparison and three-valued Boolean semantics as `value >= lower and value <= upper`,
+except that `value` is evaluated exactly once. Evaluation is left to right: value,
+lower bound, then (unless the lower comparison is `false`) upper bound. A `nothing`
+lower comparison does not short-circuit. `is not between` negates the complete
+result using ordinary `not` semantics. Bounds are not reordered or clamped.
+Each bound accepts an additive expression; parenthesize more complex expressions.
+The separating `and` belongs to the range check; a following `and` combines the
+completed check with the next condition. `between` remains a contextual word.
 
 ### Prefix Intrinsics and Selectors
 
@@ -1538,6 +1594,20 @@ counts all finite items, `items[:sum]` is equivalent to
 `items[:sum item => item]`, and `items[:average]` is equivalent to
 `items[:average item => item]`.
 
+`sum` and `average` accept exactly the values recognized by `is numeric` after
+projection: Number/Quantity, Percentage, Boolean and Dice. Boolean contributes
+integer 0/1; Dice contributes the exact integer sum of its rolls (zero for empty
+Dice), including singleton input. Number/Quantity and Percentage retain their
+existing numeric, unit and percentage arithmetic rules. Text, tags and other
+nonnumeric values are not converted.
+A nonnumeric value (including Nothing) or incompatible units makes the result
+Nothing, even for a singleton. Remaining projections still execute in order;
+an invalid intermediate result cannot recover. Empty valid input gives integer
+zero for `sum` and Nothing for `average`; invalid input gives Nothing for both.
+String concatenation and other overloaded additions remain available via `fold`.
+The first Number/Quantity or Percentage retains its storage kind and unit; no unitless-zero
+identity exception is introduced.
+
 `min`/`max` and `highest`/`lowest` return the winning source item, selected by
 the projection.
 
@@ -2117,13 +2187,17 @@ send_tag_clause ::= 'with' unary_expression (',' unary_expression)*
 let_statement ::= 'let' VARIABLE_NAME 'be' expression
 if_statement ::= 'if' if_check (';' if_check)* [';'] statement_body ['else' statement_body]
 if_check ::= expression | 'let' VARIABLE_NAME 'be' expression
-for_statement ::= 'for' VARIABLE_NAME ('in' expression | range_source) statement_body
+binding_names ::= VARIABLE_NAME (',' VARIABLE_NAME)*
+for_statement ::= 'for' for_clause ('and' for_clause)* statement_body
+for_clause ::= binding_names ('in' expression | range_source)
 seeded_random_statement ::= 'random' 'with' expression statement_body
 expression_statement ::= expression
 statement_body ::= statement | '{' separators [statement (statement_separator statement)*] separators '}'
 
 expression ::= guarded_choice_expression
-guarded_choice_expression ::= implication_expression ['when' implication_expression (',' ['or'] implication_expression 'when' implication_expression)* 'otherwise' implication_expression]
+guarded_choice_expression ::= value_first_choice | condition_first_choice
+value_first_choice ::= implication_expression ['when' implication_expression (',' ['or'] implication_expression 'when' implication_expression)* [','] 'otherwise' implication_expression]
+condition_first_choice ::= 'when' implication_expression 'then' implication_expression (',' ['or'] 'when' implication_expression 'then' implication_expression)* [','] 'otherwise' implication_expression
 implication_expression ::= default_expression [implication_arrow implication_expression]
 implication_arrow ::= '->' | '→' | '⇒'
 default_expression ::= collection_union_expression ('default' collection_union_expression)*
@@ -2140,6 +2214,7 @@ membership_operator ::= 'in' | '∈' | '∉' | 'has' 'value' | 'in' 'values' 'of
 type_operation_expression ::= relational_expression type_operation*
 type_operation ::= 'as' type_reference |
                    'is' [not_operator] ('nothing' | type_reference | numeric_check | 'empty' | extension_reference | LOWER_NAME |
+                   'between' additive_expression 'and' additive_expression |
                    'at' ('least' | 'most') additive_expression | ('less' | 'more') 'than' additive_expression |
                    additive_expression ['or' ('less' | 'more')])
 relational_expression ::= additive_expression (('<' | '>' | '<=' | '>=' | '≤' | '≥') additive_expression)*
@@ -2163,10 +2238,10 @@ clamp_expression ::= 'clamp' unary_expression 'between' expression 'and' express
 variadic_expression ::= ('min' | 'max') 'of' expression ('and' expression)*
 
 postfix_expression ::= primary_expression postfix_suffix*
-postfix_suffix ::= '.' LOWER_NAME | '[' collection_selector ']'
+postfix_suffix ::= '.' LOWER_NAME | '[' collection_selector structured_selector* ']'
 primary_expression ::= nullary_predicate_expression | literal | CONSTANT_REFERENCE | call_expression | uppercase_call_expression |
                        type_constructor_expression | VARIABLE_NAME |
-                       '(' expression ')' | bracket_literal | generated_list_expression |
+                       '(' expression ')' | bracket_literal | generated_list_expression | combined_source_expression |
                        range_expression | random_expression | seeded_random_expression | dice_expression | send_expression
 nullary_predicate_expression ::= 'is' [not_operator] LOWER_NAME
 call_expression ::= LOWER_NAME parenthesized_arguments
@@ -2197,38 +2272,41 @@ extension_call_expression ::= extension_reference (parenthesized_arguments postf
                               argument_label ':' expression (argument_label ':' expression)* |
                               unary_expression])
 
+combined_source_expression ::= '[' combined_selector structured_selector* ']'
+combined_selector ::= (':cartesian' | ':lockstep' | ':zip' | ':union' | ':intersect' | ':difference') expression (',' expression)*
 collection_selector ::= structured_selector | expression
 structured_selector ::= quantified_selector | pattern_selector | take_selector | drop_selector |
                         term_selector | count_selector | choose_selector | draw_selector |
                         shuffle_selector | reverse_selector | edge_selector | filter_selector |
                         sum_selector | average_selector | extrema_selector | projection_selector |
                         map_selector | contains_selector | distinct_selector | group_selector |
-                        sort_selector | order_selector | fold_selector | reduce_selector | split_selector | ':keys' | ':values' | ':entries'
-quantified_selector ::= (':any' | ':all') VARIABLE_NAME 'where' expression
+                        sort_selector | order_selector | fold_selector | reduce_selector | split_selector | foreach_selector | combined_selector | ':keys' | ':values' | ':entries'
+quantified_selector ::= (':any' | ':all') binding_names 'where' expression
 pattern_selector ::= ':has' (object_pattern | dice_pattern)
 take_selector ::= ':take' (slice | dice_pattern)
 drop_selector ::= ':drop' slice
 term_selector ::= ':term' expression
-count_selector ::= ':count' [VARIABLE_NAME 'where' expression]
-choose_selector ::= ':choose' POSITIVE_INTEGER ['at' 'random'] [VARIABLE_NAME 'where' expression] ['weighted' 'by' VARIABLE_NAME projection_arrow expression]
+count_selector ::= ':count' [binding_names 'where' expression]
+choose_selector ::= ':choose' POSITIVE_INTEGER ['at' 'random'] [binding_names 'where' expression] ['weighted' 'by' binding_names projection_arrow expression]
 draw_selector ::= ':draw' POSITIVE_INTEGER
 shuffle_selector ::= ':shuffle'
 reverse_selector ::= ':reverse'
-edge_selector ::= (':first' | ':last' | ':single') [VARIABLE_NAME 'where' expression]
-filter_selector ::= ':filter' VARIABLE_NAME 'where' expression
-sum_selector ::= ':sum' [VARIABLE_NAME projection_arrow expression]
-average_selector ::= ':average' [VARIABLE_NAME projection_arrow expression]
-extrema_selector ::= (':min' | ':max' | ':highest' | ':lowest') VARIABLE_NAME projection_arrow expression
-projection_selector ::= ':select' VARIABLE_NAME projection_arrow expression
-map_selector ::= ':map' VARIABLE_NAME 'by' expression [projection_arrow expression]
+edge_selector ::= (':first' | ':last' | ':single') [binding_names 'where' expression]
+filter_selector ::= ':filter' binding_names 'where' expression
+sum_selector ::= ':sum' [binding_names projection_arrow expression]
+average_selector ::= ':average' [binding_names projection_arrow expression]
+extrema_selector ::= (':min' | ':max' | ':highest' | ':lowest') binding_names projection_arrow expression
+projection_selector ::= ':select' binding_names projection_arrow expression
+map_selector ::= ':map' binding_names 'by' expression [projection_arrow expression]
 contains_selector ::= ':contains' ['all' | 'any'] expression
-distinct_selector ::= ':distinct' ['by' VARIABLE_NAME projection_arrow expression]
-group_selector ::= ':group' 'by' VARIABLE_NAME projection_arrow expression
+distinct_selector ::= ':distinct' ['by' binding_names projection_arrow expression]
+group_selector ::= ':group' 'by' binding_names projection_arrow expression
 sort_selector ::= ':sort' sort_direction
-order_selector ::= ':order' 'by' VARIABLE_NAME projection_arrow expression sort_direction
-fold_selector ::= ':fold' VARIABLE_NAME 'be' expression ',' VARIABLE_NAME projection_arrow expression
-reduce_selector ::= ':reduce' VARIABLE_NAME ',' VARIABLE_NAME projection_arrow expression
+order_selector ::= ':order' 'by' binding_names projection_arrow expression sort_direction
+fold_selector ::= ':fold' VARIABLE_NAME 'be' expression ',' binding_names projection_arrow expression
+reduce_selector ::= ':reduce' VARIABLE_NAME ',' binding_names projection_arrow expression
 split_selector ::= ':split' 'on' ('whitespace' | expression)
+foreach_selector ::= ':foreach' binding_names projection_arrow expression
 projection_arrow ::= '=>' | '↦'
 sort_direction ::= 'ascending' | 'descending'
 slice ::= ('first' | 'last' | 'highest' | 'lowest') POSITIVE_INTEGER
@@ -2269,3 +2347,66 @@ source. The normative syntax, binding and safety rules, operand forms and staged
 implementation status are defined in [Inline assembly](InlineAssembly.md).
 Only standalone handler statements, `let` initializers, complete callable bodies
 and computed-field bodies accept this form. Ordinary expressions do not.
+
+## Compact selector chains and extension names
+
+> **Since: Unreleased** — compact selector syntax
+
+A selector bracket may contain multiple colon-prefixed steps. For example,
+`items[:filter x where x > 0 :select x => x * 2]` is equivalent to
+`items[:filter x where x > 0][:select x => x * 2]`. Each step has its own
+ordinary binding scope. Types and qualified extensions inside expressions are
+not selector delimiters. `[:]` remains the empty Map literal.
+
+An extension's qualified name `:namespace.name` must be contiguous. Whitespace,
+comments and line breaks cannot occur between the colon, namespace, dot and
+function name. Whitespace may precede an argument list, as in
+`:board.cards (zone: #draw)`.
+
+## Combined collection sources and component bindings
+
+`[:cartesian A, B, C]` and `A[:cartesian B, C]` enumerate flat component
+Lists, with the last source advancing fastest. `:lockstep` (alias `:zip`)
+advances all sources together and stops at the shortest source. At least two
+sources are required, counting a leading source. Cartesian and lockstep accept
+normal iterable values under the existing `for`/iterator contract. Invalid
+source types yield Nothing; Maps supply values in key order. The infix `A zip B` retains its existing `left`/`right`
+Map elements. List multiplication `A * B` produces two-component Lists;
+ordinary left associativity makes `A * B * C` produce `[[a, b], c]` elements.
+Selectors are not automatically rewritten to the binary Cartesian instruction.
+
+`:union`, `:intersect` and `:difference` accept the same source forms and apply
+the existing infix operand rules left to right, including duplicate counts,
+Map keys, Dice ordering and scalar-right subtraction. A standalone result
+retains its operator result kind; a following selector iterates that value.
+Selector source-type restrictions still apply to the combined result: direct
+projected `:distinct` and `:order` require List, while `:group` accepts List
+or Map. A preceding filter/select produces List and changes that boundary.
+Direct `:take`, `:drop` and multi-value `:draw` preserve Dice results and
+reject Map results, just as when the combined result is stored in a binding
+before applying the selector. Single-value `:draw 1` retains `:first` semantics.
+For Dice minus a scalar, only unitless integer faces in `1..2147483647` are
+valid, matching infix subtraction; invalid faces return Nothing. A List
+operand changes a valid Dice/List combination to List, whose ordinary scalar
+subtraction rules then apply.
+All source expressions evaluate once from left to right before the combined
+operation validates them, including when an earlier source is Nothing or empty.
+Invalid source combinations return Nothing; they do not suppress effects in
+later source expressions. Ordinary faults and execution limits still stop
+execution. Short-circuiting inside each source expression is unchanged.
+Iterator creation validates the evaluated sources and releases any partially
+created child iterators on failure; no preliminary validation iterators are needed.
+
+Multiple binding names in loops and selectors bind List positions or Map values
+in ascending key order. Missing components bind Nothing; extra components are
+ignored. A scalar supplies the first component and Nothing for the rest.
+One binding always receives the complete element. Filtering preserves the
+complete element, including unbound components; selecting replaces it.
+`:entries` retains its public `key`/`value` Map elements while allowing direct
+component transfer to multiple bindings without intermediate entry Maps.
+Implicit `:sum` and `:average` consume the complete element, equivalent to an
+explicit identity projection, including after filters with multiple bindings.
+
+`[:foreach item => expression]` evaluates the expression for each element and
+returns Nothing, including for empty input. It accepts component bindings and
+follows the same short-circuit and effect ordering as other terminal selectors.

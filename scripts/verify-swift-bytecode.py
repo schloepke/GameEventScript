@@ -43,6 +43,19 @@ def main():
         op: re.findall(r"\.(\w+)", parts)
         for op, parts in re.findall(r"case \.`?(\w+)`?:\s*\[([^\]]*)\]", (SWIFT / "BytecodeOperands.swift").read_text())
     }
+    # Iterator operands depend on mode/output bits. Check both C# forms and
+    # Swift's base operands here; executable binary fixtures check flag dispatch.
+    iterator_forms = {
+        "IteratorCreate": [["targetRegister", "collectionRegister"], ["targetRegister", "sourceRegisterList"]],
+        "IteratorCreateOrJump": [["targetRegister", "collectionRegister", "jumpTarget"], ["targetRegister", "sourceRegisterList", "jumpTarget"]],
+        "IteratorNext": [["targetRegister", "iteratorRegister", "jumpTarget"], ["targetRegisterList", "iteratorRegister", "jumpTarget"]],
+    }
+    for opcode, forms in iterator_forms.items():
+        line = printer.split("GameEventScriptBytecodeOpCode." + opcode + " =>", 1)[1].split("\n", 1)[0]
+        found = [[lower(part.strip()) for part in form.split(",")] for form in re.findall(r"\[([^\]]*)\]", line)]
+        if found != forms:
+            raise RuntimeError(f"Changed dynamic iterator operands: {opcode}")
+        expected[lower(opcode)] = forms[0]
     if expected != actual:
         changed = sorted(k for k in expected.keys() | actual.keys() if expected.get(k) != actual.get(k))
         raise RuntimeError(f"Opcode operand drift: {changed}")

@@ -237,10 +237,14 @@ internal sealed partial class GesBinaryBuilder
             for (var index = 0; index < _items.Count; index++)
             {
                 var item = _items[index];
-                if (item.Instruction?.Destination.Kind == GesOperandKind.Register &&
-                    item.Instruction.Destination.RegisterRef.Id == register.Id)
+                if (item.Instruction is not { } instruction) continue;
+                if (instruction.Destination.Kind == GesOperandKind.Register && instruction.Destination.RegisterRef.Id == register.Id) count++;
+                else if (instruction.Destination.Kind == GesOperandKind.RegisterList)
                 {
-                    count++;
+                    foreach (var target in instruction.Destination.RegisterListValue!)
+                    {
+                        if (target.Id == register.Id) count++;
+                    }
                 }
             }
 
@@ -767,6 +771,14 @@ internal sealed partial class GesBinaryBuilder
                     writeCounts[registerId]++;
                     writeIndexes[registerId] = index;
                 }
+                else if (instruction.Destination.Kind == GesOperandKind.RegisterList)
+                {
+                    foreach (var target in instruction.Destination.RegisterListValue!)
+                    {
+                        writeCounts[target.Id]++;
+                        writeIndexes[target.Id] = index;
+                    }
+                }
 
                 CountOperandReads(readCounts, instruction.X);
                 CountOperandReads(readCounts, instruction.Y);
@@ -1006,7 +1018,7 @@ internal sealed partial class GesBinaryBuilder
             var remove = new bool[context.Count];
             for (var moveIndex = 0; moveIndex < context.Count; moveIndex++)
             {
-                if (context.GetInstruction(moveIndex) is not { OpCode: GameEventScriptBytecodeOpCode.Move } move ||
+                if (context.GetInstruction(moveIndex) is not { OpCode: GameEventScriptBytecodeOpCode.Move, Flags: GameEventScriptInstructionFlag.None } move ||
                     move.X.Kind != GesOperandKind.Register ||
                     move.Destination.Kind != GesOperandKind.Register ||
                     !context.IsTemporary(move.X.RegisterRef))
@@ -1058,6 +1070,14 @@ internal sealed partial class GesBinaryBuilder
                     var registerId = instruction.Destination.RegisterRef.Id;
                     writeCounts[registerId]++;
                     writeIndexes[registerId] = index;
+                }
+                else if (instruction.Destination.Kind == GesOperandKind.RegisterList)
+                {
+                    foreach (var target in instruction.Destination.RegisterListValue!)
+                    {
+                        writeCounts[target.Id]++;
+                        writeIndexes[target.Id] = index;
+                    }
                 }
 
                 CountOperandReads(readCounts, instruction.X);
@@ -1182,6 +1202,7 @@ internal sealed partial class GesBinaryBuilder
                     instruction.OpCode is GameEventScriptBytecodeOpCode.IteratorNext or GameEventScriptBytecodeOpCode.IteratorCreateOrJump ||
                     context.GetInstruction(index + 1) is not { } move ||
                     move.OpCode != GameEventScriptBytecodeOpCode.Move ||
+                    move.Flags != GameEventScriptInstructionFlag.None ||
                     instruction.Destination.Kind != GesOperandKind.Register ||
                     move.X.Kind != GesOperandKind.Register ||
                     move.Destination.Kind != GesOperandKind.Register ||
@@ -1219,6 +1240,10 @@ internal sealed partial class GesBinaryBuilder
                 if (instruction.Destination.Kind == GesOperandKind.Register)
                 {
                     writeCounts[instruction.Destination.RegisterRef.Id]++;
+                }
+                else if (instruction.Destination.Kind == GesOperandKind.RegisterList)
+                {
+                    foreach (var target in instruction.Destination.RegisterListValue!) writeCounts[target.Id]++;
                 }
 
                 CountOperandReads(readCounts, instruction.X);

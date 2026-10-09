@@ -15,6 +15,8 @@ final class GesRoutine {
     var registers: Int
     var maxStage = 0
     var hasAssembly = false
+    var componentRows: [Int: GesComponentRow] = [:]
+    var nonListBindings: Set<Int> = []
     var calls: [(Int, String)] = []
     var dependencies: Set<String> = []
     var symbols: [(String, Int, Int, Bool)] = []

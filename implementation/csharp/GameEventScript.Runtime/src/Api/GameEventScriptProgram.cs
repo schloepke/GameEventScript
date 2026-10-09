@@ -961,6 +961,8 @@ public enum GameEventScriptInstructionFlag : byte
     /// Identifies the normalize result as predicate value.
     /// </summary>
     NormalizeResultAsPredicate = 0x20,
+    /// <summary>Selects the strict numeric view for Move and scalar arithmetic for binary arithmetic, Min, Max, Negate, Abs and Clamp.</summary>
+    Numeric = 0x40,
     /// <summary>Supplies an additional tag register list to a result-bearing send instruction.</summary>
     WithTags = 0x40,
     /// <summary>Reads a Message value rather than an outbound binding in a result-bearing send instruction.</summary>
@@ -2135,6 +2137,8 @@ public enum GameEventScriptBytecodeOpCode : byte
     ConstructData = 0xDE,
     /// <summary>Splits Text on a Text delimiter, or on portable whitespace when the delimiter is Nothing.</summary>
     SplitText = 0xDF,
+    /// <summary>Materializes the ordered Cartesian product of two Lists as two-element Lists.</summary>
+    Cartesian = 0xE0,
 
     #endregion
 }

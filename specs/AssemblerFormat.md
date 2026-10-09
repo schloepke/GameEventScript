@@ -236,3 +236,26 @@ Reference-resolving comments may follow an instruction. They show string content
 `compile.program-dumps/parse-literal` covers the `ParseLiteral r1, r0` instruction
 with optional source metadata omitted. Like other instructions, its symbolic
 name and ordered operand roles follow the Bytecode registry.
+
+### Compound iterator operands
+
+> **Since: Unreleased** — compound iterator transport
+
+IteratorCreate and IteratorCreateOrJump print a nonzero mode as `mode=Union`,
+`mode=Intersect`, `mode=Difference`, `mode=Lockstep`, `mode=Cartesian` or
+`mode=Entries`. Normal mode omits the suffix. IteratorNext component output
+prints `output=Components`. These are opcode-specific fields, not predicate
+or message flags. Source and target register lists use `Sources` and `Targets`
+labels and the existing register-list representation. Cartesian uses the
+ordinary destination/left/right register operand representation.
+
+### Numeric arithmetic annotation
+
+GESA renders Move/Add/Subtract/Multiply/Divide/Power/IntegerDivide/Modulo/Remainder/Min/Max/Negate/Abs/Clamp with flag `0x40` as `mode=Numeric`.
+Inline source assembly accepts an optional final operand `#numeric`, for example
+`Add result, left, right, #numeric`. Other mode names are invalid; forms without the mode
+retain overloaded semantics. Register read/write and initialization rules
+are unchanged.
+
+Unary forms include `Move result, value, #numeric`, `Negate result, value, #numeric` and `Abs result, value, #numeric`.
+Clamp uses `Clamp result, value, minimum, maximum, #numeric`.

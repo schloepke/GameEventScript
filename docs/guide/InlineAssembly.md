@@ -59,6 +59,45 @@ and finish a builder before leaving the block. Do not copy, export or pass these
 handles to messages, functions or extensions. Balanced `RandomPush`/`RandomPop`
 pairs can isolate random experiments; a block cannot pop a surrounding scope.
 
+### Compound iterators
+
+Iterator creation can name a source register list and a mode. Component output
+writes directly to a target register list:
+
+```ges
+on Main(args) {
+    let left be [1, 2]
+    let right be [10, 20]
+    let total be asm {
+        .register iterator, first, second
+        LoadInteger total, 0
+        IteratorCreate iterator, [left, right], #cartesian
+        next:
+        IteratorNext [first, second], iterator, done
+        Add total, total, first
+        Add total, total, second
+        Jump next
+        done:
+        IteratorClose iterator
+    }
+    emit ConsoleOut(total)
+}
+```
+
+This prints `66` without constructing a pair List per iteration. Other creation
+modes are `#union`, `#intersect`, `#difference`, and `#lockstep`.
+`IteratorCreate iterator, source, #entries` uses a single Map source;
+`#normal` is the default for the existing single-source form. Use
+`IteratorCreateOrJump iterator, [left, right], invalid, #cartesian` when an
+invalid source should branch explicitly.
+
+Component targets must be distinct writable registers and cannot include the
+iterator. Every source must already be initialized. Missing components and
+exhausted targets become `nothing`; iterator handles still require closing.
+See [collection pipeline measurements](../development/CollectionPipelines.md#verification-evidence-step-8)
+for allocation and timing evidence; direct components are not a promise of
+identical speed to nested loops.
+
 ## Symbolic operations
 
 The compiler owns signatures, pools and argument staging. Use symbolic operands:
@@ -95,3 +134,17 @@ better initial candidates for comparisons with explicit iterator loops.
 
 The [measured comparison](InlineAssemblyBenchmarks.md) includes a reproducible
 C# harness, List workloads, allocation and frame-budget observations.
+
+### Numeric arithmetic
+
+Use `Add result, left, right, #numeric` (also Subtract, Multiply, Divide, Power, IntegerDivide, Modulo, Remainder, Min and Max)
+to require operands recognized by `is numeric`. Boolean uses 0/1 and Dice uses
+the roll sum, bypassing collection overloads.
+Numbers with units and percentages retain their usual arithmetic rules.
+
+`Move`, `Negate` and `Abs` accept `#numeric` after their source; `Clamp` accepts it after
+value, minimum and maximum.
+
+`Move result, value, #numeric` copies an existing numeric value, preserving units
+and Percentage. Boolean becomes 0/1 and Dice becomes its roll sum. Text is not
+parsed; nonnumeric inputs become Nothing.

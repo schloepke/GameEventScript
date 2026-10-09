@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using GameEventScript.Api;
+using GameEventScript.Runtime.Values;
 using static GameEventScript.Api.GameEventScriptBinaryBindKind;
 using static GameEventScript.Api.GameEventScriptBindingSegment;
 
@@ -47,6 +48,8 @@ internal sealed class GesLinkedProgram
         ValidateResourceMetadata(program);
         StringPool = BuildStringPool(program.StringConstants);
         StringScalarCounts = BuildStringScalarCountsIfNeeded(StringPool);
+        TextConstants = new GesValue[StringPool.Length];
+        for (var i = 0; i < TextConstants.Length; i++) TextConstants[i].SetText(StringPool[i], FetchStringScalarCount((ushort)i));
         CodeSegmentSize = checked((ushort)program.Code.Length);
         RecordConstructors = BuildIdIndexedBindTable(program, Record);
         ExtensionCallBinds = BuildIdIndexedBindTable(program, ExtensionCall);
@@ -60,6 +63,7 @@ internal sealed class GesLinkedProgram
 
     internal GameEventScriptProgram Program { get; }
     internal string[] StringPool { get; }
+    internal GesValue[] TextConstants { get; }
     internal int[]? StringScalarCounts { get; }
     internal ushort CodeSegmentSize { get; }
     internal OutboundMessageSignature[] OutboundMessageSignatures { get; }

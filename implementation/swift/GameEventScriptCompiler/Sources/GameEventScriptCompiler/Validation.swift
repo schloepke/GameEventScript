@@ -122,10 +122,14 @@ extension GesCompiler {
                 }
                 try validateStatements(yes, bindings, ancestors.union(names), conditionTypes)
                 try validateStatements(no, [], ancestors.union(names), types)
-            case .loop(let name, let e, _, let body):
+            case .loop(let bindings, let e, _, let body):
                 try validateExpression(e, visible: names.union(ancestors), types: types)
-                if names.contains(name) || ancestors.contains(name) { throw error("validate.shadowedVariable", s.location, symbol: name, kind: .variable) }
-                try validateStatements(body, [name], ancestors.union(names), types)
+                var bound: Set<String> = []
+                for name in bindings {
+                    if names.contains(name) || ancestors.contains(name) { throw error("validate.shadowedVariable", s.location, symbol: name, kind: .variable) }
+                    if !bound.insert(name).inserted { throw error("validate.duplicateVariable", s.location, symbol: name, kind: .variable) }
+                }
+                try validateStatements(body, bound, ancestors.union(names), types)
             case .seeded(let seed, let body):
                 try validateSeed(seed, types)
                 try validateExpression(seed, visible: names.union(ancestors), types: types)
@@ -146,9 +150,13 @@ extension GesCompiler {
             children += args.map(\.value)
         }
 
-        func boundExpressions(_ expressions: [GesExpression], name: String) throws {
-            if visible.contains(name) { throw error("validate.shadowedVariable", e.location, symbol: name, kind: .variable) }
-            let scope = name.isEmpty ? visible : visible.union([name])
+        func boundExpressions(_ expressions: [GesExpression], name: String, names: [String] = []) throws {
+            var bound: Set<String> = []
+            for binding in names.isEmpty ? (name.isEmpty ? [] : [name]) : names {
+                if visible.contains(binding) { throw error("validate.shadowedVariable", e.location, symbol: binding, kind: .variable) }
+                if !bound.insert(binding).inserted { throw error("validate.duplicateVariable", e.location, symbol: binding, kind: .variable) }
+            }
+            let scope = visible.union(bound)
             for expression in expressions { try validateExpression(expression, visible: scope, types: types) }
         }
 
@@ -194,23 +202,21 @@ extension GesCompiler {
                     if !labels.contains(arg.label) || positional > labels.filter({ $0 == "_" }).count { throw error("validate.invalidTypeConstructor", e.location, symbol: name, kind: .type) }
                 }
             }
-        case .list(let items), .intrinsic(_, let items): children = items
+        case .list(let items), .intrinsic(_, let items), .combined(_, let items): children = items
         case .map(let entries): children = entries.map(\.1)
         case .selector(let a, let s):
             try validateExpression(a, visible: visible, types: types)
             if s.operation == "fold" || s.operation == "reduce" {
                 if s.operation == "fold" { try validateExpression(s.expressions[0], visible: visible, types: types) }
-                if visible.contains(s.accumulator) { throw error("validate.shadowedVariable", e.location, symbol: s.accumulator, kind: .variable) }
-                if visible.contains(s.name) { throw error("validate.shadowedVariable", e.location, symbol: s.name, kind: .variable) }
-                if s.name == s.accumulator { throw error("validate.duplicateVariable", e.location, symbol: s.name, kind: .variable) }
-                try validateExpression(s.expressions.last!, visible: visible.union([s.name, s.accumulator]), types: types)
+                try boundExpressions([s.expressions.last!], name: s.name, names: [s.accumulator] + (s.names.isEmpty ? [s.name] : s.names))
             } else if s.operation == "choose" {
-                for (index, expression) in s.expressions.enumerated() { try boundExpressions([expression], name: index == 0 ? s.name : s.weightName) }
-            } else if !s.expressions.isEmpty && ["any", "all", "filter", "count", "sum", "average", "select", "min", "max", "first", "last", "single", "map", "group", "order", "distinct"].contains(s.operation) {
-                try boundExpressions(s.expressions, name: s.name)
+                for (index, expression) in s.expressions.enumerated() { try boundExpressions([expression], name: index == 0 ? s.name : s.weightName, names: index == 0 ? s.names : s.weightNames) }
+            } else if !s.expressions.isEmpty && ["any", "all", "filter", "count", "sum", "average", "foreach", "select", "min", "max", "first", "last", "single", "map", "group", "order", "distinct"].contains(s.operation) {
+                try boundExpressions(s.expressions, name: s.name, names: s.names)
             } else {
                 children = s.expressions
             }
+        case .between(let value, let minimum, let maximum): children = [value, minimum, maximum]
         case .range(let a, let b, let c): children = [a, b] + (c.map { [$0] } ?? [])
         case .choice(let branches, let fallback): children = branches.flatMap { [$0.0, $0.1] } + [fallback]
         case .generated(_, let name, let source, _, let predicate, let projection):

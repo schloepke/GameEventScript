@@ -65,6 +65,11 @@ extension GesCompiler {
             if signature.count != line.operands.count { throw assemblyFailure(line.location, "Invalid assembly operand count.", line.name) }
             for (index, operand) in line.operands.enumerated() {
                 switch signature[index] {
+                case "W":
+                    for target in assemblyWrites("W", operand) {
+                        let name = try assemblyName(target)
+                        if !writable.contains(name) { throw assemblyFailure(line.location, "Outer bindings are read-only.", name) }
+                    }
                 case "w":
                     let name = try assemblyName(operand)
                     if !writable.contains(name) { throw assemblyFailure(line.location, "Outer bindings are read-only.", name) }
@@ -115,6 +120,7 @@ extension GesCompiler {
                     registers[operandIndex] = d
                 }
             }
+            if try assemblyIterator(line, registers, r, scope, &patches) { continue }
             if try assemblySymbolic(line, registers, r, scope) { continue }
             if try assemblySpecial(line, registers, r) { continue }
             let (op, _, slots) = Self.assemblyInstructions[line.name]!
@@ -161,7 +167,9 @@ extension GesCompiler {
                 depth -= 1
                 if depth < 0 { throw assemblyFailure(line.location, "Cannot pop an outer random scope.") }
             }
-            for (i, kind) in signature.enumerated() where kind == "w" { state[try assemblyName(line.operands[i])] = assemblyResultKind(line, state) }
+            for (i, kind) in signature.enumerated() {
+                for target in assemblyWrites(kind, line.operands[i]) { state[try assemblyName(target)] = assemblyResultKind(line, state) }
+            }
             if line.name == "IteratorClose" { state[try assemblyName(line.operands[0])] = "closed" }
             if line.name.hasSuffix("BuilderFinish") || line.name.hasSuffix("BuilderFinishAscending") || line.name.hasSuffix("BuilderFinishDescending") { state[try assemblyName(line.operands[1])] = "closed" }
 
@@ -220,10 +228,12 @@ extension GesCompiler {
                         }
                         if let expected = assemblyExpectedResource(line.name, i), state[name] != expected { throw assemblyFailure(line.location, "Wrong resource lifecycle state.", name) }
                     }
-                } else if kind == "w" {
-                    let name = try assemblyName(line.operands[i])
-                    if let old = state[name], assemblyResource(old) { throw assemblyFailure(line.location, "Cannot overwrite a live resource.", name) }
-                    if assemblyResource(assemblyResultKind(line, state)) && !locals.contains(name) { throw assemblyFailure(line.location, "Resources require a temporary.", name) }
+                } else {
+                    for target in assemblyWrites(kind, line.operands[i]) {
+                        let name = try assemblyName(target)
+                        if let old = state[name], assemblyResource(old) { throw assemblyFailure(line.location, "Cannot overwrite a live resource.", name) }
+                        if assemblyResource(assemblyResultKind(line, state)) && !locals.contains(name) { throw assemblyFailure(line.location, "Resources require a temporary.", name) }
+                    }
                 }
             }
         }

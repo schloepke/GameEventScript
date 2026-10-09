@@ -69,6 +69,8 @@ private final class GesProgramDump {
                     case .itemRegisterList: name = "Items"
                     case .valueRegisterList: name = "Values"
                     case .captureRegisterList: name = "Captures"
+                    case .sourceRegisterList: name = "Sources"
+                    case .targetRegisterList: name = "Targets"
                     default: name = "Tags"
                     }
                     listLabels[index] = name + "_" + String(index)
@@ -153,11 +155,19 @@ private final class GesProgramDump {
             let parts = i.operands
             let operands = parts.enumerated().map { operand(i, $0.element, $0.offset, address) }.filter { !$0.isEmpty }
             if !operands.isEmpty { output += " " + operands.joined(separator: ", ") }
-            var flags: [String] = []
-            if i.normalizeResultAsPredicate { flags.append("NormalizeResultAsPredicate") }
-            if i.unitAndFlags & 0x40 != 0 { flags.append("WithTags") }
-            if i.unitAndFlags & 0x80 != 0 { flags.append("Indirect") }
-            if !flags.isEmpty { output += " flags=" + flags.joined(separator: ", ") }
+            if [.iteratorCreate, .iteratorCreateOrJump].contains(i.opcode), i.unitAndFlags >> 5 != 0 {
+                output += " mode=" + ["Normal", "Union", "Intersect", "Difference", "Lockstep", "Cartesian", "Entries"][Int(i.unitAndFlags >> 5)]
+            } else if [.move, .add, .subtract, .multiply, .divide, .power, .integerDivide, .modulo, .remainder, .min, .max, .negate, .abs, .clamp].contains(i.opcode), i.unitAndFlags & 64 != 0 {
+                output += " mode=Numeric"
+            } else if i.opcode == .iteratorNext && i.unitAndFlags & 32 != 0 {
+                output += " output=Components"
+            } else {
+                var flags: [String] = []
+                if i.normalizeResultAsPredicate { flags.append("NormalizeResultAsPredicate") }
+                if i.unitAndFlags & 0x40 != 0 { flags.append("WithTags") }
+                if i.unitAndFlags & 0x80 != 0 { flags.append("Indirect") }
+                if !flags.isEmpty { output += " flags=" + flags.joined(separator: ", ") }
+            }
             let comments = parts.compactMap { comment(i, $0) }
             if !comments.isEmpty { output += " // " + comments.joined(separator: ", ") }
             output += "\n"

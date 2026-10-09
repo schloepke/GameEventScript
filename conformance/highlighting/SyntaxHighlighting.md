@@ -96,3 +96,15 @@ of full-document and incremental-line results, including every scope and offset.
 ```highlight
 {"name":"inline assembly registers and instructions","language":"ges","source":"let result be asm {\n    .register temp\n    LoadInteger temp, 7\n    Multiply result, temp, temp // preserve instructions\n}\nemit Done(value: result)","expect":[{"text":"asm","kind":"keyword"},{"text":".register","kind":"keyword"},{"text":"LoadInteger","kind":"builtin","scope":"support.function.opcode.gameeventscript"},{"text":"Multiply","kind":"builtin"},{"text":"7","kind":"number"},{"text":"// preserve instructions","kind":"comment"},{"text":"emit","kind":"keyword"}]}
 ```
+
+```highlight
+{"name":"inclusive between comparisons","language":"ges","source":"if x is between 1 and 10 or x is not between 20 and 30 {}","expect":[{"text":"is","occurrence":0,"kind":"keyword"},{"text":"between","occurrence":0,"kind":"keyword"},{"text":"and","occurrence":0,"kind":"keyword"},{"text":"not","kind":"keyword"},{"text":"between","occurrence":1,"kind":"keyword"}]}
+```
+
+```json
+{"name":"combined pipeline selectors","language":"ges","source":"[:cartesian a, b :filter x, y where x = y :select x, y => x][:foreach value => :ext.save(value)]","expect":[{"text":":cartesian","kind":"builtin"},{"text":":filter","kind":"builtin"},{"text":":select","kind":"builtin"},{"text":":foreach","kind":"builtin"}]}
+```
+
+```highlight
+{"name":"condition-first guarded choice","language":"ges","source":"let rank be\n  when value = 14 then 'A',\n  when value = 13 then 'K'\n  otherwise value as :Text","expect":[{"text":"when","kind":"keyword"},{"text":"then","kind":"keyword"},{"text":"when","occurrence":1,"kind":"keyword"},{"text":"then","occurrence":1,"kind":"keyword"},{"text":"otherwise","kind":"keyword"}]}
+```

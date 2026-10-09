@@ -22,6 +22,8 @@ internal abstract record IterationSourceNode : ScriptNode;
 
 internal abstract record ScriptNode
 {
+    public IReadOnlyList<string> BindingNames { get; init; } = [];
+
     // Parser construction assigns metadata before attaching a fresh node to its
     // parent. Subsequent compiler passes retain copy-on-rewrite semantics.
     public GameEventScriptSourceLocation? SourceRange { get; set; }
@@ -374,6 +376,8 @@ internal sealed record MapEntryNode(string Key, ExpressionNode Value) : ScriptNo
 internal sealed record UnaryExpressionNode(GesUnaryOperator Operator, ExpressionNode Operand) : ExpressionNode;
 internal sealed record IntrinsicCallExpressionNode(GesIntrinsicFunction Function, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
 internal sealed record VariadicTaggedExpressionNode(string Operator, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
+internal sealed record BetweenExpressionNode(ExpressionNode Value, ExpressionNode Minimum, ExpressionNode Maximum) : ExpressionNode;
+
 internal sealed record ClampExpressionNode(ExpressionNode Value, ExpressionNode Minimum, ExpressionNode Maximum) : ExpressionNode;
 internal sealed record RangeExpressionNode(ExpressionNode FromExpression, ExpressionNode ToExpression, ExpressionNode? StepExpression) : ExpressionNode;
 internal sealed record RandomExpressionNode(ExpressionNode FromExpression, ExpressionNode ToExpression) : ExpressionNode;
@@ -391,6 +395,9 @@ internal sealed record NothingCheckExpressionNode(ExpressionNode Value) : Expres
 internal sealed record TypeCastExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;
 internal sealed record DiceCountPatternNode(int Count, ExpressionNode? Face) : DicePatternNode;
 internal sealed record MemberAccessExpressionNode(ExpressionNode Target, string Member) : ExpressionNode;
+internal sealed record CombinedCollectionExpressionNode(string Operation, IReadOnlyList<ExpressionNode> Sources) : ExpressionNode;
+internal sealed record ForeachSelectorNode(string Identifier, ExpressionNode Expression) : CollectionSelectorNode;
+
 internal sealed record CollectionAccessExpressionNode(ExpressionNode Target, CollectionSelectorNode Selector) : ExpressionNode;
 
 // Collection selector nodes
@@ -403,7 +410,10 @@ internal sealed record SequenceSliceSelectorNode(string Operation, string Scope,
 internal sealed record SeriesTermSelectorNode(ExpressionNode IndexExpression) : CollectionSelectorNode;
 internal sealed record PredicateSelectorNode(string Operator, string Identifier, ExpressionNode Predicate) : CollectionSelectorNode;
 internal sealed record CountSelectorNode(string Identifier, ExpressionNode Predicate) : CollectionSelectorNode;
-internal sealed record ChooseSelectorNode(int Count, bool AtRandom, string? Identifier, ExpressionNode? Predicate, string? WeightIdentifier, ExpressionNode? WeightExpression) : CollectionSelectorNode;
+internal sealed record ChooseSelectorNode(int Count, bool AtRandom, string? Identifier, ExpressionNode? Predicate, string? WeightIdentifier, ExpressionNode? WeightExpression) : CollectionSelectorNode
+{
+    public IReadOnlyList<string> WeightBindingNames { get; init; } = [];
+}
 internal sealed record DrawSelectorNode(int Count) : CollectionSelectorNode;
 internal sealed record ShuffleSelectorNode : CollectionSelectorNode;
 internal sealed record ReverseSelectorNode : CollectionSelectorNode;

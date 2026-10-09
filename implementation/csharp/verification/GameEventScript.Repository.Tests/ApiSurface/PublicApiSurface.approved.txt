@@ -294,6 +294,7 @@ enum GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field PublishAfter = 221
   enum-field ConstructData = 222
   enum-field SplitText = 223
+  enum-field Cartesian = 224
 enum GameEventScript.Api.GameEventScriptBytecodePatternKind
   enum-field CountAny = 0
   enum-field CountFace = 1
@@ -567,6 +568,7 @@ sealed class GameEventScript.Api.GameEventScriptInstance
 enum GameEventScript.Api.GameEventScriptInstructionFlag
   enum-field None = 0
   enum-field NormalizeResultAsPredicate = 32
+  enum-field Numeric = 64
   enum-field WithTags = 64
   enum-field Indirect = 128
 sealed class GameEventScript.Api.GameEventScriptIntegerRange

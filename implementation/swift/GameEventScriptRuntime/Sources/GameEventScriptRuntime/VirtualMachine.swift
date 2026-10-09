@@ -51,7 +51,9 @@ enum GameEventScriptVirtualMachine {
                 let y = Int(instruction.word2)
                 switch instruction.opcode {
                 case .add, .subtract, .multiply, .divide, .integerDivide, .modulo, .remainder:
-                    try state.setArithmeticResult(instruction, context)
+                    if instruction.unitAndFlags & 0x40 != 0 { try state.setNumericArithmeticResult(instruction, context) } else { try state.setArithmeticResult(instruction, context) }
+                case .power, .min, .max, .negate, .abs, .clamp:
+                    if instruction.unitAndFlags & 0x40 != 0 { try state.setNumericArithmeticResult(instruction, context) } else { try GesMath.execute(instruction, state, context, sink: state.output(d)) }
                 case .nop: break
                 case .registerLocals: state.modifyLocals(Int(instruction.signedWord1))
                 case .jump: state.ip = y
@@ -97,7 +99,8 @@ enum GameEventScriptVirtualMachine {
                     let v = state.value(x)
                     let n = v.asNumber
                     state.setBoolean(d, v.isNumeric && n.isFinite && n != n.rounded(.towardZero))
-                case .move: state.move(d, x)
+                case .move:
+                    if instruction.unitAndFlags & 0x40 != 0 { state.numericCopy(d, x) } else { state.move(d, x) }
                 case .memberAccess: try state.value(y).member(state.text(instruction.word1), sink: state.output(d))
                 case .indexAccess: state.value(y).index(Int64(instruction.word1), sink: state.output(d))
                 case .propertyAccess:
@@ -181,8 +184,12 @@ enum GameEventScriptVirtualMachine {
                 case .randomPushConstant: if !context.random.push(seed: instruction.integer) { context.budget.exhaust("MaxRandomScopeDepth", context.runtimeLimits.maxRandomScopeDepth) }
                 case .randomPop: if !context.random.pop() && !context.budget.isExhausted { state.fail("runtime.randomStackUnderflow") }
                 case .iteratorCreate, .iteratorCreateOrJump:
-                    iterator(state, d, state.value(x), context)
+                    try compoundIterator(state, instruction, context)
                     if instruction.opcode == .iteratorCreateOrJump, state.slot(d).isRegisterData { state.ip = y }
+                case .cartesian:
+                    cartesian(state, d, state.value(x), state.value(y), context.budget)
+                case .iteratorNext where instruction.unitAndFlags & 32 != 0:
+                    if nextComponents(state, instruction) { _ = context.budget.loop() }
                 case .iteratorNext:
                     if let iterator = state.slot(x).iteratorValue, iterator.next(sink: state.output(d)) != nil {
                         _ = context.budget.loop()

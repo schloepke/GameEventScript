@@ -50,6 +50,9 @@ internal sealed partial class GesParser
     private string? _sourceName;
     private int _expressionNesting;
     private int _statementNesting;
+    private int _delimiterDepth;
+    private int? _forSourceDepth;
+    private int? _choiceConditionDepth;
 
     private GesParser(GesTokenReader reader, string? sourceName, uint? sourceId)
     {
@@ -705,7 +708,7 @@ internal sealed partial class GesParser
         Expect(Of);
         SkipNewLines();
         arguments.Add(new ArgumentNode(null, ParseEqualityExpression()));
-        while (Match(OperatorAnd))
+        while (!IsForClauseStart() && Match(OperatorAnd))
         {
             SkipNewLines();
             arguments.Add(new ArgumentNode(null, ParseEqualityExpression()));
@@ -761,33 +764,65 @@ internal sealed partial class GesParser
     private ForStatementNode ParseForStatement()
     {
         var startToken = Previous;
-        var identifier = ExpectIdentifier();
+        var bindings = ParseBindingNames();
+        var identifier = bindings[0];
         SkipNewLines();
         IterationSourceNode source;
-        if (Match(In))
+        var previousSourceDepth = _forSourceDepth;
+        _forSourceDepth = _delimiterDepth;
+        try
         {
-            SkipNewLines();
-            if (Current.Kind == Identifier && string.Equals(Current.Text, "from", StringComparison.Ordinal))
+            if (Match(In))
             {
-                throw new GameEventScriptParseException("Direct ranges are not allowed after 'in'; use 'for item from ... to ...' or iterate a range variable", Current.Line, Current.Column);
+                SkipNewLines();
+                if (Current.Kind == Identifier && string.Equals(Current.Text, "from", StringComparison.Ordinal))
+                {
+                    throw new GameEventScriptParseException("Direct ranges are not allowed after 'in'; use 'for item from ... to ...' or iterate a range variable", Current.Line, Current.Column);
+                }
+
+                var sourceStart = Current;
+                source = WithRange(new CollectionIterationSourceNode(ParseExpression()), sourceStart);
             }
+            else if (MatchWord("from"))
+            {
+                var fromToken = Previous;
+                source = WithRange(new RangeIterationSourceNode(ParseRangeExpressionCore()), fromToken);
+            }
+            else
+            {
+                var token = Current;
+                throw new GameEventScriptParseException($"Expected {In} or 'from' but found {token.Text}", token.Line, token.Column);
+            }
+        }
+        finally { _forSourceDepth = previousSourceDepth; }
 
-            var sourceStart = Current;
-            source = WithRange(new CollectionIterationSourceNode(ParseExpression()), sourceStart);
-        }
-        else if (MatchWord("from"))
+        SkipNewLines();
+        StatementBodyNode body;
+        if (IsForClauseStart(requireSourceContext: false))
         {
-            var fromToken = Previous;
-            source = WithRange(new RangeIterationSourceNode(ParseRangeExpressionCore()), fromToken);
+            if (_statementNesting >= GesSourceNesting.MaximumStatementDepth) ThrowNestingLimit(CreateRange(Current));
+            Advance();
+            SkipNewLines();
+            _statementNesting++;
+            try { body = WithRange(new StatementBodyNode(false, [ParseForStatement()]), startToken); }
+            finally { _statementNesting--; }
         }
-        else
-        {
-            var token = Current;
-            throw new GameEventScriptParseException($"Expected {In} or 'from' but found {token.Text}", token.Line, token.Column);
-        }
+        else body = ParseStatementBody();
+        return WithRange(new ForStatementNode(identifier, source, body) { BindingNames = bindings }, startToken);
+    }
 
-        var body = ParseStatementBody();
-        return WithRange(new ForStatementNode(identifier, source, body), startToken);
+    private bool IsForClauseStart(bool requireSourceContext = true)
+    {
+        if (requireSourceContext && _forSourceDepth != _delimiterDepth || !Is(OperatorAnd)) return false;
+        var offset = 1;
+        if (_reader.PeekSignificant(offset++).Kind != Identifier) return false;
+        while (_reader.PeekSignificant(offset).Kind == Comma)
+        {
+            offset++;
+            if (_reader.PeekSignificant(offset++).Kind != Identifier) return false;
+        }
+        var token = _reader.PeekSignificant(offset);
+        return token.Kind == In || token.Kind == Identifier && token.Text == "from";
     }
 
     private SeededRandomStatementNode ParseSeededRandomStatement()
@@ -828,6 +863,8 @@ internal sealed partial class GesParser
 
     private ExpressionNode ParseGuardedChoiceExpression()
     {
+        SkipNewLines();
+        if (Match(When)) return ParseConditionFirstChoiceExpression();
         var expression = ParseImplicationExpression();
         if (Match(When))
         {
@@ -862,6 +899,37 @@ internal sealed partial class GesParser
         }
 
         return expression;
+    }
+
+    private ExpressionNode ParseConditionFirstChoiceExpression()
+    {
+        var startToken = Previous;
+        var branches = new List<GuardedChoiceBranchNode>();
+        while (true)
+        {
+            SkipNewLines();
+            var savedConditionDepth = _choiceConditionDepth;
+            _choiceConditionDepth = _delimiterDepth;
+            ExpressionNode condition;
+            try { condition = ParseImplicationExpression(); }
+            finally { _choiceConditionDepth = savedConditionDepth; }
+            SkipNewLines();
+            ExpectWord("then");
+            SkipNewLines();
+            var value = ParseImplicationExpression();
+            branches.Add(new GuardedChoiceBranchNode(value, condition));
+            if (!Match(Comma)) break;
+            SkipNewLines();
+            if (Is(Otherwise)) break;
+            Match(OperatorOr);
+            SkipNewLines();
+            Expect(When);
+        }
+        SkipNewLines();
+        Expect(Otherwise);
+        SkipNewLines();
+        var fallback = ParseImplicationExpression();
+        return WithRange(new GuardedChoiceExpressionNode(branches, fallback), startToken);
     }
 
     private ExpressionNode ParseImplicationExpression()
@@ -970,7 +1038,7 @@ internal sealed partial class GesParser
     {
         var expression = ParseEqualityExpression();
 
-        while (Match(OperatorAnd))
+        while (!IsForClauseStart() && Match(OperatorAnd))
         {
             SkipNewLines();
             var right = ParseEqualityExpression();
@@ -1211,6 +1279,18 @@ internal sealed partial class GesParser
                 if (Match(Empty))
                 {
                     expression = ApplyIsNegation(WithRange(new UnaryExpressionNode(GesUnaryOperator.Empty, expression), expression), negated);
+                    continue;
+                }
+
+                if (MatchWord("between"))
+                {
+                    SkipNewLines();
+                    var minimum = ParseRelationalComparisonOperand();
+                    SkipNewLines();
+                    Expect(OperatorAnd);
+                    SkipNewLines();
+                    var maximum = ParseRelationalComparisonOperand();
+                    expression = ApplyIsNegation(WithRange(new BetweenExpressionNode(expression, minimum, maximum), expression, maximum), negated);
                     continue;
                 }
 
@@ -1727,21 +1807,8 @@ internal sealed partial class GesParser
             if (Match(LeftBracket))
             {
                 SkipNewLines();
-                if (MatchTag(":split"))
-                {
-                    Expect(On);
-                    var whitespace = MatchWord("whitespace");
-                    ExpressionNode delimiter = whitespace ? new NothingLiteralExpressionNode() : ParseExpression();
-                    SkipNewLines();
-                    Expect(RightBracket);
-                    var arguments = new ArgumentListNode(whitespace ? [new ArgumentNode(null, expression)] : [new ArgumentNode(null, expression), new ArgumentNode(null, delimiter)]);
-                    expression = WithRange(new TypeConstructorExpressionNode(whitespace ? "__splitWhitespace" : "__split", arguments), expression);
-                    continue;
-                }
-                var selector = ParseCollectionSelector();
-                SkipNewLines();
+                expression = ParsePipelineSteps(expression);
                 Expect(RightBracket);
-                expression = WithRange(new CollectionAccessExpressionNode(expression, selector), expression, selector);
                 continue;
             }
 
@@ -1749,17 +1816,77 @@ internal sealed partial class GesParser
         }
     }
 
+    private IReadOnlyList<string> ParseBindingNames()
+    {
+        var names = new List<string> { ExpectIdentifier() };
+        while (Match(Comma)) { SkipNewLines(); names.Add(ExpectIdentifier()); }
+        return names;
+    }
+
+    private bool IsCombinedSelector()
+        => Current.Text is ":cartesian" or ":lockstep" or ":zip" or ":union" or ":intersect" or ":difference";
+
+    private bool IsPipelineSelectorStart()
+        => !IsExtensionCallStart() && (IsCombinedSelector() || Current.Text is
+            ":entries" or ":keys" or ":values" or ":filter" or ":select" or ":foreach" or ":any" or ":all" or ":count" or
+            ":sum" or ":average" or ":min" or ":max" or ":highest" or ":lowest" or ":fold" or ":reduce" or ":map" or
+            ":first" or ":last" or ":single" or ":distinct" or ":order" or ":group" or ":sort" or ":reverse" or ":shuffle" or
+            ":split" or ":choose" or ":draw" or ":take" or ":drop" or ":contains" or ":has" or ":term");
+
+    private ExpressionNode ParsePipelineSteps(ExpressionNode? source)
+    {
+        do
+        {
+            var start = Current;
+            if (MatchTag(":split"))
+            {
+                if (source is null) throw new GameEventScriptParseException("Split requires a source.", start);
+                Expect(On);
+                var whitespace = MatchWord("whitespace");
+                ExpressionNode delimiter = whitespace ? new NothingLiteralExpressionNode() : ParseExpression();
+                var arguments = new ArgumentListNode(whitespace ? [new ArgumentNode(null, source)] : [new ArgumentNode(null, source), new ArgumentNode(null, delimiter)]);
+                source = WithRange(new TypeConstructorExpressionNode(whitespace ? "__splitWhitespace" : "__split", arguments), source);
+            }
+            else if (IsCombinedSelector())
+            {
+                var operation = Advance().Text[1..];
+                var sources = new List<ExpressionNode>();
+                if (source is not null) sources.Add(source);
+                SkipNewLines();
+                sources.Add(ParseExpression());
+                while (Match(Comma)) { SkipNewLines(); sources.Add(ParseExpression()); }
+                if (sources.Count < 2) throw new GameEventScriptParseException("Combined selectors require at least two sources.", start);
+                source = WithRange(new CombinedCollectionExpressionNode(operation == "zip" ? "lockstep" : operation, sources), start);
+            }
+            else
+            {
+                if (source is null) throw new GameEventScriptParseException("Selector requires a source.", start);
+                var selector = ParseCollectionSelector();
+                source = WithRange(new CollectionAccessExpressionNode(source, selector), source, selector);
+            }
+            SkipNewLines();
+        } while (IsPipelineSelectorStart());
+        return source!;
+    }
+
     private CollectionSelectorNode ParseCollectionSelector()
     {
         var startToken = Current;
         SkipNewLines();
+        if (MatchTag(":foreach"))
+        {
+            var names = ParseBindingNames();
+            Expect(ProjectionArrow);
+            return WithRange(new ForeachSelectorNode(names[0], ParseExpression()) { BindingNames = names }, startToken);
+        }
         if (Match(SelectorAny, SelectorAll))
         {
             var op = Previous.Kind == SelectorAny ? "any" : "all";
-            var identifier = ExpectIdentifier();
+            var bindings = ParseBindingNames();
+            var identifier = bindings[0];
             ExpectWord("where");
             var predicate = ParseExpression();
-            return WithRange(new PredicateSelectorNode(op, identifier, predicate), startToken);
+            return WithRange(new PredicateSelectorNode(op, identifier, predicate) { BindingNames = bindings }, startToken);
         }
 
         if (Match(SelectorHas))
@@ -1791,15 +1918,16 @@ internal sealed partial class GesParser
         if (Match(SelectorCount))
         {
             SkipNewLines();
-            if (Is(RightBracket))
+            if (Is(RightBracket) || IsPipelineSelectorStart())
             {
                 return WithRange(new CountSelectorNode("value", new BooleanLiteralExpressionNode(true)), startToken);
             }
 
-            var identifier = ExpectIdentifier();
+            var bindings = ParseBindingNames();
+            var identifier = bindings[0];
             ExpectWord("where");
             var predicate = ParseExpression();
-            return WithRange(new CountSelectorNode(identifier, predicate), startToken);
+            return WithRange(new CountSelectorNode(identifier, predicate) { BindingNames = bindings }, startToken);
         }
 
         if (Match(SelectorChoose))
@@ -1841,38 +1969,41 @@ internal sealed partial class GesParser
 
         if (Match(SelectorFilter))
         {
-            var identifier = ExpectIdentifier();
+            var bindings = ParseBindingNames();
+            var identifier = bindings[0];
             ExpectWord("where");
             var predicate = ParseExpression();
-            return WithRange(new FilterSelectorNode(identifier, predicate), startToken);
+            return WithRange(new FilterSelectorNode(identifier, predicate) { BindingNames = bindings }, startToken);
         }
 
         if (Match(SelectorSum))
         {
             SkipNewLines();
-            if (Is(RightBracket))
+            if (Is(RightBracket) || IsPipelineSelectorStart())
             {
                 return WithRange(new SumSelectorNode("value", new IdentifierExpressionNode("value")), startToken);
             }
 
-            var identifier = ExpectIdentifier();
+            var bindings = ParseBindingNames();
+            var identifier = bindings[0];
             Expect(ProjectionArrow);
             var projection = ParseExpression();
-            return WithRange(new SumSelectorNode(identifier, projection), startToken);
+            return WithRange(new SumSelectorNode(identifier, projection) { BindingNames = bindings }, startToken);
         }
 
         if (Match(SelectorAverage))
         {
             SkipNewLines();
-            if (Is(RightBracket))
+            if (Is(RightBracket) || IsPipelineSelectorStart())
             {
                 return WithRange(new AverageSelectorNode("value", new IdentifierExpressionNode("value")), startToken);
             }
 
-            var identifier = ExpectIdentifier();
+            var bindings = ParseBindingNames();
+            var identifier = bindings[0];
             Expect(ProjectionArrow);
             var projection = ParseExpression();
-            return WithRange(new AverageSelectorNode(identifier, projection), startToken);
+            return WithRange(new AverageSelectorNode(identifier, projection) { BindingNames = bindings }, startToken);
         }
 
         if (MatchTag(":min"))
@@ -1908,24 +2039,27 @@ internal sealed partial class GesParser
             }
             Expect(Comma);
             SkipNewLines();
-            var identifier = ExpectIdentifier();
+            var bindings = ParseBindingNames();
+            var identifier = bindings[0];
             Expect(ProjectionArrow);
             SkipNewLines();
-            return WithRange(new FoldSelectorNode(accumulator, identifier, seed, ParseExpression()), startToken);
+            return WithRange(new FoldSelectorNode(accumulator, identifier, seed, ParseExpression()) { BindingNames = bindings }, startToken);
         }
 
         if (Match(SelectorSelect))
         {
-            var identifier = ExpectIdentifier();
+            var bindings = ParseBindingNames();
+            var identifier = bindings[0];
             Expect(ProjectionArrow);
             var projection = ParseExpression();
-            return WithRange(new SelectSelectorNode(identifier, projection), startToken);
+            return WithRange(new SelectSelectorNode(identifier, projection) { BindingNames = bindings }, startToken);
         }
 
         if (MatchTag(":map"))
         {
             SkipNewLines();
-            var identifier = ExpectIdentifier();
+            var bindings = ParseBindingNames();
+            var identifier = bindings[0];
             SkipNewLines();
             ExpectWord("by");
             SkipNewLines();
@@ -1938,7 +2072,7 @@ internal sealed partial class GesParser
                 valueProjection = ParseExpression();
             }
 
-            return WithRange(new MapSelectorNode(identifier, keyProjection, valueProjection), startToken);
+            return WithRange(new MapSelectorNode(identifier, keyProjection, valueProjection) { BindingNames = bindings }, startToken);
         }
 
         if (Match(SelectorContains))
@@ -2009,10 +2143,11 @@ internal sealed partial class GesParser
             return WithRange(new EdgeSelectorNode(mode, null, null), startToken);
         }
 
-        var identifier = ExpectIdentifier();
+        var bindings = ParseBindingNames();
+        var identifier = bindings[0];
         ExpectWord("where");
         var predicate = ParseExpression();
-        return WithRange(new EdgeSelectorNode(mode, identifier, predicate), startToken);
+        return WithRange(new EdgeSelectorNode(mode, identifier, predicate) { BindingNames = bindings }, startToken);
     }
 
     private CollectionSelectorNode ParseOrderBySelector()
@@ -2021,25 +2156,27 @@ internal sealed partial class GesParser
         SkipNewLines();
         ExpectWord("by");
         SkipNewLines();
-        var identifier = ExpectIdentifier();
+        var bindings = ParseBindingNames();
+        var identifier = bindings[0];
         Expect(ProjectionArrow);
         var projection = ParseExpression();
         var direction = ParseSortDirection();
-        return WithRange(new OrderBySelectorNode(direction, identifier, projection), startToken);
+        return WithRange(new OrderBySelectorNode(direction, identifier, projection) { BindingNames = bindings }, startToken);
     }
 
     private CollectionSelectorNode ParseProjectionSelector(string op)
     {
         var startToken = Previous;
         SkipNewLines();
-        var identifier = ExpectIdentifier();
+        var bindings = ParseBindingNames();
+        var identifier = bindings[0];
         Expect(ProjectionArrow);
         var projection = ParseExpression();
 
         return op switch
         {
-            "min" or "lowest" => WithRange(new MinSelectorNode(identifier, projection), startToken),
-            "max" or "highest" => WithRange(new MaxSelectorNode(identifier, projection), startToken),
+            "min" or "lowest" => WithRange(new MinSelectorNode(identifier, projection) { BindingNames = bindings }, startToken),
+            "max" or "highest" => WithRange(new MaxSelectorNode(identifier, projection) { BindingNames = bindings }, startToken),
             _ => throw new InvalidOperationException($"Unknown projection selector '{op}'")
         };
     }
@@ -2073,10 +2210,11 @@ internal sealed partial class GesParser
         }
 
         SkipNewLines();
-        var identifier = ExpectIdentifier();
+        var bindings = ParseBindingNames();
+        var identifier = bindings[0];
         Expect(ProjectionArrow);
         var projection = ParseExpression();
-        return WithRange(new DistinctSelectorNode(identifier, projection), startToken);
+        return WithRange(new DistinctSelectorNode(identifier, projection) { BindingNames = bindings }, startToken);
     }
 
     private CollectionSelectorNode ParseGroupBySelector()
@@ -2085,10 +2223,11 @@ internal sealed partial class GesParser
         SkipNewLines();
         ExpectWord("by");
         SkipNewLines();
-        var identifier = ExpectIdentifier();
+        var bindings = ParseBindingNames();
+        var identifier = bindings[0];
         Expect(ProjectionArrow);
         var projection = ParseExpression();
-        return WithRange(new GroupBySelectorNode(identifier, projection), startToken);
+        return WithRange(new GroupBySelectorNode(identifier, projection) { BindingNames = bindings }, startToken);
     }
 
     private ObjectMatchPatternNode ParseObjectMatchPattern()
@@ -2288,6 +2427,12 @@ internal sealed partial class GesParser
     {
         var startToken = Previous;
         SkipNewLines();
+        if (IsCombinedSelector())
+        {
+            var combined = ParsePipelineSteps(null);
+            Expect(RightBracket);
+            return combined;
+        }
         if (Match(Colon))
         {
             SkipNewLines();
@@ -2670,13 +2815,16 @@ internal sealed partial class GesParser
         string? identifier = null;
         ExpressionNode? predicate = null;
         string? weightIdentifier = null;
+        IReadOnlyList<string> names = [];
+        IReadOnlyList<string> weightNames = [];
         ExpressionNode? weightExpression = null;
         if (Current.Kind == Identifier)
         {
             var lookahead = _reader.PeekSignificant(1);
-            if (lookahead.Kind == Identifier && string.Equals(lookahead.Text, "where", StringComparison.Ordinal))
+            if (lookahead.Kind == Comma || lookahead.Kind == Identifier && string.Equals(lookahead.Text, "where", StringComparison.Ordinal))
             {
-                identifier = ExpectIdentifier();
+                names = ParseBindingNames();
+                identifier = names[0];
                 ExpectWord("where");
                 predicate = ParseExpression();
             }
@@ -2688,14 +2836,15 @@ internal sealed partial class GesParser
             SkipNewLines();
             ExpectWord("by");
             SkipNewLines();
-            weightIdentifier = ExpectIdentifier();
+            weightNames = ParseBindingNames();
+            weightIdentifier = weightNames[0];
             SkipNewLines();
             Expect(ProjectionArrow);
             SkipNewLines();
             weightExpression = ParseExpression();
         }
 
-        return WithRange(new ChooseSelectorNode(count, atRandom, identifier, predicate, weightIdentifier, weightExpression), startToken);
+        return WithRange(new ChooseSelectorNode(count, atRandom, identifier, predicate, weightIdentifier, weightExpression) { BindingNames = names, WeightBindingNames = weightNames }, startToken);
     }
 
     private ExpressionNode ParseExtensionCallExpression()
@@ -2723,7 +2872,7 @@ internal sealed partial class GesParser
         {
             arguments = ParseUngroupedLabeledArgumentList();
         }
-        else if (IsExtensionUnaryArgumentStart())
+        else if (IsExtensionUnaryArgumentStart() && !(_choiceConditionDepth == _delimiterDepth && Current.Kind == Identifier && Current.Text == "then"))
         {
             arguments = new ArgumentListNode([new ArgumentNode(null, ParseUnaryExpression())]);
         }
@@ -2812,7 +2961,7 @@ internal sealed partial class GesParser
         Expect(Of);
         SkipNewLines();
         var arguments = new List<ExpressionNode> { ParseEqualityExpression() };
-        while (Match(OperatorAnd))
+        while (!IsForClauseStart() && Match(OperatorAnd))
         {
             SkipNewLines();
             arguments.Add(ParseEqualityExpression());
@@ -2994,7 +3143,7 @@ internal sealed partial class GesParser
 
     private bool IsExtensionCallStart()
     {
-        if (Current.Kind != Tag || !Current.Text.StartsWith(":", StringComparison.Ordinal))
+        if (!Current.Text.StartsWith(":", StringComparison.Ordinal) || Current.Kind == TypeName)
         {
             return false;
         }
@@ -3024,16 +3173,18 @@ internal sealed partial class GesParser
 
     private (string ExtensionName, string FunctionName, GesToken EndToken) ParseExtensionSymbol()
     {
-        var extensionToken = Expect(Tag);
+        var extensionToken = Advance();
         SkipNewLines();
-        Expect(Dot);
+        var dot = Expect(Dot);
         SkipNewLines();
         var functionToken = ExpectExtensionFunctionName();
+        if (extensionToken.EndLine != dot.Line || extensionToken.EndColumn != dot.Column || dot.EndLine != functionToken.Line || dot.EndColumn != functionToken.Column)
+            throw new GameEventScriptParseException("Extension names must be contiguous: :namespace.name.", extensionToken);
         return (extensionToken.Text[1..], functionToken.Text, functionToken);
     }
 
     private bool IsExtensionUnaryArgumentStart()
-        => Current.Kind is Identifier or Message or Tag or TypeName or ConstantReference or GesTokenKind.Float or Percentage or UnitNumber or Text or True or False or Nothing or
+        => !IsPipelineSelectorStart() && Current.Kind is Identifier or Message or Tag or TypeName or ConstantReference or GesTokenKind.Float or Percentage or UnitNumber or Text or True or False or Nothing or
             MathConstantPi or MathConstantE or MathConstantTau or MathConstantInfinity or
             IntrinsicAbs or IntrinsicLn or IntrinsicExp or IntrinsicSqrt or IntrinsicCbrt or IntrinsicChance or
             IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound or
@@ -3269,7 +3420,12 @@ internal sealed partial class GesParser
     }
 
     private GesToken Advance()
-        => _reader.Advance();
+    {
+        var token = _reader.Advance();
+        if (token.Kind is LeftParen or LeftBracket or LeftBrace) _delimiterDepth++;
+        else if (token.Kind is RightParen or RightBracket or RightBrace) _delimiterDepth--;
+        return token;
+    }
 
     private GesToken Current => _reader.Current;
 

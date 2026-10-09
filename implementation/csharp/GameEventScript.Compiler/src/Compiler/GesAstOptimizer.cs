@@ -267,6 +267,12 @@ internal static class GesAstOptimizer
             {
                 Arguments = OptimizeExpressions(intrinsic.Arguments, knownTypeNames)
             },
+            BetweenExpressionNode between => between with
+            {
+                Value = OptimizeExpression(between.Value, knownTypeNames),
+                Minimum = OptimizeExpression(between.Minimum, knownTypeNames),
+                Maximum = OptimizeExpression(between.Maximum, knownTypeNames)
+            },
             ClampExpressionNode clamp => clamp with
             {
                 Value = OptimizeExpression(clamp.Value, knownTypeNames),
@@ -328,6 +334,7 @@ internal static class GesAstOptimizer
             {
                 Target = OptimizeExpression(member.Target, knownTypeNames)
             },
+            CombinedCollectionExpressionNode combined => combined with { Sources = OptimizeExpressions(combined.Sources, knownTypeNames) },
             CollectionAccessExpressionNode access => access with
             {
                 Target = OptimizeExpression(access.Target, knownTypeNames),
@@ -405,6 +412,7 @@ internal static class GesAstOptimizer
             {
                 IndexExpression = OptimizeExpression(seriesTermSelector.IndexExpression, knownTypeNames)
             },
+            ForeachSelectorNode each => each with { Expression = OptimizeExpression(each.Expression, knownTypeNames) },
             FilterSelectorNode filterSelector => filterSelector with
             {
                 Predicate = OptimizeExpression(filterSelector.Predicate, knownTypeNames)

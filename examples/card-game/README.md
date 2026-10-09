@@ -18,6 +18,11 @@ one card Map per combination without an intermediate List of pairs. The
 example uses the repository's current compiler/runtime; released versions
 without collection-source support cannot compile these scripts.
 
+Skat also uses Cartesian projection for bid values and multiple bindings through
+`filter` and `select` to arrange cards by suit and rank. Numeric point totals use
+`[:sum card => ...]`; text summaries and stateful accumulations retain `fold`.
+Adjacent selectors can share one bracket pair, such as `[:distinct :sort ascending]`.
+
 ## Mau Mau
 
 Mau Mau uses a 32-card deck (7–A, four suits), five cards each, and a

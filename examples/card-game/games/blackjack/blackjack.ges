@@ -28,7 +28,7 @@ function cards(player) be :board.cards(zone: hand(player: player))
 
 function dealer() be :board.cards(zone: #dealer) | :board.cards(zone: #hole)
 
-function low(cards) be cards[:fold points be 0, card => points + card.properties.value]
+function low(cards) be cards[:sum card => card.properties.value]
 
 function total(cards) be low(cards: cards) + (
     10 when low(cards: cards) is at most 11 and cards[:any card where card.properties.rank = 'A']

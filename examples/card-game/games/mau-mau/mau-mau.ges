@@ -46,9 +46,10 @@ function board(players) be [
 function playable(player) be :board.cards(zone: hand(player: player))[:filter item where fits(card: item, top: :board.top(zone: #discard))]
 
 // Keep the top discard; GES owns both the selection and random order.
-function recycled() be :board.cards(zone: #discard)[:filter card where
-    card.id <> :board.top(zone: #discard).id
-][:select card => card.id][:shuffle]
+function recycled() be :board.cards(zone: #discard)[:filter card where card.id <> :board.top(zone: #discard).id
+    :select card => card.id
+    :shuffle
+]
 
 function offers(player, id) be :board.actions(player: player)[:filter item where item.id = id]
 
@@ -196,7 +197,7 @@ on QueuePenalty(player, count) {
         otherwise [action: #penalty, label: 'No penalty cards available', handler: WaivePenalty(action, player), area: player]
     emit ActionGroup(spec: [group: #sevenPenalty, player: player, priority: 10, data: count, actions: [
         [action: #stack, label: 'Stack 7', handler: StackSeven(action, player, card),
-            cards: :board.cards(zone: hand(player: player))[:filter card where card.properties.rank = '7'][:select card => card.id]],
+            cards: :board.cards(zone: hand(player: player))[:filter card where card.properties.rank = '7' :select card => card.id]],
         draw
     ]])
 }

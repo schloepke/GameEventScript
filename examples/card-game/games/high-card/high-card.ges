@@ -20,7 +20,8 @@ function rank(value) be
 
 function deck(player) be (from 2 to 14)[:select value =>
     [suit: suit(player: player), rank: rank(value: value), value: value]
-][:shuffle]
+    :shuffle
+]
 
 function pile(player) be ('pile' + (player as :Text)) as :Tag
 

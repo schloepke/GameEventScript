@@ -339,9 +339,11 @@ console.log('Queued groups, priority gating, exclusive selection, rejection and 
 // A second rule set exercises open tricks and a human-controlled round boundary.
 const highCard = await fs.readFile(path.join(web, 'examples/high-card.ges'), 'utf8');
 assert.deepEqual(game.check(highCard), { diagnostics: [] });
+const highCardUnshuffled = highCard.replace(':shuffle', '');
+assert.notEqual(highCardUnshuffled, highCard, 'Tie scenario must remove shuffling');
 for (const players of [2, 3, 4]) {
   for (const shuffled of [false, true]) {
-    let result = game.start(shuffled ? highCard : highCard.replace('[:shuffle]', ''), 42, players);
+    let result = game.start(shuffled ? highCard : highCardUnshuffled, 42, players);
     assert.equal(result.error, undefined, result.error);
     const scores = Array(players).fill(0);
     for (let round = 1; round <= 13; round++) {

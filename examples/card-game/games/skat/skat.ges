@@ -67,20 +67,20 @@ function legal(cards, played) be cards when played[:count] = 0 otherwise followi
 
 function playable(player) be legal(cards: :board.cards(zone: hand(player: player)), played: trick())
 
-function orderedHand(cards) be suits()[:fold ordered be [], suit =>
-    ordered | ['A', 'K', 'Q', 'J', '10', '9', '8', '7'][:fold suited be [], rank =>
-        suited | cards[:filter card where card.properties.suit = suit.suit and card.properties.rank = rank]
-    ]
+// Enumerate suit/rank slots in display order, then retain the matching cards.
+function orderedHand(cards) be [:cartesian suits(), ['A', 'K', 'Q', 'J', '10', '9', '8', '7'], cards
+    :filter suit, rank, card where card.properties.suit = suit.suit and card.properties.rank = rank
+    :select suit, rank, card => card
 ]
 
 // Legal bid values, including Null; bidding advances one value at a time.
 function bids() be (
-    [9, 10, 11, 12][:fold values be [23, 35, 46, 59], base =>
-        values | (from 2 to 18)[:select factor => base * factor]
-    ] | (from 2 to 11)[:select factor => 24 * factor]
-)[:distinct][:sort ascending]
+    [23, 35, 46, 59] |
+    [:cartesian [9, 10, 11, 12], (from 2 to 18) :select base, factor => base * factor] |
+    (from 2 to 11)[:select factor => 24 * factor]
+)[:distinct :sort ascending]
 
-function nextBid() be bids()[:filter value where value is more than :board.state(key: #bid)][:first]
+function nextBid() be bids()[:filter value where value is more than :board.state(key: #bid) :first]
 
 function baseValue() be [diamonds: 9, hearts: 10, spades: 11, clubs: 12, grand: 24][(:board.state(key: #game))]
 
@@ -99,7 +99,7 @@ function matadors(cards) be tops()[:fold run be [count: 0, active: true], power 
         otherwise [count: run.count, active: false]
 ].count
 
-function eyes(zone) be :board.cards(zone: zone)[:fold total be 0, card => total + card.properties.eyes]
+function eyes(zone) be :board.cards(zone: zone)[:sum card => card.properties.eyes]
 
 function playerName(player) be 'Player ' + ((player + 1) as :Text)
 

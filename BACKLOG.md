@@ -75,8 +75,7 @@ here.
   be ported for each runtime. Keep native allocation and platform integration
   checks in their implementation-specific harnesses.
 
-- Add Homebrew installation for the standalone CLI downloads and configure
-  Developer ID signing/notarization and Windows Authenticode signing before
+- Configure Developer ID signing/notarization and Windows Authenticode signing before
   promising platform-verified publisher identity.
 - Consider optional NuGet author signing when an independent publisher signature
   is needed. Current publication uses Trusted Publishing and NuGet.org repository

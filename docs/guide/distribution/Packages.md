@@ -212,7 +212,8 @@ See [Host runtime](../../../specs/HostRuntime.md),
 
 The repository-root `Package.swift` is the public entry point. It declares four
 library products using the existing source directories; it does not depend on
-the sibling development packages, expose Conformance, or include the CLI.
+the sibling development packages or expose Conformance. Since 0.3.0 it also
+exposes the `ges` executable; library consumers build only their selected products.
 
 > **Since: 0.2.0 — root-package native tests**
 
@@ -310,7 +311,7 @@ Ordinary PR CI also verifies packaging, consumers and publication selection.
 
 ## One-time NuGet and GitHub setup
 
-1. Choose the NuGet package owner (user or organization) and confirm the three
+1. Choose the NuGet package owner (user or organization) and confirm the four library
    package IDs can be published by that owner. Package `Authors` metadata does
    not determine NuGet ownership.
 2. On nuget.org, create a Trusted Publishing policy for repository owner
@@ -359,7 +360,7 @@ PR lists may supplement it.
    branch before it can be dispatched normally through GitHub Actions.
 4. After both preparation jobs succeed, approve deployment to `nuget`. The upload
    job downloads the verified artifacts from the same run and submits only the
-   three selected-version library packages and their symbols.
+   four selected-version library packages and their symbols.
 5. Verify NuGet validation/indexing and consumption through Xcode/NuGet. A GitHub
    Release can then document the version and link to the packages.
 

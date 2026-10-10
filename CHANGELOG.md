@@ -10,104 +10,134 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
-- Cache Dice sums in numeric storage; keep counts in collection payloads and use
-  register-oriented numeric dispatch with strict `Move mode=Numeric` for aggregates.
-
+Planned for 0.4.0: language and Card Lab improvements, binary-reader hardening,
+and explicit release qualification. This section is not a publication notice.
 
 ### Added
 
-- Search the complete Card Lab source and GESA dump, including folded content,
-  with match navigation and optional case sensitivity. Ctrl/Cmd+F adopts the
-  current source or dump selection, including multiline text.
-
-- Card Lab editor block folding with gutter controls, retaining Swift syntax
-  highlighting and undo history.
-- Card Lab editor offers a read-only GESA dump with Swift syntax highlighting
-  compiled from the current source through the shared Wasm worker.
-
-- Card Lab fullscreen editor with example/Draft/Saved loading, source download,
-  automatic restart on close and one shared Wasm instance for game and editor.
-  Changing the player count starts a new game immediately.
-- Card Lab setup supports `playerLayout: #bottom` as an alternative to the default
-  `#aroundTable`. Player, zone and table badges support optional color tags.
-  Blackjack seats players below the table and reports outcomes through player and
-  dealer badges plus table text, without a result popup.
-
-- Combined collection sources evaluate all source expressions once from left to
-  right before validation, including invalid combinations. Iterator construction
-  no longer creates and closes preliminary validation iterators.
-
-- Combined collection pipelines in C# and Swift: `cartesian`, `lockstep`/`zip`,
-  `union`, `intersect` and `difference`, with source-less or leading-source forms.
-  Multiple bindings work in loops and selector projections; compact
+- Inline `asm` in C# and Swift: statement blocks, binding initializers, function
+  and predicate bodies, and computed Record fields. Symbolic operands preserve
+  compiler-owned signatures and addresses; definite-initialization and scope
+  checks keep outer bindings immutable. GESA dumps are not assembler input.
+- Compact nested loops, such as `for suit in suits and rank in ranks { ... }`,
+  with the same ordering and scope as ordinary nested loops.
+- Condition-first guarded choices, `when condition then value otherwise fallback`,
+  alongside the existing value-first spelling. Parameterless predicates support
+  `is name` and `is not name`.
+- Inclusive `value is between lower and upper` and `is not between` comparisons,
+  evaluating the value once and preserving short-circuit semantics.
+- Parenthesized extension calls support direct member access and collection
+  selectors, such as `:board.top(zone: #discard).id`.
+- Combined collection pipelines: `cartesian`, `lockstep`/`zip`, `union`,
+  `intersect` and `difference`, with source-less or leading-source forms.
+  Multiple bindings work in loops and selectors; compact
   `[:entries :filter ... :select ...]` chains avoid repeated brackets.
-- List `A * B` materializes a binary Cartesian product; pipeline component
-  iteration avoids allocating an intermediate pair per row. `:foreach`
-  evaluates an expression for each item and returns `nothing`.
+  List `A * B` materializes a binary Cartesian product. `:foreach` evaluates an
+  expression for each item and returns `nothing`.
 - Compound iterator modes, component register outputs and the Cartesian opcode
-  (`0xE0`) are supported by both runtimes, validators, GESA and inline ASM.
-  Mau Mau, Blackjack and Skat now build decks with Cartesian projections.
+  (`0xE0`) in both runtimes, validators, GESA and inline ASM. Pipeline component
+  iteration avoids an intermediate pair allocation per row.
+- Strict Numeric mode for arithmetic, Min/Max, Negate/Abs, Clamp and Move.
+  Inline ASM uses a final `#numeric` operand; dumps display `mode=Numeric`.
+  Accepted values match `is numeric`, including Boolean as 0/1 and Dice sums.
+- Optional Host opcode instrumentation and `run --profile report.md` in both
+  CLIs. Reports include opcode, source-line and instruction measurements, six
+  VM loop phases, terminal loop checks and partial results on runtime failures.
+- Browser Card Lab with editable Highest Card, Mau Mau, Skat and Blackjack rules.
+  One shared Wasm instance serves the game and fullscreen editor. The editor
+  loads examples, Draft and Saved sources, downloads source, checks diagnostics
+  and restarts the game on close. Player-count changes also restart immediately.
+- Card Lab source folding and a read-only highlighted GESA dump, with line numbers,
+  region folding and inline source annotations. Full-document search includes
+  folded content; Ctrl/Cmd+F adopts selected text and supports match navigation.
+- Configurable Card Lab player layout, colored player/zone/table badges, titled
+  notices and action buttons below cards or zones. Blackjack uses bottom seating
+  and reports outcomes through badges and table text without a result popup.
+- Bounded C#/Swift reader mutation fuzzing, independently generated canonical
+  roundtrip properties, bidirectional binary exchange and pinned 0.3.0 consumer
+  upgrade checks. Release documentation defines platform evidence and separate,
+  revision-bound performance qualification without extra native Swift PR builds.
 
+### Changed
 
-- Inclusive `value is between lower and upper` and `is not between` comparisons
-  in C# and Swift, evaluating the value once and preserving short-circuit semantics.
-
-- Parenthesized extension calls now support direct member access and collection
-  selectors on their results in C# and Swift, such as `:board.top(zone: #discard).id`.
-  Parenthesis-free argument binding is unchanged.
-
-- Opcode profiles now separate six VM loop phases per opcode, source line and
-  instruction, with independent totals for terminal loop checks in C# and Swift.
-
-- Optional opcode instrumentation for C# and Swift Hosts, with per-instance
-  instruction boundaries and slice completion callbacks.
-- `run --profile report.md` in both CLIs writes Markdown opcode, source-line and
-  instruction reports, including partial results on runtime failures.
-- Add a playable browser card-game example with editable GES rules, linked from
-  the website homepage alongside Homebrew and .NET CLI installation.
+- `sum` and `average` are strictly numeric, including singleton collections.
+  Nonnumeric values make the result `nothing`; later projections still execute.
+  Numeric strings are not converted implicitly. Use explicit conversions for
+  numeric text and `fold` for concatenation.
+- Combined collection sources evaluate every source expression once from left
+  to right before validation, including invalid combinations. Construction no
+  longer creates preliminary validation iterators.
+- Qualified extension names must be contiguous (`:namespace.name`).
+- Opcode values `0xF8..0xFF` are reserved for local experiments and rejected by
+  standard compilers, validators and runtimes; they are not a plugin ABI.
 
 ### Fixed
 
-- `sum` and `average` now reject nonnumeric projected values, including singletons,
-  while continuing later projections. Use `fold` for text concatenation.
-  Recompile existing binaries to adopt this contract.
-- Arithmetic, Min/Max, Negate/Abs and Clamp support Numeric mode (`0x40`),
-  exposed in inline assembly through a final `#numeric` operand and displayed
-  as `mode=Numeric`. Its accepted values match `is numeric`, including Boolean
-  as 0/1 and Dice as the roll sum. Numeric addition and aggregate first-value
-  initialization use direct register fast paths in C# and Swift.
-
-
-- Swift implicit `sum` and `average` consume complete Cartesian, lockstep and
-  entry elements, including after filters with multiple bindings.
-
-- Direct `take`, `drop` and `draw` after combined sources preserve Dice results
-  and Map restrictions in both compilers, matching selectors on stored results.
-
-- Compound Dice difference now rejects scalar values outside the positive Int32
-  face range. Selectors after combined sources preserve the result-type checks
-  of ordinary `order`, projected `distinct`, and `group` operations in both ports.
-  Swift also preserves Dice results for unprojected `distinct` after combined sources.
-
-### Migration
-
-- Extension names must be contiguous (`:namespace.name`); remove spaces or
-  comments inside qualified extension names. Whitespace before arguments is
-  still accepted.
-- Programs using the new iterator modes or Cartesian opcode require an updated
-  runtime. Recompile sources with the matching compiler/runtime version; older
-  runtimes reject these instruction forms rather than interpreting them differently.
+- Program validation rejects internal VM values escaping into script-visible
+  data, including through inline assembly control flow.
+- Swift compiler lowering now matches C# for constant Text-key access, collection
+  guard branches and short-circuit expressions. Adjacent source mappings are
+  compacted; inlined constants are attributed to their use sites.
+- Combined pipelines preserve ordinary selector semantics: implicit numeric
+  aggregates consume complete elements, Dice results retain their kind, Map
+  restrictions remain enforced, and Dice difference rejects invalid face values.
+- Card Lab browser assets and workers share a build version to prevent mixed
+  cached revisions, including stale dump requests. Dump source names follow the
+  loaded game instead of always using `rules.ges`.
+- Removed Card Lab folding entries accidentally inserted into the historical
+  0.2.0 and 0.3.0 notes; that feature belongs to this development release.
 
 ### Performance
 
-- Reduce Swift VM register-access and value-copy overhead for integer arithmetic,
-  retaining overflow, unit and allocation guarantees with runtime access checks enabled.
+- Swift uses compact value storage, inline dispatch and owner-local typed register
+  writes, reducing register access and value-copy overhead while preserving exact
+  Int64 arithmetic, units and runtime access checks. Dice sums use cached numeric
+  storage; collection counts stay in payloads. Numeric operations use register
+  fast paths. Profiler timestamps are captured at callback boundaries.
+- C# single binders no longer allocate binding lists, and binding metadata is
+  stored only on relevant AST nodes. Swift normal iterators reuse fixed operand
+  descriptions during validation.
+- Reviewed profile-specific reference updates distinguish deliberate storage and
+  safety-validation costs from avoidable allocations. All zero-dispatch allocation
+  budgets remain zero. See the [performance review](docs/development/Release040Performance.md).
 
-### Fixed
+### Migrating from 0.3.0
 
-- Align Swift compiler code generation with C# for constant Text-key access,
-  collection guard branches, and short-circuit expressions. Compact adjacent
-  source mappings and attribute inlined constants to their use sites.
+- Upgrade the GES libraries together and recompile scripts with the matching
+  Compiler and Runtime. New Numeric modes, compound iterators and Cartesian
+  instructions require the updated Runtime. GESB remains V1; this does not imply
+  compatibility with every pre-1.0 binary. The tested 0.3.0 upgrade covers selected
+  consumers and frozen fixtures, not arbitrary old Programs.
+- Perform a clean rebuild of C# consumers after updating packages. Incremental
+  CopyLocal can retain an old reproducible DLL with matching timestamp and size;
+  the upgrade check uses `dotnet build -t:Rebuild`.
+- Replace text/list accumulation through `[:sum]` with an explicit `fold`.
+  Convert text deliberately, for example `values[:sum value => value as :Number]`.
+  Boolean and Dice remain numeric; incompatible units still produce `nothing`.
+  Recompile existing binaries to adopt the corrected aggregate contract.
+- Remove spaces or comments inside qualified extension names; whitespace before
+  arguments remains valid. The existing value-first `when` syntax, predicate
+  calls and nested loops remain supported. Do not mix the two choice spellings
+  within one chain.
+- Do not depend on short-circuiting between combined source expressions: even
+  when an earlier source is invalid, later source expressions execute. Native
+  extension side effects are not rolled back.
+
+### Known limitations
+
+- Pre-1.0 compatibility remains subject to the
+  [version policy](docs/guide/distribution/Packages.md#version-policy).
+  [Platform coverage](docs/guide/distribution/Platforms.md) distinguishes full
+  Conformance from package and CLI smoke checks; portable libraries do not imply
+  full qualification on every OS, browser or embedding.
+- Native effects remain application-owned and nontransactional. Profiling adds
+  measurement overhead; profile numbers are not cross-machine speed promises.
+  Card Lab is an example embedding, not a multiplayer service or a general WASM
+  distribution of all SwiftPM products.
+- Final candidate package, symbol, reproducibility, installation and platform
+  evidence is required before publishing. See the
+  [0.4.0 closing review](docs/development/Release040Review.md) for the distinction
+  between completed development work and remaining publication gates.
 
 ## [0.3.0] — 2026-09-29
 
@@ -116,8 +146,6 @@ idle-duration observations in C# and Swift.
 
 ### Added
 
-- Card Lab editor block folding with gutter controls, retaining Swift syntax
-  highlighting and undo history.
 - Exposed the `ges` executable in the root SwiftPM package alongside the libraries.
   Homebrew and standalone downloads remain available. The root package now requires
   macOS 10.15.4 to cover CLI Foundation I/O.
@@ -210,8 +238,6 @@ see the migration notes below before upgrading from 0.1.0.
 
 ### Added
 
-- Card Lab editor block folding with gutter controls, retaining Swift syntax
-  highlighting and undo history.
 - Website publication triggers the hosting pull webhook after changed output is
   successfully pushed to `site`, with bounded retries and a secret-backed URL.
 

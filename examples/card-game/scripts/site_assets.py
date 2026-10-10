@@ -4,6 +4,7 @@
 """Bind the browser build to its sources and stage it into the static website."""
 import hashlib
 import json
+import re
 from pathlib import Path
 import shutil
 import sys
@@ -30,6 +31,24 @@ def identity():
     for file in sorted(files):
         digest.update(file.relative_to(ROOT).as_posix().encode() + b'\0' + file.read_bytes() + b'\0')
     return digest.hexdigest()
+
+
+
+def version_browser_assets(directory, version):
+    """Bind all local browser code/style/binary URLs to one source build identity."""
+    reference = re.compile(r"([\"'])([A-Za-z0-9_./-]+\.(?:mjs|js|css|wasm))(?:\?v=[a-f0-9]+)?\1")
+    root = directory.resolve()
+    for file in sorted(directory.rglob('*')):
+        if file.suffix not in {'.html', '.mjs', '.js', '.css'}:
+            continue
+
+        def replace(match):
+            target = (file.parent / match[2]).resolve()
+            if not target.is_relative_to(root) or not target.is_file():
+                return match[0]
+            return f'{match[1]}{match[2]}?v={version}{match[1]}'
+
+        file.write_text(reference.sub(replace, file.read_text()))
 
 
 def contents(directory):

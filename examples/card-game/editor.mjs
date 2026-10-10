@@ -1,8 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-import { diagnosticRange } from './diagnostics.mjs';
-import { foldingRanges } from './editor-folding.mjs';
+import { diagnosticRange } from './diagnostics.mjs?v=0465e905d1726f5ab2da16cb14125758904c91acff322d1be2e1567750ffb5f1';
+import { foldingRanges } from './editor-folding.mjs?v=0465e905d1726f5ab2da16cb14125758904c91acff322d1be2e1567750ffb5f1';
 
 /** CodeMirror owns editing and folding; Swift supplies highlighting and diagnostics. */
 export function attachEditor(input, colors, container, status, engine) {

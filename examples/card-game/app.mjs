@@ -1,13 +1,13 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-import { createWorkerClient } from './worker-client.mjs';
-import { attachSearch } from './search.mjs';
-import { attachDump } from './dump.mjs';
-import { attachEditor } from './editor.mjs';
-import { attachGameLibrary } from './games.mjs';
-import { showLoading } from './loading.mjs';
-import { createCardActionPicker } from './card-actions.mjs';
+import { createWorkerClient } from './worker-client.mjs?v=0465e905d1726f5ab2da16cb14125758904c91acff322d1be2e1567750ffb5f1';
+import { attachSearch } from './search.mjs?v=0465e905d1726f5ab2da16cb14125758904c91acff322d1be2e1567750ffb5f1';
+import { attachDump } from './dump.mjs?v=0465e905d1726f5ab2da16cb14125758904c91acff322d1be2e1567750ffb5f1';
+import { attachEditor } from './editor.mjs?v=0465e905d1726f5ab2da16cb14125758904c91acff322d1be2e1567750ffb5f1';
+import { attachGameLibrary } from './games.mjs?v=0465e905d1726f5ab2da16cb14125758904c91acff322d1be2e1567750ffb5f1';
+import { showLoading } from './loading.mjs?v=0465e905d1726f5ab2da16cb14125758904c91acff322d1be2e1567750ffb5f1';
+import { createCardActionPicker } from './card-actions.mjs?v=0465e905d1726f5ab2da16cb14125758904c91acff322d1be2e1567750ffb5f1';
 
 const byId = (id) => document.getElementById(id);
 const cardActions = createCardActionPicker(act);

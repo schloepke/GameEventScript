@@ -6,9 +6,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GES Card Lab</title>
-  <link rel="stylesheet" href="vendor/codemirror/lib/codemirror.css">
-  <link rel="stylesheet" href="vendor/codemirror/addon/fold/foldgutter.css">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="vendor/codemirror/lib/codemirror.css?v=0465e905d1726f5ab2da16cb14125758904c91acff322d1be2e1567750ffb5f1">
+  <link rel="stylesheet" href="vendor/codemirror/addon/fold/foldgutter.css?v=0465e905d1726f5ab2da16cb14125758904c91acff322d1be2e1567750ffb5f1">
+  <link rel="stylesheet" href="style.css?v=0465e905d1726f5ab2da16cb14125758904c91acff322d1be2e1567750ffb5f1">
 </head>
 <body>
   <main>
@@ -218,9 +218,9 @@ on ShowRules(action) {
     <section><h3>Execution rules</h3><p>After accepting an action, its consumption counter advances. You may activate further actions or update card choices. <code>finishTurn</code> ends the turn upon consumption; <code>EndGame()</code> requests game completion. Turn offers expire at turn end; completed queued groups and all their alternatives are removed, while unfinished queued offers retain their counters. The environment advances turns automatically. NextPlayersTurn variants control that advancement; they do not recursively emit on EndTurn(player).</p>
     <p>Emits are queued: a query in the same handler cannot see their effects yet. Extensions can inspect all players; visibility filters the browser view only. Runtime errors stop the game. “Check code” checks compilation, not native message signatures.</p></section>
   </dialog>
-  <script src="vendor/codemirror/lib/codemirror.js"></script>
-  <script src="vendor/codemirror/addon/fold/foldcode.js"></script>
-  <script src="vendor/codemirror/addon/fold/foldgutter.js"></script>
-  <script type="module" src="app.mjs"></script>
+  <script src="vendor/codemirror/lib/codemirror.js?v=0465e905d1726f5ab2da16cb14125758904c91acff322d1be2e1567750ffb5f1"></script>
+  <script src="vendor/codemirror/addon/fold/foldcode.js?v=0465e905d1726f5ab2da16cb14125758904c91acff322d1be2e1567750ffb5f1"></script>
+  <script src="vendor/codemirror/addon/fold/foldgutter.js?v=0465e905d1726f5ab2da16cb14125758904c91acff322d1be2e1567750ffb5f1"></script>
+  <script type="module" src="app.mjs?v=0465e905d1726f5ab2da16cb14125758904c91acff322d1be2e1567750ffb5f1"></script>
 </body>
 </html>

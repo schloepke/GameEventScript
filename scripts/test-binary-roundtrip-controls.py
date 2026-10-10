@@ -15,6 +15,25 @@ spec.loader.exec_module(properties)
 
 
 class PropertyControls(unittest.TestCase):
+    def test_encoded_numeric_boundary_coverage(self):
+        for seed in (properties.SEED, properties.SEED + 1):
+            literals = {0x26: set(), 0x27: set()}
+            for metadata, _ in properties.programs(seed, 48):
+                data = base64.b64decode(metadata['canonical'])
+                for offset in properties.fuzz.sections(data):
+                    if struct.unpack_from('<H', data, offset)[0] != 0x10:
+                        continue
+                    count = struct.unpack_from('<I', data, offset + 12)[0]
+                    for index in range(count):
+                        position = offset + 16 + index * 16
+                        opcode = data[position]
+                        if opcode in literals:
+                            literals[opcode].add(struct.unpack_from('<Q', data, position + 8)[0])
+            with self.subTest(seed=seed):
+                self.assertEqual(literals[0x26], {0, 1, (1 << 63) - 1, 1 << 63, (1 << 64) - 1})
+                self.assertEqual(literals[0x27], {0, 1 << 63, 1, 0x0010000000000000,
+                                                0x7fefffffffffffff, 0x3fb999999999999a})
+
     def test_reproducible_generation_and_optional_section_coverage(self):
         rows = list(properties.programs(properties.SEED, 192))
         self.assertEqual(rows, list(properties.programs(properties.SEED, 192)))

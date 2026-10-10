@@ -3,8 +3,10 @@
 
 # 0.4.0 closing review
 
-Reviewed on 2026-10-10 against release tag `0.3.0`
+Initial evidence review on 2026-10-10 against release tag `0.3.0`
 (`4ed9d44ded085ddccebff943365fb924bd0a3ce5`) and development commit `791cae6a`.
+The branch review was completed on 2026-10-11 for the changes from `e0acce07`
+(`origin/main`) through `cd24e907`, including the corrections recorded below.
 This is a development readiness review, not a release approval or a new
 compatibility contract. Release notes remain under
 [Unreleased](../../CHANGELOG.md#unreleased) until version/date preparation.
@@ -34,7 +36,8 @@ The open GitHub issue inventory was inspected on 2026-10-10. It contained no
 separate known correctness or reliability bug designated as a release blocker.
 That is an issue-tracker observation, not proof of absence of defects.
 [Release issue #8](https://github.com/schloepke/GameEventScript/issues/8) still
-requires distribution qualification and the final defect/limitation disposition.
+requires distribution qualification. Its final defect/limitation disposition
+is recorded below for this development branch.
 This review does not close or change the issue.
 
 - **Resolved:** the measured performance failures are explained and addressed;
@@ -91,6 +94,41 @@ package or release was published. The remaining remote matrix results cannot
 be inferred from these local checks;
 issue #8's distribution criterion remains open until its required candidate
 workflow evidence is complete.
+
+## Point 7: completed branch review
+
+The review covered the compiler allocation changes and Swift validator fast path,
+reader probes and independent binary generation, upgrade and performance evidence,
+Swift CI scope/cache/build reuse, distribution consumers, and release documentation.
+Two verification defects were found and fixed:
+
+1. The valid-program generator selected float patterns using the same index as
+   the instruction kind. This omitted positive zero, the smallest subnormal and
+   the largest finite binary64 value. Float selection now advances independently.
+   A regression control decodes the actual instruction payloads and checks all
+   advertised integer and floating boundaries with two seeds at the minimum case
+   count. It failed before the correction and passes afterward.
+2. Performance report validation previously trusted internally consistent case
+   counts. A missing case with adjusted counts could pass. Validation now checks
+   IDs and kinds against the approved reference inventory for the performance
+   suites, accounting for C#'s measured-only reports and Swift's additional GESA
+   snapshots. Controls reject missing, substituted and empty inventories.
+
+Targeted verification passed: 33 Python control tests covering binary generation,
+reader fuzzing, performance evidence, upgrade evidence, Swift CI results/scope and
+API build reuse; 192 default-seed and 1,024 alternate-seed generated Programs
+round-tripped through both implementations and both exchange directions. Existing
+complete performance reports still validate with 31 measured workloads per
+implementation; truncating a report and adjusting its counts is rejected. This
+revalidates report completeness, not a new performance measurement.
+
+No unresolved correctness, reliability or integration finding remains from this
+branch review. Issue #8 point 7 is complete for this development state, with the
+accepted limitations above explicitly retained. The corrections affect test
+generation and evidence validation, not product semantics or the bytecode contract.
+They add no Swift target or build and keep the CI property sample count unchanged.
+The required remote candidate matrix evidence under point 6 remains outstanding;
+this conclusion is not permission to publish and does not mark GitHub issues.
 
 ## Remaining publication gates
 

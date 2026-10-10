@@ -43,6 +43,7 @@ def programs(seed, count):
     random = fuzz.stream(seed)
     integers = (0, 1, (1 << 63) - 1, 1 << 63, (1 << 64) - 1)
     floats = (0, 1 << 63, 1, 0x0010000000000000, 0x7fefffffffffffff, 0x3fb999999999999a)
+    float_index = 0
     strings = ('', 'plain', 'é', 'e\u0301', '♠🃏', 'line\nnext', 'zero\0byte')
     for index in range(count):
         registers = 1 + index % 8
@@ -55,7 +56,8 @@ def programs(seed, count):
             if kind == 0:
                 code.append(instruction(0x26, register, payload=integers[(index + register) % len(integers)]))
             elif kind == 1:
-                code.append(instruction(0x27, register, payload=floats[(index + register) % len(floats)]))
+                code.append(instruction(0x27, register, payload=floats[float_index % len(floats)]))
+                float_index += 1
             elif kind == 2:
                 code.append(instruction(0x29, register, x=2 + (index + register) % len(strings)))
             else:

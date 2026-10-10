@@ -33,7 +33,7 @@ def source_identity():
             'status': command('git', 'status', '--porcelain'), 'sourceSha256': digest.hexdigest()}
 
 
-def validate_report(report):
+def validate_report(report, expected_cases):
     summary = report['summary']
     cases = report['cases']
     if (report['status'] != 'passed' or not cases or summary['total'] != len(cases)
@@ -41,6 +41,8 @@ def validate_report(report):
             or any(summary[key] != 0 for key in ('failed', 'skipped', 'error'))
             or len({case['id'] for case in cases}) != len(cases)):
         raise ValueError('Incomplete, failed or skipped Conformance results')
+    if not expected_cases or {case['id']: case['kind'] for case in cases} != expected_cases:
+        raise ValueError('Conformance results do not match the expected case inventory')
     measured = 0
     for case in cases:
         if case['status'] != 'passed':
@@ -53,6 +55,19 @@ def validate_report(report):
     if not measured:
         raise ValueError('No measured workloads')
     return measured
+
+
+def performance_inventory():
+    suites = {
+        next(line.split(':', 1)[1].strip().strip('"') for line in document.read_text().splitlines()
+             if line.startswith('suiteId:'))
+        for document in (ROOT / 'conformance/suites/performance').glob('*.md')
+    }
+    reference = json.loads((ROOT / 'conformance/cross-language/CSharpReferenceResults.json').read_text())
+    cases = {case['id']: case['kind'] for case in reference['cases'] if case['id'].split('/', 1)[0] in suites}
+    if not suites or {identity.split('/', 1)[0] for identity in cases} != suites:
+        raise ValueError('Missing performance suite in the approved reference inventory')
+    return cases
 
 
 def validate_trx(paths):
@@ -87,6 +102,7 @@ def main():
                'status': 'failed', 'checks': {}}
     print(f'Evidence: {output}', flush=True)
     try:
+        inventory = performance_inventory()
         for language in (['csharp', 'swift'] if args.language == 'all' else [args.language]):
             receipt[language + 'Toolchain'] = command('dotnet', '--info') if language == 'csharp' else command('xcrun', 'swift', '--version')
             destination = output / language
@@ -117,7 +133,13 @@ def main():
                 raise RuntimeError(f'{language} performance gate exited with {process.returncode}; see retained logs and reports')
             if language == 'csharp':
                 receipt['checks']['nativeTests'] = validate_trx(list(destination.glob('*.trx')))
-            receipt['checks'][language] = sum(validate_report(json.loads(path.read_text())) for path in reports)
+            receipt['checks'][language] = sum(validate_report(
+                json.loads(path.read_text()),
+                inventory if language == 'swift' else {
+                    identity: kind for identity, kind in inventory.items()
+                    if identity.split('/', 1)[0] == path.name.removesuffix('.results.json')
+                    and kind == 'performance'
+                }) for path in reports)
             print(f'{language}: {receipt["checks"][language]} measured workloads passed', flush=True)
         if source_identity() != before:
             raise ValueError('Source changed while measurements were running')

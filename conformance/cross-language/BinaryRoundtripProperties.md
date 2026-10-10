@@ -47,7 +47,10 @@ Swift build or target. Batches have at most 64 cases and use the existing
 30-second process watchdog and bounded reader options. Negative controls reject
 missing results, rejected generated programs, changed bytes and substitution
 with another valid generated program. Generator controls check reproducibility,
-all optional-section combinations and all register counts.
+all optional-section combinations and all register counts. They also decode the
+generated instructions to verify every advertised Int64 and binary64 boundary
+pattern, including with the minimum 48-case run and two different seeds. Float
+selection advances independently of the instruction-kind selection.
 
 ```sh
 python3 scripts/test-binary-roundtrip-controls.py

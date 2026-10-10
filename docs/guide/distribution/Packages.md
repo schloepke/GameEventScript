@@ -263,6 +263,12 @@ under `implementation/swift` remain local development and verification entry poi
 
 ## Verify a release without publishing
 
+Release preparation also requires the [release consumer upgrade checks](../../../conformance/cross-language/ReleaseUpgrade.md).
+The C# Release Candidate workflow runs the separate C#/Swift upgrade workflow
+before preparation; it does not extend normal Swift PR CI. The selected 0.3.0
+baseline is tested against the checked-out candidate commit without publication.
+
+
 ```sh
 ./scripts/release-csharp-dry-run.sh 0.1.0-rc1
 ./scripts/verify-csharp-reproducibility.sh 0.1.0-rc1

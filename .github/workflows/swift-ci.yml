@@ -99,7 +99,9 @@ jobs:
             artifacts/swift/tool
             artifacts/swift/syntaxhighlighter
             artifacts/swift-api
-          key: swift-build-v2-default-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.identity }}-${{ hashFiles('Package.swift', 'implementation/swift/**/Package.swift', 'implementation/swift/**/Package.resolved', 'scripts/test-swift*.sh', 'scripts/verify-swift-api.py') }}
+          key: swift-build-v3-default-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.identity }}-${{ hashFiles('Package.swift', 'implementation/swift/**/Package.swift', 'implementation/swift/**/Package.resolved', 'scripts/test-swift*.sh', 'scripts/verify-swift-api.py') }}-${{ github.sha }}
+          restore-keys: |
+            swift-build-v3-default-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.identity }}-${{ hashFiles('Package.swift', 'implementation/swift/**/Package.swift', 'implementation/swift/**/Package.resolved', 'scripts/test-swift*.sh', 'scripts/verify-swift-api.py') }}-
 
       - if: needs.changes.outputs.swift == 'true'
         name: Verify Swift declaration spacing controls

@@ -6,8 +6,9 @@
 Release 0.4.0 uses the existing checked-in performance budgets. Verification
 never recalibrates or relaxes them. These are implementation regression checks,
 not cross-language speed comparisons or promises for all supported platforms.
-The initial 0.4.0 run has [open regression findings](../../development/Release040Performance.md);
-the measured release gate is not yet green.
+The initial 0.4.0 findings are [resolved and documented](../../development/Release040Performance.md).
+Targeted allocation fixes and reviewed reference updates pass both measured gates;
+each final release candidate still requires its own clean revision-bound evidence.
 
 ## Existing gates
 

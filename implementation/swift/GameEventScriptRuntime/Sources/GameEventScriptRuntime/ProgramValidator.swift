@@ -151,6 +151,8 @@ extension GesOperand {
 
 extension GameEventScriptBytecodeInstruction {
     var operands: [GesOperand] {
+        // Normal iterators reuse the fixed operand table instead of allocating a dynamic list.
+        if (opcode == .iteratorCreate || opcode == .iteratorCreateOrJump) && unitAndFlags == 0 { return opcode.operands }
         if [.iteratorCreate, .iteratorCreateOrJump].contains(opcode) {
             let mode = unitAndFlags >> 5
             let source: GesOperand = mode == 0 || mode == 6 ? .collectionRegister : .sourceRegisterList

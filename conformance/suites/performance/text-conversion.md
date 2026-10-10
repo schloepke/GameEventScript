@@ -1167,20 +1167,20 @@ performance:
           toleranceAbsolute: 0.05
           unit: ms
         run.allocated:
-          reference: 535000
-          maximum: 561750
+          reference: 575000
+          maximum: 603750
           unit: B
         run.allocations:
-          reference: 11000
-          maximum: 11550
+          reference: 12000
+          maximum: 12600
           unit: count
         run.elapsed:
           reference: 2.594791
           toleranceAbsolute: 0.64869775
           unit: ms
         run.per-invoke-allocated:
-          reference: 535
-          maximum: 562
+          reference: 575
+          maximum: 604
           unit: B/iteration
         run.per-invoke-elapsed:
           reference: 0.002594791
@@ -1297,20 +1297,20 @@ performance:
           toleranceAbsolute: 0.05
           unit: ms
         run.allocated:
-          reference: 1070000
-          maximum: 1123500
+          reference: 1150000
+          maximum: 1207500
           unit: B
         run.allocations:
-          reference: 22000
-          maximum: 23100
+          reference: 24000
+          maximum: 25200
           unit: count
         run.elapsed:
           reference: 5.064125
           toleranceAbsolute: 1.26603125
           unit: ms
         run.per-invoke-allocated:
-          reference: 535
-          maximum: 562
+          reference: 575
+          maximum: 604
           unit: B/iteration
         run.per-invoke-elapsed:
           reference: 0.0025320625

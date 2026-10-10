@@ -764,8 +764,7 @@ internal sealed partial class GesParser
     private ForStatementNode ParseForStatement()
     {
         var startToken = Previous;
-        var bindings = ParseBindingNames();
-        var identifier = bindings[0];
+        var (identifier, bindings) = ParseBindingNames();
         SkipNewLines();
         IterationSourceNode source;
         var previousSourceDepth = _forSourceDepth;
@@ -1816,11 +1815,13 @@ internal sealed partial class GesParser
         }
     }
 
-    private IReadOnlyList<string> ParseBindingNames()
+    private (string Identifier, IReadOnlyList<string> Names) ParseBindingNames()
     {
-        var names = new List<string> { ExpectIdentifier() };
+        var identifier = ExpectIdentifier();
+        if (!Is(Comma)) return (identifier, []);
+        var names = new List<string> { identifier };
         while (Match(Comma)) { SkipNewLines(); names.Add(ExpectIdentifier()); }
-        return names;
+        return (identifier, names);
     }
 
     private bool IsCombinedSelector()
@@ -1875,15 +1876,14 @@ internal sealed partial class GesParser
         SkipNewLines();
         if (MatchTag(":foreach"))
         {
-            var names = ParseBindingNames();
+            var (identifier, names) = ParseBindingNames();
             Expect(ProjectionArrow);
-            return WithRange(new ForeachSelectorNode(names[0], ParseExpression()) { BindingNames = names }, startToken);
+            return WithRange(new ForeachSelectorNode(identifier, ParseExpression()) { BindingNames = names }, startToken);
         }
         if (Match(SelectorAny, SelectorAll))
         {
             var op = Previous.Kind == SelectorAny ? "any" : "all";
-            var bindings = ParseBindingNames();
-            var identifier = bindings[0];
+            var (identifier, bindings) = ParseBindingNames();
             ExpectWord("where");
             var predicate = ParseExpression();
             return WithRange(new PredicateSelectorNode(op, identifier, predicate) { BindingNames = bindings }, startToken);
@@ -1923,8 +1923,7 @@ internal sealed partial class GesParser
                 return WithRange(new CountSelectorNode("value", new BooleanLiteralExpressionNode(true)), startToken);
             }
 
-            var bindings = ParseBindingNames();
-            var identifier = bindings[0];
+            var (identifier, bindings) = ParseBindingNames();
             ExpectWord("where");
             var predicate = ParseExpression();
             return WithRange(new CountSelectorNode(identifier, predicate) { BindingNames = bindings }, startToken);
@@ -1969,8 +1968,7 @@ internal sealed partial class GesParser
 
         if (Match(SelectorFilter))
         {
-            var bindings = ParseBindingNames();
-            var identifier = bindings[0];
+            var (identifier, bindings) = ParseBindingNames();
             ExpectWord("where");
             var predicate = ParseExpression();
             return WithRange(new FilterSelectorNode(identifier, predicate) { BindingNames = bindings }, startToken);
@@ -1984,8 +1982,7 @@ internal sealed partial class GesParser
                 return WithRange(new SumSelectorNode("value", new IdentifierExpressionNode("value")), startToken);
             }
 
-            var bindings = ParseBindingNames();
-            var identifier = bindings[0];
+            var (identifier, bindings) = ParseBindingNames();
             Expect(ProjectionArrow);
             var projection = ParseExpression();
             return WithRange(new SumSelectorNode(identifier, projection) { BindingNames = bindings }, startToken);
@@ -1999,8 +1996,7 @@ internal sealed partial class GesParser
                 return WithRange(new AverageSelectorNode("value", new IdentifierExpressionNode("value")), startToken);
             }
 
-            var bindings = ParseBindingNames();
-            var identifier = bindings[0];
+            var (identifier, bindings) = ParseBindingNames();
             Expect(ProjectionArrow);
             var projection = ParseExpression();
             return WithRange(new AverageSelectorNode(identifier, projection) { BindingNames = bindings }, startToken);
@@ -2039,8 +2035,7 @@ internal sealed partial class GesParser
             }
             Expect(Comma);
             SkipNewLines();
-            var bindings = ParseBindingNames();
-            var identifier = bindings[0];
+            var (identifier, bindings) = ParseBindingNames();
             Expect(ProjectionArrow);
             SkipNewLines();
             return WithRange(new FoldSelectorNode(accumulator, identifier, seed, ParseExpression()) { BindingNames = bindings }, startToken);
@@ -2048,8 +2043,7 @@ internal sealed partial class GesParser
 
         if (Match(SelectorSelect))
         {
-            var bindings = ParseBindingNames();
-            var identifier = bindings[0];
+            var (identifier, bindings) = ParseBindingNames();
             Expect(ProjectionArrow);
             var projection = ParseExpression();
             return WithRange(new SelectSelectorNode(identifier, projection) { BindingNames = bindings }, startToken);
@@ -2058,8 +2052,7 @@ internal sealed partial class GesParser
         if (MatchTag(":map"))
         {
             SkipNewLines();
-            var bindings = ParseBindingNames();
-            var identifier = bindings[0];
+            var (identifier, bindings) = ParseBindingNames();
             SkipNewLines();
             ExpectWord("by");
             SkipNewLines();
@@ -2143,8 +2136,7 @@ internal sealed partial class GesParser
             return WithRange(new EdgeSelectorNode(mode, null, null), startToken);
         }
 
-        var bindings = ParseBindingNames();
-        var identifier = bindings[0];
+        var (identifier, bindings) = ParseBindingNames();
         ExpectWord("where");
         var predicate = ParseExpression();
         return WithRange(new EdgeSelectorNode(mode, identifier, predicate) { BindingNames = bindings }, startToken);
@@ -2156,8 +2148,7 @@ internal sealed partial class GesParser
         SkipNewLines();
         ExpectWord("by");
         SkipNewLines();
-        var bindings = ParseBindingNames();
-        var identifier = bindings[0];
+        var (identifier, bindings) = ParseBindingNames();
         Expect(ProjectionArrow);
         var projection = ParseExpression();
         var direction = ParseSortDirection();
@@ -2168,8 +2159,7 @@ internal sealed partial class GesParser
     {
         var startToken = Previous;
         SkipNewLines();
-        var bindings = ParseBindingNames();
-        var identifier = bindings[0];
+        var (identifier, bindings) = ParseBindingNames();
         Expect(ProjectionArrow);
         var projection = ParseExpression();
 
@@ -2210,8 +2200,7 @@ internal sealed partial class GesParser
         }
 
         SkipNewLines();
-        var bindings = ParseBindingNames();
-        var identifier = bindings[0];
+        var (identifier, bindings) = ParseBindingNames();
         Expect(ProjectionArrow);
         var projection = ParseExpression();
         return WithRange(new DistinctSelectorNode(identifier, projection) { BindingNames = bindings }, startToken);
@@ -2223,8 +2212,7 @@ internal sealed partial class GesParser
         SkipNewLines();
         ExpectWord("by");
         SkipNewLines();
-        var bindings = ParseBindingNames();
-        var identifier = bindings[0];
+        var (identifier, bindings) = ParseBindingNames();
         Expect(ProjectionArrow);
         var projection = ParseExpression();
         return WithRange(new GroupBySelectorNode(identifier, projection) { BindingNames = bindings }, startToken);
@@ -2823,8 +2811,7 @@ internal sealed partial class GesParser
             var lookahead = _reader.PeekSignificant(1);
             if (lookahead.Kind == Comma || lookahead.Kind == Identifier && string.Equals(lookahead.Text, "where", StringComparison.Ordinal))
             {
-                names = ParseBindingNames();
-                identifier = names[0];
+                (identifier, names) = ParseBindingNames();
                 ExpectWord("where");
                 predicate = ParseExpression();
             }
@@ -2836,8 +2823,7 @@ internal sealed partial class GesParser
             SkipNewLines();
             ExpectWord("by");
             SkipNewLines();
-            weightNames = ParseBindingNames();
-            weightIdentifier = weightNames[0];
+            (weightIdentifier, weightNames) = ParseBindingNames();
             SkipNewLines();
             Expect(ProjectionArrow);
             SkipNewLines();

@@ -25,6 +25,7 @@ const documents = new Map([
   ['docs/guide/api/CSharp.md', 'api/csharp'],
   ['docs/guide/api/Swift.md', 'api/swift'],
   ['docs/guide/distribution/Packages.md', 'docs/distribution/packages'],
+  ['docs/guide/distribution/Platforms.md', 'docs/distribution/platforms'],
   ['docs/guide/distribution/CSharp.md', 'docs/distribution/csharp'],
   ['implementation/csharp/README.md', 'docs/implementations/csharp'],
   ['implementation/swift/README.md', 'docs/implementations/swift'],

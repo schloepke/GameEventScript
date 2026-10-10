@@ -12,6 +12,8 @@ and platform build compatibility, not shared Conformance acceptance. Consult the
 [release notes](https://github.com/schloepke/GameEventScript/releases) for migration
 guidance and the [changelog](../../../CHANGELOG.md) for unreleased changes.
 See the [version policy](#version-policy) for compatible updates and contract changes.
+The [platform support matrix](Platforms.md) separates package requirements,
+Conformance coverage and native distribution checks.
 
 > **Since: 0.2.0 — package icons**
 
@@ -263,6 +265,10 @@ under `implementation/swift` remain local development and verification entry poi
 
 ## Verify a release without publishing
 
+Use the [platform qualification checklist](Platforms.md#release-qualification)
+to collect matching CI evidence for the exact release revision. A package build
+alone does not qualify all platforms or toolchains.
+
 Release preparation also requires the [release consumer upgrade checks](../../../conformance/cross-language/ReleaseUpgrade.md).
 The C# Release Candidate workflow runs the separate C#/Swift upgrade workflow
 before preparation; it does not extend normal Swift PR CI. The selected 0.3.0
@@ -338,8 +344,10 @@ future changes. Review migration guidance alongside the implementation. Use
 that versioned section as the basis for the GitHub Release description; generated
 PR lists may supplement it.
 
-1. Merge the reviewed changes and verify the C# and Swift checks for the selected
-   commit. Run the release workflow with `publish=false` and the intended version.
+1. Merge the reviewed changes and complete the
+   [platform qualification checklist](Platforms.md#release-qualification) for
+   the selected commit. Run the release workflow with `publish=false` and the
+   intended version.
 2. Once the release is approved, create and push a Git tag such as `0.1.0-rc1`
    (or `v0.1.0-rc1`) on that same commit. This is already the SwiftPM publication
    step; do not create public version tags merely to test packaging.

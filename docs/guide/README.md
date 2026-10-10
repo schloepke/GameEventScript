@@ -26,6 +26,8 @@ consult the [changelog](../../CHANGELOG.md) when targeting a published release.
 
 ## Distribution
 
+- [Platform support and release evidence](distribution/Platforms.md) distinguishes
+  Conformance, package consumption and native CLI verification by target.
 - [Library packages and releases](distribution/Packages.md) describes public
   NuGet/SwiftPM products, Xcode consumption and the shared release procedure.
 - [C# distribution](distribution/CSharp.md) describes reproducible NuGet,

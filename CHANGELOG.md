@@ -10,8 +10,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
-Planned for 0.4.0: language and Card Lab improvements, binary-reader hardening,
-and explicit release qualification. This section is not a publication notice.
+## [0.4.0] — 2026-10-11
 
 ### Added
 
@@ -376,6 +375,7 @@ First public development release of the immutable, event-driven core.
   execution, binary inspection and interactive use.
 - Documented installation and the pre-1.0 compatibility policy.
 
+[0.4.0]: https://github.com/schloepke/GameEventScript/compare/0.3.0...0.4.0
 [0.3.0]: https://github.com/schloepke/GameEventScript/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/schloepke/GameEventScript/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/schloepke/GameEventScript/releases/tag/0.1.0

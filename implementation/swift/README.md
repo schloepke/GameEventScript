@@ -359,3 +359,8 @@ Swift CI runs isolated tagged-package consumers in parallel with native tests,
 Conformance and API verification. The required `verify` job aggregates native,
 distribution and Linux-highlighter results and rejects failed scope selection or
 unexpected skipped jobs. Clean consumer build directories remain uncached.
+
+Known Card Lab browser assets can skip native Swift CI because the Website
+workflow still builds and tests the native example and WASM application. New
+files, build scripts, package manifests and Swift sources require full native
+verification; manual workflow runs always select every check.

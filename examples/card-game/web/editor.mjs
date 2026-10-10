@@ -2,19 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { diagnosticRange } from './diagnostics.mjs';
-import { showLoading } from './loading.mjs';
 
 /** Paint Swift-provided UTF-16 ranges; keep the native textarea's editing behavior. */
-export function attachEditor(input, colors, container, status) {
-  let worker,
+export function attachEditor(input, colors, container, status, engine) {
+  let active = false,
     debounce,
-    timeout,
     revision = 0,
     inFlight = false,
     composing = false;
   const lines = document.getElementById('source-lines');
   let lineCount = 0;
-  const loading = document.getElementById('editor-loading');
   const diagnosticsList = document.getElementById('diagnostics');
   const checkButton = document.getElementById('check-source');
   const kinds = new Set([
@@ -116,10 +113,6 @@ export function attachEditor(input, colors, container, status) {
   }
 
   function fail(message) {
-    loading.hidden = true;
-    clearTimeout(timeout);
-    worker?.terminate();
-    worker = null;
     inFlight = false;
     plain();
     status.textContent = message;
@@ -204,51 +197,29 @@ export function attachEditor(input, colors, container, status) {
     input.setAttribute('aria-invalid', String(diagnostics.length > 0));
   }
 
-  function request() {
-    if (composing || inFlight) return;
+  async function request() {
+    if (!active || composing || inFlight) return;
     const source = input.value;
     if (new TextEncoder().encode(source).length > 131072) {
       plain();
       status.textContent = 'Highlighting supports up to 128 KiB; editing remains available.';
       return;
     }
-    if (!worker) {
-      const active = new Worker('./worker.mjs', { type: 'module' });
-      worker = active;
-      showLoading(loading, { phase: 'download', loaded: 0 });
-      active.onmessage = ({ data }) => {
-        if (worker !== active) return;
-        if (data.type === 'loading') {
-          showLoading(loading, data);
-          return;
-        }
-        loading.hidden = true;
-        clearTimeout(timeout);
-        inFlight = false;
-        if (data.id !== revision) {
-          request();
-          return;
-        }
-        if (data.error) {
-          fail(`Code check failed: ${data.error}`);
-          return;
-        }
-        try {
-          paint(input.value, data.complete ? data.spans : [], data.diagnostics);
-          status.textContent = data.diagnostics.length
-            ? `${data.diagnostics.length} compiler diagnostics · Click to jump to source.`
-            : 'Compilation successful · no compiler diagnostics.';
-        } catch {
-          fail('Highlighting failed; editing remains available.');
-        }
-      };
-      active.onerror = () => {
-        if (worker === active) fail('Could not load highlighting; editing remains available.');
-      };
-    }
+    const version = revision;
     inFlight = true;
-    worker.postMessage({ id: revision, type: 'analyze', source });
-    timeout = setTimeout(() => fail('Code check timed out; editing remains available.'), 120000);
+    try {
+      const data = await engine.send({ type: 'analyze', source });
+      if (!active || version !== revision) return;
+      paint(source, data.complete ? data.spans : [], data.diagnostics);
+      status.textContent = data.diagnostics.length
+        ? `${data.diagnostics.length} compiler diagnostics · Click to jump to source.`
+        : 'Compilation successful · no compiler diagnostics.';
+    } catch (error) {
+      if (active && version === revision) fail(`Code check failed: ${error.message}`);
+    } finally {
+      inFlight = false;
+      if (active && version !== revision) request();
+    }
   }
 
   function changed() {
@@ -278,16 +249,17 @@ export function attachEditor(input, colors, container, status) {
     changed();
   });
   new ResizeObserver(syncScroll).observe(input);
-  window.addEventListener('pagehide', () => {
-    worker?.terminate();
-    worker = null;
-    inFlight = false;
-    clearTimeout(timeout);
-    clearTimeout(debounce);
-  });
-  window.addEventListener('pageshow', (event) => {
-    if (event.persisted) request();
-  });
   updateLines();
-  request();
+  return {
+    refresh() {
+      active = true;
+      changed();
+      clearTimeout(debounce);
+      request();
+    },
+    suspend() {
+      active = false;
+      clearTimeout(debounce);
+    },
+  };
 }

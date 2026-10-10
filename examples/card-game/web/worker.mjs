@@ -15,6 +15,10 @@ function getEngine() {
       const game = await createEngine(binary);
       report({ phase: 'ready' });
       return game;
+    }).catch(error => {
+      engine = undefined;
+      report({ phase: 'failed' });
+      throw error;
     });
   }
   return engine;

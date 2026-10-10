@@ -281,7 +281,9 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
         ("EndGame", []),
         ("Notice", ["_"]), ("Notice", ["_", "title"]), ("NoticeTable", ["_"]),
         ("NoticeTable", ["_", "pushOld"]), ("NoticeTable", ["_", "stackClear"]), ("NoticeTable", ["pop"]),
-        ("PlayerBadge", ["_", "player"]),
+        ("ZoneBadge", ["_", "zone"]), ("ZoneBadge", ["_", "zone", "color"]),
+        ("TableBadge", ["_"]), ("TableBadge", ["_", "color"]),
+        ("PlayerBadge", ["_", "player"]), ("PlayerBadge", ["_", "player", "color"]),
         ("Complete", ["action"]), ("Reject", ["action", "reason"]), ("Finish", ["winners"]),
     ]
     var board = Board()
@@ -321,7 +323,9 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
     var notices: [(text: String, title: String)] = []
     var tableNotice = ""
     var tableNoticeStack: [String] = []
-    var playerBadges: [Int: String] = [:]
+    var playerBadges: [Int: PresentationBadge] = [:]
+    var zoneBadges: [String: PresentationBadge] = [:]
+    var tableBadge: PresentationBadge?
 
     init(playerCount: Int) { self.playerCount = playerCount }
 
@@ -408,10 +412,19 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
                 }
                 tableNotice = replacement
             }
-        case "PlayerBadge":
+        case "PlayerBadge", "ZoneBadge", "TableBadge":
             let label = try text(args[0])
-            let player = try checkedPlayer(args[1])
-            if label.isEmpty { playerBadges.removeValue(forKey: player) } else { playerBadges[player] = label }
+            let color = args.signatureLabels.last == "color" ? try tag(args[args.count - 1]) : "green"
+            guard ["green", "red", "yellow", "blue", "gray"].contains(color) else { throw CardGameError("Invalid badge color") }
+            let badge = label.isEmpty ? nil : PresentationBadge(text: label, color: color)
+            switch message.name {
+            case "PlayerBadge": playerBadges[try checkedPlayer(args[1])] = badge
+            case "ZoneBadge":
+                let zone = try tag(args[1])
+                _ = try board.zoneIndex(zone)
+                zoneBadges[zone] = badge
+            default: tableBadge = badge
+            }
         case "Complete": complete(try requirePending(args[0]))
         case "Reject":
             let request = try requirePending(args[0])

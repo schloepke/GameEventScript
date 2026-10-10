@@ -15,6 +15,58 @@ const source = await fs.readFile(
   'utf8',
 );
 const game = await createEngine(binary);
+assert.equal(game.start(source, 42).state.playerLayout, 'aroundTable');
+for (const count of [1, 2, 3, 4]) {
+  const below = source.replace('function board(players) be [', 'function board(players) be [playerLayout: #bottom,');
+  const result = game.start(below, 42, count);
+  assert.equal(result.state?.playerLayout, 'bottom', result.error);
+  assert.equal(result.state.players.length, count);
+}
+for (const invalid of ['#unknown', "'bottom'", '42']) {
+  const rules = source.replace('function board(players) be [', `function board(players) be [playerLayout: ${invalid},`);
+  assert.ok(game.start(rules, 42).error);
+}
+const badgeSetup = (commands) => source.replace('on PrepareGame(players) {', `on PrepareGame(players) { ${commands}`);
+for (const color of ['green', 'red', 'yellow', 'blue', 'gray']) {
+  const result = game.start(badgeSetup(`emit PlayerBadge('Test', player: 0, color: #${color})`), 42);
+  assert.equal(result.state?.playerBadgeColors[0], color, result.error);
+}
+for (const color of ['#unknown', "'red'", '42']) {
+  assert.ok(game.start(badgeSetup(`emit PlayerBadge('Test', player: 0, color: ${color})`), 42).error);
+}
+assert.equal(game.start(badgeSetup("emit PlayerBadge('Red', player: 0, color: #red)\nemit PlayerBadge('Default', player: 0)"), 42).state.playerBadgeColors[0], 'green');
+assert.equal(game.start(badgeSetup("emit PlayerBadge('Red', player: 0, color: #red)\nemit PlayerBadge('', player: 0)"), 42).state.playerBadgeColors[0], '');
+assert.deepEqual(game.start(source, 42).state.playerBadgeColors, ['', '']);
+for (const color of ['green', 'red', 'yellow', 'blue', 'gray']) {
+  const result = game.start(badgeSetup(`emit ZoneBadge('Zone <&😀>', zone: #draw, color: #${color})
+    emit TableBadge('Table <&😀>', color: #${color})`), 42);
+  assert.equal(result.error, undefined, result.error);
+  assert.equal(result.state.tableBadge, 'Table <&😀>');
+  assert.equal(result.state.tableBadgeColor, color);
+  const zone = result.state.zones.find(zone => zone.id === 'draw');
+  assert.equal(zone.badge, 'Zone <&😀>');
+  assert.equal(zone.badgeColor, color);
+}
+for (const command of ["ZoneBadge('X', zone: #missing)", "ZoneBadge('X', zone: 'draw')",
+  "ZoneBadge('X', zone: #draw, color: #unknown)", "TableBadge('X', color: #unknown)",
+  "ZoneBadge('X', zone: #draw, color: 'red')", "TableBadge('X', color: 'red')"]) {
+  assert.ok(game.start(badgeSetup(`emit ${command}`), 42).error);
+}
+for (const label of ['Default', '']) {
+  const result = game.start(badgeSetup(`emit ZoneBadge('Red', zone: #draw, color: #red)
+    emit TableBadge('Red', color: #red)
+    emit ZoneBadge('${label}', zone: #draw)
+    emit TableBadge('${label}')`), 42);
+  const zone = result.state.zones.find(zone => zone.id === 'draw');
+  assert.equal(zone.badge, label);
+  assert.equal(zone.badgeColor, label ? 'green' : '');
+  assert.equal(result.state.tableBadge, label);
+  assert.equal(result.state.tableBadgeColor, label ? 'green' : '');
+}
+const clearedBadges = game.start(source, 42).state;
+assert.equal(clearedBadges.tableBadge, '');
+assert.equal(clearedBadges.tableBadgeColor, '');
+assert.ok(clearedBadges.zones.every(zone => zone.badge === '' && zone.badgeColor === ''));
 // Exercise the actual Swift/Foundation highlighter, including UTF-16 astral characters.
 const sample = "// 😀 comment\non Test(value) { emit Done(value: 'hello', count: 7) }";
 const colored = game.highlight(sample);
@@ -755,6 +807,7 @@ console.log('Skat: reusable global bidding reference preserves actions, cards an
 
 const blackjack = await fs.readFile(path.join(web, 'examples/blackjack.ges'), 'utf8');
 assert.deepEqual(game.check(blackjack), { diagnostics: [] });
+assert.equal(game.start(blackjack, 42, 1).state.playerLayout, 'bottom');
 const bjCards = (state, player) => state.zones.find(zone => zone.id === `hand${player}`).cards;
 const bjDealer = state => state.zones.find(zone => zone.id === 'dealer').cards;
 function bjTotal(cards) {
@@ -791,11 +844,22 @@ function checkBlackjack(result) {
   state.players.forEach((_, player) => {
     const result = bjResult(bjCards(state, player), bank);
     assert.ok(state.playerBadges[player].startsWith(`${result} · `));
+    assert.equal(state.playerBadgeColors[player], {Win: 'green', Loss: 'red', Push: 'gray'}[result]);
     assert.ok(state.tableNotice.includes(`— ${result}`));
     if (result === 'Win') winners.push(player);
   });
   assert.deepEqual(state.winners, winners);
-  assert.ok(state.notices.some(notice => notice.text === state.tableNotice));
+  assert.deepEqual(state.notices, []);
+  const results = state.players.map((_, player) => bjResult(bjCards(state, player), bank));
+  const dealerWins = results.filter(result => result === 'Loss').length;
+  const dealerLosses = results.filter(result => result === 'Win').length;
+  const dealerPushes = results.filter(result => result === 'Push').length;
+  const count = results.length;
+  const dealerLabel = dealerWins === count ? 'Win' : dealerLosses === count ? 'Loss' : dealerPushes === count ? 'Push'
+    : `${dealerWins} wins · ${dealerLosses} losses · ${dealerPushes} pushes`;
+  const dealerZone = state.zones.find(zone => zone.id === 'dealer');
+  assert.ok(dealerZone.badge.startsWith(`${dealerLabel} · `));
+  assert.equal(dealerZone.badgeColor, dealerWins === count ? 'green' : dealerLosses === count ? 'red' : dealerPushes === count ? 'gray' : 'yellow');
 }
 for (const players of [1, 2, 3]) for (let seed = 0; seed < 30; seed++) {
   let result = game.start(blackjack, seed, players);

@@ -23,12 +23,26 @@ button:disabled { cursor: default; opacity: .55; }
 .card.red { color: #b33c3c; }
 .card.playable { border-color: #bce96d; box-shadow: 0 0 0 3px #bce96d44; }
 .card.back { background: repeating-linear-gradient(45deg, #385c90, #385c90 5px, #314e7a 5px, #314e7a 10px); color: white; }
-details { margin-top: 36px; border-top: 1px solid #355d46; padding-top: 20px; }
-summary { cursor: pointer; }
+body.editing { overflow: hidden; }
+#editor-dialog { inset: 0; margin: 0; width: 100%; max-width: none; height: 100vh; height: 100dvh; max-height: none; padding: 16px; border: 0; background: #16191f; color: #e9f0e9; overflow: auto; }
+#editor-dialog[open] { display: flex; flex-direction: column; }
+.editor-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
+.editor-header h2 { font-size: 1.15rem; margin: 0; }
+.editor-toolbar { margin: 12px 0 0; flex-shrink: 0; }
+#editor-dialog .editor-status { margin: 8px 0 0; flex-shrink: 0; }
+#editor-dialog .source-editor { flex: 1; min-height: 120px; }
+#editor-dialog #diagnostics { max-height: 18vh; overflow: auto; flex-shrink: 0; margin: 8px 0 0; }
+#editor-dialog #diagnostics:empty { display: none; }
+#editor-dialog .wasm-loading { margin: 8px 0 0; flex-shrink: 0; }
+@media (max-width: 620px) {
+  #editor-dialog { padding: 10px; }
+  .editor-toolbar { gap: 8px; }
+  .editor-toolbar button, .editor-toolbar select { padding: 8px; }
+}
 /* The native textarea owns selection, input, undo and accessibility. The pre only paints colors. */
 .source-editor { --gutter-width: 58px; padding-left: var(--gutter-width); position: relative; margin-top: 12px; background: #0c1d17; border: 1px solid #355d46; border-radius: 10px; overflow: hidden; }
 .source-editor textarea, .source-editor pre { margin: 0; border: 0; padding: 16px; font: 14px/23px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-variant-ligatures: none; letter-spacing: normal; tab-size: 4; white-space: pre; text-align: left; }
-.source-editor textarea { display: block; position: relative; width: 100%; height: 1000px; min-height: 180px; resize: vertical; overflow: auto; background: transparent; color: #dbe9dc; caret-color: #f3f7ed; outline-offset: -2px; }
+.source-editor textarea { display: block; position: relative; width: 100%; height: 100%; min-height: 0; resize: none; overflow: auto; background: transparent; color: #dbe9dc; caret-color: #f3f7ed; outline-offset: -2px; }
 #source-colors { position: absolute; inset: 0 0 0 var(--gutter-width); overflow: hidden; pointer-events: none; color: #dbe9dc; visibility: hidden; }
 .source-editor.highlighted #source-colors { visibility: visible; }
 #source-lines { position: absolute; top: 0; left: 0; width: var(--gutter-width); height: 100%; padding: 16px 12px; overflow: hidden; text-align: right; color: #789788; background: #10251d; border-right: 1px solid #355d46; pointer-events: none; user-select: none; }
@@ -155,8 +169,18 @@ select { font: inherit; padding: 10px; margin-left: 6px; border: 1px solid #6880
 .card-action-picker button { text-align: left; white-space: normal; overflow-wrap: anywhere; }
 .card-action-picker button:focus-visible { outline: 2px solid #e9ffc4; outline-offset: -4px; }
 
-.player-badge { display: inline-block; padding: 3px 8px; margin-left: 8px; border-radius: 999px; background: #c8ed8a; color: #17382b; font-size: .75rem; overflow-wrap: anywhere; }
+.badge { text-transform: none; letter-spacing: normal; display: inline-block; padding: 3px 8px; margin-left: 8px; border-radius: 999px; background: #c8ed8a; color: #17382b; font-size: .75rem; overflow-wrap: anywhere; }
 
 .card-with-actions { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .below-actions { position: relative; z-index: 2; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 8px; }
 .card-with-actions > .below-actions { margin-top: 0; }
+
+/* Games may seat everyone below the table, without rotating their cards. */
+#board[data-player-layout="bottom"] { grid-template-columns: repeat(var(--player-count), minmax(240px, 1fr)); grid-template-areas: none; min-width: calc(var(--player-count) * 240px); align-items: stretch; }
+#board[data-player-layout="bottom"] > .table-area { grid-area: auto; grid-row: 1; grid-column: 1 / -1; }
+#board[data-player-layout="bottom"] > .player-area { grid-area: auto; grid-row: 2; }
+
+.badge[data-color="red"] { background: #ffb1b1; color: #501919; }
+.badge[data-color="yellow"] { background: #f2d581; color: #493607; }
+.badge[data-color="blue"] { background: #a4cfff; color: #173759; }
+.badge[data-color="gray"] { background: #c7cdd3; color: #28313b; }

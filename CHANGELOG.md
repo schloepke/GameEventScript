@@ -16,6 +16,14 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Card Lab fullscreen editor with example/Draft/Saved loading, source download,
+  automatic restart on close and one shared Wasm instance for game and editor.
+  Changing the player count starts a new game immediately.
+- Card Lab setup supports `playerLayout: #bottom` as an alternative to the default
+  `#aroundTable`. Player, zone and table badges support optional color tags.
+  Blackjack seats players below the table and reports outcomes through player and
+  dealer badges plus table text, without a result popup.
+
 - Combined collection sources evaluate all source expressions once from left to
   right before validation, including invalid combinations. Iterator construction
   no longer creates and closes preliminary validation iterators.

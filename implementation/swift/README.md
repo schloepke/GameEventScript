@@ -348,3 +348,9 @@ standalone value. Decoding reconstructs immutable data and never runs Record or
 native constructors. External objects export as typed Record snapshots. Local
 Publish does not serialize; configure encoding explicitly at your I/O boundary.
 The [message format](../../specs/MessageFormat.md) defines the envelope and errors.
+
+The CI API gate uses `python3 scripts/verify-swift-api.py --reuse-local-builds`
+after `test-swift.sh`. SwiftPM refreshes the existing Release conformance, Bridge and
+highlighter builds before fresh symbol extraction; approved snapshots and
+documentation checks are unchanged. Without this option, the API gate retains
+its independent per-package Debug builds.

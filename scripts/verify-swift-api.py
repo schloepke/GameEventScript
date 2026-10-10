@@ -61,25 +61,43 @@ def command_failure(message, log, output):
     return RuntimeError(f"{message}; see {log}\n{log.read_text(encoding='utf-8', errors='replace')[-12000:]}")
 
 
-def dump_graphs(swift, package):
+def build_options(package, reuse_local_builds):
+    """Refresh existing Release products or retain the independent default build."""
+    if reuse_local_builds:
+        owner, directory = {
+            "GameEventScriptSwiftBridge": ("GameEventScriptSwiftBridge", "swiftbridge"),
+            "GameEventScriptSyntaxHighlighter": ("GameEventScriptSyntaxHighlighter", "syntaxhighlighter"),
+        }.get(package, ("GameEventScriptConformance", "conformance"))
+        scratch = ROOT / "artifacts/swift" / directory
+    else:
+        owner, scratch = package, ARTIFACTS / package
+    return ["--package-path", str(ROOT / "implementation/swift" / owner),
+            "--scratch-path", str(scratch), "--disable-build-manifest-caching",
+            "--configuration", "release" if reuse_local_builds else "debug"]
+
+
+def dump_graphs(swift, package, reuse_local_builds=False, built_paths=None):
     scratch = ARTIFACTS / package
     scratch.mkdir(parents=True, exist_ok=True)
     # Clear this script's previous graph output so removed extension graphs cannot
     # survive a rebuild and accidentally conceal an API removal.
     for graph in scratch.rglob("*.symbols.json"):
         graph.unlink()
-    options = [
-        "--package-path", str(ROOT / "implementation" / "swift" / package),
-        "--scratch-path", str(scratch), "--disable-build-manifest-caching",
-    ]
+    options = build_options(package, reuse_local_builds)
+    built_paths = {} if built_paths is None else built_paths
     log = ARTIFACTS / (package + ".log")
     print(f"Extracting {package} public symbols…", flush=True)
     with log.open("w", encoding="utf-8") as output:
-        completed = subprocess.run([swift, "build", *options, "--build-tests"], cwd=ROOT,
-                                   stdout=output, stderr=subprocess.STDOUT, check=False)
-        if completed.returncode:
-            raise command_failure(f"Swift build failed for {package}", log, output)
-        binary_path = subprocess.check_output([swift, "build", *options, "--show-bin-path"], cwd=ROOT, text=True).strip()
+        key = tuple(options)
+        if key not in built_paths:
+            # Always refresh through SwiftPM: cached modules are never trusted as
+            # proof that current sources have been built. Tests ran in test-swift.sh.
+            completed = subprocess.run([swift, "build", *options, *([] if reuse_local_builds else ["--build-tests"])], cwd=ROOT,
+                                       stdout=output, stderr=subprocess.STDOUT, check=False)
+            if completed.returncode:
+                raise command_failure(f"Swift build failed for {package}", log, output)
+            built_paths[key] = subprocess.check_output([swift, "build", *options, "--show-bin-path"], cwd=ROOT, text=True).strip()
+        binary_path = built_paths[key]
         target = json.loads(subprocess.check_output([swift, "-print-target-info"], text=True))["target"]["triple"]
         export = scratch / "symbolgraph"
         export.mkdir(exist_ok=True)
@@ -203,16 +221,19 @@ def documentation_issues(package, graphs):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--update", action="store_true", help="approve the current declarations after review")
+    parser.add_argument("--reuse-local-builds", action="store_true",
+                        help="refresh and reuse local Release conformance/highlighter builds for extraction")
     arguments = parser.parse_args()
     swift = shutil.which("swift")
     if not swift:
         parser.error("swift must be available on PATH")
 
+    built_paths = {}
     generated = []
     undocumented = []
     try:
         for package in PACKAGES:
-            graphs = dump_graphs(swift, package)
+            graphs = dump_graphs(swift, package, arguments.reuse_local_builds, built_paths)
             generated.append((package, snapshot(package, graphs)))
             undocumented.extend(documentation_issues(package, graphs))
     except (OSError, ValueError, KeyError, RuntimeError) as error:

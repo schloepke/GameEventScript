@@ -7,7 +7,7 @@ const validCounts = counts => Array.isArray(counts) && counts.length > 0 &&
   new Set(counts).size === counts.length && counts.every(count => [1, 2, 3, 4].includes(count));
 
 /** Keep one autosaved draft and one explicit saved copy, independent of examples. */
-export async function attachGameLibrary(input, select, saveButton, status, playerSelect, onSelect, onError) {
+export async function attachGameLibrary(input, select, saveButton, status, playerSelect, onSelect, onError, editorSelect) {
   const response = await fetch('./examples.json', { cache: 'no-cache' });
   if (!response.ok) throw new Error('Could not load the game list.');
   const examples = await response.json();
@@ -22,6 +22,7 @@ export async function attachGameLibrary(input, select, saveButton, status, playe
   const validSlot = slot => slot && typeof slot.source === 'string' && [1, 2, 3, 4].includes(slot.players) &&
     (slot.playerCounts === undefined || (validCounts(slot.playerCounts) && slot.playerCounts.includes(slot.players)));
   let playerCounts = [2, 3, 4];
+  let sourceName = 'my-game.ges';
   let library = { version: 2, selected: examples[0].id, draft: null, saved: null };
   let storageWarning = '';
   try {
@@ -54,15 +55,21 @@ export async function attachGameLibrary(input, select, saveButton, status, playe
   }
 
   function options() {
-    select.replaceChildren();
-    for (const entry of [...examples, { id: 'draft', name: 'Draft · autosaved' }, { id: 'saved', name: 'Saved' }]) {
-      const option = document.createElement('option');
-      option.value = entry.id;
-      option.textContent = entry.name;
-      option.disabled = ['draft', 'saved'].includes(entry.id) && !library[entry.id];
-      select.append(option);
+    const entries = [...examples, { id: 'draft', name: 'Draft · autosaved' }, { id: 'saved', name: 'Saved' }];
+    for (const target of [select, editorSelect].filter(Boolean)) {
+      const previous = target.value;
+      target.replaceChildren();
+      for (const entry of entries) {
+        const option = document.createElement('option');
+        option.value = entry.id;
+        option.textContent = entry.name;
+        option.disabled = ['draft', 'saved'].includes(entry.id) && !library[entry.id];
+        target.append(option);
+      }
+      const available = entries.some(entry => entry.id === previous &&
+        (!['draft', 'saved'].includes(entry.id) || library[entry.id]));
+      target.value = target === editorSelect && available ? previous : library.selected;
     }
-    select.value = library.selected;
   }
 
   async function load(id) {
@@ -76,12 +83,16 @@ export async function attachGameLibrary(input, select, saveButton, status, playe
     if (!result.ok) throw new Error('Could not load the game. Your code is unchanged.');
     const counts = example.playerCounts ?? [2, 3, 4];
     const requested = example.players ?? Number(playerSelect.value);
-    return { source: await result.text(), players: counts.includes(requested) ? requested : counts[0], playerCounts: counts };
+    return { sourceName: example.source.split('/').at(-1), source: await result.text(), players: counts.includes(requested) ? requested : counts[0], playerCounts: counts };
   }
 
   function apply(slot) {
     applying = true;
+    sourceName = typeof slot.sourceName === 'string' && /^[a-z0-9-]+\.ges$/.test(slot.sourceName) ? slot.sourceName : 'my-game.ges';
     input.value = slot.source;
+    input.setSelectionRange(0, 0);
+    input.scrollTop = 0;
+    input.scrollLeft = 0;
     playerCounts = slot.playerCounts ?? [1, 2, 3, 4];
     playerSelect.replaceChildren();
     for (const count of playerCounts) {
@@ -98,7 +109,7 @@ export async function attachGameLibrary(input, select, saveButton, status, playe
   function autosave() {
     if (applying) return;
     generation++;
-    library.draft = { source: input.value, players: Number(playerSelect.value), playerCounts: [...playerCounts] };
+    library.draft = { sourceName, source: input.value, players: Number(playerSelect.value), playerCounts: [...playerCounts] };
     library.selected = 'draft';
     options();
     persist('Draft autosaved. Save keeps a separate copy in Saved.');
@@ -111,11 +122,13 @@ export async function attachGameLibrary(input, select, saveButton, status, playe
   options();
   status.textContent = storageWarning || 'Edits are autosaved to Draft. Save replaces the Saved slot.';
   input.addEventListener('input', autosave);
-  playerSelect.addEventListener('change', autosave);
+  playerSelect.addEventListener('change', () => {
+    autosave();
+    onSelect();
+  });
   select.disabled = false;
   saveButton.disabled = false;
-  select.onchange = async () => {
-    const id = select.value;
+  async function choose(id) {
     const ticket = ++generation;
     try {
       const slot = await load(id);
@@ -131,12 +144,15 @@ export async function attachGameLibrary(input, select, saveButton, status, playe
       status.textContent = error.message;
       onError(error.message);
     }
-  };
+  }
+
+  select.onchange = () => choose(select.value);
   saveButton.onclick = () => {
     generation++;
-    library.saved = { source: input.value, players: Number(playerSelect.value), playerCounts: [...playerCounts] };
+    library.saved = { sourceName, source: input.value, players: Number(playerSelect.value), playerCounts: [...playerCounts] };
     library.selected = 'saved';
     options();
     persist('Saved slot updated. Further edits go to Draft.');
   };
+  return { examples, select: choose, get sourceName() { return sourceName; } };
 }

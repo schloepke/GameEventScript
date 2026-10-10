@@ -84,6 +84,30 @@ register-oriented numeric dispatch with strict <code>Move mode=Numeric</code> fo
 <h3 id="added">Added</h3>
 <ul>
 <li>
+<p>Search the complete Card Lab source and GESA dump, including folded content,
+with match navigation and optional case sensitivity. Ctrl/Cmd+F adopts the
+current source or dump selection, including multiline text.</p>
+</li>
+<li>
+<p>Card Lab editor block folding with gutter controls, retaining Swift syntax
+highlighting and undo history.</p>
+</li>
+<li>
+<p>Card Lab editor offers a read-only GESA dump with Swift syntax highlighting
+compiled from the current source through the shared Wasm worker.</p>
+</li>
+<li>
+<p>Card Lab fullscreen editor with example/Draft/Saved loading, source download,
+automatic restart on close and one shared Wasm instance for game and editor.
+Changing the player count starts a new game immediately.</p>
+</li>
+<li>
+<p>Card Lab setup supports <code>playerLayout: #bottom</code> as an alternative to the default
+<code>#aroundTable</code>. Player, zone and table badges support optional color tags.
+Blackjack seats players below the table and reports outcomes through player and
+dealer badges plus table text, without a result popup.</p>
+</li>
+<li>
 <p>Combined collection sources evaluate all source expressions once from left to
 right before validation, including invalid combinations. Iterator construction
 no longer creates and closes preliminary validation iterators.</p>
@@ -184,6 +208,10 @@ source mappings and attribute inlined constants to their use sites.</li>
 idle-duration observations in C# and Swift.</p>
 <h3 id="added-1">Added</h3>
 <ul>
+<li>
+<p>Card Lab editor block folding with gutter controls, retaining Swift syntax
+highlighting and undo history.</p>
+</li>
 <li>
 <p>Exposed the <code>ges</code> executable in the root SwiftPM package alongside the libraries.
 Homebrew and standalone downloads remain available. The root package now requires
@@ -304,6 +332,10 @@ C# and Swift share the same release version. Compatibility may change during 0.x
 see the migration notes below before upgrading from 0.1.0.</p>
 <h3 id="added-2">Added</h3>
 <ul>
+<li>
+<p>Card Lab editor block folding with gutter controls, retaining Swift syntax
+highlighting and undo history.</p>
+</li>
 <li>
 <p>Website publication triggers the hosting pull webhook after changed output is
 successfully pushed to <code>site</code>, with bounded retries and a secret-backed URL.</p>

@@ -89,3 +89,12 @@ console.log('Dump gutter: original line numbers, independent region toggles and 
 
 assert.equal(rows[10].children[0].children[1].attributes['aria-expanded'], 'false');
 assert.equal(rows[11].hidden, true, 'Non-Code regions start folded');
+
+byId('check-source').dispatchEvent(new Event('click'));
+pending[5].resolve({ diagnostics: [], dump: 'ReturnVoid', complete: false, spans: [[0, 10, 'keyword']] });
+await Promise.resolve();
+const fallback = byId('dump-code').children[0].children[0].children[1].children;
+assert.equal(fallback.map(item => item.textContent).join(''), 'ReturnVoid');
+assert.ok(fallback.every(item => !item.className), 'Incomplete highlighting shows the complete uncolored dump');
+assert.match(byId('dump-status').textContent, /highlighting unavailable/);
+console.log('Dump view: incomplete highlighting preserves readable output.');

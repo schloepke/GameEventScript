@@ -63,7 +63,8 @@ UTF-16 ranges for the CodeMirror editing surface. Gutter markers fold handlers,
 nested `{…}` blocks and multiline `[…]` collections; Ctrl+Q toggles the current
 block. Strings and comments are excluded. Folding preserves the complete source,
 selection and undo history. The Find bar searches the complete source or dump,
-including folded content, and reveals each match. Ctrl/Cmd+F focuses it; Enter/F3
+including folded content, and reveals each match. Ctrl/Cmd+F focuses it and
+uses the current source/dump selection as the query when present; Enter/F3
 finds the next match and Shift+Enter/Shift+F3 the previous one. Match case is optional.
 Highlighting failures fall back to plain text.
 A loading bar shows Wasm download progress (percent and MB when the response size

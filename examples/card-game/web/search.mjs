@@ -47,7 +47,13 @@ export function attachSearch(dialog, input, editor, dump) {
   byId('dump-view').addEventListener('dumpchange', reset);
   dialog.addEventListener('keydown', event => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
-      event.preventDefault(); event.stopPropagation(); query.focus(); query.select();
+      event.preventDefault(); event.stopPropagation();
+      // Read before focus changes; keep the query when there is no document selection.
+      if (event.target !== query) {
+        const selected = current().getSelection();
+        if (selected) { query.value = selected; reset(); }
+      }
+      query.focus(); query.select();
     } else if (event.key === 'F3' || (event.target === query && event.key === 'Enter')) {
       event.preventDefault(); event.stopPropagation(); update(event.shiftKey ? -1 : 1);
     } else if (event.target === query && event.key === 'Escape') {

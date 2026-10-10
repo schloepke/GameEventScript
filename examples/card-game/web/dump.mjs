@@ -167,6 +167,15 @@ export function attachDump(input, engine, getSourceName = () => 'my-game.ges', f
   return {
     reset, refresh,
     getText() { return documentText; },
+    getSelection() {
+      const selection = window.getSelection();
+      if (!selection?.rangeCount || !code.contains(selection.anchorNode) || !code.contains(selection.focusNode)) return '';
+      const fragment = selection.getRangeAt(0).cloneContents();
+      for (const gutter of fragment.querySelectorAll('.dump-gutter')) gutter.remove();
+      const lines = [...fragment.querySelectorAll('.dump-line')];
+      for (const line of lines.slice(0, -1)) line.append(document.createTextNode('\n'));
+      return fragment.textContent;
+    },
     clearMatch,
     showMatch(start, end) {
       clearMatch();

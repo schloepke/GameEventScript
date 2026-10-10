@@ -572,6 +572,8 @@ Large dumps beyond the highlighter's limit remain readable without colors.
 The shared Find bar searches the complete active source or dump as literal text.
 Matches retain UTF-16 offsets, reveal enclosing folds and scroll into view. The
 search wraps in both directions, supports optional case sensitivity and refreshes
-when the document changes. Ctrl/Cmd+F focuses search; Enter/F3 navigate forward,
+when the document changes. Ctrl/Cmd+F focuses search and adopts the current
+document selection, including multiline text; without a selection it keeps the
+existing query. Enter/F3 navigate forward,
 Shift+Enter/Shift+F3 backward. Escape in the search field clears search and returns
 focus to the document without closing the editor.

@@ -17,7 +17,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ### Added
 
 - Search the complete Card Lab source and GESA dump, including folded content,
-  with match navigation and optional case sensitivity.
+  with match navigation and optional case sensitivity. Ctrl/Cmd+F adopts the
+  current source or dump selection, including multiline text.
 
 - Card Lab editor block folding with gutter controls, retaining Swift syntax
   highlighting and undo history.

@@ -160,6 +160,7 @@ export function attachEditor(input, colors, container, status, engine) {
   new ResizeObserver(() => editor.refresh()).observe(container);
   return {
     getText() { return editor.getValue(); },
+    getSelection() { return editor.getSelection(); },
     clearMatch() { searchMark?.clear(); searchMark = undefined; },
     showMatch(start, end) {
       searchMark?.clear();

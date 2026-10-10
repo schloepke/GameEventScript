@@ -211,7 +211,7 @@ select { font: inherit; padding: 10px; margin-left: 6px; border: 1px solid #6880
 .folding-editor .CodeMirror-foldgutter-open, .folding-editor .CodeMirror-foldgutter-folded { color: #9fcbb0; cursor: pointer; }
 
 .editor-search { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: .85rem; }
-.editor-search input[type="search"] { width: min(300px, 50vw); padding: 7px; border: 1px solid #688075; border-radius: 6px; background: #18392b; color: #f3f7ed; font: inherit; }
+.editor-search #search-query { resize: none; white-space: pre; overflow: auto; vertical-align: middle; width: min(300px, 50vw); padding: 7px; border: 1px solid #688075; border-radius: 6px; background: #18392b; color: #f3f7ed; font: inherit; }
 .editor-search button { padding: 6px 12px; }
 #search-status { color: #b9d0c1; }
 .search-hit { background: #e9c65f !important; color: #18251b !important; }

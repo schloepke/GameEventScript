@@ -268,6 +268,8 @@ under `implementation/swift` remain local development and verification entry poi
 Use the [platform qualification checklist](Platforms.md#release-qualification)
 to collect matching CI evidence for the exact release revision. A package build
 alone does not qualify all platforms or toolchains.
+Collect the separate [performance and allocation evidence](Performance.md) on
+the qualified measurement host without extending ordinary Swift PR CI.
 
 Release preparation also requires the [release consumer upgrade checks](../../../conformance/cross-language/ReleaseUpgrade.md).
 The C# Release Candidate workflow runs the separate C#/Swift upgrade workflow

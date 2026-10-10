@@ -109,7 +109,10 @@ toolchain versions and any limitations in the release validation evidence:
 3. Run **CLI Distribution** with the intended version and publication disabled;
    require its complete `verify` result. Require **Website / card-game** for the
    Card Lab shipped from the same revision.
-4. Review this matrix against the manifests, pinned SDKs and workflow matrices.
+4. Require the separate [performance and allocation evidence](Performance.md)
+   for both implementations; hosted correctness checks do not replace measured
+   regression checks.
+5. Review this matrix against the manifests, pinned SDKs and workflow matrices.
    Add a corresponding build-and-execute job before declaring a new target
    supported. Record moving runner/toolchain versions rather than treating a
    runner label as a compiler pin. Missing, cancelled or failed required evidence

@@ -25,13 +25,15 @@ jobs:
             10.0.201
 
       - name: Run profile-matched performance tests
-        run: ./scripts/test-csharp-performance.sh
+        run: |
+          python3 scripts/test-release-performance-controls.py
+          python3 scripts/test-release-performance.py --language csharp
 
       - name: Upload performance reports
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: csharp-performance-reports
-          path: artifacts/conformance/
+          path: artifacts/release-performance/
           if-no-files-found: warn
           retention-days: 30

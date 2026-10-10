@@ -73,6 +73,7 @@ export default defineConfig({
       ] },
       { label: 'Packages and releases', items: [
         'docs/distribution/packages', 'docs/distribution/platforms', 'docs/distribution/csharp', 'docs/changelog',
+        'docs/distribution/performance',
       ] },
     ],
   })],

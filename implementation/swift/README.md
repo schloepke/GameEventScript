@@ -369,3 +369,7 @@ The shared verification script also runs bounded, deterministic `.gesb` reader
 mutations through the existing C# and Swift adapters without additional builds.
 See [Binary reader fuzzing](../../conformance/cross-language/BinaryReaderFuzz.md)
 for seeds, resource limits, watchdogs and failure reproduction.
+
+Generated valid-program [roundtrip properties](../../conformance/cross-language/BinaryRoundtripProperties.md)
+use the same already-built probes. An independent V1 encoder checks exact field
+preservation and canonicalization, followed by actual C# ↔ Swift binary exchange.

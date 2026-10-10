@@ -123,10 +123,6 @@ here.
   documented build-host/toolchain calibration index instead of comparing raw
   timings from unrelated machines. Existing C# and Swift profile measurements
   remain implementation regression gates, not cross-platform performance promises.
-- Add property-based Reader/Writer tests without weakening the existing
-  canonical and malformed fixture corpus. Bounded mutation fuzzing now runs
-  through the existing C#/Swift adapters; see
-  `conformance/cross-language/BinaryReaderFuzz.md`.
 - Improve CFG/liveness-based register allocation and reuse of non-overlapping
   locals.
 - Measure whether the bytecode optimizer passes produce meaningful changes with

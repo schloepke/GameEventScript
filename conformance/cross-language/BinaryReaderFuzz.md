@@ -53,5 +53,5 @@ successful complete run and records the seed, counts, input hash and duration.
 The output row count locates the first unfinished input after a crash. Replay a
 saved batch with either adapter's `--binary-fuzz <input.txt> <output.txt>` mode.
 Promote discovered defects to small permanent Markdown Conformance fixtures
-before changing product behavior. Generating new valid Programs for property-
-based testing is a separate release task.
+before changing product behavior. Generated valid-program properties are covered separately by
+[Binary roundtrip properties](BinaryRoundtripProperties.md).

@@ -354,3 +354,8 @@ after `test-swift.sh`. SwiftPM refreshes the existing Release conformance, Bridg
 highlighter builds before fresh symbol extraction; approved snapshots and
 documentation checks are unchanged. Without this option, the API gate retains
 its independent per-package Debug builds.
+
+Swift CI runs isolated tagged-package consumers in parallel with native tests,
+Conformance and API verification. The required `verify` job aggregates native,
+distribution and Linux-highlighter results and rejects failed scope selection or
+unexpected skipped jobs. Clean consumer build directories remain uncached.

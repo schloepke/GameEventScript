@@ -44,27 +44,23 @@ jobs:
       - name: Verify standalone Foundation highlighting on Linux
         run: swift test --package-path implementation/swift/GameEventScriptSyntaxHighlighter --scratch-path artifacts/swift/syntaxhighlighter --disable-build-manifest-caching --configuration release
 
-  verify:
+  distribution:
     needs: changes
-    # Keep the required check present for documentation-only changes and fail if
-    # change selection fails. Only real Swift checks allocate a macOS runner.
-    if: ${{ !cancelled() }}
-    runs-on: ${{ needs.changes.outputs.swift == 'true' && 'macos-15' || 'ubuntu-latest' }}
-    # Clean distribution and local-package checks each build the SwiftSyntax macro plugin.
-    timeout-minutes: 60
+    if: needs.changes.outputs.swift == 'true'
+    runs-on: macos-15
+    timeout-minutes: 30
     steps:
-      - name: Require successful change selection
-        env:
-          SCOPE_RESULT: ${{ needs.changes.result }}
-          RUN_SWIFT: ${{ needs.changes.outputs.swift }}
-        run: |
-          test "$SCOPE_RESULT" = success
-          case "$RUN_SWIFT" in
-            true) echo "Running all Swift checks." ;;
-            false) echo "Only website/guide inputs changed; Swift checks are unchanged." ;;
-            *) echo "Missing Swift verification scope." >&2; exit 1 ;;
-          esac
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Deliberately fresh: tagged consumers must prove clean package consumption.
+      - name: Verify the public SwiftPM distribution and shared root tests
+        run: python3 scripts/test-swift-package.py
 
+  native:
+    needs: changes
+    if: needs.changes.outputs.swift == 'true'
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
       - if: needs.changes.outputs.swift == 'true'
         name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -123,10 +119,6 @@ jobs:
         run: python3 scripts/test-swift-incremental.py
 
       - if: needs.changes.outputs.swift == 'true'
-        name: Verify the public SwiftPM distribution and shared root tests
-        run: python3 scripts/test-swift-package.py
-
-      - if: needs.changes.outputs.swift == 'true'
         name: Build packages and verify shared conformance
         id: conformance
         run: ./scripts/test-swift.sh
@@ -150,3 +142,21 @@ jobs:
             artifacts/swift/message-json-roundtrip/
           if-no-files-found: error
           retention-days: 14
+
+  verify:
+    needs: [changes, native, distribution, highlighter-linux]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Verify result gate controls
+        run: python3 scripts/test-ci-swift-result.py
+      - name: Require all selected Swift checks
+        env:
+          SCOPE_RESULT: ${{ needs.changes.result }}
+          RUN_SWIFT: ${{ needs.changes.outputs.swift }}
+          NATIVE_RESULT: ${{ needs.native.result }}
+          DISTRIBUTION_RESULT: ${{ needs.distribution.result }}
+          HIGHLIGHTER_RESULT: ${{ needs.highlighter-linux.result }}
+        run: python3 scripts/ci-swift-result.py

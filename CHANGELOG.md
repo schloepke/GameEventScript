@@ -16,6 +16,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Search the complete Card Lab source and GESA dump, including folded content,
+  with match navigation and optional case sensitivity.
+
 - Card Lab editor block folding with gutter controls, retaining Swift syntax
   highlighting and undo history.
 - Card Lab editor offers a read-only GESA dump with Swift syntax highlighting

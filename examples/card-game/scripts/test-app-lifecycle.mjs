@@ -43,6 +43,7 @@ await vm.runInNewContext(`(async () => { ${source} })()`, {
     };
   },
   attachGameLibrary: async () => ({ examples: [] }),
+  attachSearch() {},
   attachDump: () => ({ reset() {}, refresh() {} }),
   attachEditor: () => ({ focus() {}, refresh: () => calls.refresh++, suspend: () => calls.suspend++ }),
 });

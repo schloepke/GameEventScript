@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createWorkerClient } from './worker-client.mjs';
+import { attachSearch } from './search.mjs';
 import { attachDump } from './dump.mjs';
 import { attachEditor } from './editor.mjs';
 import { attachGameLibrary } from './games.mjs';
@@ -358,6 +359,7 @@ try {
     byId('highlight-status'), engine,
   );
   const dump = attachDump(byId('source'), engine, () => library.sourceName, () => editor.focus());
+  attachSearch(dialog, byId('source'), editor, dump);
   window.addEventListener('pagehide', () => editor.suspend());
   window.addEventListener('pageshow', event => {
     if (!event.persisted) return;

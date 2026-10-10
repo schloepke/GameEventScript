@@ -12,6 +12,16 @@ export function attachDump(input, engine, getSourceName = () => 'my-game.ges', f
   const kinds = new Set(['plain', 'keyword', 'builtin', 'identifier', 'message', 'type', 'tag',
     'constant', 'number', 'string', 'comment', 'symbol', 'function', 'module', 'label', 'register']);
   let revision = 0;
+  let documentText = '', documentRows = [], documentRegions = new Map(), marks = [];
+
+  function clearMatch() {
+    const parents = new Set(marks.map(mark => mark.parentNode).filter(Boolean));
+    for (const mark of marks) mark.replaceWith(...mark.childNodes);
+    for (const parent of parents) parent.normalize();
+    marks = [];
+  }
+
+  function changed() { view.dispatchEvent(new Event('dumpchange')); }
 
   function paint(text, spans) {
     let previousEnd = 0;
@@ -56,6 +66,8 @@ export function attachDump(input, engine, getSourceName = () => 'my-game.ges', f
       index = end;
     }
     const rows = [];
+    documentRegions = regions;
+    documentRows = [];
     let offset = 0;
     for (let index = 0; index < lines.length; index++) {
       const row = document.createElement('div');
@@ -86,19 +98,23 @@ export function attachDump(input, engine, getSourceName = () => 'my-game.ges', f
       content.className = 'dump-line-content';
       appendRange(content, offset, offset + lines[index].length);
       offset += lines[index].length + 1;
+      documentRows.push({ start: offset - lines[index].length - 1, end: offset - 1, content });
       row.append(gutter, content);
       rows.push(row);
       fragment.append(row);
     }
     for (const region of regions.values()) region.update();
     code.replaceChildren(fragment);
+    documentText = text;
   }
 
   async function refresh() {
     if (view.hidden) return;
     const ticket = ++revision;
     const source = input.value;
+    clearMatch(); documentText = ''; documentRows = []; documentRegions = new Map();
     code.replaceChildren();
+    changed();
     status.textContent = 'Compiling GESA dump …';
     try {
       const result = await engine.send({ type: 'dump', source, sourceName: getSourceName() });
@@ -112,6 +128,7 @@ export function attachDump(input, engine, getSourceName = () => 'my-game.ges', f
       paint(result.dump, result.complete ? result.spans : []);
       code.scrollTop = 0;
       code.scrollLeft = 0;
+      changed();
       status.textContent = result.complete
         ? 'GESA dump · Read-only · Compiled from the current editor source.'
         : 'GESA dump · Read-only · Syntax highlighting unavailable for this dump.';
@@ -124,10 +141,12 @@ export function attachDump(input, engine, getSourceName = () => 'my-game.ges', f
   function reset() {
     revision++;
     view.hidden = true;
+    clearMatch(); documentText = ''; documentRows = []; documentRegions = new Map();
     code.replaceChildren();
     sourceElements.forEach(element => { element.hidden = false; });
     button.textContent = 'Dump view';
     button.setAttribute('aria-pressed', 'false');
+    changed();
   }
 
   button.onclick = () => {
@@ -145,5 +164,38 @@ export function attachDump(input, engine, getSourceName = () => 'my-game.ges', f
   };
   input.addEventListener('input', refresh);
   byId('check-source').addEventListener('click', refresh);
-  return { reset, refresh };
+  return {
+    reset, refresh,
+    getText() { return documentText; },
+    clearMatch,
+    showMatch(start, end) {
+      clearMatch();
+      const affected = documentRows.map((row, index) => ({ ...row, index }))
+        .filter(row => row.start < end && row.end > start);
+      for (const [line, region] of documentRegions) {
+        if (region.folded && affected.some(row => row.index > line && row.index <= region.end)) {
+          region.folded = false; region.update();
+        }
+      }
+      for (const row of affected) {
+        const walker = document.createTreeWalker(row.content, NodeFilter.SHOW_TEXT);
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        let offset = row.start;
+        for (const node of nodes) {
+          const length = node.textContent.length;
+          const from = Math.max(0, start - offset), to = Math.min(length, end - offset);
+          if (to > from) {
+            const selected = node.splitText(from);
+            selected.splitText(to - from);
+            const mark = document.createElement('mark');
+            mark.className = 'search-hit';
+            selected.replaceWith(mark); mark.append(selected); marks.push(mark);
+          }
+          offset += length;
+        }
+      }
+      marks[0]?.scrollIntoView({ block: 'center', inline: 'center' });
+    },
+  };
 }

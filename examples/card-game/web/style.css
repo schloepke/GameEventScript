@@ -209,3 +209,11 @@ select { font: inherit; padding: 10px; margin-left: 6px; border: 1px solid #6880
 .folding-editor .CodeMirror-focused .CodeMirror-selected { background: #a4d27d55; }
 .folding-editor .CodeMirror-foldmarker { color: #9fcbb0; background: #284a37; text-shadow: none; border-radius: 3px; padding: 0 4px; font-family: inherit; cursor: pointer; }
 .folding-editor .CodeMirror-foldgutter-open, .folding-editor .CodeMirror-foldgutter-folded { color: #9fcbb0; cursor: pointer; }
+
+.editor-search { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: .85rem; }
+.editor-search input[type="search"] { width: min(300px, 50vw); padding: 7px; border: 1px solid #688075; border-radius: 6px; background: #18392b; color: #f3f7ed; font: inherit; }
+.editor-search button { padding: 6px 12px; }
+#search-status { color: #b9d0c1; }
+.search-hit { background: #e9c65f !important; color: #18251b !important; }
+
+.editor-search input[type="checkbox"] { width: auto; margin: 0 4px 0 0; padding: 0; }

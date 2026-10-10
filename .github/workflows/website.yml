@@ -88,6 +88,7 @@ jobs:
       - name: Build and test browser game
         run: |
           python3 examples/card-game/scripts/build.py wasm
+          node examples/card-game/scripts/test-search.mjs
           node examples/card-game/scripts/test-editor-adapter.mjs
           node examples/card-game/scripts/test-editor-folding.mjs
           node examples/card-game/scripts/test-dump-view.mjs

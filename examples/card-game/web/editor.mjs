@@ -8,7 +8,7 @@ import { foldingRanges } from './editor-folding.mjs';
 export function attachEditor(input, colors, container, status, engine) {
   const CodeMirror = window.CodeMirror;
   let active = false, debounce, revision = 0, inFlight = false, syncing = false;
-  let ranges = new Map(), spans = [], diagnosticMarks = [];
+  let ranges = new Map(), spans = [], diagnosticMarks = [], searchMark;
   const diagnosticsList = document.getElementById('diagnostics');
   const checkButton = document.getElementById('check-source');
   const kinds = new Set(['plain', 'keyword', 'builtin', 'identifier', 'message', 'type', 'tag',
@@ -159,6 +159,20 @@ export function attachEditor(input, colors, container, status, engine) {
   checkButton.addEventListener('click', () => { changed(); clearTimeout(debounce); request(); });
   new ResizeObserver(() => editor.refresh()).observe(container);
   return {
+    getText() { return editor.getValue(); },
+    clearMatch() { searchMark?.clear(); searchMark = undefined; },
+    showMatch(start, end) {
+      searchMark?.clear();
+      for (const mark of editor.getAllMarks()) {
+        if (!mark.__isFold) continue;
+        const fold = mark.find();
+        if (fold && editor.indexFromPos(fold.from) < end && editor.indexFromPos(fold.to) > start) mark.clear();
+      }
+      const from = editor.posFromIndex(start), to = editor.posFromIndex(end);
+      searchMark = editor.markText(from, to, { className: 'search-hit' });
+      editor.setSelection(from, to);
+      editor.scrollIntoView({ from, to }, 46);
+    },
     focus() { editor.refresh(); editor.focus(); },
     refresh() { active = true; editor.refresh(); changed(); clearTimeout(debounce); request(); },
     suspend() { active = false; clearTimeout(debounce); },

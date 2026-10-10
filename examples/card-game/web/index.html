@@ -42,6 +42,13 @@
       <button id="show-dump" class="secondary" type="button" aria-pressed="false" aria-controls="dump-view">Dump view</button>
       <button id="show-help" class="secondary" type="button" aria-haspopup="dialog">Environment help</button>
     </div>
+    <div class="editor-search" role="search" aria-label="Search current source or dump">
+      <label>Find <input id="search-query" type="search" placeholder="Search · Ctrl/Cmd+F" autocomplete="off"></label>
+      <label><input id="search-case" type="checkbox"> Match case</label>
+      <button id="search-previous" class="secondary" type="button" aria-label="Previous match" disabled>↑</button>
+      <button id="search-next" class="secondary" type="button" aria-label="Next match" disabled>↓</button>
+      <span id="search-status" role="status" aria-live="polite"></span>
+    </div>
     <p id="save-status" class="editor-status" role="status" aria-live="polite">Loading saved code …</p>
     <div id="editor-loading" class="wasm-loading" hidden>
       <span role="status">Loading WebAssembly …</span>

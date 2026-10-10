@@ -39,24 +39,24 @@ body.editing { overflow: hidden; }
   .editor-toolbar { gap: 8px; }
   .editor-toolbar button, .editor-toolbar select { padding: 8px; }
 }
-/* The native textarea owns selection, input, undo and accessibility. The pre only paints colors. */
+/* Source fallback and editor container; CodeMirror takes over after initialization. */
 .source-editor { --gutter-width: 58px; padding-left: var(--gutter-width); position: relative; margin-top: 12px; background: #0c1d17; border: 1px solid #355d46; border-radius: 10px; overflow: hidden; }
-.source-editor textarea, .source-editor pre { margin: 0; border: 0; padding: 16px; font: 14px/23px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-variant-ligatures: none; letter-spacing: normal; tab-size: 4; white-space: pre; text-align: left; }
-.source-editor textarea { display: block; position: relative; width: 100%; height: 100%; min-height: 0; resize: none; overflow: auto; background: transparent; color: #dbe9dc; caret-color: #f3f7ed; outline-offset: -2px; }
+.source-editor #source, .source-editor pre { margin: 0; border: 0; padding: 16px; font: 14px/23px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-variant-ligatures: none; letter-spacing: normal; tab-size: 4; white-space: pre; text-align: left; }
+.source-editor #source { display: block; position: relative; width: 100%; height: 100%; min-height: 0; resize: none; overflow: auto; background: transparent; color: #dbe9dc; caret-color: #f3f7ed; outline-offset: -2px; }
 #source-colors { position: absolute; inset: 0 0 0 var(--gutter-width); overflow: hidden; pointer-events: none; color: #dbe9dc; visibility: hidden; }
 .source-editor.highlighted #source-colors { visibility: visible; }
 #source-lines { position: absolute; top: 0; left: 0; width: var(--gutter-width); height: 100%; padding: 16px 12px; overflow: hidden; text-align: right; color: #789788; background: #10251d; border-right: 1px solid #355d46; pointer-events: none; user-select: none; }
 .source-editor.highlighted textarea { color: transparent; -webkit-text-fill-color: transparent; }
-.source-editor textarea::selection { background: #a4d27d55; }
+.source-editor #source::selection { background: #a4d27d55; }
 .editor-status { font-size: .8rem; margin-top: 8px; }
-.syntax-keyword { color: #d6a1f2; }
-.syntax-builtin, .syntax-type, .syntax-function { color: #88d6df; }
-.syntax-message, .syntax-constant { color: #f0c782; }
-.syntax-number, .syntax-tag { color: #93bfff; }
-.syntax-string { color: #c5df9b; }
-.syntax-comment { color: #84a390; }
-.syntax-module, .syntax-label, .syntax-register { color: #a5c8eb; }
-.syntax-symbol { color: #b8cabe; }
+.syntax-keyword, .cm-ges-keyword { color: #d6a1f2; }
+.syntax-builtin, .syntax-type, .syntax-function, .cm-ges-builtin, .cm-ges-type, .cm-ges-function { color: #88d6df; }
+.syntax-message, .syntax-constant, .cm-ges-message, .cm-ges-constant { color: #f0c782; }
+.syntax-number, .syntax-tag, .cm-ges-number, .cm-ges-tag { color: #93bfff; }
+.syntax-string, .cm-ges-string { color: #c5df9b; }
+.syntax-comment, .cm-ges-comment { color: #84a390; }
+.syntax-module, .syntax-label, .syntax-register, .cm-ges-module, .cm-ges-label, .cm-ges-register { color: #a5c8eb; }
+.syntax-symbol, .cm-ges-symbol { color: #b8cabe; }
 
 footer { color: #94b09e; line-height: 1.6; margin-top: 28px; font-size: .8rem; }
 @media (max-width: 620px) { main { padding: 24px 16px; } #board { grid-template-columns: 1fr; } }
@@ -184,3 +184,28 @@ select { font: inherit; padding: 10px; margin-left: 6px; border: 1px solid #6880
 .badge[data-color="yellow"] { background: #f2d581; color: #493607; }
 .badge[data-color="blue"] { background: #a4cfff; color: #173759; }
 .badge[data-color="gray"] { background: #c7cdd3; color: #28313b; }
+
+#dump-view:not([hidden]) { display: flex; flex-direction: column; flex: 1; min-height: 120px; overflow: hidden; }
+#dump-code { flex: 1; min-height: 0; overflow: auto; white-space: pre; margin: 12px 0 0; padding: 12px 0; border: 1px solid #355d46; border-radius: 10px; background: #0c1d17; color: #dbe9dc; font: 14px/23px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; tab-size: 4; }
+#show-dump[aria-pressed="true"] { border-color: #71d3c5; }
+
+#dump-code .dump-line { display: flex; min-height: 23px; width: max-content; min-width: 100%; }
+#dump-code .dump-line[hidden] { display: none; }
+.dump-gutter { position: sticky; left: 0; display: inline-flex; flex: 0 0 8ch; align-items: center; background: #0c1d17; border-right: 1px solid #355d46; user-select: none; }
+.dump-line-number { width: 5ch; padding-right: 1ch; text-align: right; color: #789485; }
+#dump-code .dump-fold { width: 2ch; padding: 0; border: 0; border-radius: 2px; background: transparent; color: #9fcbb0; font: inherit; line-height: 23px; cursor: pointer; }
+#dump-code .dump-fold:hover { background: #284a37; color: #dbe9dc; }
+#dump-code .dump-fold:focus-visible { outline: 2px solid #71d3c5; }
+.dump-line-content { padding: 0 16px; }
+
+.source-editor.folding-editor { padding-left: 0; }
+.folding-editor .CodeMirror { height: 100%; background: #0c1d17; color: #dbe9dc; font: 14px/23px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.folding-editor .CodeMirror-lines { padding: 16px 0; }
+.folding-editor .CodeMirror pre.CodeMirror-line, .folding-editor .CodeMirror pre.CodeMirror-line-like { padding: 0 16px; font: inherit; }
+.folding-editor .CodeMirror-gutters { background: #10251d; border-right: 1px solid #355d46; }
+.folding-editor .CodeMirror-linenumber { color: #789788; }
+.folding-editor .CodeMirror-cursor { border-left-color: #f3f7ed; }
+.folding-editor .CodeMirror-selected { background: #a4d27d33; }
+.folding-editor .CodeMirror-focused .CodeMirror-selected { background: #a4d27d55; }
+.folding-editor .CodeMirror-foldmarker { color: #9fcbb0; background: #284a37; text-shadow: none; border-radius: 3px; padding: 0 4px; font-family: inherit; cursor: pointer; }
+.folding-editor .CodeMirror-foldgutter-open, .folding-editor .CodeMirror-foldgutter-folded { color: #9fcbb0; cursor: pointer; }

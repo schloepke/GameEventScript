@@ -78,7 +78,7 @@ public final class CardGame {
         limits.maxGeneratedCollectionItems = 2048
         host = try GameEventScriptHost(seed: seed, limits: limits, observer: bindings, extensions: bindings)
         do {
-            let program = try GameEventScriptBuilder.create().addScript(rules, sourceName: "rules.ges").compile()
+            let program = try GameEventScriptBuilder.create().withDebugInfo([.symbols, .sourceMap]).addScript(rules, sourceName: "rules.ges").compile()
             hasEndRound = program.bindings.contains { binding in
                 program.stringConstants[Int(binding.name)] == "EndRound" && binding.requiredTags.isEmpty
                     && (binding.kind == .messageNameHandler || (binding.kind == .messageHandler && binding.argumentNames.map { program.stringConstants[Int($0)] } == ["number", "players"]))

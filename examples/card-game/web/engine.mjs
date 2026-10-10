@@ -33,9 +33,9 @@ export async function createEngine(binary) {
     return result;
   };
 
-  const upload = (source) => {
+  const upload = (source, limit = 131072) => {
     const bytes = new TextEncoder().encode(source);
-    if (bytes.length === 0 || bytes.length > 131072)
+    if (bytes.length === 0 || bytes.length > limit)
       throw new Error('GES source must contain 1–131072 UTF-8 bytes');
     const pointer = api.cardgame_alloc(bytes.length);
     if (!pointer) throw new Error('Cannot allocate source buffer');
@@ -47,6 +47,13 @@ export async function createEngine(binary) {
     highlight(source) {
       if (source === '') return { complete: true, spans: [] };
       return decode(api.cardgame_highlight(upload(source)));
+    },
+
+    dump(source, sourceName = 'my-game.ges') {
+      const nameLength = new TextEncoder().encode(sourceName).length;
+      if (!nameLength || nameLength > 1024) throw new Error('Invalid source filename');
+      if (new TextEncoder().encode(source).length > 131072) throw new Error('GES source exceeds 131072 UTF-8 bytes');
+      return decode(api.cardgame_dump(upload(sourceName + (source || '\n'), 132096), nameLength));
     },
 
     check(source) {

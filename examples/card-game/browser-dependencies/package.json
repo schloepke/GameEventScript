@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "@bjorn3/browser_wasi_shim": "0.4.2"
+    "@bjorn3/browser_wasi_shim": "0.4.2",
+    "codemirror": "5.65.20"
   }
 }

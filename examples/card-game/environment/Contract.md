@@ -442,8 +442,11 @@ highlighting. Editor input is debounced and stale results are ignored. New games
 reuse the reactor; explicitly stopping execution or recovering from a timeout
 terminates it. The Editor button opens a viewport-sized modal with example
 loading, Save, code checking and help. Closing it (including Escape) starts a
-new game with the current source. Draft autosaving remains active while editing. The native textarea retains input, selection, accessibility, and undo;
-an aria-hidden pre element paints categories with CSS. Empty, incomplete, and
+new game with the current source. Draft autosaving remains active while editing. CodeMirror owns input, selection, accessibility, undo and folding, while Swift
+continues to supply all syntax categories. Fold ranges match multiline braces
+and brackets outside Swift-highlighted strings and comments. Gutter markers or
+Ctrl+Q fold the current block without changing the underlying source. Diagnostic
+links reveal enclosing folds before selecting the error. Empty, incomplete, and
 non-ASCII source is supported. If highlighting fails or times out, plain editing
 remains available. This browser adapter adds no public highlighter API.
 
@@ -550,3 +553,18 @@ emit TableBadge('Final round', color: #yellow)
 emit ZoneBadge('', zone: #dealer)
 emit TableBadge('')
 ```
+
+## Read-only GESA dump
+
+The editor's **Dump view** compiles the current source and shows the
+GESA output with the existing Swift GESA highlighter. Dump compilation retains
+symbols, source locations and the source archive. Every `.region` can be folded using its gutter marker. Only the Code region starts expanded;
+all other regions start folded. The gutter shows original dump line numbers, which
+remain stable when folding. Inline `.source-line` annotations include source text.
+The loaded example filename is retained in the dump and preserved by Draft and
+Saved; older slots without a filename use `my-game.ges`. **Source view** returns to
+editing. Loading another source refreshes an open dump; failed compilation shows
+diagnostics instead of stale output. The dump is selectable plain text, never an
+editable input. `cardgame_dump` uses the shared reactor and returns dump text,
+UTF-16 spans and compiler diagnostics without replacing or executing the game.
+Large dumps beyond the highlighter's limit remain readable without colors.

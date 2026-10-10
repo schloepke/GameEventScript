@@ -6,6 +6,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GES Card Lab</title>
+  <link rel="stylesheet" href="vendor/codemirror/lib/codemirror.css">
+  <link rel="stylesheet" href="vendor/codemirror/addon/fold/foldgutter.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -37,6 +39,7 @@
       <button id="save-game" class="secondary" type="button" disabled>Save</button>
       <button id="download-source" class="secondary" type="button">Download source</button>
       <button id="check-source" class="secondary" type="button">Check code</button>
+      <button id="show-dump" class="secondary" type="button" aria-pressed="false" aria-controls="dump-view">Dump view</button>
       <button id="show-help" class="secondary" type="button" aria-haspopup="dialog">Environment help</button>
     </div>
     <p id="save-status" class="editor-status" role="status" aria-live="polite">Loading saved code …</p>
@@ -49,6 +52,10 @@
       <pre id="source-colors" aria-hidden="true"></pre>
       <textarea id="source" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="GES game rules" aria-describedby="highlight-status"></textarea>
     </div>
+    <section id="dump-view" hidden aria-label="Compiled GESA dump">
+      <p id="dump-status" class="editor-status" role="status"></p>
+      <div id="dump-code" tabindex="0" aria-label="Read-only GESA dump"></div>
+    </section>
     <p id="highlight-status" class="editor-status" role="status">Loading compiler and syntax highlighting …</p>
     <ul id="diagnostics" aria-label="Compiler diagnostics"></ul>
   </dialog>
@@ -204,6 +211,9 @@ on ShowRules(action) {
     <section><h3>Execution rules</h3><p>After accepting an action, its consumption counter advances. You may activate further actions or update card choices. <code>finishTurn</code> ends the turn upon consumption; <code>EndGame()</code> requests game completion. Turn offers expire at turn end; completed queued groups and all their alternatives are removed, while unfinished queued offers retain their counters. The environment advances turns automatically. NextPlayersTurn variants control that advancement; they do not recursively emit on EndTurn(player).</p>
     <p>Emits are queued: a query in the same handler cannot see their effects yet. Extensions can inspect all players; visibility filters the browser view only. Runtime errors stop the game. “Check code” checks compilation, not native message signatures.</p></section>
   </dialog>
+  <script src="vendor/codemirror/lib/codemirror.js"></script>
+  <script src="vendor/codemirror/addon/fold/foldcode.js"></script>
+  <script src="vendor/codemirror/addon/fold/foldgutter.js"></script>
   <script type="module" src="app.mjs"></script>
 </body>
 </html>

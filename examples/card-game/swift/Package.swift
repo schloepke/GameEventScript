@@ -26,7 +26,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "CardGameWasm",
-            dependencies: ["CardGameEnvironment", .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"), .product(name: "GameEventScriptSyntaxHighlighter", package: "GameEventScriptSyntaxHighlighter")]
+            dependencies: [
+                "CardGameEnvironment", .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"), .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"),
+                .product(name: "GameEventScriptSyntaxHighlighter", package: "GameEventScriptSyntaxHighlighter"),
+            ]
         ),
         .testTarget(name: "CardGameEnvironmentTests", dependencies: ["CardGameEnvironment"]),
     ]

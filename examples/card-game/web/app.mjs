@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createWorkerClient } from './worker-client.mjs';
+import { attachDump } from './dump.mjs';
 import { attachEditor } from './editor.mjs';
 import { attachGameLibrary } from './games.mjs';
 import { showLoading } from './loading.mjs';
@@ -356,10 +357,14 @@ try {
     byId('source'), byId('source-colors'), byId('source-editor'),
     byId('highlight-status'), engine,
   );
+  const dump = attachDump(byId('source'), engine, () => library.sourceName, () => editor.focus());
   window.addEventListener('pagehide', () => editor.suspend());
   window.addEventListener('pageshow', event => {
     if (!event.persisted) return;
-    if (dialog.open) editor.refresh();
+    if (dialog.open) {
+      editor.refresh();
+      dump.refresh();
+    }
     else restart();
   });
   byId('load-example').onclick = () => library.select(byId('editor-example').value);
@@ -387,12 +392,13 @@ try {
     dialog.showModal();
     document.body.classList.add('editing');
     editor.refresh();
-    byId('source').focus();
+    editor.focus();
   };
   byId('close-editor').onclick = () => dialog.close();
   dialog.addEventListener('close', () => {
     document.body.classList.remove('editing');
     editor.suspend();
+    dump.reset();
     restart();
   });
   byId('restart').disabled = false;

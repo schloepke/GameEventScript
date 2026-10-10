@@ -43,7 +43,8 @@ await vm.runInNewContext(`(async () => { ${source} })()`, {
     };
   },
   attachGameLibrary: async () => ({ examples: [] }),
-  attachEditor: () => ({ refresh: () => calls.refresh++, suspend: () => calls.suspend++ }),
+  attachDump: () => ({ reset() {}, refresh() {} }),
+  attachEditor: () => ({ focus() {}, refresh: () => calls.refresh++, suspend: () => calls.suspend++ }),
 });
 assert.equal(calls.starts, 1);
 element('open-editor').onclick();

@@ -75,7 +75,7 @@ def main():
                     '--product', 'card-game-wasm', '-c', 'release',
                     '-Xswiftc', '-Xclang-linker', '-Xswiftc', '-mexec-model=reactor',
                     '-Xlinker', '-z', '-Xlinker', 'stack-size=1048576']
-        for symbol in ['cardgame_alloc', 'cardgame_start', 'cardgame_action', 'cardgame_output', 'cardgame_highlight', 'cardgame_check']:
+        for symbol in ['cardgame_alloc', 'cardgame_start', 'cardgame_action', 'cardgame_output', 'cardgame_highlight', 'cardgame_check', 'cardgame_dump']:
             command += ['-Xlinker', '--export=' + symbol]
     command += ['--package-path', str(package), '--scratch-path', str(ARTIFACTS / ('wasm-build' if args.mode == 'wasm' else 'native')),
                 '--cache-path', str(ARTIFACTS / 'cache'), '--disable-sandbox', '--disable-build-manifest-caching']
@@ -102,6 +102,11 @@ def main():
         shutil.copytree(vendor / 'dist', web / 'vendor', dirs_exist_ok=True)
         for license in ['LICENSE-APACHE', 'LICENSE-MIT']:
             shutil.copy2(vendor / license, web / 'vendor' / license)
+        editor = ARTIFACTS / 'web-deps/node_modules/codemirror'
+        for relative in ['lib/codemirror.js', 'lib/codemirror.css', 'addon/fold/foldcode.js', 'addon/fold/foldgutter.js', 'addon/fold/foldgutter.css', 'LICENSE']:
+            destination = web / 'vendor/codemirror' / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(editor / relative, destination)
         licenses = web / 'licenses'
         shutil.copytree(ROOT / 'tools/distribution/licenses', licenses)
         shutil.copy2(ROOT / 'LICENSE', licenses / 'LICENSE')
@@ -111,6 +116,7 @@ def main():
             'Swift 6.4.0 and its bundled libraries: see the license texts and sources.json here.\n'
             'wasi-libc: see wasi-libc/LICENSE and the accompanying component notices.\n'
             'browser_wasi_shim 0.4.2: MIT OR Apache-2.0; see ../vendor/LICENSE-MIT and LICENSE-APACHE.\n'
+            'CodeMirror 5.65.20: MIT; see ../vendor/codemirror/LICENSE.\n'
             'This directory retains the Swift distribution notice set; not every component is linked by this demo.\n')
         record()
         print(f'Browser assets: {web}')

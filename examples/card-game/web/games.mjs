@@ -22,6 +22,7 @@ export async function attachGameLibrary(input, select, saveButton, status, playe
   const validSlot = slot => slot && typeof slot.source === 'string' && [1, 2, 3, 4].includes(slot.players) &&
     (slot.playerCounts === undefined || (validCounts(slot.playerCounts) && slot.playerCounts.includes(slot.players)));
   let playerCounts = [2, 3, 4];
+  let sourceName = 'my-game.ges';
   let library = { version: 2, selected: examples[0].id, draft: null, saved: null };
   let storageWarning = '';
   try {
@@ -82,11 +83,12 @@ export async function attachGameLibrary(input, select, saveButton, status, playe
     if (!result.ok) throw new Error('Could not load the game. Your code is unchanged.');
     const counts = example.playerCounts ?? [2, 3, 4];
     const requested = example.players ?? Number(playerSelect.value);
-    return { source: await result.text(), players: counts.includes(requested) ? requested : counts[0], playerCounts: counts };
+    return { sourceName: example.source.split('/').at(-1), source: await result.text(), players: counts.includes(requested) ? requested : counts[0], playerCounts: counts };
   }
 
   function apply(slot) {
     applying = true;
+    sourceName = typeof slot.sourceName === 'string' && /^[a-z0-9-]+\.ges$/.test(slot.sourceName) ? slot.sourceName : 'my-game.ges';
     input.value = slot.source;
     input.setSelectionRange(0, 0);
     input.scrollTop = 0;
@@ -107,7 +109,7 @@ export async function attachGameLibrary(input, select, saveButton, status, playe
   function autosave() {
     if (applying) return;
     generation++;
-    library.draft = { source: input.value, players: Number(playerSelect.value), playerCounts: [...playerCounts] };
+    library.draft = { sourceName, source: input.value, players: Number(playerSelect.value), playerCounts: [...playerCounts] };
     library.selected = 'draft';
     options();
     persist('Draft autosaved. Save keeps a separate copy in Saved.');
@@ -147,10 +149,10 @@ export async function attachGameLibrary(input, select, saveButton, status, playe
   select.onchange = () => choose(select.value);
   saveButton.onclick = () => {
     generation++;
-    library.saved = { source: input.value, players: Number(playerSelect.value), playerCounts: [...playerCounts] };
+    library.saved = { sourceName, source: input.value, players: Number(playerSelect.value), playerCounts: [...playerCounts] };
     library.selected = 'saved';
     options();
     persist('Saved slot updated. Further edits go to Draft.');
   };
-  return { examples, select: choose };
+  return { examples, select: choose, get sourceName() { return sourceName; } };
 }

@@ -117,6 +117,7 @@ console.log('Game library: solo counts, example limits, save/reload and draft sw
 const toolbar = await attach();
 assert.deepEqual(toolbar.library.examples.map(item => item.id), examples.map(item => item.id));
 await toolbar.library.select('skat');
+assert.equal(toolbar.library.sourceName, 'skat.ges');
 assert.equal(toolbar.input.value, 'examples/skat.ges');
 assert.equal(toolbar.select.value, 'skat');
 assert.equal(toolbar.starts, 1);
@@ -130,6 +131,7 @@ edit(toolbar, 'new draft');
 toolbar.editor.value = 'saved';
 await toolbar.library.select(toolbar.editor.value);
 assert.equal(toolbar.input.value, 'saved editor source');
+assert.equal(toolbar.library.sourceName, 'skat.ges');
 await toolbar.library.select('draft');
 assert.equal(toolbar.input.value, 'new draft');
 console.log('Editor selection: Saved loads directly and retains the current Draft.');

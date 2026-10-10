@@ -16,6 +16,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Card Lab editor block folding with gutter controls, retaining Swift syntax
+  highlighting and undo history.
+- Card Lab editor offers a read-only GESA dump with Swift syntax highlighting
+  compiled from the current source through the shared Wasm worker.
+
 - Card Lab fullscreen editor with example/Draft/Saved loading, source download,
   automatic restart on close and one shared Wasm instance for game and editor.
   Changing the player count starts a new game immediately.
@@ -107,6 +112,8 @@ idle-duration observations in C# and Swift.
 
 ### Added
 
+- Card Lab editor block folding with gutter controls, retaining Swift syntax
+  highlighting and undo history.
 - Exposed the `ges` executable in the root SwiftPM package alongside the libraries.
   Homebrew and standalone downloads remain available. The root package now requires
   macOS 10.15.4 to cover CLI Foundation I/O.
@@ -199,6 +206,8 @@ see the migration notes below before upgrading from 0.1.0.
 
 ### Added
 
+- Card Lab editor block folding with gutter controls, retaining Swift syntax
+  highlighting and undo history.
 - Website publication triggers the hosting pull webhook after changed output is
   successfully pushed to `site`, with bounded retries and a secret-backed URL.
 

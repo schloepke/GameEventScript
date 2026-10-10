@@ -15,6 +15,10 @@ function getEngine() {
       const game = await createEngine(binary);
       report({ phase: 'ready' });
       return game;
+    }).catch(error => {
+      engine = undefined;
+      report({ phase: 'failed' });
+      throw error;
     });
   }
   return engine;
@@ -24,17 +28,19 @@ let serial = Promise.resolve();
 
 self.onmessage = (event) => {
   serial = serial.then(async () => {
-    const { id, type, source, seed, players, player, action, revision } = event.data;
+    const { id, type, source, sourceName, seed, players, player, action, revision } = event.data;
     try {
       const game = await getEngine();
       const result =
         type === 'analyze'
           ? { ...game.highlight(source), ...game.check(source) }
-          : type === 'highlight'
-            ? game.highlight(source)
-            : type === 'start'
-              ? game.start(source, seed, players)
-              : game.act(player, action, revision);
+          : type === 'dump'
+            ? game.dump(source, sourceName)
+            : type === 'highlight'
+              ? game.highlight(source)
+              : type === 'start'
+                ? game.start(source, seed, players)
+                : game.act(player, action, revision);
       self.postMessage({ id, ...result });
     } catch (error) {
       self.postMessage({ id, error: String(error) });

@@ -43,6 +43,7 @@ public struct Zone {
 }
 
 struct Board {
+    var playerLayout = "aroundTable"
     var zones: [Zone] = []
     var cards: [Card] = []
     var rows: [ZoneRow] = []

@@ -11,8 +11,10 @@ struct ZoneRow {
 
 extension Board {
     static func create(_ setup: GesValue, playerCount: Int) throws -> Board {
-        try fields(setup, allowed: ["table", "players", "actions"])
+        try fields(setup, allowed: ["table", "players", "actions", "playerLayout"])
         var result = Board()
+        result.playerLayout = try defaultTag(setup, "playerLayout", "aroundTable")
+        guard ["aroundTable", "bottom"].contains(result.playerLayout) else { throw CardGameError("Invalid player layout") }
         try result.setupZones(field(setup, "table"), owner: nil)
         var owners = Set<Int>()
         for player in try list(field(setup, "players")) {

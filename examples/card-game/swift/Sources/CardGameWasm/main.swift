@@ -3,12 +3,14 @@
 
 import CardGameEnvironment
 import GameEventScriptCompiler
+import GameEventScriptRuntime
 import GameEventScriptSyntaxHighlighter
 
 // This adapter is invoked serially by one browser worker. No state is shared across workers.
 // Reactor exports run without the executable main; use lazy static initialization.
 private enum Highlighting {
     static let highlighter = try! GameEventScriptSyntaxHighlighter()
+    static let assemblerHighlighter = try! GameEventScriptSyntaxHighlighter(language: .gesa)
 }
 
 nonisolated(unsafe) private var session: CardGame?
@@ -18,7 +20,7 @@ nonisolated(unsafe) private var inputCapacity = 0
 
 @_cdecl("cardgame_alloc")
 func allocateInput(_ count: Int32) -> UnsafeMutablePointer<UInt8>? {
-    guard count > 0 && count <= 131_072 else { return nil }
+    guard count > 0 && count <= 132_096 else { return nil }
     input?.deallocate()
     input = .allocate(capacity: Int(count))
     inputCapacity = Int(count)
@@ -88,15 +90,30 @@ func highlight(_ count: Int32) -> Int32 {
 }
 
 @_cdecl("cardgame_check")
-func checkSource(_ count: Int32) -> Int32 {
+func checkSource(_ count: Int32) -> Int32 { compileSource(count, dump: false) }
+
+@_cdecl("cardgame_dump")
+func dumpSource(_ count: Int32, _ nameLength: Int32) -> Int32 { compileSource(count, dump: true, nameLength: Int(nameLength)) }
+
+private func compileSource(_ count: Int32, dump: Bool, nameLength: Int = 0) -> Int32 {
     guard let input, count > 0, Int(count) <= inputCapacity else { return respond("{\"error\":\"Invalid source buffer\"}") }
     defer {
         input.deallocate()
         selfClearInput()
     }
-    let source = String(decoding: UnsafeBufferPointer(start: input, count: Int(count)), as: UTF8.self)
+    guard nameLength >= 0, nameLength <= 1024, nameLength < Int(count), Int(count) - nameLength <= 131_072 else {
+        return respond("{\"error\":\"Invalid source buffer\"}")
+    }
+    let sourceName = nameLength == 0 ? "rules.ges" : String(decoding: UnsafeBufferPointer(start: input, count: nameLength), as: UTF8.self)
+    let source = String(decoding: UnsafeBufferPointer(start: input.advanced(by: nameLength), count: Int(count) - nameLength), as: UTF8.self)
     do {
-        _ = try GameEventScriptBuilder.create().addScript(source, sourceName: "rules.ges").compile()
+        let program = try GameEventScriptBuilder.create().withDebugInfo(dump ? .all : [.symbols, .sourceMap]).addScript(source, sourceName: sourceName).compile()
+        if dump {
+            let text = GameEventScriptProgramDumper.dump(program)
+            let highlighted = Highlighting.assemblerHighlighter.highlight(text)
+            let spans = highlighted.spans.map { "[\($0.start),\($0.length),\(jsonString($0.kind.rawValue))]" }.joined(separator: ",")
+            return respond("{\"diagnostics\":[],\"dump\":\(jsonString(text)),\"complete\":\(highlighted.isComplete),\"spans\":[\(spans)]}")
+        }
         return respond("{\"diagnostics\":[]}")
     } catch let error as GameEventScriptCompileError {
         let diagnostics = error.diagnostics.map { diagnostic in

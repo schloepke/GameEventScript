@@ -437,9 +437,16 @@ the top discard retained. A completely blocked game ends in a draw.
 
 The Wasm adapter imports the unchanged Swift SyntaxHighlighter package and exports
 `cardgame_highlight`. It returns completion plus `[start, length, kind]` arrays in
-UTF-16 offsets. An independent worker debounces editor input and ignores stale
-results. The native textarea retains input, selection, accessibility, and undo;
-an aria-hidden pre element paints categories with CSS. Empty, incomplete, and
+UTF-16 offsets. A single worker shares one Wasm reactor between gameplay, compilation and
+highlighting. Editor input is debounced and stale results are ignored. New games
+reuse the reactor; explicitly stopping execution or recovering from a timeout
+terminates it. The Editor button opens a viewport-sized modal with example
+loading, Save, code checking and help. Closing it (including Escape) starts a
+new game with the current source. Draft autosaving remains active while editing. CodeMirror owns input, selection, accessibility, undo and folding, while Swift
+continues to supply all syntax categories. Fold ranges match multiline braces
+and brackets outside Swift-highlighted strings and comments. Gutter markers or
+Ctrl+Q fold the current block without changing the underlying source. Diagnostic
+links reveal enclosing folds before selecting the error. Empty, incomplete, and
 non-ASCII source is supported. If highlighting fails or times out, plain editing
 remains available. This browser adapter adds no public highlighter API.
 
@@ -447,7 +454,7 @@ remains available. This browser adapter adds no public highlighter API.
 session. Diagnostics expose code, message and optional one-based start/end line
 and column. Compiler columns count Unicode scalars; the editor maps these to
 UTF-16 offsets, including CRLF and astral characters. EOF diagnostics receive a
-visible marker. Automatic checks share the editor worker and revision guard;
+visible marker. Automatic checks share the game worker and use an editor revision guard;
 editing immediately clears stale diagnostics. This is compilation only, not
 linking against the board or execution of setup/game rules.
 
@@ -508,3 +515,65 @@ emit NoticeTable('Game over', stackClear: true)
 emit PlayerBadge('Winner', player: 0)
 emit Notice('Player 1 wins!')
 ```
+
+## Player seating layout
+
+`:board.create(setup: […])` accepts optional `playerLayout: #aroundTable` (default)
+or `playerLayout: #bottom`. Only these tags are accepted. Around-table seating
+retains the existing bottom/left/top/right arrangement (two players sit opposite).
+Bottom seating places all players upright, side by side in player order below the
+full-width table. Narrow windows may scroll the board horizontally. This is purely
+presentation and does not change turn order, actions or visibility. The JSON
+snapshot exposes `playerLayout` as `aroundTable` or `bottom`. Blackjack selects
+`#bottom`; other examples retain the default.
+
+## Badge colors
+
+`emit PlayerBadge('Win', player: player, color: #green)` sets an optional badge
+color beside the player's heading. Allowed tags: `#green`, `#red`, `#yellow`,
+`#blue`, `#gray`. Other tags and non-tag values fail validation. The two-argument
+form sets the default green, including when replacing a previously colored badge.
+Empty text removes both text and color. New games clear both. JSON exposes colors
+in `playerBadgeColors`, aligned with `playerBadges` (empty text/color when absent).
+Blackjack uses green for Win, red for Loss and gray for Push; text continues to
+identify the result independently of color.
+
+`ZoneBadge(_ text, zone[, color])` adds a badge beside an existing zone label.
+`zone` must be its Tag ID; unknown zones fail validation without storing a badge.
+`TableBadge(_ text[, color])` adds a badge beside the Table heading. Both use the
+same color palette and default green as PlayerBadge. Empty text clears the badge;
+new games clear all badges. Badges are presentation-only, visible to all viewers,
+and remain until changed. Zone snapshots include `badge` and `badgeColor`; the
+board snapshot includes `tableBadge` and `tableBadgeColor`. Absent badges use
+empty text/color strings. Badge labels are plain text, never HTML.
+
+```ges
+emit ZoneBadge('Dealer', zone: #dealer, color: #blue)
+emit TableBadge('Final round', color: #yellow)
+emit ZoneBadge('', zone: #dealer)
+emit TableBadge('')
+```
+
+## Read-only GESA dump
+
+The editor's **Dump view** compiles the current source and shows the
+GESA output with the existing Swift GESA highlighter. Dump compilation retains
+symbols, source locations and the source archive. Every `.region` can be folded using its gutter marker. Only the Code region starts expanded;
+all other regions start folded. The gutter shows original dump line numbers, which
+remain stable when folding. Inline `.source-line` annotations include source text.
+The loaded example filename is retained in the dump and preserved by Draft and
+Saved; older slots without a filename use `my-game.ges`. **Source view** returns to
+editing. Loading another source refreshes an open dump; failed compilation shows
+diagnostics instead of stale output. The dump is selectable plain text, never an
+editable input. `cardgame_dump` uses the shared reactor and returns dump text,
+UTF-16 spans and compiler diagnostics without replacing or executing the game.
+Large dumps beyond the highlighter's limit remain readable without colors.
+
+The shared Find bar searches the complete active source or dump as literal text.
+Matches retain UTF-16 offsets, reveal enclosing folds and scroll into view. The
+search wraps in both directions, supports optional case sensitivity and refreshes
+when the document changes. Ctrl/Cmd+F focuses search and adopts the current
+document selection, including multiline text; without a selection it keeps the
+existing query. Enter/F3 navigate forward,
+Shift+Enter/Shift+F3 backward. Escape in the search field clears search and returns
+focus to the document without closing the editor.

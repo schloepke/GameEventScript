@@ -50,6 +50,11 @@ function label(result) be
     'Push' when result = #push
     otherwise 'Loss'
 
+function badgeColor(result) be
+    #green when result = #win,
+    #gray when result = #push
+    otherwise #red
+
 function description(cards) be
     'Blackjack' when cards is natural
     otherwise (total(cards: cards) as :Text) + (' · Bust' when total(cards: cards) is more than 21 otherwise '')
@@ -58,6 +63,7 @@ function description(cards) be
 
 on PrepareGame(players) {
     :board.create(setup: [
+        playerLayout: #bottom,
         table: [
             [id: #shoe, label: 'Deck', position: #nw, visibility: #hidden, cards: deck()[:shuffle]],
             [id: #dealer, label: 'Dealer', position: #center, layout: #spread, visibility: #public],
@@ -156,10 +162,25 @@ on EndGame(players) {
         let summary be players[:fold text be 'Dealer: ' + description(cards: dealer()), player => text + ' · Player ' + ((player + 1) as :Text) + ': ' +
             description(cards: cards(player: player)) + ' — ' + label(result: result(player: player))]
         for player in players {
-            emit PlayerBadge(label(result: result(player: player)) + ' · ' + description(cards: cards(player: player)), player: player)
+            emit PlayerBadge(label(result: result(player: player)) + ' · ' + description(cards: cards(player: player)),
+                player: player, color: badgeColor(result: result(player: player)))
         }
         emit NoticeTable(summary, stackClear: true)
-        emit Notice(summary)
+        // Dealer results are the inverse of each player's result, not a single shared outcome.
+        let wins be players[:count player where result(player: player) = #loss]
+        let losses be players[:count player where result(player: player) = #win]
+        let pushes be players[:count] - wins - losses
+        let dealerLabel be
+            'Win' when wins = players[:count],
+            'Loss' when losses = players[:count],
+            'Push' when pushes = players[:count]
+            otherwise (wins as :Text) + ' wins · ' + (losses as :Text) + ' losses · ' + (pushes as :Text) + ' pushes'
+        let dealerColor be
+            #green when wins = players[:count],
+            #red when losses = players[:count],
+            #gray when pushes = players[:count]
+            otherwise #yellow
+        emit ZoneBadge(dealerLabel + ' · ' + description(cards: dealer()), zone: #dealer, color: dealerColor)
         emit Finish(winners: players[:filter player where result(player: player) = #win])
     } else {
         emit Finish(winners: [])

@@ -6,6 +6,7 @@ import { attachGameLibrary } from '../web/games.mjs';
 
 class Element extends EventTarget {
   constructor(value = '') { super(); this.value = value; this.children = []; }
+  setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; }
   append(child) { this.children.push(child); }
   replaceChildren() { this.children = []; }
 }
@@ -32,8 +33,8 @@ globalThis.fetch = async (url, options) => {
 };
 
 async function attach() {
-  const ui = { input: new Element(), select: new Element(), save: new Element(), status: new Element(), players: new Element('2'), starts: 0, errors: [] };
-  await attachGameLibrary(ui.input, ui.select, ui.save, ui.status, ui.players, () => ui.starts++, error => ui.errors.push(error));
+  const ui = { editor: new Element(), input: new Element(), select: new Element(), save: new Element(), status: new Element(), players: new Element('2'), starts: 0, errors: [] };
+  ui.library = await attachGameLibrary(ui.input, ui.select, ui.save, ui.status, ui.players, () => ui.starts++, error => ui.errors.push(error), ui.editor);
   return ui;
 }
 
@@ -112,3 +113,34 @@ await choose(solo, 'draft');
 assert.equal(solo.input.value, 'custom blackjack');
 assert.equal(solo.players.value, '1');
 console.log('Game library: solo counts, example limits, save/reload and draft switching passed.');
+
+const toolbar = await attach();
+assert.deepEqual(toolbar.library.examples.map(item => item.id), examples.map(item => item.id));
+await toolbar.library.select('skat');
+assert.equal(toolbar.library.sourceName, 'skat.ges');
+assert.equal(toolbar.input.value, 'examples/skat.ges');
+assert.equal(toolbar.select.value, 'skat');
+assert.equal(toolbar.starts, 1);
+assert.equal(toolbar.input.selectionStart, 0);
+console.log('Editor example loading shares the library selection and resets the caret.');
+
+edit(toolbar, 'saved editor source');
+toolbar.save.onclick();
+assert.equal(toolbar.editor.children.find(option => option.value === 'saved').disabled, false);
+edit(toolbar, 'new draft');
+toolbar.editor.value = 'saved';
+await toolbar.library.select(toolbar.editor.value);
+assert.equal(toolbar.input.value, 'saved editor source');
+assert.equal(toolbar.library.sourceName, 'skat.ges');
+await toolbar.library.select('draft');
+assert.equal(toolbar.input.value, 'new draft');
+console.log('Editor selection: Saved loads directly and retains the current Draft.');
+
+const startsBeforePlayerChange = toolbar.starts;
+toolbar.players.value = '4';
+toolbar.players.dispatchEvent(new Event('change'));
+assert.equal(toolbar.starts, startsBeforePlayerChange + 1);
+assert.equal(toolbar.select.value, 'draft');
+await toolbar.library.select('draft');
+assert.equal(toolbar.players.value, '4');
+console.log('Player count change autosaves the new count and starts exactly one new game.');

@@ -1,6 +1,9 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+import { createWorkerClient } from './worker-client.mjs';
+import { attachSearch } from './search.mjs';
+import { attachDump } from './dump.mjs';
 import { attachEditor } from './editor.mjs';
 import { attachGameLibrary } from './games.mjs';
 import { showLoading } from './loading.mjs';
@@ -8,9 +11,13 @@ import { createCardActionPicker } from './card-actions.mjs';
 
 const byId = (id) => document.getElementById(id);
 const cardActions = createCardActionPicker(act);
-let worker,
-  state,
-  timer,
+const engine = createWorkerClient(progress => {
+  for (const id of ['wasm-loading', 'editor-loading']) {
+    if (progress.phase === 'ready' || progress.phase === 'failed') byId(id).hidden = true;
+    else showLoading(byId(id), progress);
+  }
+});
+let state,
   request = 0,
   busy = false;
 let seatLayoutFrame = 0;
@@ -69,9 +76,7 @@ function lock(value) {
 }
 
 function stop() {
-  worker?.terminate();
-  worker = null;
-  clearTimeout(timer);
+  request++;
   byId('wasm-loading').hidden = true;
   lock(true);
 }
@@ -83,21 +88,34 @@ function showError(message) {
   if (!byId('error-dialog').open) byId('error-dialog').showModal();
 }
 
-function send(payload) {
-  if (!worker) return;
+async function send(payload) {
   lock(true);
   const id = ++request;
-  worker.postMessage({ id, ...payload });
-  clearTimeout(timer);
-  timer = setTimeout(
-    () => showError('Time limit reached. Check the rules or your connection and restart.'),
-    payload.type === 'start' ? 120000 : 15000,
-  );
+  try {
+    const data = await engine.send(payload, payload.type === 'start' ? 120000 : 15000);
+    if (id !== request) return;
+    render(data.state);
+    if (data.accepted === false) {
+      noticeQueue.push({ text: data.reason, title: 'Game Notice' });
+      showNextNotice();
+    }
+  } catch (error) {
+    if (id === request) showError(error.message);
+  }
 }
 
 function act(action) {
   if (!busy && state)
     send({ type: 'action', player: state.currentPlayer, action, revision: state.revision });
+}
+
+function appendBadge(heading, text, color) {
+  if (!text) return;
+  const badge = document.createElement('span');
+  badge.className = 'badge';
+  badge.dataset.color = color;
+  badge.textContent = text;
+  heading.append(badge);
 }
 
 function render(next) {
@@ -109,6 +127,8 @@ function render(next) {
   byId('board').style.removeProperty('--right-seat-width');
   byId('board').replaceChildren();
   byId('board').dataset.players = String(state.players.length);
+  byId('board').dataset.playerLayout = state.playerLayout;
+  byId('board').style.setProperty('--player-count', state.players.length);
   const table = document.createElement('section');
   table.className = 'table-area';
   for (const side of ['left', 'right']) {
@@ -126,6 +146,7 @@ function render(next) {
   const tableTitle = document.createElement('h2');
   tableTitle.textContent = 'Table';
   tableTitle.className = 'area-heading';
+  appendBadge(tableTitle, state.tableBadge, state.tableBadgeColor);
   const areaHeadings = new Map([['table', tableTitle]]);
   table.append(tableTitle);
   const tableStatus = document.createElement('div');
@@ -150,8 +171,9 @@ function render(next) {
   const playerRows = new Map();
   state.players.forEach((name, index) => {
     const area = document.createElement('section');
-    const seat = (state.players.length === 2 ? ['bottom', 'top'] : ['bottom', 'left', 'top', 'right'])[index];
+    const seat = state.playerLayout === 'bottom' ? 'bottom' : (state.players.length === 2 ? ['bottom', 'top'] : ['bottom', 'left', 'top', 'right'])[index];
     area.className = `player-area player-${index} seat-${seat}${!state.finished && index === state.currentPlayer ? ' active-player' : ''}`;
+    if (state.playerLayout === 'bottom') area.style.gridColumn = String(index + 1);
     const content = document.createElement('div');
     content.className = 'player-content';
     area.append(content);
@@ -159,13 +181,7 @@ function render(next) {
     heading.className = 'area-heading';
     areaHeadings.set(index, heading);
     heading.textContent = `${name}${!state.finished && index === state.currentPlayer ? ' · Your turn' : ''}`;
-    const badgeText = state.playerBadges?.[index];
-    if (badgeText) {
-      const badge = document.createElement('span');
-      badge.className = 'player-badge';
-      badge.textContent = badgeText;
-      heading.append(badge);
-    }
+    appendBadge(heading, state.playerBadges[index], state.playerBadgeColors[index]);
     content.append(heading);
     for (const row of state.rows.filter((row) => row.owner === index)) {
       const element = document.createElement('div');
@@ -201,6 +217,7 @@ function render(next) {
     }
     const title = document.createElement('h2');
     title.textContent = zone.label;
+    appendBadge(title, zone.badge, zone.badgeColor);
     zoneHeadings.set(zone.id, title);
     section.append(title);
     const cards = document.createElement('div');
@@ -305,31 +322,6 @@ function restart() {
   byId('error-dialog').close();
   byId('show-error').hidden = true;
   byId('error-message').textContent = '';
-  const active = new Worker('./worker.mjs', { type: 'module' });
-  worker = active;
-  showLoading(byId('wasm-loading'), { phase: 'download', loaded: 0 });
-  active.onmessage = ({ data }) => {
-    if (active !== worker) return;
-    if (data.type === 'loading') {
-      showLoading(byId('wasm-loading'), data);
-      return;
-    }
-    if (data.id !== request) return;
-    byId('wasm-loading').hidden = true;
-    clearTimeout(timer);
-    if (data.error) {
-      showError(data.error);
-      return;
-    }
-    render(data.state);
-    if (data.accepted === false) {
-      noticeQueue.push({ text: data.reason, title: 'Game Notice' });
-      showNextNotice();
-    }
-  };
-  active.onerror = (event) => {
-    if (active === worker) showError(`Worker error: ${event.message}`);
-  };
   send({
     type: 'start',
     source: byId('source').value,
@@ -342,30 +334,75 @@ byId('show-help').onclick = () => byId('help-dialog').showModal();
 
 byId('show-error').onclick = () => byId('error-dialog').showModal();
 byId('restart').onclick = restart;
-byId('stop').onclick = () => stop();
+byId('stop').onclick = () => {
+  stop();
+  engine.reset();
+};
+window.addEventListener('pagehide', () => {
+  stop();
+  engine.reset();
+});
 try {
-  await attachGameLibrary(
+  const library = await attachGameLibrary(
     byId('source'),
     byId('example'),
     byId('save-game'),
     byId('save-status'),
     byId('players'),
-    restart,
+    () => { if (!byId('editor-dialog').open) restart(); },
     showError,
+    byId('editor-example'),
   );
-  let editorAttached = false;
-  byId('source')
-    .closest('details')
-    .addEventListener('toggle', (event) => {
-      if (!event.currentTarget.open || editorAttached) return;
-      editorAttached = true;
-      attachEditor(
-        byId('source'),
-        byId('source-colors'),
-        byId('source-editor'),
-        byId('highlight-status'),
-      );
-    });
+  const dialog = byId('editor-dialog');
+  const editor = attachEditor(
+    byId('source'), byId('source-colors'), byId('source-editor'),
+    byId('highlight-status'), engine,
+  );
+  const dump = attachDump(byId('source'), engine, () => library.sourceName, () => editor.focus());
+  attachSearch(dialog, byId('source'), editor, dump);
+  window.addEventListener('pagehide', () => editor.suspend());
+  window.addEventListener('pageshow', event => {
+    if (!event.persisted) return;
+    if (dialog.open) {
+      editor.refresh();
+      dump.refresh();
+    }
+    else restart();
+  });
+  byId('load-example').onclick = () => library.select(byId('editor-example').value);
+  byId('download-source').onclick = () => {
+    const example = library.examples.find(item => item.id === byId('example').value);
+    const source = new Blob([byId('source').value], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(source);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = example ? example.source.split('/').at(-1) : 'my-game.ges';
+    byId('editor-dialog').append(link);
+    try {
+      link.click();
+    } finally {
+      link.remove();
+      // Keep the URL alive until the browser has picked up the download.
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    }
+  };
+  byId('open-editor').disabled = false;
+  byId('open-editor').onclick = () => {
+    stop();
+    noticeQueue = [];
+    byId('notice-dialog').close();
+    dialog.showModal();
+    document.body.classList.add('editing');
+    editor.refresh();
+    editor.focus();
+  };
+  byId('close-editor').onclick = () => dialog.close();
+  dialog.addEventListener('close', () => {
+    document.body.classList.remove('editing');
+    editor.suspend();
+    dump.reset();
+    restart();
+  });
   byId('restart').disabled = false;
   restart();
 } catch (error) {

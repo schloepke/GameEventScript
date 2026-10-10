@@ -48,16 +48,30 @@ python3 examples/card-game/scripts/serve.py
 ```
 
 Open <http://127.0.0.1:8766/>. Choose a game and its player count, then start a game. Click highlighted cards or **Draw a card**.
-Expand the GES editor, change a rule, and choose **New game** to compile it
-in the browser. The editor uses the existing Swift syntax highlighter through
-Wasm, including while editing incomplete code. Its dedicated worker returns
-UTF-16 ranges; a text layer paints them behind the native textarea without
-changing selection or undo. Highlighting failures fall back to plain text.
+Choose **Editor** beside the game selection to edit rules in a full-window editor
+that resizes with the browser. Its toolbar loads examples, Draft or Saved directly into the editor, saves a separate copy,
+downloads the current source as a UTF-8 `.ges` file, checks code and opens the
+environment reference. **Download source** includes unsaved edits and works even
+when the source does not compile. **Dump view** compiles the current code into
+a read-only, syntax-highlighted GESA view with line numbers and gutter folding
+for every region. Only the Code region starts expanded. Inline source annotations remain visible beside the instructions. **Source view** returns to editing. **Close & play** (or Escape)
+starts a new game with the current code. The editor uses the existing Swift
+syntax highlighter through Wasm, including while editing incomplete code.
+Game, compiler and highlighter share one worker and one Wasm instance, reused
+across new games and editor openings. The highlighter returns
+UTF-16 ranges for the CodeMirror editing surface. Gutter markers fold handlers,
+nested `{…}` blocks and multiline `[…]` collections; Ctrl+Q toggles the current
+block. Strings and comments are excluded. Folding preserves the complete source,
+selection and undo history. The Find bar searches the complete source or dump,
+including folded content, and reveals each match. Ctrl/Cmd+F focuses it and
+uses the current source/dump selection as the query when present; Enter/F3
+finds the next match and Shift+Enter/Shift+F3 the previous one. Match case is optional.
+Highlighting failures fall back to plain text.
 A loading bar shows Wasm download progress (percent and MB when the response size
 is known), followed by a separate initialization status. Unknown or compressed
 response sizes use an indeterminate bar. The editor shows its own loading status.
 **Stop** terminates the worker. Startup allows 120 seconds for the first download; a 15-second watchdog also
-terminates unresponsive compilation/execution.
+terminates unresponsive actions. Editor checks also have a 120-second watchdog.
 
 To reproduce the Wasm build on macOS:
 
@@ -227,8 +241,10 @@ No further dealer cards are needed when all players have Blackjack or have buste
 
 Each hand is evaluated against the dealer separately. A busted player loses even
 if the dealer subsequently busts. Equal totals push, and two Blackjacks push.
-Badges, table text and a result popup distinguish **Win**, **Push** and **Loss**;
-only winning players enter the environment's winner list. The example has no
+Badges and table text distinguish **Win**, **Push** and **Loss**, without a result popup.
+The dealer zone badge shows the inverse outcome; mixed outcomes across players
+show counts of dealer wins, losses and pushes.
+Only winning players enter the environment's winner list. The example has no
 bets, payouts, double down, split, insurance or surrender. All blackjack rules
 and dealer behavior are in GES. See [Blackjack rules](https://bicyclecards.com/how-to-play/blackjack/).
 

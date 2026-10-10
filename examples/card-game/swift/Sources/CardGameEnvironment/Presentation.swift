@@ -3,6 +3,11 @@
 
 import GameEventScriptRuntime
 
+struct PresentationBadge {
+    let text: String
+    let color: String
+}
+
 extension CardGame {
     /// Serializes a player-filtered snapshot. Hidden card identities and opponent hands are omitted.
     /// A nil viewer is a spectator and receives no owner-only cards or action offers.
@@ -22,9 +27,10 @@ extension CardGame {
                 return "{\"id\":\(id),\"properties\":{\(properties.map { jsonString($0.key) + ":" + jsonString($0.value.asText) }.joined(separator: ","))}}"
             }.joined(separator: ",")
             return
-                "{\"id\":\(jsonString(zone.id)),\"label\":\(jsonString(zone.label)),\"owner\":\(zone.owner.map(String.init) ?? "null"),\"position\":\(jsonString(zone.position)),\"row\":\(zone.row),\"layout\":\(jsonString(zone.layout)),\"count\":\(zone.cards.count),\"cards\":[\(shown)]}"
+                "{\"id\":\(jsonString(zone.id)),\"label\":\(jsonString(zone.label)),\"badge\":\(jsonString(bindings.zoneBadges[zone.id]?.text ?? "")),\"badgeColor\":\(jsonString(bindings.zoneBadges[zone.id]?.color ?? "")),\"owner\":\(zone.owner.map(String.init) ?? "null"),\"position\":\(jsonString(zone.position)),\"row\":\(zone.row),\"layout\":\(jsonString(zone.layout)),\"count\":\(zone.cards.count),\"cards\":[\(shown)]}"
         }.joined(separator: ",")
-        let badgeJSON = players.indices.map { jsonString(bindings.playerBadges[$0] ?? "") }.joined(separator: ",")
+        let badgeColorJSON = players.indices.map { jsonString(bindings.playerBadges[$0]?.color ?? "") }.joined(separator: ",")
+        let badgeJSON = players.indices.map { jsonString(bindings.playerBadges[$0]?.text ?? "") }.joined(separator: ",")
         let rowJSON = bindings.board.rows.map { "{\"owner\":\($0.owner.map(String.init) ?? "null"),\"index\":\($0.index),\"position\":\(jsonString($0.position))}" }.joined(separator: ",")
         let offers = bindings.offeredActivations.filter { activation in
             guard let viewer, players.indices.contains(viewer) else { return false }
@@ -38,7 +44,7 @@ extension CardGame {
             }
         }.joined(separator: ",")
         return
-            "{\"players\":[\(players.map(jsonString).joined(separator: ","))],\"currentPlayer\":\(currentPlayer.map(String.init) ?? "null"),\"winners\":[\(winners.map(String.init).joined(separator: ","))],\"finished\":\(finished),\"failed\":\(failed),\"revision\":\(revision),\"turn\":\(turn),\"round\":\(round),\"waitingForRound\":\(bindings.waitingForRound),\"direction\":\(bindings.direction),\"notice\":\(jsonString(notice)),\"notices\":[\(bindings.notices.map { "{\"text\":\(jsonString($0.text)),\"title\":\(jsonString($0.title))}" }.joined(separator: ","))],\"playerBadges\":[\(badgeJSON)],\"tableNotice\":\(jsonString(bindings.tableNotice)),\"zones\":[\(zoneJSON)],\"rows\":[\(rowJSON)],\"actions\":[\(actionJSON)]}"
+            "{\"tableBadge\":\(jsonString(bindings.tableBadge?.text ?? "")),\"tableBadgeColor\":\(jsonString(bindings.tableBadge?.color ?? "")),\"playerLayout\":\(jsonString(bindings.board.playerLayout)),\"players\":[\(players.map(jsonString).joined(separator: ","))],\"currentPlayer\":\(currentPlayer.map(String.init) ?? "null"),\"winners\":[\(winners.map(String.init).joined(separator: ","))],\"finished\":\(finished),\"failed\":\(failed),\"revision\":\(revision),\"turn\":\(turn),\"round\":\(round),\"waitingForRound\":\(bindings.waitingForRound),\"direction\":\(bindings.direction),\"notice\":\(jsonString(notice)),\"notices\":[\(bindings.notices.map { "{\"text\":\(jsonString($0.text)),\"title\":\(jsonString($0.title))}" }.joined(separator: ","))],\"playerBadgeColors\":[\(badgeColorJSON)],\"playerBadges\":[\(badgeJSON)],\"tableNotice\":\(jsonString(bindings.tableNotice)),\"zones\":[\(zoneJSON)],\"rows\":[\(rowJSON)],\"actions\":[\(actionJSON)]}"
     }
 
 }

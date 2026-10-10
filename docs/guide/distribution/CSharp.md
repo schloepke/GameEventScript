@@ -51,7 +51,12 @@ through local NuGet restore and direct DLL references. Each route compiles a
 fixture and then loads and executes it in a separate application referencing
 only Runtime and CSharpBridge. That application
 also rejects Compiler or Conformance DLLs, dependency-manifest entries, and
-loaded assemblies. No command in the dry run publishes an artifact.
+loaded assemblies. Each smoke test creates a fresh build tree below
+`artifacts/csharp/distribution-consumers`; the NuGet route also uses an empty
+package cache. This prevents stale CopyLocal DLLs with reproducible timestamps
+and sizes from contaminating release checks. Successful workspaces are removed;
+failed workspaces are retained at the printed path. No command in the dry run
+publishes an artifact.
 
 NuGet assigns random internal Core Properties names during ordinary packing.
 The repository package tool rewrites this packaging-only metadata, ZIP entry

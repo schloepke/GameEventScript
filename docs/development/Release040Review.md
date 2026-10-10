@@ -59,6 +59,39 @@ This review does not close or change the issue.
   [canonical backlog](../../BACKLOG.md). No additional feature is required by
   this closing review.
 
+## Distribution qualification follow-up
+
+Local 0.4.0 package preparation was exercised against the `8f3a2095` development
+sources. The review found and fixed a verification defect: existing C# consumer
+output directories could retain DLLs from an older version even after restore
+and an attempted Rebuild, because canonical artifacts share timestamps and can
+share file sizes. Package and staged-DLL smoke tests now allocate separate fresh
+build trees for every invocation; package restores also start with an empty
+cache. The old contaminated outputs remained in place while the corrected tests
+passed twice. Success removes only the newly allocated workspace; failure keeps
+it for diagnosis. This changes verification scripts, not library behavior.
+
+The following local checks passed; logs are retained under ignored
+`artifacts/release-040-distribution`:
+
+| Check | Local result and boundary |
+| --- | --- |
+| Four library NuGet packages and four symbol packages | Metadata, dependency graph, canonical package contents and portable PDB checks passed for 0.4.0. |
+| Package and staged-DLL consumers | Both routes compiled and executed a fixture; separate Runtime/Bridge-only consumers ran it without Compiler/Conformance. Staged-DLL consumption is not a Unity editor/IL2CPP qualification. |
+| Reproducibility | Two independent clean library/package builds produced byte-identical `.nupkg` and `.snupkg` files for all four products. |
+| SwiftPM distribution | Fresh tagged-source full and Runtime-only consumers, root-package tests, product/dependency checks and CLI exposure passed. Logs are retained in `artifacts/swift-package/latest-logs`. |
+| Portable NuGet CLI | Fresh isolated installation and CLI/editor checks passed. |
+| Native NuGet CLI | Fresh macOS ARM64 AOT pointer/RID installation, CLI/editor and delayed-terminal checks passed. Other RIDs require their native jobs. |
+| Swift standalone CLI | The macOS ARM64 archive passed relocation, version, compile/dump/run, UTF-8, REPL and delayed-message checks without SDKs on PATH. Its receipt records a dirty tree during the script fix, so it is development evidence, not a publishable final-candidate archive. |
+| Publication and installer controls | Fake-client allowlist, missing/stale package, tool-package, installer lifecycle and archive collection controls passed. These are guard tests, not real execution on all six download targets. |
+
+All listed local checks passed. A hash inventory and the scope of remaining
+checks are recorded in `artifacts/release-040-distribution/summary.json`. No
+package or release was published. The remaining remote matrix results cannot
+be inferred from these local checks;
+issue #8's distribution criterion remains open until its required candidate
+workflow evidence is complete.
+
 ## Remaining publication gates
 
 The development steps do not replace the

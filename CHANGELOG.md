@@ -73,6 +73,8 @@ and explicit release qualification. This section is not a publication notice.
 
 ### Fixed
 
+- C# distribution smoke tests use fresh build and restore directories, preventing
+  stale reproducible DLLs from a prior version contaminating package validation.
 - Program validation rejects internal VM values escaping into script-visible
   data, including through inline assembly control flow.
 - Swift compiler lowering now matches C# for constant Text-key access, collection

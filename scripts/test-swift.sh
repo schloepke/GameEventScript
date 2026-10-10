@@ -31,3 +31,6 @@ swift run --package-path "$ges_package" --scratch-path "$ges_scratch" --disable-
 python3 "$ges_root/scripts/test-number-text-roundtrip.py" --skip-build
 
 python3 "$ges_root/scripts/test-message-json-roundtrip.py" --skip-build
+
+python3 "$ges_root/scripts/test-binary-reader-fuzz-controls.py"
+python3 "$ges_root/scripts/test-binary-reader-fuzz.py" --skip-build

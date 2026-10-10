@@ -12,6 +12,10 @@ enum ToolError: Error {
 
 func run() throws -> Int32 {
     var arguments = Array(CommandLine.arguments.dropFirst())
+    if arguments.count == 3 && arguments[0] == "--binary-fuzz" {
+        try BinaryFuzzProbe.run(input: arguments[1], output: arguments[2])
+        return 0
+    }
     if arguments.count == 3 && arguments[0] == "--message-json" {
         let input = try JSONDecoder().decode([String].self, from: Data(contentsOf: URL(fileURLWithPath: arguments[1])))
         let normalized = try input.map { try GameEventScriptMessageJson.serialize(GameEventScriptMessageJson.deserialize($0)) }
@@ -31,6 +35,7 @@ func run() throws -> Int32 {
                                    [--runtime-programs <CSharp-export-directory>]
                                    [--performance | --calibrate-performance]
 
+            Binary fuzz adapter: ges-conformance --binary-fuzz <input.txt> <output.txt>
             Message JSON adapter: ges-conformance --message-json <input.json> <output.json>
             Interoperability adapter: ges-conformance --number-text <input.json> <output.json>
 

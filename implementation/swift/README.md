@@ -364,3 +364,8 @@ Known Card Lab browser assets can skip native Swift CI because the Website
 workflow still builds and tests the native example and WASM application. New
 files, build scripts, package manifests and Swift sources require full native
 verification; manual workflow runs always select every check.
+
+The shared verification script also runs bounded, deterministic `.gesb` reader
+mutations through the existing C# and Swift adapters without additional builds.
+See [Binary reader fuzzing](../../conformance/cross-language/BinaryReaderFuzz.md)
+for seeds, resource limits, watchdogs and failure reproduction.

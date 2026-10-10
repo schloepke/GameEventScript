@@ -29,3 +29,9 @@ The additional `--number-text <input.json> <output.json>` mode is an executable
 adapter for the [bidirectional numeric text gate](../../../../conformance/cross-language/NumberTextRoundtrip.md).
 It executes casts in the VM and returns exact numeric identities and formatted
 text; its caller writes all temporary inputs and results below `artifacts`.
+
+`--binary-fuzz <input.txt> <output.txt>` is an executable-only bounded reader
+probe used by `scripts/test-binary-reader-fuzz.py`. Each input line is base64
+binary data; each output line records controlled rejection or canonical accepted
+bytes. Unexpected errors fail the process. See
+`conformance/cross-language/BinaryReaderFuzz.md` for limits and reproduction.

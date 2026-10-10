@@ -36,8 +36,8 @@ The open GitHub issue inventory was inspected on 2026-10-10. It contained no
 separate known correctness or reliability bug designated as a release blocker.
 That is an issue-tracker observation, not proof of absence of defects.
 [Release issue #8](https://github.com/schloepke/GameEventScript/issues/8) still
-requires distribution qualification. Its final defect/limitation disposition
-is recorded below for this development branch.
+required distribution qualification at that point. Its completed CI qualification
+and final defect/limitation disposition are recorded below for this branch.
 This review does not close or change the issue.
 
 - **Resolved:** the measured performance failures are explained and addressed;
@@ -90,10 +90,8 @@ The following local checks passed; logs are retained under ignored
 
 All listed local checks passed. A hash inventory and the scope of remaining
 checks are recorded in `artifacts/release-040-distribution/summary.json`. No
-package or release was published. The remaining remote matrix results cannot
-be inferred from these local checks;
-issue #8's distribution criterion remains open until its required candidate
-workflow evidence is complete.
+package or release was published. These local checks alone did not complete the
+remote matrix; the subsequent CI qualification below supplies that evidence.
 
 ## Point 7: completed branch review
 
@@ -127,14 +125,50 @@ branch review. Issue #8 point 7 is complete for this development state, with the
 accepted limitations above explicitly retained. The corrections affect test
 generation and evidence validation, not product semantics or the bytecode contract.
 They add no Swift target or build and keep the CI property sample count unchanged.
-The required remote candidate matrix evidence under point 6 remains outstanding;
-this conclusion is not permission to publish and does not mark GitHub issues.
+At the time of this review, point 6 still required the remote matrix evidence
+recorded below. Neither review nor CI qualification grants permission to publish.
+
+## Point 6: completed CI qualification
+
+On 2026-10-11 (Europe/Berlin), all five manually dispatched workflows passed for
+the same clean revision, `12b674e4d8e8d54ae76292aa4a433f60cfe1d758`:
+
+| Workflow | Evidence |
+| --- | --- |
+| [C# CI](https://github.com/schloepke/GameEventScript/actions/runs/38090897227) | 2,483 non-performance test executions, 42 allocation test executions, formatting, fresh package/DLL consumers and package reproducibility passed. |
+| [Swift CI](https://github.com/schloepke/GameEventScript/actions/runs/38090899214) | Full manual scope: Linux highlighter, native Conformance/interoperability, API/documentation, isolated tagged SwiftPM consumers and aggregate `verify` passed. The compiler corpus passed 1,953 cases; independent Runtime verification passed 1,558. The strict report intentionally skipped 31 hardware-specific performance cases, measured separately below. |
+| [C# Release Candidate](https://github.com/schloepke/GameEventScript/actions/runs/38090901585) | Version 0.4.0, `publish=false`: both 0.3.0 upgrade paths, SwiftPM consumption, four library packages plus symbols, portable CLI and all six native NuGet tool RIDs passed. `publish-nuget` was skipped. |
+| [CLI Distribution](https://github.com/schloepke/GameEventScript/actions/runs/38090903706) | Version 0.4.0, `publish=false`: all six native downloads and the complete-set checksum/receipt verification passed. Every receipt records the same revision, clean sources and successful verification. `publish` was skipped. |
+| [Website](https://github.com/schloepke/GameEventScript/actions/runs/38090905856) | Fresh C#/Swift API generation, native Card Lab mechanics, WASM/browser checks and the complete site/link build passed. The earlier local stale-API build limitation is resolved by this fresh CI build. Branch execution skipped `publish`. |
+
+Swift CI recorded Apple Swift 6.1.2 (`swiftlang-6.1.2.1.2`,
+`clang-1700.0.13.5`) targeting `arm64-apple-macosx15.0`; C# used SDK 10.0.201.
+The native Swift job took 20 minutes 51 seconds, excluding its runner queue.
+Its separate distribution job ran in parallel for 14 minutes 51 seconds. These
+are observations from this run, not timing guarantees.
+
+The same clean revision passed fresh local, profile-matched performance checks:
+45 C# native test executions and 31 measured workloads in each implementation.
+The receipt is `artifacts/release-performance/run-_kribndt/evidence.json`, using
+the documented M3 Max profiles (.NET SDK 10.0.201 and Apple Swift 6.4). Hosted
+Conformance results are not substituted for these hardware-specific measurements.
+
+Run/job metadata, logs, artifact digests, upgrade summaries, Swift reports and
+the nonpublished NuGet/CLI artifacts are retained under ignored
+`artifacts/release-040-ci/12b674e4`; `summary.json` binds the evidence and file
+hashes to this revision. All six downloaded CLI archives were checked again
+against the complete-set collector and their receipts locally.
+
+Issue #8 point 6 is complete for this revision. No tag, NuGet publication,
+GitHub release or website deployment was created. This evidence record does not
+transfer qualification to later source changes or replace explicit publication
+authorization.
 
 ## Remaining publication gates
 
-The development steps do not replace the
+The successful CI qualification applies to the revision above and follows the
 [release qualification checklist](../guide/distribution/Platforms.md#release-qualification).
-Before tagging or publishing the final candidate:
+Before tagging or publishing a later final candidate:
 
 1. Review the final revision and any newly reported defects. Require full C# and
    Swift CI, including tagged SwiftPM consumers, rather than documentation-only
@@ -144,14 +178,13 @@ Before tagging or publishing the final candidate:
    Require every native NuGet tool target, every standalone CLI target, and
    Website/Card Lab verification for that revision. Existing results on older
    commits do not complete this step.
-3. Regenerate and validate the website/API output from the final source. An
-   earlier local site build stopped at stale generated API documentation;
-   record a successful fresh build rather than bypassing source-identity checks.
+3. Regenerate and validate the website/API output from the final source, retaining
+   its source-identity checks as in the successful workflow above.
 4. Move the reviewed Unreleased notes to a dated 0.4.0 section and update applicable
    `Since: Unreleased` annotations as described in the
    [publication procedure](../guide/distribution/Packages.md#publish-a-shared-version).
    Use that versioned section for the release description.
 
-Missing or failed required evidence remains a publication blocker. No tag,
-package upload, public release or additional Swift PR build is created by this
-review. Publication remains an explicitly authorized later action.
+Missing or failed required evidence remains a publication blocker. Qualification
+for `12b674e4` is complete; release version/date preparation and publication remain
+separate actions. Publication still requires explicit authorization.

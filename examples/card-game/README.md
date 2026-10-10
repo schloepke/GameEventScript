@@ -58,7 +58,8 @@ for every region. Only the Code region starts expanded. Inline source annotation
 starts a new game with the current code. The editor uses the existing Swift
 syntax highlighter through Wasm, including while editing incomplete code.
 Game, compiler and highlighter share one worker and one Wasm instance, reused
-across new games and editor openings. The highlighter returns
+across new games and editor openings. Built JavaScript, worker, stylesheet and
+Wasm URLs share a build version to avoid mixing cached files from different releases. The highlighter returns
 UTF-16 ranges for the CodeMirror editing surface. Gutter markers fold handlers,
 nested `{…}` blocks and multiline `[…]` collections; Ctrl+Q toggles the current
 block. Strings and comments are excluded. Folding preserves the complete source,

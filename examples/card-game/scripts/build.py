@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
-from site_assets import record
+from site_assets import identity, record, version_browser_assets
 
 EXAMPLE = Path(__file__).resolve().parents[1]
 ROOT = EXAMPLE.parents[1]
@@ -118,6 +118,7 @@ def main():
             'browser_wasi_shim 0.4.2: MIT OR Apache-2.0; see ../vendor/LICENSE-MIT and LICENSE-APACHE.\n'
             'CodeMirror 5.65.20: MIT; see ../vendor/codemirror/LICENSE.\n'
             'This directory retains the Swift distribution notice set; not every component is linked by this demo.\n')
+        version_browser_assets(web, identity())
         record()
         print(f'Browser assets: {web}')
 

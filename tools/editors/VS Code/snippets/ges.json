@@ -1,0 +1,41 @@
+{
+  "Message handler": {
+    "prefix": "ges-on",
+    "body": [
+      "on ${1:Main}(${2:args}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Message handler"
+  },
+  "Conditional binding": {
+    "prefix": "ges-iflet",
+    "body": [
+      "if let ${1:value} be ${2:expression} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Conditional binding"
+  },
+  "Fold collection": {
+    "prefix": "ges-fold",
+    "body": [
+      "${1:items}[:fold ${2:acc} be ${3:0}, ${4:item} => ${5:acc + item}]$0"
+    ],
+    "description": "Fold collection"
+  },
+  "Reduce collection": {
+    "prefix": "ges-reduce",
+    "body": [
+      "${1:items}[:reduce ${2:acc}, ${3:item} => ${4:acc + item}]$0"
+    ],
+    "description": "Reduce collection"
+  },
+  "Delayed message": {
+    "prefix": "ges-after",
+    "body": [
+      "emit after ${1:1s} ${2:Tick}(${3})$0"
+    ],
+    "description": "Delayed message"
+  }
+}

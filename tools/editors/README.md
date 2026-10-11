@@ -9,6 +9,20 @@ Each ZIP includes installation notes and the Apache-2.0 license. Highlighting
 works without the CLI; commands require `ges` on the editor process’s `PATH`.
 No compiler or language server is bundled.
 
+## Visual Studio Code
+
+The local [VS Code extension](VS%20Code/README.md) includes both GES and GESA
+highlighting, embedded source highlighting, language configuration and snippets.
+It also offers Check, Run and Dump editor buttons using an installed GES CLI,
+plus Compile in the Command Palette. Dump opens a read-only highlighted document.
+Markdown blocks tagged `ges` or `gesa` are highlighted in both the source editor
+and the built-in Markdown preview using the same grammars.
+In VS Code, run **Extensions: Install from VSIX...** from the Command Palette
+and select the prebuilt [GameEventScript-VSCode.vsix](VS%20Code/GameEventScript-VSCode.vsix)
+under `tools/editors/VS Code`. No build step, Marketplace account or GES CLI
+installation is required for highlighting. Maintainers update the package with
+`bash scripts/package-vscode.sh` after synchronizing the editor assets.
+
 ## Downloads
 
 | Download | Grammar format | Use with |

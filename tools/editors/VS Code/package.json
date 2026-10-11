@@ -1,0 +1,196 @@
+{
+  "name": "gameeventscript",
+  "displayName": "Game Event Script",
+  "description": "GES and GESA syntax highlighting, snippets, and CLI commands.",
+  "version": "0.4.2",
+  "publisher": "schloepke",
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.94.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "keywords": [
+    "GES",
+    "GESA",
+    "GameEventScript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schloepke/GameEventScript.git",
+    "directory": "tools/editors/VS Code"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "ges",
+        "aliases": [
+          "Game Event Script",
+          "GES"
+        ],
+        "extensions": [
+          ".ges"
+        ],
+        "configuration": "./ges-language-configuration.json"
+      },
+      {
+        "id": "gesa",
+        "aliases": [
+          "Game Event Script Assembler",
+          "GESA"
+        ],
+        "extensions": [
+          ".gesa"
+        ],
+        "configuration": "./gesa-language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ges",
+        "scopeName": "source.gameeventscript",
+        "path": "./syntaxes/GameEventScript.tmLanguage.json"
+      },
+      {
+        "language": "gesa",
+        "scopeName": "source.gameeventscript.assembler",
+        "path": "./syntaxes/GameEventScriptAssembler.tmLanguage.json",
+        "embeddedLanguages": {
+          "meta.embedded.block.gameeventscript.assembler": "ges",
+          "meta.embedded.line.gameeventscript.assembler": "ges"
+        }
+      },
+      {
+        "scopeName": "markdown.ges.codeblock",
+        "path": "./syntaxes/Markdown.tmLanguage.json",
+        "injectTo": [
+          "text.html.markdown"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.ges.markdown": "ges",
+          "meta.embedded.block.gesa.markdown": "gesa",
+          "meta.embedded.block.gameeventscript.assembler": "ges",
+          "meta.embedded.line.gameeventscript.assembler": "ges"
+        }
+      }
+    ],
+    "snippets": [
+      {
+        "language": "ges",
+        "path": "./snippets/ges.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "ges.check",
+        "title": "GES: Check",
+        "icon": "$(check)",
+        "enablement": "isWorkspaceTrusted && editorLangId == ges && resourceScheme == file"
+      },
+      {
+        "command": "ges.run",
+        "title": "GES: Run",
+        "icon": "$(play)",
+        "enablement": "isWorkspaceTrusted && editorLangId == ges && resourceScheme == file"
+      },
+      {
+        "command": "ges.dump",
+        "title": "GES: Dump",
+        "icon": "$(file-code)",
+        "enablement": "isWorkspaceTrusted && editorLangId == ges && resourceScheme == file"
+      },
+      {
+        "command": "ges.compile",
+        "title": "GES: Compile",
+        "icon": "$(gear)",
+        "enablement": "isWorkspaceTrusted && editorLangId == ges && resourceScheme == file"
+      },
+      {
+        "command": "ges.runWithArguments",
+        "title": "GES: Run with Arguments\u2026",
+        "enablement": "isWorkspaceTrusted && editorLangId == ges && resourceScheme == file",
+        "icon": "$(run-all)"
+      },
+      {
+        "command": "ges.startInteractive",
+        "title": "GES: Start Interactive Session",
+        "enablement": "isWorkspaceTrusted && editorLangId == ges && resourceScheme == file",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "ges.restartInteractive",
+        "title": "GES: Restart Interactive Session",
+        "enablement": "isWorkspaceTrusted && editorLangId == ges && resourceScheme == file",
+        "icon": "$(debug-restart)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "ges.check",
+          "when": "editorLangId == ges && resourceScheme == file",
+          "group": "navigation@1"
+        },
+        {
+          "command": "ges.run",
+          "when": "editorLangId == ges && resourceScheme == file",
+          "group": "navigation@2"
+        },
+        {
+          "command": "ges.dump",
+          "when": "editorLangId == ges && resourceScheme == file",
+          "group": "navigation@3"
+        },
+        {
+          "command": "ges.runWithArguments",
+          "when": "editorLangId == ges && resourceScheme == file",
+          "group": "navigation@4"
+        },
+        {
+          "command": "ges.startInteractive",
+          "when": "editorLangId == ges && resourceScheme == file",
+          "group": "navigation@5"
+        },
+        {
+          "command": "ges.restartInteractive",
+          "when": "editorLangId == ges && resourceScheme == file",
+          "group": "navigation@6"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Game Event Script",
+      "properties": {
+        "ges.cliPath": {
+          "type": "string",
+          "default": "ges",
+          "scope": "machine-overridable",
+          "description": "CLI executable name or absolute path (ges or dotnet-ges). No shell arguments."
+        }
+      }
+    },
+    "markdown.markdownItPlugins": true,
+    "markdown.previewStyles": [
+      "./markdown-preview.css"
+    ]
+  },
+  "main": "./extension.js",
+  "extensionKind": [
+    "workspace"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Highlighting is available; CLI commands require workspace trust."
+    },
+    "virtualWorkspaces": {
+      "supported": false
+    }
+  },
+  "dependencies": {
+    "vscode-textmate": "9.2.0",
+    "vscode-oniguruma": "2.0.1"
+  }
+}

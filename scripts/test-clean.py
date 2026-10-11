@@ -5,10 +5,13 @@
 """Safety and scope checks for the repository cleanup script, using disposable trees."""
 
 from pathlib import Path
+import errno
+import os
 import tempfile
 import sys
 import shutil
 import unittest
+from unittest.mock import patch
 
 sys.dont_write_bytecode = True
 from clean import clean
@@ -103,6 +106,75 @@ class CleanTests(unittest.TestCase):
             self.run_clean(tracked={"implementation/csharp/bin/source.cs"})
         self.assertTrue(artifact.exists())
         self.assertTrue(tracked.exists())
+
+    def test_retries_directory_repopulated_during_deletion(self):
+        index = self.write("artifacts/swift/xcode/Index.noindex/DataStore/v5/old").parent
+        original = os.rmdir
+        writes = []
+
+        def remove(path, *args, **kwargs):
+            if Path(path).name == "v5" and not writes:
+                (index / "new").write_text("indexer output")
+                writes.append(path)
+            return original(path, *args, **kwargs)
+
+        with patch("clean.os.rmdir", side_effect=remove):
+            self.run_clean()
+        self.assertEqual(len(writes), 1)
+        self.assertFalse((self.root / "artifacts").exists())
+
+    def test_persistent_writer_is_bounded_and_other_outputs_are_cleaned(self):
+        index = self.write("artifacts/swift/xcode/Index.noindex/DataStore/v5/old").parent
+        self.write("bin/output")
+        original = os.rmdir
+        writes = []
+
+        def remove(path, *args, **kwargs):
+            if Path(path).name == "v5":
+                (index / "new").write_text("indexer output")
+                writes.append(path)
+            return original(path, *args, **kwargs)
+
+        with patch("clean.os.rmdir", side_effect=remove):
+            with self.assertRaisesRegex(RuntimeError, "Xcode"):
+                self.run_clean()
+        self.assertEqual(len(writes), 3)
+        self.assertTrue(index.exists())
+        self.assertFalse((self.root / "bin").exists())
+        self.assertTrue(any("Removed 1 directories" in line for line in self.output))
+
+    def test_permission_errors_are_not_retried_or_reported_as_success(self):
+        self.write("artifacts/cache")
+        error = PermissionError(errno.EACCES, "Permission denied", "artifacts/cache")
+        with patch("clean.shutil.rmtree", side_effect=error) as remove:
+            with self.assertRaisesRegex(RuntimeError, "Permission denied"):
+                self.run_clean()
+        self.assertEqual(remove.call_count, 1)
+        self.assertTrue((self.root / "artifacts/cache").exists())
+
+    def test_retry_does_not_follow_replaced_output_symlink(self):
+        self.write("artifacts/cache")
+        external = Path(self.workspace.name) / "external"
+        external.mkdir()
+        sentinel = external / "keep"
+        sentinel.write_text("keep")
+        original = shutil.rmtree
+        calls = []
+
+        def remove(path):
+            calls.append(path)
+            if len(calls) == 1:
+                original(path)
+                path.symlink_to(external, target_is_directory=True)
+                raise OSError(errno.ENOTEMPTY, "Directory not empty", str(path))
+            return original(path)
+
+        with patch("clean.shutil.rmtree", side_effect=remove):
+            with self.assertRaises(RuntimeError):
+                self.run_clean()
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(sentinel.read_text(), "keep")
+        self.assertTrue((self.root / "artifacts").is_symlink())
 
 
 if __name__ == "__main__":

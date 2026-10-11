@@ -11,9 +11,12 @@ using GameEventScript.Runtime.VM;
 
 namespace GameEventScript.Compiler;
 
-internal static class GesAstOptimizer
+internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode> constants)
 {
     public static GesSyntaxTreeModule Optimize(GesSyntaxTreeModule module)
+        => new GesAstOptimizer(module.Constants).OptimizeModule(module);
+
+    private GesSyntaxTreeModule OptimizeModule(GesSyntaxTreeModule module)
     {
         var knownTypeNames = new HashSet<string>(module.TypeDefinitions.Keys, StringComparer.Ordinal);
         for (var externalTypeIndex = 0; externalTypeIndex < module.ExternalTypeDefinitions.Types.Count; externalTypeIndex++)
@@ -55,22 +58,22 @@ internal static class GesAstOptimizer
             module.Sources);
     }
 
-    private static TypeDefinitionNode OptimizeTypeDefinition(TypeDefinitionNode definition, ISet<string> knownTypeNames)
+    private TypeDefinitionNode OptimizeTypeDefinition(TypeDefinitionNode definition, ISet<string> knownTypeNames)
         => definition with
         {
             Fields = OptimizeTypeFields(definition.Fields, knownTypeNames)
         };
 
-    private static GesCallableDefinition OptimizeCallableDefinition(GesCallableDefinition definition, ISet<string> knownTypeNames)
+    private GesCallableDefinition OptimizeCallableDefinition(GesCallableDefinition definition, ISet<string> knownTypeNames)
     {
         var optimized = OptimizeExpression(definition.Expression, knownTypeNames);
         return new GesCallableDefinition(definition.Name, definition.ParameterList, optimized, definition.Kind, definition.SourceRange);
     }
 
-    private static EventHandlerNode OptimizeHandler(EventHandlerNode handler, ISet<string> knownTypeNames)
+    private EventHandlerNode OptimizeHandler(EventHandlerNode handler, ISet<string> knownTypeNames)
         => handler with { Statements = OptimizeStatements(handler.Statements, knownTypeNames) };
 
-    private static StatementNode OptimizeStatement(StatementNode statement, ISet<string> knownTypeNames)
+    private StatementNode OptimizeStatement(StatementNode statement, ISet<string> knownTypeNames)
         => statement switch
         {
             PublishStatementNode publish => publish with
@@ -105,10 +108,10 @@ internal static class GesAstOptimizer
             _ => statement
         };
 
-    private static StatementBodyNode OptimizeBody(StatementBodyNode body, ISet<string> knownTypeNames)
+    private StatementBodyNode OptimizeBody(StatementBodyNode body, ISet<string> knownTypeNames)
         => body with { Statements = OptimizeStatements(body.Statements, knownTypeNames) };
 
-    private static IReadOnlyList<TypeFieldDefinitionNode> OptimizeTypeFields(IReadOnlyList<TypeFieldDefinitionNode> fields, ISet<string> knownTypeNames)
+    private IReadOnlyList<TypeFieldDefinitionNode> OptimizeTypeFields(IReadOnlyList<TypeFieldDefinitionNode> fields, ISet<string> knownTypeNames)
     {
         if (fields.Count == 0)
         {
@@ -130,7 +133,7 @@ internal static class GesAstOptimizer
         return optimized;
     }
 
-    private static IReadOnlyList<StatementNode> OptimizeStatements(IReadOnlyList<StatementNode> statements, ISet<string> knownTypeNames)
+    private IReadOnlyList<StatementNode> OptimizeStatements(IReadOnlyList<StatementNode> statements, ISet<string> knownTypeNames)
     {
         if (statements.Count == 0)
         {
@@ -146,7 +149,7 @@ internal static class GesAstOptimizer
         return optimized;
     }
 
-    private static IReadOnlyList<ExpressionNode> OptimizeExpressions(IReadOnlyList<ExpressionNode> expressions, ISet<string> knownTypeNames)
+    private IReadOnlyList<ExpressionNode> OptimizeExpressions(IReadOnlyList<ExpressionNode> expressions, ISet<string> knownTypeNames)
     {
         if (expressions.Count == 0)
         {
@@ -162,7 +165,7 @@ internal static class GesAstOptimizer
         return optimized;
     }
 
-    private static IReadOnlyList<GuardedChoiceBranchNode> OptimizeGuardedChoiceBranches(IReadOnlyList<GuardedChoiceBranchNode> branches, ISet<string> knownTypeNames)
+    private IReadOnlyList<GuardedChoiceBranchNode> OptimizeGuardedChoiceBranches(IReadOnlyList<GuardedChoiceBranchNode> branches, ISet<string> knownTypeNames)
     {
         if (branches.Count == 0)
         {
@@ -183,10 +186,10 @@ internal static class GesAstOptimizer
         return optimized;
     }
 
-    private static ArgumentListNode OptimizeArgumentList(ArgumentListNode argumentList, ISet<string> knownTypeNames)
+    private ArgumentListNode OptimizeArgumentList(ArgumentListNode argumentList, ISet<string> knownTypeNames)
         => new(OptimizeArguments(argumentList.Arguments, knownTypeNames));
 
-    private static IReadOnlyList<ArgumentNode> OptimizeArguments(IReadOnlyList<ArgumentNode> arguments, ISet<string> knownTypeNames)
+    private IReadOnlyList<ArgumentNode> OptimizeArguments(IReadOnlyList<ArgumentNode> arguments, ISet<string> knownTypeNames)
     {
         if (arguments.Count == 0)
         {
@@ -206,7 +209,7 @@ internal static class GesAstOptimizer
         return optimized;
     }
 
-    private static IReadOnlyList<MapEntryNode> OptimizeMapEntries(IReadOnlyList<MapEntryNode> entries, ISet<string> knownTypeNames)
+    private IReadOnlyList<MapEntryNode> OptimizeMapEntries(IReadOnlyList<MapEntryNode> entries, ISet<string> knownTypeNames)
     {
         if (entries.Count == 0)
         {
@@ -226,7 +229,7 @@ internal static class GesAstOptimizer
         return optimized;
     }
 
-    private static IterationSourceNode OptimizeIterationSource(IterationSourceNode source, ISet<string> knownTypeNames)
+    private IterationSourceNode OptimizeIterationSource(IterationSourceNode source, ISet<string> knownTypeNames)
         => source switch
         {
             CollectionIterationSourceNode collectionSource => collectionSource with
@@ -240,10 +243,11 @@ internal static class GesAstOptimizer
             _ => source
         };
 
-    private static ExpressionNode OptimizeExpression(ExpressionNode expression, ISet<string> knownTypeNames)
+    private ExpressionNode OptimizeExpression(ExpressionNode expression, ISet<string> knownTypeNames)
     {
         var optimized = expression switch
         {
+            ConstantReferenceExpressionNode constant when constants.TryGetValue(constant.Name, out var value) => value with { SourceRange = constant.SourceRange },
             SendExpressionNode send => send with
             {
                 Message = OptimizeExpression(send.Message, knownTypeNames),
@@ -384,7 +388,7 @@ internal static class GesAstOptimizer
             : null;
     }
 
-    private static CollectionSelectorNode OptimizeSelector(CollectionSelectorNode selector, ISet<string> knownTypeNames)
+    private CollectionSelectorNode OptimizeSelector(CollectionSelectorNode selector, ISet<string> knownTypeNames)
         => selector switch
         {
             ExpressionSelectorNode expressionSelector => expressionSelector with
@@ -470,13 +474,13 @@ internal static class GesAstOptimizer
             _ => selector
         };
 
-    private static ObjectMatchPatternNode OptimizeObjectMatchPattern(ObjectMatchPatternNode pattern, ISet<string> knownTypeNames)
+    private ObjectMatchPatternNode OptimizeObjectMatchPattern(ObjectMatchPatternNode pattern, ISet<string> knownTypeNames)
         => pattern with
         {
             Entries = OptimizeObjectMatchEntries(pattern.Entries, knownTypeNames)
         };
 
-    private static IReadOnlyList<ObjectMatchEntryNode> OptimizeObjectMatchEntries(IReadOnlyList<ObjectMatchEntryNode> entries, ISet<string> knownTypeNames)
+    private IReadOnlyList<ObjectMatchEntryNode> OptimizeObjectMatchEntries(IReadOnlyList<ObjectMatchEntryNode> entries, ISet<string> knownTypeNames)
     {
         if (entries.Count == 0)
         {

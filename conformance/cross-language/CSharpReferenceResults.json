@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "A2BC1D82B85EDF542D7D9F18F2BFA03A663043669423C08AD6D5036413085078",
+    "sha256": "BD854D053D46D195103EAD4A4DF96FCFDE6BE47458DE963DA21A65C9BA816F73",
     "documentCount": 100,
-    "caseCount": 1953
+    "caseCount": 1956
   },
   "cases": [
     {
@@ -4961,6 +4961,24 @@
       "code": "conformance.passed"
     },
     {
+      "id": "compile.names-and-constants/named-constant-multiplication",
+      "kind": "scriptApi",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "program-binary",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
       "id": "compile.names-and-constants/nonliteral-constant",
       "kind": "compileError",
       "level": "atomic",
@@ -5099,6 +5117,38 @@
       "requires": {
         "core": [
           "compiler"
+        ],
+        "optional": [
+          "bytecode-snapshot"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.program-dumps/named-constant-folding",
+      "kind": "bytecodeSnapshot",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "program-binary"
+        ],
+        "optional": [
+          "bytecode-snapshot"
+        ]
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.program-dumps/named-scalar-multiply",
+      "kind": "bytecodeSnapshot",
+      "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "program-binary"
         ],
         "optional": [
           "bytecode-snapshot"

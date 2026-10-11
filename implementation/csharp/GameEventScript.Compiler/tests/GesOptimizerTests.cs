@@ -49,4 +49,28 @@ public class GesOptimizerTests
         Assert.IsInstanceOfType<IntegerLiteralExpressionNode>(let.Expression);
         Assert.AreEqual(42, ((IntegerLiteralExpressionNode)let.Expression).Value);
     }
+
+    [TestMethod]
+    public void NamedConstantInliningDoesNotMutateTheDeclarationAst()
+    {
+        const string script =
+            """
+            constant $rounds be 48
+            constant $items be 128
+            on Main() {
+                let count be $rounds * $items
+                emit Done(count)
+            }
+            """;
+
+        var module = GameEventScriptBuilder.Create().AddScript(script, "constants.ges").BuildModule();
+        var handler = module.Handlers.Values.SelectMany(handlers => handlers).Single();
+        var expression = handler.Statements.OfType<LetStatementNode>().Single().Expression;
+
+        Assert.IsInstanceOfType<IntegerLiteralExpressionNode>(expression);
+        Assert.AreEqual(6144L, ((IntegerLiteralExpressionNode)expression).Value);
+        Assert.AreNotSame(module.Constants["rounds"], expression);
+        Assert.AreEqual(48L, ((IntegerLiteralExpressionNode)module.Constants["rounds"]).Value);
+        Assert.AreEqual(1, module.Constants["rounds"].SourceRange?.Line);
+    }
 }

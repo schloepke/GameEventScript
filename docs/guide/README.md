@@ -57,5 +57,8 @@ Tracked content makes cleanup fail before any deletion. Symbolic output-director
 links are skipped, and links inside deleted outputs are never followed. Sources,
 Conformance fixtures/references, Git data, `.swiftpm`/IDE configuration, global
 package caches and tools installed outside this repository remain intact. Stop
-running builds and tests before cleaning. Verify cleanup safety with
+running builds, tests and Xcode indexing before cleaning. If a directory becomes
+nonempty during deletion, cleanup retries up to three times. Persistent failures
+are reported with a nonzero exit status after the other output directories have
+been processed; they are never counted as successfully removed. Verify cleanup safety with
 `python3 scripts/test-clean.py`; these tests use disposable directories.

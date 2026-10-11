@@ -975,6 +975,13 @@ sources in one program share one namespace; duplicate and unresolved names are
 static errors. Constants generate no runtime bindings, registers, or bytecode of
 their own.
 
+Named scalar constants participate in constant folding and static operand-kind
+recognition like their literal values. In particular, multiplying two declared
+integer constants such as `48` and `128` folds to `6144`; a declared scalar factor
+with a dynamic operand does not require Cartesian list dispatch. Debug source
+attribution for substituted or folded values identifies the expression's use
+site, not the constant declaration, including after a binary roundtrip.
+
 In particular, unary minus cannot prefix a text, tag, boolean, or `nothing`
 constant initializer; this is a syntax error rather than a runtime conversion.
 

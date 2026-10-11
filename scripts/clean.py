@@ -5,11 +5,13 @@
 """Remove only known repository build outputs, without following symlinks."""
 
 import argparse
+import errno
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
+import time
 
 
 def tracked_paths(root):
@@ -71,6 +73,29 @@ def logical_size(path):
     return size
 
 
+def remove_tree(path, report):
+    """Retry concurrent directory writes without following links or hiding failures."""
+    attempts = 3
+    for attempt in range(attempts):
+        try:
+            shutil.rmtree(path)
+            return
+        except FileNotFoundError:
+            if not os.path.lexists(path):
+                return
+            raise
+        except OSError as error:
+            if error.errno not in (errno.ENOTEMPTY, errno.EEXIST):
+                raise
+            if attempt + 1 == attempts:
+                raise RuntimeError(
+                    f"Directory remained nonempty after {attempts} attempts: {error}. "
+                    "Close Xcode or stop active build/indexing processes and run clean again."
+                ) from error
+            report(f"Directory changed during cleanup; retry {attempt + 2}/{attempts}: {path}")
+            time.sleep(0.1)
+
+
 def clean(root, *, dry_run=False, artifacts_only=False, tracked=None, report=print):
     if not (root / "AGENTS.md").is_file() or not (root / "implementation").is_dir():
         raise RuntimeError("Not a GameEventScript workspace (AGENTS.md/implementation missing).")
@@ -81,13 +106,23 @@ def clean(root, *, dry_run=False, artifacts_only=False, tracked=None, report=pri
         if any(name == relative or name.startswith(relative + "/") for name in tracked):
             raise RuntimeError(f"Refusing to delete tracked content below {relative}; no directories removed.")
     sizes = [logical_size(path) for path in paths]
+    removed, errors = [], []
+    removed_size = 0
     for path, size in zip(paths, sizes):
         report(f"{'Would remove' if dry_run else 'Remove'}: {path.relative_to(root)} ({size / 1048576:.1f} MiB)")
         if not dry_run:
-            shutil.rmtree(path)
+            try:
+                remove_tree(path, report)
+            except (OSError, RuntimeError) as error:
+                errors.append(f"{path.relative_to(root)}: {error}")
+                continue
+        removed.append(path)
+        removed_size += size
     action = "Would remove" if dry_run else "Removed"
-    report(f"{action} {len(paths)} directories, {sum(sizes) / 1048576:.1f} MiB of file data.")
-    return paths
+    report(f"{action} {len(removed)} directories, {removed_size / 1048576:.1f} MiB of file data.")
+    if errors:
+        raise RuntimeError("Could not completely remove:\n" + "\n".join(errors))
+    return removed
 
 
 def main():

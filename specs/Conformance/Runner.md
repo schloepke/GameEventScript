@@ -8,6 +8,10 @@ normalized test model in [Markdown format](MarkdownFormat.md). The authoring par
 the runner are separate components: parsing never executes a script, and the
 runner never interprets Markdown or YAML.
 
+The independent Python implementation and its current coverage boundary are
+described in [Python runner](PythonRunner.md). Its compiler verification
+does not replace the complete acceptance gates defined here.
+
 The runner API is synchronous, threadless, fileless, networkless, and independent
 of MSTest, XCTest, JUnit, or any other test framework.
 
@@ -533,6 +537,12 @@ It reports `conformance.received.invalidReport`,
 ranges, stale range contents, or overlaps. A mixed-line-ending source has no
 unambiguous document style; inserted multiline GESA then uses `LF` while all
 existing bytes remain untouched.
+
+The independent Python tool may retain `sourceDocuments` (logical document name
+mapped to the SHA-256 of its original bytes) and `measurementEvidence` alongside
+the portable report fields. These tooling extensions bind Received updates to
+exact inputs and retain raw instrumentation controls/samples; they never become
+adapter expectations. See [Python runner](PythonRunner.md).
 
 ## Adapter responsibilities
 

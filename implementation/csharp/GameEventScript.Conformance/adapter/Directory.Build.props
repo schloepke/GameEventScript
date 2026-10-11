@@ -1,0 +1,9 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<Project>
+    <Import Project="../../../../Directory.Build.props" />
+    <PropertyGroup>
+        <BaseOutputPath>$(MSBuildThisFileDirectory)../../../../artifacts/csharp/conformance-adapter/bin/</BaseOutputPath>
+        <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)../../../../artifacts/csharp/conformance-adapter/obj/</BaseIntermediateOutputPath>
+    </PropertyGroup>
+</Project>

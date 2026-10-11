@@ -375,7 +375,39 @@ steps:
     runtimeLimits:
       include:
         - name: "MaxQueuedMessagesPerRun"
-          detailContains: "Dropped \u0027C\u0027"
+          limit: 2
+    trace:
+      - event: dispatchStarted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: emit
+        message: { name: A }
+        accepted: true
+      - event: emit
+        message: { name: B }
+        accepted: true
+      - event: runtimeLimit
+        runtimeLimit:
+          name: MaxQueuedMessagesPerRun
+          limit: 2
+      - event: emit
+        message: { name: C }
+        accepted: false
+      - event: dispatchCompleted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: dispatchStarted
+        message: { name: A }
+        signatureId: "A()"
+      - event: dispatchCompleted
+        message: { name: A }
+        signatureId: "A()"
+      - event: dispatchStarted
+        message: { name: B }
+        signatureId: "B()"
+      - event: dispatchCompleted
+        message: { name: B }
+        signatureId: "B()"
 ```
 
 ---

@@ -73,6 +73,19 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
     private EventHandlerNode OptimizeHandler(EventHandlerNode handler, ISet<string> knownTypeNames)
         => handler with { Statements = OptimizeStatements(handler.Statements, knownTypeNames) };
 
+    private IReadOnlyList<IfConditionNode> OptimizeConditions(IReadOnlyList<IfConditionNode> conditions, ISet<string> knownTypeNames)
+    {
+        // Keep condition iteration outside OptimizeStatement so other statements need no captured closure.
+        var optimized = new IfConditionNode[conditions.Count];
+        for (var index = 0; index < optimized.Length; index++)
+        {
+            var condition = conditions[index];
+            optimized[index] = condition with { Expression = OptimizeExpression(condition.Expression, knownTypeNames) };
+        }
+
+        return optimized;
+    }
+
     private StatementNode OptimizeStatement(StatementNode statement, ISet<string> knownTypeNames)
         => statement switch
         {
@@ -87,7 +100,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
             },
             IfStatementNode ifStatement => ifStatement with
             {
-                Conditions = ifStatement.Conditions.Select(condition => condition with { Expression = OptimizeExpression(condition.Expression, knownTypeNames) }).ToArray(),
+                Conditions = OptimizeConditions(ifStatement.Conditions, knownTypeNames),
                 ThenBody = OptimizeBody(ifStatement.ThenBody, knownTypeNames),
                 ElseBody = ifStatement.ElseBody is null ? null : OptimizeBody(ifStatement.ElseBody, knownTypeNames)
             },

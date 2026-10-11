@@ -72,7 +72,8 @@ export default defineConfig({
         'docs/reference/conformance/cross-language-acceptance',
       ] },
       { label: 'Packages and releases', items: [
-        'docs/distribution/packages', 'docs/distribution/csharp', 'docs/changelog',
+        'docs/distribution/packages', 'docs/distribution/platforms', 'docs/distribution/csharp', 'docs/changelog',
+        'docs/distribution/performance',
       ] },
     ],
   })],

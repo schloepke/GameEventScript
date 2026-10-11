@@ -42,6 +42,8 @@ jobs:
           python3 scripts/test-publish-csharp-packages.py
           python3 scripts/test-csharp-tool-packages.py
           python3 scripts/test-csharp-tool-install.py
+          python3 scripts/test-release-upgrade-controls.py
+          python3 scripts/test-release-performance-controls.py
 
       - name: Install pinned .NET SDK and test runtime
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0

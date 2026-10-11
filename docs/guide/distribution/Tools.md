@@ -3,6 +3,9 @@
 
 # CLI installation and downloads
 
+The [platform support matrix](Platforms.md) lists the native CI hosts, toolchains
+and verification scope for both standalone downloads and NuGet tools.
+
 > **Since: 0.2.0 — standalone CLI archives**
 
 Download the CLI from the assets of a [GameEventScript GitHub release](https://github.com/schloepke/GameEventScript/releases).

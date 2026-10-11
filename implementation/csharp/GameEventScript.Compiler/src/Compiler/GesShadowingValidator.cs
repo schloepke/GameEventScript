@@ -280,9 +280,21 @@ internal static class GesShadowingValidator
     private static Scope CreateBinderScope(Scope parent, string identifier, ScriptNode node, ParsedScript script, GesValidationErrors errors)
     {
         var child = new Scope(parent);
-        var names = node.BindingNames.Count > 0 && node.BindingNames[0] == identifier ? node.BindingNames : new[] { identifier };
-        foreach (var name in names)
+        var names = node switch
         {
+            CollectionSelectorNode selector => selector.BindingNames,
+            ForStatementNode loop => loop.BindingNames,
+            _ => Array.Empty<string>()
+        };
+        if (names.Count == 0 || names[0] != identifier)
+        {
+            if (parent.ContainsVisible(identifier)) AddShadowError(script, errors, identifier, node);
+            child.Declare(identifier);
+            return child;
+        }
+        for (var index = 0; index < names.Count; index++)
+        {
+            var name = names[index];
             if (name != identifier && !GameEventScript.Runtime.GameEventScriptText.IsVariableName(name))
                 errors.Add(script, "Invalid component binding name", name, GameEventScriptSymbolKind.Variable, GameEventScriptDiagnosticCodes.ValidateInvalidIdentifierCase, node);
             if (parent.ContainsVisible(name)) AddShadowError(script, errors, name, node);

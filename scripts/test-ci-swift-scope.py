@@ -27,6 +27,16 @@ class ScopeTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertTrue(scope.requires_swift(["README.md", path]))
 
+    def test_known_card_web_assets_skip_but_unknown_and_build_inputs_do_not(self):
+        for path in scope.CARD_WEB_FILES:
+            self.assertFalse(scope.requires_swift([path, "README.md"]))
+        for path in ("examples/card-game/web/new.mjs", "examples/card-game/web/Native.swift",
+                     "examples/card-game/web/package.json", "examples/card-game/scripts/build.py",
+                     "examples/card-game/Sources/Board.swift", "examples/card-game/Package.swift",
+                     "examples/card-game/scripts/test-worker-dispatch.mjs", ".github/workflows/website.yml"):
+            with self.subTest(path=path):
+                self.assertTrue(scope.requires_swift(["examples/card-game/web/app.mjs", path]))
+
     def test_manual_and_initial_push_are_full(self):
         self.assertIsNone(scope.changed_paths("workflow_dispatch", {}))
         self.assertIsNone(scope.changed_paths("push", {"before": "0" * 40}))

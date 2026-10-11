@@ -8,6 +8,10 @@ The shared workloads and correctness expectations live in
 Their Swift profile is `swift-6.4-release-macos26-arm64-m3max`. It was calibrated
 on Apple M3 Max, macOS 26.6.2 (25G83), Apple Swift 6.4
 (`swiftlang-6.4.0.34.1`, clang `2100.3.34.1`), SDK 27.0, Release, on 2026-09-19.
+A selective refresh on 2026-10-10 resolves the reviewed
+[0.4.0 findings](../../docs/development/Release040Performance.md): compact value
+storage, mandatory loading validation and the reproduced compiler-time baseline.
+Only the documented affected metrics changed; zero-dispatch budgets stay zero.
 This is an implementation regression baseline. Other hardware/toolchains need
 an explicitly calibrated profile; raw C# and Swift timings are not equivalence
 criteria. The adapter rejects Debug builds and incompatible profile hosts.
@@ -108,10 +112,10 @@ preparation script.
 All sixteen warmed dispatch cases measured **zero bytes and zero allocations**,
 including exact/name matching, observers off/on, frame pause/resume and paired
 1000/2000-iteration workloads. Text parsing/casts measured **81–107 requested
-bytes per invocation**; Percentage formatting measured **535 bytes**. These
-nonzero costs come from current temporary byte arrays, filtered digits and text
-formatting. They remain visible as Swift-specific regression budgets and are not
-claimed as zero-allocation text conversion.
+bytes per invocation**; Percentage formatting now measures **575 bytes**. These
+nonzero costs come from temporary byte arrays, filtered digits, text formatting
+and reference payloads. They remain visible as Swift-specific regression budgets
+and are not claimed as zero-allocation text conversion.
 
 Performance measurements use the production Release build made by
 `scripts/test-swift-performance.sh`. Run that script after `swift test`, rather

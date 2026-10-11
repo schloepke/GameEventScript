@@ -15,6 +15,8 @@ if (args.Length == 3 && args[0] == "--message-json")
     return 0;
 }
 
+if (args.Length == 3 && args[0] == "--binary-fuzz") return BinaryFuzzProbe.Run(args[1], args[2]);
+
 if (args.Length == 3 && args[0] == "--number-text") return NumberTextProbe.Run(args[1], args[2]);
 
 if (args.Length != 2)

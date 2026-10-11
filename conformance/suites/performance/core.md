@@ -147,8 +147,8 @@ performance:
           maximum: 176976
           unit: B
         compile.elapsed:
-          reference: 0.214167
-          toleranceAbsolute: 0.05354175
+          reference: 0.396709
+          toleranceAbsolute: 0.09917725
           unit: ms
         program-load.allocated:
           reference: 14209
@@ -427,8 +427,8 @@ performance:
           toleranceAbsolute: 1
           unit: ms
         ast-build.allocated:
-          reference: 15.109
-          maximum: 15.109
+          reference: 15.164
+          maximum: 15.164
           unit: KiB
         binary-build.elapsed:
           reference: 0.1349
@@ -493,8 +493,8 @@ performance:
           maximum: 17473050
           unit: B
         run.allocations:
-          reference: 14000
-          maximum: 14700
+          reference: 16000
+          maximum: 16800
           unit: count
         run.elapsed:
           reference: 28.8175
@@ -744,8 +744,8 @@ performance:
           toleranceAbsolute: 1
           unit: ms
         ast-build.allocated:
-          reference: 19.094
-          maximum: 19.094
+          reference: 19.102
+          maximum: 19.102
           unit: KiB
         binary-build.elapsed:
           reference: 0.1487
@@ -1133,8 +1133,8 @@ performance:
           toleranceAbsolute: 0.079
           unit: ms
         program-load.allocated:
-          reference: 15740
-          maximum: 16527
+          reference: 17735
+          maximum: 18622
           unit: B
         program-load.elapsed:
           reference: 0.020875
@@ -1145,8 +1145,8 @@ performance:
           maximum: 2588250
           unit: B
         run.allocations:
-          reference: 7000
-          maximum: 7350
+          reference: 9000
+          maximum: 9450
           unit: count
         run.elapsed:
           reference: 11.859583
@@ -1653,8 +1653,8 @@ performance:
           maximum: 4549650
           unit: B
         run.allocations:
-          reference: 37000
-          maximum: 38850
+          reference: 40000
+          maximum: 42000
           unit: count
         run.elapsed:
           reference: 426.603

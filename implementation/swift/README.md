@@ -348,3 +348,28 @@ standalone value. Decoding reconstructs immutable data and never runs Record or
 native constructors. External objects export as typed Record snapshots. Local
 Publish does not serialize; configure encoding explicitly at your I/O boundary.
 The [message format](../../specs/MessageFormat.md) defines the envelope and errors.
+
+The CI API gate uses `python3 scripts/verify-swift-api.py --reuse-local-builds`
+after `test-swift.sh`. SwiftPM refreshes the existing Release conformance, Bridge and
+highlighter builds before fresh symbol extraction; approved snapshots and
+documentation checks are unchanged. Without this option, the API gate retains
+its independent per-package Debug builds.
+
+Swift CI runs isolated tagged-package consumers in parallel with native tests,
+Conformance and API verification. The required `verify` job aggregates native,
+distribution and Linux-highlighter results and rejects failed scope selection or
+unexpected skipped jobs. Clean consumer build directories remain uncached.
+
+Known Card Lab browser assets can skip native Swift CI because the Website
+workflow still builds and tests the native example and WASM application. New
+files, build scripts, package manifests and Swift sources require full native
+verification; manual workflow runs always select every check.
+
+The shared verification script also runs bounded, deterministic `.gesb` reader
+mutations through the existing C# and Swift adapters without additional builds.
+See [Binary reader fuzzing](../../conformance/cross-language/BinaryReaderFuzz.md)
+for seeds, resource limits, watchdogs and failure reproduction.
+
+Generated valid-program [roundtrip properties](../../conformance/cross-language/BinaryRoundtripProperties.md)
+use the same already-built probes. An independent V1 encoder checks exact field
+preservation and canonicalization, followed by actual C# ↔ Swift binary exchange.

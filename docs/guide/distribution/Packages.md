@@ -12,6 +12,8 @@ and platform build compatibility, not shared Conformance acceptance. Consult the
 [release notes](https://github.com/schloepke/GameEventScript/releases) for migration
 guidance and the [changelog](../../../CHANGELOG.md) for unreleased changes.
 See the [version policy](#version-policy) for compatible updates and contract changes.
+The [platform support matrix](Platforms.md) separates package requirements,
+Conformance coverage and native distribution checks.
 
 > **Since: 0.2.0 — package icons**
 
@@ -210,7 +212,8 @@ See [Host runtime](../../../specs/HostRuntime.md),
 
 The repository-root `Package.swift` is the public entry point. It declares four
 library products using the existing source directories; it does not depend on
-the sibling development packages, expose Conformance, or include the CLI.
+the sibling development packages or expose Conformance. Since 0.3.0 it also
+exposes the `ges` executable; library consumers build only their selected products.
 
 > **Since: 0.2.0 — root-package native tests**
 
@@ -263,6 +266,18 @@ under `implementation/swift` remain local development and verification entry poi
 
 ## Verify a release without publishing
 
+Use the [platform qualification checklist](Platforms.md#release-qualification)
+to collect matching CI evidence for the exact release revision. A package build
+alone does not qualify all platforms or toolchains.
+Collect the separate [performance and allocation evidence](Performance.md) on
+the qualified measurement host without extending ordinary Swift PR CI.
+
+Release preparation also requires the [release consumer upgrade checks](../../../conformance/cross-language/ReleaseUpgrade.md).
+The C# Release Candidate workflow runs the separate C#/Swift upgrade workflow
+before preparation; it does not extend normal Swift PR CI. The selected 0.3.0
+baseline is tested against the checked-out candidate commit without publication.
+
+
 ```sh
 ./scripts/release-csharp-dry-run.sh 0.1.0-rc1
 ./scripts/verify-csharp-reproducibility.sh 0.1.0-rc1
@@ -296,7 +311,7 @@ Ordinary PR CI also verifies packaging, consumers and publication selection.
 
 ## One-time NuGet and GitHub setup
 
-1. Choose the NuGet package owner (user or organization) and confirm the three
+1. Choose the NuGet package owner (user or organization) and confirm the four library
    package IDs can be published by that owner. Package `Authors` metadata does
    not determine NuGet ownership.
 2. On nuget.org, create a Trusted Publishing policy for repository owner
@@ -332,8 +347,10 @@ future changes. Review migration guidance alongside the implementation. Use
 that versioned section as the basis for the GitHub Release description; generated
 PR lists may supplement it.
 
-1. Merge the reviewed changes and verify the C# and Swift checks for the selected
-   commit. Run the release workflow with `publish=false` and the intended version.
+1. Merge the reviewed changes and complete the
+   [platform qualification checklist](Platforms.md#release-qualification) for
+   the selected commit. Run the release workflow with `publish=false` and the
+   intended version.
 2. Once the release is approved, create and push a Git tag such as `0.1.0-rc1`
    (or `v0.1.0-rc1`) on that same commit. This is already the SwiftPM publication
    step; do not create public version tags merely to test packaging.
@@ -343,7 +360,7 @@ PR lists may supplement it.
    branch before it can be dispatched normally through GitHub Actions.
 4. After both preparation jobs succeed, approve deployment to `nuget`. The upload
    job downloads the verified artifacts from the same run and submits only the
-   three selected-version library packages and their symbols.
+   four selected-version library packages and their symbols.
 5. Verify NuGet validation/indexing and consumption through Xcode/NuGet. A GitHub
    Release can then document the version and link to the packages.
 

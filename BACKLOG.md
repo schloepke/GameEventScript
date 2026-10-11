@@ -75,8 +75,7 @@ here.
   be ported for each runtime. Keep native allocation and platform integration
   checks in their implementation-specific harnesses.
 
-- Add Homebrew installation for the standalone CLI downloads and configure
-  Developer ID signing/notarization and Windows Authenticode signing before
+- Configure Developer ID signing/notarization and Windows Authenticode signing before
   promising platform-verified publisher identity.
 - Consider optional NuGet author signing when an independent publisher signature
   is needed. Current publication uses Trusted Publishing and NuGet.org repository
@@ -123,8 +122,6 @@ here.
   documented build-host/toolchain calibration index instead of comparing raw
   timings from unrelated machines. Existing C# and Swift profile measurements
   remain implementation regression gates, not cross-platform performance promises.
-- Add bounded fuzzing for the `.gesb` reader and property-based Reader/Writer
-  tests without weakening the existing canonical and malformed fixture corpus.
 - Improve CFG/liveness-based register allocation and reuse of non-overlapping
   locals.
 - Measure whether the bytecode optimizer passes produce meaningful changes with

@@ -87,8 +87,11 @@ The [package release guide](guide/distribution/Packages.md) describes the shared
 NuGet/SwiftPM release scope, Xcode consumption and publisher setup. Its
 [version policy](guide/distribution/Packages.md#version-policy) defines release
 numbering before and after 1.0.
+The [platform support matrix](guide/distribution/Platforms.md) lists toolchain
+requirements, actual CI coverage and the evidence required for release claims.
 The [changelog](../CHANGELOG.md) collects user-visible changes and migration
-guidance for the next release.
+guidance for the next release. The [0.4.0 closing review](development/Release040Review.md)
+records known limitations and remaining publication gates.
 
 The [Swift implementation guide](../implementation/swift/README.md) describes
 the package boundaries, current port coverage, and local verification commands.

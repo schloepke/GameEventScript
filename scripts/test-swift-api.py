@@ -71,6 +71,36 @@ class SwiftDocumentationTests(unittest.TestCase):
             (root / "Modules-tool").mkdir()
             self.assertNotIn(str(root / "Modules-tool"), API.module_search_arguments(root))
 
+    def test_reused_builds_are_refreshed_once_and_graphs_stay_independent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            commands = []
+
+            def run(arguments, **kwargs):
+                commands.append(arguments)
+                if "-output-dir" in arguments:
+                    module = arguments[arguments.index("-module-name") + 1]
+                    export = Path(arguments[arguments.index("-output-dir") + 1])
+                    (export / (module + ".symbols.json")).write_text('{"fresh": true}')
+                return SimpleNamespace(returncode=0)
+
+            with (patch.object(API, "ARTIFACTS", root),
+                  patch.object(API.subprocess, "run", side_effect=run),
+                  patch.object(API.shutil, "which", return_value="swift-symbolgraph-extract"),
+                  patch.object(API.subprocess, "check_output", side_effect=lambda args, **kwargs:
+                               '{"target":{"triple":"arm64-apple-macosx15.0"}}' if "-print-target-info" in args else str(root))):
+                builds = {}
+                for package in API.PACKAGES:
+                    export = root / package / "symbolgraph"
+                    export.mkdir(parents=True)
+                    (export / (package + "@Old.symbols.json")).write_text('{"stale": true}')
+                    self.assertEqual([{"fresh": True}], API.dump_graphs("swift", package, True, builds))
+                build_commands = [c for c in commands if "build" in c]
+                self.assertEqual(3, len(build_commands))
+                self.assertTrue(all("--build-tests" not in c for c in build_commands))
+                self.assertTrue(all("release" in c and "--disable-build-manifest-caching" in c for c in build_commands))
+                self.assertEqual(5, sum("-output-dir" in c for c in commands))
+
     def test_extractor_failure_exposes_tool_diagnostic(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

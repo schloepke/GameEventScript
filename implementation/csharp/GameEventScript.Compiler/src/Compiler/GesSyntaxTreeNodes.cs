@@ -12,7 +12,11 @@ internal abstract record StatementNode : ScriptNode;
 
 internal abstract record ExpressionNode : ScriptNode;
 
-internal abstract record CollectionSelectorNode : ScriptNode;
+internal abstract record CollectionSelectorNode : ScriptNode
+{
+    // Single bindings use the selector identifier; only multiple bindings need storage.
+    public IReadOnlyList<string> BindingNames { get; init; } = [];
+}
 
 internal abstract record ObjectMatchValueNode : ScriptNode;
 
@@ -22,8 +26,6 @@ internal abstract record IterationSourceNode : ScriptNode;
 
 internal abstract record ScriptNode
 {
-    public IReadOnlyList<string> BindingNames { get; init; } = [];
-
     // Parser construction assigns metadata before attaching a fresh node to its
     // parent. Subsequent compiler passes retain copy-on-rewrite semantics.
     public GameEventScriptSourceLocation? SourceRange { get; set; }
@@ -169,7 +171,10 @@ internal sealed record LetStatementNode(string Identifier, ExpressionNode Expres
 internal sealed record StatementBodyNode(bool IsBlock, IReadOnlyList<StatementNode> Statements) : ScriptNode;
 internal sealed record IfConditionNode(ExpressionNode Expression, string? Binding = null) : ScriptNode;
 internal sealed record IfStatementNode(IReadOnlyList<IfConditionNode> Conditions, StatementBodyNode ThenBody, StatementBodyNode? ElseBody) : StatementNode;
-internal sealed record ForStatementNode(string Identifier, IterationSourceNode Source, StatementBodyNode Body) : StatementNode;
+internal sealed record ForStatementNode(string Identifier, IterationSourceNode Source, StatementBodyNode Body) : StatementNode
+{
+    public IReadOnlyList<string> BindingNames { get; init; } = [];
+}
 internal sealed record SeededRandomStatementNode(ExpressionNode SeedExpression, StatementBodyNode Body) : StatementNode;
 internal sealed record ExpressionStatementNode(ExpressionNode Expression) : StatementNode;
 

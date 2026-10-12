@@ -43,12 +43,12 @@ def main():
                     if (target / subtree).exists():
                         shutil.rmtree(target / subtree)
                     shutil.copytree(source / subtree, target / subtree)
-        for filename in ['Clock.swift', 'VmMath.swift', 'VmNavigation.swift']:
-            path = stage / 'implementation/swift/GameEventScriptRuntime/Sources/GameEventScriptRuntime' / filename
+        runtime_sources = stage / 'implementation/swift/GameEventScriptRuntime/Sources/GameEventScriptRuntime'
+        for path in runtime_sources.rglob('*.swift'):
             original = path.read_text()
             anchor = '#elseif canImport(Musl)\n    import Musl\n#endif'
             if anchor not in original:
-                raise RuntimeError(f'Platform import anchor changed: {filename}')
+                continue
             path.write_text(original.replace(anchor, '#elseif canImport(Musl)\n    import Musl\n#elseif canImport(WASILibc)\n    import WASILibc\n#endif', 1))
         # WASI's CLOCK_MONOTONIC macro takes an address and is not imported into Swift.
         runtime = stage / 'implementation/swift/GameEventScriptRuntime'

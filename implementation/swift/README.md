@@ -311,6 +311,26 @@ ordered argument labels follow the shared specifications. VM entry reads
 arguments by index; frame/register storage and callback objects are reused.
 Callbacks and argument borrows are synchronous and must not be retained.
 
+Runtime opcode helpers live under `Sources/GameEventScriptRuntime/Opcodes`:
+`Core` contains logical operations, comparisons, casts and host calls; `Math`
+contains arithmetic, random and spatial operations; `Collections` contains
+collection operations and iteration. Each opcode entry point has its own Swift
+extension file. Shared algorithms and iterator storage live in the respective
+`Support` directories. Simple register and control-flow instructions remain in
+the inline dispatch in `VM/VirtualMachine.swift`; typed register mutation remains
+in `VM/VmState.swift`.
+
+The `Program` directory contains the immutable program model and GESA dumper.
+Its `Binary`, `Bytecode` and `Validation` subdirectories contain the binary
+reader/writer and format contract, instruction/operand definitions, and program
+validators respectively. The `VM` directory groups execution state, linked
+programs, value outputs, literal evaluation and profiling. These directories
+remain part of the same Runtime target; the public module and APIs are unchanged.
+
+The `Types` directory contains values, maps, numbers, ranges, text and messages,
+including message signatures and arguments. Their literal parsing, construction,
+text conversion and JSON codecs live alongside them.
+
 Public SwiftPM consumption uses one repository-root Git dependency after a
 version tag has been published; no Swift registry upload is required. See the
 [Swift embedding guide](../../docs/guide/Swift.md#add-the-package). The individual

@@ -331,6 +331,33 @@ The `Types` directory contains values, maps, numbers, ranges, text and messages,
 including message signatures and arguments. Their literal parsing, construction,
 text conversion and JSON codecs live alongside them.
 
+`VM/Receiver.swift` owns the internal synchronous host-service contract.
+`GameEventScriptHost` implements it with its existing queue operations; the
+context holds only a weak receiver reference and has no concrete Host dependency.
+This Swift-specific boundary replaces the previous concrete weak Host reference
+to express the VM's requirements independently. It adds protocol dispatch only
+for message delivery and explicit host-status queries, not for each opcode.
+No closure delegates, receiver wrapper objects or per-message argument copies
+are introduced. Register access, random state and the concrete final
+`GesRuntimeBudget` retain their direct paths; budget checks never query the
+receiver. Validate changes to this boundary with the shared behavior corpus and
+the measured Swift performance/allocation gate.
+
+Extension and external-constructor resolver/callback protocols are defined in
+`VM/Contracts`, while their reusable call objects and register-borrowing argument
+views live in `VM/Callbacks`. `Types/External` owns external values, their storage,
+declarative field/constructor definitions and the compiler-facing catalog. Each
+declaration has its own file; these are source-organization boundaries within the
+same module, not additional runtime adapters. Existing callback dispatch and
+argument borrowing are unchanged.
+
+Shared diagnostics and source locations live in `Diagnostics`. Runtime limits,
+publication outcomes and observation hooks belong to `VM/Contracts`, which the
+host and VM both use. Host-only callback contracts and lifecycle results live in
+`Host/Contracts` and `Host/Results`. These declarations replace the mixed
+`RuntimeAPI.swift` file without changing their public API. `Randomness` contains
+the host-owned generator used directly by the host, VM and opcode helpers.
+
 Public SwiftPM consumption uses one repository-root Git dependency after a
 version tag has been published; no Swift registry upload is required. See the
 [Swift embedding guide](../../docs/guide/Swift.md#add-the-package). The individual

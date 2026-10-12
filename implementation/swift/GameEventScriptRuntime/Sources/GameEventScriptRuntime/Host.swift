@@ -12,7 +12,7 @@ public final class GameEventScriptHost {
     private let clock: GesClockSource?
     private var delayed: [GesDelayedMessage] = []
     private let sink: (any GameEventScriptPublishSink)?
-    private lazy var context = GameEventScriptContext(host: self, random: random, limits: limits, extensions: extensions, observer: observer)
+    private lazy var context = GameEventScriptContext(receiver: self, random: random, limits: limits, extensions: extensions, observer: observer)
     private var exact: [String: [GesSubscriptionEntry]] = [:]
     private var byName: [String: [GesSubscriptionEntry]] = [:]
     private var native: [Int64: GesSubscriptionEntry] = [:]
@@ -800,3 +800,6 @@ extension GameEventScriptHost {
         }
     }
 }
+
+// The host fulfills the VM-owned contract using its existing queue operations.
+extension GameEventScriptHost: GesVmReceiver {}

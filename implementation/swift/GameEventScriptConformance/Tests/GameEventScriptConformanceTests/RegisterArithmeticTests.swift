@@ -157,7 +157,7 @@ final class RegisterArithmeticTests: XCTestCase {
     func testTextIdentityCastCanOverwriteItsSource() throws {
         let state = GesVmState(maxRegisters: 32, maxCallDepth: 4)
         let host = try GameEventScriptHost()
-        let context = GameEventScriptContext(host: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
+        let context = GameEventScriptContext(receiver: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
         state.setText(0, "kept 🐉 e\u{301}")
         let snapshot = state.value(0)
         try GesCasts.cast(state.value(0), .text, context, sink: state.output(0))
@@ -234,7 +234,7 @@ final class RegisterArithmeticTests: XCTestCase {
         XCTAssertTrue(state.ensure(96))
         state.frameStart = 40
         let host = try GameEventScriptHost()
-        let context = GameEventScriptContext(host: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
+        let context = GameEventScriptContext(receiver: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
         for destination in [0, 1, 2] {
             state.setText(0, "prefix")
             state.setInteger(1, 12)

@@ -9,8 +9,8 @@
 - Portable C# Runtime: `implementation/csharp/GameEventScript.Runtime/src`.
 - Portable C# Compiler: `implementation/csharp/GameEventScript.Compiler/src`.
 - C# adapters: `implementation/csharp/GameEventScript.CSharpBridge/src`.
-- Portable Conformance package:
-  `implementation/csharp/GameEventScript.Conformance/src`.
+- Independent Python Conformance runner: `conformance/runner`.
+- Internal C# Conformance adapter: `implementation/csharp/GameEventScript.Conformance/adapter`.
 - Optional C# highlighter: `implementation/csharp/GameEventScript.SyntaxHighlighter`.
 - Optional Swift highlighter: `implementation/swift/GameEventScriptSyntaxHighlighter`.
 - C# CLI tool: `implementation/csharp/GameEventScript.Tool/src`.
@@ -30,6 +30,7 @@ Standard verification:
 
 ```bash
 dotnet test GameEventScript.sln --filter "TestCategory!=Performance"
+sh scripts/test-csharp-conformance.sh
 ```
 
 ## Working rules
@@ -268,9 +269,12 @@ implementations remain in `CSharpBridge`.
 ## Conformance and verification
 
 The authoritative executable corpus lives under `conformance`. Markdown is the
-only authoring format. The portable parser and runner live in the separate
-`GameEventScript.Conformance` package and remain fileless, networkless,
-synchronous, and test-framework-independent.
+only authoring format. The implementation-independent parser and runner live in `conformance/runner`
+and use only the Python standard library. The internal C# executable adapter
+returns observations; expectations and verdicts remain in Python. No legacy C#
+Conformance library remains. Run `python3 conformance/runner/main.py run --kind supported`
+with `--adapter dotnet artifacts/csharp/conformance-adapter/bin/Release/net10.0/GameEventScript.ConformanceAdapter.dll`
+after building that adapter. Swift keeps its existing runner until its separate migration.
 
 Conformance distinguishes exact numeric storage with `:Number.int64` and
 `:Number.binary64`, including corresponding Quantity and Range variants. These

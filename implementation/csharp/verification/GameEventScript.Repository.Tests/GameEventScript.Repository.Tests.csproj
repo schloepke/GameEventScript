@@ -8,7 +8,6 @@
         <ProjectReference Include="../../GameEventScript.Runtime/src/GameEventScript.Runtime.csproj" />
         <ProjectReference Include="../../GameEventScript.Compiler/src/GameEventScript.Compiler.csproj" />
         <ProjectReference Include="../../GameEventScript.CSharpBridge/src/GameEventScript.CSharpBridge.csproj" />
-        <ProjectReference Include="../../GameEventScript.Conformance/src/GameEventScript.Conformance.csproj" />
         <ProjectReference Include="../GameEventScript.RuntimeConsumer/GameEventScript.RuntimeConsumer.csproj" ReferenceOutputAssembly="false" />
     </ItemGroup>
 </Project>

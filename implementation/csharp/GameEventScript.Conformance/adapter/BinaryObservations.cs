@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Buffers.Binary;
+using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using GameEventScript.Api;
 
@@ -10,6 +11,23 @@ internal static class BinaryObservations
     internal const int MaxResourceBytes = 64 * 1024 * 1024;
 
     internal static object Run(JsonElement test)
+    {
+        // Retain the bounded native-stack gate formerly owned by the legacy worker.
+        // The Python process boundary enforces timeout/output limits and detects crashes.
+        object? result = null;
+        ExceptionDispatchInfo? failure = null;
+        var thread = new Thread(() =>
+        {
+            try { result = Observe(test); }
+            catch (Exception exception) { failure = ExceptionDispatchInfo.Capture(exception); }
+        }, 1024 * 1024);
+        thread.Start();
+        thread.Join();
+        failure?.Throw();
+        return result!;
+    }
+
+    private static object Observe(JsonElement test)
     {
         var input = test.GetProperty("binary");
         var bytes = Convert.FromBase64String(input.GetProperty("data").GetString()!);

@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
 using GameEventScript.Api;
-using GameEventScript.Conformance;
 using GameEventScript.CSharpBridge;
 using GameEventScript.SyntaxHighlighter;
 
@@ -51,23 +50,19 @@ public sealed class GameEventScriptPublicApiSurfaceTests
         var runtime = typeof(GameEventScriptProgram).Assembly;
         var compiler = typeof(GameEventScriptBuilder).Assembly;
         var bridge = typeof(GameEventScriptCSharpHostRunner).Assembly;
-        var conformance = typeof(ConformanceRunner).Assembly;
 
         Assert.AreEqual("GameEventScript.Runtime", runtime.GetName().Name);
         Assert.AreEqual("GameEventScript.Compiler", compiler.GetName().Name);
         Assert.AreEqual("GameEventScript.CSharpBridge", bridge.GetName().Name);
-        Assert.AreEqual("GameEventScript.Conformance", conformance.GetName().Name);
         CollectionAssert.AreEquivalent(new[] { typeof(GameEventScriptBuilder), typeof(GameEventScriptCompileOptions), typeof(GameEventScriptCompileException) }, compiler.GetExportedTypes());
         Assert.HasCount(0, runtime.GetTypes().Where(type => IsNamespace(type, "GameEventScript.Compiler")));
         Assert.HasCount(0, runtime.GetExportedTypes().Where(type => IsNamespace(type, "GameEventScript.CSharpBridge") || IsNamespace(type, "GameEventScript.Conformance")));
         Assert.IsTrue(bridge.GetExportedTypes().All(type => IsNamespace(type, "GameEventScript.CSharpBridge")));
-        Assert.IsTrue(conformance.GetExportedTypes().All(type => IsNamespace(type, "GameEventScript.Conformance")));
 
         AssertProductReferences(typeof(GameEventScriptSyntaxHighlighter).Assembly);
         AssertProductReferences(runtime);
         AssertProductReferences(compiler, "GameEventScript.Runtime");
         AssertProductReferences(bridge, "GameEventScript.Runtime");
-        AssertProductReferences(conformance, "GameEventScript.Runtime", "GameEventScript.Compiler");
     }
 
     /// <summary>
@@ -276,5 +271,5 @@ public sealed class GameEventScriptPublicApiSurfaceTests
     }
 
     private static Assembly[] PublicAssemblies()
-        => [typeof(GameEventScriptProgram).Assembly, typeof(GameEventScriptBuilder).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly, typeof(ConformanceRunner).Assembly, typeof(GameEventScriptSyntaxHighlighter).Assembly];
+        => [typeof(GameEventScriptProgram).Assembly, typeof(GameEventScriptBuilder).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly, typeof(GameEventScriptSyntaxHighlighter).Assembly];
 }

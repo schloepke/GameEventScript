@@ -3,7 +3,7 @@
 
 using GameEventScript.Api;
 
-namespace GameEventScript.Conformance.Worker;
+namespace GameEventScript.Compiler.Worker;
 
 internal static class SourceNestingProbe
 {

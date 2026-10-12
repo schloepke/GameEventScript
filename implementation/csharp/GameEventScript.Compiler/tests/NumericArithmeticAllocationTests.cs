@@ -4,7 +4,7 @@
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 
-namespace GameEventScript.Tests.Conformance;
+namespace GameEventScript.Tests.Native;
 
 /// <summary>Verifies that numeric arithmetic does not allocate per executed operation.</summary>
 [TestClass]
@@ -62,10 +62,10 @@ public sealed class NumericArithmeticAllocationTests
                 throw new InvalidOperationException("Numeric allocation workload did not complete.");
         }
         for (var index = 0; index < 10; index++) Run();
-        var small = ConformanceCSharpAllocationProvider.MeasureBytes(Run).AllocatedBytes;
+        var small = AllocationMeasurement.MeasureBytes(Run);
         message = GameEventScriptMessage.Create("Start", [new("iterations", GesValue.GesInteger(1024))]);
         for (var index = 0; index < 10; index++) Run();
-        var large = ConformanceCSharpAllocationProvider.MeasureBytes(Run).AllocatedBytes;
+        var large = AllocationMeasurement.MeasureBytes(Run);
         Assert.AreEqual(small, large, "Additional numeric instructions must not allocate additional heap storage.");
     }
 }

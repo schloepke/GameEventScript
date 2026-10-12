@@ -11,6 +11,6 @@
         <UseAppHost>false</UseAppHost>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="../src/GameEventScript.Conformance.csproj" />
+        <ProjectReference Include="../src/GameEventScript.Compiler.csproj" />
     </ItemGroup>
 </Project>

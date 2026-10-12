@@ -54,7 +54,7 @@ public sealed class GameEventScriptLicensePolicyTests
             Assert.IsFalse(project.Descendants("PackageReference").Any(), $"{packageId} must not acquire an external package dependency.");
         }
 
-        var conformance = XDocument.Load(Path.Combine(TestRepositoryPaths.ConformanceProjectDirectory, "GameEventScript.Conformance.csproj"));
+        var conformance = XDocument.Load(Path.Combine(TestRepositoryPaths.Root, "implementation", "csharp", "GameEventScript.Conformance", "adapter", "GameEventScript.ConformanceAdapter.csproj"));
         Assert.AreEqual("false", SingleValue(conformance, "IsPackable"), "Internal Conformance must not enter NuGet distribution.");
     }
 

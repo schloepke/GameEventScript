@@ -16,9 +16,10 @@ swift test --package-path "$ges_root/implementation/swift/GameEventScriptSwiftBr
     --scratch-path "$ges_root/artifacts/swift/swiftbridge" --disable-build-manifest-caching --configuration release
 "$ges_root/scripts/test-swift-tool.sh"
 python3 "$ges_root/scripts/verify-swift-bytecode.py"
+python3 "$ges_root/scripts/prepare-runtime-fixtures.py" "$ges_root/conformance/suites" "$ges_root/artifacts/swift/runtime-fixtures/requests.json"
 dotnet run --project "$ges_root/implementation/csharp/GameEventScript.Conformance/fixture-exporter" \
     --configuration Release --artifacts-path "$ges_root/artifacts/swift/csharp-exporter" -- \
-    "$ges_root/conformance/suites" "$ges_root/artifacts/swift/runtime-fixtures"
+    "$ges_root/artifacts/swift/runtime-fixtures/requests.json" "$ges_root/artifacts/swift/runtime-fixtures"
 
 swift test --package-path "$ges_package" --scratch-path "$ges_scratch" --disable-build-manifest-caching --configuration release
 swift run --package-path "$ges_package" --scratch-path "$ges_scratch" --disable-build-manifest-caching --configuration release --skip-build ges-conformance \

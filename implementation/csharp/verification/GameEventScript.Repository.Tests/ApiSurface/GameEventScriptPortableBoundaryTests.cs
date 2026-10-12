@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using GameEventScript.Api;
-using GameEventScript.Conformance;
 
 namespace GameEventScript.Tests.Native.ApiSurface;
 
@@ -19,7 +18,6 @@ public sealed class GameEventScriptPortableBoundaryTests
     [TestMethod]
     [DataRow(typeof(GameEventScriptProgram))]
     [DataRow(typeof(GameEventScriptBuilder))]
-    [DataRow(typeof(ConformanceRunner))]
     public void PortableAssemblyHasNoFileSystemDependencies(Type assemblyType)
     {
         using var stream = File.OpenRead(assemblyType.Assembly.Location);
@@ -45,7 +43,6 @@ public sealed class GameEventScriptPortableBoundaryTests
     [TestMethod]
     [DataRow(typeof(GameEventScriptProgram))]
     [DataRow(typeof(GameEventScriptBuilder))]
-    [DataRow(typeof(ConformanceRunner))]
     public void PortableAssemblyHasNoAmbientClockOrIdentifierDependencies(Type assemblyType)
     {
         using var stream = File.OpenRead(assemblyType.Assembly.Location);
@@ -70,7 +67,6 @@ public sealed class GameEventScriptPortableBoundaryTests
     [TestMethod]
     [DataRow(typeof(GameEventScriptProgram))]
     [DataRow(typeof(GameEventScriptBuilder))]
-    [DataRow(typeof(ConformanceRunner))]
     public void PortablePublicInputsDoNotExposeUnorderedDictionaryAdapters(Type assemblyType)
     {
         var violations = assemblyType.Assembly.GetExportedTypes()

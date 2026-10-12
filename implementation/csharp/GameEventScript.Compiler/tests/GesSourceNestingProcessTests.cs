@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Text;
-using GameEventScript.Tests.Conformance;
 
 namespace GameEventScript.Tests.Native.Compiler;
 
@@ -17,7 +16,7 @@ public sealed class GesSourceNestingProcessTests
     {
         var directory = Path.Combine(TestRepositoryPaths.ConformanceArtifactsDirectory, "received", "source-nesting", mode, Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
-        var capture = ConformanceProcessIsolation.Execute(["--source-nesting", mode], directory, 30_000);
+        var capture = CompilerProcessIsolation.Execute(["--source-nesting", mode], directory, 30_000);
         File.WriteAllBytes(Path.Combine(directory, "stdout.txt"), capture.StandardOutput);
         File.WriteAllBytes(Path.Combine(directory, "stderr.txt"), capture.StandardError);
         Assert.IsNull(capture.Failure, $"Compiler worker failed: {capture.Failure}; exit {capture.ExitCode}; evidence: {directory}.");

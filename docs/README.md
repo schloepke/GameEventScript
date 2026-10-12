@@ -42,6 +42,7 @@ Every contract area has exactly one owning document. Other documents link to tha
 | Determinism | [Determinism](../specs/Semantics/Determinism.md) | Randomness, iteration, stable ordering, and deterministic dispatch | Normative |
 | Conformance Markdown | [Markdown format](../specs/Conformance/MarkdownFormat.md) | Portable suite authoring syntax and normalized test model | Normative |
 | Conformance runner | [Runner](../specs/Conformance/Runner.md) | Capabilities, execution, results, reports, and received updates | Normative |
+| Independent runner protocol | [Python runner](../specs/Conformance/PythonRunner.md) | Standalone runner and internal implementation adapters | Normative |
 | Conformance environment | [Environment](../specs/Conformance/Environment.md) | Fixed extensions, external types, sinks, observers, and resources | Normative |
 | Conformance coverage | [Coverage](../specs/Conformance/Coverage.md) | Stable mapping from portable behavior to executable case IDs | Normative |
 | Cross-language acceptance | [Cross-language acceptance](../specs/Conformance/CrossLanguageAcceptance.md) | Corpus identity and acceptance criteria for language ports | Normative |

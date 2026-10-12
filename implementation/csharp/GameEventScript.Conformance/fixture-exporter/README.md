@@ -5,13 +5,15 @@
 
 Development-only adapter for checking a runtime port before its own compiler
 exists. It compiles source groups from the shared Markdown corpus using the C#
-reference compiler and the existing Conformance external-type catalog.
+compiler and the existing Conformance external-type catalog. Python parses the
+Markdown into source-only JSON requests; the C# exporter has no runner dependency.
 It exports no expected messages or execution results.
 
 ```bash
+python3 scripts/prepare-runtime-fixtures.py conformance/suites artifacts/swift/runtime-fixtures/requests.json
 dotnet run --project implementation/csharp/GameEventScript.Conformance/fixture-exporter \
   --configuration Release --artifacts-path artifacts/swift/csharp-exporter -- \
-  conformance/suites artifacts/swift/runtime-fixtures
+  artifacts/swift/runtime-fixtures/requests.json artifacts/swift/runtime-fixtures
 ```
 
 Outputs must be below an `artifacts` directory. `manifest.tsv` has the header

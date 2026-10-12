@@ -1,8 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-using System.Text.Json;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using GameEventScript.Api;
 
 const int maxBytes = 32 * 1024 * 1024;

@@ -5,7 +5,7 @@ using System.Diagnostics;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 
-namespace GameEventScript.Tests.Conformance;
+namespace GameEventScript.Tests.Native;
 
 [TestClass]
 [DoNotParallelize]
@@ -50,7 +50,7 @@ public sealed class CollectionPipelineAllocationTests
                 throw new InvalidOperationException("Benchmark did not complete its Cartesian workload.");
         }
         for (var index = 0; index < 10; index++) Run();
-        var allocated = ConformanceCSharpAllocationProvider.MeasureBytes(Run).AllocatedBytes;
+        var allocated = AllocationMeasurement.MeasureBytes(Run);
         var samples = new double[5];
         for (var sample = 0; sample < samples.Length; sample++)
         {

@@ -9,17 +9,20 @@ The test sources are covered by the Game Event Script
 
 Tests live beside their owning modules in `../GameEventScript.*/tests`:
 Runtime (API, values, Host/VM and binary codecs), Compiler (including optimizer),
-CSharpBridge, Tool and Conformance each have a separate MSTest project.
+CSharpBridge, Tool and SyntaxHighlighter each have a separate MSTest project.
 `GameEventScript.Repository.Tests` here owns cross-module API, licensing,
 documentation and distribution checks. `TestSupport` contains linked helpers
 and `Tests.props` shares only test configuration; neither owns test cases.
 
 The shared `../../../conformance` corpus contains portable Markdown suites,
 parser fixtures, binary resources and cross-language references. The
-`../GameEventScript.Conformance/tests` adapter executes it without duplicating
-portable cases into module test projects. Its `fixtures` directory contains
-native callback/type bindings shared with the Runtime fixture exporter, and
-its `worker` directory contains the isolated-process adapter. Shared parser
+independent [Python runner](../../../conformance/runner/README.md) executes it via
+`../GameEventScript.Conformance/adapter`, without a C# parser/runner library.
+The adapter's `tests` directory qualifies implementation instrumentation and
+protocol handling. Shared `fixtures` contain native callback/type bindings used
+by the adapter and Runtime fixture exporter. Compiler bounded-stack and process
+failure checks live in `../GameEventScript.Compiler/tests` and its `worker`.
+Shared parser
 bootstrap inputs remain integrity-protected by
 `conformance/fixtures/MarkdownV1/manifest.tsv`.
 
@@ -77,66 +80,23 @@ or bootstrap behavior that cannot use the corpus as its sole oracle. The
 portable coverage map is maintained in
 [Conformance Coverage](../../../specs/Conformance/Coverage.md).
 
-The `Allocation` category includes the shared `performance.low-allocation`
-workloads through a C# measurement adapter, its escaping-allocation/reuse
-controls, the independent VM hot-path gate, and native Reader budgets. Run it
-with `--configuration Release --filter "TestCategory=Allocation"`.
+The native `Allocation` category retains the independent VM hot-path gate,
+Reader budgets, arithmetic/pipeline checks and escaping-allocation controls.
+Run it with `--configuration Release --filter "TestCategory=Allocation"`.
+Shared corpus allocation cases run separately through
+`sh scripts/test-csharp-conformance.sh`, using the C# adapter's managed profile.
+See the [adapter measurement documentation](../GameEventScript.Conformance/adapter/README.md)
+for exact scope, aggregation, instrumentation controls and hardware requirements.
 
-The shared dispatch cases select `csharp-dotnet-release-managed`, a zero-byte
-managed-heap check usable by the C# CI on different operating systems. It uses
-`GC.GetAllocatedBytesForCurrentThread` around synchronous Receive and pumping
-of reused messages. Each of three fresh hosts receives the declared warmup and
-one additional preflight iteration whose work/callback counts are checked
-against the measured batch. Compilation, linking, initialization, inputs,
-instrumentation, preflight, collections and assertions are outside the counter.
-The maximum sample is compared without rounding or tolerance. Reports under
-`artifacts/conformance/received/performance` include a `.measurement.json`
-manifest with runtime/build/GC details, raw samples, work counts and the explicit
-absence of native-heap coverage. Existing elapsed-time benchmarks continue to
-use their macOS ARM64 profile and remain outside the `Allocation` category.
-`scripts/test-csharp-performance.sh` runs test projects serially so separate
-assemblies do not compete with elapsed-time measurements.
+`scripts/test-csharp-performance.sh` runs native measurement tests serially,
+then the Python runner with both C# profiles. Reports below
+`artifacts/conformance/python` contain raw measurement evidence. No reference
+values are echoed or automatically updated.
 
-Each elapsed-profile sample performs a full collection **before** its declared
-warmup, then measures without another forced collection. AST, binary and Load
-samples each repeat `compileWarmupIterations` across the compile/load pipeline;
-dispatch samples warm their own fresh host using `warmupIterations`. Zero warmup
-still means zero warmup. This measures warmed execution when the corpus requests
-it, rather than implicitly measuring reclaimed reflection caches after warmup.
-Three samples are taken and the fastest sample supplies both elapsed time and
-its corresponding allocation count. Host construction is included in Load;
-warmup, collection and measurement setup are excluded. No test-discovery metadata
-is pinned and no reference is adjusted automatically.
-
-The ordinary Markdown corpus uses an echo provider for performance expectations
-and verifies correctness and report structure only. Those echoed numbers are
-not measurements and cannot qualify any allocation profile. Generated received
-references are never approved automatically.
-
-The `Isolation` category executes all four `program.call-graph-depth` Markdown
-cases, including both shallow controls, through the separate
-`GameEventScript.Conformance.Worker` executable. The ordinary
-non-performance corpus includes these cases exactly once through that path.
-They are selected by stable suite ID, never retried in-process or treated as
-expected crashes. `ConformanceProcessIsolationTests` checks discovery, process
-termination, timeout, bounded stdout/stderr, and result validation.
-
-The worker is built by the test-project reference and stays below
-`artifacts/csharp/conformance-worker`. It parses a snapshot of the same Markdown
-and invokes the portable runner for one binary validation/rewrite case without
-runtime steps or compiler comparison. The case executes on a thread with a
-requested 1 MiB stack to keep native-stack conditions explicit across C# hosts.
-This stack size is a test-adapter configuration, not a portable language limit.
-The parent allows 30 seconds, retains at most 64 KiB each of stdout and stderr,
-kills a timed-out or overflowing process tree, and bounds cleanup to five
-seconds. Automatic .NET minidumps are disabled for the worker.
-
-One JSON response carries protocol version, full case ID, source-document and
-fixture SHA-256, status, code, structured mismatches and optional technical
-details. It is accepted only after exit code zero, complete bounded output,
-identity validation and consistent status/assertions. Other exits and invalid
-responses produce failed Conformance results at `/execution`. Per-invocation
-Markdown snapshots, native execution metadata and bounded outputs are retained
-under `artifacts/conformance/received/isolated`. The original shared reference
-results are never replaced automatically. Run the cases and infrastructure with
-`--filter "TestCategory=Isolation|FullyQualifiedName~ConformanceProcessIsolationTests"`.
+Binary corpus cases execute through the adapter on a requested 1 MiB native
+stack, including shallow/deep call-graph controls. The independent runner
+bounds process time and output, verifies response identity and fails on crashes.
+Compiler source-nesting probes retain their separate worker under
+`artifacts/csharp/compiler-worker`, with timeout/output/termination controls in
+`CompilerProcessIsolationTests`. Run these native controls using
+`--filter "TestCategory=Isolation|FullyQualifiedName~CompilerProcessIsolationTests"`.

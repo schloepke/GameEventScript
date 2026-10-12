@@ -44,9 +44,9 @@ execution schema before an adapter is started. `requests`/`verify` provide the
 separate correctness observation-file workflow; their default selection is the
 1,925 non-performance cases. `--kind supported` selects that same subset explicitly.
 
-The original C# Conformance implementation remains in place for the next migration
-step. Swift adapter porting and switching/removing the old acceptance gates are
-separate follow-up work; they are not dependencies of this runner.
+The legacy C# runner has been removed. C# acceptance uses this runner with the
+internal C# adapter, including managed allocation and optional timing profiles.
+Swift retains its existing runner until the separate adapter migration.
 
 Normalized cases and their nested containers are read-only snapshots. Explicit
 `copy.deepcopy` produces editable working copies for measurement preparation and

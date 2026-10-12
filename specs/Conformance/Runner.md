@@ -411,7 +411,7 @@ is:
 {
   "schemaVersion": 1,
   "runner": {
-    "id": "steph.ges.conformance.csharp",
+    "id": "steph.ges.conformance.python",
     "version": "0.1.0"
   },
   "implementation": {

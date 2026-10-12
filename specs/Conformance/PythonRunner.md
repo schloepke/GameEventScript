@@ -56,8 +56,8 @@ when it rejects or throws. No sink is installed for `absent`.
 All currently authored kinds are implemented. Unknown schemas fail explicitly
 rather than producing partial acceptance. The default run includes every case;
 optional performance execution is represented by a skip unless profiles are
-selected. The old C# runner remains during migration; removing it and porting the
-Swift adapter are separate next steps.
+selected. The legacy C# runner has been removed; C# acceptance uses this runner
+and the internal adapter. Swift adapter porting remains a separate next step.
 
 Adapter observations contain raw canonical dumps, structured compiler
 diagnostics, opcode counts, Program metadata and rewritten fixture bytes rather

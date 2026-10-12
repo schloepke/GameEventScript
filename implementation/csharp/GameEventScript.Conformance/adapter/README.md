@@ -55,8 +55,8 @@ of a typed normalized observation by default; `includeNormalized` additionally
 returns the typed value for an independent comparison. Format exceptions report their stable code.
 No product JSON parser or writer is implemented in Python.
 All currently authored kinds are covered, including the measured modes below.
-The legacy C# runner has been removed. Swift retains its existing runner until
-the separate adapter port. Binary fixture observations execute on a requested
+The legacy C# and Swift runners have been removed; both implementations use
+this observation protocol with the independent Python runner. Binary fixture observations execute on a requested
 1 MiB native stack, preserving the previous deep call-graph guard. The Python
 process boundary detects crashes, bounds output and enforces deadlines.
 

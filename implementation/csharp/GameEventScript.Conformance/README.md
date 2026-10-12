@@ -25,5 +25,5 @@ sh scripts/test-csharp-conformance.sh
 Hardware-specific elapsed-time profiles remain opt-in through
 `scripts/test-csharp-performance.sh`. Reports stay below `artifacts/conformance/python`.
 Native compiler process/stack and allocation tests now live with Compiler;
-their worker is `../GameEventScript.Compiler/worker`. Swift retains its existing
-runner until the separate adapter migration.
+their worker is `../GameEventScript.Compiler/worker`. Swift uses its own internal
+adapter with the same independent Python runner.

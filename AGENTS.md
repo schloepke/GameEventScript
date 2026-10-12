@@ -274,7 +274,10 @@ and use only the Python standard library. The internal C# executable adapter
 returns observations; expectations and verdicts remain in Python. No legacy C#
 Conformance library remains. Run `python3 conformance/runner/main.py run --kind supported`
 with `--adapter dotnet artifacts/csharp/conformance-adapter/bin/Release/net10.0/GameEventScript.ConformanceAdapter.dll`
-after building that adapter. Swift keeps its existing runner until its separate migration.
+after building that adapter. Swift uses the same command with
+`--adapter artifacts/swift/conformance/release/ges-conformance-adapter`.
+The Swift development package contains executable adapters/probes and native tests,
+not a portable Conformance library.
 
 Conformance distinguishes exact numeric storage with `:Number.int64` and
 `:Number.binary64`, including corresponding Quantity and Range variants. These
@@ -430,10 +433,10 @@ measurement. Hardware/toolchain mismatches and failed controls are errors.
 Baseline calibration and received Markdown preparation never overwrite corpus
 references automatically; see `implementation/swift/Performance.md`.
 
-`ConformanceEnvironment` advertises all Core capabilities and GESA snapshots.
-Performance is opt-in and requires a profile plus measurement provider.
-Its optional resource resolver accepts IDs and byte bounds; only the executable
-adapter maps fixture paths to files. Native compilation itself needs no .NET.
+Swift adapter observations and profile measurements use the same Python runner
+as C#. Performance is opt-in; the adapter owns native instrumentation and Python
+owns metric validation and budget comparisons. The separate codec probe supports
+cross-language exchange. Native compilation itself needs no .NET.
 Build products, symbol graphs, generated binary inputs and reports belong under
 ignored `artifacts`. Public Swift API changes update `specs/PublicApi.md` and
 `implementation/swift/api`. The separate `GameEventScriptTool` package implements

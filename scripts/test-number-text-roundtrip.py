@@ -157,7 +157,7 @@ def main():
                         "--disable-build-manifest-caching", "--configuration", "release"], cwd=ROOT, check=True)
     adapters = {
         "csharp": ["dotnet", str(ROOT / "artifacts/csharp/runtime-fixture-exporter/bin/release/GameEventScript.RuntimeFixtureExporter.dll")],
-        "swift": [str(SCRATCH / "release/ges-conformance")],
+        "swift": [str(SCRATCH / "release/ges-conformance-probe")],
     }
     rows = cases()
     written = {}

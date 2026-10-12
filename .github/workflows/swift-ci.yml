@@ -131,7 +131,7 @@ jobs:
         name: Verify Swift API surface and documentation
         run: python3 scripts/verify-swift-api.py --reuse-local-builds
 
-      - name: Upload full and compact conformance results
+      - name: Upload conformance and runtime interoperability results
         if: ${{ always() && needs.changes.outputs.swift == 'true' && (steps.conformance.outcome == 'success' || hashFiles('artifacts/swift/conformance-results/**', 'artifacts/swift/number-text-roundtrip/**', 'artifacts/swift/message-json-roundtrip/**', 'artifacts/swift/binary-reader-fuzz/**', 'artifacts/swift/binary-roundtrip-properties/**') != '') }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

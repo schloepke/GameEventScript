@@ -15,9 +15,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "GameEventScriptConformance"
-               BuildableName = "GameEventScriptConformance"
-               BlueprintName = "GameEventScriptConformance"
+               BlueprintIdentifier = "GameEventScriptConformanceAdapter"
+               BuildableName = "ges-conformance-adapter"
+               BlueprintName = "GameEventScriptConformanceAdapter"
                ReferencedContainer = "container:GameEventScriptConformance">
             </BuildableReference>
          </BuildActionEntry>

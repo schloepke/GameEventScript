@@ -3,11 +3,14 @@
 
 import ConformanceInstrumentation
 import Foundation
-@_spi(Performance) import GameEventScriptConformance
 import GameEventScriptRuntime
 
+#if canImport(Darwin)
+    import Darwin
+#endif
+
 /// Native instrumentation never enters the portable library or shipped Runtime.
-final class SwiftPerformanceProvider: ConformancePerformanceProvider, @unchecked Sendable {
+final class SwiftPerformanceProvider: @unchecked Sendable {
     static let profile = "swift-6.4-release-macos26-arm64-m3max"
     private let lock = NSLock()
     private var evidence: [[String: Any]] = []
@@ -24,39 +27,37 @@ final class SwiftPerformanceProvider: ConformancePerformanceProvider, @unchecked
 
     init() throws {
         #if DEBUG
-            throw ToolError.invalidArguments("Performance measurements require a Release build")
+            throw ConformanceExecutionError.invalidInput("Performance measurements require a Release build")
         #endif
         #if !os(macOS) || !arch(arm64) || !compiler(>=6.4) || compiler(>=6.5)
-            throw ToolError.invalidArguments("This profile requires Swift 6.4 on macOS arm64")
+            throw ConformanceExecutionError.invalidInput("This profile requires Swift 6.4 on macOS arm64")
         #endif
-        guard ProcessInfo.processInfo.operatingSystemVersion.majorVersion == 26 else { throw ToolError.invalidArguments("This profile requires macOS 26") }
-        guard ges_allocation_install(), ges_allocation_controls() else { throw ToolError.invalidArguments("Allocation instrumentation controls failed or another logger is active") }
+        guard ProcessInfo.processInfo.operatingSystemVersion.majorVersion == 26 else { throw ConformanceExecutionError.invalidInput("This profile requires macOS 26") }
+        guard ges_allocation_install(), ges_allocation_controls() else { throw ConformanceExecutionError.invalidInput("Allocation instrumentation controls failed or another logger is active") }
         provenance = [
             "profile": Self.profile, "processID": ProcessInfo.processInfo.processIdentifier, "measurementID": UUID().uuidString, "measuredAt": ISO8601DateFormatter().string(from: Date()),
-            "operatingSystem": ProcessInfo.processInfo.operatingSystemVersionString, "architecture": "arm64", "configuration": "Release", "memoryManagement": "Swift ARC", "toolchain": try Self.command("/usr/bin/xcrun", ["swift", "--version"]),
-            "sdk": try Self.command("/usr/bin/xcrun", ["--show-sdk-version"]), "cpu": try Self.command("/usr/sbin/sysctl", ["-n", "machdep.cpu.brand_string"]),
+            "operatingSystem": ProcessInfo.processInfo.operatingSystemVersionString, "architecture": "arm64", "configuration": "Release", "memoryManagement": "Swift ARC", "toolchain": "Swift 6.4 (compile-time profile gate)",
+            "sdk": "toolchain default", "cpu": Self.cpu(),
             "instrumentation": "libmalloc malloc_logger; cumulative requested bytes on the calling thread", "coverageGaps": ["Other threads", "Direct mmap/mach_vm_allocate", "Private allocators bypassing libmalloc entry points", "Stack storage"],
             "controls": "malloc, calloc, realloc, zone malloc, aligned allocation, transient frees, empty interval; Swift escaping object and Array/String below", "sampleCount": sampleCount, "elapsedAggregation": "median",
             "allocationAggregation": "maximum", "timingScope": "Monotonic elapsed time with allocation instrumentation active",
             "runScope": "Reused inputs, enqueue and completion/frame pumping; excludes compile/link/init/warmup and report construction",
             "compileScope": "Builder, source parse, validation, lowering, optimization, Program validation and requested binary roundtrip", "loadScope": "Fresh Host construction, linking and initialization",
         ]
-        guard provenance["cpu"] as? String == "Apple M3 Max" else { throw ToolError.invalidArguments("The timing baseline requires Apple M3 Max; calibrate a separate profile for other hardware") }
+        guard provenance["cpu"] as? String == "Apple M3 Max" else { throw ConformanceExecutionError.invalidInput("The timing baseline requires Apple M3 Max; calibrate a separate profile for other hardware") }
         try swiftControls()
     }
 
-    private static func command(_ path: String, _ args: [String]) throws -> String {
-        let process = Process()
-        let output = Pipe()
-        process.executableURL = URL(fileURLWithPath: path)
-        process.arguments = args
-        process.standardOutput = output
-        process.standardError = Pipe()
-        try process.run()
-        let data = output.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else { throw ToolError.invalidArguments("Cannot identify measurement environment") }
-        return String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+    private static func cpu() -> String {
+        #if canImport(Darwin)
+            var count = 0
+            guard sysctlbyname("machdep.cpu.brand_string", nil, &count, nil, 0) == 0 else { return "unknown" }
+            var bytes = [CChar](repeating: 0, count: count)
+            guard sysctlbyname("machdep.cpu.brand_string", &bytes, &count, nil, 0) == 0 else { return "unknown" }
+            return String(decoding: bytes.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
+        #else
+            return "unknown"
+        #endif
     }
 
     private final class ControlObject {
@@ -76,13 +77,13 @@ final class SwiftPerformanceProvider: ConformancePerformanceProvider, @unchecked
         escapingControl = nil
         let (_, empty) = try sample { 42 }
         let (_, positive) = try sample { self.allocateControl() }
-        guard empty.bytes == 0, empty.allocations == 0, positive.bytes >= 4096, positive.allocations >= 3 else { throw ToolError.invalidArguments("Swift allocation instrumentation controls failed") }
+        guard empty.bytes == 0, empty.allocations == 0, positive.bytes >= 4096, positive.allocations >= 3 else { throw ConformanceExecutionError.invalidInput("Swift allocation instrumentation controls failed") }
         escapingControl = nil
     }
 
     private func sample<T>(_ action: () throws -> T) throws -> (T, Sample) {
         let start = ges_monotonic_nanoseconds()
-        guard ges_allocation_begin() else { throw ToolError.invalidArguments("Cannot start allocation measurement") }
+        guard ges_allocation_begin() else { throw ConformanceExecutionError.invalidInput("Cannot start allocation measurement") }
         let value: T
         do { value = try action() } catch {
             _ = ges_allocation_end()
@@ -90,14 +91,14 @@ final class SwiftPerformanceProvider: ConformancePerformanceProvider, @unchecked
         }
         let allocation = ges_allocation_end()
         let elapsed = Double(ges_monotonic_nanoseconds() - start) / 1_000_000
-        guard allocation.valid else { throw ToolError.invalidArguments("Invalid allocation counter") }
+        guard allocation.valid else { throw ConformanceExecutionError.invalidInput("Invalid allocation counter") }
         return (value, .init(elapsed: elapsed, bytes: allocation.bytes, allocations: allocation.allocations))
     }
 
-    func measure(_ test: ConformanceCase, profile: String) throws -> [ConformanceMeasuredMetric] {
+    func measure(_ test: Input, profile: String) throws -> [ConformanceMeasuredMetric] {
         lock.lock()
         defer { lock.unlock() }
-        guard profile == Self.profile else { throw ToolError.invalidArguments("Unsupported performance profile") }
+        guard profile == Self.profile else { throw ConformanceExecutionError.invalidInput("Unsupported performance profile") }
         let workload = try ConformancePerformanceWorkload(test)
         for _ in 0..<workload.compileWarmupIterations { _ = try workload.prepare(workload.compile()) }
         var compile: [Sample] = []
@@ -111,11 +112,11 @@ final class SwiftPerformanceProvider: ConformancePerformanceProvider, @unchecked
             load.append(loading)
             _ = try execution.run(iterations: workload.warmupIterations)
             let expected = try execution.run(iterations: 1)
-            guard expected.opcodes > 0, expected.messages >= test.steps.count, !workload.observeRuntime || expected.started > 0 && expected.started == expected.completed, expected.errors == 0, expected.limits == 0 else {
-                throw ToolError.invalidArguments("Invalid measured work")
+            guard expected.opcodes > 0, expected.messages >= workload.inputs.count, !workload.observeRuntime || expected.started > 0 && expected.started == expected.completed, expected.errors == 0, expected.limits == 0 else {
+                throw ConformanceExecutionError.invalidInput("Invalid measured work")
             }
             let (actual, running) = try sample { try execution.run(iterations: workload.iterations) }
-            guard actual == expected.scaled(workload.iterations) else { throw ToolError.invalidArguments("Measured work/callback counters differ from warmup") }
+            guard actual == expected.scaled(workload.iterations) else { throw ConformanceExecutionError.invalidInput("Measured work/callback counters differ from warmup") }
             run.append(running)
             counters.append([
                 "opcodes": actual.opcodes, "messages": actual.messages, "emits": actual.emits, "publishes": actual.publishes, "pauses": actual.pauses, "dispatchStarted": actual.started, "dispatchCompleted": actual.completed,
@@ -135,21 +136,33 @@ final class SwiftPerformanceProvider: ConformancePerformanceProvider, @unchecked
             }
         }
         evidence.append([
-            "id": test.fullID, "iterations": workload.iterations, "warmupIterations": workload.warmupIterations, "observeRuntime": workload.observeRuntime, "compile": compile.map(\.json), "load": load.map(\.json), "run": run.map(\.json),
+            "id": try test.text("id"), "iterations": workload.iterations, "warmupIterations": workload.warmupIterations, "observeRuntime": workload.observeRuntime, "compile": compile.map(\.json), "load": load.map(\.json), "run": run.map(\.json),
             "work": counters, "metrics": Dictionary(uniqueKeysWithValues: metrics.map { ($0.id, ["measured": $0.value, "unit": $0.unit] as [String: Any]) }),
         ])
         return metrics
     }
 
-    func writeEvidence(_ directory: URL, documents: [ConformanceDocument]) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        let identity = try ConformanceReportWriter.identify(documents)
-        let json: [String: Any] = [
-            "schemaVersion": 1, "provenance": provenance, "cases": evidence, "corpus": ["sha256": identity.sha256, "documentCount": identity.documentCount, "caseCount": identity.caseCount],
-            "documents": documents.map { ["suiteId": $0.suiteID, "sha256": ConformanceSha256.hex($0.sourceBytes)] },
-        ]
-
-        try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("SwiftPerformance.measurement.json"), options: .atomic)
+    func observation(_ test: Input) throws -> [String: Any] {
+        let requested = try test.required("measurement")
+        let measured = try measure(test, profile: requested.text("profile"))
+        let metrics = try requested.values("metrics").map { metric -> [String: Any] in
+            guard let value = measured.first(where: { $0.id == metric["id"]?.stringValue }), value.unit == metric["unit"]?.stringValue else { throw ConformanceExecutionError.invalidInput("Unsupported metric") }
+            return ["id": value.id, "value": Values.numberText(value.value), "unit": value.unit]
+        }
+        return ["status": "ok", "measurement": ["profile": Self.profile, "metrics": metrics], "evidence": ["provenance": provenance, "samples": evidence.last!]]
     }
+
+    static var available: Bool {
+        #if DEBUG || !os(macOS) || !arch(arm64) || !compiler(>=6.4) || compiler(>=6.5)
+            return false
+        #else
+            return ProcessInfo.processInfo.operatingSystemVersion.majorVersion == 26 && cpu() == "Apple M3 Max"
+        #endif
+    }
+}
+
+struct ConformanceMeasuredMetric {
+    let id: String
+    let value: Double
+    let unit: String
 }

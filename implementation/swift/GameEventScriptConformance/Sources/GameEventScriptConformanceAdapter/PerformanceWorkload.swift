@@ -4,84 +4,87 @@
 import GameEventScriptRuntime
 
 /// Prepared workload used only by platform measurement adapters; contains no clocks or instrumentation.
-@_spi(Performance) public final class ConformancePerformanceWorkload {
+final class ConformancePerformanceWorkload {
     /// Validated authored case supplying sources, inputs and performance configuration.
-    public let test: ConformanceCase
+    let test: Input
     /// Number of measured input batches.
-    public let iterations: Int
+    let iterations: Int
     /// Number of input batches requested before measurement.
-    public let warmupIterations: Int
+    let warmupIterations: Int
     /// Number of compilation warmup iterations requested by the case.
-    public let compileWarmupIterations: Int
+    let compileWarmupIterations: Int
     /// Whether runtime observer callbacks participate in the workload.
-    public let observeRuntime: Bool
+    let observeRuntime: Bool
     let inputs: [GameEventScriptMessage]
     let budgets: [Int?]
 
     /// Prepares reusable inputs and frame budgets for a supported single-host performance case.
     ///
     /// - Throws: A conformance input error for unsupported workload shapes or invalid input messages.
-    public init(_ test: ConformanceCase) throws {
-        guard test.kind == "performance", let config = test.metadata["performance"], let count = config["iterations"]?.integerValue, count > 0, (test.metadata["hostCount"]?.integerValue ?? 1) == 1, !test.sources.isEmpty,
-            Set(test.sources.map(\.programID)).count == 1, test.metadata.values("nativeHandlers").isEmpty, test.metadata.values("deferredPrograms").isEmpty, test.metadata["stepActions"]?.objectValue?.isEmpty != false, !test.steps.isEmpty,
-            test.steps.allSatisfy({ ["completion", "frames"].contains($0.pump) })
+    init(_ test: Input) throws {
+        guard let config = test["measurement"], let count = config["iterations"]?.integerValue, count > 0,
+            test["runtime"]?["hostCount"]?.integerValue == 1, !test.values("sources").isEmpty,
+            Set(test.values("sources").compactMap { $0["program"]?.stringValue }).count == 1,
+            test["runtime"]?.values("nativeHandlers").isEmpty == true,
+            test["runtime"]?.values("deferredPrograms").isEmpty == true,
+            test["runtime"]?["stepActions"]?.objectValue?.isEmpty == true,
+            !(test["runtime"]?.values("steps").isEmpty ?? true),
+            test["runtime"]!.values("steps").allSatisfy({ ["completion", "frames"].contains($0["pump"]?.stringValue ?? "") })
         else { throw ConformanceExecutionError.invalidInput("Unsupported performance workload") }
         self.test = test
         iterations = count
         warmupIterations = config["warmupIterations"]?.integerValue ?? 0
         compileWarmupIterations = config["compileWarmupIterations"]?.integerValue ?? 0
         observeRuntime = config["observeRuntime"]?.boolValue ?? true
-        inputs = try test.steps.map { step in
-            let input = test.expectation["steps"]?[step.id]?["input"] ?? .object([])
-            return try ConformanceRuntimeValueCodec.message(input.replacing("name", with: step.receive ?? .string("")))
-        }
-        budgets = test.steps.map { $0.pump == "frames" ? $0.budget : nil }
+        inputs = try test["runtime"]!.values("steps").map { try Values.message($0.required("input")) }
+        budgets = test["runtime"]!.values("steps").map { $0["pump"]?.stringValue == "frames" ? $0["budget"]?.integerValue : nil }
+
     }
 
     /// Compiles the workload's single Program group, propagating compiler or invalid-input errors.
-    public func compile() throws -> GameEventScriptProgram {
-        guard let program = try ConformanceCompilerRunner.compile(test).first?.program else { throw ConformanceExecutionError.invalidInput("Missing performance Program") }
-        return program
+    func compile() throws -> GameEventScriptProgram {
+        try CompilerObservations.compile(test)
+
     }
 
     /// Loads, starts and drains initialization on a fresh host outside the measurement interval.
     ///
     /// - Throws: A linking, runtime or conformance input error if preparation fails.
-    public func prepare(_ program: GameEventScriptProgram) throws -> ConformancePerformanceExecution { try .init(self, program) }
+    func prepare(_ program: GameEventScriptProgram) throws -> ConformancePerformanceExecution { try .init(self, program) }
 }
 
 /// Integer counters establish that measured samples execute the prepared amount of work.
-@_spi(Performance) public struct ConformanceWorkCounters: Equatable {
+struct ConformanceWorkCounters: Equatable {
     /// Executed bytecode instructions.
-    public var opcodes = 0
+    var opcodes = 0
     /// Processed logical messages.
-    public var messages = 0
+    var messages = 0
     /// Emit operations reported by execution results.
-    public var emits = 0
+    var emits = 0
     /// Publish operations reported by execution results.
-    public var publishes = 0
+    var publishes = 0
     /// Frames that paused before completing available work.
-    public var pauses = 0
+    var pauses = 0
     /// Handler-entry observer callbacks.
-    public var started = 0
+    var started = 0
     /// Handler-completion observer callbacks.
-    public var completed = 0
+    var completed = 0
     /// Emit observer callbacks.
-    public var observedEmits = 0
+    var observedEmits = 0
     /// Publish observer callbacks.
-    public var observedPublishes = 0
+    var observedPublishes = 0
     /// Outbound sink invocations.
-    public var outbound = 0
+    var outbound = 0
     /// Runtime-limit observer callbacks.
-    public var limits = 0
+    var limits = 0
     /// Runtime-error observer callbacks.
-    public var errors = 0
+    var errors = 0
 
     /// Creates zeroed counters.
-    public init() {}
+    init() {}
 
     /// Multiplies every counter by a batch count for comparison with a measured run.
-    public func scaled(_ count: Int) -> Self {
+    func scaled(_ count: Int) -> Self {
         var value = self
         value.opcodes *= count
         value.messages *= count
@@ -100,15 +103,15 @@ import GameEventScriptRuntime
 }
 
 /// A prepared host and reusable inputs owned by one synchronous measurement adapter.
-@_spi(Performance) public final class ConformancePerformanceExecution {
+final class ConformancePerformanceExecution {
     let workload: ConformancePerformanceWorkload
     let host: GameEventScriptHost
     private let observer: PerformanceObserver
 
     init(_ workload: ConformancePerformanceWorkload, _ program: GameEventScriptProgram) throws {
         self.workload = workload
-        observer = PerformanceObserver(accept: workload.test.metadata["publishSink"]?.stringValue != "reject")
-        host = try RuntimeScenario.makeHost(workload.test, observer: workload.observeRuntime ? observer : nil, publishSink: workload.test.metadata["publishSink"]?.stringValue == "absent" ? nil : observer)
+        observer = PerformanceObserver(accept: workload.test["runtime"]?["publishSink"]?.stringValue != "reject")
+        host = try RuntimeScenario.makeHost(workload.test["runtime"]!, observer: workload.observeRuntime ? observer : nil, publishSink: workload.test["runtime"]?["publishSink"]?.stringValue == "absent" ? nil : observer)
         _ = try host.load(program)
         guard try host.start().state == .ready, try host.runToCompletion().state == .completed else { throw ConformanceExecutionError.invalidInput("Performance initialization failed") }
     }
@@ -116,7 +119,7 @@ import GameEventScriptRuntime
     /// Executes repeated input batches and returns work counters, resetting observation counts for this call.
     ///
     /// - Throws: A conformance input error for negative counts, rejected inputs, faults or stalled execution.
-    public func run(iterations: Int) throws -> ConformanceWorkCounters {
+    func run(iterations: Int) throws -> ConformanceWorkCounters {
         guard iterations >= 0 else { throw ConformanceExecutionError.invalidInput("Invalid iteration count") }
         observer.counts = .init()
         var counts = ConformanceWorkCounters()

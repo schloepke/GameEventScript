@@ -32,7 +32,7 @@ at `conformance/runner` and recursively discovers the `tests` package.
 
 ## Scope
 
-The Python runner and internal C# adapter cover all 1,956 currently authored
+The Python runner and internal C# and Swift adapters cover all 1,956 currently authored
 cases: 1,925 correctness cases and 31 measured performance cases. Python owns
 validation and assertions. The adapter executes real compiler/runtime APIs and
 returns observations, never expected results or a pass/fail decision.
@@ -46,7 +46,9 @@ separate correctness observation-file workflow; their default selection is the
 
 The legacy C# runner has been removed. C# acceptance uses this runner with the
 internal C# adapter, including managed allocation and optional timing profiles.
-Swift retains its existing runner until the separate adapter migration.
+Swift uses the same runner with its internal `ges-conformance-adapter` executable,
+including native compiler/runtime observations and its optional measurement profile.
+The legacy Swift parser and runner have also been removed.
 
 Normalized cases and their nested containers are read-only snapshots. Explicit
 `copy.deepcopy` produces editable working copies for measurement preparation and

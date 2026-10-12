@@ -124,7 +124,7 @@ def main():
                         '--configuration', 'release'], cwd=ROOT, check=True)
     adapters = {
         'csharp': ['dotnet', str(ROOT / 'artifacts/csharp/runtime-fixture-exporter/bin/release/GameEventScript.RuntimeFixtureExporter.dll')],
-        'swift': [str(ROOT / 'artifacts/swift/conformance/release/ges-conformance')],
+        'swift': [str(ROOT / 'artifacts/swift/conformance/release/ges-conformance-probe')],
     }
     started = time.monotonic()
     rows = list(programs(args.seed, args.cases))

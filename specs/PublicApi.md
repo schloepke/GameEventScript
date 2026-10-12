@@ -21,7 +21,7 @@ Runtime, Compiler, Bridge or Conformance dependency and are not part of VM execu
 
 ## Scope and dependency direction
 
-The portable surface consists of three modules:
+The portable product modules and independent verification tooling are separated as follows:
 
 ```text
 GameEventScript Runtime
@@ -34,7 +34,7 @@ GameEventScript Compiler
 Independent Conformance runner (Python, repository tooling)
   Markdown parser, normalized test model, assertions, reports, received output
   -> communicates with internal implementation adapters over JSON
-  -> C# adapter depends on Runtime and Compiler; no public Conformance assembly
+  -> C# and Swift adapters depend on their Runtime and Compiler; no public Conformance library
 ```
 
 Runtime must load and execute precompiled Programs without a source compiler.
@@ -46,9 +46,9 @@ Conformance or language-specific adapters. Both portable modules remain
 synchronous and independent of filesystem, network, threads, and test frameworks.
 
 Conformance is repository tooling, not a published NuGet library or root SwiftPM
-product. The Python runner owns assertions; the internal C# adapter exposes only
-the process protocol in [PythonRunner.md](Conformance/PythonRunner.md). The Swift
-development package remains until its separate adapter migration.
+product. The Python runner owns assertions; the internal C# and Swift adapters expose only
+the process protocol in [PythonRunner.md](Conformance/PythonRunner.md). Neither
+implementation publishes a Conformance library.
 
 The following documents own detailed behavior and are incorporated by reference:
 
@@ -986,33 +986,12 @@ materializes declared external fields, propagating field failures. It does not
 perform a source-language cast. The random generator has seed, sequence, and
 entropy initializers; each Host constructs its own generator.
 
-`ConformanceMarkdownParser` accepts bytes, `ConformanceRunner` compiles and
-executes supported cases natively in memory, and `ConformanceReportWriter`
-returns report text. The default `ConformanceEnvironment` advertises all Core
-capabilities and `bytecode-snapshot`. Measurement is opt-in: an environment
-advertising `performance` must supply `performanceProfile` and a
-`ConformancePerformanceProvider`. The provider returns `ConformanceMeasuredMetric`
-values with explicit IDs, finite nonnegative Binary64 measurements and units.
-The runner executes correctness first and validates the exact profile metric
-set, units and bounds. Results expose `ConformancePerformanceResult` with each
-metric's measured, reference and allowed values; reports retain the profile ID.
-Unavailable profiles, missing/duplicate metrics and invalid readings are errors;
-values above the owning profile's bounds are performance regression failures.
-`ConformanceResourceResolver.resolve(resourceID:maximumBytes:)` supplies binary
-fixtures as copied bytes or structured `notFound`, `limitExceeded`, or `error`
-results. The environment's positive `maximumResourceBytes` defaults to 64 MiB.
-The runner independently checks the bound and declared SHA-256; failures use
-the resource error codes defined by the Conformance runner contract. Path
-interpretation belongs to the embedding, never the portable resolver interface.
-`ConformanceRuntimeRunner.runCase` additionally checks runtime scenarios from
-independently supplied `ConformanceRuntimeProgram` groups.
-`ConformanceProgramRunner` checks GESA snapshots and bounded binary fixtures.
-These Runtime-only entry points do not attribute the input compiler to Swift;
-performance scenarios verify behavior only and do not claim measurement profiles.
-The executable adapter owns filesystem access and keeps Runtime verification
-reports separate from strict full-port Conformance reports. Public declarations
-are recorded in `implementation/swift/api`; verified implementation coverage is
-recorded separately in the cross-language CapabilityMatrix.
+Swift Conformance uses the independent Python runner and an internal executable
+adapter. The adapter returns raw compiler/runtime observations and optional
+profile measurements, without parsing Markdown or evaluating expectations.
+`ges-conformance-probe` provides codec exchange and binary-fuzz entry points.
+Neither executable is a public library API. Runtime-only verification supplies
+hash-bound C# Programs to the adapter and reports their compiler identity separately.
 
 #### Native Swift adapters
 

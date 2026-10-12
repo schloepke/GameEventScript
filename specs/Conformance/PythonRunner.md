@@ -57,7 +57,8 @@ All currently authored kinds are implemented. Unknown schemas fail explicitly
 rather than producing partial acceptance. The default run includes every case;
 optional performance execution is represented by a skip unless profiles are
 selected. The legacy C# runner has been removed; C# acceptance uses this runner
-and the internal adapter. Swift adapter porting remains a separate next step.
+and the internal adapter. Swift uses the same protocol and Python assertions;
+its legacy parser and runner have also been removed.
 
 Adapter observations contain raw canonical dumps, structured compiler
 diagnostics, opcode counts, Program metadata and rewritten fixture bytes rather

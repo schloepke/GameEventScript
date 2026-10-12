@@ -30,21 +30,23 @@ regression, unavailable instrumentation, wrong profile or malformed measurement.
 For a complete corpus report with measured performance, use the built tool:
 
 ```bash
-artifacts/swift/conformance/release/ges-conformance \
-  --corpus conformance/suites --binary-fixtures conformance/fixtures \
-  --output artifacts/swift/measured-conformance --performance
+python3 conformance/runner/main.py run \
+  --performance-profile swift-6.4-release-macos26-arm64-m3max \
+  --output artifacts/swift/measured-conformance/ConformanceResults.json \
+  --adapter artifacts/swift/conformance/release/ges-conformance-adapter
 ```
 
 Ordinary `scripts/test-swift.sh` is independent of the measurement host and
-continues to report the optional performance capability as unavailable. Its
-native tests exercise performance-result validation using controlled readings;
-those tests do not count as allocation evidence. Performance verification must
+selects ordinary correctness cases with `--kind supported` and additionally checks
+the 31 performance scenarios without measurement, producing `PerformanceCorrectness.json`. Python's runner tests
+exercise performance-result validation using controlled readings; those tests
+do not count as allocation evidence. Performance verification must
 run separately, without concurrent benchmarks or builds.
 
 ## Measurement scope
 
-The native executable uses a small C instrumentation target; Runtime, Compiler,
-and the portable Conformance library do not depend on it. It observes successful
+The native executable uses a small C instrumentation target; Runtime and Compiler
+do not depend on it; instrumentation is linked only into the internal adapter. It observes successful
 allocation events through Apple's exported
 [`libmalloc` logger](https://github.com/apple-oss-distributions/libmalloc/blob/main/src/malloc.c).
 This is a platform instrumentation interface, not a Runtime dependency or a
@@ -77,9 +79,11 @@ foreign logger or failed controls stops measurement.
   publishes, pauses and callbacks must match a prepared iteration scaled by that
   count; measurement cannot pass by skipping work.
 
-`SwiftPerformance.measurement.json` records environment identity, exact Markdown
-hashes, all samples, allocation counts and work counters. Normal Conformance JSON
-and Markdown also contain measured/reference/allowed values and pass/fail results.
+`ConformanceResults.json` retains adapter evidence with environment identity,
+all samples, allocation counts and work counters, together with Python-owned
+measured/reference/allowed values and verdicts. Explicit calibration writes
+`SwiftPerformance.measurement.json`, adding the exact Markdown hashes for baseline
+preparation. No expectations or budgets are sent to the Swift adapter.
 All generated evidence stays below ignored `artifacts`.
 
 ## Baseline review and refresh

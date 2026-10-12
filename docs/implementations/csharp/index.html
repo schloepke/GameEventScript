@@ -74,8 +74,8 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <p><a href="/api/csharp/">Generated C# API reference</a></p>
 <p>The C# implementation is the reference implementation for the shared,
-language-neutral contracts. Runtime, Compiler, C# adapters and Conformance are
-separate libraries; the CLI is a separate application.</p>
+language-neutral contracts. Runtime, Compiler and C# adapters are
+separate libraries; the CLI and internal Conformance adapter are executables.</p>
 <table>
 <thead>
 <tr>
@@ -107,7 +107,7 @@ separate libraries; the CLI is a separate application.</p>
 </tr>
 <tr>
 <td><a href="https://github.com/schloepke/GameEventScript/blob/main/implementation/csharp/GameEventScript.Conformance/README.md"><code>GameEventScript.Conformance</code></a></td>
-<td>Shared Markdown parser, compiler/runtime orchestration, fixture verification and result reports</td>
+<td>Internal observation adapter for the independent Python runner</td>
 <td>Runtime and Compiler</td>
 </tr>
 <tr>
@@ -117,23 +117,23 @@ separate libraries; the CLI is a separate application.</p>
 </tr>
 </tbody>
 </table>
-<p>All five libraries target <strong>.NET Standard 2.1</strong> and use <strong>C# 12</strong>. Runtime,
-Compiler and Conformance are synchronous, fileless and independent of a test
+<p>All four libraries target <strong>.NET Standard 2.1</strong> and use <strong>C# 12</strong>. Runtime,
+and Compiler are synchronous, fileless and independent of a test
 framework. CLR-specific adapters belong to CSharpBridge. Compiler and
 CSharpBridge each depend only on Runtime, so a product executing precompiled
 <code>.gesb</code> files can ship Runtime with optional C# adapters without shipping the
 compiler or test infrastructure.</p>
 <p>The public entry points use <code>GameEventScript.Api</code>; values use
 <code>GameEventScript.Runtime.Values</code>. The compiler’s builder also lives in
-<code>GameEventScript.Api</code>, even though its assembly is separate. C# adapters and
-Conformance use <code>GameEventScript.CSharpBridge</code> and <code>GameEventScript.Conformance</code>.</p>
+<code>GameEventScript.Api</code>, even though its assembly is separate. C# adapters use <code>GameEventScript.CSharpBridge</code>. The internal Conformance adapter
+is not a public library API.</p>
 <h2 id="module-layout">Module layout</h2>
 <p>Each module owns its production project in <code>src</code> and its native test project in
 <code>tests</code>. The repository solution groups them by module, so a Runtime or Compiler
 change and its implementation tests are visible together. Build or test one
 module directly by passing its <code>.csproj</code> to <code>dotnet build</code> or <code>dotnet test</code>.</p>
-<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">implementation/csharp/</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">GameEventScript.Runtime/       src/ + tests/</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">GameEventScript.Compiler/      src/ + tests/</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">GameEventScript.CSharpBridge/  src/ + tests/</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">GameEventScript.Tool/          src/ + tests/</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">GameEventScript.Conformance/   src/ + tests/ + fixtures/ + worker/ + fixture-exporter/</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">verification/                 Repository.Tests, consumers, package tool, test support</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="implementation/csharp/  GameEventScript.Runtime/       src/ + tests/  GameEventScript.Compiler/      src/ + tests/  GameEventScript.CSharpBridge/  src/ + tests/  GameEventScript.Tool/          src/ + tests/  GameEventScript.Conformance/   src/ + tests/ + fixtures/ + worker/ + fixture-exporter/  verification/                 Repository.Tests, consumers, package tool, test support"><div></div></button></div></figure></div>
-<p>Conformance remains a separate module above Runtime and Compiler. The shared
+<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">implementation/csharp/</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">GameEventScript.Runtime/       src/ + tests/</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">GameEventScript.Compiler/      src/ + tests/ + worker/</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">GameEventScript.CSharpBridge/  src/ + tests/</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">GameEventScript.Tool/          src/ + tests/</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">GameEventScript.Conformance/   adapter/ + fixtures/ + fixture-exporter/</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">  </span></span><span style="--0:#d6deeb;--1:#403f53">verification/                 Repository.Tests, consumers, package tool, test support</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="implementation/csharp/  GameEventScript.Runtime/       src/ + tests/  GameEventScript.Compiler/      src/ + tests/ + worker/  GameEventScript.CSharpBridge/  src/ + tests/  GameEventScript.Tool/          src/ + tests/  GameEventScript.Conformance/   adapter/ + fixtures/ + fixture-exporter/  verification/                 Repository.Tests, consumers, package tool, test support"><div></div></button></div></figure></div>
+<p>The internal C# Conformance adapter depends on Runtime and Compiler. The shared
 Markdown corpus and portable fixtures stay in repository-level <code>conformance/</code>.
 <code>verification/Tests.props</code> supplies common MSTest settings and linked helpers;
 it contains no test cases. The six test projects each discover their own tests
@@ -210,21 +210,18 @@ and native tests.</p>
 <p>For Release verification including the independent allocation gates:</p>
 <div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">dotnet</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">test</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">GameEventScript.sln</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">--configuration</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">Release</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--filter</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">TestCategory!=Performance|TestCategory=Allocation</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="dotnet test GameEventScript.sln \  --configuration Release --filter &quot;TestCategory!=Performance|TestCategory=Allocation&quot;"><div></div></button></div></figure></div>
 <p>Portable behavior is authored in the shared <a href="https://github.com/schloepke/GameEventScript/blob/main/conformance">Markdown corpus</a>.
-The Conformance module’s test project adapts the fileless parser and runner to MSTest.
+The independent Python runner evaluates observations from the internal C# adapter.
+Run <code>sh scripts/test-csharp-conformance.sh</code> for correctness and managed allocations.
 Each product module owns a separate native test project.
 Native tests cover C# adapters, implementation details, public API boundaries,
 CLI/process integration and measurements that require the CLR.</p>
-<p>The ordinary Conformance run verifies behavior and report structure; its
-performance fields echo reference values and are <strong>not measurements</strong>. Actual
-managed allocation checks run in Release under the
-<code>csharp-dotnet-release-managed</code> profile, including an independent zero-allocation
-VM hot-path gate. Elapsed-time benchmarks additionally require their calibrated
-hardware/toolchain profile. See the <a href="https://github.com/schloepke/GameEventScript/blob/main/implementation/csharp/verification/README.md">test guide</a>
-for filters, measurement scope and reference updates.</p>
-<p>A complete corpus run writes <code>ConformanceResults.json</code>, <code>ConformanceReport.md</code>
-and <code>CSharpReferenceResults.received.json</code> below
-<code>artifacts/conformance/received</code>. Received results never automatically replace
-approved references. The shared
+<p>Performance is opt-in and always measured; no reference values are echoed.
+Managed allocation checks use the <code>csharp-dotnet-release-managed</code> profile.
+Elapsed-time benchmarks require their calibrated hardware/toolchain profile.
+See the <a href="https://github.com/schloepke/GameEventScript/blob/main/implementation/csharp/verification/README.md">test guide</a> for measurement scope.</p>
+<p>Reports are written below <code>artifacts/conformance/python</code>. Received Markdown is
+explicitly generated with the Python runner’s <code>received</code> command; it never
+replaces approved references automatically. The shared
 <a href="https://github.com/schloepke/GameEventScript/blob/main/conformance/cross-language/CapabilityMatrix.md">CapabilityMatrix</a> records
 corpus identity and acceptance status across implementations.</p>
 <h2 id="use-the-cli">Use the CLI</h2>

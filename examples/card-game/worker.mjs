@@ -1,9 +1,9 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-import { createEngine } from './engine.mjs?v=e85377f72a6bd790e0fa9d76ddc303c1c91fdfdfc05a3c4c08e961737798b7f4';
+import { createEngine } from './engine.mjs?v=8acb810cd16a62b6c4ddf6d5db218c29244ce65ee5d1b9cdb456c00673cdf215';
 
-import { loadWasm } from './loading.mjs?v=e85377f72a6bd790e0fa9d76ddc303c1c91fdfdfc05a3c4c08e961737798b7f4';
+import { loadWasm } from './loading.mjs?v=8acb810cd16a62b6c4ddf6d5db218c29244ce65ee5d1b9cdb456c00673cdf215';
 
 let engine;
 

@@ -104,7 +104,7 @@
 </tr>
 <tr>
 <td><code>GameEventScriptConformance</code></td>
-<td>Shared Markdown parser, native compilation/execution, bounded fixture verification, result reports</td>
+<td>Internal observation adapter, codec probes and native implementation tests</td>
 <td>Runtime and Compiler</td>
 </tr>
 <tr>
@@ -114,13 +114,14 @@
 </tr>
 </tbody>
 </table>
-<p>Runtime, Compiler and Conformance APIs are synchronous, fileless, and independent of a test framework.
-The optional SwiftBridge macro target uses the official swift-syntax build dependency. The <code>ges-conformance</code> executable
-owns file discovery, input loading, process exit status, and report writing.
-Compiler depends only on Runtime; an embedding using Runtime does not acquire
-either Compiler or Conformance. SwiftBridge is an optional Runtime-only adapter
-dependency for native integration. The <a href="/docs/tools/swift-cli/">native Swift <code>ges</code> CLI</a>
-is the user-facing tool; <code>ges-conformance</code> is the corpus verification tool.</p>
+<p>Runtime and Compiler APIs are synchronous, fileless, and independent of a test framework.
+The optional SwiftBridge macro target uses the official swift-syntax build dependency.
+The independent <a href="https://github.com/schloepke/GameEventScript/blob/main/conformance/runner/README.md">Python runner</a> owns Markdown,
+assertions and reports. <code>ges-conformance-adapter</code> executes requests against Swift
+and returns raw observations; <code>ges-conformance-probe</code> supports codec interoperability.
+Both executables are internal tooling. There is no Swift Conformance library product.
+Compiler depends only on Runtime. The <a href="/docs/tools/swift-cli/">native Swift <code>ges</code> CLI</a>
+is the user-facing tool.</p>
 <h2 id="build-and-verify">Build and verify</h2>
 <p>For application dependencies, use the repository-root SwiftPM package. It exposes
 Runtime, Compiler, SwiftBridge and SyntaxHighlighter as four selectable library products with one
@@ -132,7 +133,7 @@ Xcode installation, tagged consumer verification and release preparation.</p>
 test targets. From the repository root, run
 <code>swift test --scratch-path artifacts/swift/root-tests --disable-build-manifest-caching --configuration release</code>.
 These tests are visible to SwiftPM and Swift Package Index without becoming
-library products. Full language/host Conformance remains in its separate package.</p>
+library products. Full language/host Conformance runs through Python and the internal Swift adapter.</p>
 <h3 id="xcode-workspace">Xcode workspace</h3>
 <p><a href="https://github.com/schloepke/GameEventScript/blob/main/implementation/swift/GameEventScript.xcworkspace"><code>GameEventScript.xcworkspace</code></a> opens Runtime,
 Compiler, SwiftBridge, SyntaxHighlighter, Conformance and the CLI together. The workspace references the local
@@ -154,13 +155,13 @@ tests, and Profile uses the Release executable. Change CLI arguments under
 set the working directory under <strong>Run → Options</strong> or pass absolute paths.
 SwiftPM is the CLI’s build system; its executable package is not a public library
 dependency. The shared <code>GameEventScriptConformance</code>
-scheme runs the native Bridge and corpus tests with <strong>Cmd+U</strong> in Debug. The
+scheme runs the native Compiler, register and Bridge integration tests with <strong>Cmd+U</strong> in Debug. The
 <code>GameEventScriptSwiftBridge</code> scheme runs its native tests independently.
 Before the first full test run, execute
 <code>./scripts/test-swift.sh</code> once to prepare the C#-compiled interoperability fixtures
 in <code>artifacts/swift/runtime-fixtures</code>; refresh them after corpus changes.
-The <code>ges-conformance</code> executable is also available as a scheme; its command-line
-arguments are documented below. Performance measurements continue to use the
+The <code>ges-conformance-adapter</code> executable is also available as a scheme; Python
+starts it using the JSON observation protocol. Performance measurements continue to use the
 separate Release script and calibrated profile.</p>
 <p>For a headless Xcode test run:</p>
 <div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">./scripts/open-swift-xcode.sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--configure-only</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">xcodebuild</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-workspace</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">implementation/swift/GameEventScript.xcworkspace</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">-scheme</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">GameEventScriptConformance</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-destination</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">'</span><span style="--0:#ECC48D;--1:#984E4D">platform=macOS</span><span style="--0:#D9F5DD;--1:#111111">'</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">-derivedDataPath</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">artifacts/swift/xcode</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-parallel-testing-enabled</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">NO</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">test</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="./scripts/open-swift-xcode.sh --configure-onlyxcodebuild -workspace implementation/swift/GameEventScript.xcworkspace \  -scheme GameEventScriptConformance -destination &#x27;platform=macOS&#x27; \  -derivedDataPath artifacts/swift/xcode -parallel-testing-enabled NO test"><div></div></button></div></figure></div>
@@ -328,13 +329,17 @@ fixtures, compiler ownership/options and resource-limit failure paths.</li>
 </ul>
 <p>The <a href="https://github.com/schloepke/GameEventScript/blob/main/conformance/cross-language/CapabilityMatrix.md">CapabilityMatrix</a>
 records the exact corpus identity and report locations.</p>
-<p>Run the strict native suite without .NET:</p>
-<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">swift</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--package-path</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">implementation/swift/GameEventScriptConformance</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">--scratch-path</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">artifacts/swift/conformance</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--disable-build-manifest-caching</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-c</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">release</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#ECC48D;--1:#3B61B0">ges-conformance</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--corpus</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">conformance/suites</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">--fixtures</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">conformance/fixtures/MarkdownV1</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">--binary-fixtures</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">conformance/fixtures</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">--output</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">artifacts/swift/conformance-results</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="swift run --package-path implementation/swift/GameEventScriptConformance \  --scratch-path artifacts/swift/conformance --disable-build-manifest-caching -c release \  ges-conformance --corpus conformance/suites \  --fixtures conformance/fixtures/MarkdownV1 \  --binary-fixtures conformance/fixtures \  --output artifacts/swift/conformance-results"><div></div></button></div></figure></div>
-<p><code>ConformanceResults.json</code>, <code>.md</code>, and <code>SwiftResults.json</code> contain native Swift
-results. Adding <code>--runtime-programs artifacts/swift/runtime-fixtures</code> after the
-C# export also produces <code>RuntimeResults.json</code> and <code>.md</code> with explicitly identified
-C# compiler inputs. Generated inputs, reports and build products stay under
-ignored <code>artifacts</code>.</p>
+<p>Run all correctness cases with native Swift compilation, without .NET:</p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">swift</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">build</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--package-path</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">implementation/swift/GameEventScriptConformance</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">--scratch-path</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">artifacts/swift/conformance</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--disable-build-manifest-caching</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-c</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">release</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">python3</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">conformance/runner/main.py</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--kind</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">supported</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">--output</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">artifacts/swift/conformance-results/ConformanceResults.json</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">--adapter</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">artifacts/swift/conformance/release/ges-conformance-adapter</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="swift build --package-path implementation/swift/GameEventScriptConformance \  --scratch-path artifacts/swift/conformance --disable-build-manifest-caching -c releasepython3 conformance/runner/main.py run --kind supported \  --output artifacts/swift/conformance-results/ConformanceResults.json \  --adapter artifacts/swift/conformance/release/ges-conformance-adapter"><div></div></button></div></figure></div>
+<p>Python writes the canonical <code>ConformanceResults.json</code> report. The full test script
+also checks all 31 performance scenarios’ behavior with native compilation,
+without measuring them, in <code>PerformanceCorrectness.json</code>. This preserves the old
+native compiler corpus coverage on every CI host.
+After exporting C# inputs, <code>python3 scripts/test-swift-runtime.py</code> verifies their
+binary and source-document hashes and writes <code>RuntimeResults.json</code>, explicitly
+identifying C# compiler inputs. No native compiler fallback is allowed in that run.
+Adapter transport tests live in <code>GameEventScriptConformance/adapter/tests</code>.
+Generated inputs, reports and build products stay under ignored <code>artifacts</code>.</p>
 <h2 id="compile-source-text">Compile source text</h2>
 <p>Add <code>GameEventScriptCompiler</code> as a local SwiftPM dependency/product in the same
 way as Runtime below. The builder accepts texts and optional diagnostic source

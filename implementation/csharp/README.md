@@ -7,8 +7,8 @@
 
 
 The C# implementation is the reference implementation for the shared,
-language-neutral contracts. Runtime, Compiler, C# adapters and Conformance are
-separate libraries; the CLI is a separate application.
+language-neutral contracts. Runtime, Compiler and C# adapters are
+separate libraries; the CLI and internal Conformance adapter are executables.
 
 | Project / package | Responsibility | Dependencies |
 | --- | --- | --- |
@@ -16,11 +16,11 @@ separate libraries; the CLI is a separate application.
 | [`GameEventScript.Compiler`](GameEventScript.Compiler) | Source lexer/parser, validation, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime |
 | [`GameEventScript.CSharpBridge`](GameEventScript.CSharpBridge) | Delegate adapters, Reflection/attribute bindings, CLR value conversion and optional automatic host pumping | Runtime |
 | [`GameEventScript.SyntaxHighlighter`](GameEventScript.SyntaxHighlighter/README.md) | GES/GESA UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | .NET Standard library |
-| [`GameEventScript.Conformance`](GameEventScript.Conformance/README.md) | Shared Markdown parser, compiler/runtime orchestration, fixture verification and result reports | Runtime and Compiler |
+| [`GameEventScript.Conformance`](GameEventScript.Conformance/README.md) | Internal observation adapter for the independent Python runner | Runtime and Compiler |
 | [`GameEventScript.Tool`](GameEventScript.Tool/README.md) / `dotnet ges` | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, CSharpBridge, SyntaxHighlighter and PrettyPrompt |
 
-All five libraries target **.NET Standard 2.1** and use **C# 12**. Runtime,
-Compiler and Conformance are synchronous, fileless and independent of a test
+All four libraries target **.NET Standard 2.1** and use **C# 12**. Runtime,
+and Compiler are synchronous, fileless and independent of a test
 framework. CLR-specific adapters belong to CSharpBridge. Compiler and
 CSharpBridge each depend only on Runtime, so a product executing precompiled
 `.gesb` files can ship Runtime with optional C# adapters without shipping the
@@ -28,8 +28,8 @@ compiler or test infrastructure.
 
 The public entry points use `GameEventScript.Api`; values use
 `GameEventScript.Runtime.Values`. The compiler's builder also lives in
-`GameEventScript.Api`, even though its assembly is separate. C# adapters and
-Conformance use `GameEventScript.CSharpBridge` and `GameEventScript.Conformance`.
+`GameEventScript.Api`, even though its assembly is separate. C# adapters use `GameEventScript.CSharpBridge`. The internal Conformance adapter
+is not a public library API.
 
 ## Module layout
 
@@ -41,14 +41,14 @@ module directly by passing its `.csproj` to `dotnet build` or `dotnet test`.
 ```text
 implementation/csharp/
   GameEventScript.Runtime/       src/ + tests/
-  GameEventScript.Compiler/      src/ + tests/
+  GameEventScript.Compiler/      src/ + tests/ + worker/
   GameEventScript.CSharpBridge/  src/ + tests/
   GameEventScript.Tool/          src/ + tests/
-  GameEventScript.Conformance/   src/ + tests/ + fixtures/ + worker/ + fixture-exporter/
+  GameEventScript.Conformance/   adapter/ + fixtures/ + fixture-exporter/
   verification/                 Repository.Tests, consumers, package tool, test support
 ```
 
-Conformance remains a separate module above Runtime and Compiler. The shared
+The internal C# Conformance adapter depends on Runtime and Compiler. The shared
 Markdown corpus and portable fixtures stay in repository-level `conformance/`.
 `verification/Tests.props` supplies common MSTest settings and linked helpers;
 it contains no test cases. The six test projects each discover their own tests
@@ -101,23 +101,20 @@ dotnet test GameEventScript.sln \
 ```
 
 Portable behavior is authored in the shared [Markdown corpus](../../conformance).
-The Conformance module’s test project adapts the fileless parser and runner to MSTest.
+The independent Python runner evaluates observations from the internal C# adapter.
+Run `sh scripts/test-csharp-conformance.sh` for correctness and managed allocations.
 Each product module owns a separate native test project.
 Native tests cover C# adapters, implementation details, public API boundaries,
 CLI/process integration and measurements that require the CLR.
 
-The ordinary Conformance run verifies behavior and report structure; its
-performance fields echo reference values and are **not measurements**. Actual
-managed allocation checks run in Release under the
-`csharp-dotnet-release-managed` profile, including an independent zero-allocation
-VM hot-path gate. Elapsed-time benchmarks additionally require their calibrated
-hardware/toolchain profile. See the [test guide](verification/README.md)
-for filters, measurement scope and reference updates.
+Performance is opt-in and always measured; no reference values are echoed.
+Managed allocation checks use the `csharp-dotnet-release-managed` profile.
+Elapsed-time benchmarks require their calibrated hardware/toolchain profile.
+See the [test guide](verification/README.md) for measurement scope.
 
-A complete corpus run writes `ConformanceResults.json`, `ConformanceReport.md`
-and `CSharpReferenceResults.received.json` below
-`artifacts/conformance/received`. Received results never automatically replace
-approved references. The shared
+Reports are written below `artifacts/conformance/python`. Received Markdown is
+explicitly generated with the Python runner's `received` command; it never
+replaces approved references automatically. The shared
 [CapabilityMatrix](../../conformance/cross-language/CapabilityMatrix.md) records
 corpus identity and acceptance status across implementations.
 

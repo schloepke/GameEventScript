@@ -34,6 +34,11 @@ jobs:
           python3 scripts/sync-editor-bundles.py --check
           python3 scripts/test-editor-bundles.py
 
+      - name: Verify independent Python conformance runner
+        run: |
+          python3 -m unittest discover -s conformance/runner -p 'test_*.py'
+          python3 scripts/test-prepare-runtime-fixtures.py
+
       - name: Verify canonical highlighting tables
         run: python3 scripts/sync-highlighter-grammars.py --check
 
@@ -54,6 +59,15 @@ jobs:
 
       - name: Restore solution
         run: dotnet restore GameEventScript.sln
+
+      - name: Verify internal C# conformance adapter
+        run: |
+          dotnet build implementation/csharp/GameEventScript.Conformance/adapter/GameEventScript.ConformanceAdapter.csproj --configuration Release
+          dotnet format whitespace implementation/csharp/GameEventScript.Conformance/adapter/GameEventScript.ConformanceAdapter.csproj --no-restore --verify-no-changes
+          GES_CSHARP_ADAPTER="$PWD/artifacts/csharp/conformance-adapter/bin/Release/net10.0/GameEventScript.ConformanceAdapter.dll" python3 -m unittest discover -s implementation/csharp/GameEventScript.Conformance/adapter/tests -p 'test_*.py'
+
+      - name: Run shared corpus and managed allocation gate
+        run: sh scripts/test-csharp-conformance.sh
 
       - name: Verify C# formatting
         run: dotnet format GameEventScript.sln --no-restore --verify-no-changes

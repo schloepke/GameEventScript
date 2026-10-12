@@ -99,7 +99,8 @@ class SwiftDocumentationTests(unittest.TestCase):
                 self.assertEqual(3, len(build_commands))
                 self.assertTrue(all("--build-tests" not in c for c in build_commands))
                 self.assertTrue(all("release" in c and "--disable-build-manifest-caching" in c for c in build_commands))
-                self.assertEqual(5, sum("-output-dir" in c for c in commands))
+                self.assertEqual(4, sum("-output-dir" in c for c in commands))
+                self.assertNotIn("GameEventScriptConformance", API.PACKAGES)
 
     def test_extractor_failure_exposes_tool_diagnostic(self):
         with tempfile.TemporaryDirectory() as directory:

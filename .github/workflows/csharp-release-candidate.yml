@@ -57,6 +57,9 @@ jobs:
           dotnet restore GameEventScript.sln
           dotnet test GameEventScript.sln --configuration Release --no-restore --filter "TestCategory!=Performance"
 
+      - name: Run shared corpus and managed allocation gate
+        run: sh scripts/test-csharp-conformance.sh
+
       - name: Prepare release candidate without publishing
         env:
           RELEASE_VERSION: ${{ inputs.version }}

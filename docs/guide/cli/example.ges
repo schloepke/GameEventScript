@@ -18,6 +18,8 @@ on Main(args) {
 				emit ConsoleOut("Number argument: f(", arg, ") = ", double(arg))
 			} else if arg is :Tag {
 				emit ConsoleOut("Tag: ", arg)
+			} else if arg is :Handler {
+				emit ConsoleOut("Handler: ", arg)
 			} else {
 				emit ConsoleOut("Argument: ", arg)
 			}
@@ -25,4 +27,13 @@ on Main(args) {
 	} else {
 		emit ConsoleErr("We got args which is not a list: ", args)
 	}
+}
+
+on Test() {
+	if 1 + 1 = 2 {
+		emit ConsoleOut("Test passed")
+	} else {
+		emit ConsoleErr("Test failed")
+	}
+    emit ConsoleOut([:cartesian [1, 2], [3, 4] :select x, y => x + y :sum])
 }

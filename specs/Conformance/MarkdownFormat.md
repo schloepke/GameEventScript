@@ -825,7 +825,7 @@ stable error `duplicateTypeName`.
 
 ```yaml
 externalTypeApi:
-  typeNames: [sample, sample]
+  typeNames: [Sample, Sample]
 ```
 
 ```yaml

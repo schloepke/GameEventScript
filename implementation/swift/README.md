@@ -12,16 +12,17 @@
 | `GameEventScriptCompiler` | Source lexer/parser, validation, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime |
 | [`GameEventScriptSwiftBridge`](GameEventScriptSwiftBridge/README.md) | Native closure adapters, typed value conversion, KeyPath/external-type bindings and an optional synchronized Host runner | Runtime; Foundation for the runner |
 | [`GameEventScriptSyntaxHighlighter`](GameEventScriptSyntaxHighlighter/README.md) | GES/GESA UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | Foundation |
-| `GameEventScriptConformance` | Shared Markdown parser, native compilation/execution, bounded fixture verification, result reports | Runtime and Compiler |
+| `GameEventScriptConformance` | Internal observation adapter, codec probes and native implementation tests | Runtime and Compiler |
 | `GameEventScriptTool` / `ges` executable | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, SyntaxHighlighter, Foundation and POSIX |
 
-Runtime, Compiler and Conformance APIs are synchronous, fileless, and independent of a test framework.
-The optional SwiftBridge macro target uses the official swift-syntax build dependency. The `ges-conformance` executable
-owns file discovery, input loading, process exit status, and report writing.
-Compiler depends only on Runtime; an embedding using Runtime does not acquire
-either Compiler or Conformance. SwiftBridge is an optional Runtime-only adapter
-dependency for native integration. The [native Swift `ges` CLI](GameEventScriptTool/README.md)
-is the user-facing tool; `ges-conformance` is the corpus verification tool.
+Runtime and Compiler APIs are synchronous, fileless, and independent of a test framework.
+The optional SwiftBridge macro target uses the official swift-syntax build dependency.
+The independent [Python runner](../../conformance/runner/README.md) owns Markdown,
+assertions and reports. `ges-conformance-adapter` executes requests against Swift
+and returns raw observations; `ges-conformance-probe` supports codec interoperability.
+Both executables are internal tooling. There is no Swift Conformance library product.
+Compiler depends only on Runtime. The [native Swift `ges` CLI](GameEventScriptTool/README.md)
+is the user-facing tool.
 
 ## Build and verify
 
@@ -36,7 +37,7 @@ The root package also reuses the native SwiftBridge, bridge-macro and highlighte
 test targets. From the repository root, run
 `swift test --scratch-path artifacts/swift/root-tests --disable-build-manifest-caching --configuration release`.
 These tests are visible to SwiftPM and Swift Package Index without becoming
-library products. Full language/host Conformance remains in its separate package.
+library products. Full language/host Conformance runs through Python and the internal Swift adapter.
 
 ### Xcode workspace
 
@@ -66,13 +67,13 @@ tests, and Profile uses the Release executable. Change CLI arguments under
 set the working directory under **Run → Options** or pass absolute paths.
 SwiftPM is the CLI's build system; its executable package is not a public library
 dependency. The shared `GameEventScriptConformance`
-scheme runs the native Bridge and corpus tests with **Cmd+U** in Debug. The
+scheme runs the native Compiler, register and Bridge integration tests with **Cmd+U** in Debug. The
 `GameEventScriptSwiftBridge` scheme runs its native tests independently.
 Before the first full test run, execute
 `./scripts/test-swift.sh` once to prepare the C#-compiled interoperability fixtures
 in `artifacts/swift/runtime-fixtures`; refresh them after corpus changes.
-The `ges-conformance` executable is also available as a scheme; its command-line
-arguments are documented below. Performance measurements continue to use the
+The `ges-conformance-adapter` executable is also available as a scheme; Python
+starts it using the JSON observation protocol. Performance measurements continue to use the
 separate Release script and calibrated profile.
 
 For a headless Xcode test run:
@@ -204,22 +205,25 @@ Verified on 2026-09-23 with Swift 6.4 on macOS arm64, Release:
 The [CapabilityMatrix](../../conformance/cross-language/CapabilityMatrix.md)
 records the exact corpus identity and report locations.
 
-Run the strict native suite without .NET:
+Run all correctness cases with native Swift compilation, without .NET:
 
 ```bash
-swift run --package-path implementation/swift/GameEventScriptConformance \
-  --scratch-path artifacts/swift/conformance --disable-build-manifest-caching -c release \
-  ges-conformance --corpus conformance/suites \
-  --fixtures conformance/fixtures/MarkdownV1 \
-  --binary-fixtures conformance/fixtures \
-  --output artifacts/swift/conformance-results
+swift build --package-path implementation/swift/GameEventScriptConformance \
+  --scratch-path artifacts/swift/conformance --disable-build-manifest-caching -c release
+python3 conformance/runner/main.py run --kind supported \
+  --output artifacts/swift/conformance-results/ConformanceResults.json \
+  --adapter artifacts/swift/conformance/release/ges-conformance-adapter
 ```
 
-`ConformanceResults.json`, `.md`, and `SwiftResults.json` contain native Swift
-results. Adding `--runtime-programs artifacts/swift/runtime-fixtures` after the
-C# export also produces `RuntimeResults.json` and `.md` with explicitly identified
-C# compiler inputs. Generated inputs, reports and build products stay under
-ignored `artifacts`.
+Python writes the canonical `ConformanceResults.json` report. The full test script
+also checks all 31 performance scenarios' behavior with native compilation,
+without measuring them, in `PerformanceCorrectness.json`. This preserves the old
+native compiler corpus coverage on every CI host.
+After exporting C# inputs, `python3 scripts/test-swift-runtime.py` verifies their
+binary and source-document hashes and writes `RuntimeResults.json`, explicitly
+identifying C# compiler inputs. No native compiler fallback is allowed in that run.
+Adapter transport tests live in `GameEventScriptConformance/adapter/tests`.
+Generated inputs, reports and build products stay under ignored `artifacts`.
 
 ## Compile source text
 

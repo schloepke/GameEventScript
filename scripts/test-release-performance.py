@@ -115,18 +115,11 @@ def main():
             with (output / (language + '.log')).open('w') as log:
                 process = subprocess.run(invocation, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
             if language == 'csharp':
-                sources = ROOT / 'artifacts/conformance/received/performance'
-                reports = []
-                for document in sorted((ROOT / 'conformance/suites/performance').glob('*.md')):
-                    # Suite identity is declared in the Markdown front matter.
-                    suite = next(line.split(':', 1)[1].strip().strip('"') for line in document.read_text().splitlines() if line.startswith('suiteId:'))
-                    report = sources / (suite + '.results.json')
-                    if report.stat().st_mtime_ns < start:
-                        raise ValueError('Stale performance report: ' + str(report))
-                    reports.append(destination / report.name)
-                    for item in sources.glob(suite + '.*'):
-                        if item.stat().st_mtime_ns >= start:
-                            shutil.copy2(item, destination / item.name)
+                report = ROOT / 'artifacts/conformance/python/performance-results.json'
+                if report.stat().st_mtime_ns < start:
+                    raise ValueError('Stale performance report: ' + str(report))
+                reports = [destination / report.name]
+                shutil.copy2(report, reports[0])
             else:
                 reports = [destination / 'ConformanceResults.json']
             if process.returncode:
@@ -137,8 +130,7 @@ def main():
                 json.loads(path.read_text()),
                 inventory if language == 'swift' else {
                     identity: kind for identity, kind in inventory.items()
-                    if identity.split('/', 1)[0] == path.name.removesuffix('.results.json')
-                    and kind == 'performance'
+                    if kind == 'performance'
                 }) for path in reports)
             print(f'{language}: {receipt["checks"][language]} measured workloads passed', flush=True)
         if source_identity() != before:

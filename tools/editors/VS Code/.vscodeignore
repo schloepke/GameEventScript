@@ -1,0 +1,13 @@
+# Copyright 2026 Stephan Schlöpke
+# SPDX-License-Identifier: Apache-2.0
+**/*
+!package.json
+!extension.js
+!markdown-preview.js
+!markdown-preview.css
+!node_modules/**
+!README.md
+!LICENSE
+!*-language-configuration.json
+!syntaxes/**
+!snippets/**

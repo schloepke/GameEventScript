@@ -8,3 +8,5 @@ repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$repository_root"
 
 dotnet test GameEventScript.sln --filter "TestCategory!=Performance"
+
+sh scripts/test-csharp-conformance.sh

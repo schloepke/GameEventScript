@@ -21,7 +21,7 @@ Runtime, Compiler, Bridge or Conformance dependency and are not part of VM execu
 
 ## Scope and dependency direction
 
-The portable surface consists of three modules:
+The portable product modules and independent verification tooling are separated as follows:
 
 ```text
 GameEventScript Runtime
@@ -31,9 +31,10 @@ GameEventScript Compiler
   source builder, lexer, parser, validation, optimizer, bytecode generation
   -> depends only on GameEventScript Runtime
 
-GameEventScript Conformance
-  Markdown parser, normalized test model, runner, results, reports, received output
-  -> depends on GameEventScript Runtime and Compiler
+Independent Conformance runner (Python, repository tooling)
+  Markdown parser, normalized test model, assertions, reports, received output
+  -> communicates with internal implementation adapters over JSON
+  -> C# and Swift adapters depend on their Runtime and Compiler; no public Conformance library
 ```
 
 Runtime must load and execute precompiled Programs without a source compiler.
@@ -41,13 +42,13 @@ Shared value semantics, text/number conversions, runtime literal parsing, Progra
 validation, and declarative external-type definitions remain in Runtime. There
 is no additional shared Core module. Compiler uses these Runtime contracts;
 Runtime never references Compiler or Conformance. Compiler never references
-Conformance or language-specific adapters. All three portable modules remain
+Conformance or language-specific adapters. Both portable modules remain
 synchronous and independent of filesystem, network, threads, and test frameworks.
 
-Conformance is a separate repository/development module, not a published NuGet
-library or root SwiftPM product. Its public contract is independent of the
-reference test framework and filesystem adapters; its exported development API
-does not enlarge the supported application package surface.
+Conformance is repository tooling, not a published NuGet library or root SwiftPM
+product. The Python runner owns assertions; the internal C# and Swift adapters expose only
+the process protocol in [PythonRunner.md](Conformance/PythonRunner.md). Neither
+implementation publishes a Conformance library.
 
 The following documents own detailed behavior and are incorporated by reference:
 
@@ -171,8 +172,8 @@ refer to their exact bit width.
   Detach, and Unsubscribe calls from a native callback are permitted and obey
   the enqueue-time snapshot rules; they must return before the callback returns.
 - Observer and publish-sink callbacks run synchronously on the pumping caller.
-- Conformance parser, runner, writers, resolver, provider, and sink are also
-  synchronous. They start no tasks or threads.
+- Portable library operations remain synchronous. Conformance process orchestration
+  belongs to repository tooling, outside the application library contract.
 
 ### Allocation contract
 
@@ -870,199 +871,19 @@ exception reported at the callback boundary, even if its inner cause is an
 
 ## Conformance parser API
 
-### Parser operation
-
-`ConformanceMarkdownParser.Parse(utf8BytesOrText, limits?) -> ConformanceDocument`
-is synchronous and fileless. Bytes are strict UTF-8. Text is treated as the same
-Unicode content and converted to the canonical parser model. The parser applies
-the complete Markdown structure, limited YAML, schema, cross-reference, and
-limit validation before returning.
-
-Success returns one fully validated immutable Document. Failure carries an
-ordered non-empty list of ConformanceDiagnostic values. `ConformanceParseException`
-is the C# transport only. Markdown tokens, YAML nodes, and parse trees are private
-implementation details and never appear in the public result.
-
-`ConformanceParserLimits` contains maxima for document bytes, tests, YAML depth,
-YAML nodes, scalar bytes, sources/test, source bytes/test, steps/test, and hosts/test.
-Limits are checked before proportional allocation. The Default configuration is
-read-only by convention and is snapshotted at parse start.
-
-### Normalized document model
-
-`ConformanceDocument` owns immutable source identity, format version, suite ID,
-title, frontmatter range, and ordered Cases. `ConformanceSourceDocument` retains
-immutable original UTF-8 bytes, BOM presence, and detected line-ending style so
-a ReceivedWriter can preserve authoring bytes. `ConformanceSourceRange` is a
-value containing UTF-8 byte offset/length and one-based line/column bounds.
-Source bytes, nested sequences, and lookup maps expose no writable backing
-storage through their public collection views, including map key/value views.
-
-`ConformanceCase` owns normalized identity (`Id`, `SuiteId`, `FullId`, title),
-kind, level, categories, tags, capability requirements, sources, steps, compile
-options, runtime/random/sink/external-registry settings, native handlers,
-deferred programs, host count, optional kind-specific input, expectations,
-assembler text, and exact source ranges needed for received output.
-
-`ConformanceRandomConfiguration.Entropy` exposes a copied, read-only list of
-ordered bytes for entropy-based host configuration. It is empty when `Seed`
-or `Sequence` is selected. The input encoding and mutual-exclusion rules are
-owned by [Conformance Markdown](Conformance/MarkdownFormat.md).
-
-All nested case model types are immutable data projections of the fields defined
-by [Conformance Markdown](Conformance/MarkdownFormat.md):
-
-- source/message/value data: `SourceInput`, `Message`, `Argument`, `Value`,
-  `ValueEntry`, and `MessageSignatureDefinition`;
-- execution data: `Step`, `PumpMode`, `NativeHandler`, `NativeEmit`,
-  `NativeAction`, `NativeActionKind`, `RandomConfiguration`, `RuntimeLimits`,
-  `PublishSinkMode`, and `ExternalTypeRegistryMode`;
-- configuration: `CapabilityRequirements`, `CompileOptions`, and
-  `ComparisonOptions` with exact/Ulp Binary64 comparison;
-- kind-specific inputs: `BinaryFixture`, `MessageApiCase`, `ValueApiCase`,
-  `ExternalTypeApiCase`, and `PerformanceWorkload`;
-- expectations: `Expectation`, `StepExpectation`, `ChannelExpectation`,
-  `ObservationExpectation`, `ObserverEventExpectation`, `ExpectedDiagnostic`,
-  `RuntimeLimitExpectation`, `PublishResultExpectation`, `BinaryExpectation`,
-  `OpcodeExpectation`, `CompileMetadataExpectation`, `ProgramResourceExpectation`,
-  `HandlerResourceExpectation`, `MessageDefinitionExpectation`,
-  `MessageApiExpectation`, `ValueApiExpectation`, `ExternalTypeApiExpectation`,
-  `PerformanceExpectation`, `PerformanceProfile`, and `PerformanceMetric`.
-
-`ConformanceNativeHandler.FaultCode` exposes the optional caller-chosen diagnostic
-code for a deliberate native-handler failure, or null when absent.
-`FaultProgramName` and `FaultHandlerName` expose the fixture's supplied context
-before Host enrichment. Input constraints and execution order are owned by the
-Markdown format.
-
-`ConformanceExpectedDiagnostic.ProgramNameSpecified` and `HandlerNameSpecified`
-distinguish an omitted context constraint from an explicit null expectation.
-When a flag is true, the corresponding nullable value must match exactly;
-otherwise that context field is unconstrained.
-
-`ConformanceMessageApiCase.CompareConformanceMessage` and
-`ConformanceMessageApiExpectation.ConformanceEquals` expose the optional paired
-transport comparison input and result defined in the Markdown format. They
-exercise the same conformance comparison as runtime message expectations.
-
-`ConformanceNativeAction.ExpectedError` exposes the optional structured link
-diagnostic expected from `loadProgram`. The Markdown format defines its
-exclusivity with `ExpectedResult` and the runner's continuation behavior.
-
-`ConformancePerformanceWorkload.ObserveRuntime` exposes the Boolean measurement
-observer selection, defaulting to true, defined by the Markdown format. It does
-not disable observations in the separate correctness execution. Platform
-allocation counters remain behind `PerformanceProvider`, outside the portable
-model and runner.
-The same collection immutability requirement covers parser diagnostics,
-resource bytes, environment capabilities, measurements, and runner reports.
-
-Enum-like model values have the closed sets specified by MarkdownFormat:
-`TestKind`, `TestLevel`, `PumpMode`, `PublishSinkMode`,
-`ExternalTypeRegistryMode`, `ObserverEventKind`, `NativeActionKind`,
-`BinaryOutcome`, and `Binary64ComparisonMode`. A parser rejects unknown V1
-values rather than materializing an unknown enum ordinal.
-
-Every model collection preserves author order unless its schema explicitly
-requires canonical sorting. Optional submodels are absent, not empty fabricated
-objects. Callers may retain and concurrently read a parsed Document.
+The independent Python runner owns Markdown parsing and normalized test inputs.
+See [MarkdownFormat.md](Conformance/MarkdownFormat.md).
 
 ## Conformance runner API
 
-### Environment and callbacks
-
-`ConformanceRunnerEnvironment` is an immutable snapshot containing runner and
-implementation IDs/versions, sorted capability IDs, portable extension catalog/
-registry inputs, optional resource resolver, optional performance provider, and
-optional performance profile ID. Environment validation precedes case execution.
-
-`ConformanceRunnerOptions` contains RunnerLimits plus flags controlling inclusion
-of successful assembler output and technical details. `RunnerLimits` bounds case
-count, frames per step, and resource bytes. Defaults are immutable/snapshotted.
-
-`ResourceResolver.Resolve(resourceId, maximumByteCount) -> ResourceResult` is the
-only external fixture byte boundary. ResourceResult is immutable status
-(`Found`, `NotFound`, `LimitExceeded`, or `Error`), bytes, and optional stable
-error code. Found bytes are copied/treated immutable and rechecked against the
-limit and SHA-256. The runner never interprets a path or URL.
-
-`PerformanceProvider.Measure(case, profileId) -> PerformanceMeasurement`
-returns ordered `MeasuredMetric(id, unit, canonicalValue)` values after ordinary
-correctness execution. It owns platform timing/allocation mechanics and must not
-mutate the case. `ResultSink.CaseCompleted(result)` is called once per completed
-case in execution order; its result is observational and does not replace the
-runner-owned immutable result.
-
-Resolver and performance-provider failures are caught at the case boundary and
-produce an Error result with a stable runner code. ResultSink is an outer
-reporting callback and must not throw; a sink exception is an embedding-contract
-violation and is not converted into another case result.
-
-### Runner operations
-
-| Operation | Contract |
-| --- | --- |
-| `RunCase(document, caseId, environment, options?, sink?)` | Resolves exactly one full or document-local case ID and executes no other case. |
-| `RunDocument(document, environment, options?, sink?)` | Runs cases once in document order and returns one report. |
-| `RunCorpus(documents, environment, options?, sink?)` | Preflights the complete caller-ordered corpus, rejects duplicate identities before execution, then runs each case once in document/case order. |
-
-All operations are synchronous, threadless, fileless, and test-framework-free.
-Options and sink are optional; absence selects defaults/no notifications. Each
-case receives isolated mutable compiler/Host/random/observer state. The detailed
-execution algorithm and capability behavior are defined by
-[Conformance runner](Conformance/Runner.md).
-
-### Results
-
-`ConformanceCaseResult` is immutable and contains case/suite identity, title,
-kind, level, categories, tags, status, stable code, missing capabilities,
-mismatches, diagnostics, runtime-limit results, optional actual assembler,
-optional performance result, and optional technical details.
-
-Status is exactly `Passed`, `Failed`, `Skipped`, or `Error`:
-
-- Failed means the implementation ran but did not meet an expectation.
-- Error means invalid environment/model/resource or an unhandled implementation
-  failure prevented a valid comparison.
-- Skipped is permitted only for an absent declared optional capability.
-
-`Mismatch` stores stable code/path, expected/actual canonical text, and optional
-structured result diagnostic. `ResultDiagnostic` is the report-safe projection
-of a Core diagnostic. `RuntimeLimitResult` stores limit name, detail, and value.
-`PerformanceResult` contains selected profile ID and ordered
-`PerformanceMetricResult` values `(id, unit, reference, measured, allowed,
-passed)`. Canonical numeric strings avoid locale and Binary64 parser differences.
-
-`ConformanceRunReport` contains immutable runner/implementation identity,
-capabilities, optional performance profile, ordered case results, aggregate
-status, and RunSummary. Summary counts total/passed/failed/skipped/error exactly
-once and must equal the Cases collection. A framework adapter aggregates already
-returned case results; it must not rerun the corpus merely to write a report.
+The runner owns assertions and communicates with implementation adapters through
+the [V1 process protocol](Conformance/PythonRunner.md). There is no public C#
+Conformance library API.
 
 ## Conformance writer API
 
-All writers are pure with respect to their input models, perform no file I/O,
-use deterministic ordering, and either return Text/Bytes or write into
-caller-provided storage. `ToArray` output is UTF-8 with LF and no BOM unless the
-specific received-preservation rule says otherwise.
-
-| Writer | Operations and contract |
-| --- | --- |
-| `ResultJsonWriter` | `ToText(report)` / `ToArray(report)` emit the complete canonical machine-readable result with fixed property order. |
-| `MarkdownReportWriter` | `ToText(report)` emits the human-readable aggregate report and performance tables. It is informative, not runner input. |
-| `ReceivedMarkdownWriter` | `ToText(document, report)` / `ToArray(...)` return an approval candidate that replaces only eligible performance references and assembler payload ranges. It never writes or overwrites the source document. |
-| `CrossLanguageResultJsonWriter` | `Identify(documents)` returns CorpusIdentity; `ToText/ToArray(documents, report)` emit the compact canonical cross-language comparison artifact. |
-
-Received output first verifies document/report identity, case presence, source
-ranges, non-overlap, and stale authored content. Failure returns a stable
-`ReceivedWriterCode` (`InvalidReport`, `MissingCase`, `MissingRange`,
-`OverlappingRange`, or `StaleRange`); the C# transport is
-`ConformanceReceivedWriteException`. A failed operation returns no partial
-candidate and never mutates document bytes.
-
-`CorpusIdentity` contains Markdown format version, document count, case count,
-and SHA-256 of canonical corpus identity. `Identify` is deterministic for the
-caller-supplied ordered documents and never reads discovery paths.
+Reports and Received Markdown are produced by the independent runner. Their
+contracts remain in [Runner.md](Conformance/Runner.md).
 
 ## Language-binding requirements
 
@@ -1078,7 +899,7 @@ the Reader.
 
 Package and assembly identities use `GameEventScript.Runtime`,
 `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, and
-`GameEventScript.Conformance`. Their shared C# namespace root is
+`GameEventScript.SyntaxHighlighter`. Their shared C# namespace root is
 `GameEventScript`; the module name does not add another namespace layer to
 the public `GameEventScript.Api` contracts. Public type names remain unchanged.
 
@@ -1165,33 +986,12 @@ materializes declared external fields, propagating field failures. It does not
 perform a source-language cast. The random generator has seed, sequence, and
 entropy initializers; each Host constructs its own generator.
 
-`ConformanceMarkdownParser` accepts bytes, `ConformanceRunner` compiles and
-executes supported cases natively in memory, and `ConformanceReportWriter`
-returns report text. The default `ConformanceEnvironment` advertises all Core
-capabilities and `bytecode-snapshot`. Measurement is opt-in: an environment
-advertising `performance` must supply `performanceProfile` and a
-`ConformancePerformanceProvider`. The provider returns `ConformanceMeasuredMetric`
-values with explicit IDs, finite nonnegative Binary64 measurements and units.
-The runner executes correctness first and validates the exact profile metric
-set, units and bounds. Results expose `ConformancePerformanceResult` with each
-metric's measured, reference and allowed values; reports retain the profile ID.
-Unavailable profiles, missing/duplicate metrics and invalid readings are errors;
-values above the owning profile's bounds are performance regression failures.
-`ConformanceResourceResolver.resolve(resourceID:maximumBytes:)` supplies binary
-fixtures as copied bytes or structured `notFound`, `limitExceeded`, or `error`
-results. The environment's positive `maximumResourceBytes` defaults to 64 MiB.
-The runner independently checks the bound and declared SHA-256; failures use
-the resource error codes defined by the Conformance runner contract. Path
-interpretation belongs to the embedding, never the portable resolver interface.
-`ConformanceRuntimeRunner.runCase` additionally checks runtime scenarios from
-independently supplied `ConformanceRuntimeProgram` groups.
-`ConformanceProgramRunner` checks GESA snapshots and bounded binary fixtures.
-These Runtime-only entry points do not attribute the input compiler to Swift;
-performance scenarios verify behavior only and do not claim measurement profiles.
-The executable adapter owns filesystem access and keeps Runtime verification
-reports separate from strict full-port Conformance reports. Public declarations
-are recorded in `implementation/swift/api`; verified implementation coverage is
-recorded separately in the cross-language CapabilityMatrix.
+Swift Conformance uses the independent Python runner and an internal executable
+adapter. The adapter returns raw compiler/runtime observations and optional
+profile measurements, without parsing Markdown or evaluating expectations.
+`ges-conformance-probe` provides codec exchange and binary-fuzz entry points.
+Neither executable is a public library API. Runtime-only verification supplies
+hash-bound C# Programs to the adapter and reports their compiler identity separately.
 
 #### Native Swift adapters
 
@@ -1327,9 +1127,6 @@ duplicated as a second source of truth here.
 | ExtensionReference, ExtensionRegistry/Function, ExtensionCall | Extension API |
 | External definitions/catalog, constructor reference/registry/call, ExternalValue | External-type API |
 | Diagnostic, codes/phase/symbol/location and failure transports | Diagnostics and failure transport |
-| Conformance parser, limits/diagnostics, Document/Case and normalized nested models | Conformance parser API |
-| Environment/options/limits, resolver/provider/sink, Runner, results/report/summary | Conformance runner API |
-| Result, Markdown, Received, and CrossLanguage writers plus CorpusIdentity | Conformance writer API |
 | CSharpBridge reflection, delegate, dictionary, and automatic-runner adapters | Language-binding requirements; non-portable |
 
 The portable public API is limited to the families above. VM execution state,

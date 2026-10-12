@@ -16,17 +16,22 @@ swift test --package-path "$ges_root/implementation/swift/GameEventScriptSwiftBr
     --scratch-path "$ges_root/artifacts/swift/swiftbridge" --disable-build-manifest-caching --configuration release
 "$ges_root/scripts/test-swift-tool.sh"
 python3 "$ges_root/scripts/verify-swift-bytecode.py"
+python3 "$ges_root/scripts/prepare-runtime-fixtures.py" "$ges_root/conformance/suites" "$ges_root/artifacts/swift/runtime-fixtures/requests.json"
 dotnet run --project "$ges_root/implementation/csharp/GameEventScript.Conformance/fixture-exporter" \
     --configuration Release --artifacts-path "$ges_root/artifacts/swift/csharp-exporter" -- \
-    "$ges_root/conformance/suites" "$ges_root/artifacts/swift/runtime-fixtures"
+    "$ges_root/artifacts/swift/runtime-fixtures/requests.json" "$ges_root/artifacts/swift/runtime-fixtures"
 
 swift test --package-path "$ges_package" --scratch-path "$ges_scratch" --disable-build-manifest-caching --configuration release
-swift run --package-path "$ges_package" --scratch-path "$ges_scratch" --disable-build-manifest-caching --configuration release --skip-build ges-conformance \
-    --corpus "$ges_root/conformance/suites" \
-    --fixtures "$ges_root/conformance/fixtures/MarkdownV1" \
-    --output "$ges_root/artifacts/swift/conformance-results" \
-    --runtime-programs "$ges_root/artifacts/swift/runtime-fixtures" \
-    --binary-fixtures "$ges_root/conformance/fixtures"
+python3 "$ges_root/conformance/runner/main.py" run --kind supported \
+    --output "$ges_root/artifacts/swift/conformance-results/ConformanceResults.json" \
+    --adapter "$ges_scratch/release/ges-conformance-adapter"
+python3 "$ges_root/scripts/test-performance-correctness.py" \
+    --profile swift-6.4-release-macos26-arm64-m3max \
+    --output "$ges_root/artifacts/swift/conformance-results/PerformanceCorrectness.json" \
+    --adapter "$ges_scratch/release/ges-conformance-adapter"
+python3 "$ges_root/scripts/test-swift-runtime-controls.py"
+python3 "$ges_root/scripts/test-swift-runtime.py"
+python3 "$ges_root/implementation/swift/GameEventScriptConformance/adapter/tests/test_adapter.py" --adapter "$ges_scratch/release/ges-conformance-adapter"
 
 python3 "$ges_root/scripts/test-number-text-roundtrip.py" --skip-build
 

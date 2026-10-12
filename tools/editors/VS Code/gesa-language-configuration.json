@@ -1,0 +1,21 @@
+{
+  "comments": {
+    "lineComment": "//"
+  },
+  "brackets": [
+    [
+      "[",
+      "]"
+    ],
+    [
+      "(",
+      ")"
+    ]
+  ],
+  "folding": {
+    "markers": {
+      "start": "^\\s*\\.region(?:\\s|$)",
+      "end": "^\\s*\\.region-end(?:\\s|$)"
+    }
+  }
+}

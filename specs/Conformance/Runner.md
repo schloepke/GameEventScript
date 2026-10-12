@@ -8,6 +8,10 @@ normalized test model in [Markdown format](MarkdownFormat.md). The authoring par
 the runner are separate components: parsing never executes a script, and the
 runner never interprets Markdown or YAML.
 
+The independent Python implementation and its current coverage boundary are
+described in [Python runner](PythonRunner.md). Its compiler verification
+does not replace the complete acceptance gates defined here.
+
 The runner API is synchronous, threadless, fileless, networkless, and independent
 of MSTest, XCTest, JUnit, or any other test framework.
 
@@ -407,7 +411,7 @@ is:
 {
   "schemaVersion": 1,
   "runner": {
-    "id": "steph.ges.conformance.csharp",
+    "id": "steph.ges.conformance.python",
     "version": "0.1.0"
   },
   "implementation": {
@@ -461,8 +465,9 @@ text or `null`. Performance is either `null` or an object containing `profile`
 and a `metrics` object keyed by metric ID; every metric contains, in order,
 `measured`, `reference`, `allowed`, `unit`, and `passed`. Optional mismatch and
 diagnostic fields are omitted when absent. Optional nonnormative
-`technicalDetails` is the final case property when explicitly requested from
-the runner.
+`technicalDetails` is the final case property when an adapter provides technical
+error detail or when explicitly requested from the runner. Adapter `detail` text
+is retained verbatim in this nonnormative field; it never determines a verdict.
 
 The normative result contains no timestamp, hostname, username, absolute path,
 wall-clock duration, process ID, random build ID, or stack trace. A tool may
@@ -533,6 +538,12 @@ It reports `conformance.received.invalidReport`,
 ranges, stale range contents, or overlaps. A mixed-line-ending source has no
 unambiguous document style; inserted multiline GESA then uses `LF` while all
 existing bytes remain untouched.
+
+The independent Python tool may retain `sourceDocuments` (logical document name
+mapped to the SHA-256 of its original bytes) and `measurementEvidence` alongside
+the portable report fields. These tooling extensions bind Received updates to
+exact inputs and retain raw instrumentation controls/samples; they never become
+adapter expectations. See [Python runner](PythonRunner.md).
 
 ## Adapter responsibilities
 

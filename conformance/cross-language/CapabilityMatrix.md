@@ -69,18 +69,17 @@ with normalized units and explicit gaps where a profile has no measurement.
 Refresh it from the shared corpus using
 `ruby --disable-gems scripts/write-performance-matrix.rb`.
 
-The [Swift verification script](../../scripts/test-swift.sh) emits the
-[strict result](../../artifacts/swift/conformance-results/ConformanceResults.json),
-[Markdown report](../../artifacts/swift/conformance-results/ConformanceResults.md),
-[compact result](../../artifacts/swift/conformance-results/SwiftResults.json), and
-separate [Runtime JSON](../../artifacts/swift/conformance-results/RuntimeResults.json)
-and [Runtime Markdown](../../artifacts/swift/conformance-results/RuntimeResults.md).
-Generated inputs and reports remain below ignored `artifacts`. Swift CI attaches
-these reports as its `swift-conformance` artifact. The profile-matched
-[measured full report](../../artifacts/swift/measured-conformance/ConformanceResults.json)
-and [measurement provenance](../../artifacts/swift/measured-conformance/SwiftPerformance.measurement.json)
-are produced separately with `--performance`. The verification script runs
-the strict runner without `--allow-incomplete` and requires it to succeed.
+The [Swift verification script](../../scripts/test-swift.sh) uses the independent
+Python runner and internal Swift adapter. It emits the
+[strict result](../../artifacts/swift/conformance-results/ConformanceResults.json)
+and separate [Runtime JSON](../../artifacts/swift/conformance-results/RuntimeResults.json)
+with C# compiler inputs. Generated inputs and reports remain below ignored
+`artifacts`. Swift CI attaches these reports as its `swift-conformance` artifact.
+The profile-matched [measured full report](../../artifacts/swift/measured-conformance/ConformanceResults.json)
+retains instrumentation evidence and is produced separately by selecting
+`--performance-profile swift-6.4-release-macos26-arm64-m3max` in the Python runner.
+Ordinary verification selects all correctness cases; measured performance remains
+a separate profile-specific gate. See [Swift performance](../../implementation/swift/Performance.md).
 
 The [native Swift CLI](../../implementation/swift/GameEventScriptTool/README.md)
 provides `ges compile/check/run/dump` and the interactive event console. CLI

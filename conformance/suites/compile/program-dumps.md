@@ -1355,3 +1355,232 @@ Start_39:			ReturnVoid
 // -------------------------------------------------------------------------------
 
 ```
+
+---
+
+## Test: named constants fold at their use site
+
+This snapshot verifies that named scalar constants fold to one integer load. Source attribution stays on the use site after a binary roundtrip, with no runtime multiplication or Cartesian dispatch.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: named-constant-folding
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+module constantfolding
+constant $rounds be 48
+constant $items be 128
+on Main() {
+  let count be $rounds * $items
+  emit Done(count)
+}
+```
+
+### Expected Game Event Script Assembler
+
+```gesa
+// -------------------------------------------------------------------------------
+//  Module: constantfolding
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "constantfolding"
+.program-version 0
+
+// -------------------------------------------------------------------------------
+.region "Source: compile.program-dumps.named-constant-folding.ges"
+
+.segment source "compile.program-dumps.named-constant-folding.ges"
+
+module constantfolding
+constant $rounds be 48
+constant $items be 128
+on Main() {
+  let count be $rounds * $items
+  emit Done(count)
+}
+
+.region-end "Source: compile.program-dumps.named-constant-folding.ges"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Text"
+
+.segment text
+
+T_Main:				.text "Main"
+T_1:				.text "_"
+T_Done:				.text "Done"
+T_constantfolding:	.text "constantfolding"
+
+.region-end "Text"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Lists"
+
+.segment lists
+
+U16_0:				.u16 []
+U16_1:				.u16 [1]
+Args_2:				.registers [r0]
+
+.region-end "Lists"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Bindings"
+
+.segment bind
+
+Handler_Main:		.bind MessageHandler id=0 name=T_Main args=[] entry=Main // "Main()"
+Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_1] // "Done(_)"
+
+.region-end "Bindings"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Code"
+
+.segment code
+
+.source-line "compile.program-dumps.named-constant-folding.ges" 4 | on Main() {
+Main:				 // handler Main()
+					RegisterLocals #1
+
+.source-line "compile.program-dumps.named-constant-folding.ges" 5 |   let count be $rounds * $items
+					LoadInteger r0(count), #6144
+
+.source-line "compile.program-dumps.named-constant-folding.ges" 6 |   emit Done(count)
+					EmitMessage Outbound_Done, Args_2 // "Done(_)"
+
+.source-line "compile.program-dumps.named-constant-folding.ges" 4 | on Main() {
+					ReturnVoid
+
+.region-end "Code"
+// -------------------------------------------------------------------------------
+
+```
+
+---
+
+## Test: named scalar constants avoid Cartesian dispatch
+
+This snapshot verifies that a named scalar factor on either side of a dynamic operand needs only Multiply, without list checks or Cartesian dispatch. The binary roundtrip retains use-site source attribution.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: named-scalar-multiply
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+module constantscalar
+constant $factor be 48
+on Main(value) {
+  emit Done($factor * value, value * $factor)
+}
+```
+
+### Expected Game Event Script Assembler
+
+```gesa
+// -------------------------------------------------------------------------------
+//  Module: constantscalar
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "constantscalar"
+.program-version 0
+
+// -------------------------------------------------------------------------------
+.region "Source: compile.program-dumps.named-scalar-multiply.ges"
+
+.segment source "compile.program-dumps.named-scalar-multiply.ges"
+
+module constantscalar
+constant $factor be 48
+on Main(value) {
+  emit Done($factor * value, value * $factor)
+}
+
+.region-end "Source: compile.program-dumps.named-scalar-multiply.ges"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Text"
+
+.segment text
+
+T_value:			.text "value"
+T_Main:				.text "Main"
+T_2:				.text "_"
+T_Done:				.text "Done"
+T_constantscalar:	.text "constantscalar"
+
+.region-end "Text"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Lists"
+
+.segment lists
+
+U16_0:				.u16 [0]
+U16_1:				.u16 []
+U16_2:				.u16 [2, 2]
+Args_3:				.registers [r2, r3]
+
+.region-end "Lists"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Bindings"
+
+.segment bind
+
+Handler_Main:		.bind MessageHandler id=0 name=T_Main args=[T_value] entry=Main // "Main(value)"
+Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_2, T_2] // "Done(_, _)"
+
+.region-end "Bindings"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Code"
+
+.segment code
+
+.source-line "compile.program-dumps.named-scalar-multiply.ges" 3 | on Main(value) {
+Main:				 // handler Main(value)
+					RegisterLocals #3
+
+.source-line "compile.program-dumps.named-scalar-multiply.ges" 4 |   emit Done($factor * value, value * $factor)
+					LoadInteger r1, #48
+					Multiply r2, r1, r0(value)
+					LoadInteger r1, #48
+					Multiply r3, r0(value), r1
+					EmitMessage Outbound_Done, Args_3 // "Done(_, _)"
+
+.source-line "compile.program-dumps.named-scalar-multiply.ges" 3 | on Main(value) {
+					ReturnVoid
+
+.region-end "Code"
+// -------------------------------------------------------------------------------
+
+```

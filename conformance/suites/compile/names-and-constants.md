@@ -382,3 +382,58 @@ error:
   phase: parse
   code: parse.syntax
 ```
+
+---
+
+## Test: named constant arithmetic and dynamic multiplication preserve exact results
+
+This case verifies that folded arithmetic and multiplication with a dynamic operand
+on either side produce exact integers after a binary roundtrip. The instruction and source-map contract
+is checked by the corresponding portable Program dump cases.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: named-constant-multiplication
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+module constantresults
+constant $rounds be 48
+constant $items be 128
+on Main(value) {
+  emit Done(folded: $rounds * $items, left: $rounds * value, right: value * $rounds)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| execute | Main | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  execute:
+    input:
+      args:
+        - name: value
+          value: { type: ":Number.int64", value: "128" }
+    local:
+      - name: Done
+        args:
+          - name: folded
+            value: { type: ":Number.int64", value: "6144" }
+          - name: left
+            value: { type: ":Number.int64", value: "6144" }
+          - name: right
+            value: { type: ":Number.int64", value: "6144" }
+```

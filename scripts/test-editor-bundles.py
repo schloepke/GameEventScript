@@ -13,6 +13,7 @@ import sys
 import tempfile
 import types
 import unittest
+import zipfile
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse, unquote
 import html
@@ -46,6 +47,84 @@ with patch.dict(sys.modules, sublime=sublime, sublime_plugin=plugin):
 
 
 class EditorTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which('node'), 'Node.js required for VS Code execution checks')
+    def test_vscode_commands_and_packaged_markdown_highlighting(self):
+        subprocess.run(['node', '--test', str(ROOT / 'scripts/test-vscode-extension.cjs')], check=True, capture_output=True)
+        with tempfile.TemporaryDirectory() as directory:
+            with zipfile.ZipFile(ROOT / 'tools/editors/VS Code/GameEventScript-VSCode.vsix') as archive:
+                archive.extractall(directory)
+            environment = dict(os.environ, GES_VSCODE_EXTENSION_ROOT=str(Path(directory) / 'extension'))
+            result = subprocess.run(['node', '--test', str(ROOT / 'scripts/test-vscode-markdown.cjs')],
+                                    env=environment, capture_output=True, text=True)
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+    def test_prebuilt_vscode_package_matches_sources(self):
+        root = ROOT / 'tools/editors/VS Code'
+        files = {
+            'package.json': 'package.json',
+            'extension.js': 'extension.js',
+            'markdown-preview.js': 'markdown-preview.js',
+            'markdown-preview.css': 'markdown-preview.css',
+            'readme.md': 'README.md',
+            'LICENSE.txt': 'LICENSE',
+        }
+        for pattern in ('*-language-configuration.json', 'syntaxes/*.json', 'snippets/*.json'):
+            for path in root.glob(pattern):
+                relative = path.relative_to(root).as_posix()
+                files[relative] = relative
+        with zipfile.ZipFile(root / 'GameEventScript-VSCode.vsix') as archive:
+            dependencies = {name for name in archive.namelist() if name.startswith('extension/node_modules/')}
+            self.assertEqual({'[Content_Types].xml', 'extension.vsixmanifest'} |
+                             {'extension/' + name for name in files} | dependencies, set(archive.namelist()))
+            manifest = json.loads((root / 'package.json').read_text())
+            lock = json.loads((root / 'package-lock.json').read_text())
+            self.assertEqual(manifest['dependencies'], lock['packages']['']['dependencies'])
+            self.assertEqual(set(manifest['dependencies']), {name.split('/')[2] for name in dependencies})
+            for name, version in manifest['dependencies'].items():
+                data = json.loads(archive.read('extension/node_modules/' + name + '/package.json'))
+                self.assertEqual(version, data['version'])
+            for name in ('vscode-oniguruma/LICENSE.txt', 'vscode-oniguruma/NOTICES.txt',
+                         'vscode-oniguruma/release/onig.wasm', 'vscode-textmate/LICENSE.md'):
+                self.assertIn('extension/node_modules/' + name, dependencies)
+            for packaged, source in files.items():
+                self.assertEqual((root / source).read_bytes(), archive.read('extension/' + packaged),
+                                 source + ': rebuild with bash scripts/package-vscode.sh')
+
+    def test_vscode_languages_resolve_grammars_and_embedded_source(self):
+        root = ROOT / 'tools/editors/VS Code'
+        manifest = json.loads((root / 'package.json').read_text())
+        self.assertTrue((root / manifest['main']).is_file())
+        self.assertNotIn('browser', manifest)
+        contributions = manifest['contributes']
+        languages = {item['id']: item for item in contributions['languages']}
+        self.assertEqual({'.ges'}, set(languages['ges']['extensions']))
+        self.assertEqual({'.gesa'}, set(languages['gesa']['extensions']))
+        scopes = {}
+        for grammar in contributions['grammars']:
+            data = json.loads((root / grammar['path']).read_text())
+            self.assertEqual(grammar['scopeName'], data['scopeName'])
+            scopes[data['scopeName']] = grammar
+            for language in grammar.get('embeddedLanguages', {}).values():
+                self.assertIn(language, languages)
+        self.assertIn('source.gameeventscript', scopes)
+        self.assertEqual({
+            'meta.embedded.block.gameeventscript.assembler': 'ges',
+            'meta.embedded.line.gameeventscript.assembler': 'ges',
+        }, scopes['source.gameeventscript.assembler']['embeddedLanguages'])
+        for language in languages.values():
+            configuration = json.loads((root / language['configuration']).read_text())
+            self.assertEqual('//', configuration['comments']['lineComment'])
+        config = json.loads((root / languages['gesa']['configuration']).read_text())
+        markers = config['folding']['markers']
+        self.assertRegex('.region "Code"', markers['start'])
+        self.assertNotRegex('.region-end "Code"', markers['start'])
+        self.assertRegex('.region-end "Code"', markers['end'])
+        for item in contributions['snippets']:
+            self.assertIn(item['language'], languages)
+            snippets = json.loads((root / item['path']).read_text())
+            self.assertEqual({snippet['trigger'] for snippet in DATA['snippets']},
+                             {snippet['prefix'] for snippet in snippets.values()})
+
     def test_generated_files_match_and_scope_captures_are_preserved(self):
         for path, text in GEN.generate().items():
             self.assertEqual(text, path.read_text(), str(path))

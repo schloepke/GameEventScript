@@ -1,0 +1,29 @@
+/* Copyright 2026 Stephan Schlöpke */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+.ges-token-comment { color: #6a9955; }
+.ges-token-string { color: #ce9178; }
+.ges-token-keyword { color: #c586c0; }
+.ges-token-constant { color: #b5cea8; }
+.ges-token-entity { color: #dcdcaa; }
+.ges-token-variable { color: #9cdcfe; }
+
+.vscode-light .ges-token-comment { color: #008000; }
+.vscode-light .ges-token-string { color: #a31515; }
+.vscode-light .ges-token-keyword { color: #0000ff; }
+.vscode-light .ges-token-constant { color: #098658; }
+.vscode-light .ges-token-entity { color: #795e26; }
+.vscode-light .ges-token-variable { color: #001080; }
+
+.vscode-high-contrast .ges-token-comment,
+.vscode-high-contrast .ges-token-string,
+.vscode-high-contrast .ges-token-keyword,
+.vscode-high-contrast .ges-token-constant,
+.vscode-high-contrast .ges-token-entity,
+.vscode-high-contrast .ges-token-variable,
+.vscode-high-contrast-light .ges-token-comment,
+.vscode-high-contrast-light .ges-token-string,
+.vscode-high-contrast-light .ges-token-keyword,
+.vscode-high-contrast-light .ges-token-constant,
+.vscode-high-contrast-light .ges-token-entity,
+.vscode-high-contrast-light .ges-token-variable { color: inherit; }

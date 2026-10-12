@@ -31,7 +31,7 @@ id: duplicate-type-name
 kind: externalTypeApi
 level: atomic
 externalTypeApi:
-  typeNames: [sample, sample]
+  typeNames: [Sample, Sample]
 ```
 
 ### Expectation

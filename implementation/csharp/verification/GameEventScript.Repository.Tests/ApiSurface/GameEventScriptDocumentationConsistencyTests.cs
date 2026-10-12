@@ -5,7 +5,6 @@ using System.Globalization;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using GameEventScript.Api;
-using GameEventScript.Conformance;
 using GameEventScript.CSharpBridge;
 
 namespace GameEventScript.Tests.Native.ApiSurface;
@@ -43,14 +42,11 @@ public sealed class GameEventScriptDocumentationConsistencyTests
             "ExtensionReference, ExtensionRegistry/Function, ExtensionCall",
             "External definitions/catalog, constructor reference/registry/call, ExternalValue",
             "Diagnostic, codes/phase/symbol/location and failure transports",
-            "Conformance parser, limits/diagnostics, Document/Case and normalized nested models",
-            "Environment/options/limits, resolver/provider/sink, Runner, results/report/summary",
-            "Result, Markdown, Received, and CrossLanguage writers plus CorpusIdentity",
             "CSharpBridge reflection, delegate, dictionary, and automatic-runner adapters"
         };
         CollectionAssert.AreEqual(expectedFamilies, actualFamilies, "PublicApi.md ownership families changed without updating the consistency gate.");
 
-        var actualNamespaces = new[] { typeof(GameEventScriptProgram).Assembly, typeof(GameEventScriptBuilder).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly, typeof(ConformanceRunner).Assembly }
+        var actualNamespaces = new[] { typeof(GameEventScriptProgram).Assembly, typeof(GameEventScriptBuilder).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly }
             .SelectMany(assembly => assembly.GetExportedTypes())
             .Select(type => type.Namespace ?? string.Empty)
             .Distinct(StringComparer.Ordinal)
@@ -60,7 +56,6 @@ public sealed class GameEventScriptDocumentationConsistencyTests
         {
             "GameEventScript.Api",
             "GameEventScript.CSharpBridge",
-            "GameEventScript.Conformance",
             "GameEventScript.Runtime.Values"
         };
         CollectionAssert.AreEqual(expectedNamespaces, actualNamespaces, "A new public namespace requires an explicit PublicApi.md ownership decision.");
@@ -146,13 +141,6 @@ public sealed class GameEventScriptDocumentationConsistencyTests
         var specificationDirectory = TestRepositoryPaths.SpecificationsDirectory;
         var portableDiagnostics = File.ReadAllText(Path.Combine(specificationDirectory, "Diagnostics.md"));
         AssertConstantValuesAppear(typeof(GameEventScriptDiagnosticCodes), portableDiagnostics, "Diagnostics.md");
-
-        var conformanceSpecification = string.Join("\n", Directory.EnumerateFiles(Path.Combine(specificationDirectory, "Conformance"), "*.md", SearchOption.TopDirectoryOnly)
-            .OrderBy(path => path, StringComparer.Ordinal)
-            .Select(File.ReadAllText));
-        AssertConstantValuesAppear(typeof(ConformanceDiagnosticCodes), conformanceSpecification, "Conformance specifications");
-        AssertConstantValuesAppear(typeof(ConformanceRunnerCodes), conformanceSpecification, "Conformance specifications");
-        AssertConstantValuesAppear(typeof(ConformanceReceivedWriterCodes), conformanceSpecification, "Conformance specifications");
     }
 
     /// <summary>

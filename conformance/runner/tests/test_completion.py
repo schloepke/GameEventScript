@@ -13,6 +13,7 @@ from core.corpus import InvalidDocument, parse_document, read_corpus, read_docum
 from core.source_document import SourceDocument
 from core.yaml_subset import parse
 from core import execution
+from core.runner import requests, verify
 from reporting import received
 from reporting import reports
 
@@ -28,6 +29,22 @@ class CompletionTests(unittest.TestCase):
         raw = {'implementation': {'id': 'fixture', 'version': '1'}, 'results': [
             {'id': case.id, 'status': 'passed', 'code': 'conformance.passed', **fields}]}
         return reports.canonical([case], raw)
+
+    def test_adapter_error_detail_survives_canonical_json_report(self):
+        case = next(case for case in self.cases if case.kind == 'bytecode')
+        request = requests([case])
+        detail = 'Adapterfehler: Größe unbekannt.\nAdditional context.'
+        observed = {'formatVersion': 1, 'requestDigest': request['requestDigest'],
+                    'implementation': {'id': 'fixture', 'version': '1'},
+                    'capabilities': request['cases'][0]['requires']['core'] + request['cases'][0]['requires']['optional'],
+                    'observations': {case.id: {'status': 'error', 'detail': detail}}}
+        result = json.loads(json.dumps(reports.canonical([case], verify([case], observed))))
+        self.assertEqual(result['status'], 'error')
+        self.assertEqual(result['cases'][0]['code'], 'python.observation.executionError')
+        self.assertEqual(result['cases'][0]['technicalDetails'], detail)
+        self.assertEqual(list(result['cases'][0])[-1], 'technicalDetails')
+        for fields in ({}, {'detail': None}):
+            self.assertNotIn('technicalDetails', self.report(case, **fields)['cases'][0])
 
     def test_all_cases_validate_no_adapter(self):
         execution.validate(self.cases, ROOT / 'fixtures')

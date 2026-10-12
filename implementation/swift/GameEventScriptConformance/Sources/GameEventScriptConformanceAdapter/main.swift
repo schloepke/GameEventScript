@@ -60,7 +60,11 @@ do {
                     observations[id] = try CompilerObservations.observe(kind, CompilerObservations.compile(test))
                 }
             } catch let error as GameEventScriptCompileError {
-                observations[id] = ["status": "compileError", "diagnostics": error.diagnostics.map(CompilerObservations.diagnostic)]
+                if ["scriptApi", "loadError", "programBinary"].contains(kind) {
+                    observations[id] = ["status": "error", "detail": "Runtime input compilation failed."]
+                } else {
+                    observations[id] = ["status": "compileError", "diagnostics": error.diagnostics.map(CompilerObservations.diagnostic)]
+                }
             } catch { observations[id] = ["status": "error", "detail": String(describing: error)] }
         }
         output = ["formatVersion": 1, "requestDigest": digest, "implementation": identity, "capabilities": capabilities, "observations": observations]

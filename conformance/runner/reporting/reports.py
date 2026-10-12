@@ -38,6 +38,8 @@ def canonical(cases, report):
             'mismatches': [dict(item, code=item.get('code', 'conformance.assertion.mismatch')) for item in mismatches],
             'diagnostics': raw.get('diagnostics', []), 'runtimeLimits': raw.get('runtimeLimits', []),
             'actualAssembler': raw.get('actualAssembler'), 'performance': performance})
+        if isinstance(raw.get('detail'), str):
+            output[-1]['technicalDetails'] = raw['detail']
     summary = {s: sum(item['status'] == s for item in output) for s in ('passed', 'failed', 'skipped', 'error')}
     status = next((s for s in ('error', 'failed', 'skipped') if summary[s]), 'passed')
     profiles = list(dict.fromkeys(item['performance']['profile'] for item in output if item['performance']))

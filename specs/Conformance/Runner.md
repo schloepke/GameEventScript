@@ -465,8 +465,9 @@ text or `null`. Performance is either `null` or an object containing `profile`
 and a `metrics` object keyed by metric ID; every metric contains, in order,
 `measured`, `reference`, `allowed`, `unit`, and `passed`. Optional mismatch and
 diagnostic fields are omitted when absent. Optional nonnormative
-`technicalDetails` is the final case property when explicitly requested from
-the runner.
+`technicalDetails` is the final case property when an adapter provides technical
+error detail or when explicitly requested from the runner. Adapter `detail` text
+is retained verbatim in this nonnormative field; it never determines a verdict.
 
 The normative result contains no timestamp, hostname, username, absolute path,
 wall-clock duration, process ID, random build ID, or stack trace. A tool may

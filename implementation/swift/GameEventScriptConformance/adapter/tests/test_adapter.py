@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Swift adapter protocol controls; portable behavior remains in Markdown."""
 import argparse
+import base64
 import copy
 import json
 from pathlib import Path
@@ -33,6 +34,42 @@ class AdapterTests(unittest.TestCase):
         observation = body['observations']['adapter/control']
         self.assertEqual(set(observation), {'status', 'dump'})
         self.assertIn('EmitMessage', observation['dump'])
+
+    def test_input_compile_errors_preserve_batch_and_expected_compile_errors(self):
+        data = request()
+        template = data['cases'][0]
+        failures = []
+        for kind in ('scriptApi', 'loadError', 'programBinary', 'compileError'):
+            case = copy.deepcopy(template)
+            case.update(id='adapter/' + kind, kind=kind)
+            case['sources'][0]['text'] = 'on Main( {'
+            if kind == 'scriptApi':
+                case['runtime'] = {'limits': {}, 'random': {'seed': '0'}, 'hostCount': 1,
+                                   'nativeHandlers': [], 'deferredPrograms': [], 'stepActions': {},
+                                   'initializationPump': 'completion', 'publishSink': 'accept', 'steps': []}
+            elif kind == 'loadError':
+                case['api'] = {'limits': {}, 'externalTypeRegistry': 'environment'}
+            elif kind == 'programBinary':
+                fixture = ROOT / 'conformance/fixtures/GesbV1/execute-cartesian-components.gesb'
+                case['binary'] = {'data': base64.b64encode(fixture.read_bytes()).decode('ascii'),
+                                  'includeDump': False, 'compareCompiledRuntime': True,
+                                  'programVersion': '0', 'runtime': None}
+            failures.append(case)
+        data['cases'] = failures + [template]
+        result = self.run_adapter(json.dumps(data).encode())
+        self.assertEqual(result.returncode, 0, result.stderr)
+        observations = json.loads(result.stdout)['observations']
+        self.assertEqual(set(observations), {case['id'] for case in data['cases']})
+        for kind in ('scriptApi', 'loadError', 'programBinary'):
+            with self.subTest(kind=kind):
+                observation = observations['adapter/' + kind]
+                self.assertEqual(set(observation), {'status', 'detail'})
+                self.assertEqual(observation['status'], 'error')
+                self.assertIsInstance(observation['detail'], str)
+                self.assertTrue(observation['detail'])
+        self.assertEqual(observations['adapter/compileError']['status'], 'compileError')
+        self.assertTrue(observations['adapter/compileError']['diagnostics'])
+        self.assertEqual(observations['adapter/control']['status'], 'ok')
 
     def test_rejects_unknown_fields_kinds_options_duplicate_ids_and_sources(self):
         mutations = [lambda r: r.update(expect={}),

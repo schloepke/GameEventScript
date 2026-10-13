@@ -12,6 +12,11 @@ A selective refresh on 2026-10-10 resolves the reviewed
 [0.4.0 findings](../../docs/development/Release040Performance.md): compact value
 storage, mandatory loading validation and the reproduced compiler-time baseline.
 Only the documented affected metrics changed; zero-dispatch budgets stay zero.
+A full refresh on 2026-10-14 follows the manually owned register buffer and
+runtime fast paths. Three independent production Release processes supplied the
+references; a separate verification process checks the resulting budgets.
+Existing allocation upper bounds were never increased, including the two
+slightly higher measured references described below.
 This is an implementation regression baseline. Other hardware/toolchains need
 an explicitly calibrated profile; raw C# and Swift timings are not equivalence
 criteria. The adapter rejects Debug builds and incompatible profile hosts.
@@ -113,13 +118,29 @@ copy approved profile changes into the original Markdown. Re-run regression
 verification in a fresh process. A zero-dispatch target cannot be relaxed by the
 preparation script.
 
-All sixteen warmed dispatch cases measured **zero bytes and zero allocations**,
-including exact/name matching, observers off/on, frame pause/resume and paired
-1000/2000-iteration workloads. Text parsing/casts measured **81–107 requested
-bytes per invocation**; Percentage formatting now measures **575 bytes**. These
-nonzero costs come from temporary byte arrays, filtered digits, text formatting
-and reference payloads. They remain visible as Swift-specific regression budgets
-and are not claimed as zero-allocation text conversion.
+All sixteen warmed dispatch cases still measure **zero bytes and zero allocations**.
+The 2026-10-14 refresh compares the checked-in references with three fresh
+process measurements (each containing five samples):
+
+| Swift workload (1,000 invocations) | Run time, old → new (ms) | Requested run bytes, old → new |
+| --- | ---: | ---: |
+| Arithmetic | 1.918416 → 0.794375 | 192000 → 128000 |
+| Range/select | 28.8175 → 8.206708 | 16641000 → 7988000 |
+| Record construction/casts | 2.791708 → 1.347667 | 2984000 → 416000 |
+| Filter/select/sum | 11.859583 → 3.283125 | 2465000 → 1380000 |
+| Mixed pipelines/control/messages | 426.603 → 63.067334 | 4333000 → 4124000 |
+
+These are comparisons with historical corpus references, not an isolated
+before/after attribution to the latest commit or a cross-language ranking.
+No run-allocation count increased. Range/select loading grows from 13544 to
+13670 requested bytes (+126 B, 0.93%). Mixed-workload compilation grows from
+864263 to 875838 bytes (+11575 B, 1.34%). These are load/compile costs, not
+per-invocation VM costs. Exact causality was not isolated; their existing upper
+bounds remain 14222 and 907477 bytes respectively.
+
+Evidence is retained under `artifacts/swift/performance-refresh-{1,2,3}`;
+reviewed candidates under `artifacts/swift/performance-refresh-candidates`;
+fresh verification under `artifacts/swift/performance-after-refresh`.
 
 Performance measurements use the production Release build made by
 `scripts/test-swift-performance.sh`. Run that script after `swift test`, rather

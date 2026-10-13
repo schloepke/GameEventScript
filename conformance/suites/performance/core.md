@@ -93,90 +93,90 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         ast-build.elapsed:
-          reference: 0.0984
-          toleranceAbsolute: 1
+          reference: 0.065
+          toleranceAbsolute: 0.05
           unit: ms
         ast-build.allocated:
-          reference: 23.148
-          maximum: 23.148
+          reference: 21.9921875
+          maximum: 23.091796875
           unit: KiB
         binary-build.elapsed:
-          reference: 0.121
-          toleranceAbsolute: 1
+          reference: 0.1115
+          toleranceAbsolute: 0.05
           unit: ms
         binary-build.allocated:
-          reference: 47.008
-          maximum: 47.008
+          reference: 44.1171875
+          maximum: 46.3232421875
           unit: KiB
         program-load.elapsed:
-          reference: 0.0415
-          toleranceAbsolute: 1
+          reference: 0.0342
+          toleranceAbsolute: 0.05
           unit: ms
         program-load.allocated:
-          reference: 13.367
-          maximum: 13.461
+          reference: 12.34375
+          maximum: 12.9609375
           unit: KiB
         compile.elapsed:
-          reference: 0.2609
-          toleranceAbsolute: 1
+          reference: 0.2112
+          toleranceAbsolute: 0.0528
           unit: ms
         compile.allocated:
-          reference: 83.523
-          maximum: 83.523
+          reference: 78.453125
+          maximum: 82.3759765625
           unit: KiB
         run.elapsed:
-          reference: 2.4191
-          toleranceAbsolute: 1
+          reference: 2.0253
+          toleranceAbsolute: 0.506325
           unit: ms
         run.allocated:
-          reference: 140.656
-          maximum: 171.914
+          reference: 132.8125
+          maximum: 139.453125
           unit: KiB
         run.per-invoke-elapsed:
-          reference: 0.002419
-          toleranceAbsolute: 1
+          reference: 0.0020253
+          toleranceAbsolute: 0.000506325
           unit: ms
         run.per-invoke-allocated:
-          reference: 0.141
-          maximum: 0.172
+          reference: 0.1328125
+          maximum: 0.1396484375
           unit: KiB
     swift-6.4-release-macos26-arm64-m3max:
       metrics:
         compile.allocated:
-          reference: 168548
-          maximum: 176976
+          reference: 166699
+          maximum: 175034
           unit: B
         compile.elapsed:
-          reference: 0.396709
-          toleranceAbsolute: 0.09917725
+          reference: 0.197541
+          toleranceAbsolute: 0.05
           unit: ms
         program-load.allocated:
-          reference: 14209
-          maximum: 14920
+          reference: 13751
+          maximum: 14439
           unit: B
         program-load.elapsed:
-          reference: 0.018083
+          reference: 0.017
           toleranceAbsolute: 0.05
           unit: ms
         run.allocated:
-          reference: 192000
-          maximum: 201600
+          reference: 128000
+          maximum: 134400
           unit: B
         run.allocations:
           reference: 2000
           maximum: 2100
           unit: count
         run.elapsed:
-          reference: 1.918416
-          toleranceAbsolute: 0.479604
+          reference: 0.794375
+          toleranceAbsolute: 0.19859375
           unit: ms
         run.per-invoke-allocated:
-          reference: 192
-          maximum: 202
+          reference: 128
+          maximum: 135
           unit: B/iteration
         run.per-invoke-elapsed:
-          reference: 0.001918416
-          toleranceAbsolute: 0.000479604
+          reference: 0.000794375
+          toleranceAbsolute: 0.00019859375
           unit: ms/iteration
 ```
 
@@ -423,90 +423,90 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         ast-build.elapsed:
-          reference: 0.0637
-          toleranceAbsolute: 1
+          reference: 0.0465
+          toleranceAbsolute: 0.05
           unit: ms
         ast-build.allocated:
-          reference: 15.164
+          reference: 15.0546875
           maximum: 15.164
           unit: KiB
         binary-build.elapsed:
-          reference: 0.1349
-          toleranceAbsolute: 1
+          reference: 0.134
+          toleranceAbsolute: 0.05
           unit: ms
         binary-build.allocated:
-          reference: 46.734
-          maximum: 46.734
+          reference: 43.9765625
+          maximum: 46.17578125
           unit: KiB
         program-load.elapsed:
-          reference: 0.0404
-          toleranceAbsolute: 1
+          reference: 0.0414
+          toleranceAbsolute: 0.05
           unit: ms
         program-load.allocated:
-          reference: 13.164
+          reference: 12.6640625
           maximum: 13.258
           unit: KiB
         compile.elapsed:
-          reference: 0.239
-          toleranceAbsolute: 1
+          reference: 0.2234
+          toleranceAbsolute: 0.05585
           unit: ms
         compile.allocated:
-          reference: 75.008
+          reference: 71.6953125
           maximum: 75.008
           unit: KiB
         run.elapsed:
-          reference: 45.4494
+          reference: 34.0699
           toleranceAbsolute: 7.657185
           unit: ms
         run.allocated:
-          reference: 11445.344
+          reference: 11437.5
           maximum: 11476.602
           unit: KiB
         run.per-invoke-elapsed:
-          reference: 0.045449
-          toleranceAbsolute: 1
+          reference: 0.0340699
+          toleranceAbsolute: 0.008517475
           unit: ms
         run.per-invoke-allocated:
-          reference: 11.445
+          reference: 11.4375
           maximum: 11.477
           unit: KiB
     swift-6.4-release-macos26-arm64-m3max:
       metrics:
         compile.allocated:
-          reference: 111822
-          maximum: 117414
+          reference: 108429
+          maximum: 113851
           unit: B
         compile.elapsed:
-          reference: 0.219375
-          toleranceAbsolute: 0.05484375
+          reference: 0.1545
+          toleranceAbsolute: 0.05
           unit: ms
         program-load.allocated:
-          reference: 13544
+          reference: 13670
           maximum: 14222
           unit: B
         program-load.elapsed:
-          reference: 0.02325
+          reference: 0.01675
           toleranceAbsolute: 0.05
           unit: ms
         run.allocated:
-          reference: 16641000
-          maximum: 17473050
+          reference: 7988000
+          maximum: 8387400
           unit: B
         run.allocations:
           reference: 16000
           maximum: 16800
           unit: count
         run.elapsed:
-          reference: 28.8175
-          toleranceAbsolute: 7.204375
+          reference: 8.206708
+          toleranceAbsolute: 2.051677
           unit: ms
         run.per-invoke-allocated:
-          reference: 16641
-          maximum: 17474
+          reference: 7988
+          maximum: 8388
           unit: B/iteration
         run.per-invoke-elapsed:
-          reference: 0.0288175
-          toleranceAbsolute: 0.007204375
+          reference: 0.008206708
+          toleranceAbsolute: 0.002051677
           unit: ms/iteration
 ```
 
@@ -740,90 +740,90 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         ast-build.elapsed:
-          reference: 0.0823
-          toleranceAbsolute: 1
+          reference: 0.0587
+          toleranceAbsolute: 0.05
           unit: ms
         ast-build.allocated:
-          reference: 19.102
+          reference: 19.015625
           maximum: 19.102
           unit: KiB
         binary-build.elapsed:
-          reference: 0.1487
-          toleranceAbsolute: 1
+          reference: 0.126
+          toleranceAbsolute: 0.05
           unit: ms
         binary-build.allocated:
-          reference: 46.586
-          maximum: 46.586
+          reference: 43.6484375
+          maximum: 45.8310546875
           unit: KiB
         program-load.elapsed:
-          reference: 0.0494
-          toleranceAbsolute: 1
+          reference: 0.0398
+          toleranceAbsolute: 0.05
           unit: ms
         program-load.allocated:
-          reference: 15.258
-          maximum: 15.352
+          reference: 14.390625
+          maximum: 15.1103515625
           unit: KiB
         compile.elapsed:
-          reference: 0.2804
-          toleranceAbsolute: 1
+          reference: 0.2245
+          toleranceAbsolute: 0.056125
           unit: ms
         compile.allocated:
-          reference: 80.938
-          maximum: 80.938
+          reference: 77.0546875
+          maximum: 80.908203125
           unit: KiB
         run.elapsed:
-          reference: 2.7994
-          toleranceAbsolute: 1
+          reference: 2.1449
+          toleranceAbsolute: 0.536225
           unit: ms
         run.allocated:
-          reference: 687.531
-          maximum: 718.789
+          reference: 429.6875
+          maximum: 451.171875
           unit: KiB
         run.per-invoke-elapsed:
-          reference: 0.002799
-          toleranceAbsolute: 1
+          reference: 0.0021449
+          toleranceAbsolute: 0.000536225
           unit: ms
         run.per-invoke-allocated:
-          reference: 0.688
-          maximum: 0.719
+          reference: 0.4296875
+          maximum: 0.451171875
           unit: KiB
     swift-6.4-release-macos26-arm64-m3max:
       metrics:
         compile.allocated:
-          reference: 172822
-          maximum: 181464
+          reference: 168517
+          maximum: 176943
           unit: B
         compile.elapsed:
-          reference: 0.210416
-          toleranceAbsolute: 0.052604
+          reference: 0.2205
+          toleranceAbsolute: 0.055125
           unit: ms
         program-load.allocated:
-          reference: 16022
-          maximum: 16824
+          reference: 15956
+          maximum: 16754
           unit: B
         program-load.elapsed:
-          reference: 0.017584
+          reference: 0.02
           toleranceAbsolute: 0.05
           unit: ms
         run.allocated:
-          reference: 2984000
-          maximum: 3133200
+          reference: 416000
+          maximum: 436800
           unit: B
         run.allocations:
-          reference: 13000
-          maximum: 13650
+          reference: 5000
+          maximum: 5250
           unit: count
         run.elapsed:
-          reference: 2.791708
-          toleranceAbsolute: 0.697927
+          reference: 1.347667
+          toleranceAbsolute: 0.33691675
           unit: ms
         run.per-invoke-allocated:
-          reference: 2984
-          maximum: 3134
+          reference: 416
+          maximum: 437
           unit: B/iteration
         run.per-invoke-elapsed:
-          reference: 0.002791708
-          toleranceAbsolute: 0.000697927
+          reference: 0.001347667
+          toleranceAbsolute: 0.00033691675
           unit: ms/iteration
 ```
 
@@ -1075,90 +1075,90 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         ast-build.elapsed:
-          reference: 0.1527
-          toleranceAbsolute: 1
+          reference: 0.1118
+          toleranceAbsolute: 0.05
           unit: ms
         ast-build.allocated:
-          reference: 31.641
-          maximum: 31.641
+          reference: 29.46875
+          maximum: 30.9423828125
           unit: KiB
         binary-build.elapsed:
-          reference: 0.2887
-          toleranceAbsolute: 1
+          reference: 0.3167
+          toleranceAbsolute: 0.079175
           unit: ms
         binary-build.allocated:
-          reference: 105.656
-          maximum: 105.656
+          reference: 100.1328125
+          maximum: 105.139648438
           unit: KiB
         program-load.elapsed:
-          reference: 0.0534
-          toleranceAbsolute: 1
+          reference: 0.1002
+          toleranceAbsolute: 0.05
           unit: ms
         program-load.allocated:
-          reference: 18.438
-          maximum: 18.531
+          reference: 16.1015625
+          maximum: 16.9072265625
           unit: KiB
         compile.elapsed:
-          reference: 0.4948
-          toleranceAbsolute: 1
+          reference: 0.5215
+          toleranceAbsolute: 0.130375
           unit: ms
         compile.allocated:
-          reference: 155.734
-          maximum: 155.734
+          reference: 145.703125
+          maximum: 152.98828125
           unit: KiB
         run.elapsed:
-          reference: 20.1405
+          reference: 16.2299
           toleranceAbsolute: 2.92875
           unit: ms
         run.allocated:
-          reference: 1281.281
+          reference: 1273.4375
           maximum: 1312.539
           unit: KiB
         run.per-invoke-elapsed:
-          reference: 0.020141
-          toleranceAbsolute: 1
+          reference: 0.0162299
+          toleranceAbsolute: 0.004057475
           unit: ms
         run.per-invoke-allocated:
-          reference: 1.281
+          reference: 1.2734375
           maximum: 1.313
           unit: KiB
     swift-6.4-release-macos26-arm64-m3max:
       metrics:
         compile.allocated:
-          reference: 273155
-          maximum: 286813
+          reference: 260154
+          maximum: 273162
           unit: B
         compile.elapsed:
-          reference: 0.316
-          toleranceAbsolute: 0.079
+          reference: 0.325917
+          toleranceAbsolute: 0.08147925
           unit: ms
         program-load.allocated:
-          reference: 17735
-          maximum: 18622
+          reference: 17578
+          maximum: 18457
           unit: B
         program-load.elapsed:
-          reference: 0.020875
+          reference: 0.022959
           toleranceAbsolute: 0.05
           unit: ms
         run.allocated:
-          reference: 2465000
-          maximum: 2588250
+          reference: 1380000
+          maximum: 1449000
           unit: B
         run.allocations:
           reference: 9000
           maximum: 9450
           unit: count
         run.elapsed:
-          reference: 11.859583
-          toleranceAbsolute: 2.96489575
+          reference: 3.283125
+          toleranceAbsolute: 0.82078125
           unit: ms
         run.per-invoke-allocated:
-          reference: 2465
-          maximum: 2589
+          reference: 1380
+          maximum: 1449
           unit: B/iteration
         run.per-invoke-elapsed:
-          reference: 0.011859583
-          toleranceAbsolute: 0.00296489575
+          reference: 0.003283125
+          toleranceAbsolute: 0.00082078125
           unit: ms/iteration
 ```
 
@@ -1583,90 +1583,90 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         ast-build.elapsed:
-          reference: 0.4111
-          toleranceAbsolute: 1
+          reference: 0.2536
+          toleranceAbsolute: 0.0634
           unit: ms
         ast-build.allocated:
-          reference: 84.055
-          maximum: 84.055
+          reference: 79.5
+          maximum: 83.4755859375
           unit: KiB
         binary-build.elapsed:
-          reference: 0.767
-          toleranceAbsolute: 1
+          reference: 0.8864
+          toleranceAbsolute: 0.2216
           unit: ms
         binary-build.allocated:
-          reference: 253.586
+          reference: 242.109375
           maximum: 253.586
           unit: KiB
         program-load.elapsed:
-          reference: 0.1072
-          toleranceAbsolute: 1
+          reference: 0.1042
+          toleranceAbsolute: 0.05
           unit: ms
         program-load.allocated:
-          reference: 32.797
-          maximum: 32.867
+          reference: 26.3984375
+          maximum: 27.71875
           unit: KiB
         compile.elapsed:
-          reference: 1.2853
-          toleranceAbsolute: 1
+          reference: 1.2445
+          toleranceAbsolute: 0.311125
           unit: ms
         compile.allocated:
-          reference: 370.438
-          maximum: 370.438
+          reference: 348.0078125
+          maximum: 365.408203125
           unit: KiB
         run.elapsed:
-          reference: 766.0925
-          toleranceAbsolute: 116.627745
+          reference: 69.9597
+          toleranceAbsolute: 17.489925
           unit: ms
         run.allocated:
-          reference: 2234.406
+          reference: 2257.8125
           maximum: 2265.664
           unit: KiB
         run.per-invoke-elapsed:
-          reference: 0.766093
-          toleranceAbsolute: 1
+          reference: 0.0699597
+          toleranceAbsolute: 0.017489925
           unit: ms
         run.per-invoke-allocated:
-          reference: 2.234
+          reference: 2.2578125
           maximum: 2.266
           unit: KiB
     swift-6.4-release-macos26-arm64-m3max:
       metrics:
         compile.allocated:
-          reference: 864263
+          reference: 875838
           maximum: 907477
           unit: B
         compile.elapsed:
-          reference: 1.028917
-          toleranceAbsolute: 0.25722925
+          reference: 0.950959
+          toleranceAbsolute: 0.23773975
           unit: ms
         program-load.allocated:
-          reference: 27583
-          maximum: 28963
+          reference: 27197
+          maximum: 28557
           unit: B
         program-load.elapsed:
-          reference: 0.052
+          reference: 0.052375
           toleranceAbsolute: 0.05
           unit: ms
         run.allocated:
-          reference: 4333000
-          maximum: 4549650
+          reference: 4124000
+          maximum: 4330200
           unit: B
         run.allocations:
           reference: 40000
           maximum: 42000
           unit: count
         run.elapsed:
-          reference: 426.603
-          toleranceAbsolute: 106.65075
+          reference: 63.067334
+          toleranceAbsolute: 15.7668335
           unit: ms
         run.per-invoke-allocated:
-          reference: 4333
-          maximum: 4550
+          reference: 4124
+          maximum: 4331
           unit: B/iteration
         run.per-invoke-elapsed:
-          reference: 0.426603
-          toleranceAbsolute: 0.10665075
+          reference: 0.063067334
+          toleranceAbsolute: 0.0157668335
           unit: ms/iteration
 ```
 

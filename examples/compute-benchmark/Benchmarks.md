@@ -9,8 +9,8 @@ the commands below from the repository root, using installed Release CLIs from
 the same source revision where possible.
 
 ```sh
-ges run docs/guide/cli/compute-benchmark.ges
-dotnet ges run docs/guide/cli/compute-benchmark.ges
+ges run examples/compute-benchmark/compute-benchmark.ges
+dotnet ges run examples/compute-benchmark/compute-benchmark.ges
 ```
 
 The script chains 48 compute messages. Each batch constructs 128 immutable
@@ -38,8 +38,8 @@ default failure handling enabled so failures cannot masquerade as fast runs.
 
 ```sh
 hyperfine -N --warmup 3 --runs 20 \
-  'dotnet ges run --quiet docs/guide/cli/compute-benchmark.ges' \
-  'ges run --quiet docs/guide/cli/compute-benchmark.ges'
+  'dotnet ges run --quiet examples/compute-benchmark/compute-benchmark.ges' \
+  'ges run --quiet examples/compute-benchmark/compute-benchmark.ges'
 ```
 
 This measures process startup, source reading, compilation, linking and execution.
@@ -51,7 +51,7 @@ the observable result is identical.
 Compile once, then give both runtimes **the same binary**:
 
 ```sh
-ges compile docs/guide/cli/compute-benchmark.ges \
+ges compile examples/compute-benchmark/compute-benchmark.ges \
   -o artifacts/cli/compute-benchmark/workload.gesb
 
 hyperfine -N --warmup 3 --runs 20 \
@@ -82,36 +82,6 @@ ges run artifacts/cli/compute-benchmark/workload.gesb --profile artifacts/profil
 dotnet ges run artifacts/cli/compute-benchmark/workload.gesb --profile artifacts/profiles/csharp.md
 ```
 
-`--profile <report.md>` writes a Markdown file, creating missing directories and
-replacing a previous report. It works with source input, multiple binaries and
-`--scenario`. Interactive profiling is not supported. Normal script output and
-exit codes remain unchanged; the report is also written after a runtime failure
-or limit, so it can contain partial execution. An unwritable report is a CLI I/O
-failure. Profile paths must end in `.md` and must not name an input file.
-
-The report contains program-instance IDs, all executed opcode kinds, and the top
-100 source-line and instruction rows by measured time. Each row shows instruction
-starts, total milliseconds, share of measured VM time and mean nanoseconds.
-Additional mean-nanosecond columns separate State (processing check), Budget
-(exhaustion check), Slice (reserved-count check), Fetch (instruction access and
-pointer increment), Execute (dispatch and opcode body), and Advance (completed
-counter and loop transition). A Loop phases table includes terminal checks that
-never reach an instruction; these are not assigned to an opcode or source line.
-Budget reservation and completion outside the loop are excluded.
-Source-line counts aggregate opcode starts, not source-statement invocations.
-Addresses and instance IDs remain available without debug information; their
-source is marked `[unmapped]`. Duplicate modules remain separate instances. A
-source map identifies the line containing the start of the mapped source span.
-
-Initialization and synchronous extension calls are included. Compilation, loading,
-native message handlers and waits between execution slices are excluded. Script
-calls use exclusive accounting: callee instructions receive their own time.
-
-Profiling perturbs execution. Bookkeeping is excluded from timed intervals, but
-clock reads and callback transitions remain. Six timed phases mean substantially
-more measurement overhead than a single timer per opcode. Tiny phases may be
-dominated by that overhead. Compare repeated
-profiles on the same machine and use unprofiled benchmarks for overall speed.
-A wall-clock-sensitive script may observe different delayed-message readiness
-under instrumentation. Counts after an opcode fault can differ from the Host's
-completed-opcode counter. The report measures neither allocations nor CPU time.
+For report contents, timing boundaries and interpretation, see the general CLI
+documentation: [Swift](../../implementation/swift/GameEventScriptTool/README.md#opcode-profiling)
+or [C#](../../implementation/csharp/GameEventScript.Tool/README.md#opcode-profiling).

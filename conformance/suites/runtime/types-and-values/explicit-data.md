@@ -1542,3 +1542,217 @@ steps:
         - any: true
 ```
 
+
+---
+
+## Test: nested-constructor-growth
+
+Nested dynamic constructors retain their arguments while growing the active register stack.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nested-constructor-growth
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+record :Wide as {
+    _ f1: :Number, _ f2: :Number, _ f3: :Number, _ f4: :Number, _ f5: :Number, _ f6: :Number, _ f7: :Number, _ f8: :Number,
+    _ f9: :Number, _ f10: :Number, _ f11: :Number, _ f12: :Number, _ f13: :Number, _ f14: :Number, _ f15: :Number, _ f16: :Number,
+    _ f17: :Number, _ f18: :Number, _ f19: :Number, _ f20: :Number, _ f21: :Number, _ f22: :Number, _ f23: :Number, _ f24: :Number,
+    _ f25: :Number, _ f26: :Number, _ f27: :Number, _ f28: :Number, _ f29: :Number, _ f30: :Number, _ f31: :Number, _ f32: :Number,
+    _ f33: :Number, _ f34: :Number, _ f35: :Number, _ f36: :Number, _ f37: :Number, _ f38: :Number, _ f39: :Number, _ f40: :Number,
+    sent: :Boolean computed by emit Observed(value: f40)
+}
+record :Outer as {
+    _ f1: :Number, _ f2: :Number, _ f3: :Number, _ f4: :Number, _ f5: :Number, _ f6: :Number, _ f7: :Number, _ f8: :Number,
+    _ f9: :Number, _ f10: :Number, _ f11: :Number, _ f12: :Number, _ f13: :Number, _ f14: :Number, _ f15: :Number, _ f16: :Number,
+    _ f17: :Number, _ f18: :Number, _ f19: :Number, _ f20: :Number, _ f21: :Number, _ f22: :Number, _ f23: :Number, _ f24: :Number,
+    _ f25: :Number, _ f26: :Number, _ f27: :Number, _ f28: :Number, _ f29: :Number, _ f30: :Number, _ f31: :Number, _ f32: :Number,
+    _ f33: :Number, _ f34: :Number, _ f35: :Number, _ f36: :Number, _ f37: :Number, _ f38: :Number, _ f39: :Number, _ f40: :Number,
+    _ text: :Text, child: :Wide computed by parse text
+}
+on Start {
+    let value be parse ':Outer(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, ":Wide(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40)")'
+    emit Done(ok: value.f1 = 1 and value.f40 = 40 and value.child.f1 = 1 and value.child.f40 = 40)
+}
+on Probe { emit Alive() }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+| recovery | Probe | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Observed
+        args:
+          - name: value
+            value:
+              type: ":Number.int64"
+              value: "40"
+      - name: Done
+        args:
+          - name: ok
+            value:
+              type: ":Boolean"
+              value: true
+    diagnostics: []
+  recovery:
+    local:
+      - name: Alive
+    diagnostics: []
+```
+
+---
+
+## Test: nested-constructor-growth-sliced
+
+Nested dynamic constructors retain their arguments while growing the active register stack.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nested-constructor-growth-sliced
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+record :Wide as {
+    _ f1: :Number, _ f2: :Number, _ f3: :Number, _ f4: :Number, _ f5: :Number, _ f6: :Number, _ f7: :Number, _ f8: :Number,
+    _ f9: :Number, _ f10: :Number, _ f11: :Number, _ f12: :Number, _ f13: :Number, _ f14: :Number, _ f15: :Number, _ f16: :Number,
+    _ f17: :Number, _ f18: :Number, _ f19: :Number, _ f20: :Number, _ f21: :Number, _ f22: :Number, _ f23: :Number, _ f24: :Number,
+    _ f25: :Number, _ f26: :Number, _ f27: :Number, _ f28: :Number, _ f29: :Number, _ f30: :Number, _ f31: :Number, _ f32: :Number,
+    _ f33: :Number, _ f34: :Number, _ f35: :Number, _ f36: :Number, _ f37: :Number, _ f38: :Number, _ f39: :Number, _ f40: :Number,
+    sent: :Boolean computed by emit Observed(value: f40)
+}
+record :Outer as {
+    _ f1: :Number, _ f2: :Number, _ f3: :Number, _ f4: :Number, _ f5: :Number, _ f6: :Number, _ f7: :Number, _ f8: :Number,
+    _ f9: :Number, _ f10: :Number, _ f11: :Number, _ f12: :Number, _ f13: :Number, _ f14: :Number, _ f15: :Number, _ f16: :Number,
+    _ f17: :Number, _ f18: :Number, _ f19: :Number, _ f20: :Number, _ f21: :Number, _ f22: :Number, _ f23: :Number, _ f24: :Number,
+    _ f25: :Number, _ f26: :Number, _ f27: :Number, _ f28: :Number, _ f29: :Number, _ f30: :Number, _ f31: :Number, _ f32: :Number,
+    _ f33: :Number, _ f34: :Number, _ f35: :Number, _ f36: :Number, _ f37: :Number, _ f38: :Number, _ f39: :Number, _ f40: :Number,
+    _ text: :Text, child: :Wide computed by parse text
+}
+on Start {
+    let value be parse ':Outer(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, ":Wide(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40)")'
+    emit Done(ok: value.f1 = 1 and value.f40 = 40 and value.child.f1 = 1 and value.child.f40 = 40)
+}
+on Probe { emit Alive() }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | frames | 1 |
+| recovery | Probe | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Observed
+        args:
+          - name: value
+            value:
+              type: ":Number.int64"
+              value: "40"
+      - name: Done
+        args:
+          - name: ok
+            value:
+              type: ":Boolean"
+              value: true
+    diagnostics: []
+  recovery:
+    local:
+      - name: Alive
+    diagnostics: []
+```
+
+---
+
+## Test: nested-constructor-register-limit
+
+Nested dynamic constructors retain their arguments while growing the active register stack.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nested-constructor-register-limit
+compile:
+  binaryRoundTrip: true
+runtimeLimits:
+  maxRegisterValues: 64
+```
+
+### Source code under test
+
+```ges
+record :Wide as {
+    _ f1: :Number, _ f2: :Number, _ f3: :Number, _ f4: :Number, _ f5: :Number, _ f6: :Number, _ f7: :Number, _ f8: :Number,
+    _ f9: :Number, _ f10: :Number, _ f11: :Number, _ f12: :Number, _ f13: :Number, _ f14: :Number, _ f15: :Number, _ f16: :Number,
+    _ f17: :Number, _ f18: :Number, _ f19: :Number, _ f20: :Number, _ f21: :Number, _ f22: :Number, _ f23: :Number, _ f24: :Number,
+    _ f25: :Number, _ f26: :Number, _ f27: :Number, _ f28: :Number, _ f29: :Number, _ f30: :Number, _ f31: :Number, _ f32: :Number,
+    _ f33: :Number, _ f34: :Number, _ f35: :Number, _ f36: :Number, _ f37: :Number, _ f38: :Number, _ f39: :Number, _ f40: :Number,
+    sent: :Boolean computed by emit Observed(value: f40)
+}
+record :Outer as {
+    _ f1: :Number, _ f2: :Number, _ f3: :Number, _ f4: :Number, _ f5: :Number, _ f6: :Number, _ f7: :Number, _ f8: :Number,
+    _ f9: :Number, _ f10: :Number, _ f11: :Number, _ f12: :Number, _ f13: :Number, _ f14: :Number, _ f15: :Number, _ f16: :Number,
+    _ f17: :Number, _ f18: :Number, _ f19: :Number, _ f20: :Number, _ f21: :Number, _ f22: :Number, _ f23: :Number, _ f24: :Number,
+    _ f25: :Number, _ f26: :Number, _ f27: :Number, _ f28: :Number, _ f29: :Number, _ f30: :Number, _ f31: :Number, _ f32: :Number,
+    _ f33: :Number, _ f34: :Number, _ f35: :Number, _ f36: :Number, _ f37: :Number, _ f38: :Number, _ f39: :Number, _ f40: :Number,
+    _ text: :Text, child: :Wide computed by parse text
+}
+on Start {
+    let value be parse ':Outer(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, ":Wide(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40)")'
+    emit Done(ok: value.f1 = 1 and value.f40 = 40 and value.child.f1 = 1 and value.child.f40 = 40)
+}
+on Probe { emit Alive() }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+| recovery | Probe | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local: []
+    diagnostics:
+      - phase: runtime
+        code: runtime.registerOverflow
+  recovery:
+    local:
+      - name: Alive
+    diagnostics: []
+```

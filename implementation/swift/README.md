@@ -311,52 +311,25 @@ ordered argument labels follow the shared specifications. VM entry reads
 arguments by index; frame/register storage and callback objects are reused.
 Callbacks and argument borrows are synchronous and must not be retained.
 
-Runtime opcode helpers live under `Sources/GameEventScriptRuntime/Opcodes`:
-`Core` contains logical operations, comparisons, casts and host calls; `Math`
-contains arithmetic, random and spatial operations; `Collections` contains
-collection operations and iteration. Each opcode entry point has its own Swift
-extension file. Shared algorithms and iterator storage live in the respective
-`Support` directories. Simple register and control-flow instructions remain in
-the inline dispatch in `VM/VirtualMachine.swift`; typed register mutation remains
-in `VM/VmState.swift`.
+Runtime sources follow the C# grouping within one unchanged SwiftPM target:
 
-The `Program` directory contains the immutable program model and GESA dumper.
-Its `Binary`, `Bytecode` and `Validation` subdirectories contain the binary
-reader/writer and format contract, instruction/operand definitions, and program
-validators respectively. The `VM` directory groups execution state, linked
-programs, value outputs, literal evaluation and profiling. These directories
-remain part of the same Runtime target; the public module and APIs are unchanged.
+- `Api` contains host/context APIs, diagnostics, messages, extension contracts,
+  external type descriptors, random streams, profiling and the immutable Program
+  API. `Api/Program` retains the `Binary`, `Bytecode` and `Validation` subfolders.
+- `Runtime/Values` contains the shared value representation, maps, numeric/text
+  helpers, iterators, builders and borrowed value arguments.
+- `Runtime/VM` contains execution state, linked programs, register outputs and
+  literal evaluation. The context calls the existing Host queue operations directly.
+- `Runtime/VM/Opcodes` groups opcode extensions by `Core`, `Math` and
+  `Collections`, with one file per opcode entry point and shared algorithms in
+  their `Support` subfolders. Simple instructions remain in the inline dispatch
+  in `Runtime/VM/VirtualMachine.swift`; typed register writes remain in
+  `Runtime/VM/VmState.swift`.
 
-The `Types` directory contains values, maps, numbers, ranges, text and messages,
-including message signatures and arguments. Their literal parsing, construction,
-text conversion and JSON codecs live alongside them.
-
-`VM/Receiver.swift` owns the internal synchronous host-service contract.
-`GameEventScriptHost` implements it with its existing queue operations; the
-context holds only a weak receiver reference and has no concrete Host dependency.
-This Swift-specific boundary replaces the previous concrete weak Host reference
-to express the VM's requirements independently. It adds protocol dispatch only
-for message delivery and explicit host-status queries, not for each opcode.
-No closure delegates, receiver wrapper objects or per-message argument copies
-are introduced. Register access, random state and the concrete final
-`GesRuntimeBudget` retain their direct paths; budget checks never query the
-receiver. Validate changes to this boundary with the shared behavior corpus and
-the measured Swift performance/allocation gate.
-
-Extension and external-constructor resolver/callback protocols are defined in
-`VM/Contracts`, while their reusable call objects and register-borrowing argument
-views live in `VM/Callbacks`. `Types/External` owns external values, their storage,
-declarative field/constructor definitions and the compiler-facing catalog. Each
-declaration has its own file; these are source-organization boundaries within the
-same module, not additional runtime adapters. Existing callback dispatch and
-argument borrowing are unchanged.
-
-Shared diagnostics and source locations live in `Diagnostics`. Runtime limits,
-publication outcomes and observation hooks belong to `VM/Contracts`, which the
-host and VM both use. Host-only callback contracts and lifecycle results live in
-`Host/Contracts` and `Host/Results`. These declarations replace the mixed
-`RuntimeAPI.swift` file without changing their public API. `Randomness` contains
-the host-owned generator used directly by the host, VM and opcode helpers.
+The context retains a weak reference to its owning Host. No closure delegates, wrapper
+objects or argument copies are introduced; register writes and budget checks
+retain their direct paths. The folders do not define separate packages or alter
+public module names or APIs.
 
 Public SwiftPM consumption uses one repository-root Git dependency after a
 version tag has been published; no Swift registry upload is required. See the

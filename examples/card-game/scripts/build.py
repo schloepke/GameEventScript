@@ -63,7 +63,7 @@ def main():
         if target_anchor not in runtime_manifest:
             raise RuntimeError('Runtime manifest changed; review the isolated Wasm patch')
         manifest.write_text(runtime_manifest.replace(target_anchor, 'targets: [.target(name: "CardGameWasiClock"), .target(name: "GameEventScriptRuntime", dependencies: ["CardGameWasiClock"])]'))
-        clock = runtime / 'Sources/GameEventScriptRuntime/Clock.swift'
+        clock = runtime / 'Sources/GameEventScriptRuntime/Api/Clock.swift'
         clock_text = clock.read_text().replace('    import WASILibc', '    import WASILibc\n    import CardGameWasiClock')
         body = '        var value = timespec()\n        clock_gettime(CLOCK_MONOTONIC, &value)\n        return Int64(value.tv_sec) * 1_000_000 + Int64(value.tv_nsec) / 1_000'
         if body not in clock_text:

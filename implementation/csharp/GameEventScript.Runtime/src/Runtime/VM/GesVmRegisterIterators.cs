@@ -17,7 +17,16 @@ internal static class GesVmRegisterIterators
 
     internal static bool GesVmIteratorNext(this GesVmState vmState, ushort destinationRegister, in GesValue iterator, ushort noMoreAddress)
     {
-        if (iterator is { Kind: Iterator, ObjectValue: IGesIterator it })
+        if (iterator is { Kind: Iterator, ObjectValue: GesIntegerRangeIterator range })
+        {
+            // Hot loop form: write the integer term in place instead of copying an iterator result.
+            if (range.NextInteger() is { } term)
+            {
+                vmState.SetInteger(destinationRegister, term);
+                return true;
+            }
+        }
+        else if (iterator is { Kind: Iterator, ObjectValue: IGesIterator it })
         {
             var next = it.Next();
             if (next.HasValue)

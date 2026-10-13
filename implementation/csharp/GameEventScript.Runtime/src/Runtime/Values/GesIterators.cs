@@ -23,7 +23,7 @@ internal readonly struct GesIteratorResult
     internal readonly GesValue Value;
 }
 
-internal class GesIntegerRangeIterator(long from, long to, long step) : IGesIterator, IDisposable
+internal sealed class GesIntegerRangeIterator(long from, long to, long step) : IGesIterator, IDisposable
 {
     private long _current = from;
     private long _remaining = GameEventScriptRangeMath.GetLength(from, to, step);
@@ -31,13 +31,23 @@ internal class GesIntegerRangeIterator(long from, long to, long step) : IGesIter
 
     public GesIteratorResult Next()
     {
-        if (_disposed || _remaining <= 0) return default;
+        if (NextInteger() is not { } term) return default;
 
         var value = default(GesValue);
-        value.SetInteger(_current);
+        value.SetInteger(term);
+        return new GesIteratorResult(in value);
+    }
+
+    // Statically dispatched step used by VM dispatch to write the term in place; same sequence as
+    // Next(). Null marks the end, mirroring the optional result of the Swift port.
+    internal long? NextInteger()
+    {
+        if (_disposed || _remaining <= 0) return null;
+
+        var term = _current;
         _remaining--;
         if (_remaining > 0) _current = unchecked(_current + step);
-        return new GesIteratorResult(in value);
+        return term;
     }
 
     public void Dispose()

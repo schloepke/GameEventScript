@@ -123,13 +123,16 @@ internal static class GameEventScriptVirtualMachine
 
                     case ConstructData:
                     {
+                        if (vmState.ActiveProgram!.DataConstructionPositions(instruction.StringIndex, instruction.AU) is not { } positions)
+                        {
+                            vmState.SetNothing(instruction.DestinationRegister);
+                            break;
+                        }
+
                         var registers = vmState.Program.UInt16IndexLists.Resolve(instruction.ListIndex);
-                        var names = vmState.Program.UInt16IndexLists.Resolve(instruction.AU);
                         var arguments = new GesValue[registers.Length];
-                        var labels = new string[names.Length];
                         for (var i = 0; i < arguments.Length; i++) arguments[i] = vmState.Register(registers[i]);
-                        for (var i = 0; i < labels.Length; i++) labels[i] = vmState.FetchStringByPointer(names[i]);
-                        var constructed = GesDataConstruction.Create(vmState.FetchStringByPointer(instruction.StringIndex), labels, arguments, vmState, context);
+                        var constructed = GesDataConstruction.Create(vmState.FetchStringByPointer(instruction.StringIndex), positions, arguments, vmState, context);
                         vmState.SetValue(instruction.DestinationRegister, constructed);
                         break;
                     }
@@ -363,7 +366,7 @@ internal static class GameEventScriptVirtualMachine
                     case Add:
                         if ((instruction.UnitAndFlags & 0x40) != 0)
                             vmState.AddNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
-                        else vmState.GesVmAdd(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
+                        else vmState.AddRegisters(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
                         break;
                     case Subtract:
                         if ((instruction.UnitAndFlags & 0x40) != 0) vmState.SubtractNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
@@ -371,7 +374,7 @@ internal static class GameEventScriptVirtualMachine
                         break;
                     case Multiply:
                         if ((instruction.UnitAndFlags & 0x40) != 0) vmState.MultiplyNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
-                        else vmState.GesVmMultiply(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
+                        else vmState.MultiplyRegisters(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
                         break;
                     case Divide:
                         if ((instruction.UnitAndFlags & 0x40) != 0) vmState.DivideNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
@@ -387,7 +390,7 @@ internal static class GameEventScriptVirtualMachine
                         break;
                     case Modulo:
                         if ((instruction.UnitAndFlags & 0x40) != 0) vmState.ModuloNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
-                        else vmState.GesVmModulo(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
+                        else vmState.ModuloRegisters(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
                         break;
                     case Remainder:
                         if ((instruction.UnitAndFlags & 0x40) != 0) vmState.RemainderNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);

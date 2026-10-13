@@ -17,20 +17,16 @@ internal static class GesVmRegisterCollections
 
     internal static void GesVmCreateMap(this GesVmState vmState, ushort destinationRegister, ushort keyNamesIndex)
     {
-        var keyNames = vmState.Program.UInt16IndexLists.Resolve(keyNamesIndex);
-        if (keyNames.Length != vmState.StageLength)
+        var layout = vmState.ActiveProgram!.MapLayout(keyNamesIndex);
+        if (layout.InputCount != vmState.StageLength)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        var map = new GesVmMapBuilder(vmState.StageLength);
-        for (ushort i = 0; i < vmState.StageLength; i++)
-        {
-            map.Set(vmState.FetchStringByPointer(keyNames[i]), vmState.RegisterStaged(i));
-        }
-
-        vmState.SetMap(destinationRegister, map.ToMap());
+        var values = new GesValue[layout.Keys.Length];
+        for (var i = 0; i < values.Length; i++) values[i] = vmState.RegisterStaged((ushort)layout.Sources[i]);
+        vmState.SetMap(destinationRegister, new GesValueMap(layout.Keys, values));
     }
 
     internal static void GesVmCreateListBuilder(this GesVmState vmState, ushort destinationRegister)

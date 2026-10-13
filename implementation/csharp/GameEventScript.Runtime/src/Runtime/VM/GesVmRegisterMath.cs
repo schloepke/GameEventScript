@@ -3,6 +3,7 @@
 
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
 using GameEventScript.Runtime.Values;
@@ -15,6 +16,42 @@ namespace GameEventScript.Runtime.VM;
 [SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
 internal static class GesVmRegisterMath
 {
+    // Integer operands are the hot case: compute with the general path's helpers and write the
+    // result in place, without an intermediate GesValue. Every other outcome, including mismatched
+    // units, overflow or a zero divisor, takes the complete general path, as in the Swift port.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void AddRegisters(this GesVmState vmState, ushort destinationRegister, ushort x, ushort y)
+    {
+        ref readonly var a = ref vmState.Register(x);
+        ref readonly var b = ref vmState.Register(y);
+        if (a.Kind is Integer && b.Kind is Integer && SameUnit(in a, in b) is { } unit && GameEventScriptNumber.AddExact(a.IntegerValue, b.IntegerValue) is { } result)
+            vmState.SetInteger(destinationRegister, result, unit);
+        else
+            vmState.GesVmAdd(destinationRegister, in a, in b);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void MultiplyRegisters(this GesVmState vmState, ushort destinationRegister, ushort x, ushort y)
+    {
+        ref readonly var a = ref vmState.Register(x);
+        ref readonly var b = ref vmState.Register(y);
+        if (a.Kind is Integer && b.Kind is Integer && ProductUnit(in a, in b) is { } unit && GameEventScriptNumber.MultiplyExact(a.IntegerValue, b.IntegerValue) is { } result)
+            vmState.SetInteger(destinationRegister, result, unit);
+        else
+            vmState.GesVmMultiply(destinationRegister, in a, in b);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void ModuloRegisters(this GesVmState vmState, ushort destinationRegister, ushort x, ushort y)
+    {
+        ref readonly var a = ref vmState.Register(x);
+        ref readonly var b = ref vmState.Register(y);
+        if (a.Kind is Integer && b.Kind is Integer && SameUnit(in a, in b) is { } unit && b.IntegerValue != 0)
+            vmState.SetInteger(destinationRegister, GameEventScriptNumber.Modulo(a.IntegerValue, b.IntegerValue), unit);
+        else
+            vmState.GesVmModulo(destinationRegister, in a, in b);
+    }
+
     internal static void GesVmAdd(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
         var dst = GesVmAdd(in a, in b, vmState);

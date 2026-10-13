@@ -268,6 +268,12 @@ internal static class GesVmRegisterSortGroupDistinct
 
     private static bool SortValues(GesValue[] values, int count, bool descending)
     {
+        if (HasNumericSortKeys(values, count))
+        {
+            SortNumeric(values, null, count, descending);
+            return true;
+        }
+
         for (var i = 1; i < count; i++)
         {
             var value = values[i];
@@ -288,6 +294,12 @@ internal static class GesVmRegisterSortGroupDistinct
 
     internal static bool SortValuesByKeys(GesValue[] values, GesValue[] keys, int count, bool descending)
     {
+        if (HasNumericSortKeys(keys, count))
+        {
+            SortNumeric(values, keys, count, descending);
+            return true;
+        }
+
         for (var i = 1; i < count; i++)
         {
             var value = values[i];
@@ -308,6 +320,81 @@ internal static class GesVmRegisterSortGroupDistinct
 
         return true;
     }
+
+    // When all keys are numeric with one unit and none is NaN, every pair is comparable and
+    // CompareAscending reduces to binary64 comparison. SortNumeric then yields exactly the stable
+    // insertion-sort order in O(n log n), without heap allocation for small inputs.
+    private static bool HasNumericSortKeys(GesValue[] keys, int count)
+    {
+        if (count < 2) return false;
+        var unit = keys[0].Unit;
+        for (var i = 0; i < count; i++)
+        {
+            ref readonly var key = ref keys[i];
+            if (!key.IsNumeric || key.Unit != unit || double.IsNaN(key.AsNumeric)) return false;
+        }
+
+        return true;
+    }
+
+    // Requires HasNumericSortKeys; sorts (key, original index) pairs, then permutes in place.
+    private static void SortNumeric(GesValue[] values, GesValue[]? keys, int count, bool descending)
+    {
+        var sortKeys = keys ?? values;
+        Span<(double Key, int Index)> order = count <= 128 ? stackalloc (double, int)[count] : new (double, int)[count];
+        for (var i = 0; i < count; i++)
+        {
+            var number = sortKeys[i].AsNumeric;
+            order[i] = (descending ? -number : number, i);
+        }
+
+        // (key, index) pairs are distinct, so this unstable heapsort has exactly one result.
+        for (var root = count / 2 - 1; root >= 0; root--) SiftDown(order, root, count);
+        for (var end = count - 1; end > 0; end--)
+        {
+            (order[0], order[end]) = (order[end], order[0]);
+            SiftDown(order, 0, end);
+        }
+
+        // Apply result[i] = original[order[i].Index] in place by walking each permutation cycle once.
+        for (var start = 0; start < count; start++)
+        {
+            if (order[start].Index < 0) continue;
+            var savedValue = values[start];
+            var savedKey = keys is null ? default : keys[start];
+            var current = start;
+            while (true)
+            {
+                var next = order[current].Index;
+                order[current].Index = ~next;
+                if (next == start)
+                {
+                    values[current] = savedValue;
+                    if (keys is not null) keys[current] = savedKey;
+                    break;
+                }
+
+                values[current] = values[next];
+                if (keys is not null) keys[current] = keys[next];
+                current = next;
+            }
+        }
+    }
+
+    private static void SiftDown(Span<(double Key, int Index)> heap, int root, int end)
+    {
+        while (true)
+        {
+            var child = 2 * root + 1;
+            if (child >= end) return;
+            if (child + 1 < end && Precedes(heap[child], heap[child + 1])) child++;
+            if (!Precedes(heap[root], heap[child])) return;
+            (heap[root], heap[child]) = (heap[child], heap[root]);
+            root = child;
+        }
+    }
+
+    private static bool Precedes((double Key, int Index) left, (double Key, int Index) right) => left.Key < right.Key || (left.Key == right.Key && left.Index < right.Index);
 
     private static int? CompareAscending(in GesValue a, in GesValue b)
     {

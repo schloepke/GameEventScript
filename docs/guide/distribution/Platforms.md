@@ -26,7 +26,7 @@ Swift's package tools version is a manifest requirement, not a claim that every
 product is tested with every Swift compiler from 6.0 onward. The macOS deployment
 target likewise does not mean that tests run on macOS 10.15.4. The local Runtime,
 Compiler and SyntaxHighlighter packages have no explicit Apple platform floor;
-the public root package also contains the CLI and Bridge. See
+the public root package contains the Bridge, while the CLI is a separate package. See
 [Package.swift](../../../Package.swift) for the actual distribution contract.
 
 The complete Swift corpus is currently checked on macOS ARM64; the complete C#

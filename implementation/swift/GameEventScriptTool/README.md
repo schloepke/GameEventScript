@@ -232,7 +232,7 @@ until the file closes. Message pumping pauses while the editor is open. Only
 
 Both interactive prompts indent continuation lines without adding `...` tokens.
 
-The public root SwiftPM package also exposes `ges` from 0.3.0. See
+The CLI is built from this separate package; the root SwiftPM package exposes only libraries. See
 [SwiftPM source builds and Homebrew installation](../../../docs/guide/distribution/Tools.md).
 
 ## Opcode profiling

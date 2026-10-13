@@ -321,9 +321,9 @@ Conformance. Keep the explicit upload allowlist in
 The root `Package.swift` is the public SwiftPM entry point with four library
 products: GameEventScriptRuntime, GameEventScriptCompiler,
 GameEventScriptSwiftBridge and GameEventScriptSyntaxHighlighter. They use existing sources and share a Git tag/version;
-local development packages remain separate. The root manifest also exposes the `ges`
-executable using the existing CLI and TerminalSupport sources; Conformance remains internal.
-The root package requires macOS 10.15.4 for CLI Foundation I/O. Three root test targets reuse the existing SwiftBridge,
+local development packages remain separate. CLI and TerminalSupport belong only to the
+separate GameEventScriptTool package; Conformance remains internal.
+The root package requires macOS 10.15 for the SwiftSyntax macro dependency. Three root test targets reuse the existing SwiftBridge,
 bridge-macro and SyntaxHighlighter test directories; never duplicate their sources
 or add test products. `python3 scripts/test-swift-package.py` checks tagged Git
 consumption, the product/dependency graph, the root tests and Runtime-only builds in disposable

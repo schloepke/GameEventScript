@@ -12,6 +12,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Changed
 
+- The root SwiftPM package now exposes only the four libraries. Build `ges` from
+  `implementation/swift/GameEventScriptTool`, or install it via Homebrew, the
+  install script or standalone downloads. The root macOS minimum is now 10.15;
+  the separate CLI retains its 10.15.4 minimum.
 - Swift `GameEventScriptProgram` is now an immutable `final class`, so hosts and
   callers share a single Program instance. Program contents, binary encoding and
   copy-on-write isolation of returned arrays are unchanged.

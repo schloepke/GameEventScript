@@ -1,32 +1,23 @@
 module ges.cli.example
 
-record :Data as {
+record :Arguments as {
 	input: :List, 
-	sum: :Number computed by input[:sum], 
-	average: :Number computed by input[:average]
+	parsed: :List computed by input[:select x => parse x when x is :Text otherwise x]
 }
 
 function double(_ x as :Number) be x + x
 
 on Main(args) {
-	if args is :List {
-		emit ConsoleErr("We have a list of strings in the args parameter")
-		// we are going to convert all strings in args and parse them
-		let parsedArgs be args[:select x => parse x when x is :Text otherwise x]
-		for arg in parsedArgs {
-			if arg is :Number and arg is not :Dice {
-				emit ConsoleOut("Number argument: f(", arg, ") = ", double(arg))
-			} else if arg is :Tag {
-				emit ConsoleOut("Tag: ", arg)
-			} else if arg is :Handler {
-				emit ConsoleOut("Handler: ", arg)
-			} else {
-				emit ConsoleOut("Argument: ", arg)
-			}
-		}
-	} else {
-		emit ConsoleErr("We got args which is not a list: ", args)
-	}
+	emit ConsoleOut("---- Starting ----")
+	let arguments be :Arguments(input: args) when args is :List otherwise :Arguments(input: [args])
+	arguments.parsed[:foreach x => emit ConsoleOut("Parsed argument: ", x)]
+	arguments.parsed[:foreach x => 
+		when x is :Number and x is not :Dice then emit ConsoleOut("Number argument: f(", x, ") = ", double(x)),
+		when x is :Tag then emit ConsoleOut("Tag: ", x),
+		when x is :Message then emit ConsoleOut("Message: ", x) and emit x,
+		otherwise emit ConsoleOut("Argument: ", x)
+	]
+	emit ConsoleOut("---- Finished ----")
 }
 
 on Test() {

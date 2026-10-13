@@ -1,13 +1,28 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesMath {
-    @inline(__always)
-    static func executeClamp<Output: GesValueOutput>(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext, _ a: GesValue, _ b: GesValue, sink: Output) throws -> Output.Result {
-        var upper = s.value(Int(i.a))
-        if i.unitAndFlags & 0x40 != 0 && (upper.kind == .boolean || upper.kind == .dice) { upper = numericOperand(upper) }
-        guard a.unit == b.unit, b.unit == upper.unit, a.isNumeric, b.isNumeric, upper.isNumeric else { return sink.nothing }
-        if let av = a.integerValue, let bv = b.integerValue, let cv = upper.integerValue { return sink.integer(Swift.min(Swift.max(av, Swift.min(bv, cv)), Swift.max(bv, cv)), unit: a.unit) }
-        return sink.float(Swift.min(Swift.max(a.asNumber, Swift.min(b.asNumber, upper.asNumber)), Swift.max(b.asNumber, upper.asNumber)), unit: a.unit)
+extension GesVmState {
+    @inline(never)
+    func executeClamp(_ target: Int, _ x: Int, _ y: Int, _ operandA: Int) {
+        registers.withUnsafeMutableBufferPointer { slots in
+            let upper = operandA
+            guard slots[x].unit == slots[y].unit, slots[y].unit == slots[upper].unit, slots[x].isNumeric, slots[y].isNumeric, slots[upper].isNumeric else { return slots[target].setNothing() }
+            if let av = slots[x].integerValue, let bv = slots[y].integerValue, let cv = slots[upper].integerValue {
+                return slots[target].setInteger(Swift.min(Swift.max(av, Swift.min(bv, cv)), Swift.max(bv, cv)), unit: slots[x].unit)
+            }
+            return slots[target].setFloat(Swift.min(Swift.max(slots[x].asNumber, Swift.min(slots[y].asNumber, slots[upper].asNumber)), Swift.max(slots[y].asNumber, slots[upper].asNumber)), unit: slots[x].unit)
+        }
+    }
+
+    @inline(never)
+    func executeClampNumeric(_ target: Int, _ x: Int, _ y: Int, _ operandA: Int) {
+        registers.withUnsafeMutableBufferPointer { slots in
+            let upper = operandA
+            guard slots[x].unit == slots[y].unit, slots[y].unit == slots[upper].unit, slots[x].isNumeric, slots[y].isNumeric, slots[upper].isNumeric else { return slots[target].setNothing() }
+            if let av = slots[x].numericIntegerValue, let bv = slots[y].numericIntegerValue, let cv = slots[upper].numericIntegerValue {
+                return slots[target].setInteger(Swift.min(Swift.max(av, Swift.min(bv, cv)), Swift.max(bv, cv)), unit: slots[x].unit)
+            }
+            return slots[target].setFloat(Swift.min(Swift.max(slots[x].asNumber, Swift.min(slots[y].asNumber, slots[upper].asNumber)), Swift.max(slots[y].asNumber, slots[upper].asNumber)), unit: slots[x].unit)
+        }
     }
 }

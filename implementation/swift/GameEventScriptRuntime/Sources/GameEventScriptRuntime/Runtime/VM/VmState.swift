@@ -15,7 +15,8 @@ final class GesVmState {
     var error: GameEventScriptDiagnostic?
     var handlerName: String?
     var ip = 0, frameStart = 0, frameLength = 0, stageLength = 0
-    private var registers: [GesValue]
+    // Owned register storage; opcode extensions read fields and mutate through typed setters.
+    var registers: [GesValue]
     private var frames: [Frame]
     private var depth = 0
     private let maxRegisters: Int
@@ -137,48 +138,6 @@ final class GesVmState {
     }
 
     @inline(__always)
-    func setArithmeticResult(_ instruction: GameEventScriptBytecodeInstruction, _ context: GameEventScriptContext) throws {
-        if setIntegerArithmeticResult(instruction) { return }
-        try GesMath.execute(instruction, self, context, sink: output(Int(instruction.word0)))
-    }
-
-    @inline(__always)
-    func setNumericArithmeticResult(_ instruction: GameEventScriptBytecodeInstruction, _ context: GameEventScriptContext) throws {
-        let op = instruction.opcode
-        if op == .add || op == .subtract || op == .multiply || op == .divide || op == .integerDivide || op == .modulo || op == .remainder {
-            if setNumericIntegerArithmeticResult(instruction) { return }
-        }
-        if op == .add || op == .subtract {
-            let x = frameStart + Int(instruction.word1)
-            let y = frameStart + Int(instruction.word2)
-            guard registers[x].isNumeric, registers[y].isNumeric else {
-                setNothing(Int(instruction.word0))
-                return
-            }
-            setNumericFractionalAddResult(instruction)
-            return
-        }
-        try GesMath.execute(instruction, self, context, sink: output(Int(instruction.word0)))
-    }
-
-    @inline(__always)
-    private func setNumericIntegerArithmeticResult(_ instruction: GameEventScriptBytecodeInstruction) -> Bool {
-        let start = frameStart
-        return registers.withUnsafeMutableBufferPointer { slots in
-            let x = start + Int(instruction.word1)
-            let y = start + Int(instruction.word2)
-            guard let a = slots[x].numericIntegerValue, let b = slots[y].numericIntegerValue else { return false }
-            let destination = start + Int(instruction.word0)
-            switch GesMath.integerArithmeticResult(instruction.opcode, a, b, slots[x].unit, slots[y].unit) {
-            case .nothing: slots[destination].setNothing()
-            case .integer(let value, let unit): slots[destination].setInteger(value, unit: unit)
-            case .float(let value, let unit): slots[destination].setFloat(value, unit: unit)
-            }
-            return true
-        }
-    }
-
-    @inline(__always)
     func numericCopy(_ destination: Int, _ source: Int) {
         let src = frameStart + source
         let dst = frameStart + destination
@@ -191,53 +150,6 @@ final class GesVmState {
             registers[dst].setInteger(sum)
         } else if dst != src {
             registers[dst] = registers[src]
-        }
-    }
-
-    @inline(never)
-    private func setNumericFractionalAddResult(_ instruction: GameEventScriptBytecodeInstruction) {
-        let start = frameStart
-        // Read scalar fields only; no full GesValue copies or collection dispatch.
-        registers.withUnsafeMutableBufferPointer { slots in
-            let x = start + Int(instruction.word1)
-            let y = start + Int(instruction.word2)
-            let left = slots[x].asNumber
-            let right = slots[y].asNumber
-            let leftPercentage = slots[x].kind == .percentage
-            let rightPercentage = slots[y].kind == .percentage
-            let unit = slots[x].unit
-            let sameUnit = unit == slots[y].unit
-            let destination = start + Int(instruction.word0)
-            let subtract = instruction.opcode == .subtract
-            if leftPercentage {
-                if rightPercentage { slots[destination].setPercentage(subtract ? left - right : left + right) } else { slots[destination].setNothing() }
-            } else if rightPercentage {
-                let delta = left * right
-                slots[destination].setFloat(subtract ? left - delta : left + delta, unit: unit)
-            } else if sameUnit {
-                slots[destination].setFloat(subtract ? left - right : left + right, unit: unit)
-            } else {
-                slots[destination].setNothing()
-            }
-        }
-    }
-
-    @inline(__always)
-    func setIntegerArithmeticResult(_ instruction: GameEventScriptBytecodeInstruction) -> Bool {
-        let start = frameStart
-        // One exclusive storage borrow; no callback, frame change or growth occurs in this region.
-        // Only scalar inputs survive the destination write, even when source and destination alias.
-        return registers.withUnsafeMutableBufferPointer { slots in
-            guard let a = slots[start + Int(instruction.word1)].integerOperand,
-                let b = slots[start + Int(instruction.word2)].integerOperand
-            else { return false }
-            let destination = start + Int(instruction.word0)
-            switch GesMath.integerArithmeticResult(instruction.opcode, a.value, b.value, a.unit, b.unit) {
-            case .nothing: slots[destination].setNothing()
-            case .integer(let value, let unit): slots[destination].setInteger(value, unit: unit)
-            case .float(let value, let unit): slots[destination].setFloat(value, unit: unit)
-            }
-            return true
         }
     }
 

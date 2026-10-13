@@ -1,9 +1,34 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesCollectionOperators {
-    @inline(__always)
-    static func executeTakeWeighted<Output: GesValueOutput>(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext, _ slot: GesValue, _ a: GesValue, sink: Output) throws -> Output.Result {
-        return try performOneWeightedTakeWeighted(i, s, c, slot, a, sink: sink)
+extension GesVmState {
+    @inline(never)
+    func executeTakeWeighted(_ destinationRegister: Int, _ sourceRegister: Int, _ countOperand: Int, _ operandA: Int, _ context: GameEventScriptContext) {
+        let destination = destinationRegister
+        let x = frameStart + sourceRegister
+        let y = frameStart + operandA
+        let count = countOperand
+        guard var items = registers[x].listValue, let weights = registers[y].listValue, weights.count >= items.count else { return setNothing(destination) }
+        if items.isEmpty || count <= 0 { return setList(destination, []) }
+        var weightsBuffer = weights.prefix(items.count).map(\.asNumber)
+        if weightsBuffer.contains(where: { !$0.isFinite || $0 <= 0 }) { return setList(destination, []) }
+        var total = weightsBuffer.reduce(0, +)
+        var result = [GesValue](repeating: .nothing, count: min(count, items.count))
+        for target in result.indices {
+            if total <= 0 { break }
+            let threshold = context.random.nextFloat(0, total)
+            var cumulative = 0.0
+            var selected = items.count - 1
+            for index in items.indices {
+                cumulative += weightsBuffer[index]
+                if threshold < cumulative {
+                    selected = index
+                    break
+                }
+            }
+            result[target] = items.remove(at: selected)
+            total -= weightsBuffer.remove(at: selected)
+        }
+        return setList(destination, result)
     }
 }

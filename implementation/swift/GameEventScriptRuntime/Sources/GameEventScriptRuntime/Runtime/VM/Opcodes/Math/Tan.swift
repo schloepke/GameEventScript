@@ -9,12 +9,13 @@
     import Musl
 #endif
 
-extension GesNavigation {
-    @inline(__always)
-    static func executeTan<Output: GesValueOutput>(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, sink: Output) -> Output.Result {
-        let a = s.value(Int(i.word1))
-        guard a.isNumeric, a.unit == .none || a.unit == .degree else { return sink.nothing }
-        let n = a.unit == .degree ? a.asNumber / 180 * Double.pi : a.asNumber
-        return sink.float(tan(n))
+extension GesVmState {
+    @inline(never)
+    func executeTan(_ target: Int, _ x: Int) {
+        registers.withUnsafeMutableBufferPointer { slots in
+            guard slots[x].isNumeric, slots[x].unit == .none || slots[x].unit == .degree else { return slots[target].setNothing() }
+            let n = slots[x].unit == .degree ? slots[x].asNumber / 180 * Double.pi : slots[x].asNumber
+            return slots[target].setFloat(tan(n))
+        }
     }
 }

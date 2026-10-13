@@ -1,10 +1,12 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesMath {
-    @inline(__always)
-    static func executeNot<Output: GesValueOutput>(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext, _ a: GesValue, _ b: GesValue, sink: Output) throws -> Output.Result {
-        guard let truth = a.truth else { return sink.nothing }
-        return sink.boolean(!truth)
+extension GesVmState {
+    @inline(never)
+    func executeNot(_ target: Int, _ x: Int) {
+        registers.withUnsafeMutableBufferPointer { slots in
+            guard let truth = slots[x].truth else { return slots[target].setNothing() }
+            return slots[target].setBoolean(!truth)
+        }
     }
 }

@@ -1,9 +1,22 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesNavigation {
-    @inline(__always)
-    static func executeNormalize3D<Output: GesValueOutput>(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, sink: Output) -> Output.Result {
-        evaluate(.normalize3D, i, s, sink: sink)
+extension GesVmState {
+    @inline(never)
+    func executeNormalize3D(_ target: Int, _ x: Int, _ otherRegister: Int, _ operandA: Int) {
+        let component0 = x
+        let component1 = otherRegister
+        let component2 = operandA
+        registers.withUnsafeMutableBufferPointer { slots in
+            guard slots[component0].isNumeric, slots[component0].unit == slots[x].unit else { return slots[target].setNothing() }
+            let ax = slots[component0].asNumber
+            guard slots[component1].isNumeric, slots[component1].unit == slots[x].unit else { return slots[target].setNothing() }
+            let ay = slots[component1].asNumber
+            guard slots[component2].isNumeric, slots[component2].unit == slots[x].unit else { return slots[target].setNothing() }
+            let az = slots[component2].asNumber
+            let length = (ax * ax + ay * ay + az * az).squareRoot()
+            guard length != 0, !length.isNaN else { return slots[target].setNothing() }
+            return slots[target].setVector(x: ax / length, y: ay / length, z: az / length, unit: .none)
+        }
     }
 }

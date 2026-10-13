@@ -1,9 +1,13 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesCollectionOperators {
-    @inline(__always)
-    static func executeContainsValue<Output: GesValueOutput>(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext, _ slot: GesValue, _ a: GesValue, sink: Output) throws -> Output.Result {
-        return try performContainsContainsValueContainsAnyContainsAll(i, s, c, slot, a, sink: sink)
+extension GesVmState {
+    @inline(never)
+    func executeContainsValue(_ target: Int, _ x: Int, _ y: Int) {
+        registers.withUnsafeMutableBufferPointer { slots in
+            if slots[y].isRegisterData, slots[y].isNothing { return slots[target].setNothing() }
+            if let entries = slots[y].mapEntries { return slots[target].setBoolean(entries.contains { $0.value == slots[x].registerValue }) }
+            return slots[target].setBoolean(slots[y].spatialValue != nil && (1...3).contains { slots[y].index(Int64($0)) == slots[x].registerValue })
+        }
     }
 }

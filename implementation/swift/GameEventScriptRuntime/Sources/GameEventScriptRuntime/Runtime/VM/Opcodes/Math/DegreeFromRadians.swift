@@ -1,9 +1,11 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesMath {
-    @inline(__always)
-    static func executeDegreeFromRadians<Output: GesValueOutput>(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext, _ a: GesValue, _ b: GesValue, sink: Output) throws -> Output.Result {
-        return a.isNumeric && a.asNumber.isFinite && !a.hasUnit ? sink.float(a.asNumber / Double.pi * 180, unit: .degree) : sink.nothing
+extension GesVmState {
+    @inline(never)
+    func executeDegreeFromRadians(_ target: Int, _ x: Int) {
+        registers.withUnsafeMutableBufferPointer { slots in
+            return slots[x].isNumeric && slots[x].asNumber.isFinite && !slots[x].hasUnit ? slots[target].setFloat(slots[x].asNumber / Double.pi * 180, unit: .degree) : slots[target].setNothing()
+        }
     }
 }

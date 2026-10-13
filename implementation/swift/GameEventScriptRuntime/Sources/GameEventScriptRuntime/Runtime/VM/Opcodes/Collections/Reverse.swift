@@ -1,9 +1,16 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesCollectionOperators {
-    @inline(__always)
-    static func executeReverse<Output: GesValueOutput>(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext, _ slot: GesValue, _ a: GesValue, sink: Output) throws -> Output.Result {
-        return try performSortAscendingSortDescendingReverse(i, s, c, slot, a, sink: sink)
+extension GesVmState {
+    @inline(never)
+    func executeReverse(_ destinationRegister: Int, _ sourceRegister: Int) {
+        let destination = destinationRegister
+        let x = frameStart + sourceRegister
+        if registers[x].integerRangeValue != nil || registers[x].floatRangeValue != nil {
+
+            return GesCollectionOperators.reverseRange(registers[x].registerValue, sink: output(destination))
+        }
+        guard let values = GesCollectionOperators.materialize(registers[x], ranges: false) else { return setNothing(destination) }
+        return setList(destination, values.reversed())
     }
 }

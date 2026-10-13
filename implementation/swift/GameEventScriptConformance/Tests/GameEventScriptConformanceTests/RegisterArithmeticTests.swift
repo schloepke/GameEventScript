@@ -179,8 +179,78 @@ final class RegisterArithmeticTests: XCTestCase {
                 state.setValue(0, .integer(29))
                 state.setValue(1, .integer(5))
                 state.setValue(2, .text("previous destination"))
-                XCTAssertTrue(state.setIntegerArithmeticResult(.init(opcode: opcode, word0: destination, word1: 0, word2: 1)))
+                let instruction = GameEventScriptBytecodeInstruction(opcode: opcode, word0: destination, word1: 0, word2: 1)
+                switch opcode {
+                case .add: state.executeAdd(state.frameStart + Int(destination), state.frameStart, state.frameStart + 1)
+                case .subtract: state.executeSubtract(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .multiply: state.executeMultiply(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .divide: state.executeDivide(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .integerDivide: state.executeIntegerDivide(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .modulo: state.executeModulo(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .remainder: state.executeRemainder(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                default: XCTFail("Unexpected arithmetic test opcode")
+                }
                 XCTAssertEqual(state.value(Int(destination)), expected)
+            }
+        }
+    }
+
+    func testNumericOpcodesReadInputsBeforeOverwritingEitherRegister() {
+        let state = GesVmState(maxRegisters: 128, maxCallDepth: 4)
+        XCTAssertTrue(state.ensure(96))
+        state.frameStart = 40
+        let cases: [(GameEventScriptBytecodeOpCode, GesValue)] = [
+            (.add, .integer(6)), (.subtract, .integer(-4)), (.multiply, .integer(5)),
+            (.divide, .float(0.2)), (.integerDivide, .integer(0)), (.modulo, .integer(1)),
+            (.remainder, .integer(1)), (.power, .float(1)), (.min, .integer(1)), (.max, .integer(5)),
+        ]
+        for (opcode, expected) in cases {
+            for destination: UInt16 in [0, 1, 2] {
+                state.setBoolean(0, true)
+                state.setDice(1, [2, 3])
+                state.setText(2, "old destination")
+                let instruction = GameEventScriptBytecodeInstruction(opcode: opcode, word0: destination, word1: 0, word2: 1)
+                switch opcode {
+                case .add: state.executeAddNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .subtract: state.executeSubtractNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .multiply: state.executeMultiplyNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .divide: state.executeDivideNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .integerDivide: state.executeIntegerDivideNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .modulo: state.executeModuloNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .remainder: state.executeRemainderNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .power: state.executePowerNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .min: state.executeMinNumeric(Int(instruction.word0), Int(instruction.word1), Int(instruction.word2))
+                case .max: state.executeMaxNumeric(Int(instruction.word0), Int(instruction.word1), Int(instruction.word2))
+                default: XCTFail("Unexpected numeric test opcode")
+                }
+                XCTAssertEqual(state.value(Int(destination)), expected)
+                XCTAssertEqual(state.value(Int(destination)).kind, expected.kind)
+                if destination != 0 { XCTAssertEqual(state.value(0), .boolean(true)) }
+                if destination != 1 { XCTAssertEqual(state.value(1), .dice([2, 3])) }
+            }
+        }
+    }
+
+    func testNavigationReadsEveryComponentBeforeOverwritingAnInput() {
+        let state = GesVmState(maxRegisters: 128, maxCallDepth: 4)
+        XCTAssertTrue(state.ensure(96))
+        state.frameStart = 40
+        for destination: UInt16 in 0...6 {
+            for index in 0..<6 { state.setFloat(index, Double(index + 1), unit: .meter) }
+            state.setText(6, "old destination")
+            let instruction = GameEventScriptBytecodeInstruction(opcode: .distanceSquared3D, word0: destination, word1: 0, word2: 1, payload: 2 | (3 << 16) | (4 << 32) | (5 << 48))
+            state.executeDistanceSquared3D(
+                state.frameStart + Int(instruction.word0),
+                state.frameStart + Int(instruction.word1),
+                state.frameStart + Int(instruction.word2),
+                state.frameStart + Int(instruction.a),
+                state.frameStart + Int(instruction.b),
+                state.frameStart + Int(instruction.c),
+                state.frameStart + Int(instruction.d)
+            )
+            XCTAssertEqual(state.value(Int(destination)), .float(27))
+            for index in 0..<6 where index != Int(destination) {
+                XCTAssertEqual(state.value(index), .float(Double(index + 1), unit: .meter))
             }
         }
     }
@@ -214,21 +284,6 @@ final class RegisterArithmeticTests: XCTestCase {
         XCTAssertEqual(state.value(1), .list([.text("retained")]))
     }
 
-    func testNonIntegerOperandsLeaveRegistersUntouchedForFallback() {
-        let state = GesVmState(maxRegisters: 32, maxCallDepth: 4)
-        for value: GesValue in [.float(1.5), .percentage(0.2), .text("prefix"), .nothing] {
-            for destination: UInt16 in [0, 1, 2] {
-                state.setValue(0, value)
-                state.setValue(1, .integer(5))
-                state.setValue(2, .text("sentinel"))
-                XCTAssertFalse(state.setIntegerArithmeticResult(.init(opcode: .add, word0: destination, word1: 0, word2: 1)))
-                XCTAssertEqual(state.value(0), value)
-                XCTAssertEqual(state.value(1), .integer(5))
-                XCTAssertEqual(state.value(2), .text("sentinel"))
-            }
-        }
-    }
-
     func testTypedHelperOutputsCanOverwriteTheirInputs() throws {
         let state = GesVmState(maxRegisters: 128, maxCallDepth: 4)
         XCTAssertTrue(state.ensure(96))
@@ -238,17 +293,21 @@ final class RegisterArithmeticTests: XCTestCase {
         for destination in [0, 1, 2] {
             state.setText(0, "prefix")
             state.setInteger(1, 12)
-            GesMath.add(state.value(0), state.value(1), sink: state.output(destination))
+            state.executeAdd(state.frameStart + destination, state.frameStart, state.frameStart + 1)
             XCTAssertEqual(state.value(destination), .text("prefix12"))
 
             state.setFloat(0, 1.25)
             state.setFloat(1, 2.5)
-            GesMath.arithmetic(.multiply, state.value(0), state.value(1), sink: state.output(destination))
+            state.executeMultiply(
+                state.frameStart + Int((GameEventScriptBytecodeInstruction.init(opcode: .multiply, word0: UInt16(destination), word1: 0, word2: 1)).word0),
+                state.frameStart + Int((GameEventScriptBytecodeInstruction.init(opcode: .multiply, word0: UInt16(destination), word1: 0, word2: 1)).word1),
+                state.frameStart + Int((GameEventScriptBytecodeInstruction.init(opcode: .multiply, word0: UInt16(destination), word1: 0, word2: 1)).word2)
+            )
             XCTAssertEqual(state.value(destination), .float(3.125))
 
             state.setVector(0, x: 1, y: 2, z: 3, unit: .meter)
             state.setVector(1, x: 4, y: 5, z: 6, unit: .meter)
-            GesMath.add(state.value(0), state.value(1), sink: state.output(destination))
+            state.executeAdd(state.frameStart + destination, state.frameStart, state.frameStart + 1)
             XCTAssertEqual(state.value(destination), .vector(x: 5, y: 7, z: 9, unit: .meter))
 
             state.setText(0, "12.5%")

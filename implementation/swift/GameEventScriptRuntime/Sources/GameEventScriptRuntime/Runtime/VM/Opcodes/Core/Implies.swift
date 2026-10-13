@@ -1,10 +1,12 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesMath {
-    @inline(__always)
-    static func executeImplies<Output: GesValueOutput>(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext, _ a: GesValue, _ b: GesValue, sink: Output) throws -> Output.Result {
-        if a.truth == false || b.truth == true { return sink.boolean(true) }
-        return a.truth != nil && b.truth != nil ? sink.boolean(false) : sink.nothing
+extension GesVmState {
+    @inline(never)
+    func executeImplies(_ target: Int, _ x: Int, _ y: Int) {
+        registers.withUnsafeMutableBufferPointer { slots in
+            if slots[x].truth == false || slots[y].truth == true { return slots[target].setBoolean(true) }
+            return slots[x].truth != nil && slots[y].truth != nil ? slots[target].setBoolean(false) : slots[target].setNothing()
+        }
     }
 }

@@ -9,11 +9,12 @@
     import Musl
 #endif
 
-extension GesNavigation {
-    @inline(__always)
-    static func executeAsin<Output: GesValueOutput>(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, sink: Output) -> Output.Result {
-        let a = s.value(Int(i.word1))
-        guard a.isNumeric, !a.hasUnit else { return sink.nothing }
-        return sink.float(asin(a.asNumber))
+extension GesVmState {
+    @inline(never)
+    func executeAsin(_ target: Int, _ x: Int) {
+        registers.withUnsafeMutableBufferPointer { slots in
+            guard slots[x].isNumeric, !slots[x].hasUnit else { return slots[target].setNothing() }
+            return slots[target].setFloat(asin(slots[x].asNumber))
+        }
     }
 }

@@ -24,6 +24,8 @@ enum GameEventScriptVirtualMachine {
     }
 
     // Specialize the shared loop so the disabled path has no existential call or optional check per opcode.
+    // Opcode extensions normally stay out of line: broad inlining regressed the uninstrumented
+    // compute benchmark. Keep exceptions such as Add measurement-driven, independently of this loop specialization.
     @inline(__always)
     private static func executeSlice<Instrumentation: VmInstrumentation>(_ state: GesVmState, context: GameEventScriptContext, budget: Int, instrumentation: Instrumentation) -> Int {
         var executed = 0
@@ -50,10 +52,6 @@ enum GameEventScriptVirtualMachine {
                 let x = Int(instruction.word1)
                 let y = Int(instruction.word2)
                 switch instruction.opcode {
-                case .add, .subtract, .multiply, .divide, .integerDivide, .modulo, .remainder:
-                    if instruction.unitAndFlags & 0x40 != 0 { try state.setNumericArithmeticResult(instruction, context) } else { try state.setArithmeticResult(instruction, context) }
-                case .power, .min, .max, .negate, .abs, .clamp:
-                    if instruction.unitAndFlags & 0x40 != 0 { try state.setNumericArithmeticResult(instruction, context) } else { try GesMath.execute(instruction, state, context, sink: state.output(d)) }
                 case .nop: break
                 case .registerLocals: state.modifyLocals(Int(instruction.signedWord1))
                 case .jump: state.ip = y
@@ -216,12 +214,194 @@ enum GameEventScriptVirtualMachine {
                     }
                 case .listBuilderFinish, .mapBuilderFinish, .distinctBuilderFinish, .groupBuilderFinish, .orderBuilderFinishAscending, .orderBuilderFinishDescending:
                     if let builder = state.slot(x).builderValue { builder.finish(descending: instruction.opcode == .orderBuilderFinishDescending, sink: state.output(d)) } else { state.setNothing(d) }
-                default:
-                    if instruction.opcode.rawValue >= 0x50 && instruction.opcode.rawValue <= 0x97 {
-                        try GesMath.execute(instruction, state, context, sink: state.output(d))
+                case .or: state.executeOr(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .and: state.executeAnd(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .xor: state.executeXor(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .implies: state.executeImplies(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .not: state.executeNot(state.frameStart + d, state.frameStart + x)
+                case .equal: state.executeEqual(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .notEqual: state.executeNotEqual(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .less: state.executeLess(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .greater: state.executeGreater(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .lessOrEqual: state.executeLessOrEqual(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .greaterOrEqual: state.executeGreaterOrEqual(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .add:
+                    if instruction.unitAndFlags & 0x40 != 0 { state.executeAddNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y) } else { state.executeAdd(state.frameStart + d, state.frameStart + x, state.frameStart + y) }
+                case .subtract:
+                    if instruction.unitAndFlags & 0x40 != 0 {
+                        state.executeSubtractNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y)
                     } else {
-                        try GesCollectionOperators.execute(instruction, state, context, sink: state.output(d))
+                        state.executeSubtract(state.frameStart + d, state.frameStart + x, state.frameStart + y)
                     }
+                case .multiply:
+                    if instruction.unitAndFlags & 0x40 != 0 {
+                        state.executeMultiplyNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                    } else {
+                        state.executeMultiply(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                    }
+                case .divide:
+                    if instruction.unitAndFlags & 0x40 != 0 {
+                        state.executeDivideNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                    } else {
+                        state.executeDivide(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                    }
+                case .power:
+                    if instruction.unitAndFlags & 0x40 != 0 { state.executePowerNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y) } else { state.executePower(state.frameStart + d, state.frameStart + x, state.frameStart + y) }
+                case .integerDivide:
+                    if instruction.unitAndFlags & 0x40 != 0 {
+                        state.executeIntegerDivideNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                    } else {
+                        state.executeIntegerDivide(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                    }
+                case .modulo:
+                    if instruction.unitAndFlags & 0x40 != 0 {
+                        state.executeModuloNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                    } else {
+                        state.executeModulo(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                    }
+                case .remainder:
+                    if instruction.unitAndFlags & 0x40 != 0 {
+                        state.executeRemainderNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                    } else {
+                        state.executeRemainder(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                    }
+                case .min: if instruction.unitAndFlags & 0x40 != 0 { state.executeMinNumeric(d, x, y) } else { state.executeMin(d, x, y) }
+                case .max: if instruction.unitAndFlags & 0x40 != 0 { state.executeMaxNumeric(d, x, y) } else { state.executeMax(d, x, y) }
+                case .negate: if instruction.unitAndFlags & 0x40 != 0 { state.executeNegateNumeric(state.frameStart + d, state.frameStart + x) } else { state.executeNegate(state.frameStart + d, state.frameStart + x) }
+                case .abs: if instruction.unitAndFlags & 0x40 != 0 { state.executeAbsNumeric(state.frameStart + d, state.frameStart + x) } else { state.executeAbs(state.frameStart + d, state.frameStart + x) }
+                case .logN: state.executeLogN(state.frameStart + d, state.frameStart + x)
+                case .chance: state.executeChance(d, x, context)
+                case .clamp:
+                    if instruction.unitAndFlags & 0x40 != 0 {
+                        state.executeClampNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a))
+                    } else {
+                        state.executeClamp(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a))
+                    }
+                case .randomTake: state.executeRandomTake(d, x, y, context)
+                case .randomTakeFloat: state.executeRandomTakeFloat(d, x, y, context)
+                case .term: state.executeTerm(d, x, y)
+                case .exp: state.executeExp(state.frameStart + d, state.frameStart + x)
+                case .floor: state.executeFloor(state.frameStart + d, state.frameStart + x)
+                case .ceil: state.executeCeil(state.frameStart + d, state.frameStart + x)
+                case .truncate: state.executeTruncate(state.frameStart + d, state.frameStart + x)
+                case .roundHalfEven: state.executeRoundHalfEven(state.frameStart + d, state.frameStart + x)
+                case .roundHalfUp: state.executeRoundHalfUp(state.frameStart + d, state.frameStart + x)
+                case .roundHalfDown: state.executeRoundHalfDown(state.frameStart + d, state.frameStart + x)
+                case .degreeToRadians: state.executeDegreeToRadians(state.frameStart + d, state.frameStart + x)
+                case .degreeFromRadians: state.executeDegreeFromRadians(state.frameStart + d, state.frameStart + x)
+                case .wrapDegree: state.executeWrapDegree(state.frameStart + d, state.frameStart + x)
+                case .sin: state.executeSin(state.frameStart + d, state.frameStart + x)
+                case .cos: state.executeCos(state.frameStart + d, state.frameStart + x)
+                case .tan: state.executeTan(state.frameStart + d, state.frameStart + x)
+                case .asin: state.executeAsin(state.frameStart + d, state.frameStart + x)
+                case .acos: state.executeAcos(state.frameStart + d, state.frameStart + x)
+                case .atan: state.executeAtan(state.frameStart + d, state.frameStart + x)
+                case .atan2: state.executeAtan2(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .hypot2D: state.executeHypot2D(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .hypot3D: state.executeHypot3D(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a))
+                case .distance: state.executeDistance(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .distance2D: state.executeDistance2D(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a), state.frameStart + Int(instruction.b))
+                case .distance3D:
+                    state.executeDistance3D(
+                        state.frameStart + d,
+                        state.frameStart + x,
+                        state.frameStart + y,
+                        state.frameStart + Int(instruction.a),
+                        state.frameStart + Int(instruction.b),
+                        state.frameStart + Int(instruction.c),
+                        state.frameStart + Int(instruction.d)
+                    )
+                case .distanceSquared: state.executeDistanceSquared(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .distanceSquared2D: state.executeDistanceSquared2D(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a), state.frameStart + Int(instruction.b))
+                case .distanceSquared3D:
+                    state.executeDistanceSquared3D(
+                        state.frameStart + d,
+                        state.frameStart + x,
+                        state.frameStart + y,
+                        state.frameStart + Int(instruction.a),
+                        state.frameStart + Int(instruction.b),
+                        state.frameStart + Int(instruction.c),
+                        state.frameStart + Int(instruction.d)
+                    )
+                case .lengthSquared: state.executeLengthSquared(state.frameStart + d, state.frameStart + x)
+                case .lengthSquared2D: state.executeLengthSquared2D(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .lengthSquared3D: state.executeLengthSquared3D(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a))
+                case .normalize: state.executeNormalize(state.frameStart + d, state.frameStart + x)
+                case .normalize2D: state.executeNormalize2D(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .normalize3D: state.executeNormalize3D(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a))
+                case .dot: state.executeDot(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .dot2D: state.executeDot2D(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a), state.frameStart + Int(instruction.b))
+                case .dot3D:
+                    state.executeDot3D(
+                        state.frameStart + d,
+                        state.frameStart + x,
+                        state.frameStart + y,
+                        state.frameStart + Int(instruction.a),
+                        state.frameStart + Int(instruction.b),
+                        state.frameStart + Int(instruction.c),
+                        state.frameStart + Int(instruction.d)
+                    )
+                case .cross: state.executeCross(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .cross2D: state.executeCross2D(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a), state.frameStart + Int(instruction.b))
+                case .cross3D:
+                    state.executeCross3D(
+                        state.frameStart + d,
+                        state.frameStart + x,
+                        state.frameStart + y,
+                        state.frameStart + Int(instruction.a),
+                        state.frameStart + Int(instruction.b),
+                        state.frameStart + Int(instruction.c),
+                        state.frameStart + Int(instruction.d)
+                    )
+                case .angleBetween: state.executeAngleBetween(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .angleBetween2D: state.executeAngleBetween2D(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a), state.frameStart + Int(instruction.b))
+                case .angleBetween3D:
+                    state.executeAngleBetween3D(
+                        state.frameStart + d,
+                        state.frameStart + x,
+                        state.frameStart + y,
+                        state.frameStart + Int(instruction.a),
+                        state.frameStart + Int(instruction.b),
+                        state.frameStart + Int(instruction.c),
+                        state.frameStart + Int(instruction.d)
+                    )
+                case .takeFirst: state.executeTakeFirst(d, x, Int(instruction.signedWord2))
+                case .dropFirst: state.executeDropFirst(d, x, Int(instruction.signedWord2))
+                case .takeLast: state.executeTakeLast(d, x, Int(instruction.signedWord2))
+                case .dropLast: state.executeDropLast(d, x, Int(instruction.signedWord2))
+                case .takeHighest: state.executeTakeHighest(d, x, Int(instruction.signedWord2))
+                case .takeLowest: state.executeTakeLowest(d, x, Int(instruction.signedWord2))
+                case .dropHighest: state.executeDropHighest(d, x, Int(instruction.signedWord2))
+                case .dropLowest: state.executeDropLowest(d, x, Int(instruction.signedWord2))
+                case .oneRandom: state.executeOneRandom(d, x, context)
+                case .takeRandom: state.executeTakeRandom(d, x, Int(instruction.signedWord2), context)
+                case .oneWeighted: state.executeOneWeighted(d, x, y, context)
+                case .takeWeighted: state.executeTakeWeighted(d, x, Int(instruction.signedWord2), Int(instruction.a), context)
+                case .count: state.executeCount(d, x)
+                case .startsWith: state.executeStartsWith(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .endsWith: state.executeEndsWith(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .contains: state.executeContains(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .containsAny: state.executeContainsAny(d, x, y)
+                case .containsAll: state.executeContainsAll(d, x, y)
+                case .hasAny: state.executeHasAny(d, x)
+                case .hasAll: state.executeHasAll(d, x)
+                case .containsValue: state.executeContainsValue(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .union: state.executeUnion(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .intersect: state.executeIntersect(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .zip: state.executeZip(state.frameStart + d, state.frameStart + x, state.frameStart + y)
+                case .keysOfMap: try state.executeKeysOfMap(d, x)
+                case .valuesOfMap: try state.executeValuesOfMap(d, x)
+                case .entriesOfMap: try state.executeEntriesOfMap(d, x)
+                case .first: state.executeFirst(d, x)
+                case .last: state.executeLast(d, x)
+                case .single: state.executeSingle(d, x)
+                case .distinct: state.executeDistinct(d, x)
+                case .sortAscending: state.executeSortAscending(d, x)
+                case .sortDescending: state.executeSortDescending(d, x)
+                case .reverse: state.executeReverse(d, x)
+                case .shuffle: state.executeShuffle(d, x, context)
+                case .hasPattern: state.executeHasPattern(d, x, Int(instruction.signedWord2), instruction.a, Int(instruction.b))
+                case .takePattern: state.executeTakePattern(d, x, Int(instruction.signedWord2), instruction.a, Int(instruction.b))
                 }
                 instrumentation.phaseStarting(.advance)
                 executed += 1

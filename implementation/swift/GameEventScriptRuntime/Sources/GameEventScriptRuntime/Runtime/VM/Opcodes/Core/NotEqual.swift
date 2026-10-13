@@ -1,9 +1,12 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesMath {
-    @inline(__always)
-    static func executeNotEqual<Output: GesValueOutput>(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext, _ a: GesValue, _ b: GesValue, sink: Output) throws -> Output.Result {
-        return try performEqualNotEqual(i, s, c, a, b, sink: sink)
+extension GesVmState {
+    @inline(never)
+    func executeNotEqual(_ target: Int, _ x: Int, _ y: Int) {
+        registers.withUnsafeMutableBufferPointer { slots in
+            if slots[x].isNothing || slots[y].isNothing { return slots[target].setNothing() }
+            return slots[target].setBoolean(GesComparison.equal(slots[x].registerValue, slots[y].registerValue) == false)
+        }
     }
 }

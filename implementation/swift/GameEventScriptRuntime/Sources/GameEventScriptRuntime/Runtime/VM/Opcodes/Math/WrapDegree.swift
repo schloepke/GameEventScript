@@ -1,12 +1,14 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesMath {
-    @inline(__always)
-    static func executeWrapDegree<Output: GesValueOutput>(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext, _ a: GesValue, _ b: GesValue, sink: Output) throws -> Output.Result {
-        if !a.isNumeric || !a.asNumber.isFinite || (a.unit != .none && a.unit != .degree) { return sink.nothing }
-        var value = a.asNumber.truncatingRemainder(dividingBy: 360)
-        if value < 0 { value += 360 }
-        return sink.float(value == 360 ? 0 : value, unit: .degree)
+extension GesVmState {
+    @inline(never)
+    func executeWrapDegree(_ target: Int, _ x: Int) {
+        registers.withUnsafeMutableBufferPointer { slots in
+            if !slots[x].isNumeric || !slots[x].asNumber.isFinite || (slots[x].unit != .none && slots[x].unit != .degree) { return slots[target].setNothing() }
+            var value = slots[x].asNumber.truncatingRemainder(dividingBy: 360)
+            if value < 0 { value += 360 }
+            return slots[target].setFloat(value == 360 ? 0 : value, unit: .degree)
+        }
     }
 }

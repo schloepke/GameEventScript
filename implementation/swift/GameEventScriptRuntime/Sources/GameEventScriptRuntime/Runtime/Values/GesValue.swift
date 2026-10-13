@@ -164,13 +164,17 @@ public struct GesValue: Hashable, CustomStringConvertible {
     // Every object accessor is guarded by a private discriminator set together with its payload.
     private func payload<Value>(_ type: Value.Type) -> Value { unsafeDowncast(object!, to: GesValueObject<Value>.self).value }
 
+    // Scalar setters run per instruction; skip the runtime release call when no payload is held.
+    @inline(__always)
+    private mutating func releaseObject() { if object != nil { object = nil } }
+
     @inline(__always)
     mutating func setNothing() {
         valueKind = .nothing
         valueUnit = .none
         flags = 0
         numericBits = 0
-        object = nil
+        releaseObject()
     }
 
     @inline(__always)
@@ -179,7 +183,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         valueUnit = .none
         flags = Self.numericFlag | Self.hasValueFlag | (value ? Self.trueFlag : Self.falseFlag)
         numericBits = value ? 1 : 0
-        object = nil
+        releaseObject()
     }
 
     @inline(__always)
@@ -188,7 +192,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         valueUnit = unit
         flags = Self.numericFlag | Self.hasValueFlag | (value != 0 ? Self.trueFlag : Self.falseFlag)
         numericBits = UInt64(bitPattern: value)
-        object = nil
+        releaseObject()
     }
 
     @inline(__always)
@@ -205,7 +209,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         valueUnit = unit
         flags = Self.numericFlag | Self.hasValueFlag | (value != 0 ? Self.trueFlag : Self.falseFlag)
         numericBits = value.bitPattern
-        object = nil
+        releaseObject()
     }
 
     @inline(__always)
@@ -218,7 +222,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         valueUnit = .none
         flags = Self.numericFlag | Self.hasValueFlag | (value != 0 ? Self.trueFlag : Self.falseFlag)
         numericBits = GesNumber.canonicalZero(value).bitPattern
-        object = nil
+        releaseObject()
     }
 
     private mutating func setObject(_ kind: GesValueKind, _ value: AnyObject, unit: GesUnit = .none, hasValue: Bool = true, truth: Bool? = nil, numeric: Bool = false) {
@@ -273,10 +277,9 @@ public struct GesValue: Hashable, CustomStringConvertible {
         setObject(.list, value.isEmpty ? Self.emptyList : GesValueObject(value), hasValue: !value.isEmpty)
     }
 
-    mutating func setMap(_ entries: [GesMapEntry]) {
-        let map = GesValueMap(entries)
-        setObject(.map, GesValueObject(map), hasValue: map.length != 0)
-    }
+    mutating func setMap(_ entries: [GesMapEntry]) { setMap(GesValueMap(entries)) }
+
+    mutating func setMap(_ map: GesValueMap) { setObject(.map, GesValueObject(map), hasValue: map.length != 0) }
 
     mutating func setRecord(typeName: String, entries: [GesMapEntry]) {
         setRecord(typeName: typeName, fields: GesValueMap(entries))

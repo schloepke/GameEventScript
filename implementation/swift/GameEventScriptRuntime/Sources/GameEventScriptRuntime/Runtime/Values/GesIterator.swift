@@ -3,6 +3,13 @@
 
 class GesIterator {
     private var source: GesValue
+    // Integer ranges are the hot loop form; iterate unboxed state without touching `source`.
+    // For every valid index the next term is the previous one plus `rangeStep`, which equals
+    // GesIntegerRange.term(at:) without its per-step multiplication and bound checks.
+    private let integerRange: GesIntegerRange?
+    private let rangeCount: Int64
+    private let rangeStep: Int64
+    private var rangeTerm: Int64
     private var index: Int64 = 0
     private var textIndex: String.UnicodeScalarView.Index?
     private var closed = false
@@ -10,6 +17,11 @@ class GesIterator {
 
     init(patternSequence: Bool) {
         source = .nothing
+        integerRange = nil
+        rangeCount = 0
+        rangeStep = 0
+        rangeTerm = 0
+        isSourceIterator = false
         isPatternSequence = patternSequence
     }
 
@@ -19,14 +31,48 @@ class GesIterator {
         default: return nil
         }
         self.source = source
+        integerRange = source.integerRangeValue
+        rangeCount = integerRange?.count ?? 0
+        rangeStep = integerRange?.step ?? 0
+        rangeTerm = integerRange?.from ?? 0
+        isSourceIterator = true
         isPatternSequence = [.list, .dice, .map, .record].contains(source.kind)
         textIndex = source.textValue?.unicodeScalars.startIndex
     }
 
     func next() -> GesValue? { next(sink: GesValueFactory()) }
 
-    func next<Output: GesValueOutput>(sink: Output) -> Output.Result? {
+    /// Whether `nextIntegerTerm()` applies; subclasses never iterate a plain integer range.
+    final var isIntegerRange: Bool { integerRange != nil }
+    /// Whether this iterator walks a source value; subclasses never do, so `nextFromSource` applies.
+    final let isSourceIterator: Bool
+
+    // Statically dispatched step for the hot integer-range loop; same semantics as next(sink:).
+    @inline(__always)
+    final func nextIntegerTerm() -> Int64? {
+        guard !closed, index < rangeCount else {
+            closed = true
+            return nil
+        }
+        let term = rangeTerm
+        if index == .max - 1 {
+            closed = true
+        } else {
+            index += 1
+            // Only advance to a term that exists, so the addition cannot overflow.
+            if index < rangeCount { rangeTerm &+= rangeStep }
+        }
+        return term
+    }
+
+    func next<Output: GesValueOutput>(sink: Output) -> Output.Result? { nextFromSource(sink: sink) }
+
+    // Statically dispatched, so callers with a concrete sink get a specialized copy; kept out
+    // of line because inlining it into VM dispatch regressed the compute benchmark.
+    @inline(never)
+    final func nextFromSource<Output: GesValueOutput>(sink: Output) -> Output.Result? {
         if closed { return nil }
+        if integerRange != nil { return nextIntegerTerm().map { sink.integer($0) } }
         let result: Output.Result?
         switch source.kind {
         case .integerRange: result = source.integerRangeValue!.term(at: index + 1).map { sink.integer($0) }

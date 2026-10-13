@@ -41,6 +41,9 @@ public struct GesValueMap: Hashable {
         self.entries = normalized
     }
 
+    // Trusted entries already in canonical order without duplicate keys (precomputed map layouts).
+    init(canonical entries: [GesMapEntry]) { self.entries = entries }
+
     /// Number of distinct keys.
     public var length: Int { entries.count }
 

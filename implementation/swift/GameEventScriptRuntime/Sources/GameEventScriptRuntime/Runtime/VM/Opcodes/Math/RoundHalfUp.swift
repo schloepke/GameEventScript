@@ -4,11 +4,9 @@
 extension GesVmState {
     @inline(never)
     func executeRoundHalfUp(_ target: Int, _ x: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            guard slots[x].isNumeric else { return slots[target].setNothing() }
-            let n = slots[x].asNumber
-            let result = n.rounded(.toNearestOrAwayFromZero)
-            return slots[target].setInteger(GesNumber.saturatedInteger(result))
-        }
+        guard registers[x].isNumeric else { return registers[target].setNothing() }
+        let n = registers[x].asNumber
+        let result = n.rounded(.toNearestOrAwayFromZero)
+        return registers[target].setInteger(GesNumber.saturatedInteger(result))
     }
 }

@@ -19,6 +19,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - Swift `GameEventScriptProgram` is now an immutable `final class`, so hosts and
   callers share a single Program instance. Program contents, binary encoding and
   copy-on-write isolation of returned arrays are unchanged.
+- The Swift VM executes script handlers substantially faster: registers are
+  mutated in place without per-access exclusivity checks, integer loops and
+  arithmetic avoid boxing and reference counting, and constant map literals,
+  data constructions and numeric sorts no longer redo per-execution work.
+  Behavior and results are unchanged.
 
 ## [0.4.0] — 2026-10-11
 

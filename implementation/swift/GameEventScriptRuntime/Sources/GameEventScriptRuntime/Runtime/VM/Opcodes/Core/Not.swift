@@ -4,9 +4,7 @@
 extension GesVmState {
     @inline(never)
     func executeNot(_ target: Int, _ x: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            guard let truth = slots[x].truth else { return slots[target].setNothing() }
-            return slots[target].setBoolean(!truth)
-        }
+        guard let truth = registers[x].truth else { return registers[target].setNothing() }
+        return registers[target].setBoolean(!truth)
     }
 }

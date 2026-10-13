@@ -3,7 +3,7 @@
 
 extension GameEventScriptVirtualMachine {
     static func nextComponents(_ state: GesVmState, _ instruction: GameEventScriptBytecodeInstruction) -> Bool {
-        let iterator = state.slot(Int(instruction.word1)).iteratorValue
+        let iterator = state.iterator(Int(instruction.word1))
         let components = iterator as? any GesComponentIterator
         let item = components == nil ? iterator?.next() : nil
         let hasValue = components?.moveNext() ?? (item != nil)

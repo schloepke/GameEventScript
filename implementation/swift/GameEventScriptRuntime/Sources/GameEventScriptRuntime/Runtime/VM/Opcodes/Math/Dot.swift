@@ -4,16 +4,14 @@
 extension GesVmState {
     @inline(never)
     func executeDot(_ target: Int, _ x: Int, _ y: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            guard slots[x].unit == slots[y].unit else { return slots[target].setNothing() }
-            guard slots[x].spatialValue != nil, slots[y].spatialValue != nil else { return slots[target].setNothing() }
-            let ax = slots[x].x
-            let ay = slots[x].y
-            let az = slots[x].z
-            let bx = slots[y].x
-            let by = slots[y].y
-            let bz = slots[y].z
-            return slots[target].setFloat(ax * bx + ay * by + az * bz)
-        }
+        guard registers[x].unit == registers[y].unit else { return registers[target].setNothing() }
+        guard registers[x].spatialValue != nil, registers[y].spatialValue != nil else { return registers[target].setNothing() }
+        let ax = registers[x].x
+        let ay = registers[x].y
+        let az = registers[x].z
+        let bx = registers[y].x
+        let by = registers[y].y
+        let bz = registers[y].z
+        return registers[target].setFloat(ax * bx + ay * by + az * bz)
     }
 }

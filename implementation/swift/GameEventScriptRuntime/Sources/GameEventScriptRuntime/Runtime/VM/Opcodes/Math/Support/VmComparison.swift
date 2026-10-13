@@ -86,6 +86,15 @@ enum GesComparison {
     }
 
     static func sorted(_ values: [GesValue], keys: [GesValue]? = nil, descending: Bool = false) -> [GesValue]? {
+        if let numbers = numericSortKeys(keys ?? values) {
+            // Every pair is comparable and order() reduces to binary64 comparison, so a stable
+            // O(n log n) sort yields exactly the insertion-sort result below.
+            let positions = numbers.indices.sorted { left, right in
+                if numbers[left] != numbers[right] { return descending ? numbers[left] > numbers[right] : numbers[left] < numbers[right] }
+                return left < right
+            }
+            return positions.map { values[$0] }
+        }
         var result = values
         var keys = keys ?? values
         // Stable insertion ordering matches the portable incomparable-key rules.
@@ -104,6 +113,18 @@ enum GesComparison {
             keys[cursor] = key
         }
         return result
+    }
+
+    // Binary64 sort keys when all keys are numeric with one unit, the case order() never rejects.
+    private static func numericSortKeys(_ keys: [GesValue]) -> [Double]? {
+        guard let unit = keys.first?.unit else { return [] }
+        var numbers: [Double] = []
+        numbers.reserveCapacity(keys.count)
+        for key in keys {
+            guard key.isNumeric, key.unit == unit else { return nil }
+            numbers.append(key.asNumber)
+        }
+        return numbers
     }
 
     private static func rank(_ kind: GesValueKind) -> Int {

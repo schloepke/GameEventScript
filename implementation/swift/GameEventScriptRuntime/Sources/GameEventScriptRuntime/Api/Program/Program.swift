@@ -109,7 +109,10 @@ public struct GameEventScriptBytecodeInstruction: Sendable, Equatable {
     /// Payload bits 48...63 interpreted as UInt16.
     public var d: UInt16 { UInt16(truncatingIfNeeded: payload >> 48) }
     /// Decoded degree, meter or second unit; other codes yield none. Validation rejects invalid encodings.
-    public var unit: GesUnit {
+    public var unit: GesUnit { decodedUnit }
+    // Inlined into VM dispatch; the public accessor shares this single mapping.
+    @inline(__always)
+    var decodedUnit: GesUnit {
         switch unitAndFlags & 0x1f {
         case 1: .degree
         case 2: .meter

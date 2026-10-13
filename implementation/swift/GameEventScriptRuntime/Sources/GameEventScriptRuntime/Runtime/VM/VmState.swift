@@ -16,7 +16,9 @@ final class GesVmState {
     var handlerName: String?
     var ip = 0, frameStart = 0, frameLength = 0, stageLength = 0
     // Owned register storage; opcode extensions read fields and mutate through typed setters.
-    var registers: [GesValue]
+    // Only ensure() moves it, so every register access re-derives its address from this base.
+    private var registerBase: UnsafeMutablePointer<GesValue>
+    private var registerCapacity: Int
     private var frames: [Frame]
     private var depth = 0
     private let maxRegisters: Int
@@ -26,9 +28,19 @@ final class GesVmState {
 
     init(maxRegisters: Int, maxCallDepth: Int) {
         self.maxRegisters = maxRegisters
-        registers = [GesValue](repeating: .nothing, count: min(32, maxRegisters))
+        registerCapacity = min(32, maxRegisters)
+        registerBase = .allocate(capacity: max(1, registerCapacity))
+        registerBase.initialize(repeating: .nothing, count: registerCapacity)
         frames = [Frame](repeating: .init(), count: maxCallDepth)
     }
+
+    deinit {
+        registerBase.deinitialize(count: registerCapacity)
+        registerBase.deallocate()
+    }
+
+    @inline(__always)
+    var registers: GesRegisterFile { GesRegisterFile(base: registerBase, count: registerCapacity) }
 
     func prepareCapacity(_ capacity: Int) {
         if processing {
@@ -39,19 +51,39 @@ final class GesVmState {
     }
 
     @discardableResult func ensure(_ count: Int) -> Bool {
-        if count <= registers.count { return true }
+        if count <= registerCapacity { return true }
         if count > maxRegisters {
             fail("runtime.registerOverflow")
             return false
         }
-        let capacity = min(maxRegisters, max(count, max(1, registers.count) * 2))
-        registers.append(contentsOf: repeatElement(.nothing, count: capacity - registers.count))
+        grow(to: min(maxRegisters, max(count, max(1, registerCapacity) * 2)))
         return true
+    }
+
+    // Growth runs between register operations only: handler entry prewarms the Program's
+    // static requirement, so in practice only dynamic literal parsing reaches this path.
+    private func grow(to capacity: Int) {
+        let storage = UnsafeMutablePointer<GesValue>.allocate(capacity: capacity)
+        storage.moveInitialize(from: registerBase, count: registerCapacity)
+        (storage + registerCapacity).initialize(repeating: .nothing, count: capacity - registerCapacity)
+        registerBase.deallocate()
+        registerBase = storage
+        registerCapacity = capacity
     }
 
     func value(_ index: Int) -> GesValue { registers[frameStart + index].registerValue }
 
     func slot(_ index: Int) -> GesValue { registers[frameStart + index] }
+
+    // Borrow register-owned VM objects in place instead of copying the whole slot.
+    @inline(__always)
+    func iterator(_ index: Int) -> GesIterator? { registers[frameStart + index].iteratorValue }
+
+    @inline(__always)
+    func builder(_ index: Int) -> GesCollectionBuilder? { registers[frameStart + index].builderValue }
+
+    @inline(__always)
+    func isRegisterData(_ index: Int) -> Bool { registers[frameStart + index].isRegisterData }
 
     // Copy existing values (arguments, callbacks, collection members); computed results use typed setters.
     func setValue(_ index: Int, _ value: GesValue) { registers[frameStart + index] = value }
@@ -75,6 +107,8 @@ final class GesVmState {
     func setList(_ index: Int, _ value: [GesValue]) { registers[frameStart + index].setList(value) }
 
     func setMap(_ index: Int, _ value: [GesMapEntry]) { registers[frameStart + index].setMap(value) }
+
+    func setMap(_ index: Int, _ value: GesValueMap) { registers[frameStart + index].setMap(value) }
 
     func setRecord(_ index: Int, typeName: String, entries: [GesMapEntry]) { registers[frameStart + index].setRecord(typeName: typeName, entries: entries) }
 
@@ -243,7 +277,7 @@ final class GesVmState {
 
     func reset() {
         for index in 0..<depth { frames[index] = .init() }
-        for index in registers.indices { registers[index].setNothing() }
+        for index in 0..<registerCapacity { registerBase[index].setNothing() }
         linked = nil
         handlerName = nil
         error = nil

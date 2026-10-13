@@ -8,22 +8,20 @@ extension GesVmState {
         let component1 = otherRegister
         let component2 = operandA
         let component3 = operandB
-        registers.withUnsafeMutableBufferPointer { slots in
-            guard slots[component0].isNumeric, slots[component0].unit == slots[x].unit else { return slots[target].setNothing() }
-            let ax = slots[component0].asNumber
-            guard slots[component1].isNumeric, slots[component1].unit == slots[x].unit else { return slots[target].setNothing() }
-            let ay = slots[component1].asNumber
-            guard slots[component2].isNumeric, slots[component2].unit == slots[x].unit else { return slots[target].setNothing() }
-            let bx = slots[component2].asNumber
-            guard slots[component3].isNumeric, slots[component3].unit == slots[x].unit else { return slots[target].setNothing() }
-            let by = slots[component3].asNumber
-            let az = 0.0
-            let bz = 0.0
-            let dx = ax - bx
-            let dy = ay - by
-            let dz = az - bz
-            let squared = dx * dx + dy * dy + dz * dz
-            return slots[target].setFloat(squared.squareRoot(), unit: slots[x].unit)
-        }
+        guard registers[component0].isNumeric, registers[component0].unit == registers[x].unit else { return registers[target].setNothing() }
+        let ax = registers[component0].asNumber
+        guard registers[component1].isNumeric, registers[component1].unit == registers[x].unit else { return registers[target].setNothing() }
+        let ay = registers[component1].asNumber
+        guard registers[component2].isNumeric, registers[component2].unit == registers[x].unit else { return registers[target].setNothing() }
+        let bx = registers[component2].asNumber
+        guard registers[component3].isNumeric, registers[component3].unit == registers[x].unit else { return registers[target].setNothing() }
+        let by = registers[component3].asNumber
+        let az = 0.0
+        let bz = 0.0
+        let dx = ax - bx
+        let dy = ay - by
+        let dz = az - bz
+        let squared = dx * dx + dy * dy + dz * dz
+        return registers[target].setFloat(squared.squareRoot(), unit: registers[x].unit)
     }
 }

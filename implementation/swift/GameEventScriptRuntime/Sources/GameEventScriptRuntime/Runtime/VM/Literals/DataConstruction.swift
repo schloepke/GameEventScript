@@ -7,7 +7,13 @@ enum GesDataConstruction {
     }
 
     static func create<Output: GesValueOutput>(_ type: String, _ labels: [String], _ arguments: [GesValue], _ context: GameEventScriptContext, sink: Output) throws -> Output.Result {
-        guard let positions = GesDataConstructionShape.positions(type, labels), arguments.count == labels.count else { return sink.nothing }
+        guard let positions = GesDataConstructionShape.positions(type, labels) else { return sink.nothing }
+        return try create(type, positions: positions, arguments, context, sink: sink)
+    }
+
+    // Positions come from GesDataConstructionShape, resolved once per constant type/label list.
+    static func create<Output: GesValueOutput>(_ type: String, positions: [Int], _ arguments: [GesValue], _ context: GameEventScriptContext, sink: Output) throws -> Output.Result {
+        guard arguments.count == positions.count else { return sink.nothing }
         var values = [GesValue](repeating: .nothing, count: max(3, arguments.count))
         for (i, position) in positions.enumerated() { values[position] = arguments[i] }
         let first = values[0]

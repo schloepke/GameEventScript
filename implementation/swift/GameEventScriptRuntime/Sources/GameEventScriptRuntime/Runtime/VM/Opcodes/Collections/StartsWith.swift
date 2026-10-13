@@ -4,16 +4,14 @@
 extension GesVmState {
     @inline(never)
     func executeStartsWith(_ target: Int, _ x: Int, _ y: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            if slots[x].isNothing { return slots[target].setNothing() }
-            if let at = slots[x].textValue, let bt = slots[y].textValue { return slots[target].setBoolean(at.unicodeScalars.starts(with: bt.unicodeScalars)) }
-            guard GesCollectionOperators.sequence(slots[x].registerValue), GesCollectionOperators.sequence(slots[y].registerValue) else { return slots[target].setBoolean(false) }
-            let ac = GesCollectionOperators.length(slots[x].registerValue)
-            let bc = GesCollectionOperators.length(slots[y].registerValue)
-            if bc > ac { return slots[target].setBoolean(false) }
-            let start: Int64 = 0
-            for index in 0..<bc { if slots[x].index(start + index + 1) != slots[y].index(index + 1) { return slots[target].setBoolean(false) } }
-            return slots[target].setBoolean(true)
-        }
+        if registers[x].isNothing { return registers[target].setNothing() }
+        if let at = registers[x].textValue, let bt = registers[y].textValue { return registers[target].setBoolean(at.unicodeScalars.starts(with: bt.unicodeScalars)) }
+        guard GesCollectionOperators.sequence(registers[x].registerValue), GesCollectionOperators.sequence(registers[y].registerValue) else { return registers[target].setBoolean(false) }
+        let ac = GesCollectionOperators.length(registers[x].registerValue)
+        let bc = GesCollectionOperators.length(registers[y].registerValue)
+        if bc > ac { return registers[target].setBoolean(false) }
+        let start: Int64 = 0
+        for index in 0..<bc { if registers[x].index(start + index + 1) != registers[y].index(index + 1) { return registers[target].setBoolean(false) } }
+        return registers[target].setBoolean(true)
     }
 }

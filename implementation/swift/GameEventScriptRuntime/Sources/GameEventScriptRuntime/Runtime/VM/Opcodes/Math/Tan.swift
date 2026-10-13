@@ -12,10 +12,8 @@
 extension GesVmState {
     @inline(never)
     func executeTan(_ target: Int, _ x: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            guard slots[x].isNumeric, slots[x].unit == .none || slots[x].unit == .degree else { return slots[target].setNothing() }
-            let n = slots[x].unit == .degree ? slots[x].asNumber / 180 * Double.pi : slots[x].asNumber
-            return slots[target].setFloat(tan(n))
-        }
+        guard registers[x].isNumeric, registers[x].unit == .none || registers[x].unit == .degree else { return registers[target].setNothing() }
+        let n = registers[x].unit == .degree ? registers[x].asNumber / 180 * Double.pi : registers[x].asNumber
+        return registers[target].setFloat(tan(n))
     }
 }

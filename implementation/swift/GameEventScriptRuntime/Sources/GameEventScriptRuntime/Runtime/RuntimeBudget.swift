@@ -7,9 +7,13 @@ final class GesRuntimeBudget {
     var loopIterations = 0
     var callDepth = 0
     private(set) var isExhausted = false
-    var limits: GameEventScriptRuntimeLimits { context.runtimeLimits }
+    // Immutable host limits copied once; checks must not retain the unowned context per loop step.
+    let limits: GameEventScriptRuntimeLimits
 
-    init(context: GameEventScriptContext) { self.context = context }
+    init(context: GameEventScriptContext) {
+        self.context = context
+        limits = context.runtimeLimits
+    }
 
     func reset() {
         executionSteps = 0
@@ -37,6 +41,7 @@ final class GesRuntimeBudget {
         if processing && executionSteps >= limits.maxExecutionSteps { exhaust("MaxExecutionSteps", limits.maxExecutionSteps) }
     }
 
+    @inline(__always)
     func loop() -> Bool {
         if isExhausted { return false }
         if limits.maxLoopIterations > 0 && loopIterations >= limits.maxLoopIterations {

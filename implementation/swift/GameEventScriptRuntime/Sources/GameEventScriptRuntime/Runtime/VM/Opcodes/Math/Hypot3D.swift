@@ -7,15 +7,13 @@ extension GesVmState {
         let component0 = x
         let component1 = otherRegister
         let component2 = operandA
-        registers.withUnsafeMutableBufferPointer { slots in
-            guard slots[component0].isNumeric, slots[component0].unit == slots[x].unit else { return slots[target].setNothing() }
-            let ax = slots[component0].asNumber
-            guard slots[component1].isNumeric, slots[component1].unit == slots[x].unit else { return slots[target].setNothing() }
-            let ay = slots[component1].asNumber
-            guard slots[component2].isNumeric, slots[component2].unit == slots[x].unit else { return slots[target].setNothing() }
-            let az = slots[component2].asNumber
-            let squared = ax * ax + ay * ay + az * az
-            return slots[target].setFloat(squared.squareRoot(), unit: slots[x].unit)
-        }
+        guard registers[component0].isNumeric, registers[component0].unit == registers[x].unit else { return registers[target].setNothing() }
+        let ax = registers[component0].asNumber
+        guard registers[component1].isNumeric, registers[component1].unit == registers[x].unit else { return registers[target].setNothing() }
+        let ay = registers[component1].asNumber
+        guard registers[component2].isNumeric, registers[component2].unit == registers[x].unit else { return registers[target].setNothing() }
+        let az = registers[component2].asNumber
+        let squared = ax * ax + ay * ay + az * az
+        return registers[target].setFloat(squared.squareRoot(), unit: registers[x].unit)
     }
 }

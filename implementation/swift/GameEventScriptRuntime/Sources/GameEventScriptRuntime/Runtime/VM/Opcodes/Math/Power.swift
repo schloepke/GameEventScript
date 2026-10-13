@@ -12,23 +12,19 @@
 extension GesVmState {
     @inline(never)
     func executePower(_ target: Int, _ x: Int, _ y: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            if slots[x].isNothing || slots[y].isNothing { return slots[target].setNothing() }
-            let left = slots[x].asNumber
-            let right = slots[y].asNumber
-            if slots[y].hasUnit || left.isNaN || right.isNaN || (slots[x].hasUnit && right != 0 && right != 1) { return slots[target].setNothing() }
-            return slots[target].setFloat(pow(left, right), unit: right == 1 ? slots[x].unit : .none)
-        }
+        if registers[x].isNothing || registers[y].isNothing { return registers[target].setNothing() }
+        let left = registers[x].asNumber
+        let right = registers[y].asNumber
+        if registers[y].hasUnit || left.isNaN || right.isNaN || (registers[x].hasUnit && right != 0 && right != 1) { return registers[target].setNothing() }
+        return registers[target].setFloat(pow(left, right), unit: right == 1 ? registers[x].unit : .none)
     }
 
     @inline(never)
     func executePowerNumeric(_ target: Int, _ x: Int, _ y: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            guard slots[x].isNumeric, slots[y].isNumeric else { return slots[target].setNothing() }
-            let left = slots[x].asNumber
-            let right = slots[y].asNumber
-            if slots[y].hasUnit || left.isNaN || right.isNaN || (slots[x].hasUnit && right != 0 && right != 1) { return slots[target].setNothing() }
-            return slots[target].setFloat(pow(left, right), unit: right == 1 ? slots[x].unit : .none)
-        }
+        guard registers[x].isNumeric, registers[y].isNumeric else { return registers[target].setNothing() }
+        let left = registers[x].asNumber
+        let right = registers[y].asNumber
+        if registers[y].hasUnit || left.isNaN || right.isNaN || (registers[x].hasUnit && right != 0 && right != 1) { return registers[target].setNothing() }
+        return registers[target].setFloat(pow(left, right), unit: right == 1 ? registers[x].unit : .none)
     }
 }

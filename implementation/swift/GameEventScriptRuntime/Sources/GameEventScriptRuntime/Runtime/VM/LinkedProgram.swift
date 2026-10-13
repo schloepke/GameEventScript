@@ -21,10 +21,32 @@ final class GesLinkedProgram {
     var constructors: [UInt16: any GameEventScriptExternalTypeConstructor] = [:]
     var constructorBindings: [UInt16: GameEventScriptBinding] = [:]
     var outbound: [UInt16: GameEventScriptMessageSignature] = [:]
+    private var mapLayouts: [GesMapLayout?]
+
+    private var dataPositions: [UInt32: [Int]?] = [:]
+
+    /// Argument positions of a constant data-construction type and label list, resolved on first use;
+    /// nil when the shape is invalid and construction yields Nothing.
+    func dataConstructionPositions(type: UInt16, labels: UInt16) -> [Int]? {
+        let key = UInt32(type) << 16 | UInt32(labels)
+        if let positions = dataPositions[key] { return positions }
+        let positions = GesDataConstructionShape.positions(program.stringConstants[Int(type)], program.uint16IndexLists[Int(labels)].map { program.stringConstants[Int($0)] })
+        dataPositions[key] = .some(positions)
+        return positions
+    }
+
+    /// Canonical key order of a constant map-literal key list, computed on first use.
+    func mapLayout(_ list: UInt16) -> GesMapLayout {
+        if let layout = mapLayouts[Int(list)] { return layout }
+        let layout = GesMapLayout(program.uint16IndexLists[Int(list)].map { program.stringConstants[Int($0)] })
+        mapLayouts[Int(list)] = layout
+        return layout
+    }
 
     init(_ program: GameEventScriptProgram, extensions: (any GameEventScriptExtensionRegistry)?, types: (any GameEventScriptExternalTypeRegistry)?) throws {
         self.program = program
         textValues = program.stringConstants.map(GesValue.text)
+        mapLayouts = .init(repeating: nil, count: program.uint16IndexLists.count)
         for binding in program.bindings {
             let name = program.stringConstants[Int(binding.name)]
             let labels = binding.argumentNames.map { program.stringConstants[Int($0)] }
@@ -59,5 +81,20 @@ final class GesLinkedProgram {
             default: break
             }
         }
+    }
+}
+
+/// Canonical GesValueMap order for a fixed key list: ascending scalar keys, last duplicate wins.
+final class GesMapLayout {
+    let inputCount: Int
+    let keys: [String]
+    /// Input (staged) position supplying each canonical entry.
+    let sources: [Int]
+
+    init(_ inputKeys: [String]) {
+        inputCount = inputKeys.count
+        let canonical = GesValueMap(inputKeys.enumerated().map { GesMapEntry(key: $0.element, value: .integer(Int64($0.offset))) })
+        keys = canonical.entries.map(\.key)
+        sources = canonical.entries.map { Int($0.value.integerValue!) }
     }
 }

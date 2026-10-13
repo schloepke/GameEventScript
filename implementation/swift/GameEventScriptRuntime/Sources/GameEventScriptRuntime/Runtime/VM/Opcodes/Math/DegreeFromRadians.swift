@@ -4,8 +4,6 @@
 extension GesVmState {
     @inline(never)
     func executeDegreeFromRadians(_ target: Int, _ x: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            return slots[x].isNumeric && slots[x].asNumber.isFinite && !slots[x].hasUnit ? slots[target].setFloat(slots[x].asNumber / Double.pi * 180, unit: .degree) : slots[target].setNothing()
-        }
+        return registers[x].isNumeric && registers[x].asNumber.isFinite && !registers[x].hasUnit ? registers[target].setFloat(registers[x].asNumber / Double.pi * 180, unit: .degree) : registers[target].setNothing()
     }
 }

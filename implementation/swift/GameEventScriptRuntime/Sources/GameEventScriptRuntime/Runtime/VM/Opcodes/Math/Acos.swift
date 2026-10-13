@@ -12,9 +12,7 @@
 extension GesVmState {
     @inline(never)
     func executeAcos(_ target: Int, _ x: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            guard slots[x].isNumeric, !slots[x].hasUnit else { return slots[target].setNothing() }
-            return slots[target].setFloat(acos(slots[x].asNumber))
-        }
+        guard registers[x].isNumeric, !registers[x].hasUnit else { return registers[target].setNothing() }
+        return registers[target].setFloat(acos(registers[x].asNumber))
     }
 }

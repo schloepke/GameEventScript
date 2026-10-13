@@ -360,6 +360,14 @@ canonical equivalence. Keep Int64 and Binary64 storage separate. Register storag
 follows the C# architecture: one numeric word, an optional
 object reference, kind, unit and cached flags. Typed setters mutate these fields
 in the register array; do not replace this with nested associated-value enums.
+`GesVmState` owns that array as one manually allocated buffer (`GesRegisterFile`),
+the Swift counterpart of C#'s in-place `ref` register access: elements are
+addressed through its base pointer, without per-access exclusivity or copy-on-write
+checks. Only the VM mutates registers, serially; callbacks use the state's
+accessors. Storage moves only in `ensure`, between instructions. Handler entry
+prewarms the Program requirement, so only dynamic literal parsing grows during
+execution. Access registers through `registers[...]` each time; never keep a view
+or pointer across an operation that may grow storage.
 Immutable Message and Handler payloads are shared by reference behind read-only
 Swift value APIs. VM entry borrows arguments by index rather than allocating an
 argument array. Mutable callback arguments are borrowed only

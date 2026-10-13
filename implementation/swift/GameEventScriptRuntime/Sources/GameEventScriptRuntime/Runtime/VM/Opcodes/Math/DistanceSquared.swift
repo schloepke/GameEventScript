@@ -4,24 +4,22 @@
 extension GesVmState {
     @inline(never)
     func executeDistanceSquared(_ target: Int, _ x: Int, _ y: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            guard slots[x].unit == slots[y].unit else { return slots[target].setNothing() }
-            if slots[x].isNumeric && slots[y].isNumeric {
-                let delta = slots[x].asNumber - slots[y].asNumber
-                return slots[target].setFloat(delta * delta)
-            }
-            guard slots[x].spatialValue != nil, slots[y].spatialValue != nil else { return slots[target].setNothing() }
-            let ax = slots[x].x
-            let ay = slots[x].y
-            let az = slots[x].z
-            let bx = slots[y].x
-            let by = slots[y].y
-            let bz = slots[y].z
-            let dx = ax - bx
-            let dy = ay - by
-            let dz = az - bz
-            let squared = dx * dx + dy * dy + dz * dz
-            return slots[target].setFloat(squared)
+        guard registers[x].unit == registers[y].unit else { return registers[target].setNothing() }
+        if registers[x].isNumeric && registers[y].isNumeric {
+            let delta = registers[x].asNumber - registers[y].asNumber
+            return registers[target].setFloat(delta * delta)
         }
+        guard registers[x].spatialValue != nil, registers[y].spatialValue != nil else { return registers[target].setNothing() }
+        let ax = registers[x].x
+        let ay = registers[x].y
+        let az = registers[x].z
+        let bx = registers[y].x
+        let by = registers[y].y
+        let bz = registers[y].z
+        let dx = ax - bx
+        let dy = ay - by
+        let dz = az - bz
+        let squared = dx * dx + dy * dy + dz * dz
+        return registers[target].setFloat(squared)
     }
 }

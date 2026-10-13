@@ -29,21 +29,24 @@ enum GameEventScriptVirtualMachine {
     @inline(__always)
     private static func executeSlice<Instrumentation: VmInstrumentation>(_ state: GesVmState, context: GameEventScriptContext, budget: Int, instrumentation: Instrumentation) -> Int {
         var executed = 0
-        let reserved = context.budget.reserve(budget)
+        // The linked Program and the lazily created budget are fixed for the whole slice.
+        let runtimeBudget = context.budget
+        let code = state.linked?.program.code ?? []
+        let reserved = runtimeBudget.reserve(budget)
         do {
             while true {
                 instrumentation.phaseStarting(.stateCheck)
                 if !state.processing { break }
                 instrumentation.phaseStarting(.budgetCheck)
-                if context.budget.isExhausted { break }
+                if runtimeBudget.isExhausted { break }
                 instrumentation.phaseStarting(.sliceCheck)
                 if executed >= reserved { break }
                 instrumentation.phaseStarting(.fetch)
-                if state.ip < 0 || state.ip >= state.program.code.count {
+                if state.ip < 0 || state.ip >= code.count {
                     state.fail("runtime.illegalInstructionPointer")
                     break
                 }
-                let instruction = state.program.code[state.ip]
+                let instruction = code[state.ip]
                 state.ip += 1
                 instrumentation.instructionStarting(state.ip - 1)
                 // Keep dispatch in the loop, matching the C# hot path. Case exits still
@@ -79,16 +82,21 @@ enum GameEventScriptVirtualMachine {
                     } else {
                         state.setNothing(d)
                     }
-                case .castUnit: GesCasts.unit(state.value(x), instruction.unit, sink: state.output(d))
+                case .castUnit: GesCasts.unit(state.value(x), instruction.decodedUnit, sink: state.output(d))
                 case .castNumeric: GesCasts.number(state.value(x), sink: state.output(d))
-                case .constructData: try GesDataConstruction.create(state.text(instruction.word1), state.list(instruction.a).map(state.text), state.values(instruction.word2), context, sink: state.output(d))
+                case .constructData:
+                    if let positions = state.linked!.dataConstructionPositions(type: instruction.word1, labels: instruction.a) {
+                        try GesDataConstruction.create(state.text(instruction.word1), positions: positions, state.values(instruction.word2), context, sink: state.output(d))
+                    } else {
+                        state.setNothing(d)
+                    }
                 case .splitText: GesTextSplit.split(state.value(x), state.value(y), whitespace: instruction.a == 1, sink: state.output(d))
                 case .parseLiteral: try GesLiteralParser.evaluate(state.value(x), context: context, state: state, destination: d)
                 case .checkType: state.setBoolean(d, GesCasts.check(state.value(x), GameEventScriptBytecodeTypeKind(rawValue: instruction.word2)!))
                 case .checkCustomType: state.setBoolean(d, state.value(x).customTypeName == state.text(instruction.word2))
                 case .checkUnit:
                     let value = state.value(x)
-                    state.setBoolean(d, ((value.kind == .integer || value.kind == .float) || value.spatialValue != nil) && value.unit == instruction.unit)
+                    state.setBoolean(d, ((value.kind == .integer || value.kind == .float) || value.spatialValue != nil) && value.unit == instruction.decodedUnit)
                 case .checkNumeric: state.setBoolean(d, state.value(x).isNumeric)
                 case .checkInteger:
                     let v = state.value(x)
@@ -109,8 +117,8 @@ enum GameEventScriptVirtualMachine {
                 case .loadNothing: state.setNothing(d)
                 case .loadTrue: state.setBoolean(d, true)
                 case .loadFalse: state.setBoolean(d, false)
-                case .loadInteger: state.setInteger(d, instruction.integer, unit: instruction.unit)
-                case .loadFloat: state.setFloat(d, instruction.float, unit: instruction.unit)
+                case .loadInteger: state.setInteger(d, instruction.integer, unit: instruction.decodedUnit)
+                case .loadFloat: state.setFloat(d, instruction.float, unit: instruction.decodedUnit)
                 case .loadPercentage: state.setPercentage(d, instruction.float)
                 case .loadText: state.loadText(d, constant: instruction.word1)
                 case .loadTag: state.loadText(d, constant: instruction.word1, tag: true)
@@ -126,15 +134,15 @@ enum GameEventScriptVirtualMachine {
                 case .stageNothing: state.stageNothing()
                 case .stageTrue: state.stageBoolean(true)
                 case .stageFalse: state.stageBoolean(false)
-                case .stageInteger: state.stageInteger(instruction.integer, unit: instruction.unit)
-                case .stageFloat: state.stageFloat(instruction.float, unit: instruction.unit)
+                case .stageInteger: state.stageInteger(instruction.integer, unit: instruction.decodedUnit)
+                case .stageFloat: state.stageFloat(instruction.float, unit: instruction.decodedUnit)
                 case .stagePercentage: state.stagePercentage(instruction.float)
                 case .stageText: state.stageTextConstant(instruction.word1)
                 case .stageTag: state.stageTextConstant(instruction.word1, tag: true)
                 case .createDice:
                     let count = Int(instruction.signedWord1)
                     let sides = Int(instruction.signedWord2)
-                    if count <= 0 || sides <= 0 || !context.budget.dice(count: count, sides: sides) {
+                    if count <= 0 || sides <= 0 || !runtimeBudget.dice(count: count, sides: sides) {
                         state.setDice(d, [])
                         break
                     }
@@ -146,8 +154,15 @@ enum GameEventScriptVirtualMachine {
                     state.setList(d, (0..<state.stageLength).map(state.staged))
                     state.clearStage()
                 case .createMap:
-                    let names = state.list(instruction.word1)
-                    if names.count == state.stageLength { state.setMap(d, names.enumerated().map { .init(key: state.text($0.element), value: state.staged($0.offset)) }) } else { state.setNothing(d) }
+                    let layout = state.linked!.mapLayout(instruction.word1)
+                    if layout.inputCount == state.stageLength {
+                        var entries: [GesMapEntry] = []
+                        entries.reserveCapacity(layout.keys.count)
+                        for index in layout.keys.indices { entries.append(.init(key: layout.keys[index], value: state.staged(layout.sources[index]))) }
+                        state.setMap(d, GesValueMap(canonical: entries))
+                    } else {
+                        state.setNothing(d)
+                    }
                     state.clearStage()
                 case .createRange, .createRangeWithStep:
                     range(state.value(x), state.value(y), instruction.opcode == .createRangeWithStep ? state.value(Int(instruction.a)) : .integer(1), sink: state.output(d))
@@ -178,25 +193,33 @@ enum GameEventScriptVirtualMachine {
                     state.setValue(d, value.hasValue ? value : state.value(y))
                 case .randomPush:
                     let seed = state.value(x)
-                    if !context.random.push(seed: seed.kind == .integer && !seed.hasUnit ? seed.asInteger : nil) { context.budget.exhaust("MaxRandomScopeDepth", context.runtimeLimits.maxRandomScopeDepth) }
-                case .randomPushConstant: if !context.random.push(seed: instruction.integer) { context.budget.exhaust("MaxRandomScopeDepth", context.runtimeLimits.maxRandomScopeDepth) }
-                case .randomPop: if !context.random.pop() && !context.budget.isExhausted { state.fail("runtime.randomStackUnderflow") }
+                    if !context.random.push(seed: seed.kind == .integer && !seed.hasUnit ? seed.asInteger : nil) { runtimeBudget.exhaust("MaxRandomScopeDepth", context.runtimeLimits.maxRandomScopeDepth) }
+                case .randomPushConstant: if !context.random.push(seed: instruction.integer) { runtimeBudget.exhaust("MaxRandomScopeDepth", context.runtimeLimits.maxRandomScopeDepth) }
+                case .randomPop: if !context.random.pop() && !runtimeBudget.isExhausted { state.fail("runtime.randomStackUnderflow") }
                 case .iteratorCreate, .iteratorCreateOrJump:
                     try compoundIterator(state, instruction, context)
-                    if instruction.opcode == .iteratorCreateOrJump, state.slot(d).isRegisterData { state.ip = y }
+                    if instruction.opcode == .iteratorCreateOrJump, state.isRegisterData(d) { state.ip = y }
                 case .cartesian:
-                    cartesian(state, d, state.value(x), state.value(y), context.budget)
+                    cartesian(state, d, state.value(x), state.value(y), runtimeBudget)
                 case .iteratorNext where instruction.unitAndFlags & 32 != 0:
-                    if nextComponents(state, instruction) { _ = context.budget.loop() }
+                    if nextComponents(state, instruction) { _ = runtimeBudget.loop() }
                 case .iteratorNext:
-                    if let iterator = state.slot(x).iteratorValue, iterator.next(sink: state.output(d)) != nil {
-                        _ = context.budget.loop()
+                    if let iterator = state.iterator(x), iterator.isIntegerRange {
+                        if let term = iterator.nextIntegerTerm() {
+                            state.setInteger(d, term)
+                            _ = runtimeBudget.loop()
+                        } else {
+                            state.setNothing(d)
+                            state.ip = y
+                        }
+                    } else if let iterator = state.iterator(x), (iterator.isSourceIterator ? iterator.nextFromSource(sink: state.output(d)) : iterator.next(sink: state.output(d))) != nil {
+                        _ = runtimeBudget.loop()
                     } else {
                         state.setNothing(d)
                         state.ip = y
                     }
                 case .iteratorClose:
-                    if let iterator = state.slot(x).iteratorValue { iterator.close() }
+                    if let iterator = state.iterator(x) { iterator.close() }
                     state.setNothing(x)
                 case .listBuilderCreate, .mapBuilderCreate, .distinctBuilderCreate, .groupBuilderCreate, .orderBuilderCreate:
                     let kind: GesCollectionBuilder.Kind
@@ -209,11 +232,11 @@ enum GameEventScriptVirtualMachine {
                     }
                     state.createBuilder(d, kind)
                 case .listBuilderAdd, .mapBuilderAdd, .distinctBuilderAdd, .groupBuilderAdd, .orderBuilderAdd:
-                    if let builder = state.slot(x).builderValue {
-                        if instruction.opcode == .listBuilderAdd { builder.add(value: state.value(y), budget: context.budget) } else { builder.add(key: state.value(y), value: state.value(Int(instruction.a)), budget: context.budget) }
+                    if let builder = state.builder(x) {
+                        if instruction.opcode == .listBuilderAdd { builder.add(value: state.value(y), budget: runtimeBudget) } else { builder.add(key: state.value(y), value: state.value(Int(instruction.a)), budget: runtimeBudget) }
                     }
                 case .listBuilderFinish, .mapBuilderFinish, .distinctBuilderFinish, .groupBuilderFinish, .orderBuilderFinishAscending, .orderBuilderFinishDescending:
-                    if let builder = state.slot(x).builderValue { builder.finish(descending: instruction.opcode == .orderBuilderFinishDescending, sink: state.output(d)) } else { state.setNothing(d) }
+                    if let builder = state.builder(x) { builder.finish(descending: instruction.opcode == .orderBuilderFinishDescending, sink: state.output(d)) } else { state.setNothing(d) }
                 case .or: state.executeOr(state.frameStart + d, state.frameStart + x, state.frameStart + y)
                 case .and: state.executeAnd(state.frameStart + d, state.frameStart + x, state.frameStart + y)
                 case .xor: state.executeXor(state.frameStart + d, state.frameStart + x, state.frameStart + y)
@@ -408,7 +431,7 @@ enum GameEventScriptVirtualMachine {
             }
         } catch let fault as GameEventScriptExtensionFault { state.fail(fault.diagnostic) } catch let fault as GesRuntimeError { state.fail(fault.diagnostic) } catch { state.fail("runtime.unhandledFailure", error: error) }
         instrumentation.finishSlice()
-        context.budget.complete(executed: executed, reserved: reserved, processing: state.processing)
+        runtimeBudget.complete(executed: executed, reserved: reserved, processing: state.processing)
         return executed
     }
 }

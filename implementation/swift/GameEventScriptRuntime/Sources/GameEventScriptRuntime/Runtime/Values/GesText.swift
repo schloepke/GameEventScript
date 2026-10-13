@@ -5,10 +5,23 @@
 /// Swift's canonical-equivalence string comparison is deliberately not used.
 public enum GesText {
     /// Compares the exact scalar sequence, without Unicode normalization.
-    public static func scalarEqual(_ left: String, _ right: String) -> Bool { left.unicodeScalars.elementsEqual(right.unicodeScalars) }
+    public static func scalarEqual(_ left: String, _ right: String) -> Bool {
+        // UTF-8 encodes scalar sequences bijectively, so byte equality is scalar equality.
+        let leftBytes = left.utf8
+        let rightBytes = right.utf8
+        if leftBytes.count != rightBytes.count { return false }
+        if let contiguous = leftBytes.withContiguousStorageIfAvailable({ l in rightBytes.withContiguousStorageIfAvailable { r in l.elementsEqual(r) } }), let equal = contiguous { return equal }
+        return leftBytes.elementsEqual(rightBytes)
+    }
 
     /// Orders text lexicographically by Unicode scalar value.
-    public static func scalarLess(_ left: String, _ right: String) -> Bool { left.unicodeScalars.lexicographicallyPrecedes(right.unicodeScalars) { $0.value < $1.value } }
+    public static func scalarLess(_ left: String, _ right: String) -> Bool {
+        // UTF-8 byte order preserves scalar value order, including for prefixes.
+        let leftBytes = left.utf8
+        let rightBytes = right.utf8
+        if let contiguous = leftBytes.withContiguousStorageIfAvailable({ l in rightBytes.withContiguousStorageIfAvailable { r in l.lexicographicallyPrecedes(r) } }), let less = contiguous { return less }
+        return leftBytes.lexicographicallyPrecedes(rightBytes)
+    }
 
     /// Hashes the exact scalar sequence; the hash is process-local, not transport data.
     public static func hashScalars(_ text: String, into hasher: inout Hasher) {

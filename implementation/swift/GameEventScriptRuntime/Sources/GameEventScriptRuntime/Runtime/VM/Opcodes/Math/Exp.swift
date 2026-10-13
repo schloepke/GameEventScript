@@ -12,8 +12,6 @@
 extension GesVmState {
     @inline(never)
     func executeExp(_ target: Int, _ x: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            return slots[x].hasUnit ? slots[target].setNothing() : slots[target].setFloat(exp(slots[x].asNumber))
-        }
+        return registers[x].hasUnit ? registers[target].setNothing() : registers[target].setFloat(exp(registers[x].asNumber))
     }
 }

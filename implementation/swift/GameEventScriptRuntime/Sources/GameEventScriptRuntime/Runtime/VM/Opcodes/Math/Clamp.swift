@@ -4,25 +4,21 @@
 extension GesVmState {
     @inline(never)
     func executeClamp(_ target: Int, _ x: Int, _ y: Int, _ operandA: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            let upper = operandA
-            guard slots[x].unit == slots[y].unit, slots[y].unit == slots[upper].unit, slots[x].isNumeric, slots[y].isNumeric, slots[upper].isNumeric else { return slots[target].setNothing() }
-            if let av = slots[x].integerValue, let bv = slots[y].integerValue, let cv = slots[upper].integerValue {
-                return slots[target].setInteger(Swift.min(Swift.max(av, Swift.min(bv, cv)), Swift.max(bv, cv)), unit: slots[x].unit)
-            }
-            return slots[target].setFloat(Swift.min(Swift.max(slots[x].asNumber, Swift.min(slots[y].asNumber, slots[upper].asNumber)), Swift.max(slots[y].asNumber, slots[upper].asNumber)), unit: slots[x].unit)
+        let upper = operandA
+        guard registers[x].unit == registers[y].unit, registers[y].unit == registers[upper].unit, registers[x].isNumeric, registers[y].isNumeric, registers[upper].isNumeric else { return registers[target].setNothing() }
+        if let av = registers[x].integerValue, let bv = registers[y].integerValue, let cv = registers[upper].integerValue {
+            return registers[target].setInteger(Swift.min(Swift.max(av, Swift.min(bv, cv)), Swift.max(bv, cv)), unit: registers[x].unit)
         }
+        return registers[target].setFloat(Swift.min(Swift.max(registers[x].asNumber, Swift.min(registers[y].asNumber, registers[upper].asNumber)), Swift.max(registers[y].asNumber, registers[upper].asNumber)), unit: registers[x].unit)
     }
 
     @inline(never)
     func executeClampNumeric(_ target: Int, _ x: Int, _ y: Int, _ operandA: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            let upper = operandA
-            guard slots[x].unit == slots[y].unit, slots[y].unit == slots[upper].unit, slots[x].isNumeric, slots[y].isNumeric, slots[upper].isNumeric else { return slots[target].setNothing() }
-            if let av = slots[x].numericIntegerValue, let bv = slots[y].numericIntegerValue, let cv = slots[upper].numericIntegerValue {
-                return slots[target].setInteger(Swift.min(Swift.max(av, Swift.min(bv, cv)), Swift.max(bv, cv)), unit: slots[x].unit)
-            }
-            return slots[target].setFloat(Swift.min(Swift.max(slots[x].asNumber, Swift.min(slots[y].asNumber, slots[upper].asNumber)), Swift.max(slots[y].asNumber, slots[upper].asNumber)), unit: slots[x].unit)
+        let upper = operandA
+        guard registers[x].unit == registers[y].unit, registers[y].unit == registers[upper].unit, registers[x].isNumeric, registers[y].isNumeric, registers[upper].isNumeric else { return registers[target].setNothing() }
+        if let av = registers[x].numericIntegerValue, let bv = registers[y].numericIntegerValue, let cv = registers[upper].numericIntegerValue {
+            return registers[target].setInteger(Swift.min(Swift.max(av, Swift.min(bv, cv)), Swift.max(bv, cv)), unit: registers[x].unit)
         }
+        return registers[target].setFloat(Swift.min(Swift.max(registers[x].asNumber, Swift.min(registers[y].asNumber, registers[upper].asNumber)), Swift.max(registers[y].asNumber, registers[upper].asNumber)), unit: registers[x].unit)
     }
 }

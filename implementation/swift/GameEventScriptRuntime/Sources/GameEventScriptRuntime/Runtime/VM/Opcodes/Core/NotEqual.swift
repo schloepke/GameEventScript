@@ -4,9 +4,7 @@
 extension GesVmState {
     @inline(never)
     func executeNotEqual(_ target: Int, _ x: Int, _ y: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            if slots[x].isNothing || slots[y].isNothing { return slots[target].setNothing() }
-            return slots[target].setBoolean(GesComparison.equal(slots[x].registerValue, slots[y].registerValue) == false)
-        }
+        if registers[x].isNothing || registers[y].isNothing { return registers[target].setNothing() }
+        return registers[target].setBoolean(GesComparison.equal(registers[x].registerValue, registers[y].registerValue) == false)
     }
 }

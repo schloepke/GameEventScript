@@ -2,101 +2,104 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVmState {
-    @inline(never)
+    // Integer operands are the hot case and run inline in dispatch; every other
+    // combination, including a zero divisor, takes the complete out-of-line body.
+    @inline(__always)
     func executeModulo(_ target: Int, _ x: Int, _ y: Int) {
-        let handled = registers.withUnsafeMutableBufferPointer { slots in
-            switch slots[x].kind {
-            case .integer where slots[y].kind == .integer:
-                let av = slots[x].integerValue!
-                let bv = slots[y].integerValue!
-                guard slots[x].unit == slots[y].unit else {
-                    slots[target].setNothing()
-                    return true
-                }
-                let unit = slots[x].unit
-                guard bv != 0 else {
-                    slots[target].setNothing()
-                    return true
-                }
-                var result = av == .min && bv == -1 ? 0 : av % bv
-                if result != 0 && (result < 0) != (bv < 0) { result += bv }
-                slots[target].setInteger(result, unit: unit)
-                return true
-            default: return false
+        guard registers[x].kind == .integer, registers[y].kind == .integer, registers[x].unit == registers[y].unit, let bv = registers[y].integerValue, bv != 0 else { return executeModuloGeneral(target, x, y) }
+        let av = registers[x].integerValue!
+        let unit = registers[x].unit
+        var result = av == .min && bv == -1 ? 0 : av % bv
+        if result != 0 && (result < 0) != (bv < 0) { result += bv }
+        registers[target].setInteger(result, unit: unit)
+    }
+
+    @inline(never)
+    func executeModuloGeneral(_ target: Int, _ x: Int, _ y: Int) {
+        if registers[x].kind == .integer && registers[y].kind == .integer {
+            let av = registers[x].integerValue!
+            let bv = registers[y].integerValue!
+            guard registers[x].unit == registers[y].unit else {
+                registers[target].setNothing()
+                return
             }
+            let unit = registers[x].unit
+            guard bv != 0 else {
+                registers[target].setNothing()
+                return
+            }
+            var result = av == .min && bv == -1 ? 0 : av % bv
+            if result != 0 && (result < 0) != (bv < 0) { result += bv }
+            registers[target].setInteger(result, unit: unit)
+            return
         }
-        if handled { return }
-        registers.withUnsafeMutableBufferPointer { slots in
-            if slots[x].isNothing || slots[y].isNothing { return slots[target].setNothing() }
-            switch slots[x].kind {
-            case .float where slots[y].kind == .float:
-                guard slots[x].unit == slots[y].unit else { return slots[target].setNothing() }
-                let unit: GesUnit = slots[x].unit
-                let left = slots[x].floatValue!
-                let right = slots[y].floatValue!
-                guard left.isFinite, !right.isNaN, right != 0 else { return slots[target].setNothing() }
-                var result = right.isInfinite ? left : left.truncatingRemainder(dividingBy: right)
-                if right.isFinite && result != 0 && (result < 0) != (right < 0) { result += right }
-                return slots[target].setFloat(result, unit: unit)
-            case .integer where slots[y].kind == .float:
-                guard slots[x].unit == slots[y].unit else { return slots[target].setNothing() }
-                let unit: GesUnit = slots[x].unit
-                let left = Double(slots[x].integerValue!)
-                let right = slots[y].floatValue!
-                guard left.isFinite, !right.isNaN, right != 0 else { return slots[target].setNothing() }
-                var result = right.isInfinite ? left : left.truncatingRemainder(dividingBy: right)
-                if right.isFinite && result != 0 && (result < 0) != (right < 0) { result += right }
-                return slots[target].setFloat(result, unit: unit)
-            case .float where slots[y].kind == .integer:
-                guard slots[x].unit == slots[y].unit else { return slots[target].setNothing() }
-                let unit: GesUnit = slots[x].unit
-                let left = slots[x].floatValue!
-                let right = Double(slots[y].integerValue!)
-                guard left.isFinite, !right.isNaN, right != 0 else { return slots[target].setNothing() }
-                var result = right.isInfinite ? left : left.truncatingRemainder(dividingBy: right)
-                if right.isFinite && result != 0 && (result < 0) != (right < 0) { result += right }
-                return slots[target].setFloat(result, unit: unit)
-            default: break
-            }
-            guard slots[x].unit == slots[y].unit else { return slots[target].setNothing() }
-            let unit = slots[x].unit
-            if slots[x].spatialValue != nil || slots[y].spatialValue != nil { return slots[target].setNothing() }
-            let left = slots[x].asNumber
-            let right = slots[y].asNumber
-            guard left.isFinite, !right.isNaN, right != 0 else { return slots[target].setNothing() }
+        if registers[x].isNothing || registers[y].isNothing { return registers[target].setNothing() }
+        switch registers[x].kind {
+        case .float where registers[y].kind == .float:
+            guard registers[x].unit == registers[y].unit else { return registers[target].setNothing() }
+            let unit: GesUnit = registers[x].unit
+            let left = registers[x].floatValue!
+            let right = registers[y].floatValue!
+            guard left.isFinite, !right.isNaN, right != 0 else { return registers[target].setNothing() }
             var result = right.isInfinite ? left : left.truncatingRemainder(dividingBy: right)
             if right.isFinite && result != 0 && (result < 0) != (right < 0) { result += right }
-            return slots[target].setFloat(result, unit: unit)
+            return registers[target].setFloat(result, unit: unit)
+        case .integer where registers[y].kind == .float:
+            guard registers[x].unit == registers[y].unit else { return registers[target].setNothing() }
+            let unit: GesUnit = registers[x].unit
+            let left = Double(registers[x].integerValue!)
+            let right = registers[y].floatValue!
+            guard left.isFinite, !right.isNaN, right != 0 else { return registers[target].setNothing() }
+            var result = right.isInfinite ? left : left.truncatingRemainder(dividingBy: right)
+            if right.isFinite && result != 0 && (result < 0) != (right < 0) { result += right }
+            return registers[target].setFloat(result, unit: unit)
+        case .float where registers[y].kind == .integer:
+            guard registers[x].unit == registers[y].unit else { return registers[target].setNothing() }
+            let unit: GesUnit = registers[x].unit
+            let left = registers[x].floatValue!
+            let right = Double(registers[y].integerValue!)
+            guard left.isFinite, !right.isNaN, right != 0 else { return registers[target].setNothing() }
+            var result = right.isInfinite ? left : left.truncatingRemainder(dividingBy: right)
+            if right.isFinite && result != 0 && (result < 0) != (right < 0) { result += right }
+            return registers[target].setFloat(result, unit: unit)
+        default: break
         }
+        guard registers[x].unit == registers[y].unit else { return registers[target].setNothing() }
+        let unit = registers[x].unit
+        if registers[x].spatialValue != nil || registers[y].spatialValue != nil { return registers[target].setNothing() }
+        let left = registers[x].asNumber
+        let right = registers[y].asNumber
+        guard left.isFinite, !right.isNaN, right != 0 else { return registers[target].setNothing() }
+        var result = right.isInfinite ? left : left.truncatingRemainder(dividingBy: right)
+        if right.isFinite && result != 0 && (result < 0) != (right < 0) { result += right }
+        return registers[target].setFloat(result, unit: unit)
     }
 
     @inline(never)
     func executeModuloNumeric(_ target: Int, _ x: Int, _ y: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            guard slots[x].isNumeric, slots[y].isNumeric else { return slots[target].setNothing() }
-            if let av = slots[x].numericIntegerValue, let bv = slots[y].numericIntegerValue {
-                guard slots[x].unit == slots[y].unit else {
-                    slots[target].setNothing()
-                    return
-                }
-                let unit = slots[x].unit
-                guard bv != 0 else {
-                    slots[target].setNothing()
-                    return
-                }
-                var result = av == .min && bv == -1 ? 0 : av % bv
-                if result != 0 && (result < 0) != (bv < 0) { result += bv }
-                slots[target].setInteger(result, unit: unit)
+        guard registers[x].isNumeric, registers[y].isNumeric else { return registers[target].setNothing() }
+        if let av = registers[x].numericIntegerValue, let bv = registers[y].numericIntegerValue {
+            guard registers[x].unit == registers[y].unit else {
+                registers[target].setNothing()
                 return
             }
-            guard slots[x].unit == slots[y].unit else { return slots[target].setNothing() }
-            let unit = slots[x].unit
-            let left = slots[x].asNumber
-            let right = slots[y].asNumber
-            guard left.isFinite, !right.isNaN, right != 0 else { return slots[target].setNothing() }
-            var result = right.isInfinite ? left : left.truncatingRemainder(dividingBy: right)
-            if right.isFinite && result != 0 && (result < 0) != (right < 0) { result += right }
-            return slots[target].setFloat(result, unit: unit)
+            let unit = registers[x].unit
+            guard bv != 0 else {
+                registers[target].setNothing()
+                return
+            }
+            var result = av == .min && bv == -1 ? 0 : av % bv
+            if result != 0 && (result < 0) != (bv < 0) { result += bv }
+            registers[target].setInteger(result, unit: unit)
+            return
         }
+        guard registers[x].unit == registers[y].unit else { return registers[target].setNothing() }
+        let unit = registers[x].unit
+        let left = registers[x].asNumber
+        let right = registers[y].asNumber
+        guard left.isFinite, !right.isNaN, right != 0 else { return registers[target].setNothing() }
+        var result = right.isInfinite ? left : left.truncatingRemainder(dividingBy: right)
+        if right.isFinite && result != 0 && (result < 0) != (right < 0) { result += right }
+        return registers[target].setFloat(result, unit: unit)
     }
 }

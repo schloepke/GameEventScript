@@ -10,20 +10,18 @@ extension GesVmState {
         let component3 = operandB
         let component4 = operandC
         let component5 = operandD
-        registers.withUnsafeMutableBufferPointer { slots in
-            guard slots[component0].isNumeric, slots[component0].unit == slots[x].unit else { return slots[target].setNothing() }
-            let ax = slots[component0].asNumber
-            guard slots[component1].isNumeric, slots[component1].unit == slots[x].unit else { return slots[target].setNothing() }
-            let ay = slots[component1].asNumber
-            guard slots[component2].isNumeric, slots[component2].unit == slots[x].unit else { return slots[target].setNothing() }
-            let az = slots[component2].asNumber
-            guard slots[component3].isNumeric, slots[component3].unit == slots[x].unit else { return slots[target].setNothing() }
-            let bx = slots[component3].asNumber
-            guard slots[component4].isNumeric, slots[component4].unit == slots[x].unit else { return slots[target].setNothing() }
-            let by = slots[component4].asNumber
-            guard slots[component5].isNumeric, slots[component5].unit == slots[x].unit else { return slots[target].setNothing() }
-            let bz = slots[component5].asNumber
-            return slots[target].setFloat(ax * bx + ay * by + az * bz)
-        }
+        guard registers[component0].isNumeric, registers[component0].unit == registers[x].unit else { return registers[target].setNothing() }
+        let ax = registers[component0].asNumber
+        guard registers[component1].isNumeric, registers[component1].unit == registers[x].unit else { return registers[target].setNothing() }
+        let ay = registers[component1].asNumber
+        guard registers[component2].isNumeric, registers[component2].unit == registers[x].unit else { return registers[target].setNothing() }
+        let az = registers[component2].asNumber
+        guard registers[component3].isNumeric, registers[component3].unit == registers[x].unit else { return registers[target].setNothing() }
+        let bx = registers[component3].asNumber
+        guard registers[component4].isNumeric, registers[component4].unit == registers[x].unit else { return registers[target].setNothing() }
+        let by = registers[component4].asNumber
+        guard registers[component5].isNumeric, registers[component5].unit == registers[x].unit else { return registers[target].setNothing() }
+        let bz = registers[component5].asNumber
+        return registers[target].setFloat(ax * bx + ay * by + az * bz)
     }
 }

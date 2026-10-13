@@ -2,95 +2,97 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVmState {
-    @inline(never)
+    // Integer operands are the hot case and run inline in dispatch; every other
+    // combination, including overflow, takes the complete out-of-line body.
+    @inline(__always)
     func executeMultiply(_ target: Int, _ x: Int, _ y: Int) {
-        let handled = registers.withUnsafeMutableBufferPointer { slots in
-            switch slots[x].kind {
-            case .integer where slots[y].kind == .integer:
-                let av = slots[x].integerValue!
-                let bv = slots[y].integerValue!
-                guard !slots[x].hasUnit || !slots[y].hasUnit else {
-                    slots[target].setNothing()
-                    return true
-                }
-                let unit = slots[x].hasUnit ? slots[x].unit : slots[y].unit
-                let (result, overflow) = av.multipliedReportingOverflow(by: bv)
-                if overflow {
-                    slots[target].setFloat(Double(av) * Double(bv), unit: unit)
-                    return true
-                }
-                slots[target].setInteger(result, unit: unit)
-                return true
-            default: return false
+        guard registers[x].kind == .integer, registers[y].kind == .integer, !registers[x].hasUnit || !registers[y].hasUnit else { return executeMultiplyGeneral(target, x, y) }
+        let unit = registers[x].hasUnit ? registers[x].unit : registers[y].unit
+        let (result, overflow) = registers[x].integerValue!.multipliedReportingOverflow(by: registers[y].integerValue!)
+        if overflow { return executeMultiplyGeneral(target, x, y) }
+        registers[target].setInteger(result, unit: unit)
+    }
+
+    @inline(never)
+    func executeMultiplyGeneral(_ target: Int, _ x: Int, _ y: Int) {
+        if registers[x].kind == .integer && registers[y].kind == .integer {
+            let av = registers[x].integerValue!
+            let bv = registers[y].integerValue!
+            guard !registers[x].hasUnit || !registers[y].hasUnit else {
+                registers[target].setNothing()
+                return
             }
+            let unit = registers[x].hasUnit ? registers[x].unit : registers[y].unit
+            let (result, overflow) = av.multipliedReportingOverflow(by: bv)
+            if overflow {
+                registers[target].setFloat(Double(av) * Double(bv), unit: unit)
+                return
+            }
+            registers[target].setInteger(result, unit: unit)
+            return
         }
-        if handled { return }
-        registers.withUnsafeMutableBufferPointer { slots in
-            if slots[x].isNothing || slots[y].isNothing { return slots[target].setNothing() }
-            switch slots[x].kind {
-            case .float where slots[y].kind == .float:
-                guard !slots[x].hasUnit || !slots[y].hasUnit else { return slots[target].setNothing() }
-                let unit: GesUnit = slots[x].hasUnit ? slots[x].unit : slots[y].unit
-                let left = slots[x].floatValue!
-                let right = slots[y].floatValue!
-                let result = left * right
-                return slots[target].setFloat(result, unit: unit)
-            case .integer where slots[y].kind == .float:
-                guard !slots[x].hasUnit || !slots[y].hasUnit else { return slots[target].setNothing() }
-                let unit: GesUnit = slots[x].hasUnit ? slots[x].unit : slots[y].unit
-                let left = Double(slots[x].integerValue!)
-                let right = slots[y].floatValue!
-                let result = left * right
-                return slots[target].setFloat(result, unit: unit)
-            case .float where slots[y].kind == .integer:
-                guard !slots[x].hasUnit || !slots[y].hasUnit else { return slots[target].setNothing() }
-                let unit: GesUnit = slots[x].hasUnit ? slots[x].unit : slots[y].unit
-                let left = slots[x].floatValue!
-                let right = Double(slots[y].integerValue!)
-                let result = left * right
-                return slots[target].setFloat(result, unit: unit)
-            default: break
-            }
-            guard !slots[x].hasUnit || !slots[y].hasUnit else { return slots[target].setNothing() }
-            let unit = slots[x].hasUnit ? slots[x].unit : slots[y].unit
-            if slots[x].spatialValue != nil || slots[y].spatialValue != nil {
-                if slots[x].kind == .vector && slots[y].asNumber.isFinite {
-                    return slots[target].setVector(x: slots[x].x * slots[y].asNumber, y: slots[x].y * slots[y].asNumber, z: slots[x].z * slots[y].asNumber, unit: unit)
-                }
-                if slots[y].kind == .vector && slots[x].asNumber.isFinite {
-                    return slots[target].setVector(x: slots[y].x * slots[x].asNumber, y: slots[y].y * slots[x].asNumber, z: slots[y].z * slots[x].asNumber, unit: unit)
-                }
-                return slots[target].setNothing()
-            }
-            let left = slots[x].asNumber
-            let right = slots[y].asNumber
-            return slots[x].kind == .percentage && slots[y].kind == .percentage ? slots[target].setPercentage(left * right) : slots[target].setFloat(left * right, unit: unit)
+        if registers[x].isNothing || registers[y].isNothing { return registers[target].setNothing() }
+        switch registers[x].kind {
+        case .float where registers[y].kind == .float:
+            guard !registers[x].hasUnit || !registers[y].hasUnit else { return registers[target].setNothing() }
+            let unit: GesUnit = registers[x].hasUnit ? registers[x].unit : registers[y].unit
+            let left = registers[x].floatValue!
+            let right = registers[y].floatValue!
+            let result = left * right
+            return registers[target].setFloat(result, unit: unit)
+        case .integer where registers[y].kind == .float:
+            guard !registers[x].hasUnit || !registers[y].hasUnit else { return registers[target].setNothing() }
+            let unit: GesUnit = registers[x].hasUnit ? registers[x].unit : registers[y].unit
+            let left = Double(registers[x].integerValue!)
+            let right = registers[y].floatValue!
+            let result = left * right
+            return registers[target].setFloat(result, unit: unit)
+        case .float where registers[y].kind == .integer:
+            guard !registers[x].hasUnit || !registers[y].hasUnit else { return registers[target].setNothing() }
+            let unit: GesUnit = registers[x].hasUnit ? registers[x].unit : registers[y].unit
+            let left = registers[x].floatValue!
+            let right = Double(registers[y].integerValue!)
+            let result = left * right
+            return registers[target].setFloat(result, unit: unit)
+        default: break
         }
+        guard !registers[x].hasUnit || !registers[y].hasUnit else { return registers[target].setNothing() }
+        let unit = registers[x].hasUnit ? registers[x].unit : registers[y].unit
+        if registers[x].spatialValue != nil || registers[y].spatialValue != nil {
+            if registers[x].kind == .vector && registers[y].asNumber.isFinite {
+                return registers[target].setVector(x: registers[x].x * registers[y].asNumber, y: registers[x].y * registers[y].asNumber, z: registers[x].z * registers[y].asNumber, unit: unit)
+            }
+            if registers[y].kind == .vector && registers[x].asNumber.isFinite {
+                return registers[target].setVector(x: registers[y].x * registers[x].asNumber, y: registers[y].y * registers[x].asNumber, z: registers[y].z * registers[x].asNumber, unit: unit)
+            }
+            return registers[target].setNothing()
+        }
+        let left = registers[x].asNumber
+        let right = registers[y].asNumber
+        return registers[x].kind == .percentage && registers[y].kind == .percentage ? registers[target].setPercentage(left * right) : registers[target].setFloat(left * right, unit: unit)
     }
 
     @inline(never)
     func executeMultiplyNumeric(_ target: Int, _ x: Int, _ y: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            guard slots[x].isNumeric, slots[y].isNumeric else { return slots[target].setNothing() }
-            if let av = slots[x].numericIntegerValue, let bv = slots[y].numericIntegerValue {
-                guard !slots[x].hasUnit || !slots[y].hasUnit else {
-                    slots[target].setNothing()
-                    return
-                }
-                let unit = slots[x].hasUnit ? slots[x].unit : slots[y].unit
-                let (result, overflow) = av.multipliedReportingOverflow(by: bv)
-                if overflow {
-                    slots[target].setFloat(Double(av) * Double(bv), unit: unit)
-                    return
-                }
-                slots[target].setInteger(result, unit: unit)
+        guard registers[x].isNumeric, registers[y].isNumeric else { return registers[target].setNothing() }
+        if let av = registers[x].numericIntegerValue, let bv = registers[y].numericIntegerValue {
+            guard !registers[x].hasUnit || !registers[y].hasUnit else {
+                registers[target].setNothing()
                 return
             }
-            guard !slots[x].hasUnit || !slots[y].hasUnit else { return slots[target].setNothing() }
-            let unit = slots[x].hasUnit ? slots[x].unit : slots[y].unit
-            let left = slots[x].asNumber
-            let right = slots[y].asNumber
-            return slots[x].kind == .percentage && slots[y].kind == .percentage ? slots[target].setPercentage(left * right) : slots[target].setFloat(left * right, unit: unit)
+            let unit = registers[x].hasUnit ? registers[x].unit : registers[y].unit
+            let (result, overflow) = av.multipliedReportingOverflow(by: bv)
+            if overflow {
+                registers[target].setFloat(Double(av) * Double(bv), unit: unit)
+                return
+            }
+            registers[target].setInteger(result, unit: unit)
+            return
         }
+        guard !registers[x].hasUnit || !registers[y].hasUnit else { return registers[target].setNothing() }
+        let unit = registers[x].hasUnit ? registers[x].unit : registers[y].unit
+        let left = registers[x].asNumber
+        let right = registers[y].asNumber
+        return registers[x].kind == .percentage && registers[y].kind == .percentage ? registers[target].setPercentage(left * right) : registers[target].setFloat(left * right, unit: unit)
     }
 }

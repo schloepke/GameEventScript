@@ -4,9 +4,7 @@
 extension GesVmState {
     @inline(never)
     func executeContains(_ target: Int, _ x: Int, _ y: Int) {
-        registers.withUnsafeMutableBufferPointer { slots in
-            if slots[y].isRegisterData, slots[y].isNothing { return slots[target].setNothing() }
-            return slots[target].setBoolean(GesCollectionOperators.contains(slots[x].registerValue, slots[y]))
-        }
+        if registers[y].isRegisterData, registers[y].isNothing { return registers[target].setNothing() }
+        return registers[target].setBoolean(GesCollectionOperators.contains(registers[x].registerValue, registers[y]))
     }
 }

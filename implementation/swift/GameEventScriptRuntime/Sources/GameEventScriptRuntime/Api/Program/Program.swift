@@ -1,8 +1,10 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-/// An immutable, portable `.gesb` program. Only validated readers and compilers create programs.
-public struct GameEventScriptProgram: Sendable {
+/// An immutable, shared reference to a portable `.gesb` program.
+/// Only validated readers and compilers create programs. Hosts share the same instance;
+/// arrays returned to callers retain copy-on-write isolation from the program.
+public final class GameEventScriptProgram: Sendable {
     /// Portable binary format version; independent of the application program version.
     public let formatVersion: UInt16
     /// Declared module identifier.
@@ -31,6 +33,38 @@ public struct GameEventScriptProgram: Sendable {
     public let buildMetadata: GameEventScriptBuildMetadata?
     /// Preserved opaque sections retained by the selected reader policy.
     public let opaqueSections: [GameEventScriptOpaqueSection]
+
+    init(
+        formatVersion: UInt16,
+        moduleName: String,
+        programVersion: UInt64,
+        requiredRegisterCount: UInt16,
+        requiredCallStackDepth: UInt16,
+        stringConstants: [String],
+        uint16IndexLists: [[UInt16]],
+        bindings: [GameEventScriptBinding],
+        code: [GameEventScriptBytecodeInstruction],
+        debugSymbols: [GameEventScriptDebugSymbol]?,
+        sourceMap: GameEventScriptSourceMap?,
+        sourceArchive: [GameEventScriptSourceArchiveEntry]?,
+        buildMetadata: GameEventScriptBuildMetadata?,
+        opaqueSections: [GameEventScriptOpaqueSection]
+    ) {
+        self.formatVersion = formatVersion
+        self.moduleName = moduleName
+        self.programVersion = programVersion
+        self.requiredRegisterCount = requiredRegisterCount
+        self.requiredCallStackDepth = requiredCallStackDepth
+        self.stringConstants = stringConstants
+        self.uint16IndexLists = uint16IndexLists
+        self.bindings = bindings
+        self.code = code
+        self.debugSymbols = debugSymbols
+        self.sourceMap = sourceMap
+        self.sourceArchive = sourceArchive
+        self.buildMetadata = buildMetadata
+        self.opaqueSections = opaqueSections
+    }
 }
 
 /// A logical instruction; its encoding never depends on native memory layout.

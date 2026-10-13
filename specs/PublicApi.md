@@ -963,6 +963,9 @@ initializer remains available. `GameEventScriptBuilder.create()` creates a
 compiler builder. `load`, `start`, `isReady`, `subscribe`, `receive`, `executeFrame`,
 and `runToCompletion` retain the host contracts above. The mutable VM is host-private.
 
+`GameEventScriptProgram` is a `final`, `Sendable` reference type. Passing it to
+multiple hosts shares one immutable instance rather than copying the Program
+structure. Host-specific links and execution state remain outside that instance.
 Program segments use `let` properties and native Array values with copy-on-write
 storage; callers cannot mutate a Program through a returned array. Int64,
 UInt64, UInt16, and Double retain their specified transport widths. Instructions

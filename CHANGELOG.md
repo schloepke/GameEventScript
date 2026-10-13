@@ -10,6 +10,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+### Changed
+
+- Swift `GameEventScriptProgram` is now an immutable `final class`, so hosts and
+  callers share a single Program instance. Program contents, binary encoding and
+  copy-on-write isolation of returned arrays are unchanged.
+
 ## [0.4.0] — 2026-10-11
 
 ### Added

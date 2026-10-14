@@ -52,11 +52,9 @@ public final class GesProgramBuilder {
     var options = GesCompileOptions()
     var catalog: (any GesExternalTypeCatalog)?
 
-    /// Creates an empty source builder with default compile options.
+    /// Creates an empty source builder with default compile options. `GameEventScriptProgram.makeBuilder()` is
+    /// equivalent.
     public init() {}
-
-    /// Creates an empty builder matching the portable compiler workflow.
-    public static func create() -> GesProgramBuilder { .init() }
 
     /// Adds source text in input order, strips an initial BOM and uses UnknownSource when no name is supplied. Returns
     /// this builder; performs no file I/O.
@@ -96,4 +94,10 @@ public final class GesProgramBuilder {
         let modules = try sources.map { try GesParser(source: $0).parse() }
         return try GesCompiler(modules: modules, sources: sources, catalog: catalog, options: configuration).compile()
     }
+}
+
+extension GameEventScriptProgram {
+    /// Creates an empty source builder with default compile options; equivalent to `GesProgramBuilder()`. Available
+    /// when the Compiler module is imported.
+    public static func makeBuilder() -> GesProgramBuilder { .init() }
 }

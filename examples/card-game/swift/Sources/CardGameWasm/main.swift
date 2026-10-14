@@ -107,7 +107,7 @@ private func compileSource(_ count: Int32, dump: Bool, nameLength: Int = 0) -> I
     let sourceName = nameLength == 0 ? "rules.ges" : String(decoding: UnsafeBufferPointer(start: input, count: nameLength), as: UTF8.self)
     let source = String(decoding: UnsafeBufferPointer(start: input.advanced(by: nameLength), count: Int(count) - nameLength), as: UTF8.self)
     do {
-        let program = try GesProgramBuilder.create().withDebugInfo(dump ? .all : [.symbols, .sourceMap]).addScript(source, sourceName: sourceName).compile()
+        let program = try GesProgramBuilder().withDebugInfo(dump ? .all : [.symbols, .sourceMap]).addScript(source, sourceName: sourceName).compile()
         if dump {
             let text = GameEventScriptProgramDumper.dump(program)
             let highlighted = Highlighting.assemblerHighlighter.highlight(text)

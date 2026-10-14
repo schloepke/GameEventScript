@@ -18,7 +18,10 @@ final class RunSession {
         self.options = options
         self.io = io
         observer = RunObserver(io: io, options: options)
-        host = try GameEventScriptHost(seed: options.seed, limits: options.limits, observer: observer, profiler: profiler)
+        let builder = GameEventScriptHost.makeBuilder().withRuntimeLimits(options.limits).withRuntimeObserver(observer)
+        if let seed = options.seed { builder.withRandomSeed(seed) }
+        if let profiler { builder.withProfiler(profiler) }
+        host = try builder.build()
         inventory = RunInventory(host: host, io: io, workspace: self.workspace, nextID: nextID)
         try observer.subscribe(inventory)
     }

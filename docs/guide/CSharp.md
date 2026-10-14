@@ -46,7 +46,7 @@ using GameEventScript.Api;
 using GameEventScript.CSharpBridge;
 using GameEventScript.Runtime.Values;
 
-var program = GesProgramBuilder.Create()
+var program = new GesProgramBuilder()
     .AddScript("""
         module tutorial.damage
         function damage(base, bonus) be base + bonus

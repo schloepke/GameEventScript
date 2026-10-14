@@ -34,7 +34,7 @@ public sealed class CollectionPipelineAllocationTests
 
     private static (long Bytes, double Milliseconds) Measure(string statements, int size)
     {
-        var program = GesProgramBuilder.Create().AddScript($"module allocation\non Start(items) {{\n{statements}\n}}", "cartesian.ges")
+        var program = new GesProgramBuilder().AddScript($"module allocation\non Start(items) {{\n{statements}\n}}", "cartesian.ges")
             .Compile(new GesCompileOptions { DebugInfo = GesDebugInfoOptions.None });
         var host = GameEventScriptHost.CreateBuilder().WithRuntimeLimits(new GesRuntimeLimits { MaxGeneratedCollectionItems = 100_000 }).Build();
         host.Load(program);

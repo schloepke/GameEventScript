@@ -257,8 +257,10 @@ python3 scripts/port-performance-reference.py compare --port swift --runs 5 --re
       structural steps below: Program Reader/Writer/Validator/Dumper, Message
       JSON, and the Swift-only `GameEventScriptBinding`, `…BuildMetadata` and
       `…SourceMap` (segment model). Bridge types follow in phase 2.
-- [ ] Builders: direct creation, `CreateBuilder()`/`makeBuilder()` conveniences,
-      C# 14 for the Compiler project only, internal Host initializer in Swift.
+- [x] Builders: direct creation, `CreateBuilder()`/`makeBuilder()` conveniences,
+      C# 14 for the Compiler project only, internal Host initializer in Swift,
+      Swift `make…` factory methods. The C# convenience lives in
+      `GesProgramBuilderEntry`; API gates ignore its compiler-generated marker types.
 - [ ] Segment Program model in Swift; Reader/Writer/Validator/Dumper as Program
       members in both ports.
 - [ ] Move `GesDebugInfoOptions` to the Swift Runtime.

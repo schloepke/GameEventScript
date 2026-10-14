@@ -56,7 +56,7 @@ public struct GesMessageSignature: Hashable, CustomStringConvertible, Sendable {
 
     /// Formats the normalized name and labels without constructing a signature.
     /// Label order and repeated positional labels are preserved.
-    public static func createSignatureId(name: String?, parameterNames: [String?] = []) throws -> String {
+    public static func makeSignatureId(name: String?, parameterNames: [String?] = []) throws -> String {
         let normalizedName = try normalizeMessageName(name)
         let normalizedLabels = try parameterNames.map(normalizeParameterName)
         return normalizedName + "(" + normalizedLabels.joined(separator: ",") + ")"
@@ -66,14 +66,14 @@ public struct GesMessageSignature: Hashable, CustomStringConvertible, Sendable {
     public func matches(_ message: GameEventScriptMessage) -> Bool { GesText.scalarEqual(signatureId, message.signatureId) }
 
     /// Binds ordered values to this signature, or returns nil for an empty name or wrong arity.
-    public func createMessage(_ arguments: [GesValue]) -> GameEventScriptMessage? {
+    public func makeMessage(_ arguments: [GesValue]) -> GameEventScriptMessage? {
         guard !name.isEmpty, arguments.count == parameters.count else { return nil }
         return GameEventScriptMessage(normalizedName: name, arguments: GesMessageArguments(normalizedNames: parameters, values: arguments), signatureId: signatureId, normalizedTags: [])
     }
 
     /// Binds ordered values to this signature, throwing when a concrete message cannot be created.
     public func withArguments(_ arguments: [GesValue]) throws -> GameEventScriptMessage {
-        guard let message = createMessage(arguments) else { throw GesMessageError.argumentCountMismatch }
+        guard let message = makeMessage(arguments) else { throw GesMessageError.argumentCountMismatch }
         return message
     }
 

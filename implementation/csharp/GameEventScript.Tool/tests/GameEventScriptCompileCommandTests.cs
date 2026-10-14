@@ -39,7 +39,7 @@ public sealed class GameEventScriptCompileCommandTests
         var result = Run("compile", "source file.ges");
         AssertSuccess(result);
         var bytes = File.ReadAllBytes(Path.Combine(_directory, "source file.gesb"));
-        var expected = GesProgramBuilder.Create().AddScript(Source, "source file.ges").Compile();
+        var expected = new GesProgramBuilder().AddScript(Source, "source file.ges").Compile();
         CollectionAssert.AreEqual(GameEventScriptProgramWriter.ToArray(expected), bytes);
         var program = GameEventScriptProgramReader.Read(bytes);
         Assert.IsNotNull(program.DebugSymbols);
@@ -75,7 +75,7 @@ public sealed class GameEventScriptCompileCommandTests
         AssertSuccess(Run("compile", option, "nested output/program.gesb", "--no-debug", "source.ges"));
         Assert.IsFalse(File.Exists(Path.Combine(_directory, "source.gesb")));
         var bytes = File.ReadAllBytes(Path.Combine(_directory, "nested output", "program.gesb"));
-        var expected = GesProgramBuilder.Create().AddScript(Source, "source.ges").WithDebugInfo(GesDebugInfoOptions.None).Compile();
+        var expected = new GesProgramBuilder().AddScript(Source, "source.ges").WithDebugInfo(GesDebugInfoOptions.None).Compile();
         CollectionAssert.AreEqual(GameEventScriptProgramWriter.ToArray(expected), bytes);
         var program = GameEventScriptProgramReader.Read(bytes);
         Assert.IsNull(program.DebugSymbols);
@@ -97,7 +97,7 @@ public sealed class GameEventScriptCompileCommandTests
         AssertSuccess(Run("compile", "source.ges"));
         var updated = File.ReadAllBytes(outputPath);
         Assert.IsFalse(original.SequenceEqual(updated));
-        CollectionAssert.AreEqual(GameEventScriptProgramWriter.ToArray(GesProgramBuilder.Create().AddScript(changed, "source.ges").Compile()), updated);
+        CollectionAssert.AreEqual(GameEventScriptProgramWriter.ToArray(new GesProgramBuilder().AddScript(changed, "source.ges").Compile()), updated);
         Assert.IsEmpty(Directory.GetFiles(_directory, ".ges-*.tmp"));
     }
 
@@ -220,7 +220,7 @@ public sealed class GameEventScriptCompileCommandTests
         File.WriteAllText(path, source);
         var result = Run("compile", "source.ges", "--no-debug", option);
         AssertSuccess(result);
-        var expected = GesProgramBuilder.Create().AddScript(source, "source.ges").WithDebugInfo(GesDebugInfoOptions.None).Compile();
+        var expected = new GesProgramBuilder().AddScript(source, "source.ges").WithDebugInfo(GesDebugInfoOptions.None).Compile();
         var bytes = File.ReadAllBytes(Path.Combine(_directory, "source.gesb"));
         CollectionAssert.AreEqual(GameEventScriptProgramWriter.ToArray(expected), bytes);
         if (quiet) Assert.AreEqual(string.Empty, result.StandardOutput);
@@ -257,7 +257,7 @@ public sealed class GameEventScriptCompileCommandTests
         var result = Run("compile", "handlers.ges", "-o", "combined.gesb", "definitions.ges");
         AssertSuccess(result);
         var bytes = File.ReadAllBytes(Path.Combine(_directory, "combined.gesb"));
-        var expected = GesProgramBuilder.Create().AddScript(handlers, "handlers.ges").AddScript(definitions, "definitions.ges").Compile();
+        var expected = new GesProgramBuilder().AddScript(handlers, "handlers.ges").AddScript(definitions, "definitions.ges").Compile();
         CollectionAssert.AreEqual(GameEventScriptProgramWriter.ToArray(expected), bytes);
         var program = GameEventScriptProgramReader.Read(bytes);
         CollectionAssert.AreEqual(new[] { "handlers.ges", "definitions.ges" }, program.SourceArchive!.Sources.Select(source => source.SourceName).ToArray());

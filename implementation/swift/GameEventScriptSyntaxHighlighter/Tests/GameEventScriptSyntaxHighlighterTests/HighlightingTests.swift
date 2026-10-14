@@ -44,7 +44,7 @@ final class HighlightingTests: XCTestCase {
             }
             let lines = try NSRegularExpression(pattern: "[^\\r\\n]*(?:\\r\\n|\\r|\\n|$)").matches(in: source, range: NSRange(location: 0, length: text.length))
             var cursor = 0
-            var state = highlighter.createState()
+            var state = highlighter.makeState()
             for line in lines {
                 if line.range.length == 0 && cursor == text.length { break }
                 let incremental = try highlighter.highlightLine(text.substring(with: line.range), state: state)
@@ -69,7 +69,7 @@ final class HighlightingTests: XCTestCase {
         let inside = try GesSyntaxHighlighter().highlightLine("emit Done()", state: open.nextState)
         XCTAssertTrue(inside.spans.allSatisfy { $0.kind == .string })
         let closed = try highlighter.highlightLine("'closed'\n")
-        XCTAssertEqual(highlighter.createState(), closed.nextState)
+        XCTAssertEqual(highlighter.makeState(), closed.nextState)
         XCTAssertNotEqual(open.nextState, closed.nextState)
         XCTAssertEqual(try highlighter.highlightLine("emit Done()", state: closed.nextState).spans.first?.kind, .keyword)
     }
@@ -81,7 +81,7 @@ final class HighlightingTests: XCTestCase {
         XCTAssertTrue(highlighter.highlight("12345").spans.isEmpty)
         XCTAssertTrue(highlighter.highlight("").isComplete)
         XCTAssertThrowsError(try highlighter.highlightLine("x\ny"))
-        XCTAssertThrowsError(try highlighter.highlightLine("x", state: GesSyntaxHighlighter(language: .gesa).createState()))
+        XCTAssertThrowsError(try highlighter.highlightLine("x", state: GesSyntaxHighlighter(language: .gesa).makeState()))
         XCTAssertThrowsError(try GesSyntaxHighlighter(maxInputLength: 0))
         let spans = highlighter.highlight("1234").spans
         XCTAssertThrowsError(try GesAnsiRenderer.render("1", spans: spans))

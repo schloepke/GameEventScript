@@ -16,7 +16,7 @@ public sealed class GameEventScriptDiagnosticContractTests
         Assert.AreEqual(GesDiagnosticPhase.Decode, format.Diagnostic.Phase);
         Assert.AreEqual("decode.invalidHeaderSize", format.Diagnostic.Code);
 
-        var program = GesProgramBuilder.Create()
+        var program = new GesProgramBuilder()
             .AddScript("function leaf(value) be value + 1\n\non Start(value) {\n  let result be leaf(value: value)\n}")
             .Compile();
         var host = GameEventScriptHost.CreateBuilder()

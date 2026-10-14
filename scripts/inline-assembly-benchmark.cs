@@ -20,7 +20,7 @@ foreach (var operation in new[] { "count", "any", "all", "first" })
     foreach (var variant in new[] { "opcode", "loop" })
     {
         var source = File.ReadAllText(Path.Combine(sourceRoot, operation + "-" + variant + ".ges"));
-        var program = GesProgramBuilder.Create().WithDebugInfo(GesDebugInfoOptions.None)
+        var program = new GesProgramBuilder().WithDebugInfo(GesDebugInfoOptions.None)
             .AddScript(driver, "driver.ges").AddScript(source, operation + "-" + variant + ".ges").Compile();
         var host = GameEventScriptHost.CreateBuilder().WithRandomSeed(1)
             .WithRuntimeLimits(new GesRuntimeLimits { MaxExecutionSteps = 0, MaxLoopIterations = 0 }).Build();

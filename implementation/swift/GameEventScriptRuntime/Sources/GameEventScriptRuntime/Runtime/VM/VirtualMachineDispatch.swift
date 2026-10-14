@@ -112,7 +112,7 @@ extension GesVirtualMachine {
                     let key = value(x)
                     let value = self.value(y)
                     if let integer = key.integerValue { value.index(integer, sink: output(d)) } else if let text = key.textValue { try value.member(text, sink: output(d)) } else { setNothing(d) }
-                case .bindHandler: if let message = value(x).signatureValue?.createMessage(values(instruction.word2)) { setMessage(d, message) } else { setNothing(d) }
+                case .bindHandler: if let message = value(x).signatureValue?.makeMessage(values(instruction.word2)) { setMessage(d, message) } else { setNothing(d) }
                 case .loadNothing: setNothing(d)
                 case .loadTrue: setBoolean(d, true)
                 case .loadFalse: setBoolean(d, false)
@@ -128,7 +128,7 @@ extension GesVirtualMachine {
                         break
                     }
                     let signature = try GesMessageSignature(name: text(shape[0]), parameters: shape.dropFirst().map(text))
-                    if instruction.opcode == .loadHandler { setHandler(d, signature) } else if let message = signature.createMessage(values(instruction.word2)) { setMessage(d, message) } else { setNothing(d) }
+                    if instruction.opcode == .loadHandler { setHandler(d, signature) } else if let message = signature.makeMessage(values(instruction.word2)) { setMessage(d, message) } else { setNothing(d) }
                 case .stageRegister: stageRegister(x)
                 case .stageNothing: stageNothing()
                 case .stageTrue: stageBoolean(true)

@@ -115,7 +115,7 @@ public sealed class GameEventScriptCallbackFailureTests
     {
         var diagnostics = new List<GesDiagnostic>();
         var host = GameEventScriptHost.CreateBuilder().WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(runtimeError: diagnostics.Add)).Build().StartForTest();
-        host.Load(GesProgramBuilder.Create().AddScript("module callbacks\non Start {}").Compile());
+        host.Load(new GesProgramBuilder().AddScript("module callbacks\non Start {}").Compile());
         host.RunToCompletion();
         // Force the internal Begin guard before the VM has its own handler context.
         host.VirtualMachine!.State = GesVirtualMachine.StateValue.Processing;
@@ -180,7 +180,7 @@ public sealed class GameEventScriptCallbackFailureTests
         out List<GesDiagnostic> diagnostics)
     {
         var catalog = new GesDeclaredExternalTypeCatalog([definition]);
-        var bytecode = GesProgramBuilder.Create()
+        var bytecode = new GesProgramBuilder()
             .WithExternalTypeCatalog(catalog)
             .AddScript(script)
             .Compile();

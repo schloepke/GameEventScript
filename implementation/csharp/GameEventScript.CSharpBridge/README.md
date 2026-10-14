@@ -28,7 +28,7 @@ using GameEventScript.CSharpBridge;
 using GameEventScript.Runtime;
 
 var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(BotState));
-var program = GesProgramBuilder.Create()
+var program = new GesProgramBuilder()
     .WithExternalTypeCatalog(registry)
     .AddScript("""
         module tutorial.bindings

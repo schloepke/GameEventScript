@@ -235,7 +235,7 @@ names; it performs no file I/O:
 import GameEventScriptCompiler
 import GameEventScriptRuntime
 
-let program = try GesProgramBuilder.create()
+let program = try GesProgramBuilder()
     .addScript("""
         module example
         function double(_ value as :Number) be value + value
@@ -281,7 +281,7 @@ final class Output: GesNativeMessageHandler {
 
 func execute(_ bytes: [UInt8]) throws -> (start: GesStartResult, execution: GesExecutionResult?) {
     let program = try GameEventScriptProgramReader.read(bytes)
-    let host = try GameEventScriptHost.createBuilder().withRandomSeed(123).build()
+    let host = try GameEventScriptHost.makeBuilder().withRandomSeed(123).build()
     let output = try GesMessageSignature(name: "Done", parameters: ["value"])
     _ = try host.subscribe(output, handler: Output())
     let instance = try host.load(program)
@@ -299,7 +299,7 @@ func execute(_ bytes: [UInt8]) throws -> (start: GesStartResult, execution: GesE
 `executeFrame(opcodeBudget:)` allows bounded stepping and resumption. The host
 retains subscriptions and loaded Programs until explicitly detached; discarding
 a handle does not unsubscribe it. Enqueue-time snapshots and dispatch ordering
-match the shared Host contract. Configure through `createBuilder()`, then build, load all Programs and call
+match the shared Host contract. Configure through `GameEventScriptHost.makeBuilder()`, then build, load all Programs and call
 `start()`. Start runs only the initial group; its emitted messages wait for normal
 pumping. A later Load with initialization has a pending instance `startResult` until its queued init
 finishes. A failed late init removes that instance, its outputs and captured

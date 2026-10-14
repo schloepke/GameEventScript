@@ -51,9 +51,9 @@ symbol {"access":"public","declaration":"enum GesHighlightingError","kind":"swif
 symbol {"access":"public","declaration":"enum GesSyntaxKind","kind":"swift.enum","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind"}
 symbol {"access":"public","declaration":"enum GesSyntaxLanguage","kind":"swift.enum","path":"GameEventScriptSyntaxHighlighter.GesSyntaxLanguage"}
 symbol {"access":"public","declaration":"final class GesSyntaxHighlighter","kind":"swift.class","path":"GameEventScriptSyntaxHighlighter.GesSyntaxHighlighter"}
-symbol {"access":"public","declaration":"func createState() -> GesHighlightState","kind":"swift.method","path":"GameEventScriptSyntaxHighlighter.GesSyntaxHighlighter.createState()"}
 symbol {"access":"public","declaration":"func highlight(_ text: String) -> GesHighlightResult","kind":"swift.method","path":"GameEventScriptSyntaxHighlighter.GesSyntaxHighlighter.highlight(_:)"}
 symbol {"access":"public","declaration":"func highlightLine(_ text: String, state: GesHighlightState? = nil) throws -> GesHighlightResult","kind":"swift.method","path":"GameEventScriptSyntaxHighlighter.GesSyntaxHighlighter.highlightLine(_:state:)"}
+symbol {"access":"public","declaration":"func makeState() -> GesHighlightState","kind":"swift.method","path":"GameEventScriptSyntaxHighlighter.GesSyntaxHighlighter.makeState()"}
 symbol {"access":"public","declaration":"init(language: GesSyntaxLanguage = .ges, maxInputLength: Int = 262_144) throws","kind":"swift.init","path":"GameEventScriptSyntaxHighlighter.GesSyntaxHighlighter.init(language:maxInputLength:)"}
 symbol {"access":"public","declaration":"init?(rawValue: String)","kind":"swift.init","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.init(rawValue:)"}
 symbol {"access":"public","declaration":"init?(rawValue: String)","kind":"swift.init","path":"GameEventScriptSyntaxHighlighter.GesSyntaxLanguage.init(rawValue:)"}

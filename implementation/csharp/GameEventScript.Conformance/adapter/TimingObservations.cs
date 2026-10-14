@@ -63,7 +63,7 @@ internal static class TimingObservations
         var limits = RuntimeObservations.CreateLimits(test.GetProperty("runtime").GetProperty("limits"));
         GesProgramBuilder Builder()
         {
-            var builder = GesProgramBuilder.Create().WithExternalTypeCatalog(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Catalog);
+            var builder = new GesProgramBuilder().WithExternalTypeCatalog(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Catalog);
             foreach (var source in sources) builder.AddScript(source.Text, source.Name);
             return builder;
         }

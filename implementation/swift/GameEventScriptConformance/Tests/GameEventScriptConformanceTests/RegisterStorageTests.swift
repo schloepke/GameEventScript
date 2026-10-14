@@ -98,7 +98,7 @@ final class RegisterStorageTests: XCTestCase {
         let linked = try GesLinkedProgram(program, extensions: nil, types: nil)
         let entry = try XCTUnwrap(program.bindings.first { program.stringConstants[Int($0.name)] == "Start" }).entryAddress
         for budget in [1, 10000] {
-            let host = try GameEventScriptHost.createBuilder().build()
+            let host = try GameEventScriptHost.makeBuilder().build()
             let context = GesContext(host: host, random: .init(), limits: .init(), extensions: nil, observer: nil)
             let state = GesVirtualMachine(maxRegisters: 512, maxCallDepth: 64)
             state.prepareCapacity(Int(program.requiredRegisterCount))

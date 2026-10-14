@@ -225,9 +225,16 @@ these limits.
 non-empty diagnostic list. A port may return a result union instead. Diagnostics
 remain the portable failure value.
 
-The C# compiler entry point is
-`GesProgramBuilder.Create().AddScript(text, sourceName).Compile(options)`.
-Host construction independently uses `GameEventScriptHost.CreateBuilder()`.
+The compiler entry point is a directly created builder:
+`new GesProgramBuilder().AddScript(text, sourceName).Compile(options)` in C#
+and `GesProgramBuilder().addScript(text, sourceName:).compile(options:)` in Swift.
+The target type offers the same builder as a convenience:
+`GameEventScriptProgram.CreateBuilder()` in C# (a C# 14 static extension member;
+earlier language versions such as Unity use the constructor) and
+`GameEventScriptProgram.makeBuilder()` in Swift. Host construction independently
+uses `new GesHostBuilder()` or `GameEventScriptHost.CreateBuilder()`
+(Swift: `GesHostBuilder()` or `GameEventScriptHost.makeBuilder()`); hosts have
+no public constructor or initializer.
 
 ## Program and bytecode data API
 
@@ -893,7 +900,7 @@ contracts remain in [Runner.md](Conformance/Runner.md).
 `GameEventScript.Compiler` package supplies `GesProgramBuilder`,
 `GesCompileOptions`, and `GesCompileException` in the
 `GameEventScript.Api` namespace. Applications compile through
-`GesProgramBuilder.Create()`, construct hosts through
+`new GesProgramBuilder()`, construct hosts through
 `GameEventScriptHost.CreateBuilder()`, and load precompiled Programs through
 the Reader.
 
@@ -956,11 +963,11 @@ Compiler internals and the compiler-only Runtime SPI are not public embedding AP
 Runtime exposes `GesValue`, `GesQuantityUnit`, immutable range descriptors, messages,
 signatures, Program data and codecs, `GameEventScriptHost`, Context, lifecycle
 handles, random generators, diagnostics, and the extension/external-type
-protocols. `GameEventScriptHost.createBuilder()` provides the same mutable
+protocols. `GameEventScriptHost.makeBuilder()` provides the same mutable
 configuration workflow as C#, including seed, entropy, sequence, limits, observer,
-sink and registries. Every `build()` creates an independent Host. The direct
-initializer remains available. `GesProgramBuilder.create()` creates a
-compiler builder. `load`, `start`, `isReady`, `subscribe`, `receive`, `executeFrame`,
+sink and registries. Every `build()` creates an independent Host; the Host
+initializer is internal. `GesProgramBuilder()` or
+`GameEventScriptProgram.makeBuilder()` creates a compiler builder. `load`, `start`, `isReady`, `subscribe`, `receive`, `executeFrame`,
 and `runToCompletion` retain the host contracts above. The mutable VM is host-private.
 
 `GameEventScriptProgram` is a `final`, `Sendable` reference type. Passing it to

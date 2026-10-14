@@ -13,7 +13,7 @@ public sealed class GameEventScriptProgramFormatTests
     [TestMethod]
     public void CompilerGeneratesAllDebugSectionsByDefault()
     {
-        var program = GesProgramBuilder.Create()
+        var program = new GesProgramBuilder()
             .AddScript("module defaultdebug\n\non Start { emit Done(value: 1) }", "default-debug.ges")
             .Compile();
 
@@ -44,14 +44,14 @@ public sealed class GameEventScriptProgramFormatTests
     public void CanonicalGoldenBinariesRemainByteStable()
     {
         var emptyHash = Sha256(GameEventScriptProgramWriter.ToArray(
-            GesProgramBuilder.Create().Compile(new GesCompileOptions
+            new GesProgramBuilder().Compile(new GesCompileOptions
             {
                 DebugInfo = GesDebugInfoOptions.None
             })));
         var runtimeHash = Sha256(GameEventScriptProgramWriter.ToArray(Compile(GesDebugInfoOptions.None)));
         var debugHash = Sha256(GameEventScriptProgramWriter.ToArray(Compile(GesDebugInfoOptions.All)));
 
-        var multipleSources = GesProgramBuilder.Create()
+        var multipleSources = new GesProgramBuilder()
             .AddScript("module first\nfunction plusOne(value) be value + 1", "first.ges")
             .AddScript("module first\non Start(value) { emit Done(value: plusOne(value: value)) }", "second.ges")
             .WithDebugInfo()
@@ -101,7 +101,7 @@ public sealed class GameEventScriptProgramFormatTests
     [TestMethod]
     public void DuplicateBindingIdsProduceStableError()
     {
-        var program = GesProgramBuilder.Create()
+        var program = new GesProgramBuilder()
             .AddScript("module duplicateids\non First { }\non Second { }")
             .Compile();
         var bytes = GameEventScriptProgramWriter.ToArray(program);
@@ -117,7 +117,7 @@ public sealed class GameEventScriptProgramFormatTests
     [TestMethod]
     public void ProgramValidatorEnforcesPortableCallableIdentity()
     {
-        var program = GesProgramBuilder.Create()
+        var program = new GesProgramBuilder()
             .AddScript("function resolve(unit, enemy) be unit + enemy\nfunction resolve(unit, collision) be unit * collision\non Start { emit Done(a: resolve(unit: 2, enemy: 3), b: resolve(unit: 2, collision: 3)) }")
             .Compile();
         var entries = program.Bindings.Entries.ToArray();
@@ -187,7 +187,7 @@ public sealed class GameEventScriptProgramFormatTests
     public void UnicodeSourcesUseUtf8ByteOffsetsAndRoundTrip()
     {
         const string source = "module unicode\n\non Start(name) {\n  let text be \"🙂 é \" + name\n  emit Done(text: text)\n}\n";
-        var program = GesProgramBuilder.Create().AddScript(source, "ä/logic.ges").WithDebugInfo().Compile();
+        var program = new GesProgramBuilder().AddScript(source, "ä/logic.ges").WithDebugInfo().Compile();
         var bytes = GameEventScriptProgramWriter.ToArray(program);
         var sourceMapSection = FindSection(bytes, (ushort)GesSectionType.SourceMap);
         Assert.AreEqual((uint)1, ReadU32(bytes, sourceMapSection + 12));
@@ -266,7 +266,7 @@ public sealed class GameEventScriptProgramFormatTests
     }
 
     private static GameEventScriptProgram Compile(GesDebugInfoOptions options)
-        => GesProgramBuilder.Create()
+        => new GesProgramBuilder()
             .AddScript("module binaryone\n\non Start(value) {\n  let result be value + 1\n  emit Done(value: result)\n}\n", "main.ges")
             .WithProgramVersion(42)
             .WithDebugInfo(options)

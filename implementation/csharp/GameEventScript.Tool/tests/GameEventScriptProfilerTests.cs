@@ -16,7 +16,7 @@ public sealed class GameEventScriptProfilerTests
     {
         long now = 0;
         var profiler = new RunProfiler(() => now += 10, 1_000_000_000);
-        var program = GesProgramBuilder.Create().AddScript("function f(_ x) be x + 1\non Tick { emit Result(f(10)) }", "sample.ges").Compile();
+        var program = new GesProgramBuilder().AddScript("function f(_ x) be x + 1\non Tick { emit Result(f(10)) }", "sample.ges").Compile();
         var host = GameEventScriptHost.CreateBuilder().WithProfiler(profiler).Build();
         host.Load(program);
         host.Load(program);
@@ -59,7 +59,7 @@ public sealed class GameEventScriptProfilerTests
     {
         long now = 0;
         var profiler = nativeClock ? new RunProfiler() : new RunProfiler(() => ++now, 1_000_000_000);
-        var program = GesProgramBuilder.Create().AddScript("on Tick { emit Result(10) }").Compile();
+        var program = new GesProgramBuilder().AddScript("on Tick { emit Result(10) }").Compile();
         var measurement = profiler.CreateProgramProfiler(program);
         for (var index = 0; index < 1000; index++) RecordInstruction();
         measurement.FinishSlice();
@@ -87,7 +87,7 @@ public sealed class GameEventScriptProfilerTests
     public void FaultAndTerminalChecksRemainSeparate()
     {
         long now = 0;
-        var program = GesProgramBuilder.Create().AddScript("on Tick { emit Result(10) }").Compile();
+        var program = new GesProgramBuilder().AddScript("on Tick { emit Result(10) }").Compile();
         var measurement = new RunProfiler.Measurement(program, () => now += 10);
         measurement.PhaseStarting(GesProfilePhase.StateCheck);
         measurement.FinishSlice();
@@ -133,7 +133,7 @@ public sealed class GameEventScriptProfilerTests
     [TestMethod]
     public void ReportWorksWithoutDebugData()
     {
-        var program = GesProgramBuilder.Create().WithDebugInfo(GesDebugInfoOptions.None).AddScript("on Tick { emit Result(10) }").Compile();
+        var program = new GesProgramBuilder().WithDebugInfo(GesDebugInfoOptions.None).AddScript("on Tick { emit Result(10) }").Compile();
         var profiler = new RunProfiler();
         var host = GameEventScriptHost.CreateBuilder().WithProfiler(profiler).Build();
         host.Load(program);

@@ -59,7 +59,7 @@ import GameEventScriptRuntime
 import GameEventScriptCompiler
 import GameEventScriptSwiftBridge
 
-let program = try GesProgramBuilder.create()
+let program = try GesProgramBuilder()
     .addScript("""
         module tutorial.damage
         function damage(base, bonus) be base + bonus
@@ -69,7 +69,7 @@ let program = try GesProgramBuilder.create()
         """, sourceName: "damage.ges")
     .compile()
 
-let host = try GameEventScriptHost.createBuilder()
+let host = try GameEventScriptHost.makeBuilder()
     .withRandomSeed(123)
     .build()
 

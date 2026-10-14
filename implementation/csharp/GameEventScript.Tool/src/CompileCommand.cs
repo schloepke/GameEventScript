@@ -113,7 +113,7 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
                     if (string.Equals(Path.GetFullPath(sourcePath), outputPath, outputPathComparison)) return UsageError("Source and output must be different files.");
             }
 
-            var builder = GesProgramBuilder.Create().WithDebugInfo(debugInfo);
+            var builder = new GesProgramBuilder().WithDebugInfo(debugInfo);
             foreach (var sourcePath in sourcePaths)
             {
                 activeSourcePath = sourcePath;

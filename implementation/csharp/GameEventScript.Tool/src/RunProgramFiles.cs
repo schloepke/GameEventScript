@@ -12,7 +12,7 @@ internal static class RunProgramFiles
 
     internal static GameEventScriptProgram Compile(IReadOnlyList<string> paths, ref string? activePath)
     {
-        var builder = GesProgramBuilder.Create();
+        var builder = new GesProgramBuilder();
         foreach (var path in paths)
         {
             activePath = path;

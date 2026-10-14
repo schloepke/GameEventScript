@@ -8,7 +8,7 @@ internal static class AdapterCompiler
 {
     internal static GameEventScriptProgram Compile(JsonElement test, ulong programVersion = 0, string? programId = null)
     {
-        var builder = GesProgramBuilder.Create();
+        var builder = new GesProgramBuilder();
         if (test.GetProperty("kind").GetString() is "scriptApi" or "loadError") builder.WithExternalTypeCatalog(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Catalog);
         foreach (var source in test.GetProperty("sources").EnumerateArray())
             if (programId is null || source.GetProperty("program").GetString() == programId) builder.AddScript(source.GetProperty("text").GetString()!, source.GetProperty("name").GetString()!);

@@ -216,7 +216,7 @@ public sealed class GameEventScriptConsoleLifecycleTests
     private string Binary(string name, string source)
     {
         var path = Path.Combine(_directory, name);
-        File.WriteAllBytes(path, GameEventScriptProgramWriter.ToArray(GesProgramBuilder.Create().AddScript(source).Compile()));
+        File.WriteAllBytes(path, GameEventScriptProgramWriter.ToArray(new GesProgramBuilder().AddScript(source).Compile()));
         return path;
     }
 

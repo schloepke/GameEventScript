@@ -231,7 +231,7 @@ public sealed class GameEventScriptProgramModelTests
     }
 
     private static GameEventScriptProgram Compile()
-        => GesProgramBuilder.Create()
+        => new GesProgramBuilder()
             .AddScript("module portablemodel\n\non Start(value) { emit Done(result: value + 1) }", "portable-model.ges")
             .WithProgramVersion(7)
             .WithDebugInfo(GesDebugInfoOptions.All)

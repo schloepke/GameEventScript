@@ -88,7 +88,7 @@ public sealed class GameEventScriptCheckRunCommandTests
         if (binary)
         {
             input = "game.gesb";
-            var program = GesProgramBuilder.Create().WithDebugInfo(debug ? GesDebugInfoOptions.All : GesDebugInfoOptions.None).AddScript(ProgramSource).Compile();
+            var program = new GesProgramBuilder().WithDebugInfo(debug ? GesDebugInfoOptions.All : GesDebugInfoOptions.None).AddScript(ProgramSource).Compile();
             File.WriteAllBytes(Path.Combine(_directory, input), GameEventScriptProgramWriter.ToArray(program));
         }
         var original = File.ReadAllBytes(Path.Combine(_directory, input));

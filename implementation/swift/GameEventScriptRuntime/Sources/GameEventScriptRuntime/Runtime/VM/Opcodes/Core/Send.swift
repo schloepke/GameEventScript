@@ -26,7 +26,7 @@ extension GesVirtualMachine {
             }
         }
         let message: GameEventScriptMessage?
-        if i.unitAndFlags & 0x80 != 0 { message = value(Int(i.word1)).messageValue } else { message = linked!.outbound[i.word1]?.createMessage(values(i.word2)) }
+        if i.unitAndFlags & 0x80 != 0 { message = value(Int(i.word1)).messageValue } else { message = linked!.outbound[i.word1]?.makeMessage(values(i.word2)) }
         guard var message else {
             setBoolean(Int(i.word0), false)
             return

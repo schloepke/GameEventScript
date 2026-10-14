@@ -21,10 +21,12 @@ public sealed class GesProgramBuilder
     private IGesExternalTypeCatalog _externalTypeCatalog = GameEventScriptEmptyExternalTypeCatalog.Instance;
 
     /// <summary>
-    /// Creates an instance of the GesProgramBuilder.
+    /// Creates an empty source builder with default compile options.
     /// </summary>
-    /// <returns>A new instance of the GesProgramBuilder.</returns>
-    public static GesProgramBuilder Create() => new();
+    /// <remarks>C# 14 consumers can also use <c>GameEventScriptProgram.CreateBuilder()</c>.</remarks>
+    public GesProgramBuilder()
+    {
+    }
 
     /// <summary>
     /// Selects the portable debug metadata generated for bytecode dumps and tooling.

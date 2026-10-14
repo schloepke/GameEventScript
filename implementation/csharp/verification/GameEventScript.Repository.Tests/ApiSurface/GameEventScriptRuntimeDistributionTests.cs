@@ -21,7 +21,7 @@ public sealed class GameEventScriptRuntimeDistributionTests
         Directory.CreateDirectory(directory);
         try
         {
-            var program = GesProgramBuilder.Create().WithDebugInfo(debugInfo).AddScript("on Start(value) { emit Done(result: (parse value) + 1) }").Compile();
+            var program = new GesProgramBuilder().WithDebugInfo(debugInfo).AddScript("on Start(value) { emit Done(result: (parse value) + 1) }").Compile();
             var path = Path.Combine(directory, "program.gesb");
             File.WriteAllBytes(path, GameEventScriptProgramWriter.ToArray(program));
             var configuration = typeof(GameEventScriptRuntimeDistributionTests).Assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()!.Configuration;

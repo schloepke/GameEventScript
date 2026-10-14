@@ -25,7 +25,7 @@ symbol {"access":"public","declaration":"init(diagnostics: [GesDiagnostic])","ki
 symbol {"access":"public","declaration":"init(rawValue: UInt8)","kind":"swift.init","path":"GameEventScriptCompiler.GesDebugInfoOptions.init(rawValue:)"}
 symbol {"access":"public","declaration":"let diagnostics: [GesDiagnostic]","kind":"swift.property","path":"GameEventScriptCompiler.GesCompileError.diagnostics"}
 symbol {"access":"public","declaration":"let rawValue: UInt8","kind":"swift.property","path":"GameEventScriptCompiler.GesDebugInfoOptions.rawValue"}
-symbol {"access":"public","declaration":"static func create() -> GesProgramBuilder","kind":"swift.type.method","path":"GameEventScriptCompiler.GesProgramBuilder.create()"}
+symbol {"access":"public","declaration":"static func makeBuilder() -> GesProgramBuilder","kind":"swift.type.method","path":"GameEventScriptCompiler.GameEventScriptProgram.makeBuilder()","swiftExtension":{"extendedModule":"GameEventScriptRuntime","typeKind":"swift.class"}}
 symbol {"access":"public","declaration":"static let all: GesDebugInfoOptions","kind":"swift.type.property","path":"GameEventScriptCompiler.GesDebugInfoOptions.all"}
 symbol {"access":"public","declaration":"static let none: GesDebugInfoOptions","kind":"swift.type.property","path":"GameEventScriptCompiler.GesDebugInfoOptions.none"}
 symbol {"access":"public","declaration":"static let sourceArchive: GesDebugInfoOptions","kind":"swift.type.property","path":"GameEventScriptCompiler.GesDebugInfoOptions.sourceArchive"}

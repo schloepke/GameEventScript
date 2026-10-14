@@ -39,7 +39,7 @@ foreach (var testCase in requests.RootElement.EnumerateArray())
     if (groups.Length == 0) rows.Add(string.Join('\t', identity, "", "", "", documentHash));
     foreach (var group in groups)
     {
-        var builder = GesProgramBuilder.Create().WithExternalTypeCatalog(GameEventScriptConformanceExternalTypes.Catalog);
+        var builder = new GesProgramBuilder().WithExternalTypeCatalog(GameEventScriptConformanceExternalTypes.Catalog);
         foreach (var source in group) builder.AddScript(source.GetProperty("text").GetString()!, source.GetProperty("name").GetString()!);
         var debug = GesDebugInfoOptions.None;
         foreach (var option in testCase.GetProperty("debugInfo").EnumerateArray())

@@ -13,13 +13,13 @@ final class StartupBootstrapTests: XCTestCase {
     }
 
     func testBuilderStartIsExplicitAndDoesNotDrainMessages() throws {
-        let builder = GameEventScriptHost.createBuilder().withRandomSeed(42)
+        let builder = GameEventScriptHost.makeBuilder().withRandomSeed(42)
         let host = try builder.build()
         let other = try builder.build()
         XCTAssertFalse(host === other)
         let counter = Counter()
         _ = try host.subscribe(.init(name: "Tick"), handler: counter)
-        let instance = try host.load(GesProgramBuilder.create().addScript("on initialization { emit Tick() }").compile())
+        let instance = try host.load(GesProgramBuilder().addScript("on initialization { emit Tick() }").compile())
         XCTAssertFalse(host.isReady)
         XCTAssertNil(instance.startResult)
         XCTAssertFalse(host.receive(try .init(name: "Tick")))

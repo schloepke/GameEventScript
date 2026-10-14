@@ -158,7 +158,7 @@ public sealed class GameEventScriptDumpCommandTests
 
     private byte[] CreateBinary(string name, bool debug)
     {
-        var program = GesProgramBuilder.Create().AddScript(Source, "unavailable-source.ges").WithDebugInfo(debug ? GesDebugInfoOptions.All : GesDebugInfoOptions.None).Compile();
+        var program = new GesProgramBuilder().AddScript(Source, "unavailable-source.ges").WithDebugInfo(debug ? GesDebugInfoOptions.All : GesDebugInfoOptions.None).Compile();
         var bytes = GameEventScriptProgramWriter.ToArray(program);
         File.WriteAllBytes(Path.Combine(_directory, name), bytes);
         return bytes;

@@ -48,6 +48,7 @@ PLATFORM_ONLY = {
     ("csharp", "Compiler", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
     ("csharp", "Bridge", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
     ("csharp", "Runtime", "GesReadOnlyArray"): "idiomatic mapping: Swift exposes [T]",
+    ("csharp", "Compiler", "GesProgramBuilderEntry"): "C# 14 static extension container; Swift extends GameEventScriptProgram directly",
     ("swift", "Runtime", "GesApiError"): "idiomatic mapping: C# throws BCL ArgumentException/InvalidOperationException",
     ("swift", "Runtime", "GesMessageError"): "idiomatic mapping: C# throws BCL argument exceptions for invalid message input",
     ("swift", "SyntaxHighlighter", "GesHighlightingError"): "idiomatic mapping: C# throws BCL argument exceptions for invalid input",

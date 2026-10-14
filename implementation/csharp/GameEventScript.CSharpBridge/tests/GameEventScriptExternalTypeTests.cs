@@ -30,7 +30,7 @@ public sealed class GameEventScriptExternalTypeTests
             }
             """;
 
-        var bytecode = GesProgramBuilder.Create()
+        var bytecode = new GesProgramBuilder()
             .WithExternalTypeCatalog(registry)
             .AddScript(script)
             .Compile();
@@ -78,7 +78,7 @@ public sealed class GameEventScriptExternalTypeTests
             }
             """;
 
-        var bytecode = GesProgramBuilder.Create()
+        var bytecode = new GesProgramBuilder()
             .WithExternalTypeCatalog(registry)
             .AddScript(script)
             .Compile();

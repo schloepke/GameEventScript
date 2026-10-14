@@ -85,7 +85,7 @@ final class RegisterArithmeticTests: XCTestCase {
 
     func testMessageAndHandlerWrapExistingImmutablePayloads() throws {
         let signature = try GesMessageSignature(name: "Done", parameters: ["value"])
-        let message = try XCTUnwrap(signature.createMessage([.integer(7)]))
+        let message = try XCTUnwrap(signature.makeMessage([.integer(7)]))
         var value = GesValue.message(message)
         XCTAssertTrue(value.messageValue!.storage === message.storage)
         let copy = value
@@ -99,7 +99,7 @@ final class RegisterArithmeticTests: XCTestCase {
     func testMessageArgumentsReuseBuffersAndPreserveSnapshots() throws {
         let signature = try GesMessageSignature(name: "Done", parameters: ["_", "value", "_"])
         var input: [GesValue] = [.integer(1), .text("kept"), .boolean(true)]
-        let message = try XCTUnwrap(signature.createMessage(input))
+        let message = try XCTUnwrap(signature.makeMessage(input))
         let arguments = message.arguments
         input.withUnsafeBufferPointer { original in
             arguments.values.withUnsafeBufferPointer { stored in XCTAssertEqual(original.baseAddress, stored.baseAddress) }
@@ -130,7 +130,7 @@ final class RegisterArithmeticTests: XCTestCase {
         XCTAssertEqual(message.arguments, rebuilt)
         XCTAssertEqual(message.signatureId, "Done(_,value,_)")
         XCTAssertEqual(Array(GesMessageArguments.empty), [])
-        XCTAssertNil(signature.createMessage([]))
+        XCTAssertNil(signature.makeMessage([]))
         XCTAssertThrowsError(try GesMessageArguments([.init(name: "value", value: .integer(1)), .init(name: "value", value: .integer(2))]))
     }
 
@@ -156,7 +156,7 @@ final class RegisterArithmeticTests: XCTestCase {
 
     func testTextIdentityCastCanOverwriteItsSource() throws {
         let state = GesVirtualMachine(maxRegisters: 32, maxCallDepth: 4)
-        let host = try GameEventScriptHost()
+        let host = try GameEventScriptHost.makeBuilder().build()
         let context = GesContext(host: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
         state.setText(0, "kept 🐉 e\u{301}")
         let snapshot = state.value(0)
@@ -288,7 +288,7 @@ final class RegisterArithmeticTests: XCTestCase {
         let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
         XCTAssertTrue(state.ensure(96))
         state.frameStart = 40
-        let host = try GameEventScriptHost()
+        let host = try GameEventScriptHost.makeBuilder().build()
         let context = GesContext(host: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
         for destination in [0, 1, 2] {
             state.setText(0, "prefix")

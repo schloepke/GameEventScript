@@ -391,7 +391,7 @@ public sealed class GameEventScriptRunEntryPointTests
 
     private byte[] Binary(string name, string source)
     {
-        var program = GesProgramBuilder.Create().AddScript(source).Compile();
+        var program = new GesProgramBuilder().AddScript(source).Compile();
         var bytes = GameEventScriptProgramWriter.ToArray(program);
         File.WriteAllBytes(Path.Combine(_directory, name), bytes);
         return bytes;

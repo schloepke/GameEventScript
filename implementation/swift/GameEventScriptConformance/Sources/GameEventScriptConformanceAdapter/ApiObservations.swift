@@ -70,7 +70,7 @@ enum ApiObservations {
                 result["handlerEquals"] = left == right
                 result["handlerHashEquals"] = left.hashValue == right.hashValue
             }
-            if input["createArguments"] != nil { result["createdMessageSignatureId"] = try signature.createMessage(input.values("createArguments").map { try Values.decode($0) })?.signatureId ?? "<null>" }
+            if input["createArguments"] != nil { result["createdMessageSignatureId"] = try signature.makeMessage(input.values("createArguments").map { try Values.decode($0) })?.signatureId ?? "<null>" }
             return ["status": "ok", "message": result]
         } catch let error as GesMessageFormatError { return failure(error.code) } catch let error as GesMessageError {
             switch error {

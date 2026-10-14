@@ -7,13 +7,13 @@ extension GesVirtualMachine {
         var message: GameEventScriptMessage?
         if valueMessage {
             let value = self.value(Int(i.word1))
-            message = value.messageValue ?? value.signatureValue?.createMessage([])
+            message = value.messageValue ?? value.signatureValue?.makeMessage([])
         } else {
             guard let signature = linked!.outbound[i.word0] else {
                 fail("runtime.invalidMessageBinding")
                 return
             }
-            message = signature.createMessage(values(i.word2))
+            message = signature.makeMessage(values(i.word2))
         }
         guard var message else { return }
         if [.emitMessageWithTags, .emitMessageValueWithTags, .publishMessageWithTags, .publishMessageValueWithTags].contains(i.opcode) {

@@ -10,7 +10,7 @@ final class ContextOwnershipTests: XCTestCase {
     private weak var borrowedHost: GameEventScriptHost?
 
     func testContextDoesNotRetainHost() throws {
-        var host: GameEventScriptHost? = try GameEventScriptHost()
+        var host: GameEventScriptHost? = try GameEventScriptHost.makeBuilder().build()
         borrowedHost = host
         let context = GesContext(host: host!, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
         host = nil

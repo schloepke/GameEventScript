@@ -18,7 +18,7 @@ public sealed class GameEventScriptProgramResourceBoundaryTests
     {
         var source = "module resources\nfunction add(_ value) be value + 1\n" +
                      (nested ? "function twice(_ value) be add(add(value))\non Start(value) { emit Done(value: twice(value)) }" : "on Start(value) { emit Done(value: add(value)) }");
-        var valid = GesProgramBuilder.Create().AddScript(source).Compile(new GesCompileOptions { DebugInfo = GesDebugInfoOptions.None });
+        var valid = new GesProgramBuilder().AddScript(source).Compile(new GesCompileOptions { DebugInfo = GesDebugInfoOptions.None });
         var registers = underdeclareDepth ? valid.RequiredRegisterCount : checked((ushort)(valid.RequiredRegisterCount - 1));
         var depth = underdeclareDepth ? (ushort)0 : valid.RequiredCallStackDepth;
         var bindings = valid.Bindings.Entries.ToArray();

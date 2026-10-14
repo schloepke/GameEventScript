@@ -14,7 +14,7 @@ internal static class Program
     {
         var highlights = new GesSyntaxHighlighter().Highlight("emit Done(42)");
         if (!highlights.IsComplete || !highlights.Spans.Any(span => span.Kind == GesSyntaxKind.Number)) return Fail("The packaged highlighter did not classify a number.");
-        var compiled = GesProgramBuilder.Create()
+        var compiled = new GesProgramBuilder()
             .AddScript("on Start(value) { emit Done(result: (parse value) + 1) }", "package-consumer.ges")
             .Compile();
         var encoded = GameEventScriptProgramWriter.ToArray(compiled);

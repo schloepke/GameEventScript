@@ -15,8 +15,8 @@ final class ProfilerTests: XCTestCase {
             now += 10
             return now
         })
-        let program = try GesProgramBuilder.create().addScript("function f(_ x) be x + 1\non Tick { emit Result(f(10)) }", sourceName: "sample.ges").compile()
-        let host = try GameEventScriptHost.createBuilder().withProfiler(profiler).build()
+        let program = try GesProgramBuilder().addScript("function f(_ x) be x + 1\non Tick { emit Result(f(10)) }", sourceName: "sample.ges").compile()
+        let host = try GameEventScriptHost.makeBuilder().withProfiler(profiler).build()
         try host.load(program)
         try host.load(program)
         _ = try host.start()
@@ -49,7 +49,7 @@ final class ProfilerTests: XCTestCase {
 
     func testFaultAndTerminalChecksRemainSeparate() throws {
         var now: UInt64 = 0
-        let program = try GesProgramBuilder.create().addScript("on Tick { emit Result(10) }").compile()
+        let program = try GesProgramBuilder().addScript("on Tick { emit Result(10) }").compile()
         let measurement = RunProfiler.Measurement(
             program,
             clock: {
@@ -72,9 +72,9 @@ final class ProfilerTests: XCTestCase {
     }
 
     func testReportWithoutDebugData() throws {
-        let program = try GesProgramBuilder.create().withDebugInfo(.none).addScript("on Tick { emit Result(10) }").compile()
+        let program = try GesProgramBuilder().withDebugInfo(.none).addScript("on Tick { emit Result(10) }").compile()
         let profiler = RunProfiler()
-        let host = try GameEventScriptHost.createBuilder().withProfiler(profiler).build()
+        let host = try GameEventScriptHost.makeBuilder().withProfiler(profiler).build()
         try host.load(program)
         _ = try host.start()
         host.receive(try .init(name: "Tick"))

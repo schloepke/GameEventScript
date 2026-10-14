@@ -12,7 +12,7 @@ internal static class NumberTextProbe
     internal static int Run(string input, string output)
     {
         using var requests = JsonDocument.Parse(File.ReadAllText(input));
-        var program = GesProgramBuilder.Create().AddScript(
+        var program = new GesProgramBuilder().AddScript(
             "on Probe(value, text) { emit Result(formatted: value as :Text, number: text as :Number, percentage: text as :Percentage) }").Compile();
         var host = GameEventScriptHost.CreateBuilder().Build();
         var capture = new Capture();

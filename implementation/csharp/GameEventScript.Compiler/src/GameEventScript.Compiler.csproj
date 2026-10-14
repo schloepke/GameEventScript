@@ -17,7 +17,7 @@
         <PackageIcon>icon.png</PackageIcon>
         <RepositoryUrl>https://github.com/schloepke/GameEventScript</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
-        <LangVersion>12</LangVersion>
+        <LangVersion>14</LangVersion>
         <Nullable>enable</Nullable>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <IncludeSymbols>true</IncludeSymbols>

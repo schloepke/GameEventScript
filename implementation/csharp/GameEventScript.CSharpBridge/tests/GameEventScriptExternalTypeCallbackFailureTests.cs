@@ -32,7 +32,7 @@ public sealed class GameEventScriptExternalTypeCallbackFailureTests
         var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(clrType);
         var valueExpression = readsField ? "sample.value" : "sample";
         var script = $"on Start {{ let sample be :{clrType.Name}(declared: {(declared ? "true" : "false")}); emit MustNotRun(value: {valueExpression}) }}\non Check {{ emit Done }}";
-        var program = GesProgramBuilder.Create().WithExternalTypeCatalog(registry).AddScript(script).Compile();
+        var program = new GesProgramBuilder().WithExternalTypeCatalog(registry).AddScript(script).Compile();
         var diagnostics = new List<GesDiagnostic>();
         var emitted = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
@@ -83,7 +83,7 @@ public sealed class GameEventScriptExternalTypeCallbackFailureTests
     public void ApplicationReflectionWrapperRemainsAnUnexpectedFailure()
     {
         var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(NestedReflectionConstructor));
-        var program = GesProgramBuilder.Create().WithExternalTypeCatalog(registry)
+        var program = new GesProgramBuilder().WithExternalTypeCatalog(registry)
             .AddScript("module callbacks\non Start { let sample be :NestedReflectionConstructor(); emit MustNotRun(value: sample) }").Compile();
         var host = GameEventScriptHost.CreateBuilder().WithExternalTypeRegistry(registry).Build().StartForTest();
         host.Load(program);

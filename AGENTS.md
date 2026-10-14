@@ -391,8 +391,9 @@ availability alone is insufficient for reliable native incremental builds.
 `python3 scripts/verify-swift-dependencies.py` checks imports against SwiftPM's
 target/source descriptions; Swift CI runs this gate.
 
-Swift Host and Compiler expose createBuilder()/create() factories matching the
-C# builder workflow. Swift collections use immutable value semantics and copy-on-write storage.
+Swift Host and Program expose makeBuilder() conveniences matching the C#
+CreateBuilder() workflow; builders are also created directly, and the Swift Host
+initializer is internal. Swift collections use immutable value semantics and copy-on-write storage.
 Text and map-key equality/order use Unicode scalars, not Swift String's
 canonical equivalence. Keep Int64 and Binary64 storage separate. Register storage
 follows the C# architecture: one numeric word, an optional

@@ -34,7 +34,7 @@ enum NumberTextProbe {
     static func run(input: String, output: String) throws {
         let requests = try JSONDecoder().decode([Request].self, from: Data(contentsOf: URL(fileURLWithPath: input)))
         let program = try GesProgramBuilder().addScript("on Probe(value, text) { emit Result(formatted: value as :Text, number: text as :Number, percentage: text as :Percentage) }").compile()
-        let host = try GameEventScriptHost(seed: 0)
+        let host = try GameEventScriptHost.makeBuilder().withRandomSeed(0).build()
         let capture = Capture()
         _ = try host.subscribe(.init(name: "Result", parameters: ["formatted", "number", "percentage"]), handler: capture)
         _ = try host.load(program)

@@ -23,7 +23,7 @@ public final class GesSyntaxHighlighter: Sendable {
     }
 
     /// Creates an empty, immutable line-boundary state that editors may retain.
-    public func createState() -> GesHighlightState { .init(language: language, frames: []) }
+    public func makeState() -> GesHighlightState { .init(language: language, frames: []) }
 
     /// Highlights a complete document, preserving CR, LF, CRLF and all UTF-16 offsets. Invalid code remains highlightable.
     public func highlight(_ text: String) -> GesHighlightResult { run(text, state: nil) }

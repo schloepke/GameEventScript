@@ -40,11 +40,8 @@ public final class GameEventScriptHost {
     private var pumping = false
     private var idleSinceMicroseconds: Int64?
 
-    /// Creates a loading, single-caller host with a private random stream. Load initial Programs and call `start()`
-    /// before receiving messages.
-    ///
-    /// - Throws: `GesApiError.invalidArgument` if the random-scope limit is outside 0...65535.
-    public init(
+    // Hosts are created only through `GesHostBuilder.build()`, which forwards its complete configuration here.
+    init(
         seed: Int64? = nil,
         sequence: [Double] = [],
         limits: GesRuntimeLimits = .init(),
@@ -66,8 +63,8 @@ public final class GameEventScriptHost {
         random = GesRandomGenerator(seed: seed ?? GesRandomGenerator.entropySeed(), sequence: sequence, maxScopeDepth: limits.maxRandomScopeDepth)
     }
 
-    /// Creates mutable configuration for independent hosts.
-    public static func createBuilder() -> GesHostBuilder { .init() }
+    /// Creates mutable configuration for independent hosts; equivalent to `GesHostBuilder()`.
+    public static func makeBuilder() -> GesHostBuilder { .init() }
 
     /// Whether the complete initial load group started successfully; later instance failures do not clear readiness.
     public private(set) var isReady = false

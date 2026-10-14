@@ -57,7 +57,7 @@ internal static class SourceNestingProbe
     {
         try
         {
-            GesProgramBuilder.Create().AddScript(source, "nesting.ges").Compile();
+            new GesProgramBuilder().AddScript(source, "nesting.ges").Compile();
         }
         catch (GesCompileException exception) when (reject)
         {

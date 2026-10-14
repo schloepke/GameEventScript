@@ -15,7 +15,7 @@ func title(_ value: Any) -> String {
 enum CompilerObservations {
     static func compile(_ test: Input, programID: String? = nil, version: UInt64 = 0) throws -> GameEventScriptProgram {
         if ForeignPrograms.inputs != nil { return try ForeignPrograms.read(test, group: programID) }
-        let builder = GesProgramBuilder.create()
+        let builder = GesProgramBuilder()
         if ["scriptApi", "loadError"].contains(test["kind"]?.stringValue ?? "") { builder.withExternalTypeCatalog(RuntimeFixtures.catalog) }
         for source in test.values("sources") where programID == nil || source["program"]?.stringValue == programID {
             builder.addScript(try source.text("text"), sourceName: try source.text("name"))

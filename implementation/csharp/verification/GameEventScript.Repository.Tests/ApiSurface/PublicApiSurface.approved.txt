@@ -692,7 +692,8 @@ sealed class GameEventScript.Api.GesProgramBuilder
   method GameEventScript.Api.GesProgramBuilder WithDebugInfo(GameEventScript.Api.GesDebugInfoOptions options)
   method GameEventScript.Api.GesProgramBuilder WithExternalTypeCatalog(GameEventScript.Api.IGesExternalTypeCatalog catalog)
   method GameEventScript.Api.GesProgramBuilder WithProgramVersion(System.UInt64 version)
-  method static GameEventScript.Api.GesProgramBuilder Create()
+static class GameEventScript.Api.GesProgramBuilderEntry
+  method static GameEventScript.Api.GesProgramBuilder CreateBuilder()
 enum GameEventScript.Api.GesProgramFormatErrorCode
   enum-field InvalidMagic = 1
   enum-field UnsupportedFormatVersion = 2

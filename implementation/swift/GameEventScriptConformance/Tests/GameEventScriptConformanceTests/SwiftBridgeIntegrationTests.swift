@@ -10,7 +10,7 @@ import XCTest
 final class SwiftBridgeIntegrationTests: XCTestCase {
     func testRunnerWakesForDelayedMessagesWithoutFurtherInput() throws {
         let program = try GesProgramBuilder().addScript("on Start { emit after 0.02s Done() }").compile()
-        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.createBuilder().build())
+        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.makeBuilder().build())
         defer { runner.close() }
         let done = expectation(description: "Delayed delivery without another Receive")
         _ = try runner.subscribe(.init(name: "Done")) { _, _ in done.fulfill() }
@@ -55,7 +55,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
         let compiled = try GesProgramBuilder().withExternalTypeCatalog(types).addScript(source).compile()
         let bytes = try GameEventScriptProgramWriter.bytes(compiled)
         let program = try GameEventScriptProgramReader.read(bytes)
-        let host = try GameEventScriptHost(seed: 1, extensions: extensions, externalTypes: types).startForTest()
+        let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).withRegistry(extensions).withExternalTypeRegistry(types).build().startForTest()
         var result: GameEventScriptMessage?
         _ = try host.subscribe(.init(name: "Done", parameters: ["name", "score"])) { message, _ in result = message }
         _ = try host.load(program)
@@ -86,7 +86,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
             let types = try GameEventScriptSwiftExternalTypeRegistry([type.binding])
             for (expression, unexpected) in [(":app.fail()", "runtime.extensionCallFailed"), (":Player()", "runtime.externalConstructorFailed")] {
                 let program = try GesProgramBuilder().withExternalTypeCatalog(types).addScript("on Start() { emit Done(\(expression)) }").compile()
-                let host = try GameEventScriptHost(seed: 1, extensions: extensions, externalTypes: types).startForTest()
+                let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).withRegistry(extensions).withExternalTypeRegistry(types).build().startForTest()
                 _ = try host.load(program)
                 host.receive(try .init(name: "Start"))
                 let result = try host.runToCompletion()
@@ -99,7 +99,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
 
     func testRunnerSchedulesInitializationAndDetachesProgram() throws {
         let program = try GesProgramBuilder().addScript("on initialization { emit Ready() }\non Start() { emit Done() }").compile()
-        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 1).startForTest())
+        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(1).build().startForTest())
         defer { runner.close() }
         let instance = try runner.load(program)
         while !runner.isIdle { _ = try runner.runToCompletion() }
@@ -117,8 +117,8 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
 
     func testImmutableProgramRemainsReusableAcrossRunners() throws {
         let program = try GesProgramBuilder().addScript("on initialization { emit Ready() }").compile()
-        let first = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 1).startForTest())
-        let second = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 2).startForTest())
+        let first = try GameEventScriptSwiftHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(1).build().startForTest())
+        let second = try GameEventScriptSwiftHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(2).build().startForTest())
         defer {
             first.close()
             second.close()

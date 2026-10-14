@@ -15,7 +15,7 @@ public sealed class GameEventScriptStartupBootstrapTests
         var host = GameEventScriptHost.CreateBuilder().Build();
         var delivered = 0;
         host.Subscribe("Tick", [], (_, _) => delivered++);
-        var instance = host.Load(GesProgramBuilder.Create().AddScript("on initialization { emit Tick() }").Compile());
+        var instance = host.Load(new GesProgramBuilder().AddScript("on initialization { emit Tick() }").Compile());
         Assert.IsFalse(host.IsReady);
         Assert.IsNull(instance.StartResult);
         Assert.IsFalse(host.Receive(GameEventScriptMessage.Create("Tick")));
@@ -41,7 +41,7 @@ public sealed class GameEventScriptStartupBootstrapTests
         using var runner = GameEventScriptCSharpHostRunner.Create(GameEventScriptHost.CreateBuilder().Build());
         var delivered = 0;
         runner.Subscribe("Tick", [], (_, _) => delivered++);
-        var instance = runner.Load(GesProgramBuilder.Create().AddScript("on initialization { emit Tick() }").Compile());
+        var instance = runner.Load(new GesProgramBuilder().AddScript("on initialization { emit Tick() }").Compile());
         Assert.IsFalse(runner.IsReady);
         Assert.IsNull(runner.GetStartResult(instance));
         Assert.IsFalse(runner.Receive(GameEventScriptMessage.Create("Tick")));

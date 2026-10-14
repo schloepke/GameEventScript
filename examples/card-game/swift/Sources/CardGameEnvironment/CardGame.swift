@@ -76,9 +76,9 @@ public final class CardGame {
         limits.maxExecutionSteps = 50_000
         limits.maxLoopIterations = 2048
         limits.maxGeneratedCollectionItems = 2048
-        host = try GameEventScriptHost(seed: seed, limits: limits, observer: bindings, extensions: bindings)
+        host = try GameEventScriptHost.makeBuilder().withRandomSeed(seed).withRuntimeLimits(limits).withRuntimeObserver(bindings).withRegistry(bindings).build()
         do {
-            let program = try GesProgramBuilder.create().withDebugInfo([.symbols, .sourceMap]).addScript(rules, sourceName: "rules.ges").compile()
+            let program = try GesProgramBuilder().withDebugInfo([.symbols, .sourceMap]).addScript(rules, sourceName: "rules.ges").compile()
             hasEndRound = program.bindings.contains { binding in
                 program.stringConstants[Int(binding.name)] == "EndRound" && binding.requiredTags.isEmpty
                     && (binding.kind == .messageNameHandler || (binding.kind == .messageHandler && binding.argumentNames.map { program.stringConstants[Int($0)] } == ["number", "players"]))

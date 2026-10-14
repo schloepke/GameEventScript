@@ -25,6 +25,16 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   the Swift protocol `GesExternalTypeCatalog`), Swift `GameEventScriptExtensionFault`
   becomes `GesExtensionFaultError` and Swift `GameEventScriptAPIError` becomes
   `GesApiError`. Behavior is unchanged; migrate by renaming references.
+- Builders are created directly or through their target type, following each
+  language's idiom. C#: `new GesProgramBuilder()` (the static `Create()` is
+  removed) or, with C# 14, `GameEventScriptProgram.CreateBuilder()`; hosts via
+  `new GesHostBuilder()` or `GameEventScriptHost.CreateBuilder()`. Swift:
+  `GesProgramBuilder()` or `GameEventScriptProgram.makeBuilder()` (`create()` is
+  removed); hosts via `GesHostBuilder()` or `GameEventScriptHost.makeBuilder()`
+  (formerly `createBuilder()`). The Swift `GameEventScriptHost` initializer is no
+  longer public; configure hosts through the builder. Swift factory methods use
+  `make`: `GesMessageSignature.makeMessage(_:)`, `makeSignatureId(name:parameterNames:)`
+  and `GesSyntaxHighlighter.makeState()`.
 
 ### Changed
 

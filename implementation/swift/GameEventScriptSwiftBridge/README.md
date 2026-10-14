@@ -94,7 +94,7 @@ remain useful for foreign types, generic types and custom throwing getters.
 import GameEventScriptRuntime
 import GameEventScriptSwiftBridge
 
-let host = try GameEventScriptHost.createBuilder().withRandomSeed(123).build()
+let host = try GameEventScriptHost.makeBuilder().withRandomSeed(123).build()
 let done = try GesMessageSignature(name: "Done", parameters: ["value"])
 let subscription = try host.subscribe(done) { message, context in
     let value = try Int.fromGesValue(message.arguments[0])
@@ -169,7 +169,7 @@ let extensions = try GameEventScriptSwiftExtensionRegistry([
         try call.setSwiftValue(number * 2)
     }
 ])
-let host = try GameEventScriptHost(seed: 123, extensions: extensions)
+let host = try GameEventScriptHost.makeBuilder().withRandomSeed(123).withRegistry(extensions).build()
 // A loaded script can call :app.double(21).
 ```
 
@@ -199,7 +199,7 @@ let player = try GameEventScriptSwiftType<Player>("Player", fields: [
     }
 ])
 let types = try GameEventScriptSwiftExternalTypeRegistry([player.binding])
-let host = try GameEventScriptHost(seed: 123, externalTypes: types)
+let host = try GameEventScriptHost.makeBuilder().withRandomSeed(123).withExternalTypeRegistry(types).build()
 
 let value = player.wrap(Player(name: "Ada", score: 42))
 let original = try player.unwrap(value)
@@ -227,7 +227,7 @@ descriptor with the same name.
 ## Optional synchronized runner
 
 ```swift
-let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.createBuilder().withRandomSeed(123).build())
+let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(123).build())
 let registration = try runner.subscribe(.init(name: "Done", parameters: ["value"])) { message, _ in
     print(message.arguments[0])
 }

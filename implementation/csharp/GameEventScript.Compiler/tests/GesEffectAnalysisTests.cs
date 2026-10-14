@@ -129,7 +129,7 @@ public sealed class GesEffectAnalysisTests
     }
 
     private static GameEventScriptProgram Compile(string source)
-        => GesProgramBuilder.Create().AddScript(source, "effects.ges").Compile(new GesCompileOptions { DebugInfo = GesDebugInfoOptions.None });
+        => new GesProgramBuilder().AddScript(source, "effects.ges").Compile(new GesCompileOptions { DebugInfo = GesDebugInfoOptions.None });
 
     private static GesBytecodeOpCode[] HandlerOpcodes(GameEventScriptProgram program)
     {

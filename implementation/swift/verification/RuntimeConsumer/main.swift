@@ -12,7 +12,7 @@ final class Receiver: GesNativeMessageHandler {
 
 let receiver = Receiver()
 let program = try GameEventScriptProgramReader.read(Array(Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1]))))
-let host = try GameEventScriptHost.createBuilder().withRandomSeed(1).build()
+let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).build()
 _ = try host.subscribeMessageName("Done", handler: receiver)
 _ = try host.load(program)
 let startup = try host.start()

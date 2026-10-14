@@ -118,7 +118,7 @@ internal static class RunConsole
                 }
                 var sourceName = $"<interactive:{lineNumber}>";
                 var source = "on initialization {\n" + line + "\n}\n";
-                var program = GesProgramBuilder.Create().AddScript(source, sourceName).Compile();
+                var program = new GesProgramBuilder().AddScript(source, sourceName).Compile();
                 var handlers = program.Bindings.Entries.Where(binding => binding.Kind is GesBinaryBindKind.MessageHandler or GesBinaryBindKind.MessageNameHandler).ToArray();
                 if (handlers.Length != 1 || program.StringConstants.Resolve(handlers[0].Name) != "initialization")
                 {

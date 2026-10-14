@@ -52,16 +52,15 @@ final class RuntimeScenario {
             seed = try GesRandomGenerator.seedFromEntropy(bytes)
         }
         let sequence = try (random?["sequence"]?.arrayValue ?? []).map { try Values.number($0.numberValue ?? $0.stringValue!) }
-        return try GameEventScriptHost(
-            seed: seed ?? 0,
-            sequence: sequence,
-            limits: limits,
-            observer: observer,
-            extensions: RuntimeFixtures(),
-            externalTypes: test["externalTypeRegistry"]?.stringValue == "absent" ? nil : RuntimeFixtures(mismatch: test["externalTypeRegistry"]?.stringValue == "mismatch"),
-            publishSink: publishSink,
-            clock: clock
-        )
+        let builder = GameEventScriptHost.makeBuilder()
+            .withRandomSequence(sequence, fallbackSeed: seed ?? 0)
+            .withRuntimeLimits(limits)
+            .withRegistry(RuntimeFixtures())
+        if let observer { builder.withRuntimeObserver(observer) }
+        if test["externalTypeRegistry"]?.stringValue != "absent" { builder.withExternalTypeRegistry(RuntimeFixtures(mismatch: test["externalTypeRegistry"]?.stringValue == "mismatch")) }
+        if let publishSink { builder.withPublishSink(publishSink) }
+        if let clock { builder.withClock(clock) }
+        return try builder.build()
     }
 
     func configure() throws {

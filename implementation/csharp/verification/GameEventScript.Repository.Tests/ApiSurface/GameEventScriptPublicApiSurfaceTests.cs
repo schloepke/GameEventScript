@@ -45,6 +45,16 @@ public sealed class GameEventScriptPublicApiSurfaceTests
     }
 
     [TestMethod]
+    public void ProgramBuilderConvenienceCreatesIndependentBuilders()
+    {
+        var first = GameEventScriptProgram.CreateBuilder();
+        var second = GameEventScriptProgram.CreateBuilder();
+
+        Assert.AreNotSame(first, second);
+        Assert.AreEqual(1, first.AddScript("on Main() { }").Compile().Bindings.Entries.Count);
+    }
+
+    [TestMethod]
     public void PublicTypesAndDependenciesFollowAssemblyBoundaries()
     {
         var runtime = typeof(GameEventScriptProgram).Assembly;
@@ -54,7 +64,10 @@ public sealed class GameEventScriptPublicApiSurfaceTests
         Assert.AreEqual("GameEventScript.Runtime", runtime.GetName().Name);
         Assert.AreEqual("GameEventScript.Compiler", compiler.GetName().Name);
         Assert.AreEqual("GameEventScript.CSharpBridge", bridge.GetName().Name);
-        CollectionAssert.AreEquivalent(new[] { typeof(GesProgramBuilder), typeof(GesCompileOptions), typeof(GesCompileException) }, compiler.GetExportedTypes());
+        // C# 14 extension blocks add compiler-generated nested marker types to the declaring class.
+        CollectionAssert.AreEquivalent(
+            new[] { typeof(GesProgramBuilder), typeof(GesCompileOptions), typeof(GesCompileException), typeof(GesProgramBuilderEntry) },
+            compiler.GetExportedTypes().Where(type => type.DeclaringType is null).ToArray());
         Assert.HasCount(0, runtime.GetTypes().Where(type => IsNamespace(type, "GameEventScript.Compiler")));
         Assert.HasCount(0, runtime.GetExportedTypes().Where(type => IsNamespace(type, "GameEventScript.CSharpBridge") || IsNamespace(type, "GameEventScript.Conformance")));
         Assert.IsTrue(bridge.GetExportedTypes().All(type => IsNamespace(type, "GameEventScript.CSharpBridge")));
@@ -83,8 +96,7 @@ public sealed class GameEventScriptPublicApiSurfaceTests
                 .Where(name => name is not null)
                 .ToHashSet(StringComparer.Ordinal);
 
-            undocumentedTypes.AddRange(assembly
-                .GetExportedTypes()
+            undocumentedTypes.AddRange(DeclaredPublicTypes(assembly)
                 .Select(type => "T:" + (type.FullName ?? type.Name).Replace('+', '.'))
                 .Where(typeId => !documentedMembers.Contains(typeId)));
         }
@@ -115,7 +127,7 @@ public sealed class GameEventScriptPublicApiSurfaceTests
     internal static string BuildPublicSurfaceSnapshot()
     {
         var output = new StringBuilder();
-        foreach (var type in PublicAssemblies().SelectMany(assembly => assembly.GetExportedTypes()).OrderBy(type => type.FullName, StringComparer.Ordinal))
+        foreach (var type in PublicAssemblies().SelectMany(DeclaredPublicTypes).OrderBy(type => type.FullName, StringComparer.Ordinal))
         {
             output.AppendLine(FormatKind(type) + " " + (type.FullName ?? type.Name).Replace("+", "."));
             if (type.IsEnum)
@@ -269,6 +281,13 @@ public sealed class GameEventScriptPublicApiSurfaceTests
         CollectionAssert.AreEquivalent(expected, references.Where(name => name.StartsWith("GameEventScript", StringComparison.Ordinal)).ToArray(), assembly.GetName().Name);
         Assert.IsFalse(references.Any(name => name.StartsWith("Beamable", StringComparison.Ordinal) || name.StartsWith("Unity", StringComparison.Ordinal)));
     }
+
+    /// <summary>
+    /// Returns exported types declared in source. C# 14 extension blocks add public, compiler-generated marker types
+    /// with unspeakable names; they are metadata for the extension members, not API types of their own.
+    /// </summary>
+    internal static IEnumerable<Type> DeclaredPublicTypes(Assembly assembly) =>
+        assembly.GetExportedTypes().Where(type => !type.Name.Contains('<'));
 
     private static Assembly[] PublicAssemblies()
         => [typeof(GameEventScriptProgram).Assembly, typeof(GesProgramBuilder).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly, typeof(GesSyntaxHighlighter).Assembly];

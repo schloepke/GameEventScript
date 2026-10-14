@@ -46,7 +46,7 @@ public sealed class GameEventScriptCSharpHostRunnerTests
     public void AutomaticRunnerWakesForDelayedMessagesWithoutFurtherInput()
     {
         var host = GameEventScriptHost.CreateBuilder().Build();
-        host.Load(GesProgramBuilder.Create().AddScript("on Start { emit after 0.02s Done() }").Compile());
+        host.Load(new GesProgramBuilder().AddScript("on Start { emit after 0.02s Done() }").Compile());
         using var done = new ManualResetEventSlim(false);
         host.Subscribe("Done", [], (_, _) => done.Set());
         using var runner = host.RunAutomatically();
@@ -63,7 +63,7 @@ public sealed class GameEventScriptCSharpHostRunnerTests
         var delivered = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         host.Subscribe("Ready", [], (message, _) => delivered.Add(message));
-        if (queuedInitialization) host.Load(GesProgramBuilder.Create().AddScript("on initialization { emit Ready() }").Compile());
+        if (queuedInitialization) host.Load(new GesProgramBuilder().AddScript("on initialization { emit Ready() }").Compile());
         else Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Ready")));
         Assert.IsFalse(host.IsIdle);
 
@@ -86,7 +86,7 @@ public sealed class GameEventScriptCSharpHostRunnerTests
         var delivered = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         host.Subscribe("Ready", [], (message, _) => delivered.Add(message));
-        host.Load(GesProgramBuilder.Create().AddScript("on Start { emit Ready() }").Compile());
+        host.Load(new GesProgramBuilder().AddScript("on Start { emit Ready() }").Compile());
         Assert.AreEqual(GesExecutionState.Completed, host.RunToCompletion().State);
         Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Start")));
         Assert.AreEqual(GesExecutionState.Paused, host.ExecuteFrame(1).State);

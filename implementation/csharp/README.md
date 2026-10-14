@@ -164,7 +164,7 @@ diagnostic source names; file access remains with the embedding:
 ```csharp
 using GameEventScript.Api;
 
-var program = GesProgramBuilder.Create()
+var program = new GesProgramBuilder()
     .AddScript("""
         module example
         function double(_ value as :Number) be value + value

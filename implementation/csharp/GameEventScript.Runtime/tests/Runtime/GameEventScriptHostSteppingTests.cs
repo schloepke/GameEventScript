@@ -311,7 +311,7 @@ public sealed class GameEventScriptHostSteppingTests
     }
 
     private static GameEventScriptProgram Compile(string source)
-        => GesProgramBuilder.Create().AddScript(source).Compile();
+        => new GesProgramBuilder().AddScript(source).Compile();
 
     private static void UpdateMaximum(ref int target, int candidate)
     {

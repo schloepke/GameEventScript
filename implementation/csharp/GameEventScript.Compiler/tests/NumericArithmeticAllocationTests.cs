@@ -51,7 +51,7 @@ public sealed class NumericArithmeticAllocationTests
                 }
             }
             """;
-        var program = GesProgramBuilder.Create().AddScript(source).Compile();
+        var program = new GesProgramBuilder().AddScript(source).Compile();
         var host = GameEventScriptHost.CreateBuilder().WithRuntimeLimits(new GesRuntimeLimits { MaxExecutionSteps = 0, MaxLoopIterations = 0 }).Build();
         host.Load(program);
         Assert.AreEqual(GesStartState.Ready, host.Start().State);

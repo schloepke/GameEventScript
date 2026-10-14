@@ -57,6 +57,9 @@ sh scripts/test-csharp-conformance.sh
 - Standard-library `TryGetValue`, `TryAdd`, and `TryParse` calls are accepted in
   portable C# code. Do not introduce public GES-level `Try...out` contracts.
 - Use `rg` for source and file searches.
+- Internal types use the `Ges` prefix; public API types keep `GameEventScript`.
+  Abbreviations are written as words (`Ges`, `Vm`, never `GES`/`VM`), and
+  corresponding internal types use identical names in the C# and Swift ports.
 - Preserve unrelated user changes and never revert them without an explicit
   request.
 
@@ -152,6 +155,10 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   Braced and unbraced bodies have identical scope boundaries; no branch binding escapes.
 - `[:fold acc be seed, item => expression]` and `[:reduce acc, item => expression]`
   lower to ordinary iterator loops and an internal accumulator, without new opcodes.
+- Both compilers hoist pure, total loop-invariant loads and arithmetic in front of
+  single-entry loops between their two cleanup rounds (C# `LoopInvariantHoistingPass`,
+  Swift `hoistLoopInvariants`). Keep their positive opcode list, placement and position
+  relocation identical; `compile.loop-invariants` snapshots both outputs.
 - Local declarations use only `let name be expression`. Conversions belong to
   the expression, for example `let value be input as :Number`.
 - Only variable bindings may use a canonical `_number` suffix. Other names may
@@ -209,9 +216,10 @@ only native handlers or any number of additively loaded Programs.
 - Instance and subscription handles use stable host-local registration IDs and
   store no detach/unsubscribe closures.
 - Each host owns one `GameEventScriptContext`, one logical-message ring queue,
-  one random generator, and at most one lazily created reusable `GesVmState`.
-- `GameEventScriptVirtualMachine` is a stateless executor. Program-specific
-  dynamic links live in `GesLinkedProgram`.
+  one random generator, and at most one lazily created reusable `GesVirtualMachine`.
+- `GesVirtualMachine` owns the resumable execution state and executes it through
+  its `Begin`/`RunSlice` methods. Program-specific dynamic links live in
+  `GesLinkedProgram`.
 - One logical message and all captured handlers complete before the next
   message. Script handlers may pause across frames; native handlers are atomic.
 - `Receive` and `Emit` enqueue locally. `Publish` enqueues locally and then calls
@@ -230,7 +238,7 @@ only native handlers or any number of additively loaded Programs.
 - Optional C# synchronization and automatic pumping live in
   `CSharpBridge/GameEventScriptCSharpHostRunner.cs`.
 
-Hot-path VM mutation goes through `GesVmState.Set...` methods. Read-only register
+Hot-path VM mutation goes through `GesVirtualMachine.Set...` methods. Read-only register
 borrows are accepted. Never hold a mutable destination reference across an
 operation that may grow or replace register storage.
 
@@ -321,9 +329,9 @@ Conformance. Keep the explicit upload allowlist in
 The root `Package.swift` is the public SwiftPM entry point with four library
 products: GameEventScriptRuntime, GameEventScriptCompiler,
 GameEventScriptSwiftBridge and GameEventScriptSyntaxHighlighter. They use existing sources and share a Git tag/version;
-local development packages remain separate. The root manifest also exposes the `ges`
-executable using the existing CLI and TerminalSupport sources; Conformance remains internal.
-The root package requires macOS 10.15.4 for CLI Foundation I/O. Three root test targets reuse the existing SwiftBridge,
+local development packages remain separate. CLI and TerminalSupport belong only to the
+separate GameEventScriptTool package; Conformance remains internal.
+The root package requires macOS 10.15 for the SwiftSyntax macro dependency. Three root test targets reuse the existing SwiftBridge,
 bridge-macro and SyntaxHighlighter test directories; never duplicate their sources
 or add test products. `python3 scripts/test-swift-package.py` checks tagged Git
 consumption, the product/dependency graph, the root tests and Runtime-only builds in disposable
@@ -360,6 +368,14 @@ canonical equivalence. Keep Int64 and Binary64 storage separate. Register storag
 follows the C# architecture: one numeric word, an optional
 object reference, kind, unit and cached flags. Typed setters mutate these fields
 in the register array; do not replace this with nested associated-value enums.
+`GesVirtualMachine` owns that array as one manually allocated buffer (`GesRegisterFile`),
+the Swift counterpart of C#'s in-place `ref` register access: elements are
+addressed through its base pointer, without per-access exclusivity or copy-on-write
+checks. Only the VM mutates registers, serially; callbacks use the VM's
+accessors. Storage moves only in `ensure`, between instructions. Handler entry
+prewarms the Program requirement, so only dynamic literal parsing grows during
+execution. Access registers through `registers[...]` each time; never keep a view
+or pointer across an operation that may grow storage.
 Immutable Message and Handler payloads are shared by reference behind read-only
 Swift value APIs. VM entry borrows arguments by index rather than allocating an
 argument array. Mutable callback arguments are borrowed only

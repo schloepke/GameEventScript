@@ -22,6 +22,7 @@ internal sealed partial class GesBinaryBuilder
         PeepholeMoveEliminationPass.Instance,
         BranchSimplificationPass.Instance,
         JumpCleanupPass.Instance,
+        LoopInvariantHoistingPass.Instance,
         LocalConstantFoldingPass.Instance,
         DeadTempWriteEliminationPass.Instance,
         RegisterPressureReductionPass.Instance,
@@ -125,6 +126,30 @@ internal sealed partial class GesBinaryBuilder
             => _builder.AddTemporaryRegisterInRoutine(name, ResolveRoutineIdNear(index));
 
         public GesLabelRef AddLabel(string? name = null) => _builder.AddLabel(name);
+
+        internal int LabelCount => _builder._labels.Count;
+
+        // Moves the marked items, in their order, in front of `target`; every marked index is after `target`.
+        internal void MoveMarkedBefore(int target, bool[] marked)
+        {
+            var moved = new List<PlanItem>();
+            var writeIndex = target;
+            for (var readIndex = target; readIndex < _items.Count; readIndex++)
+            {
+                if (marked[readIndex]) moved.Add(_items[readIndex]);
+                else _items[writeIndex++] = _items[readIndex];
+            }
+
+            for (var index = _items.Count - 1; index >= target + moved.Count; index--) _items[index] = _items[index - moved.Count];
+            for (var index = 0; index < moved.Count; index++) _items[target + index] = moved[index];
+        }
+
+        internal bool IsRoutineEntryLabel(GesLabelRef label)
+        {
+            foreach (var routine in _builder._routines)
+                if (routine.EntryLabel.Id == label.Id) return true;
+            return false;
+        }
 
         public InstructionPlan? GetInstruction(int index)
         {

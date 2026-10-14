@@ -2350,8 +2350,8 @@ multiplication operator.
 ## Inline assembly
 
 Inline `asm { ... }` blocks expose explicit instructions inside ordinary GES
-source. The normative syntax, binding and safety rules, operand forms and staged
-implementation status are defined in [Inline assembly](InlineAssembly.md).
+source. The normative syntax, binding and safety rules and operand forms are
+defined in [Inline assembly](InlineAssembly.md).
 Only standalone handler statements, `let` initializers, complete callable bodies
 and computed-field bodies accept this form. Ordinary expressions do not.
 

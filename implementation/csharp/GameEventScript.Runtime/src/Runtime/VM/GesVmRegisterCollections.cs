@@ -8,58 +8,54 @@ namespace GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterCollections
 {
-    internal static void GesVmCreateList(this GesVmState vmState, ushort destinationRegister)
+    internal static void GesVmCreateList(this GesVirtualMachine vm, ushort destinationRegister)
     {
-        var list = new GesValue[vmState.StageLength];
-        for (ushort i = 0; i < vmState.StageLength; i++) list[i] = vmState.RegisterStaged(i);
-        vmState.SetList(destinationRegister, list);
+        var list = new GesValue[vm.StageLength];
+        for (ushort i = 0; i < vm.StageLength; i++) list[i] = vm.RegisterStaged(i);
+        vm.SetList(destinationRegister, list);
     }
 
-    internal static void GesVmCreateMap(this GesVmState vmState, ushort destinationRegister, ushort keyNamesIndex)
+    internal static void GesVmCreateMap(this GesVirtualMachine vm, ushort destinationRegister, ushort keyNamesIndex)
     {
-        var keyNames = vmState.Program.UInt16IndexLists.Resolve(keyNamesIndex);
-        if (keyNames.Length != vmState.StageLength)
+        var layout = vm.ActiveProgram!.MapLayout(keyNamesIndex);
+        if (layout.InputCount != vm.StageLength)
         {
-            vmState.SetNothing(destinationRegister);
+            vm.SetNothing(destinationRegister);
             return;
         }
 
-        var map = new GesVmMapBuilder(vmState.StageLength);
-        for (ushort i = 0; i < vmState.StageLength; i++)
-        {
-            map.Set(vmState.FetchStringByPointer(keyNames[i]), vmState.RegisterStaged(i));
-        }
-
-        vmState.SetMap(destinationRegister, map.ToMap());
+        var values = new GesValue[layout.Keys.Length];
+        for (var i = 0; i < values.Length; i++) values[i] = vm.RegisterStaged((ushort)layout.Sources[i]);
+        vm.SetMap(destinationRegister, new GesValueMap(layout.Keys, values));
     }
 
-    internal static void GesVmCreateListBuilder(this GesVmState vmState, ushort destinationRegister)
+    internal static void GesVmCreateListBuilder(this GesVirtualMachine vm, ushort destinationRegister)
     {
-        vmState.CreateListBuilder(destinationRegister);
+        vm.CreateListBuilder(destinationRegister);
     }
 
-    internal static void GesVmListBuilderAdd(this GesVmState vmState, in GesValue listBuilder, in GesValue value, GesRuntimeBudget budget)
+    internal static void GesVmListBuilderAdd(this GesVirtualMachine vm, in GesValue listBuilder, in GesValue value, GesRuntimeBudget budget)
     {
         if (listBuilder.Kind is ListBuilder && listBuilder.ObjectValue is GesVmListBuilder builder && budget.CheckGeneratedCollectionItemCountWithinLimit((long)builder.Count + 1)) builder.Add(value);
     }
 
-    internal static void GesVmListBuilderFinish(this GesVmState vmState, ushort destinationRegister, in GesValue listBuilder)
+    internal static void GesVmListBuilderFinish(this GesVirtualMachine vm, ushort destinationRegister, in GesValue listBuilder)
     {
         if (listBuilder.Kind is ListBuilder && listBuilder.ObjectValue is GesVmListBuilder builder)
         {
-            vmState.SetList(destinationRegister, builder.ToList());
+            vm.SetList(destinationRegister, builder.ToList());
             return;
         }
 
-        vmState.SetNothing(destinationRegister);
+        vm.SetNothing(destinationRegister);
     }
 
-    internal static void GesVmCreateMapBuilder(this GesVmState vmState, ushort destinationRegister)
+    internal static void GesVmCreateMapBuilder(this GesVirtualMachine vm, ushort destinationRegister)
     {
-        vmState.CreateMapBuilder(destinationRegister);
+        vm.CreateMapBuilder(destinationRegister);
     }
 
-    internal static void GesVmMapBuilderAdd(this GesVmState vmState, in GesValue mapBuilder, in GesValue keyValue, in GesValue value, GesRuntimeBudget budget)
+    internal static void GesVmMapBuilderAdd(this GesVirtualMachine vm, in GesValue mapBuilder, in GesValue keyValue, in GesValue value, GesRuntimeBudget budget)
     {
         if (mapBuilder.Kind is not MapBuilder || mapBuilder.ObjectValue is not GesVmMapBuilder builder) return;
         var key = keyValue.Kind switch
@@ -72,91 +68,91 @@ internal static class GesVmRegisterCollections
         builder.Set(key, value, budget);
     }
 
-    internal static void GesVmMapBuilderFinish(this GesVmState vmState, ushort destinationRegister, in GesValue mapBuilder)
+    internal static void GesVmMapBuilderFinish(this GesVirtualMachine vm, ushort destinationRegister, in GesValue mapBuilder)
     {
         if (mapBuilder.Kind is MapBuilder && mapBuilder.ObjectValue is GesVmMapBuilder builder)
         {
-            vmState.SetMap(destinationRegister, builder.ToMap());
+            vm.SetMap(destinationRegister, builder.ToMap());
             return;
         }
 
-        vmState.SetNothing(destinationRegister);
+        vm.SetNothing(destinationRegister);
     }
 
-    internal static void GesVmCreateDistinctBuilder(this GesVmState vmState, ushort destinationRegister)
+    internal static void GesVmCreateDistinctBuilder(this GesVirtualMachine vm, ushort destinationRegister)
     {
-        vmState.CreateDistinctBuilder(destinationRegister);
+        vm.CreateDistinctBuilder(destinationRegister);
     }
 
-    internal static void GesVmDistinctBuilderAdd(this GesVmState vmState, in GesValue distinctBuilder, in GesValue keyValue, in GesValue value, GesRuntimeBudget budget)
+    internal static void GesVmDistinctBuilderAdd(this GesVirtualMachine vm, in GesValue distinctBuilder, in GesValue keyValue, in GesValue value, GesRuntimeBudget budget)
     {
         if (distinctBuilder.Kind is DistinctBuilder && distinctBuilder.ObjectValue is GesVmDistinctBuilder builder) builder.Add(in keyValue, in value, budget);
     }
 
-    internal static void GesVmDistinctBuilderFinish(this GesVmState vmState, ushort destinationRegister, in GesValue distinctBuilder)
+    internal static void GesVmDistinctBuilderFinish(this GesVirtualMachine vm, ushort destinationRegister, in GesValue distinctBuilder)
     {
         if (distinctBuilder.Kind is DistinctBuilder && distinctBuilder.ObjectValue is GesVmDistinctBuilder builder)
         {
-            vmState.SetList(destinationRegister, builder.ToList());
+            vm.SetList(destinationRegister, builder.ToList());
             return;
         }
 
-        vmState.SetNothing(destinationRegister);
+        vm.SetNothing(destinationRegister);
     }
 
-    internal static void GesVmCreateGroupBuilder(this GesVmState vmState, ushort destinationRegister)
+    internal static void GesVmCreateGroupBuilder(this GesVirtualMachine vm, ushort destinationRegister)
     {
-        vmState.CreateGroupBuilder(destinationRegister);
+        vm.CreateGroupBuilder(destinationRegister);
     }
 
-    internal static void GesVmGroupBuilderAdd(this GesVmState vmState, in GesValue groupBuilder, in GesValue keyValue, in GesValue value, GesRuntimeBudget budget)
+    internal static void GesVmGroupBuilderAdd(this GesVirtualMachine vm, in GesValue groupBuilder, in GesValue keyValue, in GesValue value, GesRuntimeBudget budget)
     {
         if (groupBuilder.Kind is not GroupBuilder || groupBuilder.ObjectValue is not GesVmGroupBuilder builder) return;
         var key = keyValue.Kind is Text or Tag ? keyValue.TextValue : keyValue.ToText;
         builder.Add(key, value, budget);
     }
 
-    internal static void GesVmGroupBuilderFinish(this GesVmState vmState, ushort destinationRegister, in GesValue groupBuilder)
+    internal static void GesVmGroupBuilderFinish(this GesVirtualMachine vm, ushort destinationRegister, in GesValue groupBuilder)
     {
         if (groupBuilder.Kind is GroupBuilder && groupBuilder.ObjectValue is GesVmGroupBuilder builder)
         {
             var result = builder.ToMapValue();
-            vmState.SetValue(destinationRegister, in result);
+            vm.SetValue(destinationRegister, in result);
             return;
         }
 
-        vmState.SetNothing(destinationRegister);
+        vm.SetNothing(destinationRegister);
     }
 
-    internal static void GesVmCreateOrderBuilder(this GesVmState vmState, ushort destinationRegister)
+    internal static void GesVmCreateOrderBuilder(this GesVirtualMachine vm, ushort destinationRegister)
     {
-        vmState.CreateOrderBuilder(destinationRegister);
+        vm.CreateOrderBuilder(destinationRegister);
     }
 
-    internal static void GesVmOrderBuilderAdd(this GesVmState vmState, in GesValue orderBuilder, in GesValue keyValue, in GesValue value, GesRuntimeBudget budget)
+    internal static void GesVmOrderBuilderAdd(this GesVirtualMachine vm, in GesValue orderBuilder, in GesValue keyValue, in GesValue value, GesRuntimeBudget budget)
     {
         if (orderBuilder.Kind is OrderBuilder && orderBuilder.ObjectValue is GesVmOrderBuilder builder) builder.Add(in keyValue, in value, budget);
     }
 
-    internal static void GesVmOrderBuilderFinishAscending(this GesVmState vmState, ushort destinationRegister, in GesValue orderBuilder)
+    internal static void GesVmOrderBuilderFinishAscending(this GesVirtualMachine vm, ushort destinationRegister, in GesValue orderBuilder)
     {
         if (orderBuilder.Kind is OrderBuilder && orderBuilder.ObjectValue is GesVmOrderBuilder builder && builder.ToList(descending: false) is { } list)
         {
-            vmState.SetList(destinationRegister, list);
+            vm.SetList(destinationRegister, list);
             return;
         }
 
-        vmState.SetNothing(destinationRegister);
+        vm.SetNothing(destinationRegister);
     }
 
-    internal static void GesVmOrderBuilderFinishDescending(this GesVmState vmState, ushort destinationRegister, in GesValue orderBuilder)
+    internal static void GesVmOrderBuilderFinishDescending(this GesVirtualMachine vm, ushort destinationRegister, in GesValue orderBuilder)
     {
         if (orderBuilder.Kind is OrderBuilder && orderBuilder.ObjectValue is GesVmOrderBuilder builder && builder.ToList(descending: true) is { } list)
         {
-            vmState.SetList(destinationRegister, list);
+            vm.SetList(destinationRegister, list);
             return;
         }
 
-        vmState.SetNothing(destinationRegister);
+        vm.SetNothing(destinationRegister);
     }
 }

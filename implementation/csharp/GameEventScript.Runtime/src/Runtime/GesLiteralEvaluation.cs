@@ -22,11 +22,11 @@ internal sealed class GesLiteralEvaluation
     private sealed record Operation(GesLiteralNode Node, int[] Inputs);
     private readonly List<Operation> _operations = new();
     private readonly List<GesValue> _results = new();
-    private readonly GesVmState _state;
+    private readonly GesVirtualMachine _state;
     private readonly GameEventScriptContext _context;
     private readonly ushort _destination;
     private int _next;
-    private GesLiteralEvaluation(GesValue root, GesVmState state, GameEventScriptContext context, ushort destination)
+    private GesLiteralEvaluation(GesValue root, GesVirtualMachine state, GameEventScriptContext context, ushort destination)
     {
         _state = state;
         _context = context;
@@ -34,7 +34,7 @@ internal sealed class GesLiteralEvaluation
         Add(root);
     }
 
-    internal static void Start(GesValue root, GesVmState state, GameEventScriptContext context, ushort destination)
+    internal static void Start(GesValue root, GesVirtualMachine state, GameEventScriptContext context, ushort destination)
     {
         if (!ContainsNode(root))
         {
@@ -131,7 +131,7 @@ internal sealed class GesLiteralEvaluation
                     _state.StageValue(match < 0 ? default : args[match]);
                 }
 
-                if (_state.State == GesVmState.StateValue.Processing && _state.CallAddress(constructor.EntryAddress, _destination))
+                if (_state.State == GesVirtualMachine.StateValue.Processing && _state.CallAddress(constructor.EntryAddress, _destination))
                     _state.CallStack[_state.CallStackPointer - 1].LiteralContinuation = this;
                 return;
             }

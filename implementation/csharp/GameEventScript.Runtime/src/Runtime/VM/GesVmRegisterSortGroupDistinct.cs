@@ -11,19 +11,19 @@ namespace GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterSortGroupDistinct
 {
-    internal static void GesVmDistinct(this GesVmState vmState, ushort destinationRegister, in GesValue source)
+    internal static void GesVmDistinct(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source)
     {
         var resultValue = new GesValue();
         switch (source.Kind)
         {
             case Nothing:
-                vmState.SetNothing(destinationRegister);
+                vm.SetNothing(destinationRegister);
                 return;
             case List when source.ObjectValue is GesValue[] list:
             {
                 if (list.Length == 0)
                 {
-                    vmState.SetList(destinationRegister, vmState.EmptyList);
+                    vm.SetList(destinationRegister, vm.EmptyList);
                     return;
                 }
 
@@ -46,20 +46,20 @@ internal static class GesVmRegisterSortGroupDistinct
 
                 if (resultLength == list.Length)
                 {
-                    vmState.SetList(destinationRegister, result);
+                    vm.SetList(destinationRegister, result);
                     return;
                 }
 
                 var compact = new GesValue[resultLength];
                 for (var i = 0; i < resultLength; i++) compact[i] = result[i];
-                vmState.SetList(destinationRegister, compact);
+                vm.SetList(destinationRegister, compact);
                 return;
             }
             case Dice when source.ObjectValue is int[] dice:
             {
                 if (dice.Length == 0)
                 {
-                    vmState.SetDice(destinationRegister, []);
+                    vm.SetDice(destinationRegister, []);
                     return;
                 }
 
@@ -76,13 +76,13 @@ internal static class GesVmRegisterSortGroupDistinct
 
                 if (count == values.Length)
                 {
-                    vmState.SetDice(destinationRegister, values);
+                    vm.SetDice(destinationRegister, values);
                     return;
                 }
 
                 var compact = new int[count];
                 Array.Copy(values, compact, count);
-                vmState.SetDice(destinationRegister, compact);
+                vm.SetDice(destinationRegister, compact);
                 return;
             }
             case Iterator when source.ObjectValue is IGesIterator iterator:
@@ -120,24 +120,24 @@ internal static class GesVmRegisterSortGroupDistinct
 
                 var result = new GesValue[count];
                 for (var i = 0; i < count; i++) result[i] = values[i];
-                vmState.SetList(destinationRegister, result);
+                vm.SetList(destinationRegister, result);
                 return;
             }
             default:
                 resultValue.SetNothing();
-                vmState.SetValue(destinationRegister, in resultValue);
+                vm.SetValue(destinationRegister, in resultValue);
                 return;
         }
     }
-    internal static void GesVmSortAscending(this GesVmState vmState, ushort destinationRegister, in GesValue source)
+    internal static void GesVmSortAscending(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source)
     {
-        GesVmSort(vmState, destinationRegister, in source, descending: false);
+        GesVmSort(vm, destinationRegister, in source, descending: false);
     }
-    internal static void GesVmSortDescending(this GesVmState vmState, ushort destinationRegister, in GesValue source)
+    internal static void GesVmSortDescending(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source)
     {
-        GesVmSort(vmState, destinationRegister, in source, descending: true);
+        GesVmSort(vm, destinationRegister, in source, descending: true);
     }
-    private static void GesVmSort(GesVmState vmState, ushort destinationRegister, in GesValue source, bool descending)
+    private static void GesVmSort(GesVirtualMachine vm, ushort destinationRegister, in GesValue source, bool descending)
     {
         switch (source.Kind)
         {
@@ -145,7 +145,7 @@ internal static class GesVmRegisterSortGroupDistinct
             {
                 if (list.Length == 0)
                 {
-                    vmState.SetList(destinationRegister, vmState.EmptyList);
+                    vm.SetList(destinationRegister, vm.EmptyList);
                     return;
                 }
 
@@ -153,11 +153,11 @@ internal static class GesVmRegisterSortGroupDistinct
                 for (var i = 0; i < list.Length; i++) result[i] = list[i];
                 if (!SortValues(result, list.Length, descending))
                 {
-                    vmState.SetNothing(destinationRegister);
+                    vm.SetNothing(destinationRegister);
                     return;
                 }
 
-                vmState.SetList(destinationRegister, result);
+                vm.SetList(destinationRegister, result);
                 return;
             }
             case Dice when source.ObjectValue is int[] dice:
@@ -172,7 +172,7 @@ internal static class GesVmRegisterSortGroupDistinct
                     for (var i = 0; i < dice.Length; i++) result[i].SetInteger(dice[dice.Length - i - 1]);
                 }
 
-                vmState.SetList(destinationRegister, result);
+                vm.SetList(destinationRegister, result);
                 return;
             }
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
@@ -180,24 +180,24 @@ internal static class GesVmRegisterSortGroupDistinct
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length == 0)
                 {
-                    vmState.SetRange(destinationRegister, 0, 0, 0);
+                    vm.SetRange(destinationRegister, 0, 0, 0);
                     return;
                 }
 
                 var sourceDescending = range.Step < 0;
                 if (sourceDescending == descending)
                 {
-                    vmState.SetRange(destinationRegister, range.From, range.To, range.Step);
+                    vm.SetRange(destinationRegister, range.From, range.To, range.Step);
                     return;
                 }
 
                 if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last)
                 {
-                    vmState.SetRange(destinationRegister, last, range.From, -range.Step);
+                    vm.SetRange(destinationRegister, last, range.From, -range.Step);
                     return;
                 }
 
-                vmState.SetNothing(destinationRegister);
+                vm.SetNothing(destinationRegister);
                 return;
             }
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
@@ -205,24 +205,24 @@ internal static class GesVmRegisterSortGroupDistinct
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length == 0)
                 {
-                    vmState.SetRange(destinationRegister, 0, 0, 0);
+                    vm.SetRange(destinationRegister, 0, 0, 0);
                     return;
                 }
 
                 var sourceDescending = range.Step < 0d;
                 if (sourceDescending == descending)
                 {
-                    vmState.SetRange(destinationRegister, range.From, range.To, range.Step);
+                    vm.SetRange(destinationRegister, range.From, range.To, range.Step);
                     return;
                 }
 
                 if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last)
                 {
-                    vmState.SetRange(destinationRegister, last, range.From, -range.Step);
+                    vm.SetRange(destinationRegister, last, range.From, -range.Step);
                     return;
                 }
 
-                vmState.SetNothing(destinationRegister);
+                vm.SetNothing(destinationRegister);
                 return;
             }
             case Iterator when source.ObjectValue is IGesIterator iterator:
@@ -251,23 +251,29 @@ internal static class GesVmRegisterSortGroupDistinct
 
                 if (!SortValues(values, count, descending))
                 {
-                    vmState.SetNothing(destinationRegister);
+                    vm.SetNothing(destinationRegister);
                     return;
                 }
 
                 var result = new GesValue[count];
                 for (var i = 0; i < count; i++) result[i] = values[i];
-                vmState.SetList(destinationRegister, result);
+                vm.SetList(destinationRegister, result);
                 return;
             }
             default:
-                vmState.SetNothing(destinationRegister);
+                vm.SetNothing(destinationRegister);
                 return;
         }
     }
 
     private static bool SortValues(GesValue[] values, int count, bool descending)
     {
+        if (HasNumericSortKeys(values, count))
+        {
+            SortNumeric(values, null, count, descending);
+            return true;
+        }
+
         for (var i = 1; i < count; i++)
         {
             var value = values[i];
@@ -288,6 +294,12 @@ internal static class GesVmRegisterSortGroupDistinct
 
     internal static bool SortValuesByKeys(GesValue[] values, GesValue[] keys, int count, bool descending)
     {
+        if (HasNumericSortKeys(keys, count))
+        {
+            SortNumeric(values, keys, count, descending);
+            return true;
+        }
+
         for (var i = 1; i < count; i++)
         {
             var value = values[i];
@@ -308,6 +320,81 @@ internal static class GesVmRegisterSortGroupDistinct
 
         return true;
     }
+
+    // When all keys are numeric with one unit and none is NaN, every pair is comparable and
+    // CompareAscending reduces to binary64 comparison. SortNumeric then yields exactly the stable
+    // insertion-sort order in O(n log n), without heap allocation for small inputs.
+    private static bool HasNumericSortKeys(GesValue[] keys, int count)
+    {
+        if (count < 2) return false;
+        var unit = keys[0].Unit;
+        for (var i = 0; i < count; i++)
+        {
+            ref readonly var key = ref keys[i];
+            if (!key.IsNumeric || key.Unit != unit || double.IsNaN(key.AsNumeric)) return false;
+        }
+
+        return true;
+    }
+
+    // Requires HasNumericSortKeys; sorts (key, original index) pairs, then permutes in place.
+    private static void SortNumeric(GesValue[] values, GesValue[]? keys, int count, bool descending)
+    {
+        var sortKeys = keys ?? values;
+        Span<(double Key, int Index)> order = count <= 128 ? stackalloc (double, int)[count] : new (double, int)[count];
+        for (var i = 0; i < count; i++)
+        {
+            var number = sortKeys[i].AsNumeric;
+            order[i] = (descending ? -number : number, i);
+        }
+
+        // (key, index) pairs are distinct, so this unstable heapsort has exactly one result.
+        for (var root = count / 2 - 1; root >= 0; root--) SiftDown(order, root, count);
+        for (var end = count - 1; end > 0; end--)
+        {
+            (order[0], order[end]) = (order[end], order[0]);
+            SiftDown(order, 0, end);
+        }
+
+        // Apply result[i] = original[order[i].Index] in place by walking each permutation cycle once.
+        for (var start = 0; start < count; start++)
+        {
+            if (order[start].Index < 0) continue;
+            var savedValue = values[start];
+            var savedKey = keys is null ? default : keys[start];
+            var current = start;
+            while (true)
+            {
+                var next = order[current].Index;
+                order[current].Index = ~next;
+                if (next == start)
+                {
+                    values[current] = savedValue;
+                    if (keys is not null) keys[current] = savedKey;
+                    break;
+                }
+
+                values[current] = values[next];
+                if (keys is not null) keys[current] = keys[next];
+                current = next;
+            }
+        }
+    }
+
+    private static void SiftDown(Span<(double Key, int Index)> heap, int root, int end)
+    {
+        while (true)
+        {
+            var child = 2 * root + 1;
+            if (child >= end) return;
+            if (child + 1 < end && Precedes(heap[child], heap[child + 1])) child++;
+            if (!Precedes(heap[root], heap[child])) return;
+            (heap[root], heap[child]) = (heap[child], heap[root]);
+            root = child;
+        }
+    }
+
+    private static bool Precedes((double Key, int Index) left, (double Key, int Index) right) => left.Key < right.Key || (left.Key == right.Key && left.Index < right.Index);
 
     private static int? CompareAscending(in GesValue a, in GesValue b)
     {

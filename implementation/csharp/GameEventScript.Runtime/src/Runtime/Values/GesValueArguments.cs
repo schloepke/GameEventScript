@@ -13,7 +13,7 @@ namespace GameEventScript.Runtime.Values;
 public readonly struct GesValueArguments
 {
     private readonly GesValue[]? _values;
-    private readonly GesVmState? _vmState;
+    private readonly GesVirtualMachine? _vm;
     private readonly GameEventScriptUInt16IndexList _registers;
 
     /// <summary>
@@ -28,15 +28,15 @@ public readonly struct GesValueArguments
     public GesValueArguments(GesValue[] values)
     {
         _values = values ?? [];
-        _vmState = null;
+        _vm = null;
         _registers = default;
         Length = _values.Length;
     }
 
-    internal GesValueArguments(GesVmState vmState, GameEventScriptUInt16IndexList registers)
+    internal GesValueArguments(GesVirtualMachine vm, GameEventScriptUInt16IndexList registers)
     {
         _values = null;
-        _vmState = vmState ?? throw new ArgumentNullException(nameof(vmState));
+        _vm = vm ?? throw new ArgumentNullException(nameof(vm));
         _registers = registers;
         Length = registers.Length;
     }
@@ -59,9 +59,9 @@ public readonly struct GesValueArguments
     /// <returns>The result of the operation.</returns>
     public ref readonly GesValue ValueAt(int index)
     {
-        if (_vmState is { } vmState)
+        if (_vm is { } vm)
         {
-            return ref vmState.Register(_registers[index]);
+            return ref vm.Register(_registers[index]);
         }
 
         return ref _values![index];

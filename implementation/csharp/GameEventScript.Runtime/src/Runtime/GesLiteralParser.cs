@@ -17,12 +17,12 @@ internal struct GesLiteralParser
     internal const int MaximumItems = 65536;
 
     private readonly string _text;
-    private readonly GesVmState _state;
+    private readonly GesVirtualMachine _state;
     private int _position;
     private int _items;
     private string? _limit;
 
-    private GesLiteralParser(string text, GesVmState state)
+    private GesLiteralParser(string text, GesVirtualMachine state)
     {
         _text = text;
         _state = state;
@@ -31,7 +31,7 @@ internal struct GesLiteralParser
         _limit = null;
     }
 
-    internal static GesValue Parse(in GesValue input, GameEventScriptContext context, GesVmState state)
+    internal static GesValue Parse(in GesValue input, GameEventScriptContext context, GesVirtualMachine state)
     {
         if (input.Kind != GameEventScriptBytecodeTypeKind.Text) return GesValue.GesNothing();
         if (input.Length > MaximumInputScalars)

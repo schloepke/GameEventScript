@@ -77,6 +77,8 @@ final class GesCompiler {
     var numericLimitExceeded = false
     var imports: [String: Int] = [:], recordIDs: [String: Int] = [:]
     var routines: [GesRoutine] = []
+    // Operand slot layouts per opcode shape, shared by every routine of this compilation.
+    var operandLayouts: [Int: GesOperandSlots] = [:]
     var sourcePositions: [UInt32: [UInt64: Int]] = [:]
 
     init(modules: [GesModule], sources: [GesSource], catalog: (any GameEventScriptExternalTypeCatalogProtocol)?, options: GameEventScriptCompileOptions) {

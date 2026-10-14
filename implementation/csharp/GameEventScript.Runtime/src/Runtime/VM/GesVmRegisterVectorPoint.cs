@@ -10,42 +10,42 @@ namespace GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterVectorPoint
 {
-    internal static void GesVmCreateVector(this GesVmState vmState, ushort destinationRegister, short start)
+    internal static void GesVmCreateVector(this GesVirtualMachine vm, ushort destinationRegister, short start)
     {
-        if (start == 0 && vmState.StageLength > 0)
+        if (start == 0 && vm.StageLength > 0)
         {
-            ref readonly var first = ref vmState.RegisterStaged(0);
+            ref readonly var first = ref vm.RegisterStaged(0);
             switch (first.Kind)
             {
                 case Vector:
                 case Point:
-                    if (vmState.StageLength > 2)
+                    if (vm.StageLength > 2)
                     {
-                        vmState.SetNothing(destinationRegister);
+                        vm.SetNothing(destinationRegister);
                         return;
                     }
 
                     if (first.ObjectValue is not GesValueVectorPoint triplet)
                     {
-                        vmState.SetNothing(destinationRegister);
+                        vm.SetNothing(destinationRegister);
                         return;
                     }
 
                     var liftedZ = triplet.Z;
                     var liftedUnit = first.Unit;
-                    if (vmState.StageLength > 1)
+                    if (vm.StageLength > 1)
                     {
-                        ref readonly var zValue = ref vmState.RegisterStaged(1);
+                        ref readonly var zValue = ref vm.RegisterStaged(1);
                         var lifted = zValue.AsNumericWithUnit();
                         liftedZ = lifted.Value;
                         if (double.IsNaN(liftedZ) || liftedUnit != lifted.Unit)
                         {
-                            vmState.SetNothing(destinationRegister);
+                            vm.SetNothing(destinationRegister);
                             return;
                         }
                     }
 
-                    vmState.SetVector(destinationRegister, triplet.X, triplet.Y, liftedZ, liftedUnit);
+                    vm.SetVector(destinationRegister, triplet.X, triplet.Y, liftedZ, liftedUnit);
                     return;
             }
         }
@@ -57,21 +57,21 @@ internal static class GesVmRegisterVectorPoint
         var x = 0.0d;
         var y = 0.0d;
         var z = 0.0d;
-        if (start == 0 && i < vmState.StageLength)
+        if (start == 0 && i < vm.StageLength)
         {
-            var read = vmState.RegisterStaged(i++).AsNumericWithUnit();
+            var read = vm.RegisterStaged(i++).AsNumericWithUnit();
             x = read.Value;
             unitX = read.Unit;
         }
-        if (start <= 1 && i < vmState.StageLength)
+        if (start <= 1 && i < vm.StageLength)
         {
-            var read = vmState.RegisterStaged(i++).AsNumericWithUnit();
+            var read = vm.RegisterStaged(i++).AsNumericWithUnit();
             y = read.Value;
             unitY = read.Unit;
         }
-        if (start <= 2 && i < vmState.StageLength)
+        if (start <= 2 && i < vm.StageLength)
         {
-            var read = vmState.RegisterStaged(i).AsNumericWithUnit();
+            var read = vm.RegisterStaged(i).AsNumericWithUnit();
             z = read.Value;
             unitZ = read.Unit;
         }
@@ -91,49 +91,49 @@ internal static class GesVmRegisterVectorPoint
         }
         if (!unit.HasValue || double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z))
         {
-            vmState.SetNothing(destinationRegister);
+            vm.SetNothing(destinationRegister);
         }
         else
         {
-            vmState.SetVector(destinationRegister, x, y, z, unit.Value);
+            vm.SetVector(destinationRegister, x, y, z, unit.Value);
         }
     }
-    internal static void GesVmCreatePoint(this GesVmState vmState, ushort destinationRegister, short start)
+    internal static void GesVmCreatePoint(this GesVirtualMachine vm, ushort destinationRegister, short start)
     {
-        if (start == 0 && vmState.StageLength > 0)
+        if (start == 0 && vm.StageLength > 0)
         {
-            ref readonly var first = ref vmState.RegisterStaged(0);
+            ref readonly var first = ref vm.RegisterStaged(0);
             switch (first.Kind)
             {
                 case Vector:
                 case Point:
-                    if (vmState.StageLength > 2)
+                    if (vm.StageLength > 2)
                     {
-                        vmState.SetNothing(destinationRegister);
+                        vm.SetNothing(destinationRegister);
                         return;
                     }
 
                     if (first.ObjectValue is not GesValueVectorPoint triplet)
                     {
-                        vmState.SetNothing(destinationRegister);
+                        vm.SetNothing(destinationRegister);
                         return;
                     }
 
                     var liftedZ = triplet.Z;
                     var liftedUnit = first.Unit;
-                    if (vmState.StageLength > 1)
+                    if (vm.StageLength > 1)
                     {
-                        ref readonly var zValue = ref vmState.RegisterStaged(1);
+                        ref readonly var zValue = ref vm.RegisterStaged(1);
                         var lifted = zValue.AsNumericWithUnit();
                         liftedZ = lifted.Value;
                         if (double.IsNaN(liftedZ) || liftedUnit != lifted.Unit)
                         {
-                            vmState.SetNothing(destinationRegister);
+                            vm.SetNothing(destinationRegister);
                             return;
                         }
                     }
 
-                    vmState.SetPoint(destinationRegister, triplet.X, triplet.Y, liftedZ, liftedUnit);
+                    vm.SetPoint(destinationRegister, triplet.X, triplet.Y, liftedZ, liftedUnit);
                     return;
             }
         }
@@ -145,21 +145,21 @@ internal static class GesVmRegisterVectorPoint
         var x = 0.0d;
         var y = 0.0d;
         var z = 0.0d;
-        if (start == 0 && i < vmState.StageLength)
+        if (start == 0 && i < vm.StageLength)
         {
-            var read = vmState.RegisterStaged(i++).AsNumericWithUnit();
+            var read = vm.RegisterStaged(i++).AsNumericWithUnit();
             x = read.Value;
             unitX = read.Unit;
         }
-        if (start <= 1 && i < vmState.StageLength)
+        if (start <= 1 && i < vm.StageLength)
         {
-            var read = vmState.RegisterStaged(i++).AsNumericWithUnit();
+            var read = vm.RegisterStaged(i++).AsNumericWithUnit();
             y = read.Value;
             unitY = read.Unit;
         }
-        if (start <= 2 && i < vmState.StageLength)
+        if (start <= 2 && i < vm.StageLength)
         {
-            var read = vmState.RegisterStaged(i).AsNumericWithUnit();
+            var read = vm.RegisterStaged(i).AsNumericWithUnit();
             z = read.Value;
             unitZ = read.Unit;
         }
@@ -179,11 +179,11 @@ internal static class GesVmRegisterVectorPoint
         }
         if (!unit.HasValue || double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z))
         {
-            vmState.SetNothing(destinationRegister);
+            vm.SetNothing(destinationRegister);
         }
         else
         {
-            vmState.SetPoint(destinationRegister, x, y, z, unit.Value);
+            vm.SetPoint(destinationRegister, x, y, z, unit.Value);
         }
     }
 

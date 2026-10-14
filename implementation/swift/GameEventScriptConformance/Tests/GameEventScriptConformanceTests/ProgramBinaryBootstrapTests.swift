@@ -7,6 +7,28 @@ import XCTest
 
 /// Native buffer ownership and reader-retention checks; portable binary assertions live in Python.
 final class ProgramBinaryBootstrapTests: XCTestCase {
+    func testHostsShareProgramIdentityAndReturnedArraysRemainIsolated() throws {
+        let program = try GameEventScriptBuilder.create().addScript("on Main() { emit Done(1) }").compile()
+        let firstHost = try GameEventScriptHost()
+        let secondHost = try GameEventScriptHost()
+        let first = try firstHost.load(program)
+        let second = try secondHost.load(program)
+        XCTAssertTrue(first.program === program)
+        XCTAssertTrue(second.program === program)
+        let bytes = try GameEventScriptProgramWriter.bytes(program)
+        var strings = program.stringConstants
+        strings.append("caller-owned")
+        var indexes = program.uint16IndexLists
+        indexes.append([0])
+        if !indexes[0].isEmpty { indexes[0][0] = UInt16.max }
+        var code = program.code
+        code.removeAll()
+        XCTAssertEqual(try GameEventScriptProgramWriter.bytes(program), bytes)
+        let decoded = try GameEventScriptProgramReader.read(bytes)
+        XCTAssertFalse(decoded === program)
+        XCTAssertEqual(try GameEventScriptProgramWriter.bytes(decoded), bytes)
+    }
+
     func testWriterBuffersAndReaderRetention() throws {
         let builder = GameEventScriptBuilder.create()
         builder.addScript("module bootstrap.binary\non Main() { emit Done(1) }", sourceName: "binary.ges")

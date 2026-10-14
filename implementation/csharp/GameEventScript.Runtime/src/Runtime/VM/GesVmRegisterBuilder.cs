@@ -107,13 +107,13 @@ internal sealed class GesVmMapBuilder
 
 internal sealed class GesVmGroupBuilder
 {
-    private readonly GesVmState _state;
+    private readonly GesVirtualMachine _state;
     private string[] _keys;
     private GesValue[][] _buckets;
     private int[] _counts;
     private int _count;
 
-    internal GesVmGroupBuilder(GesVmState state, int capacity = 0)
+    internal GesVmGroupBuilder(GesVirtualMachine state, int capacity = 0)
     {
         _state = state;
         var size = capacity <= 0 ? 4 : capacity;

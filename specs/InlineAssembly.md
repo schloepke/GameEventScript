@@ -1,12 +1,14 @@
 <!-- Copyright 2026 Stephan Schlöpke -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# Inline assembly implementation contract
+# Inline assembly specification
 
-Status: C# and Swift implementations and initial measurements qualified. Each
-implementation milestone must qualify the corresponding behavior in shared
-Markdown Conformance before marking it implemented. Inline assembly is GES
-source syntax, not a reader for the GESA dump format.
+> **Since: 0.4.0**
+
+This document defines the normative syntax, operand forms, binding and safety
+rules for inline assembly in GES. Both C# and Swift implement this contract,
+qualified by shared Markdown Conformance. Inline assembly is GES source syntax,
+not a reader for the GESA dump format.
 
 ## Scope and syntax
 
@@ -131,7 +133,11 @@ analysis is not by itself proof of internal-value safety. Adversarial binary
 fixtures must qualify internal handles, resource use, aliases and escape paths.
 Any required safety fix applies equally to non-ASM Programs in both runtimes.
 
-## Delivery and verification
+## Delivery and verification history
+
+This section and the implementation milestones below are an informative record
+of the completed implementation work, not pending feature gates. Test counts
+record the corpus at each milestone, not the current coverage.
 
 1. Contract and complete opcode inventory (this document).
 2. Audit shared binary validation and qualify/harden internal-value safety.
@@ -155,7 +161,7 @@ unit, ordering and empty-input semantics. Timing excludes compilation, assembly
 and input creation. Report allocations, code size, limits and pause granularity
 as well as elapsed time; do not infer that all operations behave alike.
 
-## Implementation progress
+## Completed implementation milestones
 
 - Step 1: contract and inventory recorded.
 - Step 2: internal-value escape validation implemented in both runtimes. The

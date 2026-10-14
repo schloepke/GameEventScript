@@ -383,7 +383,7 @@ class AdapterTests(unittest.TestCase):
         report = json.loads(result.stdout)
         self.assertEqual(len(self.cases), report['summary']['passed'])
         self.assertEqual(31, report['summary']['skipped'])
-        self.assertEqual(1956, report['summary']['total'])
+        self.assertEqual(1964, report['summary']['total'])
 
 
 if __name__ == '__main__':

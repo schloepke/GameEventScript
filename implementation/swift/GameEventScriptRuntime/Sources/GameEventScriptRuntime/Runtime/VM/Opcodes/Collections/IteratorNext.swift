@@ -1,0 +1,30 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+extension GesVirtualMachine {
+    func nextComponents(_ instruction: GameEventScriptBytecodeInstruction) -> Bool {
+        let iterator = self.iterator(Int(instruction.word1))
+        let components = iterator as? any GesComponentIterator
+        let item = components == nil ? iterator?.next() : nil
+        let hasValue = components?.moveNext() ?? (item != nil)
+        for (index, target) in linked!.program.uint16IndexLists[Int(instruction.word0)].enumerated() {
+            var value = GesValue.nothing
+            if hasValue {
+                if let components {
+                    value = components.component(index)
+                } else if let item {
+                    if let list = item.listValue {
+                        value = index < list.count ? list[index] : .nothing
+                    } else if item.kind == .map, let map = item.mapEntries {
+                        value = index < map.count ? map[index].value : .nothing
+                    } else if index == 0 {
+                        value = item
+                    }
+                }
+            }
+            setValue(Int(target), value)
+        }
+        if !hasValue { ip = Int(instruction.word2) }
+        return hasValue
+    }
+}

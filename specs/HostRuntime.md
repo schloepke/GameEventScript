@@ -23,7 +23,7 @@ message-handler binds and their maxima in the program header model.
 `GameEventScriptHost` is one autonomous serial execution unit. It owns the local
 message queue, exact- and name-subscription indexes, private random stream,
 runtime limits, observer, optional outbound sink, linked program instances, and
-at most one reusable `GesVmState`. A host may contain only native handlers and
+at most one reusable `GesVirtualMachine`. A host may contain only native handlers and
 does not create a VM until the first program is loaded. Host construction accepts
 a seed, entropy bytes, or an immutable sequence configuration, never a live
 mutable generator; building two hosts from the same configuration creates two
@@ -63,12 +63,12 @@ Its random generator supports nested `Push()`, `Push(Int64)`, and `Pop()` scopes
 It does not own a queue, VM, or scheduler. A context or its random generator must
 not be retained for asynchronous use after a native or extension callback.
 
-`GameEventScriptVirtualMachine` is a stateless executor. `GesVmState` contains
-only the currently resumable execution: active linked program, instruction
+`GesVirtualMachine` is the host's reusable virtual machine. It executes Programs
+and contains only the currently resumable execution: active linked program, instruction
 pointer, registers, frames, stages, and active message. Random state and its
 scope stack belong to the host-owned generator so extensions observe the same
 active scoped stream as bytecode. The host
-reuses this state serially for every script handler and fully resets it after
+reuses this machine serially for every script handler and fully resets it after
 completion or failure. VM pooling across hosts is not part of this architecture.
 
 All portable failures follow [Diagnostics](Diagnostics.md). Ordinary runtime handler failures

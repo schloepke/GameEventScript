@@ -10,6 +10,26 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+### Changed
+
+- The root SwiftPM package now exposes only the four libraries. Build `ges` from
+  `implementation/swift/GameEventScriptTool`, or install it via Homebrew, the
+  install script or standalone downloads. The root macOS minimum is now 10.15;
+  the separate CLI retains its 10.15.4 minimum.
+- Swift `GameEventScriptProgram` is now an immutable `final class`, so hosts and
+  callers share a single Program instance. Program contents, binary encoding and
+  copy-on-write isolation of returned arrays are unchanged.
+- Script handlers execute faster in both runtimes. Integer arithmetic and
+  integer range loops write results in place, constant map literals and data
+  constructions no longer redo per-execution work, and sorting numeric keys is
+  no longer quadratic. The Swift VM additionally mutates registers in place
+  without per-access exclusivity checks or reference counting on integer paths.
+  Behavior and results are unchanged.
+- Both compilers move loop-invariant constant loads and arithmetic in front of
+  their loop, so loops execute fewer instructions. Random draws, messages and
+  host calls stay in place and results are unchanged; executed opcode counts
+  drop and register requirements can grow slightly.
+
 ## [0.4.0] — 2026-10-11
 
 ### Added

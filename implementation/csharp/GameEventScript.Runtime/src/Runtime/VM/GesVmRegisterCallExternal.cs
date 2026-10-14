@@ -10,7 +10,7 @@ namespace GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterCallExternal
 {
-    internal static void GesVmCallExternal(this GesVmState state, ushort destinationRegister, ushort externalBindId, ushort argumentRegisterList, GameEventScriptContext context, bool isPredicate)
+    internal static void GesVmCallExternal(this GesVirtualMachine state, ushort destinationRegister, ushort externalBindId, ushort argumentRegisterList, GameEventScriptContext context, bool isPredicate)
     {
         if (externalBindId >= state.ExtensionCallBinds.Length || state.ExtensionCallBinds[externalBindId].Kind != GameEventScriptBinaryBindKind.ExtensionCall)
         {
@@ -80,7 +80,7 @@ internal static class GesVmRegisterCallExternal
         {
             var randomFault = context.EndRandomBoundary(randomBoundary);
             // Always restore the random scope, but retain a callback failure already reported above.
-            if (state.State != GesVmState.StateValue.Error)
+            if (state.State != GesVirtualMachine.StateValue.Error)
             {
                 if (randomFault == GameEventScriptRandomGenerator.ScopeBoundaryFault.BoundaryUnderflow)
                     state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeRandomStackUnderflow, "Random scope pop crossed the active extension boundary.");

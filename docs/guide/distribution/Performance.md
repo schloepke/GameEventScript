@@ -78,3 +78,30 @@ open; it does not authorize skipping it.
 Use the [platform qualification checklist](Platforms.md#release-qualification)
 for the remaining release evidence. All reports are generated below ignored
 `artifacts`; they must not enter the source packages.
+
+## Development baseline refresh — 2026-10-14
+
+After the Swift register-storage and C# runtime optimizations, both measured
+profiles were refreshed from three independent processes. Swift follows its
+existing median-time/maximum-allocation policy. C# uses the median of the three
+reported process timings (each adapter report selects its minimum sample), and
+the maximum reported allocation. Workloads and measurement instrumentation are
+unchanged. Timing tolerances use 25% with a 0.05 ms floor, divided by iterations
+for per-invocation metrics, and are capped by their previous absolute allowance.
+Allocation bounds are capped by their previous bound and a 5% allowance (rounded
+up to bytes); zero remains zero. No previous allocation upper bound is relaxed.
+
+The only C# run-allocation increase against its historical reference is the mixed
+workload: 2234.406 to 2257.8125 KiB per 1000 invocations (+1.05%). The largest
+sample is an early sample; the final sample in all three processes is 2280000 B.
+This establishes sample variation, not an isolated cause. The existing bound of
+2265.664 KiB remains unchanged. All sixteen zero-allocation dispatch workloads
+and the managed text-conversion zero-allocation workloads still pass.
+Swift's small load/compile increases and execution reductions are detailed in
+the [Swift baseline](../../../implementation/swift/Performance.md).
+
+C# evidence: `artifacts/conformance/python/performance-before-refresh.json`,
+`performance-refresh-2.json`, `performance-refresh-3.json`, and independent
+`performance-after-refresh.json`. Swift evidence is linked in its baseline guide.
+The refreshed references are development evidence; they do not replace a clean
+revision-bound release verification.

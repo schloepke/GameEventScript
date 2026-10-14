@@ -124,7 +124,7 @@ public interface IGameEventScriptExternalTypeConstructor
 public sealed class GesExternalTypeConstructorCall
 {
     private GesValueArguments _arguments = GesValueArguments.Empty;
-    private Runtime.VM.GesVmState? _vmState;
+    private Runtime.VM.GesVirtualMachine? _vm;
     private ushort _destinationRegister;
     private string? _expectedTypeName;
     private GesValue _result;
@@ -158,9 +158,9 @@ public sealed class GesExternalTypeConstructorCall
 
     internal bool HasResult => _hasResult;
 
-    internal void BeginCall(Runtime.VM.GesVmState vmState, ushort destinationRegister, GesValueArguments arguments, string expectedTypeName)
+    internal void BeginCall(Runtime.VM.GesVirtualMachine vm, ushort destinationRegister, GesValueArguments arguments, string expectedTypeName)
     {
-        _vmState = vmState ?? throw new ArgumentNullException(nameof(vmState));
+        _vm = vm ?? throw new ArgumentNullException(nameof(vm));
         _destinationRegister = destinationRegister;
         _arguments = arguments;
         _expectedTypeName = expectedTypeName;
@@ -170,7 +170,7 @@ public sealed class GesExternalTypeConstructorCall
 
     internal void EndCall()
     {
-        _vmState = null;
+        _vm = null;
         _destinationRegister = 0;
         _arguments = GesValueArguments.Empty;
         _expectedTypeName = null;
@@ -191,7 +191,7 @@ public sealed class GesExternalTypeConstructorCall
     {
         _hasResult = true;
         _result = value;
-        _vmState?.SetValue(_destinationRegister, in value);
+        _vm?.SetValue(_destinationRegister, in value);
     }
 
     /// <summary>
@@ -204,14 +204,14 @@ public sealed class GesExternalTypeConstructorCall
         if (_expectedTypeName is not null && !string.Equals(value.Definition.Name, _expectedTypeName, StringComparison.Ordinal))
         {
             SetNothing();
-            _vmState?.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidExternalTypeBinding,
+            _vm?.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidExternalTypeBinding,
                 $"External constructor for ':{_expectedTypeName}' returned value of type ':{value.Definition.Name}'.");
             return;
         }
         _hasResult = true;
         _result = default;
         _result.SetExternalType(value);
-        _vmState?.SetExternalType(_destinationRegister, value);
+        _vm?.SetExternalType(_destinationRegister, value);
     }
 }
 

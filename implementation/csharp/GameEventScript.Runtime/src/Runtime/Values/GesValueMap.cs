@@ -30,6 +30,14 @@ public sealed class GesValueMap
         Array.Sort(_keys, _values, GameEventScriptText.ScalarComparer);
     }
 
+    // Trusted canonical keys from a GesMapLayout: validated, scalar-sorted and unique. The layout
+    // shares one immutable key array between every map built from the same constant key list.
+    internal GesValueMap(string[] canonicalKeys, GesValue[] values)
+    {
+        _keys = canonicalKeys;
+        _values = values;
+    }
+
     /// <summary>
     /// Gets the length.
     /// </summary>

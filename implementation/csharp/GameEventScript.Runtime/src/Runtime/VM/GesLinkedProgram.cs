@@ -61,6 +61,30 @@ internal sealed class GesLinkedProgram
         RequiredRegisterCapacity = program.RequiredRegisterCount;
     }
 
+    private GesMapLayout?[]? _mapLayouts;
+    private readonly Dictionary<uint, int[]?> _dataConstructionPositions = [];
+
+    // Canonical key order of a constant map-literal key list, computed on first use.
+    internal GesMapLayout MapLayout(ushort keyNamesIndex)
+    {
+        _mapLayouts ??= new GesMapLayout?[Program.UInt16IndexLists.Slices.Count];
+        return _mapLayouts[keyNamesIndex] ??= new GesMapLayout(Program.UInt16IndexLists.Resolve(keyNamesIndex), StringPool);
+    }
+
+    // Argument positions of a constant data-construction type and label list, resolved on first use;
+    // null when the shape is invalid and construction yields Nothing.
+    internal int[]? DataConstructionPositions(ushort typeIndex, ushort labelsIndex)
+    {
+        var key = (uint)typeIndex << 16 | labelsIndex;
+        if (_dataConstructionPositions.TryGetValue(key, out var cached)) return cached;
+        var names = Program.UInt16IndexLists.Resolve(labelsIndex);
+        var labels = new string[names.Length];
+        for (var i = 0; i < labels.Length; i++) labels[i] = StringPool[names[i]];
+        var positions = GesDataConstruction.Positions(StringPool[typeIndex], labels);
+        _dataConstructionPositions[key] = positions;
+        return positions;
+    }
+
     internal GameEventScriptProgram Program { get; }
     internal string[] StringPool { get; }
     internal GesValue[] TextConstants { get; }
@@ -240,4 +264,38 @@ internal sealed class GesLinkedProgram
             message,
             symbol,
             ProgramName: Program.ModuleName));
+}
+
+// Canonical GesValueMap order for a fixed key list: ascending scalar keys, last duplicate wins.
+internal sealed class GesMapLayout
+{
+    internal GesMapLayout(GameEventScriptUInt16IndexList keyNames, string[] stringPool)
+    {
+        InputCount = keyNames.Length;
+        var keys = new List<string>(keyNames.Length);
+        var sources = new List<int>(keyNames.Length);
+        for (var i = 0; i < keyNames.Length; i++)
+        {
+            var key = stringPool[keyNames[i]];
+            var existing = keys.FindIndex(candidate => string.Equals(candidate, key, StringComparison.Ordinal));
+            if (existing >= 0)
+            {
+                sources[existing] = i;
+                continue;
+            }
+
+            GameEventScriptText.RequireValidUnicode(key, nameof(keyNames));
+            keys.Add(key);
+            sources.Add(i);
+        }
+
+        Keys = [.. keys];
+        Sources = [.. sources];
+        Array.Sort(Keys, Sources, GameEventScriptText.ScalarComparer);
+    }
+
+    internal int InputCount { get; }
+    internal string[] Keys { get; }
+    // Staged input position supplying each canonical entry.
+    internal int[] Sources { get; }
 }

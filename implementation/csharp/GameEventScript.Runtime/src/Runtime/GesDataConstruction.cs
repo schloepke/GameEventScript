@@ -74,10 +74,16 @@ internal static class GesDataConstruction
         return result;
     }
 
-    internal static GesValue Create(string type, string[] labels, GesValue[] arguments, GesVmState state, GameEventScriptContext context)
+    internal static GesValue Create(string type, string[] labels, GesValue[] arguments, GesVirtualMachine state, GameEventScriptContext context)
     {
         var positions = Positions(type, labels);
-        if (positions is null || arguments.Length != labels.Length)
+        return positions is null ? default : Create(type, positions, arguments, state, context);
+    }
+
+    // Positions come from Positions(type, labels), resolved once per constant type and label list.
+    internal static GesValue Create(string type, int[] positions, GesValue[] arguments, GesVirtualMachine state, GameEventScriptContext context)
+    {
+        if (arguments.Length != positions.Length)
             return default;
         var values = new GesValue[Math.Max(3, arguments.Length)];
         for (var i = 0; i < arguments.Length; i++)

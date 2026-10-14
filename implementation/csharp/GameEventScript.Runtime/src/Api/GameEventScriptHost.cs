@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using GameEventScript.Runtime;
 using GameEventScript.Runtime.VM;
-using static GameEventScript.Runtime.VM.GesVmState.StateValue;
+using static GameEventScript.Runtime.VM.GesVirtualMachine.StateValue;
 
 namespace GameEventScript.Api;
 
@@ -28,7 +28,7 @@ public sealed partial class GameEventScriptHost
     private readonly Dictionary<string, SubscriptionEntry[]> _byName = new(StringComparer.Ordinal);
     private readonly MessageRingQueue _queue = new(16);
     private readonly GameEventScriptContext _context;
-    private GesVmState? _vmState;
+    private GesVirtualMachine? _vm;
     private PendingMessage _activeMessage;
     private SubscriptionEntry? _activeHandler;
     private bool _hasActiveMessage;
@@ -77,7 +77,7 @@ public sealed partial class GameEventScriptHost
     /// Gets a value indicating whether no message is active or queued.
     /// </summary>
     public bool IsIdle => !_hasActiveMessage && PendingMessageCount == 0;
-    internal GesVmState? VmState => _vmState;
+    internal GesVirtualMachine? VirtualMachine => _vm;
 
     /// <summary>
     /// Validates and links an immutable program into this host and registers all of its handlers.
@@ -130,8 +130,8 @@ public sealed partial class GameEventScriptHost
             }
         }
 
-        _vmState ??= new GesVmState((ushort)maxRegisterCount, (ushort)maxCallStackDepth);
-        if (!_vmState.PrepareCapacity(linked))
+        _vm ??= new GesVirtualMachine((ushort)maxRegisterCount, (ushort)maxCallStackDepth);
+        if (!_vm.PrepareCapacity(linked))
             _pendingVmWarmupCapacity = Math.Max(_pendingVmWarmupCapacity, linked.RequiredRegisterCapacity);
 
         var registrationId = NextRegistrationId();
@@ -306,34 +306,34 @@ public sealed partial class GameEventScriptHost
             {
                 int executed;
                 _executingScript = true;
-                try { executed = GameEventScriptVirtualMachine.RunSlice(_vmState!, _context, remaining); }
+                try { executed = _vm!.RunSlice(_context, remaining); }
                 finally { _executingScript = false; }
                 _stepExecutedOpcodes += executed;
                 if (_initializationInstance is not null) _initializationOpcodes += executed;
                 remaining -= executed;
                 if (_context.RuntimeBudget.IsExhausted)
                 {
-                    _vmState!.Reset();
+                    _vm!.Reset();
                     CompleteActiveHandler();
                     FailInitialization(GameEventScriptStartState.RuntimeLimitReached);
                     runtimeLimitReached = true;
                     break;
                 }
 
-                if (_vmState!.State == Processing) break;
-                if (_vmState.State == Error)
+                if (_vm!.State == Processing) break;
+                if (_vm.State == Error)
                 {
-                    RecordRuntimeError(_vmState.ErrorDiagnostic ?? CreateRuntimeDiagnostic(
+                    RecordRuntimeError(_vm.ErrorDiagnostic ?? CreateRuntimeDiagnostic(
                         GameEventScriptDiagnosticCodes.RuntimeUnhandledFailure,
                         "The VM entered an error state without a diagnostic."));
-                    _vmState.Reset();
+                    _vm.Reset();
                     CompleteActiveHandler();
                     FailInitialization(GameEventScriptStartState.RuntimeError);
                     if (_starting) break;
                     continue;
                 }
 
-                _vmState.Reset();
+                _vm.Reset();
                 CompleteActiveHandler();
                 if (_initializationInstance is not null && _context.RuntimeBudget.IsExhausted)
                 {
@@ -382,13 +382,13 @@ public sealed partial class GameEventScriptHost
             try
             {
                 _executingScript = true;
-                GameEventScriptVirtualMachine.Begin(_vmState!, next.Instance!.LinkedProgram, _activeMessage.Message,
+                _vm!.Begin(next.Instance!.LinkedProgram, _activeMessage.Message,
                     next.MatchArguments, next.EntryAddress, next.DispatchSignatureId, _context);
             }
             catch (GameEventScriptFatalRuntimeException exception)
             {
                 RecordRuntimeError(exception.Diagnostic);
-                _vmState!.Reset();
+                _vm!.Reset();
                 CompleteActiveHandler();
                 FailInitialization(GameEventScriptStartState.RuntimeError);
                 if (_starting) break;
@@ -553,7 +553,7 @@ public sealed partial class GameEventScriptHost
         }
         _scriptHandlerActive = false;
         _activeHandler = null;
-        if (_pendingVmWarmupCapacity > 0 && _vmState is not null && _vmState.PrepareCapacity(_pendingVmWarmupCapacity))
+        if (_pendingVmWarmupCapacity > 0 && _vm is not null && _vm.PrepareCapacity(_pendingVmWarmupCapacity))
             _pendingVmWarmupCapacity = 0;
         if (handler is not null) _observer?.DispatchCompleted(_activeMessage.Message, handler.DispatchSignatureId);
     }

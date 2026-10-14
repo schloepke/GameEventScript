@@ -28,7 +28,7 @@ def enum_values(text, name, swift=False):
 
 def main():
     csharp = (CS / "GameEventScriptProgram.cs").read_text() + (CS / "GameEventScriptProgramFormat.cs").read_text()
-    swift = (SWIFT / "Bytecode.swift").read_text() + (SWIFT / "ProgramFormat.swift").read_text()
+    swift = (SWIFT / "Api/Program/Bytecode/Bytecode.swift").read_text() + (SWIFT / "Api/Program/Binary/ProgramFormat.swift").read_text()
     names = re.findall(r"public enum (\w+): (?:UInt\d+|Int),", swift)
     for name in names:
         expected, actual = enum_values(csharp, name), enum_values(swift, name, True)
@@ -41,7 +41,7 @@ def main():
     }
     actual = {
         op: re.findall(r"\.(\w+)", parts)
-        for op, parts in re.findall(r"case \.`?(\w+)`?:\s*\[([^\]]*)\]", (SWIFT / "BytecodeOperands.swift").read_text())
+        for op, parts in re.findall(r"case \.`?(\w+)`?:\s*\[([^\]]*)\]", (SWIFT / "Api/Program/Bytecode/BytecodeOperands.swift").read_text())
     }
     # Iterator operands depend on mode/output bits. Check both C# forms and
     # Swift's base operands here; executable binary fixtures check flag dispatch.
@@ -66,8 +66,8 @@ def main():
         forms = re.findall(r"\[([^\]]*)\]", block)[:3]
         if forms != ["TargetRegister, IteratorRegister, PatternKind, CountImmediate, FaceRegister", "TargetRegister, IteratorRegister, PatternKind, CountImmediate", "TargetRegister, IteratorRegister, PatternKind"]:
             raise RuntimeError(f"Changed dynamic pattern operands: {opcode}")
-    operands = (SWIFT / "BytecodeOperands.swift").read_text()
-    validator = (SWIFT / "ProgramValidator.swift").read_text()
+    operands = (SWIFT / "Api/Program/Bytecode/BytecodeOperands.swift").read_text()
+    validator = (SWIFT / "Api/Program/Validation/ProgramValidator.swift").read_text()
     for required in ("case .hasPattern, .takePattern: [.targetRegister, .iteratorRegister, .patternKind]",):
         if re.sub(r"\s+", "", required) not in re.sub(r"\s+", "", operands):
             raise RuntimeError("Swift pattern base operands changed")

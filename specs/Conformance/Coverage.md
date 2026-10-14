@@ -50,6 +50,7 @@ here. Add or update this matrix in the same change as new portable behavior.
 | Random known-answer vectors, non-consuming bounds, valid nested streams, explicit dynamic-seed conversion, invalid-seed parent restoration, and cleanup after runtime limits | `runtime.atomic.random/case-0002` through `runtime.atomic.random/case-0007`, `runtime.random-dice-ranges/case-0005`, `runtime.random-dice-ranges/case-0018`, `compile.build-errors/case-0038`, `compile.build-errors/case-0039`, `compile.bytecode-lowering/case-0012` |
 | Quantity application, checks, and unit removal through `:Quantity(none)` | `runtime.types-and-values.numeric-and-units/case-0036` |
 | Compiler handler/program resource metadata | `compile.binary-compiler/case-0001`, `api.messages/case-0007` |
+| Loop-invariant constant loads and arithmetic move in front of their loop, including out of nested loops, while random draws, messages and loop-dependent values stay inside and results are unchanged | all four `compile.loop-invariants` cases |
 | Direct recursive call rejection | `compile.build-errors/case-0001` |
 | Callable overload identity by ordered labels, without type dispatch | `runtime.predicates-functions/case-0010`, `compile.build-errors/case-0049` |
 | Predicate/function name separation and ambiguous predicate shorthand | `compile.build-errors/case-0021`, `compile.build-errors/case-0050` |

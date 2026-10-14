@@ -11,7 +11,7 @@ namespace GameEventScript.Runtime.VM;
 
 internal static class GesVmCompoundIterators
 {
-    internal static void GesVmIteratorCreate(this GesVmState state, GameEventScriptBytecodeInstruction instruction, GesRuntimeBudget budget)
+    internal static void GesVmIteratorCreate(this GesVirtualMachine state, GameEventScriptBytecodeInstruction instruction, GesRuntimeBudget budget)
     {
         var mode = instruction.UnitAndFlags >> 5;
         if (mode == 0)
@@ -188,7 +188,7 @@ internal static class GesVmCompoundIterators
         if (iterator is IDisposable disposable) disposable.Dispose();
     }
 
-    internal static bool GesVmIteratorNextComponents(this GesVmState state, GameEventScriptBytecodeInstruction instruction)
+    internal static bool GesVmIteratorNextComponents(this GesVirtualMachine state, GameEventScriptBytecodeInstruction instruction)
     {
         var iterator = state.Register(instruction.XRegister).ObjectValue as IGesIterator;
         var targets = state.FetchUInt16SliceTableByPointer(instruction.DestinationRegister);
@@ -212,7 +212,7 @@ internal static class GesVmCompoundIterators
             _ => index == 0 ? item : default
         };
 
-    internal static void GesVmCartesian(this GesVmState state, ushort destination, in GesValue left, in GesValue right, GesRuntimeBudget budget)
+    internal static void GesVmCartesian(this GesVirtualMachine state, ushort destination, in GesValue left, in GesValue right, GesRuntimeBudget budget)
     {
         if (left.Kind != List || right.Kind != List) { state.SetNothing(destination); return; }
         var a = (GesValue[])left.ObjectValue!;

@@ -87,8 +87,8 @@ xcodebuild -workspace implementation/swift/GameEventScript.xcworkspace \
 
 ### SwiftPM verification
 
-The local SwiftBridge package explicitly requires macOS 10.15 for SwiftSyntax.
-The root distribution (including `ges`), CLI and Conformance packages
+The root distribution and local SwiftBridge package explicitly require macOS 10.15 for SwiftSyntax.
+The separate CLI and Conformance packages
 require macOS 10.15.4 or newer for the executable adapters' throwing Foundation
 file-handle I/O. The standalone Runtime, Compiler and SyntaxHighlighter packages
 do not inherit these package requirements.
@@ -310,6 +310,26 @@ storage. Unicode-scalar identity, exact Int64 ranges, Binary64 values, units, an
 ordered argument labels follow the shared specifications. VM entry reads
 arguments by index; frame/register storage and callback objects are reused.
 Callbacks and argument borrows are synchronous and must not be retained.
+
+Runtime sources follow the C# grouping within one unchanged SwiftPM target:
+
+- `Api` contains host/context APIs, diagnostics, messages, extension contracts,
+  external type descriptors, random streams, profiling and the immutable Program
+  API. `Api/Program` retains the `Binary`, `Bytecode` and `Validation` subfolders.
+- `Runtime/Values` contains the shared value representation, maps, numeric/text
+  helpers, iterators, builders and borrowed value arguments.
+- `Runtime/VM` contains the virtual machine, linked programs, register outputs and
+  literal evaluation. The context calls the existing Host queue operations directly.
+- `Runtime/VM/Opcodes` groups opcode extensions by `Core`, `Math` and
+  `Collections`, with one file per opcode entry point and shared algorithms in
+  their `Support` subfolders. Simple instructions remain in the inline dispatch
+  in `Runtime/VM/VirtualMachineDispatch.swift`; typed register writes remain in
+  `Runtime/VM/VirtualMachine.swift`.
+
+The context retains a weak reference to its owning Host. No closure delegates, wrapper
+objects or argument copies are introduced; register writes and budget checks
+retain their direct paths. The folders do not define separate packages or alter
+public module names or APIs.
 
 Public SwiftPM consumption uses one repository-root Git dependency after a
 version tag has been published; no Swift registry upload is required. See the

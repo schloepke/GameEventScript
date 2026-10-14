@@ -13,7 +13,7 @@ final class ExternalTypeTests: XCTestCase {
 
     final class MutablePlayer { var name = "before" }
 
-    func playerType() throws -> GameEventScriptSwiftType<Player> {
+    func playerType() throws -> GesBridgeTypeBinding<Player> {
         try .init(
             "Player",
             fields: [.init("name", typeName: "Text", keyPath: \Player.name), .init("score", typeName: "Number", keyPath: \Player.score)],
@@ -23,7 +23,7 @@ final class ExternalTypeTests: XCTestCase {
 
     func testDescriptorCatalogConstructorAndKeyPathAccess() throws {
         let type = try playerType()
-        let registry = try GameEventScriptSwiftExternalTypeRegistry([type.binding])
+        let registry = try GesBridgeExternalTypeRegistry([type.binding])
         XCTAssertEqual(registry.types.count, 1)
         XCTAssertEqual(try registry.resolve(":Player")?.fields.map(\.name), ["name", "score"])
         let reference = try GesExternalTypeConstructorReference(typeName: "Player", argumentLabels: ["name", "score"])
@@ -41,24 +41,24 @@ final class ExternalTypeTests: XCTestCase {
     }
 
     func testClassBindingsRetainIdentityAndGettersCanThrow() throws {
-        let type = try GameEventScriptSwiftType<MutablePlayer>("Player", fields: [.init("name", typeName: "Text", keyPath: \MutablePlayer.name)])
+        let type = try GesBridgeTypeBinding<MutablePlayer>("Player", fields: [.init("name", typeName: "Text", keyPath: \MutablePlayer.name)])
         let player = MutablePlayer()
         let wrapped = type.wrap(player)
         player.name = "after"
         XCTAssertTrue(try type.unwrap(wrapped) === player)
         XCTAssertEqual(try wrapped.externalValue?.field("name"), .text("after"))
-        let broken = try GameEventScriptSwiftType<Player>("Broken", fields: [.init("name", typeName: "Text", get: { _ in throw try GesExtensionFaultError(code: "app.field", message: "Failed") })])
+        let broken = try GesBridgeTypeBinding<Player>("Broken", fields: [.init("name", typeName: "Text", get: { _ in throw try GesExtensionFaultError(code: "app.field", message: "Failed") })])
         XCTAssertThrowsError(try broken.wrap(Player(name: "", score: 0)).materializedMap()) { XCTAssertEqual(($0 as? GesExtensionFaultError)?.diagnostic.code, "app.field") }
     }
 
     func testDuplicateAndInconsistentBindingsFailBeforeUse() throws {
         let type = try playerType()
-        XCTAssertThrowsError(try GameEventScriptSwiftExternalTypeRegistry([type.binding, type.binding]))
-        let field = try GameEventScriptSwiftField<Player>("name", typeName: "Text", keyPath: \Player.name)
-        XCTAssertThrowsError(try GameEventScriptSwiftType("Player", fields: [field, field]))
-        let make = GameEventScriptSwiftConstructor<Player>(parameters: ["missing"]) { _ in Player(name: "", score: 0) }
-        XCTAssertThrowsError(try GameEventScriptSwiftType("Player", fields: [field], constructors: [make]))
-        let zero = GameEventScriptSwiftConstructor<Player> { _ in Player(name: "", score: 0) }
-        XCTAssertThrowsError(try GameEventScriptSwiftType("Player", fields: [field], constructors: [zero, zero]))
+        XCTAssertThrowsError(try GesBridgeExternalTypeRegistry([type.binding, type.binding]))
+        let field = try GesBridgeFieldBinding<Player>("name", typeName: "Text", keyPath: \Player.name)
+        XCTAssertThrowsError(try GesBridgeTypeBinding("Player", fields: [field, field]))
+        let make = GesBridgeConstructorBinding<Player>(parameters: ["missing"]) { _ in Player(name: "", score: 0) }
+        XCTAssertThrowsError(try GesBridgeTypeBinding("Player", fields: [field], constructors: [make]))
+        let zero = GesBridgeConstructorBinding<Player> { _ in Player(name: "", score: 0) }
+        XCTAssertThrowsError(try GesBridgeTypeBinding("Player", fields: [field], constructors: [zero, zero]))
     }
 }

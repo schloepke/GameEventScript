@@ -12,28 +12,6 @@ using GameEventScript.Runtime.Values;
 namespace GameEventScript.CSharpBridge;
 
 /// <summary>
-/// Represents a game event script c sharp external types.
-/// </summary>
-public static class GameEventScriptCSharpExternalTypes
-{
-    /// <summary>
-    /// Creates a registry.
-    /// </summary>
-    /// <param name="types">The types value.</param>
-    /// <returns>The result of the operation.</returns>
-    public static GameEventScriptCSharpExternalTypeRegistry CreateRegistry(params Type[] types)
-        => CreateRegistry((IEnumerable<Type>)types);
-
-    /// <summary>
-    /// Creates a registry.
-    /// </summary>
-    /// <param name="types">The types value.</param>
-    /// <returns>The result of the operation.</returns>
-    public static GameEventScriptCSharpExternalTypeRegistry CreateRegistry(IEnumerable<Type> types)
-        => GameEventScriptCSharpExternalTypeRegistry.Create(types);
-}
-
-/// <summary>
 /// Represents a ges type attribute.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
@@ -180,16 +158,17 @@ public sealed class GesParamAttribute : Attribute
 }
 
 /// <summary>
-/// Represents a game event script c sharp external type registry.
+/// Immutable external-type catalog and constructor registry built from <see cref="GesTypeAttribute"/>-annotated CLR types.
 /// </summary>
-public sealed class GameEventScriptCSharpExternalTypeRegistry : IGesExternalTypeCatalog, IGesExternalTypeRegistry
+/// <remarks>Pass the same instance to the compiler builder as catalog and to the host builder as registry.</remarks>
+public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGesExternalTypeRegistry
 {
     private readonly Dictionary<string, GesExternalTypeDefinition> _typesByName = new(StringComparer.Ordinal);
     private readonly Dictionary<string, IGesExternalTypeConstructor> _constructors = new(StringComparer.Ordinal);
-    private readonly Dictionary<Type, GameEventScriptCSharpExternalTypeBinding> _bindingsByClrType = new();
+    private readonly Dictionary<Type, GesBridgeExternalTypeBinding> _bindingsByClrType = new();
     private IReadOnlyList<GesExternalTypeDefinition> _types = Array.Empty<GesExternalTypeDefinition>();
 
-    private GameEventScriptCSharpExternalTypeRegistry()
+    private GesBridgeExternalTypeRegistry()
     {
     }
 
@@ -198,13 +177,25 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGesExternalType
     /// </summary>
     public IReadOnlyList<GesExternalTypeDefinition> Types => _types;
 
-    internal static GameEventScriptCSharpExternalTypeRegistry Create(params Type[] types)
+    /// <summary>
+    /// Creates a registry from attributed CLR types.
+    /// </summary>
+    /// <param name="types">Types annotated with <see cref="GesTypeAttribute"/>.</param>
+    /// <returns>The validated registry.</returns>
+    /// <exception cref="ArgumentException">A type declaration is invalid or duplicated.</exception>
+    public static GesBridgeExternalTypeRegistry Create(params Type[] types)
         => Create((IEnumerable<Type>)types);
 
-    internal static GameEventScriptCSharpExternalTypeRegistry Create(IEnumerable<Type> types)
+    /// <summary>
+    /// Creates a registry from attributed CLR types.
+    /// </summary>
+    /// <param name="types">Types annotated with <see cref="GesTypeAttribute"/>.</param>
+    /// <returns>The validated registry.</returns>
+    /// <exception cref="ArgumentException">A type declaration is invalid or duplicated.</exception>
+    public static GesBridgeExternalTypeRegistry Create(IEnumerable<Type> types)
     {
         _ = types ?? throw new ArgumentNullException(nameof(types));
-        var registry = new GameEventScriptCSharpExternalTypeRegistry();
+        var registry = new GesBridgeExternalTypeRegistry();
         foreach (var type in types)
         {
             registry.RegisterType(type ?? throw new ArgumentException("External type list contains null.", nameof(types)));
@@ -245,12 +236,12 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGesExternalType
             return result;
         }
 
-        return GameEventScriptCSharpExternalTypeValueConverter.ToValue(value);
+        return GesBridgeValueConverter.ToValue(value);
     }
 
     internal IGesExternalValue? CreateExternalValue(object value)
         => _bindingsByClrType.TryGetValue(value.GetType(), out var binding)
-            ? new GameEventScriptCSharpExternalValue(value, binding, this)
+            ? new GesBridgeExternalValue(value, binding, this)
             : null;
 
     private void RegisterType(Type clrType)
@@ -271,7 +262,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGesExternalType
             constructors.Select(constructor => constructor.Definition).ToArray());
         if (!_typesByName.TryAdd(definition.Name, definition))
             throw new ArgumentException($"External GameEventScript type ':{definition.Name}' is registered more than once.", nameof(clrType));
-        if (!_bindingsByClrType.TryAdd(clrType, new GameEventScriptCSharpExternalTypeBinding(definition, fieldReaders)))
+        if (!_bindingsByClrType.TryAdd(clrType, new GesBridgeExternalTypeBinding(definition, fieldReaders)))
             throw new ArgumentException($"CLR type '{clrType.FullName}' is registered more than once.", nameof(clrType));
         for (var index = 0; index < constructors.Count; index++)
         {
@@ -281,9 +272,9 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGesExternalType
         }
     }
 
-    private static IReadOnlyList<GameEventScriptCSharpExternalFieldBinding> BuildFields(Type clrType)
+    private static IReadOnlyList<GesBridgeExternalFieldBinding> BuildFields(Type clrType)
     {
-        var fields = new List<GameEventScriptCSharpExternalFieldBinding>();
+        var fields = new List<GesBridgeExternalFieldBinding>();
         foreach (var property in clrType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
         {
             var attribute = property.GetCustomAttribute<GesFieldAttribute>();
@@ -322,15 +313,15 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGesExternalType
         return fields;
     }
 
-    private static GameEventScriptCSharpExternalFieldBinding CreateFieldBinding(GesFieldAttribute attribute, Func<object, object?> reader)
+    private static GesBridgeExternalFieldBinding CreateFieldBinding(GesFieldAttribute attribute, Func<object, object?> reader)
     {
         var definition = attribute.Kind is { } kind
             ? new GesExternalTypeFieldDefinition(attribute.Name, kind, attribute.Unit)
             : new GesExternalTypeFieldDefinition(attribute.Name, attribute.TypeName);
-        return new GameEventScriptCSharpExternalFieldBinding(definition, reader);
+        return new GesBridgeExternalFieldBinding(definition, reader);
     }
 
-    private static IReadOnlyList<ReflectionExternalTypeConstructor> BuildConstructors(Type clrType, string typeName, ISet<string> fieldNames, GameEventScriptCSharpExternalTypeRegistry registry)
+    private static IReadOnlyList<ReflectionExternalTypeConstructor> BuildConstructors(Type clrType, string typeName, ISet<string> fieldNames, GesBridgeExternalTypeRegistry registry)
     {
         var constructors = new List<ReflectionExternalTypeConstructor>();
         foreach (var constructor in clrType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
@@ -374,7 +365,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGesExternalType
         return constructors;
     }
 
-    private static ReflectionExternalTypeConstructor BuildConstructorBinding(string typeName, ISet<string> fieldNames, MethodBase method, Func<object?[], object?> invoke, GameEventScriptCSharpExternalTypeRegistry registry)
+    private static ReflectionExternalTypeConstructor BuildConstructorBinding(string typeName, ISet<string> fieldNames, MethodBase method, Func<object?[], object?> invoke, GesBridgeExternalTypeRegistry registry)
     {
         var parameters = method.GetParameters()
             .Select(parameter => BuildParameterDefinition(method, fieldNames, parameter))
@@ -407,7 +398,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGesExternalType
         GesExternalTypeConstructorDefinition definition,
         IReadOnlyList<ExternalParameterBinding> parameters,
         Func<object?[], object?> invoke,
-        GameEventScriptCSharpExternalTypeRegistry registry) : IGesExternalTypeConstructor
+        GesBridgeExternalTypeRegistry registry) : IGesExternalTypeConstructor
     {
         public GesExternalTypeConstructorDefinition Definition { get; } = definition;
 
@@ -423,7 +414,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGesExternalType
             var converted = new object?[arguments.Length];
             for (var index = 0; index < converted.Length; index++)
             {
-                converted[index] = GameEventScriptCSharpExternalTypeValueConverter.ToClrValue(arguments, index, parameters[index].ClrType);
+                converted[index] = GesBridgeValueConverter.ToClrValue(arguments, index, parameters[index].ClrType);
             }
 
             var result = invoke(converted);
@@ -445,15 +436,15 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGesExternalType
     }
 }
 
-internal sealed record GameEventScriptCSharpExternalFieldBinding(GesExternalTypeFieldDefinition Definition, Func<object, object?> Reader);
+internal sealed record GesBridgeExternalFieldBinding(GesExternalTypeFieldDefinition Definition, Func<object, object?> Reader);
 
-internal sealed class GameEventScriptCSharpExternalTypeBinding(GesExternalTypeDefinition definition, IReadOnlyDictionary<string, GameEventScriptCSharpExternalFieldBinding> fields)
+internal sealed class GesBridgeExternalTypeBinding(GesExternalTypeDefinition definition, IReadOnlyDictionary<string, GesBridgeExternalFieldBinding> fields)
 {
     internal GesExternalTypeDefinition Definition { get; } = definition;
-    internal IReadOnlyDictionary<string, GameEventScriptCSharpExternalFieldBinding> Fields { get; } = fields;
+    internal IReadOnlyDictionary<string, GesBridgeExternalFieldBinding> Fields { get; } = fields;
 }
 
-internal sealed class GameEventScriptCSharpExternalValue(object instance, GameEventScriptCSharpExternalTypeBinding binding, GameEventScriptCSharpExternalTypeRegistry registry) : IGesExternalValue
+internal sealed class GesBridgeExternalValue(object instance, GesBridgeExternalTypeBinding binding, GesBridgeExternalTypeRegistry registry) : IGesExternalValue
 {
     internal object Instance { get; } = instance;
 
@@ -467,7 +458,7 @@ internal sealed class GameEventScriptCSharpExternalValue(object instance, GameEv
     }
 }
 
-internal static class GameEventScriptCSharpExternalTypeValueConverter
+internal static class GesBridgeValueConverter
 {
     public static GesValue ToValue(object? value)
     {
@@ -617,7 +608,7 @@ internal static class GameEventScriptCSharpExternalTypeValueConverter
     {
         _ = objectType ?? throw new ArgumentNullException(nameof(objectType));
         if (value.ObjectValue is GesExternalValue externalValue &&
-            externalValue.Value is GameEventScriptCSharpExternalValue csharpValue &&
+            externalValue.Value is GesBridgeExternalValue csharpValue &&
             objectType.IsInstanceOfType(csharpValue.Instance)) return csharpValue.Instance;
         return null;
     }

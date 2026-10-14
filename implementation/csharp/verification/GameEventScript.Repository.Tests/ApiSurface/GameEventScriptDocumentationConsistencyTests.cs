@@ -46,7 +46,7 @@ public sealed class GameEventScriptDocumentationConsistencyTests
         };
         CollectionAssert.AreEqual(expectedFamilies, actualFamilies, "PublicApi.md ownership families changed without updating the consistency gate.");
 
-        var actualNamespaces = new[] { typeof(GameEventScriptProgram).Assembly, typeof(GesProgramBuilder).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly }
+        var actualNamespaces = new[] { typeof(GameEventScriptProgram).Assembly, typeof(GesProgramBuilder).Assembly, typeof(GesBridgeHostRunner).Assembly }
             .SelectMany(assembly => assembly.GetExportedTypes())
             .Select(type => type.Namespace ?? string.Empty)
             .Distinct(StringComparer.Ordinal)

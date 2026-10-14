@@ -59,7 +59,7 @@ public sealed class GameEventScriptCompileCommandTests
         var host = GameEventScriptHost.CreateBuilder().WithRandomSeed(1).Build().StartForTest();
         host.Subscribe("Done", ["result", "text"], (message, _) => received = message.Arguments.GetAsInteger("result"));
         host.Load(program);
-        Assert.IsTrue(host.Receive(GameEventScriptCSharpMessage.Create("Start", ("value", GesValue.GesInteger(41)))));
+        Assert.IsTrue(host.Receive(GesBridgeMessage.Create("Start", ("value", GesValue.GesInteger(41)))));
         Assert.AreEqual(GesExecutionState.Completed, host.RunToCompletion().State);
         Assert.AreEqual(42L, received);
     }
@@ -268,7 +268,7 @@ public sealed class GameEventScriptCompileCommandTests
         host.Subscribe("First", ["result"], (message, _) => received.Add("first:" + message.Arguments.GetAsInteger("result")));
         host.Subscribe("Second", ["result"], (message, _) => received.Add("second:" + message.Arguments.GetAsInteger("result")));
         host.Load(program);
-        Assert.IsTrue(host.Receive(GameEventScriptCSharpMessage.Create("Start", ("value", GesValue.GesInteger(41)))));
+        Assert.IsTrue(host.Receive(GesBridgeMessage.Create("Start", ("value", GesValue.GesInteger(41)))));
         Assert.AreEqual(GesExecutionState.Completed, host.RunToCompletion().State);
         CollectionAssert.AreEqual(new[] { "first:42", "second:42" }, received);
     }

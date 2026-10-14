@@ -37,7 +37,7 @@ private final class AnnotatedSensor {
 
     @GesConstruct
     static func make(distance: Double) throws -> AnnotatedSensor {
-        guard distance >= 0 else { throw GameEventScriptSwiftConversionError.outOfRange("distance") }
+        guard distance >= 0 else { throw GesBridgeConversionError.outOfRange("distance") }
         return AnnotatedSensor(distance)
     }
 }
@@ -72,7 +72,7 @@ final class AnnotationTests: XCTestCase {
 
     func testPositionalNativeParameterUsesRenamedFieldAndChecksOverflow() throws {
         let type = try PositionalData.createGesType()
-        let registry = try GameEventScriptSwiftExternalTypeRegistry([type.binding])
+        let registry = try GesBridgeExternalTypeRegistry([type.binding])
         let constructor = try XCTUnwrap(registry.resolve(.init(typeName: "PositionalData", argumentLabels: ["count"])))
         let call = GesExternalTypeConstructorCall(arguments: .init([.integer(255)]))
         try constructor.invoke(call)
@@ -85,7 +85,7 @@ final class AnnotationTests: XCTestCase {
         XCTAssertEqual(type.definition.name, "Player")
         XCTAssertEqual(type.definition.fields.map(\.name), ["name", "score", "doubled"])
         XCTAssertEqual(type.definition.fields.map(\.typeName), ["Text", "Number", "Number"])
-        let registry = try GameEventScriptSwiftExternalTypeRegistry([type.binding])
+        let registry = try GesBridgeExternalTypeRegistry([type.binding])
         let constructor = try XCTUnwrap(registry.resolve(.init(typeName: "Player", argumentLabels: ["name", "score"])))
         XCTAssertEqual(constructor.definition.parameters.map(\.name), ["score", "name"])
         let call = GesExternalTypeConstructorCall(arguments: .init([.integer(21), .text("Ada")]))
@@ -101,7 +101,7 @@ final class AnnotationTests: XCTestCase {
     func testUnitsComputedFieldsCollectionsAndStaticFactory() throws {
         let type = try AnnotatedSensor.createGesType()
         XCTAssertEqual(type.definition.fields.first?.unit, .meter)
-        let registry = try GameEventScriptSwiftExternalTypeRegistry([type.binding])
+        let registry = try GesBridgeExternalTypeRegistry([type.binding])
         let constructor = try XCTUnwrap(registry.resolve(.init(typeName: "AnnotatedSensor", argumentLabels: ["distance"])))
         XCTAssertEqual(constructor.definition.parameters.first?.unit, .meter)
         let call = GesExternalTypeConstructorCall(arguments: .init([.float(1.5, unit: .meter)]))
@@ -119,11 +119,11 @@ final class AnnotationTests: XCTestCase {
     }
 
     func testQuantityConversionNeverDiscardsUnexpectedUnitsOrKinds() throws {
-        XCTAssertEqual(try GameEventScriptSwiftValue.encode(Optional<Double>.none, unit: .meter), .nothing)
-        let value: Double? = try GameEventScriptSwiftValue.decode(.nothing, unit: .meter)
+        XCTAssertEqual(try GesBridgeValueConversion.encode(Optional<Double>.none, unit: .meter), .nothing)
+        let value: Double? = try GesBridgeValueConversion.decode(.nothing, unit: .meter)
         XCTAssertNil(value)
-        XCTAssertThrowsError(try GameEventScriptSwiftValue.encode(GesValue.integer(2, unit: .second), unit: .meter))
-        XCTAssertThrowsError(try GameEventScriptSwiftValue.encode(true, unit: .meter))
-        XCTAssertThrowsError(try GameEventScriptSwiftValue.decode(.float(1.5, unit: .meter), as: Int.self, unit: .meter))
+        XCTAssertThrowsError(try GesBridgeValueConversion.encode(GesValue.integer(2, unit: .second), unit: .meter))
+        XCTAssertThrowsError(try GesBridgeValueConversion.encode(true, unit: .meter))
+        XCTAssertThrowsError(try GesBridgeValueConversion.decode(.float(1.5, unit: .meter), as: Int.self, unit: .meter))
     }
 }

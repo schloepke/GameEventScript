@@ -292,9 +292,13 @@ contains exactly the measured reference sources plus the recalibrated corpus.
 
 ### Phase 2 – Bridge
 
-- [ ] Apply the Bridge mapping table in both ports.
-- [ ] Consolidate value conversion and extension registration entry points.
-- [ ] Update Bridge tests, macros and documentation.
+- [x] Apply the Bridge mapping table in both ports.
+- [x] Consolidate value conversion and extension registration entry points
+      (C# `GesBridgeExtensionRegistry.Create/CreateBuilder`,
+      `GesBridgeExternalTypeRegistry.Create`; C# gains `GesBridgePublishSink` and a
+      public `GesBridgeMessageHandler`).
+- [x] Update Bridge tests, macros and documentation. Single-bridge types are
+      listed with reasons in the port gate.
 
 ### Phase 3 – Internal names and layers
 

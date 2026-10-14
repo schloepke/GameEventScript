@@ -7,7 +7,7 @@ using GameEventScript.Runtime.Values;
 namespace GameEventScript.CSharpBridge;
 
 /// <summary>Provides C# dictionary factories for portable immutable values.</summary>
-public static class GameEventScriptCSharpValue
+public static class GesBridgeValueConversion
 {
     /// <summary>Creates an immutable map from dictionary entries using the portable factory's canonical Unicode scalar key order.</summary>
     /// <param name="entries">The entries to snapshot. Null or an empty dictionary creates an empty map.</param>

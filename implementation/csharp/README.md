@@ -250,7 +250,7 @@ an instance or subscription handle does not detach it; use `Detach()` or
 The immutable Program can be reused in multiple independent Hosts.
 
 Add `GameEventScript.CSharpBridge` when you need delegate handlers, CLR-backed
-external types, attribute-based extensions or `GameEventScriptCSharpHostRunner`
+external types, attribute-based extensions or `GesBridgeHostRunner`
 for synchronization and automatic pumping. It does not add a Compiler dependency.
 The [public API specification](../../specs/PublicApi.md) documents the portable
 contracts and C# mapping; [Host runtime](../../specs/HostRuntime.md) owns lifecycle,

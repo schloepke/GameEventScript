@@ -13,43 +13,6 @@ using GameEventScript.Runtime.VM;
 namespace GameEventScript.CSharpBridge;
 
 /// <summary>
-/// Represents a game event script c sharp extensions.
-/// </summary>
-public static class GameEventScriptCSharpExtensions
-{
-    /// <summary>
-    /// Creates a registry.
-    /// </summary>
-    /// <param name="extensionTypes">The extension types value.</param>
-    /// <returns>The result of the operation.</returns>
-    public static IGesExtensionRegistry CreateRegistry(params Type[] extensionTypes)
-        => CreateRegistry((IEnumerable<Type>)extensionTypes);
-
-    /// <summary>
-    /// Creates a registry.
-    /// </summary>
-    /// <param name="extensionTypes">The extension types value.</param>
-    /// <returns>The result of the operation.</returns>
-    public static IGesExtensionRegistry CreateRegistry(IEnumerable<Type> extensionTypes)
-        => CreateBuilder().AddRange(extensionTypes).Build();
-
-    /// <summary>
-    /// Creates a builder.
-    /// </summary>
-    /// <returns>The result of the operation.</returns>
-    public static GameEventScriptCSharpExtensionRegistryBuilder CreateBuilder()
-        => GameEventScriptCSharpExtensionRegistryBuilder.Create(baseRegistry: null);
-
-    /// <summary>
-    /// Creates a builder.
-    /// </summary>
-    /// <param name="baseRegistry">The base registry value.</param>
-    /// <returns>The result of the operation.</returns>
-    public static GameEventScriptCSharpExtensionRegistryBuilder CreateBuilder(IGesExtensionRegistry baseRegistry)
-        => GameEventScriptCSharpExtensionRegistryBuilder.Create(baseRegistry ?? throw new ArgumentNullException(nameof(baseRegistry)));
-}
-
-/// <summary>
 /// Represents a ges extension attribute.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
@@ -113,19 +76,19 @@ public sealed class GesFunctionAttribute(string name) : Attribute
 }
 
 /// <summary>
-/// Represents a game event script c sharp extension registry builder.
+/// Collects attributed extension types and optionally falls back to a base registry for unknown signatures.
 /// </summary>
-public sealed class GameEventScriptCSharpExtensionRegistryBuilder
+public sealed class GesBridgeExtensionRegistryBuilder
 {
     private readonly IGesExtensionRegistry? _baseRegistry;
     private readonly List<Type> _extensionTypes = [];
 
-    private GameEventScriptCSharpExtensionRegistryBuilder(IGesExtensionRegistry? baseRegistry)
+    private GesBridgeExtensionRegistryBuilder(IGesExtensionRegistry? baseRegistry)
     {
         _baseRegistry = baseRegistry;
     }
 
-    internal static GameEventScriptCSharpExtensionRegistryBuilder Create(IGesExtensionRegistry? baseRegistry)
+    internal static GesBridgeExtensionRegistryBuilder Create(IGesExtensionRegistry? baseRegistry)
         => new(baseRegistry);
 
     /// <summary>
@@ -133,7 +96,7 @@ public sealed class GameEventScriptCSharpExtensionRegistryBuilder
     /// </summary>
     /// <param name="extensionType">The extension type value.</param>
     /// <returns>The result of the operation.</returns>
-    public GameEventScriptCSharpExtensionRegistryBuilder Add(Type extensionType)
+    public GesBridgeExtensionRegistryBuilder Add(Type extensionType)
     {
         _extensionTypes.Add(extensionType ?? throw new ArgumentNullException(nameof(extensionType)));
         return this;
@@ -144,14 +107,14 @@ public sealed class GameEventScriptCSharpExtensionRegistryBuilder
     /// </summary>
     /// <typeparam name="T">The t type.</typeparam>
     /// <returns>The result of the operation.</returns>
-    public GameEventScriptCSharpExtensionRegistryBuilder Add<T>() => Add(typeof(T));
+    public GesBridgeExtensionRegistryBuilder Add<T>() => Add(typeof(T));
 
     /// <summary>
     /// Adds the range.
     /// </summary>
     /// <param name="extensionTypes">The extension types value.</param>
     /// <returns>The result of the operation.</returns>
-    public GameEventScriptCSharpExtensionRegistryBuilder AddRange(IEnumerable<Type> extensionTypes)
+    public GesBridgeExtensionRegistryBuilder AddRange(IEnumerable<Type> extensionTypes)
     {
         _ = extensionTypes ?? throw new ArgumentNullException(nameof(extensionTypes));
         foreach (var extensionType in extensionTypes)
@@ -168,31 +131,47 @@ public sealed class GameEventScriptCSharpExtensionRegistryBuilder
     /// <returns>The result of the operation.</returns>
     public IGesExtensionRegistry Build()
     {
-        var localRegistry = GameEventScriptCSharpExtensionRegistry.Create(_extensionTypes);
+        var localRegistry = GesBridgeExtensionRegistry.Create(_extensionTypes);
         return _baseRegistry is null
             ? localRegistry
-            : new GameEventScriptOverlayExtensionRegistry(localRegistry, _baseRegistry);
+            : new GesBridgeOverlayExtensionRegistry(localRegistry, _baseRegistry);
     }
 }
 
-internal sealed class GameEventScriptOverlayExtensionRegistry(IGesExtensionRegistry localRegistry, IGesExtensionRegistry baseRegistry) : IGesExtensionRegistry
+internal sealed class GesBridgeOverlayExtensionRegistry(IGesExtensionRegistry localRegistry, IGesExtensionRegistry baseRegistry) : IGesExtensionRegistry
 {
     public IGesExtensionFunction? Resolve(GesExtensionReference reference)
         => localRegistry.Resolve(reference) ?? baseRegistry.Resolve(reference);
 }
 
-internal sealed class GameEventScriptCSharpExtensionRegistry : IGesExtensionRegistry
+/// <summary>
+/// Immutable extension registry built from <see cref="GesExtensionAttribute"/>-annotated types through Reflection.
+/// </summary>
+/// <remarks>Signatures are validated and indexed once at creation; linking resolves each function once.</remarks>
+public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
 {
     private readonly IReadOnlyDictionary<string, IGesExtensionFunction> _functions;
 
-    private GameEventScriptCSharpExtensionRegistry(IReadOnlyDictionary<string, IGesExtensionFunction> functions)
+    private GesBridgeExtensionRegistry(IReadOnlyDictionary<string, IGesExtensionFunction> functions)
     {
         _functions = functions ?? throw new ArgumentNullException(nameof(functions));
     }
 
-    public static GameEventScriptCSharpExtensionRegistry Create(params Type[] extensionTypes) => Create((IEnumerable<Type>)extensionTypes);
+    /// <summary>
+    /// Creates a registry from attributed extension types.
+    /// </summary>
+    /// <param name="extensionTypes">Types annotated with <see cref="GesExtensionAttribute"/>.</param>
+    /// <returns>The validated registry.</returns>
+    /// <exception cref="ArgumentException">An extension declaration is invalid or a signature is duplicated.</exception>
+    public static GesBridgeExtensionRegistry Create(params Type[] extensionTypes) => Create((IEnumerable<Type>)extensionTypes);
 
-    public static GameEventScriptCSharpExtensionRegistry Create(IEnumerable<Type> extensionTypes)
+    /// <summary>
+    /// Creates a registry from attributed extension types.
+    /// </summary>
+    /// <param name="extensionTypes">Types annotated with <see cref="GesExtensionAttribute"/>.</param>
+    /// <returns>The validated registry.</returns>
+    /// <exception cref="ArgumentException">An extension declaration is invalid or a signature is duplicated.</exception>
+    public static GesBridgeExtensionRegistry Create(IEnumerable<Type> extensionTypes)
     {
         _ = extensionTypes ?? throw new ArgumentNullException(nameof(extensionTypes));
         var functions = new Dictionary<string, IGesExtensionFunction>(StringComparer.Ordinal);
@@ -201,9 +180,29 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGesExtensionRegi
             RegisterExtensionType(extensionType ?? throw new ArgumentException("Extension type list contains null.", nameof(extensionTypes)), functions);
         }
 
-        return new GameEventScriptCSharpExtensionRegistry(functions);
+        return new GesBridgeExtensionRegistry(functions);
     }
 
+    /// <summary>
+    /// Creates a builder for incrementally added extension types.
+    /// </summary>
+    /// <returns>A new empty builder.</returns>
+    public static GesBridgeExtensionRegistryBuilder CreateBuilder()
+        => GesBridgeExtensionRegistryBuilder.Create(baseRegistry: null);
+
+    /// <summary>
+    /// Creates a builder whose registry falls back to <paramref name="baseRegistry"/> for signatures it does not define.
+    /// </summary>
+    /// <param name="baseRegistry">The fallback registry.</param>
+    /// <returns>A new empty builder.</returns>
+    public static GesBridgeExtensionRegistryBuilder CreateBuilder(IGesExtensionRegistry baseRegistry)
+        => GesBridgeExtensionRegistryBuilder.Create(baseRegistry ?? throw new ArgumentNullException(nameof(baseRegistry)));
+
+    /// <summary>
+    /// Resolves a referenced extension signature.
+    /// </summary>
+    /// <param name="reference">The Program's extension reference.</param>
+    /// <returns>The function, or <see langword="null"/> when the signature is not registered.</returns>
     public IGesExtensionFunction? Resolve(GesExtensionReference reference)
     {
         _ = reference ?? throw new ArgumentNullException(nameof(reference));
@@ -563,7 +562,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGesExtensionRegi
     private sealed class ExternalObjectArgumentReader<T> : IExtensionArgumentReader<T>
     {
         public bool Read(GesValueArguments arguments, int index, out T value)
-            => (value = (GameEventScriptCSharpExternalTypeValueConverter.ToClrExternalObjectValue(in arguments[index], typeof(T)) is T typed ? typed : default)!) is not null;
+            => (value = (GesBridgeValueConverter.ToClrExternalObjectValue(in arguments[index], typeof(T)) is T typed ? typed : default)!) is not null;
     }
 
     private sealed class GesValueReturnConverter : IExtensionReturnConverter<GesValue>

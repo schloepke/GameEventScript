@@ -955,35 +955,35 @@ interface GameEventScript.Api.IGesRuntimeObserver
   method System.Void MessagePublished(GameEventScript.Api.GameEventScriptMessage message, GameEventScript.Api.GesPublishResult result)
   method System.Void RuntimeError(GameEventScript.Api.GesDiagnostic diagnostic)
   method System.Void RuntimeLimitReached(System.String limitName, System.String detail, System.Int32 limit)
-static class GameEventScript.CSharpBridge.GameEventScriptCSharpContextExtensions
+static class GameEventScript.CSharpBridge.GesBridgeContextExtensions
   method static GameEventScript.Api.GesPublishResult Publish(GameEventScript.Api.GesContext context, GameEventScript.Api.GesMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, GameEventScript.Runtime.Values.GesValue> arguments)
   method static GameEventScript.Api.GesPublishResult Publish(GameEventScript.Api.GesContext context, System.String message, System.ValueTuple<System.String, GameEventScript.Runtime.Values.GesValue>[] arguments)
   method static System.Boolean Emit(GameEventScript.Api.GesContext context, GameEventScript.Api.GesMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, GameEventScript.Runtime.Values.GesValue> arguments)
   method static System.Boolean Emit(GameEventScript.Api.GesContext context, System.String message, System.ValueTuple<System.String, GameEventScript.Runtime.Values.GesValue>[] arguments)
-sealed class GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder
+sealed class GameEventScript.CSharpBridge.GesBridgeExtensionRegistry
+  method GameEventScript.Api.IGesExtensionFunction Resolve(GameEventScript.Api.GesExtensionReference reference)
+  method static GameEventScript.CSharpBridge.GesBridgeExtensionRegistry Create(System.Collections.Generic.IEnumerable<System.Type> extensionTypes)
+  method static GameEventScript.CSharpBridge.GesBridgeExtensionRegistry Create(System.Type[] extensionTypes)
+  method static GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder CreateBuilder()
+  method static GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder CreateBuilder(GameEventScript.Api.IGesExtensionRegistry baseRegistry)
+sealed class GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder
   method GameEventScript.Api.IGesExtensionRegistry Build()
-  method GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder Add(System.Type extensionType)
-  method GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder Add<T>()
-  method GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder AddRange(System.Collections.Generic.IEnumerable<System.Type> extensionTypes)
-static class GameEventScript.CSharpBridge.GameEventScriptCSharpExtensions
-  method static GameEventScript.Api.IGesExtensionRegistry CreateRegistry(System.Collections.Generic.IEnumerable<System.Type> extensionTypes)
-  method static GameEventScript.Api.IGesExtensionRegistry CreateRegistry(System.Type[] extensionTypes)
-  method static GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder CreateBuilder()
-  method static GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder CreateBuilder(GameEventScript.Api.IGesExtensionRegistry baseRegistry)
-sealed class GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypeRegistry
+  method GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder Add(System.Type extensionType)
+  method GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder Add<T>()
+  method GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder AddRange(System.Collections.Generic.IEnumerable<System.Type> extensionTypes)
+sealed class GameEventScript.CSharpBridge.GesBridgeExternalTypeRegistry
   method GameEventScript.Api.GesExternalTypeDefinition Resolve(System.String typeName)
   method GameEventScript.Api.IGesExternalTypeConstructor Resolve(GameEventScript.Api.GesExternalTypeConstructorReference reference)
+  method static GameEventScript.CSharpBridge.GesBridgeExternalTypeRegistry Create(System.Collections.Generic.IEnumerable<System.Type> types)
+  method static GameEventScript.CSharpBridge.GesBridgeExternalTypeRegistry Create(System.Type[] types)
   property System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesExternalTypeDefinition> Types { get }
-static class GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypes
-  method static GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypeRegistry CreateRegistry(System.Collections.Generic.IEnumerable<System.Type> types)
-  method static GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypeRegistry CreateRegistry(System.Type[] types)
-static class GameEventScript.CSharpBridge.GameEventScriptCSharpHostExtensions
+static class GameEventScript.CSharpBridge.GesBridgeHostExtensions
   method static GameEventScript.Api.GesSubscription Subscribe(GameEventScript.Api.GameEventScriptHost host, GameEventScript.Api.GesMessageSignature signature, System.Action<GameEventScript.Api.GameEventScriptMessage, GameEventScript.Api.GesContext> handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
   method static GameEventScript.Api.GesSubscription Subscribe(GameEventScript.Api.GameEventScriptHost host, GameEventScript.Api.GesMessageSignature signature, System.Action<GameEventScript.Api.GameEventScriptMessage, GameEventScript.Api.GesContext> handler, System.Int32 priority)
   method static GameEventScript.Api.GesSubscription Subscribe(GameEventScript.Api.GameEventScriptHost host, System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, System.Action<GameEventScript.Api.GameEventScriptMessage, GameEventScript.Api.GesContext> handler, System.Int32 priority)
   method static GameEventScript.Api.GesSubscription SubscribeMessageName(GameEventScript.Api.GameEventScriptHost host, System.String messageName, System.Action<GameEventScript.Api.GameEventScriptMessage, GameEventScript.Api.GesContext> handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
-  method static GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner RunAutomatically(GameEventScript.Api.GameEventScriptHost host)
-sealed class GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner
+  method static GameEventScript.CSharpBridge.GesBridgeHostRunner RunAutomatically(GameEventScript.Api.GameEventScriptHost host)
+sealed class GameEventScript.CSharpBridge.GesBridgeHostRunner
   method GameEventScript.Api.GesExecutionResult RunToCompletion()
   method GameEventScript.Api.GesProgramInstance Load(GameEventScript.Api.GameEventScriptProgram program, System.Int32 priority)
   method GameEventScript.Api.GesStartResult Start()
@@ -993,16 +993,22 @@ sealed class GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner
   method System.Boolean Receive(GameEventScript.Api.GameEventScriptMessage message)
   method System.Boolean Unsubscribe(GameEventScript.Api.GesSubscription subscription)
   method System.Void Dispose()
-  method static GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner Create(GameEventScript.Api.GameEventScriptHost host)
+  method static GameEventScript.CSharpBridge.GesBridgeHostRunner Create(GameEventScript.Api.GameEventScriptHost host)
   property GameEventScript.Api.GesExecutionResult? LastResult { get }
   property System.Boolean IsIdle { get }
   property System.Boolean IsReady { get }
   property System.Int64? IdleDurationMicroseconds { get }
-static class GameEventScript.CSharpBridge.GameEventScriptCSharpMessage
+static class GameEventScript.CSharpBridge.GesBridgeMessage
   method static GameEventScript.Api.GameEventScriptMessage Create(GameEventScript.Api.GesMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, GameEventScript.Runtime.Values.GesValue> arguments, System.Collections.Generic.IEnumerable<System.String> tags)
   method static GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IEnumerable<System.String> tags, System.ValueTuple<System.String, GameEventScript.Runtime.Values.GesValue>[] arguments)
   method static GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.ValueTuple<System.String, GameEventScript.Runtime.Values.GesValue>[] arguments)
-static class GameEventScript.CSharpBridge.GameEventScriptCSharpValue
+sealed class GameEventScript.CSharpBridge.GesBridgeMessageHandler
+  ctor GesBridgeMessageHandler(System.Action<GameEventScript.Api.GameEventScriptMessage, GameEventScript.Api.GesContext> handler)
+  method System.Void Handle(GameEventScript.Api.GameEventScriptMessage message, GameEventScript.Api.GesContext context)
+sealed class GameEventScript.CSharpBridge.GesBridgePublishSink
+  ctor GesBridgePublishSink(System.Func<GameEventScript.Api.GameEventScriptMessage, System.Boolean> publish)
+  method System.Boolean Publish(GameEventScript.Api.GameEventScriptMessage message)
+static class GameEventScript.CSharpBridge.GesBridgeValueConversion
   method static GameEventScript.Runtime.Values.GesValue GesMap(System.Collections.Generic.IReadOnlyDictionary<System.String, GameEventScript.Runtime.Values.GesValue> entries)
   method static GameEventScript.Runtime.Values.GesValue GesRecord(System.String typeName, System.Collections.Generic.IReadOnlyDictionary<System.String, GameEventScript.Runtime.Values.GesValue> fields)
 sealed class GameEventScript.CSharpBridge.GesConstructAttribute

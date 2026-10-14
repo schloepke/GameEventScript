@@ -8,14 +8,14 @@ using GameEventScript.Api;
 
 namespace GameEventScript.CSharpBridge;
 
-internal sealed class GameEventScriptCSharpDispatcher : IDisposable
+internal sealed class GesBridgeDispatcher : IDisposable
 {
     private readonly Queue<Action> _workItems = new();
     private readonly object _gate = new();
     private readonly Thread[] _workers;
     private bool _disposed;
 
-    private GameEventScriptCSharpDispatcher(int workerCount, string workerName)
+    private GesBridgeDispatcher(int workerCount, string workerName)
     {
         if (workerCount <= 0) throw new ArgumentOutOfRangeException(nameof(workerCount), "GameEventScript dispatcher worker count must be greater than zero.");
         _workers = new Thread[workerCount];
@@ -27,16 +27,16 @@ internal sealed class GameEventScriptCSharpDispatcher : IDisposable
         }
     }
 
-    public static GameEventScriptCSharpDispatcher Shared { get; } = new(1, "GameEventScript shared dispatch pump");
+    public static GesBridgeDispatcher Shared { get; } = new(1, "GameEventScript shared dispatch pump");
 
-    public static GameEventScriptCSharpDispatcher Create(int workerCount = 1) => new(workerCount, "GameEventScript dispatch pump");
+    public static GesBridgeDispatcher Create(int workerCount = 1) => new(workerCount, "GameEventScript dispatch pump");
 
     public void Enqueue(Action workItem)
     {
         _ = workItem ?? throw new ArgumentNullException(nameof(workItem));
         lock (_gate)
         {
-            if (_disposed) throw new ObjectDisposedException(nameof(GameEventScriptCSharpDispatcher));
+            if (_disposed) throw new ObjectDisposedException(nameof(GesBridgeDispatcher));
             _workItems.Enqueue(workItem);
             Monitor.Pulse(_gate);
         }

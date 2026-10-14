@@ -29,7 +29,7 @@ public sealed class GameEventScriptExternalTypeCallbackFailureTests
     [DataRow(typeof(ThrowingGetter), false, true)]
     public void ReflectionCallbackPreservesFaultIdentity(Type clrType, bool declared, bool readsField)
     {
-        var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(clrType);
+        var registry = GesBridgeExternalTypeRegistry.Create(clrType);
         var valueExpression = readsField ? "sample.value" : "sample";
         var script = $"on Start {{ let sample be :{clrType.Name}(declared: {(declared ? "true" : "false")}); emit MustNotRun(value: {valueExpression}) }}\non Check {{ emit Done }}";
         var program = new GesProgramBuilder().WithExternalTypeCatalog(registry).AddScript(script).Compile();
@@ -82,7 +82,7 @@ public sealed class GameEventScriptExternalTypeCallbackFailureTests
     [TestMethod]
     public void ApplicationReflectionWrapperRemainsAnUnexpectedFailure()
     {
-        var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(NestedReflectionConstructor));
+        var registry = GesBridgeExternalTypeRegistry.Create(typeof(NestedReflectionConstructor));
         var program = new GesProgramBuilder().WithExternalTypeCatalog(registry)
             .AddScript("module callbacks\non Start { let sample be :NestedReflectionConstructor(); emit MustNotRun(value: sample) }").Compile();
         var host = GameEventScriptHost.CreateBuilder().WithExternalTypeRegistry(registry).Build().StartForTest();

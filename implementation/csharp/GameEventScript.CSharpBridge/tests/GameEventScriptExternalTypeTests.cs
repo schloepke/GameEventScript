@@ -15,7 +15,7 @@ public sealed class GameEventScriptExternalTypeTests
     [TestMethod]
     public void ExternalTypeConstructorIsPortableAndBoundByHost()
     {
-        var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(AimValue));
+        var registry = GesBridgeExternalTypeRegistry.Create(typeof(AimValue));
         const string script =
             """
             on Start {
@@ -65,7 +65,7 @@ public sealed class GameEventScriptExternalTypeTests
     [TestMethod]
     public void ExtensionCanReadExternalClrObjectWithoutDictionaryMaterialization()
     {
-        var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(AimValue));
+        var registry = GesBridgeExternalTypeRegistry.Create(typeof(AimValue));
         const string script =
             """
             on Start {
@@ -86,7 +86,7 @@ public sealed class GameEventScriptExternalTypeTests
         var received = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithExternalTypeRegistry(registry)
-            .WithRegistry(GameEventScriptCSharpExtensions.CreateRegistry(typeof(AimExtensionFunctions)))
+            .WithRegistry(GesBridgeExtensionRegistry.Create(typeof(AimExtensionFunctions)))
             .Build().StartForTest();
         host.Load(bytecode);
         host.Subscribe("Done", ["score", "lead", "distance", "integerDistance"], (message, _) => received.Add(message));
@@ -107,7 +107,7 @@ public sealed class GameEventScriptExternalTypeTests
     [TestMethod]
     public void AnnotatedExtensionsAllowValueParameters()
     {
-        var registry = GameEventScriptCSharpExtensions.CreateRegistry(typeof(ValueExtensionFunctions));
+        var registry = GesBridgeExtensionRegistry.Create(typeof(ValueExtensionFunctions));
 
         Assert.IsNotNull(registry.Resolve(new GesExtensionReference("value", "value", [GesMessageSignature.UnlabeledParameterName])));
     }
@@ -115,11 +115,11 @@ public sealed class GameEventScriptExternalTypeTests
     [TestMethod]
     public void ExtensionRegistryBuilderCreatesImmutableOverlayRegistry()
     {
-        var baseRegistry = GameEventScriptCSharpExtensions
+        var baseRegistry = GesBridgeExtensionRegistry
             .CreateBuilder()
             .Add(typeof(BaseOverlayExtensionFunctions))
             .Build();
-        var extendedRegistry = GameEventScriptCSharpExtensions
+        var extendedRegistry = GesBridgeExtensionRegistry
             .CreateBuilder(baseRegistry)
             .Add(typeof(LocalOverlayExtensionFunctions))
             .Build();

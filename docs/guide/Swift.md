@@ -156,7 +156,7 @@ struct BotState {
 }
 
 let bot = try BotState.createGesType()
-let registry = try GameEventScriptSwiftExternalTypeRegistry([bot.binding])
+let registry = try GesBridgeExternalTypeRegistry([bot.binding])
 let value = bot.wrap(BotState(energy: 100, distance: 4))
 ```
 

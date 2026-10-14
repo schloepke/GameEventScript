@@ -9,29 +9,55 @@ using GameEventScript.Runtime.Values;
 
 namespace GameEventScript.CSharpBridge;
 
-internal sealed class GameEventScriptCSharpNativeMessageHandler(Action<GameEventScriptMessage, GesContext> handler) : IGesNativeMessageHandler
+/// <summary>
+/// A delegate retained once at subscription time; dispatch invokes it synchronously.
+/// </summary>
+/// <param name="handler">The synchronous handler, invoked with the message and the owning host context.</param>
+public sealed class GesBridgeMessageHandler(Action<GameEventScriptMessage, GesContext> handler) : IGesNativeMessageHandler
 {
     private readonly Action<GameEventScriptMessage, GesContext> _handler =
         handler ?? throw new ArgumentNullException(nameof(handler));
 
+    /// <summary>
+    /// Invokes the stored delegate synchronously, propagating its exception.
+    /// </summary>
+    /// <param name="message">The dispatched message.</param>
+    /// <param name="context">The owning host context.</param>
     public void Handle(GameEventScriptMessage message, GesContext context)
         => _handler(message, context);
 }
 
 /// <summary>
+/// A synchronous outbound publish delegate; exceptions retain the Runtime's classification.
+/// </summary>
+/// <param name="publish">Returns whether the sink accepted responsibility for the message.</param>
+public sealed class GesBridgePublishSink(Func<GameEventScriptMessage, bool> publish) : IGesPublishSink
+{
+    private readonly Func<GameEventScriptMessage, bool> _publish =
+        publish ?? throw new ArgumentNullException(nameof(publish));
+
+    /// <summary>
+    /// Invokes the stored delegate and returns its acceptance flag, propagating its exception.
+    /// </summary>
+    /// <param name="message">The outbound message.</param>
+    /// <returns><see langword="true"/> when the delegate accepted the message.</returns>
+    public bool Publish(GameEventScriptMessage message) => _publish(message);
+}
+
+/// <summary>
 /// Optional C# adapter that serializes host access and pumps accepted messages on a shared worker.
 /// </summary>
-public sealed class GameEventScriptCSharpHostRunner : IDisposable
+public sealed class GesBridgeHostRunner : IDisposable
 {
     private readonly GameEventScriptHost _host;
-    private readonly GameEventScriptCSharpDispatcher _dispatcher;
+    private readonly GesBridgeDispatcher _dispatcher;
     private readonly object _gate = new();
     private Timer? _timer;
     private bool _scheduled;
     private bool _disposed;
     private GesExecutionResult? _lastResult;
 
-    private GameEventScriptCSharpHostRunner(GameEventScriptHost host, GameEventScriptCSharpDispatcher dispatcher)
+    private GesBridgeHostRunner(GameEventScriptHost host, GesBridgeDispatcher dispatcher)
     {
         _host = host ?? throw new ArgumentNullException(nameof(host));
         _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
@@ -43,11 +69,11 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
     /// A loading host waits for an explicit call to Start.
     /// </summary>
     /// <param name="host">The host whose access becomes owned by the returned runner.</param>
-    /// <returns>A runner using <see cref="GameEventScriptCSharpDispatcher.Shared"/>.</returns>
+    /// <returns>A runner using <see cref="GesBridgeDispatcher.Shared"/>.</returns>
     /// <remarks>Direct host access must stop when ownership is transferred. Pending callbacks may start before this method returns.</remarks>
-    public static GameEventScriptCSharpHostRunner Create(GameEventScriptHost host)
+    public static GesBridgeHostRunner Create(GameEventScriptHost host)
     {
-        var runner = new GameEventScriptCSharpHostRunner(host, GameEventScriptCSharpDispatcher.Shared);
+        var runner = new GesBridgeHostRunner(host, GesBridgeDispatcher.Shared);
         lock (runner._gate)
         {
             if (runner._host.IsReady && !runner._host.IsIdle) runner.Schedule();
@@ -154,7 +180,7 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
             return _host.Subscribe(
                 message,
                 parameterNames,
-                new GameEventScriptCSharpNativeMessageHandler(handler),
+                new GesBridgeMessageHandler(handler),
                 priority);
         }
     }
@@ -233,14 +259,14 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
 
     private void ThrowIfDisposed()
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(GameEventScriptCSharpHostRunner));
+        if (_disposed) throw new ObjectDisposedException(nameof(GesBridgeHostRunner));
     }
 }
 
 /// <summary>
 /// Provides delegate-based and automatic-runner conveniences that intentionally remain outside the portable Core.
 /// </summary>
-public static class GameEventScriptCSharpHostExtensions
+public static class GesBridgeHostExtensions
 {
     /// <summary>
     /// Performs the subscribe operation.
@@ -255,7 +281,7 @@ public static class GameEventScriptCSharpHostExtensions
         => RequireHost(host).Subscribe(
             message,
             parameterNames,
-            new GameEventScriptCSharpNativeMessageHandler(handler),
+            new GesBridgeMessageHandler(handler),
             priority);
 
     /// <summary>
@@ -269,7 +295,7 @@ public static class GameEventScriptCSharpHostExtensions
     public static GesSubscription Subscribe(this GameEventScriptHost host, GesMessageSignature signature, Action<GameEventScriptMessage, GesContext> handler, int priority = 0)
         => RequireHost(host).Subscribe(
             signature,
-            new GameEventScriptCSharpNativeMessageHandler(handler),
+            new GesBridgeMessageHandler(handler),
             priority);
 
     /// <summary>
@@ -291,7 +317,7 @@ public static class GameEventScriptCSharpHostExtensions
         int priority = 0)
         => RequireHost(host).Subscribe(
             signature,
-            new GameEventScriptCSharpNativeMessageHandler(handler),
+            new GesBridgeMessageHandler(handler),
             matchingTags,
             withoutTags,
             priority);
@@ -315,7 +341,7 @@ public static class GameEventScriptCSharpHostExtensions
         int priority = 0)
         => RequireHost(host).SubscribeMessageName(
             messageName,
-            new GameEventScriptCSharpNativeMessageHandler(handler),
+            new GesBridgeMessageHandler(handler),
             matchingTags,
             withoutTags,
             priority);
@@ -326,8 +352,8 @@ public static class GameEventScriptCSharpHostExtensions
     /// <param name="host">The host whose access becomes owned by the runner.</param>
     /// <returns>The automatic host runner.</returns>
     /// <remarks>Direct host access must stop when ownership is transferred. Pending callbacks may start before this method returns.</remarks>
-    public static GameEventScriptCSharpHostRunner RunAutomatically(this GameEventScriptHost host)
-        => GameEventScriptCSharpHostRunner.Create(RequireHost(host));
+    public static GesBridgeHostRunner RunAutomatically(this GameEventScriptHost host)
+        => GesBridgeHostRunner.Create(RequireHost(host));
 
     private static GameEventScriptHost RequireHost(GameEventScriptHost? host)
         => host ?? throw new ArgumentNullException(nameof(host));
@@ -337,7 +363,7 @@ public static class GameEventScriptCSharpHostExtensions
 /// C#-specific message construction conveniences. Portable code uses ordered
 /// <see cref="GesMessageArgument"/> values directly.
 /// </summary>
-public static class GameEventScriptCSharpMessage
+public static class GesBridgeMessage
 {
     /// <summary>
     /// Creates a message from C# tuple arguments while preserving tuple order.
@@ -411,7 +437,7 @@ public static class GameEventScriptCSharpMessage
 /// <summary>
 /// Provides C# tuple and dictionary conveniences for context messaging.
 /// </summary>
-public static class GameEventScriptCSharpContextExtensions
+public static class GesBridgeContextExtensions
 {
     /// <summary>
     /// Performs the emit operation.
@@ -421,7 +447,7 @@ public static class GameEventScriptCSharpContextExtensions
     /// <param name="arguments">The arguments value.</param>
     /// <returns>The result of the operation.</returns>
     public static bool Emit(this GesContext context, string message, params (string name, GesValue value)[] arguments)
-        => RequireContext(context).Emit(GameEventScriptCSharpMessage.Create(message, arguments));
+        => RequireContext(context).Emit(GesBridgeMessage.Create(message, arguments));
 
     /// <summary>
     /// Performs the emit operation.
@@ -431,7 +457,7 @@ public static class GameEventScriptCSharpContextExtensions
     /// <param name="arguments">The arguments value.</param>
     /// <returns>The result of the operation.</returns>
     public static bool Emit(this GesContext context, GesMessageSignature signature, IReadOnlyDictionary<string, GesValue> arguments)
-        => RequireContext(context).Emit(GameEventScriptCSharpMessage.Create(signature, arguments));
+        => RequireContext(context).Emit(GesBridgeMessage.Create(signature, arguments));
 
     /// <summary>
     /// Performs the publish operation.
@@ -441,7 +467,7 @@ public static class GameEventScriptCSharpContextExtensions
     /// <param name="arguments">The arguments value.</param>
     /// <returns>The result of the operation.</returns>
     public static GesPublishResult Publish(this GesContext context, string message, params (string name, GesValue value)[] arguments)
-        => RequireContext(context).Publish(GameEventScriptCSharpMessage.Create(message, arguments));
+        => RequireContext(context).Publish(GesBridgeMessage.Create(message, arguments));
 
     /// <summary>
     /// Performs the publish operation.
@@ -451,7 +477,7 @@ public static class GameEventScriptCSharpContextExtensions
     /// <param name="arguments">The arguments value.</param>
     /// <returns>The result of the operation.</returns>
     public static GesPublishResult Publish(this GesContext context, GesMessageSignature signature, IReadOnlyDictionary<string, GesValue> arguments)
-        => RequireContext(context).Publish(GameEventScriptCSharpMessage.Create(signature, arguments));
+        => RequireContext(context).Publish(GesBridgeMessage.Create(signature, arguments));
 
     private static GesContext RequireContext(GesContext? context)
         => context ?? throw new ArgumentNullException(nameof(context));

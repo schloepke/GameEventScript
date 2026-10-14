@@ -4,7 +4,7 @@
 import GameEventScriptRuntime
 
 /// One validated extension signature and its synchronous Swift implementation.
-public struct GameEventScriptSwiftExtension: GesExtensionFunction {
+public struct GesBridgeExtension: GesExtensionFunction {
     /// Validated portable signature used during host linking.
     public let reference: GesExtensionReference
     private let body: (GesExtensionCall) throws -> Void
@@ -24,15 +24,15 @@ public struct GameEventScriptSwiftExtension: GesExtensionFunction {
 }
 
 /// Immutable extension registrations, indexed once before Host linking.
-public struct GameEventScriptSwiftExtensionRegistry: GesExtensionRegistry {
-    private let functions: [String: GameEventScriptSwiftExtension]
+public struct GesBridgeExtensionRegistry: GesExtensionRegistry {
+    private let functions: [String: GesBridgeExtension]
     private let fallback: (any GesExtensionRegistry)?
 
     /// Indexes unique extension signatures and optionally delegates missing imports to a fallback.
     ///
     /// - Throws: An API error for duplicate signatures.
-    public init(_ extensions: [GameEventScriptSwiftExtension], fallback: (any GesExtensionRegistry)? = nil) throws {
-        var functions: [String: GameEventScriptSwiftExtension] = [:]
+    public init(_ extensions: [GesBridgeExtension], fallback: (any GesExtensionRegistry)? = nil) throws {
+        var functions: [String: GesBridgeExtension] = [:]
         for item in extensions { guard functions.updateValue(item, forKey: item.reference.signatureID) == nil else { throw GesApiError.invalidArgument("Duplicate extension signature: " + item.reference.signatureID) } }
         self.functions = functions
         self.fallback = fallback
@@ -47,12 +47,12 @@ public struct GameEventScriptSwiftExtensionRegistry: GesExtensionRegistry {
 
 extension GesExtensionCall {
     /// Converts and stores the result without retaining this borrowed call object.
-    public func setSwiftValue<T: GameEventScriptSwiftValueConvertible>(_ value: T) throws { setValue(try value.toGesValue()) }
+    public func setSwiftValue<T: GesBridgeValueConvertible>(_ value: T) throws { setValue(try value.toGesValue()) }
 }
 
 extension GesValueArguments {
     /// Strict native conversion with bounds checking; only use during the active callback.
-    public func swiftValue<T: GameEventScriptSwiftValueConvertible>(at index: Int, as type: T.Type = T.self) throws -> T {
+    public func swiftValue<T: GesBridgeValueConvertible>(at index: Int, as type: T.Type = T.self) throws -> T {
         guard index >= 0 && index < count else { throw GesApiError.invalidArgument("Argument index out of range") }
         return try T.fromGesValue(self[index])
     }

@@ -4,7 +4,7 @@
 import GameEventScriptRuntime
 
 /// A closure retained once at subscription time; dispatch invokes it synchronously.
-public struct GameEventScriptSwiftMessageHandler: GesNativeMessageHandler {
+public struct GesBridgeMessageHandler: GesNativeMessageHandler {
     private let body: (GameEventScriptMessage, GesContext) throws -> Void
 
     /// Retains a synchronous throwing handler closure once at registration time.
@@ -15,7 +15,7 @@ public struct GameEventScriptSwiftMessageHandler: GesNativeMessageHandler {
 }
 
 /// A synchronous outbound publish callback; errors retain the Runtime's classification.
-public struct GameEventScriptSwiftPublishSink: GesPublishSink {
+public struct GesBridgePublishSink: GesPublishSink {
     private let body: (GameEventScriptMessage) throws -> Bool
 
     /// Retains a synchronous outbound callback returning whether delivery was accepted.
@@ -33,29 +33,29 @@ extension GameEventScriptHost {
     /// - Throws: An API error for invalid tag names or exhausted registration IDs.
     public func subscribe(_ signature: GesMessageSignature, matchingTags: [String] = [], withoutTags: [String] = [], priority: Int = 0, handler: @escaping (GameEventScriptMessage, GesContext) throws -> Void) throws
         -> GesSubscription
-    { try subscribe(signature, handler: GameEventScriptSwiftMessageHandler(handler), matchingTags: matchingTags, withoutTags: withoutTags, priority: priority) }
+    { try subscribe(signature, handler: GesBridgeMessageHandler(handler), matchingTags: matchingTags, withoutTags: withoutTags, priority: priority) }
 
     /// Registers a native handler matching a message name with any argument labels and optional tag filters.
     ///
     /// - Returns: An idempotently detachable subscription.
     /// - Throws: An API error for an empty name, invalid tags or exhausted registration IDs.
     public func subscribeMessageName(_ name: String, matchingTags: [String] = [], withoutTags: [String] = [], priority: Int = 0, handler: @escaping (GameEventScriptMessage, GesContext) throws -> Void) throws -> GesSubscription {
-        try subscribeMessageName(name, handler: GameEventScriptSwiftMessageHandler(handler), matchingTags: matchingTags, withoutTags: withoutTags, priority: priority)
+        try subscribeMessageName(name, handler: GesBridgeMessageHandler(handler), matchingTags: matchingTags, withoutTags: withoutTags, priority: priority)
     }
 }
 
 extension GameEventScriptMessage {
     /// Ordered pairs preserve positional arguments and external label order.
-    public init(name: String, swiftArguments: [(String?, any GameEventScriptSwiftValueConvertible)], tags: [String] = []) throws {
+    public init(name: String, swiftArguments: [(String?, any GesBridgeValueConvertible)], tags: [String] = []) throws {
         try self.init(name: name, arguments: swiftArguments.map { try GesMessageArgument(name: $0.0, value: $0.1.toGesValue()) }, tags: tags)
     }
 }
 
 extension GesMessageSignature {
     /// Binds a complete named dictionary in signature order; positional signatures cannot use dictionaries.
-    public func withSwiftArguments(_ values: [String: any GameEventScriptSwiftValueConvertible]) throws -> GameEventScriptMessage {
+    public func withSwiftArguments(_ values: [String: any GesBridgeValueConvertible]) throws -> GameEventScriptMessage {
         guard !parameters.contains("_") else { throw GesMessageError.invalidParameterName }
-        var normalized: [String: any GameEventScriptSwiftValueConvertible] = [:]
+        var normalized: [String: any GesBridgeValueConvertible] = [:]
         for (key, value) in values {
             let name = try Self.normalizeParameterName(key)
             guard normalized.updateValue(value, forKey: name) == nil else { throw GesMessageError.duplicateArgumentName }
@@ -73,11 +73,11 @@ extension GesMessageSignature {
 extension GesContext {
     /// Enqueues local delivery without pumping. Returns false if the host no longer exists or rejects the message. The
     /// name overload validates message arguments and may throw.
-    @discardableResult public func emit(_ name: String, swiftArguments: [(String?, any GameEventScriptSwiftValueConvertible)], tags: [String] = []) throws -> Bool { emit(try .init(name: name, swiftArguments: swiftArguments, tags: tags)) }
+    @discardableResult public func emit(_ name: String, swiftArguments: [(String?, any GesBridgeValueConvertible)], tags: [String] = []) throws -> Bool { emit(try .init(name: name, swiftArguments: swiftArguments, tags: tags)) }
 
     /// Enqueues local delivery and attempts outbound delivery, or stages publication during initialization. Returns
     /// separate acceptance flags. The name overload validates the message and may throw.
-    @discardableResult public func publish(_ name: String, swiftArguments: [(String?, any GameEventScriptSwiftValueConvertible)], tags: [String] = []) throws -> GesPublishResult {
+    @discardableResult public func publish(_ name: String, swiftArguments: [(String?, any GesBridgeValueConvertible)], tags: [String] = []) throws -> GesPublishResult {
         publish(try .init(name: name, swiftArguments: swiftArguments, tags: tags))
     }
 }

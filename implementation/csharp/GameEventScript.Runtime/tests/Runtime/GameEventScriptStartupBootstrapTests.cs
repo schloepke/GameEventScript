@@ -38,7 +38,7 @@ public sealed class GameEventScriptStartupBootstrapTests
     [TestMethod]
     public void ReadyRunnerCanBeConfiguredBeforeExplicitStart()
     {
-        using var runner = GameEventScriptCSharpHostRunner.Create(GameEventScriptHost.CreateBuilder().Build());
+        using var runner = GesBridgeHostRunner.Create(GameEventScriptHost.CreateBuilder().Build());
         var delivered = 0;
         runner.Subscribe("Tick", [], (_, _) => delivered++);
         var instance = runner.Load(new GesProgramBuilder().AddScript("on initialization { emit Tick() }").Compile());

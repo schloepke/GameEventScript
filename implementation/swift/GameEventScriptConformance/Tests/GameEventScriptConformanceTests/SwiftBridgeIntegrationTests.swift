@@ -10,7 +10,7 @@ import XCTest
 final class SwiftBridgeIntegrationTests: XCTestCase {
     func testRunnerWakesForDelayedMessagesWithoutFurtherInput() throws {
         let program = try GesProgramBuilder().addScript("on Start { emit after 0.02s Done() }").compile()
-        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.makeBuilder().build())
+        let runner = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().build())
         defer { runner.close() }
         let done = expectation(description: "Delayed delivery without another Receive")
         _ = try runner.subscribe(.init(name: "Done")) { _, _ in done.fulfill() }
@@ -38,8 +38,8 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
 
     func testTypedCatalogExtensionAndExternalConstructorExecuteFromBinary() throws {
         let player = try Player.createGesType()
-        let types = try GameEventScriptSwiftExternalTypeRegistry([player.binding])
-        let extensions = try GameEventScriptSwiftExtensionRegistry([
+        let types = try GesBridgeExternalTypeRegistry([player.binding])
+        let extensions = try GesBridgeExtensionRegistry([
             .init(namespace: "app", name: "double", parameters: ["_"]) { call in
                 let number: Int = try call.arguments.swiftValue(at: 0)
                 try call.setSwiftValue(number * 2)
@@ -72,8 +72,8 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
                 if explicit { throw try GesExtensionFaultError(code: "app.failure", message: "Failed") }
                 throw Failure.unexpected
             }
-            let extensions = try GameEventScriptSwiftExtensionRegistry([.init(namespace: "app", name: "fail") { _ in try fail() }])
-            let type = try GameEventScriptSwiftType<Player>(
+            let extensions = try GesBridgeExtensionRegistry([.init(namespace: "app", name: "fail") { _ in try fail() }])
+            let type = try GesBridgeTypeBinding<Player>(
                 "Player",
                 fields: [],
                 constructors: [
@@ -83,7 +83,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
                     }
                 ]
             )
-            let types = try GameEventScriptSwiftExternalTypeRegistry([type.binding])
+            let types = try GesBridgeExternalTypeRegistry([type.binding])
             for (expression, unexpected) in [(":app.fail()", "runtime.extensionCallFailed"), (":Player()", "runtime.externalConstructorFailed")] {
                 let program = try GesProgramBuilder().withExternalTypeCatalog(types).addScript("on Start() { emit Done(\(expression)) }").compile()
                 let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).withRegistry(extensions).withExternalTypeRegistry(types).build().startForTest()
@@ -99,7 +99,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
 
     func testRunnerSchedulesInitializationAndDetachesProgram() throws {
         let program = try GesProgramBuilder().addScript("on initialization { emit Ready() }\non Start() { emit Done() }").compile()
-        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(1).build().startForTest())
+        let runner = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(1).build().startForTest())
         defer { runner.close() }
         let instance = try runner.load(program)
         while !runner.isIdle { _ = try runner.runToCompletion() }
@@ -117,8 +117,8 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
 
     func testImmutableProgramRemainsReusableAcrossRunners() throws {
         let program = try GesProgramBuilder().addScript("on initialization { emit Ready() }").compile()
-        let first = try GameEventScriptSwiftHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(1).build().startForTest())
-        let second = try GameEventScriptSwiftHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(2).build().startForTest())
+        let first = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(1).build().startForTest())
+        let second = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(2).build().startForTest())
         defer {
             first.close()
             second.close()

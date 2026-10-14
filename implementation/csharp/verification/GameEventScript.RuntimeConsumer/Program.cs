@@ -21,7 +21,7 @@ internal static class Program
         host.Subscribe("Done", ["result"], (message, _) => result = message.Arguments.GetAsInteger("result"));
         host.Load(program);
         if (host.Start().State != GesStartState.Ready) throw new InvalidOperationException("Host startup failed.");
-        if (!host.Receive(GameEventScriptCSharpMessage.Create("Start", ("value", GesValue.GesText("41"))))) throw new InvalidOperationException("The host rejected the input message.");
+        if (!host.Receive(GesBridgeMessage.Create("Start", ("value", GesValue.GesText("41"))))) throw new InvalidOperationException("The host rejected the input message.");
         if (host.RunToCompletion().State != GesExecutionState.Completed || result != 42) throw new InvalidOperationException("The runtime/bridge pipeline did not produce 42.");
         AssertRuntimeOnly();
         Console.WriteLine("Runtime and CSharpBridge loaded and executed .gesb without a compiler.");

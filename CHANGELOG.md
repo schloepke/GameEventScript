@@ -63,6 +63,20 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `GesOpaqueSection.flags` is a `GesSectionFlags` option set instead of a raw
   `UInt16`, as in C#. The C# `GesInstructionFlag` enum is no longer public; both
   languages expose the raw `UnitAndFlags`/`unitAndFlags` byte.
+- Bridge types use the `GesBridge` prefix and identical names for shared roles:
+  `GesBridgeHostRunner`, `GesBridgeExtensionRegistry`,
+  `GesBridgeExternalTypeRegistry`, `GesBridgeMessageHandler`,
+  `GesBridgePublishSink` and `GesBridgeValueConversion` (formerly
+  `GameEventScriptCSharp…`/`GameEventScriptSwift…`). C# registries are created with
+  `GesBridgeExtensionRegistry.Create(types)`/`CreateBuilder()` and
+  `GesBridgeExternalTypeRegistry.Create(types)`; the static `GameEventScriptCSharpExtensions`
+  and `GameEventScriptCSharpExternalTypes` entry classes are removed. C# gains the
+  public `GesBridgeMessageHandler` and `GesBridgePublishSink` delegate adapters.
+  Swift descriptors become `GesBridgeFieldBinding<Root>`,
+  `GesBridgeConstructorBinding<Root>`, `GesBridgeTypeBinding<Root>` and
+  `GesBridgeAnyTypeBinding`; `GesBridgeValueConvertible`,
+  `GesBridgeConversionError` and `GesBridgeHostRunnerRegistration` replace their
+  `GameEventScriptSwift…` predecessors. Attributes and macros keep their names.
 
 ### Changed
 

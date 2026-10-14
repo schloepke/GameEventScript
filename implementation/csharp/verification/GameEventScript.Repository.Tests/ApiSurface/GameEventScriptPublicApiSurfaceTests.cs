@@ -59,7 +59,7 @@ public sealed class GameEventScriptPublicApiSurfaceTests
     {
         var runtime = typeof(GameEventScriptProgram).Assembly;
         var compiler = typeof(GesProgramBuilder).Assembly;
-        var bridge = typeof(GameEventScriptCSharpHostRunner).Assembly;
+        var bridge = typeof(GesBridgeHostRunner).Assembly;
 
         Assert.AreEqual("GameEventScript.Runtime", runtime.GetName().Name);
         Assert.AreEqual("GameEventScript.Compiler", compiler.GetName().Name);
@@ -290,5 +290,5 @@ public sealed class GameEventScriptPublicApiSurfaceTests
         assembly.GetExportedTypes().Where(type => !type.Name.Contains('<'));
 
     private static Assembly[] PublicAssemblies()
-        => [typeof(GameEventScriptProgram).Assembly, typeof(GesProgramBuilder).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly, typeof(GesSyntaxHighlighter).Assembly];
+        => [typeof(GameEventScriptProgram).Assembly, typeof(GesProgramBuilder).Assembly, typeof(GesBridgeHostRunner).Assembly, typeof(GesSyntaxHighlighter).Assembly];
 }

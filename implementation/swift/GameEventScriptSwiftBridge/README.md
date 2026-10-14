@@ -46,7 +46,7 @@ struct BotState {
 }
 
 let bot = try BotState.createGesType()
-let registry = try GameEventScriptSwiftExternalTypeRegistry([bot.binding])
+let registry = try GesBridgeExternalTypeRegistry([bot.binding])
 let value = bot.wrap(BotState(energy: 100, distance: 4))
 ```
 
@@ -126,14 +126,14 @@ let message = try signature.withSwiftArguments(["score": 42, "name": "Ada"])
 The dictionary must contain exactly the signature's named arguments. Missing,
 extra, duplicate normalized or positional labels are rejected. Context's
 `emit` and `publish` have the same ordered `swiftArguments` convenience.
-`GameEventScriptSwiftPublishSink` wraps a synchronous outbound closure.
+`GesBridgePublishSink` wraps a synchronous outbound closure.
 
 ## Native value conversion
 
-Use `GameEventScriptSwiftValue.encode(value)` and
-`GameEventScriptSwiftValue.decode(value, as: Int.self)`, or the corresponding
+Use `GesBridgeValueConversion.encode(value)` and
+`GesBridgeValueConversion.decode(value, as: Int.self)`, or the corresponding
 `toGesValue()` / `fromGesValue(_:)` methods. Custom types may implement
-`GameEventScriptSwiftValueConvertible` explicitly.
+`GesBridgeValueConvertible` explicitly.
 
 | Swift type | GES representation / decoding |
 | --- | --- |
@@ -152,7 +152,7 @@ a plain `Double`. Fractional numbers cannot decode to an integer. Encoding
 floating-point values uses the portable factory: NaN becomes Nothing, signed zero
 is normalized, and representable integral values use Int64. Use `GesValue`
 explicitly for units, Percentage, Tag, Dice and other specialized values.
-Conversion errors use `GameEventScriptSwiftConversionError`.
+Conversion errors use `GesBridgeConversionError`.
 
 Swift dictionaries compare canonically equivalent String keys as equal; GES
 maps distinguish their scalar sequences. Decoding a GES map rejects collisions
@@ -163,8 +163,8 @@ cannot recover keys already merged by a Swift dictionary. Use ordered
 ## Extensions
 
 ```swift
-let extensions = try GameEventScriptSwiftExtensionRegistry([
-    GameEventScriptSwiftExtension(namespace: "app", name: "double", parameters: ["_"]) { call in
+let extensions = try GesBridgeExtensionRegistry([
+    GesBridgeExtension(namespace: "app", name: "double", parameters: ["_"]) { call in
         let number: Int = try call.arguments.swiftValue(at: 0)
         try call.setSwiftValue(number * 2)
     }
@@ -190,7 +190,7 @@ struct Player {
     let score: Int
 }
 
-let player = try GameEventScriptSwiftType<Player>("Player", fields: [
+let player = try GesBridgeTypeBinding<Player>("Player", fields: [
     .init("name", typeName: "Text", keyPath: \Player.name),
     .init("score", typeName: "Number", keyPath: \Player.score),
 ], constructors: [
@@ -198,7 +198,7 @@ let player = try GameEventScriptSwiftType<Player>("Player", fields: [
         try Player(name: arguments.swiftValue(at: 0), score: arguments.swiftValue(at: 1))
     }
 ])
-let types = try GameEventScriptSwiftExternalTypeRegistry([player.binding])
+let types = try GesBridgeExternalTypeRegistry([player.binding])
 let host = try GameEventScriptHost.makeBuilder().withRandomSeed(123).withExternalTypeRegistry(types).build()
 
 let value = player.wrap(Player(name: "Ada", score: 42))
@@ -227,7 +227,7 @@ descriptor with the same name.
 ## Optional synchronized runner
 
 ```swift
-let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(123).build())
+let runner = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(123).build())
 let registration = try runner.subscribe(.init(name: "Done", parameters: ["value"])) { message, _ in
     print(message.arguments[0])
 }

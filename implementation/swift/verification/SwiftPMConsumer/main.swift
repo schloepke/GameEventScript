@@ -19,7 +19,7 @@ struct ConsumerPoint {
 let highlighted = try GesSyntaxHighlighter().highlight("emit Done(42)")
 precondition(highlighted.isComplete && highlighted.spans.contains { $0.kind == .number })
 let pointType = try ConsumerPoint.createGesType()
-let types = try GameEventScriptSwiftExternalTypeRegistry([pointType.binding])
+let types = try GesBridgeExternalTypeRegistry([pointType.binding])
 let program = try GesProgramBuilder().addScript("on Start(value) { emit Done(result: (parse value) + 1) }").compile()
 let macroProgram = try GesProgramBuilder().withExternalTypeCatalog(types).addScript("on FromMacro(value) { let point be :ConsumerPoint(value: value); emit Done(result: point.value) }").compile()
 let bytes = try program.encode()

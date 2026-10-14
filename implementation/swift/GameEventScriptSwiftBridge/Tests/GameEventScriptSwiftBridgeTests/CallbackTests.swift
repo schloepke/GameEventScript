@@ -58,7 +58,7 @@ final class CallbackTests: XCTestCase {
     func testContextAndPublishClosureUsePortableDelivery() throws {
         var outbound: [GameEventScriptMessage] = []
         var local: [GameEventScriptMessage] = []
-        let sink = GameEventScriptSwiftPublishSink {
+        let sink = GesBridgePublishSink {
             outbound.append($0)
             return true
         }
@@ -77,16 +77,16 @@ final class CallbackTests: XCTestCase {
     }
 
     func testExtensionRegistryValidatesIdentityAndFallsBack() throws {
-        let function = try GameEventScriptSwiftExtension(namespace: "app", name: "value", parameters: ["a", "b"]) { try $0.setSwiftValue(42) }
-        let fallback = try GameEventScriptSwiftExtensionRegistry([function])
-        let registry = try GameEventScriptSwiftExtensionRegistry([], fallback: fallback)
+        let function = try GesBridgeExtension(namespace: "app", name: "value", parameters: ["a", "b"]) { try $0.setSwiftValue(42) }
+        let fallback = try GesBridgeExtensionRegistry([function])
+        let registry = try GesBridgeExtensionRegistry([], fallback: fallback)
         let call = GesExtensionCall()
         try XCTUnwrap(registry.resolve(function.reference)).invoke(call)
         XCTAssertEqual(call.result, .integer(42))
         XCTAssertNil(try registry.resolve(.init(extensionName: "app", functionName: "value", argumentLabels: ["b", "a"])))
-        XCTAssertThrowsError(try GameEventScriptSwiftExtensionRegistry([function, function]))
-        XCTAssertThrowsError(try GameEventScriptSwiftExtension(namespace: "app", name: "value", parameters: ["a", "a"]) { _ in })
-        XCTAssertNoThrow(try GameEventScriptSwiftExtension(namespace: "app", name: "value", parameters: ["_", "_"]) { _ in })
+        XCTAssertThrowsError(try GesBridgeExtensionRegistry([function, function]))
+        XCTAssertThrowsError(try GesBridgeExtension(namespace: "app", name: "value", parameters: ["a", "a"]) { _ in })
+        XCTAssertNoThrow(try GesBridgeExtension(namespace: "app", name: "value", parameters: ["_", "_"]) { _ in })
         XCTAssertThrowsError(try GesValueArguments().swiftValue(at: 0, as: Int?.self))
     }
 }

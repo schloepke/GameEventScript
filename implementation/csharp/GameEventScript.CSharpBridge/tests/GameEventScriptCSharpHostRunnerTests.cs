@@ -71,7 +71,7 @@ public sealed class GameEventScriptCSharpHostRunnerTests
         using var runner = host.RunAutomatically();
         // The shared dispatcher has one FIFO worker. This barrier follows any initial
         // pump scheduled by Create; it does not send another message to the target host.
-        GameEventScriptCSharpDispatcher.Shared.Enqueue(barrier.Set);
+        GesBridgeDispatcher.Shared.Enqueue(barrier.Set);
         Assert.IsTrue(barrier.Wait(TimeSpan.FromSeconds(5)), "The shared dispatcher did not reach the test barrier.");
         runner.Dispose();
 
@@ -93,8 +93,8 @@ public sealed class GameEventScriptCSharpHostRunnerTests
         Assert.IsFalse(host.IsIdle);
 
         using var barrier = new ManualResetEventSlim(false);
-        using var runner = GameEventScriptCSharpHostRunner.Create(host);
-        GameEventScriptCSharpDispatcher.Shared.Enqueue(barrier.Set);
+        using var runner = GesBridgeHostRunner.Create(host);
+        GesBridgeDispatcher.Shared.Enqueue(barrier.Set);
         Assert.IsTrue(barrier.Wait(TimeSpan.FromSeconds(5)), "The shared dispatcher did not resume the paused host.");
         runner.Dispose();
 
@@ -115,7 +115,7 @@ public sealed class GameEventScriptCSharpHostRunnerTests
         using var releaseWorker = new ManualResetEventSlim(false);
         using var barrier = new ManualResetEventSlim(false);
         // Hold the single worker so Dispose deterministically precedes the initial pump.
-        GameEventScriptCSharpDispatcher.Shared.Enqueue(() =>
+        GesBridgeDispatcher.Shared.Enqueue(() =>
         {
             workerEntered.Set();
             releaseWorker.Wait();
@@ -125,7 +125,7 @@ public sealed class GameEventScriptCSharpHostRunnerTests
             Assert.IsTrue(workerEntered.Wait(TimeSpan.FromSeconds(5)), "The shared dispatcher did not reach the worker gate.");
             using var runner = host.RunAutomatically();
             runner.Dispose();
-            GameEventScriptCSharpDispatcher.Shared.Enqueue(barrier.Set);
+            GesBridgeDispatcher.Shared.Enqueue(barrier.Set);
             releaseWorker.Set();
             Assert.IsTrue(barrier.Wait(TimeSpan.FromSeconds(5)), "The shared dispatcher did not finish the suppressed pump.");
 

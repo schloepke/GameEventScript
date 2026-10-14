@@ -911,21 +911,30 @@ Package and assembly identities use `GameEventScript.Runtime`,
 `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, and
 `GameEventScript.SyntaxHighlighter`. Their shared C# namespace root is
 `GameEventScript`; the module name does not add another namespace layer to
-the public `GameEventScript.Api` contracts. Public type names remain unchanged.
+the public `GameEventScript.Api` contracts.
 
 `GameEventScript.CSharpBridge` depends only on Runtime and must not pull in
 Compiler or Conformance, directly or transitively. It supplies:
 
-- `GameEventScriptCSharpValue.GesMap(entries)` and
-  `GameEventScriptCSharpValue.GesRecord(typeName, fields)` snapshot dictionary
+- `GesBridgeValueConversion.GesMap(entries)` and
+  `GesBridgeValueConversion.GesRecord(typeName, fields)` snapshot dictionary
   entries and delegate to the portable ordered value factories. Null or empty
   dictionaries mean no entries; dictionary enumeration order does not determine
   the resulting canonical key order;
-- tuple/dictionary message and Context conveniences;
-- delegate native-handler adapters;
-- reflection/attribute extension and external-type registries;
-- an optional lock-based automatic Host runner with the ownership-transfer and
+- tuple/dictionary message and Context conveniences (`GesBridgeMessage`,
+  `GesBridgeHostExtensions`, `GesBridgeContextExtensions`);
+- delegate adapters `GesBridgeMessageHandler` and `GesBridgePublishSink`;
+- Reflection/attribute registries `GesBridgeExtensionRegistry.Create(types)` (or
+  `CreateBuilder()` for incremental registration and a fallback registry) and
+  `GesBridgeExternalTypeRegistry.Create(types)`;
+- an optional lock-based automatic `GesBridgeHostRunner` with the ownership-transfer and
   scheduling rules in [HostRuntime](HostRuntime.md#c-automatic-runner).
+
+Bridge types use the `GesBridge` prefix in both languages. A role present in both
+bridges has the same type name (`GesBridgeHostRunner`, `GesBridgeExtensionRegistry`,
+`GesBridgeExternalTypeRegistry`, `GesBridgeMessageHandler`, `GesBridgePublishSink`,
+`GesBridgeValueConversion`); Reflection-specific C# types and Swift descriptor
+types exist in one bridge only.
 
 Source-file reading belongs to the CLI or embedding. The compiler accepts
 `AddScript(text, sourceName)`; CSharpBridge has no compiler-builder extensions.
@@ -1027,7 +1036,7 @@ signatures through an explicit fallback registry. Dictionary message binding
 requires a known signature with exclusively named parameters and exactly one
 value for each normalized label. Ordered tuple inputs support positional labels.
 
-`GameEventScriptSwiftValueConvertible` defines explicit native conversion.
+`GesBridgeValueConvertible` defines explicit native conversion.
 Built-in conformances cover Boolean, Text, signed and unsigned fixed-width Swift
 integers, Float/Double, Optional, Array, String-keyed Dictionary and GesValue.
 Native decoding checks kind and units, rejects fractional or out-of-range integer
@@ -1038,9 +1047,9 @@ NaN, infinity, zero and integral-storage normalization. Nothing represents nil;
 GesValue conversion is identity. Collection conversions recurse and preserve
 canonical GES ordering. Dictionary decoding rejects distinct scalar keys that
 Swift String equality would merge; encoding preserves only keys present in the
-input dictionary. Native failures use `GameEventScriptSwiftConversionError`.
+input dictionary. Native failures use `GesBridgeConversionError`.
 
-`GameEventScriptSwiftType<Root>` exposes only its declared KeyPath/getter fields
+`GesBridgeTypeBinding<Root>` exposes only its declared KeyPath/getter fields
 and constructor closures. Constructor parameter labels refer to declared fields
 and inherit their type definitions. Call arguments follow the constructor's
 declared parameter order. A type-erased binding supplies a validated compiler
@@ -1069,7 +1078,7 @@ attaches the explicit unit to a native numeric magnitude; constructor decoding
 checks the exact unit before stripping it and invoking strict native conversion.
 Nothing retains existing Optional/NaN semantics. No magnitude scaling, truncation
 or implicit reinterpretation of an already unit-bearing value occurs. These
-operations are also exposed by `GameEventScriptSwiftValue.encode(_:unit:)` and
+operations are also exposed by `GesBridgeValueConversion.encode(_:unit:)` and
 `decode(_:as:unit:)`; `.none` delegates to the ordinary strict conversion.
 
 `@GesConstruct` exposes a synchronous, nonfailable initializer or static factory
@@ -1084,7 +1093,7 @@ portable descriptor name/signature validation still occurs when the throwing
 factory executes. Manual descriptors remain available for foreign/generic types
 and throwing getters. Macro expansion adds no GES syntax or portable behavior.
 
-`GameEventScriptSwiftHostRunner` is an optional synchronized embedding adapter.
+`GesBridgeHostRunner` is an optional synchronized embedding adapter.
 It takes exclusive ownership through Swift 6 sending parameters and serializes
 Host access and lifecycle operations with one recursive lock. Transferred Host,
 callback and external-value state must not be accessed outside that ownership

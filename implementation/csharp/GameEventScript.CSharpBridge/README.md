@@ -27,7 +27,7 @@ using GameEventScript.Api;
 using GameEventScript.CSharpBridge;
 using GameEventScript.Runtime;
 
-var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(BotState));
+var registry = GesBridgeExternalTypeRegistry.Create(typeof(BotState));
 var program = new GesProgramBuilder()
     .WithExternalTypeCatalog(registry)
     .AddScript("""
@@ -139,7 +139,7 @@ public static class CombatFunctions
 ```
 
 Register it on the host builder with
-`.WithRegistry(GameEventScriptCSharpExtensions.CreateRegistry(typeof(CombatFunctions)))`.
+`.WithRegistry(GesBridgeExtensionRegistry.Create(typeof(CombatFunctions)))`.
 The script calls `:combat.bonus(energy: 100)`. Extension registries and external
 type registries have distinct roles: `WithRegistry` installs functions;
 `WithExternalTypeRegistry` installs native types.
@@ -162,9 +162,22 @@ seconds from meters. Declared `GesExtensionFaultException` errors
 retain their diagnostic codes across callback boundaries; unexpected native
 exceptions become the corresponding runtime failure diagnostic.
 
+## Delegate adapters
+
+`GesBridgeMessageHandler` and `GesBridgePublishSink` wrap delegates as the
+portable `IGesNativeMessageHandler` and `IGesPublishSink` contracts:
+
+```csharp
+var host = GameEventScriptHost.CreateBuilder()
+    .WithPublishSink(new GesBridgePublishSink(message => outbox.TryAdd(message)))
+    .Build();
+```
+
+The `Subscribe` host extensions create message handlers from delegates directly.
+
 ## Automatic host pumping
 
-`GameEventScriptCSharpHostRunner` supplies optional synchronization and background
+`GesBridgeHostRunner` supplies optional synchronization and background
 pumping outside the portable Runtime. A loading host still needs an explicit
 Start.
 

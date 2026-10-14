@@ -86,7 +86,7 @@ public sealed class GameEventScriptExternalTypeImmutabilityTests
     [TestMethod]
     public void BridgeCatalogEnumerationAndConstructorLookupRemainConsistent()
     {
-        var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(SampleValue));
+        var registry = GesBridgeExternalTypeRegistry.Create(typeof(SampleValue));
         var original = registry.Types.Single();
 
         CollectionMutationProbe.ReplaceFirstIfWritable(registry.Types, new GesExternalTypeDefinition("Other", [], []));

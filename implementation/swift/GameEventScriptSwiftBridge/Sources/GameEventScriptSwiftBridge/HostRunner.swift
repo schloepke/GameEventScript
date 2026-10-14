@@ -6,12 +6,12 @@ import Foundation
 import GameEventScriptRuntime
 
 /// A runner-owned registration. All lifecycle access uses the same serialization gate as execution.
-public struct GameEventScriptSwiftRegistration: Sendable {
+public struct GesBridgeHostRunnerRegistration: Sendable {
     /// Stable identifier within the runner's owning host.
     public let registrationID: Int64
-    private let owner: GameEventScriptSwiftHostRunner
+    private let owner: GesBridgeHostRunner
 
-    fileprivate init(_ id: Int64, owner: GameEventScriptSwiftHostRunner) {
+    fileprivate init(_ id: Int64, owner: GesBridgeHostRunner) {
         registrationID = id
         self.owner = owner
     }
@@ -28,7 +28,7 @@ public struct GameEventScriptSwiftRegistration: Sendable {
 /// Owns a transferred Host and serializes all access. Ready hosts pump on a shared serial dispatcher.
 /// Start is explicit for a host still in its initial loading phase; recursive receives only enqueue.
 /// Callbacks, external objects and the Host must not be accessed outside the runner after transfer.
-public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
+public final class GesBridgeHostRunner: @unchecked Sendable {
     private let gate = NSRecursiveLock()
     private var host: GameEventScriptHost?
     private var instances: [Int64: GesProgramInstance] = [:]
@@ -86,7 +86,7 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
     }
 
     /// Programs contain immutable transport data and remain reusable across independent runners.
-    public func load(_ program: GameEventScriptProgram, priority: Int = 0) throws -> GameEventScriptSwiftRegistration {
+    public func load(_ program: GameEventScriptProgram, priority: Int = 0) throws -> GesBridgeHostRunnerRegistration {
         try locked {
             let host = try activeHost()
             let instance = try host.load(program, priority: priority)
@@ -101,7 +101,7 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
     /// - Returns: A registration whose lifecycle uses the same gate as execution.
     /// - Throws: An API error if closed, or a registration validation error.
     public func subscribe(_ signature: GesMessageSignature, matchingTags: [String] = [], withoutTags: [String] = [], priority: Int = 0, handler: sending @escaping (GameEventScriptMessage, GesContext) throws -> Void) throws
-        -> GameEventScriptSwiftRegistration
+        -> GesBridgeHostRunnerRegistration
     {
         try locked {
             let subscription = try activeHost().subscribe(signature, matchingTags: matchingTags, withoutTags: withoutTags, priority: priority, handler: handler)

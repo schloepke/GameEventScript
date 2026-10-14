@@ -20,14 +20,14 @@ public sealed class GameEventScriptCSharpValueAdapterTests
             ["\uE000"] = GesValue.GesInteger(2),
             ["a"] = GesValue.GesInteger(1)
         };
-        var value = record ? GameEventScriptCSharpValue.GesRecord("Sample", entries) : GameEventScriptCSharpValue.GesMap(entries);
+        var value = record ? GesBridgeValueConversion.GesRecord("Sample", entries) : GesBridgeValueConversion.GesMap(entries);
         var reordered = new Dictionary<string, GesValue>
         {
             ["a"] = GesValue.GesInteger(1),
             ["\uE000"] = GesValue.GesInteger(2),
             ["\U00010000"] = GesValue.GesInteger(3)
         };
-        Assert.AreEqual(value, record ? GameEventScriptCSharpValue.GesRecord("Sample", reordered) : GameEventScriptCSharpValue.GesMap(reordered));
+        Assert.AreEqual(value, record ? GesBridgeValueConversion.GesRecord("Sample", reordered) : GesBridgeValueConversion.GesMap(reordered));
 
         entries["a"] = GesValue.GesInteger(99);
         entries.Clear();
@@ -48,7 +48,7 @@ public sealed class GameEventScriptCSharpValueAdapterTests
     public void DictionaryFactoriesAcceptNullAndEmptyInputs(bool record, bool nullInput)
     {
         Dictionary<string, GesValue>? entries = nullInput ? null : new Dictionary<string, GesValue>();
-        var value = record ? GameEventScriptCSharpValue.GesRecord("Sample", entries) : GameEventScriptCSharpValue.GesMap(entries);
+        var value = record ? GesBridgeValueConversion.GesRecord("Sample", entries) : GesBridgeValueConversion.GesMap(entries);
         var expected = record ? GesValue.GesRecord("Sample", [], []) : GesValue.GesMap([], []);
 
         Assert.AreEqual(expected, value);

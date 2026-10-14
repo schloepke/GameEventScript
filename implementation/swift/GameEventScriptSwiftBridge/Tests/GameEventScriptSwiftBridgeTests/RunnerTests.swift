@@ -30,7 +30,7 @@ final class RunnerTests: XCTestCase {
     }
 
     func testIdleDurationThroughRunner() throws {
-        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.makeBuilder().withClock(FrozenClock()).build())
+        let runner = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().withClock(FrozenClock()).build())
         defer { runner.close() }
         XCTAssertNil(runner.idleDurationMicroseconds)
         let done = expectation(description: "Native handler ran")
@@ -49,7 +49,7 @@ final class RunnerTests: XCTestCase {
     }
 
     func testRunnerWaitsForExplicitStart() throws {
-        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.makeBuilder().build())
+        let runner = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().build())
         defer { runner.close() }
         let trace = Trace()
         _ = try runner.subscribe(.init(name: "Tick")) { _, _ in trace.append(1) }
@@ -63,7 +63,7 @@ final class RunnerTests: XCTestCase {
     }
 
     func testConcurrentReceivesSerializeMessageDispatch() throws {
-        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(1).build().startForTest())
+        let runner = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(1).build().startForTest())
         let trace = Trace()
         let start = try GesMessageSignature(name: "Start", parameters: ["value"])
         let done = try GesMessageSignature(name: "Done", parameters: ["value"])
@@ -93,7 +93,7 @@ final class RunnerTests: XCTestCase {
     }
 
     func testRecursiveReceivesEnqueueWithoutRecursiveDispatch() throws {
-        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(1).build().startForTest())
+        let runner = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(1).build().startForTest())
         defer { runner.close() }
         let trace = Trace()
         _ = try runner.subscribe(.init(name: "Start", parameters: ["value"])) { message, _ in
@@ -119,7 +119,7 @@ final class RunnerTests: XCTestCase {
             throw try GesExtensionFaultError(code: "app.runner", message: "Failed")
         }
         host.receive(try .init(name: "Start"))
-        let runner = GameEventScriptSwiftHostRunner(host)
+        let runner = GesBridgeHostRunner(host)
         while !runner.isIdle { _ = try runner.runToCompletion() }
         XCTAssertEqual(runner.lastResult?.diagnostic?.code, "app.runner")
         XCTAssertEqual(trace.values, [1])

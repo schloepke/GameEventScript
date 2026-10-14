@@ -3,9 +3,13 @@
 
 # Inline assembly
 
-Inline assembly is an unreleased compiler feature for instruction-level experiments
-and comparisons. Both native compilers accept the same syntax. Programs remain
-ordinary validated `.gesb` files; the Runtime needs no assembly-specific mode.
+> **Since: 0.4.0**
+
+Inline assembly is part of the GES language. Both native compilers implement the
+same [normative syntax and safety rules](../../specs/InlineAssembly.md). Programs
+remain ordinary validated `.gesb` files; the Runtime needs no assembly-specific
+mode. ASM supports explicit instruction sequences, including instruction-level
+experiments and comparisons.
 
 Use ordinary GES for rules. An ASM block is useful when the exact VM instruction
 sequence is what you want to study. The [runnable example](../../examples/inline-assembly/operations.ges)

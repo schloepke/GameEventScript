@@ -80,10 +80,11 @@ enum GesDataConstruction {
     // Switches instead of per-call dictionary literals; same exact-name mapping as before.
     private static func unit(named name: String) -> GesUnit? {
         switch name {
-        case "", "none": .none
-        case "s", "second": .second
-        case "m", "meter": .meter
-        case "°", "degree": .degree
+        // Qualified: a bare `.none` in an optional context would mean nil, not the unitless unit.
+        case "", "none": GesUnit.none
+        case "s", "second": GesUnit.second
+        case "m", "meter": GesUnit.meter
+        case "°", "degree": GesUnit.degree
         default: nil
         }
     }

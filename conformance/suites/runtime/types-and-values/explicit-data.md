@@ -70,6 +70,67 @@ steps:
 
 ---
 
+## Test: number-unitless-constructors
+
+This case verifies that the unit names `none` and the empty text construct unitless numbers, directly and through
+parsing, and that they reject a number that already carries another unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: number-unitless-constructors
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(unitless: :Number(5, "none"), blank: :Number(value: 2.5, unit: ""), parsed: parse ' :Number(7, "none") ', conflict: :Number(2m, "none"))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: unitless
+            value:
+              type: ":Number.int64"
+              value: "5"
+          - name: blank
+            value:
+              type: ":Number.binary64"
+              value: "2.5"
+          - name: parsed
+            value:
+              type: ":Number.int64"
+              value: "7"
+          - name: conflict
+            value:
+              type: ":Nothing"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
 ## Test: primitive-wrappers
 
 This case verifies primitive wrappers using public language behavior and a binary roundtrip.

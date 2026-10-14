@@ -152,6 +152,10 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   Braced and unbraced bodies have identical scope boundaries; no branch binding escapes.
 - `[:fold acc be seed, item => expression]` and `[:reduce acc, item => expression]`
   lower to ordinary iterator loops and an internal accumulator, without new opcodes.
+- Both compilers hoist pure, total loop-invariant loads and arithmetic in front of
+  single-entry loops between their two cleanup rounds (C# `LoopInvariantHoistingPass`,
+  Swift `hoistLoopInvariants`). Keep their positive opcode list, placement and position
+  relocation identical; `compile.loop-invariants` snapshots both outputs.
 - Local declarations use only `let name be expression`. Conversions belong to
   the expression, for example `let value be input as :Number`.
 - Only variable bindings may use a canonical `_number` suffix. Other names may

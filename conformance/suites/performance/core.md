@@ -621,11 +621,11 @@ Start:				 // handler Start()
 .source-line "range select and aggregate.ges" 4 |   let values be :List[:select item from 1 to 100 => item * 2]
 					ListBuilderCreate r4
 					CreateRangeIteratorShort r5, #1, #100, #1
-Start_3:			IteratorNext r1(item), r5, Start_8
 					LoadInteger r6, #2
+Start_4:			IteratorNext r1(item), r5, Start_8
 					Multiply r7, r1(item), r6
 					ListBuilderAdd r4, r7
-					Jump Start_3
+					Jump Start_4
 Start_8:			IteratorClose r5
 					ListBuilderFinish r0(values), r4
 
@@ -1273,7 +1273,7 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_directTotal, T_st
 
 .source-line "pipeline filter select sum and direct list slice.ges" 3 | on Start {
 Start:				 // handler Start()
-					RegisterLocals #11
+					RegisterLocals #13
 // compiler-generated
 					StageInteger #1
 					StageInteger #2
@@ -1320,20 +1320,20 @@ Start_34:			LoadNothing r2(directTotal)
 Start_35:			IteratorCreateOrJump r5, r0(values), Start_56
 					LoadFalse r6
 					LoadNothing r3(streamTotal)
-Start_38:			IteratorNext r7, r5, Start_52
-					LoadInteger r8, #2
-					Modulo r9, r7, r8
+					LoadInteger r7, #2
 					LoadInteger r8, #0
-					Equal r10, r9, r8
-					JumpIfNotTrue r10, Start_38
 					LoadInteger r9, #2
-					Multiply r8, r7, r9
+Start_41:			IteratorNext r10, r5, Start_52
+					Modulo r11, r10, r7
+					Equal r12, r11, r8
+					JumpIfNotTrue r12, Start_41
+					Multiply r11, r10, r9
 					JumpIfTrue r6, Start_50
-					Move r3(streamTotal), r8 mode=Numeric
+					Move r3(streamTotal), r11 mode=Numeric
 					LoadTrue r6
-					Jump Start_38
-Start_50:			Add r3(streamTotal), r3(streamTotal), r8 mode=Numeric
-					Jump Start_38
+					Jump Start_41
+Start_50:			Add r3(streamTotal), r3(streamTotal), r11 mode=Numeric
+					Jump Start_41
 Start_52:			IteratorClose r5
 					JumpIfTrue r6, Start_57
 					LoadInteger r3(streamTotal), #0
@@ -1344,12 +1344,12 @@ Start_56:			LoadNothing r3(streamTotal)
 Start_57:			IteratorCreateOrJump r5, r0(values), Start_68
 					LoadInteger r4(streamCount), #0
 					LoadInteger r6, #1
-Start_60:			IteratorNext r7, r5, Start_66
-					LoadInteger r9, #10
-					Greater r8, r7, r9
-					JumpIfNotTrue r8, Start_60
+					LoadInteger r7, #10
+Start_61:			IteratorNext r8, r5, Start_66
+					Greater r9, r8, r7
+					JumpIfNotTrue r9, Start_61
 					Add r4(streamCount), r4(streamCount), r6
-					Jump Start_60
+					Jump Start_61
 Start_66:			IteratorClose r5
 					Jump Start_69
 Start_68:			LoadNothing r4(streamCount)
@@ -1829,25 +1829,25 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_total, T_average,
 
 .source-line "engine performance mixed pipelines control flow and messages.ges" 5 | on Start(values) {
 Start:				 // handler Start(values)
-					RegisterLocals #22
+					RegisterLocals #24
 
 .source-line "engine performance mixed pipelines control flow and messages.ges" 6 |   let total be values[:filter value where value is high][:select value => value + 5%][:sum value => floor value]
 					IteratorCreateOrJump r16, r0(values), Start_21
 					LoadFalse r17
 					LoadNothing r1(total)
-Start_4:			IteratorNext r18, r16, Start_17
-					StageRegister r18
-					Call r19, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
-					JumpIfNotTrue r19, Start_4
-					LoadPercentage r19, #0.05
-					Add r20, r18, r19
-					Floor r18, r20
+					LoadPercentage r18, #0.05
+Start_5:			IteratorNext r19, r16, Start_17
+					StageRegister r19
+					Call r20, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
+					JumpIfNotTrue r20, Start_5
+					Add r20, r19, r18
+					Floor r19, r20
 					JumpIfTrue r17, Start_15
-					Move r1(total), r18 mode=Numeric
+					Move r1(total), r19 mode=Numeric
 					LoadTrue r17
-					Jump Start_4
-Start_15:			Add r1(total), r1(total), r18 mode=Numeric
-					Jump Start_4
+					Jump Start_5
+Start_15:			Add r1(total), r1(total), r19 mode=Numeric
+					Jump Start_5
 Start_17:			IteratorClose r16
 					JumpIfTrue r17, Start_22
 					LoadInteger r1(total), #0
@@ -1858,25 +1858,25 @@ Start_21:			LoadNothing r1(total)
 Start_22:			IteratorCreateOrJump r16, r0(values), Start_47
 					LoadInteger r2(average), #0
 					LoadInteger r17, #1
-					LoadFalse r20
-					LoadNothing r18
-Start_27:			IteratorNext r19, r16, Start_41
-					StageRegister r19
-					Call r21, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
-					JumpIfNotTrue r21, Start_27
-					LoadPercentage r21, #0.05
-					Add r22, r19, r21
-					Floor r19, r22
+					LoadFalse r18
+					LoadNothing r20
+					LoadPercentage r19, #0.05
+Start_28:			IteratorNext r21, r16, Start_41
+					StageRegister r21
+					Call r22, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
+					JumpIfNotTrue r22, Start_28
+					Add r22, r21, r19
+					Floor r21, r22
 					Add r2(average), r2(average), r17
-					JumpIfTrue r20, Start_39
-					Move r18, r19 mode=Numeric
-					LoadTrue r20
-					Jump Start_27
-Start_39:			Add r18, r18, r19 mode=Numeric
-					Jump Start_27
+					JumpIfTrue r18, Start_39
+					Move r20, r21 mode=Numeric
+					LoadTrue r18
+					Jump Start_28
+Start_39:			Add r20, r20, r21 mode=Numeric
+					Jump Start_28
 Start_41:			IteratorClose r16
 					JumpIfNotTrue r2(average), Start_45
-					Divide r2(average), r18, r2(average) mode=Numeric
+					Divide r2(average), r20, r2(average) mode=Numeric
 					Jump Start_48
 Start_45:			LoadNothing r2(average)
 					Jump Start_48
@@ -1886,14 +1886,14 @@ Start_47:			LoadNothing r2(average)
 Start_48:			IteratorCreateOrJump r16, r0(values), Start_61
 					LoadInteger r3(oddCount), #0
 					LoadInteger r17, #1
-Start_51:			IteratorNext r20, r16, Start_59
 					LoadInteger r18, #2
-					Modulo r22, r20, r18
 					LoadInteger r20, #1
-					Equal r18, r22, r20
-					JumpIfNotTrue r18, Start_51
+Start_53:			IteratorNext r19, r16, Start_59
+					Modulo r22, r19, r18
+					Equal r19, r22, r20
+					JumpIfNotTrue r19, Start_53
 					Add r3(oddCount), r3(oddCount), r17
-					Jump Start_51
+					Jump Start_53
 Start_59:			IteratorClose r16
 					Jump Start_62
 Start_61:			LoadNothing r3(oddCount)
@@ -1901,14 +1901,14 @@ Start_61:			LoadNothing r3(oddCount)
 .source-line "engine performance mixed pipelines control flow and messages.ges" 9 |   let firstBoosted be values[:filter value where value is high][:select value => value + 5%][:first]
 Start_62:			IteratorCreateOrJump r16, r0(values), Start_74
 					LoadNothing r4(firstBoosted)
-Start_64:			IteratorNext r17, r16, Start_72
-					StageRegister r17
-					Call r22, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
-					JumpIfNotTrue r22, Start_64
-					LoadPercentage r22, #0.05
-					Add r4(firstBoosted), r17, r22
+					LoadPercentage r17, #0.05
+Start_65:			IteratorNext r18, r16, Start_72
+					StageRegister r18
+					Call r20, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
+					JumpIfNotTrue r20, Start_65
+					Add r4(firstBoosted), r18, r17
 					Jump Start_72
-					Jump Start_64
+					Jump Start_65
 Start_72:			IteratorClose r16
 					Jump Start_75
 Start_74:			LoadNothing r4(firstBoosted)
@@ -1924,19 +1924,19 @@ Start_75:			LoadInteger r16, #105, unit:meter
 					IteratorCreateOrJump r16, r0(values), Start_96
 					LoadInteger r7(directOddScaled), #0
 					LoadInteger r17, #1
-Start_81:			IteratorNext r22, r16, Start_94
-					LoadInteger r20, #2
-					Modulo r18, r22, r20
-					LoadInteger r20, #1
-					Equal r19, r18, r20
-					JumpIfNotTrue r19, Start_81
 					LoadInteger r18, #2
-					Multiply r20, r22, r18
-					LoadInteger r22, #10
-					Greater r18, r20, r22
-					JumpIfNotTrue r18, Start_81
+					LoadInteger r20, #1
+					LoadInteger r22, #2
+					LoadInteger r19, #10
+Start_85:			IteratorNext r21, r16, Start_94
+					Modulo r23, r21, r18
+					Equal r24, r23, r20
+					JumpIfNotTrue r24, Start_85
+					Multiply r23, r21, r22
+					Greater r21, r23, r19
+					JumpIfNotTrue r21, Start_85
 					Add r7(directOddScaled), r7(directOddScaled), r17
-					Jump Start_81
+					Jump Start_85
 Start_94:			IteratorClose r16
 					Jump Start_97
 Start_96:			LoadNothing r7(directOddScaled)
@@ -1965,56 +1965,60 @@ Start_97:			LoadInteger r16, #100, unit:meter
 
 .source-line "engine performance mixed pipelines control flow and messages.ges" 20 |   for item from 1 to 16 {
 Start_107:			CreateRangeIteratorShort r16, #1, #16, #1
-Start_108:			IteratorNext r13(item), r16, Start_134
 
 .source-line "engine performance mixed pipelines control flow and messages.ges" 21 |     let foldedBucket be values[:filter value where (value + item) mod 7 > 0][:select value => (value + item) * 2][:sum value => value]
-					IteratorCreateOrJump r17, r0(values), Start_132
-					LoadFalse r20
-					LoadNothing r14(foldedBucket)
-Start_112:			IteratorNext r22, r17, Start_128
-					Add r18, r22, r13(item)
-					LoadInteger r19, #7
-					Modulo r21, r18, r19
+					LoadInteger r17, #7
 					LoadInteger r18, #0
-					Greater r19, r21, r18
-					JumpIfNotTrue r19, Start_112
-					Add r21, r22, r13(item)
-					LoadInteger r22, #2
-					Multiply r18, r21, r22
-					JumpIfTrue r20, Start_126
-					Move r14(foldedBucket), r18 mode=Numeric
-					LoadTrue r20
-					Jump Start_112
-Start_126:			Add r14(foldedBucket), r14(foldedBucket), r18 mode=Numeric
-					Jump Start_112
-Start_128:			IteratorClose r17
-					JumpIfTrue r20, Start_108
+					LoadInteger r20, #2
+
+.source-line "engine performance mixed pipelines control flow and messages.ges" 20 |   for item from 1 to 16 {
+Start_111:			IteratorNext r13(item), r16, Start_134
+
+.source-line "engine performance mixed pipelines control flow and messages.ges" 21 |     let foldedBucket be values[:filter value where (value + item) mod 7 > 0][:select value => (value + item) * 2][:sum value => value]
+					IteratorCreateOrJump r22, r0(values), Start_132
+					LoadFalse r19
+					LoadNothing r14(foldedBucket)
+Start_115:			IteratorNext r23, r22, Start_128
+					Add r21, r23, r13(item)
+					Modulo r24, r21, r17
+					Greater r21, r24, r18
+					JumpIfNotTrue r21, Start_115
+					Add r24, r23, r13(item)
+					Multiply r23, r24, r20
+					JumpIfTrue r19, Start_126
+					Move r14(foldedBucket), r23 mode=Numeric
+					LoadTrue r19
+					Jump Start_115
+Start_126:			Add r14(foldedBucket), r14(foldedBucket), r23 mode=Numeric
+					Jump Start_115
+Start_128:			IteratorClose r22
+					JumpIfTrue r19, Start_111
 					LoadInteger r14(foldedBucket), #0
-					Jump Start_108
+					Jump Start_111
 Start_132:			LoadNothing r14(foldedBucket)
 
 .source-line "engine performance mixed pipelines control flow and messages.ges" 20 |   for item from 1 to 16 {
-					Jump Start_108
+					Jump Start_111
 Start_134:			IteratorClose r16
 
 .source-line "engine performance mixed pipelines control flow and messages.ges" 23 |   let workTotal be values[:filter value where value >= 10][:select value => value + 5%][:select value => value * 2][:sum value => value]
 					IteratorCreateOrJump r16, r0(values), Start_156
 					LoadFalse r17
 					LoadNothing r15(workTotal)
-Start_138:			IteratorNext r20, r16, Start_152
-					LoadInteger r21, #10
-					GreaterOrEqual r22, r20, r21
-					JumpIfNotTrue r22, Start_138
-					LoadPercentage r21, #0.05
-					Add r22, r20, r21
-					LoadInteger r20, #2
-					Multiply r21, r22, r20
+					LoadInteger r18, #10
+					LoadPercentage r20, #0.05
+					LoadInteger r22, #2
+Start_141:			IteratorNext r19, r16, Start_152
+					GreaterOrEqual r24, r19, r18
+					JumpIfNotTrue r24, Start_141
+					Add r24, r19, r20
+					Multiply r19, r24, r22
 					JumpIfTrue r17, Start_150
-					Move r15(workTotal), r21 mode=Numeric
+					Move r15(workTotal), r19 mode=Numeric
 					LoadTrue r17
-					Jump Start_138
-Start_150:			Add r15(workTotal), r15(workTotal), r21 mode=Numeric
-					Jump Start_138
+					Jump Start_141
+Start_150:			Add r15(workTotal), r15(workTotal), r19 mode=Numeric
+					Jump Start_141
 Start_152:			IteratorClose r16
 					JumpIfTrue r17, Start_157
 					LoadInteger r15(workTotal), #0

@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using GameEventScript.Compiler;
 using GameEventScript.Runtime;
 using static GameEventScript.Api.GesDiagnosticCodes;
-using static GameEventScript.Api.GesSymbolKind;
+using static GameEventScript.Api.GesDiagnosticSymbolKind;
 using static GameEventScript.Compiler.GameEventScriptCallableKind;
 
 namespace GameEventScript.Api;
@@ -278,7 +278,7 @@ public sealed class GesProgramBuilder
             if (map.ContainsKey(externalType.Name))
             {
                 var module = FindModuleWithType(modules, externalType.Name);
-                errors.Add(module, $"Type '{externalType.Name}' is defined both as a script record and an external type", externalType.Name, GesSymbolKind.Type, ValidateDuplicateType);
+                errors.Add(module, $"Type '{externalType.Name}' is defined both as a script record and an external type", externalType.Name, GesDiagnosticSymbolKind.Type, ValidateDuplicateType);
                 continue;
             }
 
@@ -321,7 +321,7 @@ public sealed class GesProgramBuilder
             {
                 if (!map.TryAdd(typeDefinition.Name, typeDefinition))
                 {
-                    errors.Add(module, $"Type '{typeDefinition.Name}' is defined more than once", typeDefinition.Name, GesSymbolKind.Type, ValidateDuplicateType, typeDefinition);
+                    errors.Add(module, $"Type '{typeDefinition.Name}' is defined more than once", typeDefinition.Name, GesDiagnosticSymbolKind.Type, ValidateDuplicateType, typeDefinition);
                 }
             }
         }

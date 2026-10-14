@@ -316,7 +316,7 @@ public sealed record GesDiagnostic(
     string Code,
     string Message,
     string? Symbol = null,
-    GesSymbolKind SymbolKind = GesSymbolKind.Unknown,
+    GesDiagnosticSymbolKind SymbolKind = GesDiagnosticSymbolKind.Unknown,
     GesSourceLocation? SourceLocation = null,
     string? ProgramName = null,
     string? HandlerName = null,
@@ -341,13 +341,13 @@ public sealed record GesDiagnostic(
 /// are critical for parsing, symbol resolution, and error reporting during
 /// the compilation and validation phases of Game Event Scripts.
 /// </remarks>
-public enum GesSymbolKind
+public enum GesDiagnosticSymbolKind
 {
     /// <summary>
     /// Represents an unidentified or unclassified symbol encountered during the processing of a Game Event Script.
     /// </summary>
     /// <remarks>
-    /// This value indicates that the symbol does not match any predefined category within the GesSymbolKind enum.
+    /// This value indicates that the symbol does not match any predefined category within the GesDiagnosticSymbolKind enum.
     /// It is commonly used as a fallback or default classification when a symbol cannot be resolved or identified.
     /// This may occur due to incomplete, missing, or corrupted script content.
     /// </remarks>

@@ -59,9 +59,9 @@ internal partial class GesVirtualMachine
     internal GesDiagnostic? ErrorDiagnostic { get; private set; }
     internal string? ActiveHandlerName { get; private set; }
     internal GesLinkedProgram.OutboundMessageSignature[] OutboundMessageSignatures => ActiveProgram!.OutboundMessageSignatures;
-    internal GameEventScriptBinaryBindEntry[] RecordConstructors => ActiveProgram!.RecordConstructors;
-    internal GameEventScriptBinaryBindEntry[] ExtensionCallBinds => ActiveProgram!.ExtensionCallBinds;
-    internal GameEventScriptBinaryBindEntry[] ExternalTypeBinds => ActiveProgram!.ExternalTypeBinds;
+    internal GesBindingSegment.Entry[] RecordConstructors => ActiveProgram!.RecordConstructors;
+    internal GesBindingSegment.Entry[] ExtensionCallBinds => ActiveProgram!.ExtensionCallBinds;
+    internal GesBindingSegment.Entry[] ExternalTypeBinds => ActiveProgram!.ExternalTypeBinds;
     internal IGesExtensionFunction?[] BoundExtensionCalls => ActiveProgram!.BoundExtensionCalls;
     internal IGesExternalTypeConstructor?[] BoundExternalTypeConstructors => ActiveProgram!.BoundExternalTypeConstructors;
     internal GesExtensionCall ExtensionCall { get; }

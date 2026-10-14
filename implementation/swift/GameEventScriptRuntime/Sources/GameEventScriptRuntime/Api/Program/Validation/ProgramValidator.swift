@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Complete, host-independent validation shared by reading, writing, and loading.
-public enum GameEventScriptProgramValidator {
+enum GesProgramValidator {
     /// Checks complete Program structure, references, debug data and resource metadata without resolving host imports.
     ///
     /// - Throws: `GesProgramFormatError` with a stable classification on failure.
-    public static func validate(_ p: GameEventScriptProgram) throws {
+    static func validate(_ p: GameEventScriptProgram) throws {
         if p.formatVersion != 1 { throw failure(.unsupportedFormatVersion) }
         if !GesNames.module(p.moduleName) { throw failure(.invalidProgram, 1) }
         if [p.stringConstants.count, p.uint16IndexLists.count, p.bindings.count, p.code.count].contains(where: { $0 > 65535 }) { throw failure(.tooManyEntries) }

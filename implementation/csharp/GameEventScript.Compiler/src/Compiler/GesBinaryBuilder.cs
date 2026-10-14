@@ -294,7 +294,7 @@ internal sealed partial class GesBinaryBuilder
             builder.AddUInt16Slice(argumentNames);
             builder.AddUInt16Slice(requiredTags);
             builder.AddUInt16Slice(excludedTags);
-            builder.AddBind(new GameEventScriptBinaryBindEntry(
+            builder.AddBind(new GesBindingSegment.Entry(
                 bind.Kind,
                 resolveText(bind.Name),
                 argumentNames,
@@ -322,7 +322,7 @@ internal sealed partial class GesBinaryBuilder
         private readonly List<string> _textConstants = [];
         private readonly Dictionary<string, ushort> _textIndexes = [];
         private readonly List<ushort[]> _uint16Slices = [];
-        private readonly List<GameEventScriptBinaryBindEntry> _binds = [];
+        private readonly List<GesBindingSegment.Entry> _binds = [];
         private readonly List<GesBytecodeInstruction> _instructions = [];
 
         public BinaryMaterializer WithVersion(ushort version)
@@ -387,7 +387,7 @@ internal sealed partial class GesBinaryBuilder
             return index;
         }
 
-        public BinaryMaterializer AddBind(GameEventScriptBinaryBindEntry bind)
+        public BinaryMaterializer AddBind(GesBindingSegment.Entry bind)
         {
             _binds.Add(bind);
             return this;

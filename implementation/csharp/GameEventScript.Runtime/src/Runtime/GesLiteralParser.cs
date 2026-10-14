@@ -112,7 +112,7 @@ internal struct GesLiteralParser
         var builtin = name.ToLowerInvariant();
         // Built-in names are case-sensitive; user Record definitions retain their declared spelling.
         var isBuiltin = GesDataConstruction.IsType(builtin) && name == char.ToUpperInvariant(builtin[0]) + builtin.Substring(1);
-        GameEventScriptBinaryBindEntry? constructor = null;
+        GesBindingSegment.Entry? constructor = null;
         if (!isBuiltin)
         {
             foreach (var binding in _state.Program.Bindings.Entries)

@@ -1,9 +1,9 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GameEventScriptProgramValidator {
+extension GesProgramValidator {
     static func validateDebug(_ p: GameEventScriptProgram) throws {
-        for (index, symbol) in (p.debugSymbols ?? []).enumerated() {
+        for (index, symbol) in (p.debugSymbols?.symbols ?? []).enumerated() {
             if (symbol.name != "_" && !GesNames.identifier(symbol.name)) || symbol.codeLength == 0 || UInt64(symbol.codeStart) + UInt64(symbol.codeLength) > UInt64(p.code.count) || symbol.registerID == .max {
                 throw failure(.invalidDebugSymbol, 32, index)
             }
@@ -77,12 +77,12 @@ extension GameEventScriptProgramValidator {
         var known: Set<UInt16> = []
         for (index, section) in p.opaqueSections.enumerated() {
             let type = section.sectionType
-            if type == 0 || type == .max || section.originalOrdinal < 0 || section.flags & 1 != 0 { throw failure(.unknownRequiredSection, type, index) }
-            if section.flags & ~0x00f1 != 0 { throw failure(.invalidSectionFlags, type, index) }
+            if type == 0 || type == .max || section.originalOrdinal < 0 || section.flags.rawValue & 1 != 0 { throw failure(.unknownRequiredSection, type, index) }
+            if section.flags.rawValue & ~0x00f1 != 0 { throw failure(.invalidSectionFlags, type, index) }
             if [1, 2, 3, 4, 16].contains(type) { throw failure(.duplicateSection, type, index) }
             if type == 32 && p.debugSymbols != nil || type == 33 && p.sourceMap != nil || type == 34 && p.sourceArchive != nil || type == 48 && p.buildMetadata != nil { throw failure(.duplicateSection, type, index) }
             if [32, 33, 34, 48].contains(type) {
-                if section.sectionVersion == 1 && section.flags & 0xf0 == 0 { throw failure(.invalidProgram, type, index) }
+                if section.sectionVersion == 1 && section.flags.rawValue & 0xf0 == 0 { throw failure(.invalidProgram, type, index) }
                 if !known.insert(type).inserted { throw failure(.duplicateSection, type, index) }
             }
             if !ordinals.insert(section.originalOrdinal).inserted { throw failure(.invalidProgram, type, index) }

@@ -32,7 +32,7 @@ enum CompilerObservations {
             }
         }
         let program = try builder.compile(options: options)
-        return test["compile"]?["binaryRoundTrip"]?.boolValue == true ? try GameEventScriptProgramReader.read(GameEventScriptProgramWriter.bytes(program)) : program
+        return test["compile"]?["binaryRoundTrip"]?.boolValue == true ? try GameEventScriptProgram.read(program.encode()) : program
     }
 
     static func diagnostic(_ value: GesDiagnostic) -> [String: Any] {
@@ -46,7 +46,7 @@ enum CompilerObservations {
     }
 
     static func observe(_ kind: String, _ program: GameEventScriptProgram) -> [String: Any] {
-        if kind == "bytecodeSnapshot" { return ["status": "ok", "dump": GameEventScriptProgramDumper.dump(program)] }
+        if kind == "bytecodeSnapshot" { return ["status": "ok", "dump": program.dump()] }
         if kind == "compileError" { return ["status": "ok"] }
         if kind == "bytecode" {
             var counts: [String: Int] = [:]

@@ -26,7 +26,7 @@ and predicate calls use public callable entry addresses in VM-owned frames.
 Helper expressions run through linear entry addresses and isolate their
 temporary registers from handler locals with temporary frame extensions. Predicate
 calls use `Call` or `CallExternal` with
-`GesInstructionFlag.NormalizeResultAsPredicate` set in
+the NormalizeResultAsPredicate flag (bit `0x20`) set in
 `UnitAndFlags`. Local calls use direct `Call` instructions with target entry
 addresses and contiguous staged argument sequences. Extension calls use direct
 `CallExternal` instructions with argument register lists.

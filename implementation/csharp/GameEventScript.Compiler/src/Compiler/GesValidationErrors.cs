@@ -14,7 +14,7 @@ internal sealed class GesValidationErrors
 
     public int Count => _errors.Count;
 
-    public void Add(ParsedScript? module, string message, string symbol, GesSymbolKind symbolKind, string code, ScriptNode? sourceNode = null)
+    public void Add(ParsedScript? module, string message, string symbol, GesDiagnosticSymbolKind symbolKind, string code, ScriptNode? sourceNode = null)
     {
         var moduleName = string.IsNullOrWhiteSpace(module?.ModuleName) ? "UnknownModule" : module.ModuleName;
         var sourceName = string.IsNullOrWhiteSpace(module?.SourceName) ? "UnknownSource" : module.SourceName;
@@ -53,7 +53,7 @@ internal sealed class GesValidationErrors
         }
     }
 
-    private static ScriptNode? FindSourceNode(ParsedScript? module, string symbol, GesSymbolKind symbolKind)
+    private static ScriptNode? FindSourceNode(ParsedScript? module, string symbol, GesDiagnosticSymbolKind symbolKind)
     {
         if (module is null)
         {
@@ -62,15 +62,15 @@ internal sealed class GesValidationErrors
 
         return symbolKind switch
         {
-            GesSymbolKind.Type => FindTypeDefinition(module.TypeDefinitions, symbol),
-            GesSymbolKind.Predicate => FindPredicateDefinition(module.PredicateDefinitions, symbol),
-            GesSymbolKind.Function => FindFunctionDefinition(module.FunctionDefinitions, symbol),
-            GesSymbolKind.Handler => FindHandler(module.Handlers, symbol) ??
+            GesDiagnosticSymbolKind.Type => FindTypeDefinition(module.TypeDefinitions, symbol),
+            GesDiagnosticSymbolKind.Predicate => FindPredicateDefinition(module.PredicateDefinitions, symbol),
+            GesDiagnosticSymbolKind.Function => FindFunctionDefinition(module.FunctionDefinitions, symbol),
+            GesDiagnosticSymbolKind.Handler => FindHandler(module.Handlers, symbol) ??
                                                  FindNodeInModule(module, symbol),
-            GesSymbolKind.Message => FindHandler(module.Handlers, symbol) ??
+            GesDiagnosticSymbolKind.Message => FindHandler(module.Handlers, symbol) ??
                                                  FindNodeInModule(module, symbol),
-            GesSymbolKind.Variable => FindVariableNode(module, symbol),
-            GesSymbolKind.GlobalDefinition => FindPredicateDefinition(module.PredicateDefinitions, symbol) ??
+            GesDiagnosticSymbolKind.Variable => FindVariableNode(module, symbol),
+            GesDiagnosticSymbolKind.GlobalDefinition => FindPredicateDefinition(module.PredicateDefinitions, symbol) ??
                                                           FindFunctionDefinition(module.FunctionDefinitions, symbol) ??
                                                           FindConstantDefinition(module.ConstantDefinitions, symbol) ??
                                                           FindNodeInModule(module, symbol),

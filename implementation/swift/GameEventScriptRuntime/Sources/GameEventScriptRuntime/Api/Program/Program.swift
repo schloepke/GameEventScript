@@ -7,30 +7,32 @@
 public final class GameEventScriptProgram: Sendable {
     /// Portable binary format version; independent of the application program version.
     public let formatVersion: UInt16
+    /// Module identity, application version and resource requirements.
+    public let metadata: GesProgramMetadataSegment
     /// Declared module identifier.
-    public let moduleName: String
+    public var moduleName: String { metadata.moduleName }
     /// Application-provided version carried by the Program metadata.
-    public let programVersion: UInt64
+    public var programVersion: UInt64 { metadata.programVersion }
     /// Maximum simultaneous register requirement computed from executable bindings.
-    public let requiredRegisterCount: UInt16
+    public var requiredRegisterCount: UInt16 { metadata.requiredRegisterCount }
     /// Maximum acyclic nested-call depth required by this Program.
-    public let requiredCallStackDepth: UInt16
-    /// Decoded UTF-8 constants addressed by UInt16 indexes.
-    public let stringConstants: [String]
+    public var requiredCallStackDepth: UInt16 { metadata.requiredCallStackDepth }
+    /// UTF-8 constants addressed by UInt16 indexes.
+    public let stringConstants: GesStringConstantSegment
     /// Shared lists of indexes used by bindings and instructions.
-    public let uint16IndexLists: [[UInt16]]
+    public let uint16IndexLists: GesUInt16IndexListSegment
     /// Declarative callable and import entries; contains no host callbacks.
-    public let bindings: [GameEventScriptBinding]
+    public let bindings: GesBindingSegment
     /// Logical bytecode instructions in address order.
-    public let code: [GesBytecodeInstruction]
+    public let code: GesCodeSegment
     /// Optional register names and lifetimes; nil when absent or not retained.
-    public let debugSymbols: [GesDebugSymbol]?
+    public let debugSymbols: GesDebugSymbolsSegment?
     /// Optional bytecode-to-source mapping.
-    public let sourceMap: GameEventScriptSourceMap?
+    public let sourceMap: GesSourceMapSegment?
     /// Optional original UTF-8 source documents.
-    public let sourceArchive: [GesSourceArchiveEntry]?
+    public let sourceArchive: GesSourceArchiveSegment?
     /// Optional compiler identity and version.
-    public let buildMetadata: GameEventScriptBuildMetadata?
+    public let buildMetadata: GesBuildMetadataSegment?
     /// Preserved opaque sections retained by the selected reader policy.
     public let opaqueSections: [GesOpaqueSection]
 
@@ -42,29 +44,173 @@ public final class GameEventScriptProgram: Sendable {
         requiredCallStackDepth: UInt16,
         stringConstants: [String],
         uint16IndexLists: [[UInt16]],
-        bindings: [GameEventScriptBinding],
+        bindings: [GesBindingSegment.Entry],
         code: [GesBytecodeInstruction],
         debugSymbols: [GesDebugSymbol]?,
-        sourceMap: GameEventScriptSourceMap?,
+        sourceMap: GesSourceMapSegment?,
         sourceArchive: [GesSourceArchiveEntry]?,
-        buildMetadata: GameEventScriptBuildMetadata?,
+        buildMetadata: GesBuildMetadataSegment?,
         opaqueSections: [GesOpaqueSection]
     ) {
         self.formatVersion = formatVersion
-        self.moduleName = moduleName
-        self.programVersion = programVersion
-        self.requiredRegisterCount = requiredRegisterCount
-        self.requiredCallStackDepth = requiredCallStackDepth
-        self.stringConstants = stringConstants
-        self.uint16IndexLists = uint16IndexLists
-        self.bindings = bindings
-        self.code = code
-        self.debugSymbols = debugSymbols
+        metadata = GesProgramMetadataSegment(moduleName: moduleName, requiredRegisterCount: requiredRegisterCount, requiredCallStackDepth: requiredCallStackDepth, programVersion: programVersion)
+        self.stringConstants = GesStringConstantSegment(values: stringConstants)
+        self.uint16IndexLists = GesUInt16IndexListSegment(lists: uint16IndexLists)
+        self.bindings = GesBindingSegment(entries: bindings)
+        self.code = GesCodeSegment(instructions: code)
+        self.debugSymbols = debugSymbols.map(GesDebugSymbolsSegment.init(symbols:))
         self.sourceMap = sourceMap
-        self.sourceArchive = sourceArchive
+        self.sourceArchive = sourceArchive.map(GesSourceArchiveSegment.init(sources:))
         self.buildMetadata = buildMetadata
         self.opaqueSections = opaqueSections
     }
+}
+
+/// Module identity, application version and the Program's resource requirements.
+public struct GesProgramMetadataSegment: Sendable, Equatable {
+    /// Declared module identifier.
+    public let moduleName: String
+    /// Maximum simultaneous register requirement computed from executable bindings.
+    public let requiredRegisterCount: UInt16
+    /// Maximum acyclic nested-call depth required by this Program.
+    public let requiredCallStackDepth: UInt16
+    /// Application-provided version.
+    public let programVersion: UInt64
+
+    /// Creates metadata from already validated values.
+    public init(moduleName: String, requiredRegisterCount: UInt16, requiredCallStackDepth: UInt16, programVersion: UInt64) {
+        self.moduleName = moduleName
+        self.requiredRegisterCount = requiredRegisterCount
+        self.requiredCallStackDepth = requiredCallStackDepth
+        self.programVersion = programVersion
+    }
+}
+
+/// UTF-8 string constants addressed by UInt16 index. The binary layout is exposed as slices into one UTF-8 buffer.
+public struct GesStringConstantSegment: Sendable, RandomAccessCollection {
+    /// One constant's byte range within `data`.
+    public struct SliceEntry: Sendable, Equatable {
+        /// First byte offset in `data`.
+        public let start: Int
+        /// UTF-8 byte length.
+        public let length: Int
+
+        /// Creates a byte range.
+        public init(start: Int, length: Int) {
+            self.start = start
+            self.length = length
+        }
+    }
+
+    // Decoded constants; the VM and linker address them directly.
+    let values: [String]
+
+    init(values: [String]) { self.values = values }
+
+    /// Creates a segment from UTF-8 slices; malformed UTF-8 is decoded with replacement characters.
+    public init(slices: [SliceEntry], data: [UInt8]) {
+        values = slices.map { String(decoding: data[$0.start..<($0.start + $0.length)], as: UTF8.self) }
+    }
+
+    /// Byte ranges of all constants in index order.
+    public var slices: [SliceEntry] {
+        var start = 0
+        return values.map { value in
+            defer { start += value.utf8.count }
+            return SliceEntry(start: start, length: value.utf8.count)
+        }
+    }
+
+    /// Concatenated UTF-8 bytes of all constants.
+    public var data: [UInt8] { values.flatMap { Array($0.utf8) } }
+
+    /// UTF-8 byte length of the constant at `index`.
+    public func resolveSize(_ index: UInt16) -> Int { values[Int(index)].utf8.count }
+
+    /// The decoded constant at `index`.
+    public func resolve(_ index: UInt16) -> String { values[Int(index)] }
+
+    /// The first constant index.
+    public var startIndex: Int { 0 }
+
+    /// The index after the last constant.
+    public var endIndex: Int { values.count }
+
+    /// The decoded constant at `index`.
+    public subscript(index: Int) -> String { values[index] }
+}
+
+/// One resolved UInt16 index list.
+public struct GesUInt16IndexList: Sendable, RandomAccessCollection {
+    let values: [UInt16]
+
+    /// First element offset in the segment's `data`.
+    public let start: Int
+
+    /// Number of elements.
+    public var length: Int { values.count }
+
+    /// The first element position.
+    public var startIndex: Int { 0 }
+
+    /// The position after the last element.
+    public var endIndex: Int { values.count }
+
+    /// The element at `index`, relative to this list.
+    public subscript(index: Int) -> UInt16 { values[index] }
+}
+
+/// Shared UInt16 index lists used by bindings and instructions.
+public struct GesUInt16IndexListSegment: Sendable, RandomAccessCollection {
+    /// One list's element range within `data`.
+    public struct SliceEntry: Sendable, Equatable {
+        /// First element offset in `data`.
+        public let start: Int
+        /// Element count.
+        public let length: Int
+
+        /// Creates an element range.
+        public init(start: Int, length: Int) {
+            self.start = start
+            self.length = length
+        }
+    }
+
+    // Lists as stored arrays; the VM reads them directly.
+    let lists: [[UInt16]]
+    private let starts: [Int]
+
+    init(lists: [[UInt16]]) {
+        self.lists = lists
+        var start = 0
+        starts = lists.map { list in
+            defer { start += list.count }
+            return start
+        }
+    }
+
+    /// Creates a segment from element slices into one shared buffer.
+    public init(slices: [SliceEntry], data: [UInt16]) {
+        self.init(lists: slices.map { Array(data[$0.start..<($0.start + $0.length)]) })
+    }
+
+    /// Element ranges of all lists in index order.
+    public var slices: [SliceEntry] { zip(starts, lists).map { SliceEntry(start: $0, length: $1.count) } }
+
+    /// Concatenated elements of all lists.
+    public var data: [UInt16] { lists.flatMap { $0 } }
+
+    /// The list at `index`.
+    public func resolve(_ index: UInt16) -> GesUInt16IndexList { self[Int(index)] }
+
+    /// The first list index.
+    public var startIndex: Int { 0 }
+
+    /// The index after the last list.
+    public var endIndex: Int { lists.count }
+
+    /// The list at `index`.
+    public subscript(index: Int) -> GesUInt16IndexList { GesUInt16IndexList(values: lists[index], start: starts[index]) }
 }
 
 /// A logical instruction; its encoding never depends on native memory layout.
@@ -124,53 +270,95 @@ public struct GesBytecodeInstruction: Sendable, Equatable {
     public var normalizeResultAsPredicate: Bool { unitAndFlags & 0x20 != 0 }
 }
 
-/// A declarative binding; callbacks and execution state never belong to a Program.
-public struct GameEventScriptBinding: Sendable {
-    /// Binding role: executable declaration, message signature or host import.
-    public let kind: GesBinaryBindKind
-    /// Binding identifier within its kind.
-    public let id: UInt16
-    /// Index of the binding name in the string table.
-    public let name: UInt16
-    /// Ordered string indexes for parameter labels.
-    public let argumentNames: [UInt16]
-    /// String indexes of tags required by this handler.
-    public let requiredTags: [UInt16]
-    /// String indexes of tags that exclude this handler.
-    public let excludedTags: [UInt16]
-    /// Executable entry instruction, or UInt16.max for a non-executable binding.
-    public let entryAddress: UInt16
-    /// Maximum active registers required by this callable, including arguments.
-    public let requiredRegisterCount: UInt16
-    /// Maximum nested-call depth reachable from this callable.
-    public let requiredCallStackDepth: UInt16
+/// Declarative callable and import entries in binding-id order.
+public struct GesBindingSegment: Sendable, RandomAccessCollection {
+    /// A declarative binding; callbacks and execution state never belong to a Program.
+    public struct Entry: Sendable {
+        /// Binding role: executable declaration, message signature or host import.
+        public let kind: GesBinaryBindKind
+        /// Binding identifier within its kind.
+        public let id: UInt16
+        /// Index of the binding name in the string table.
+        public let name: UInt16
+        /// Ordered string indexes for parameter labels.
+        public let argumentNames: [UInt16]
+        /// String indexes of tags required by this handler.
+        public let requiredTags: [UInt16]
+        /// String indexes of tags that exclude this handler.
+        public let excludedTags: [UInt16]
+        /// Executable entry instruction, or UInt16.max for a non-executable binding.
+        public let entryAddress: UInt16
+        /// Maximum active registers required by this callable, including arguments.
+        public let requiredRegisterCount: UInt16
+        /// Maximum nested-call depth reachable from this callable.
+        public let requiredCallStackDepth: UInt16
 
-    /// Creates binding data. Names and tag values are string-table indexes; omitted IDs and entry addresses use
-    /// UInt16.max. The Program validator enforces consistency.
-    public init(
-        kind: GesBinaryBindKind,
-        name: UInt16,
-        argumentNames: [UInt16] = [],
-        entryAddress: UInt16 = .max,
-        id: UInt16 = .max,
-        requiredTags: [UInt16] = [],
-        excludedTags: [UInt16] = [],
-        requiredRegisterCount: UInt16 = 0,
-        requiredCallStackDepth: UInt16 = 0
-    ) {
-        self.kind = kind
-        self.id = id
-        self.name = name
-        self.argumentNames = argumentNames
-        self.requiredTags = requiredTags
-        self.excludedTags = excludedTags
-        self.entryAddress = entryAddress
-        self.requiredRegisterCount = requiredRegisterCount
-        self.requiredCallStackDepth = requiredCallStackDepth
+        /// Creates binding data. Names and tag values are string-table indexes; omitted IDs and entry addresses use
+        /// UInt16.max. The Program validator enforces consistency.
+        public init(
+            kind: GesBinaryBindKind,
+            name: UInt16,
+            argumentNames: [UInt16] = [],
+            entryAddress: UInt16 = .max,
+            id: UInt16 = .max,
+            requiredTags: [UInt16] = [],
+            excludedTags: [UInt16] = [],
+            requiredRegisterCount: UInt16 = 0,
+            requiredCallStackDepth: UInt16 = 0
+        ) {
+            self.kind = kind
+            self.id = id
+            self.name = name
+            self.argumentNames = argumentNames
+            self.requiredTags = requiredTags
+            self.excludedTags = excludedTags
+            self.entryAddress = entryAddress
+            self.requiredRegisterCount = requiredRegisterCount
+            self.requiredCallStackDepth = requiredCallStackDepth
+        }
+
+        var isExecutable: Bool { [.messageHandler, .messageNameHandler, .function, .predicate, .record].contains(kind) }
+        var isHandler: Bool { kind == .messageHandler || kind == .messageNameHandler }
     }
 
-    var isExecutable: Bool { [.messageHandler, .messageNameHandler, .function, .predicate, .record].contains(kind) }
-    var isHandler: Bool { kind == .messageHandler || kind == .messageNameHandler }
+    /// All entries in binding-id order.
+    public let entries: [Entry]
+
+    /// Creates a segment from entries in binding-id order.
+    public init(entries: [Entry]) { self.entries = entries }
+
+    /// Number of entries as encoded in the binary section header.
+    public var entryCount: UInt16 { UInt16(truncatingIfNeeded: entries.count) }
+
+    /// The first binding id.
+    public var startIndex: Int { 0 }
+
+    /// The binding id after the last entry.
+    public var endIndex: Int { entries.count }
+
+    /// The entry with binding id `index`.
+    public subscript(index: Int) -> Entry { entries[index] }
+}
+
+/// Logical bytecode instructions in address order.
+public struct GesCodeSegment: Sendable, RandomAccessCollection {
+    /// All instructions in address order.
+    public let instructions: [GesBytecodeInstruction]
+
+    /// Creates a segment from instructions in address order.
+    public init(instructions: [GesBytecodeInstruction]) { self.instructions = instructions }
+
+    /// Number of instructions.
+    public var length: Int { instructions.count }
+
+    /// The first instruction address.
+    public var startIndex: Int { 0 }
+
+    /// The address after the last instruction.
+    public var endIndex: Int { instructions.count }
+
+    /// The instruction at `index`.
+    public subscript(index: Int) -> GesBytecodeInstruction { instructions[index] }
 }
 
 /// Role of a named register in an executable binding.
@@ -251,7 +439,7 @@ public struct GesSourceMapEntry: Sendable {
 }
 
 /// Source identities and mappings retained in the optional SourceMap section.
-public struct GameEventScriptSourceMap: Sendable {
+public struct GesSourceMapSegment: Sendable {
     /// Source-document identities in stored order.
     public let sources: [GesSourceMapSource]
     /// Instruction-to-source mappings in stored order.
@@ -284,8 +472,44 @@ public struct GesSourceArchiveEntry: Sendable {
     public var text: String { String(decoding: utf8Content, as: UTF8.self) }
 }
 
+/// Optional register names and lifetimes.
+public struct GesDebugSymbolsSegment: Sendable, RandomAccessCollection {
+    /// Debug symbols in section order.
+    public let symbols: [GesDebugSymbol]
+
+    /// Creates a segment from symbols in section order.
+    public init(symbols: [GesDebugSymbol]) { self.symbols = symbols }
+
+    /// The first position.
+    public var startIndex: Int { 0 }
+
+    /// The position after the last element.
+    public var endIndex: Int { symbols.count }
+
+    /// The element at `index`.
+    public subscript(index: Int) -> GesDebugSymbol { symbols[index] }
+}
+
+/// Optional original UTF-8 source documents.
+public struct GesSourceArchiveSegment: Sendable, RandomAccessCollection {
+    /// Archived documents in source-id order.
+    public let sources: [GesSourceArchiveEntry]
+
+    /// Creates a segment from documents in source-id order.
+    public init(sources: [GesSourceArchiveEntry]) { self.sources = sources }
+
+    /// The first position.
+    public var startIndex: Int { 0 }
+
+    /// The position after the last element.
+    public var endIndex: Int { sources.count }
+
+    /// The element at `index`.
+    public subscript(index: Int) -> GesSourceArchiveEntry { sources[index] }
+}
+
 /// Compiler provenance recorded separately from executable Program data.
-public struct GameEventScriptBuildMetadata: Sendable {
+public struct GesBuildMetadataSegment: Sendable {
     /// Identifier of the producing compiler.
     public let compilerID: String
     /// Version string reported by that compiler.
@@ -298,12 +522,28 @@ public struct GameEventScriptBuildMetadata: Sendable {
     }
 }
 
+/// Section header flag bits of the `.gesb` V1 container.
+public struct GesSectionFlags: OptionSet, Sendable, Hashable {
+    /// Raw UInt16 flag bits as encoded in the section header.
+    public let rawValue: UInt16
+
+    /// Creates flags from raw bits; the Program validator rejects unsupported combinations.
+    public init(rawValue: UInt16) { self.rawValue = rawValue }
+
+    /// No flags.
+    public static let none: Self = []
+    /// The section is required for correct interpretation.
+    public static let required = Self(rawValue: 0x0001)
+    /// Bits reserved for the payload compression method.
+    public static let compressionMask = Self(rawValue: 0x00f0)
+}
+
 /// Uninterpreted section retained for lossless rewriting under the reader retention policy.
 public struct GesOpaqueSection: Sendable {
     /// Raw UInt16 section identifier.
     public let sectionType: UInt16
-    /// Raw section flag bits.
-    public let flags: UInt16
+    /// Section flag bits.
+    public let flags: GesSectionFlags
     /// Version of this section payload.
     public let sectionVersion: UInt16
     /// Uninterpreted encoded payload bytes.
@@ -312,7 +552,7 @@ public struct GesOpaqueSection: Sendable {
     public let originalOrdinal: Int
 
     /// Creates retained section data; the Program validator checks permitted framing and flag values.
-    public init(sectionType: UInt16, flags: UInt16, sectionVersion: UInt16, rawPayload: [UInt8], originalOrdinal: Int) {
+    public init(sectionType: UInt16, flags: GesSectionFlags, sectionVersion: UInt16, rawPayload: [UInt8], originalOrdinal: Int) {
         self.sectionType = sectionType
         self.flags = flags
         self.sectionVersion = sectionVersion

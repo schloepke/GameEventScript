@@ -99,7 +99,7 @@ public sealed partial class GameEventScriptHost
         if (_starting || _executingScript || _startResult is { State: not GesStartState.Ready })
             throw new InvalidOperationException("Loading is not allowed during initialization, script execution, or after a failed start.");
         _ = program ?? throw new ArgumentNullException(nameof(program));
-        GameEventScriptProgramValidator.Validate(program);
+        program.Validate();
         var maxRegisterCount = Math.Min(
             ushort.MaxValue,
             _limits.MaxRegisterValues > 0 ? _limits.MaxRegisterValues : DefaultRegisterLimit);

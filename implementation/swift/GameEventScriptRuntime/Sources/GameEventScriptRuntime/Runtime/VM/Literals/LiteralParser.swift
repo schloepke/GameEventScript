@@ -78,7 +78,7 @@ struct GesLiteralParser {
         return TextNumberCast.read(token, percentage: token.hasSuffix("%"), allowGrouping: false)
     }
 
-    private mutating func node(_ type: String, _ labels: [String], _ arguments: [GesValue], _ constructor: GameEventScriptBinding? = nil) -> GesValue {
+    private mutating func node(_ type: String, _ labels: [String], _ arguments: [GesValue], _ constructor: GesBindingSegment.Entry? = nil) -> GesValue {
         let index = nodes.count
         nodes.append(.init(type: type, labels: labels, arguments: arguments, constructor: constructor))
         return .record(typeName: "@literal", entries: [.init(key: "id", value: .integer(Int64(index)))])

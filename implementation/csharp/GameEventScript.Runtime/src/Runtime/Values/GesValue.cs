@@ -22,7 +22,7 @@ internal readonly record struct GesNumericWithUnit(double Value, GesQuantityUnit
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 [SuppressMessage("ReSharper", "ConvertToAutoPropertyWithPrivateSetter")]
 [StructLayout(LayoutKind.Explicit, Size = 32)]
-public struct GesValue : IEquatable<GesValue>
+public partial struct GesValue : IEquatable<GesValue>
 {
     [Flags]
     internal enum GesValueFlags : byte

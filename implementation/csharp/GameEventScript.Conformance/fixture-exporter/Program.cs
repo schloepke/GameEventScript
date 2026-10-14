@@ -10,7 +10,7 @@ using GameEventScript.Tests.Conformance;
 if (args.Length == 3 && args[0] == "--message-json")
 {
     var input = System.Text.Json.JsonSerializer.Deserialize<string[]>(File.ReadAllText(args[1]))!;
-    var normalized = input.Select(json => GameEventScriptMessageJson.Serialize(GameEventScriptMessageJson.Deserialize(json))).ToArray();
+    var normalized = input.Select(json => GameEventScriptMessage.FromJson(json).ToJson()).ToArray();
     File.WriteAllText(args[2], System.Text.Json.JsonSerializer.Serialize(normalized));
     return 0;
 }
@@ -51,7 +51,7 @@ foreach (var testCase in requests.RootElement.EnumerateArray())
                 _ => throw new InvalidDataException("Unknown debug option.")
             };
         var program = builder.Compile(new GesCompileOptions { DebugInfo = debug, ProgramVersion = testCase.GetProperty("programVersion").GetUInt64() });
-        var binary = GameEventScriptProgramWriter.ToArray(program);
+        var binary = program.Encode();
         var hash = Convert.ToHexString(SHA256.HashData(binary));
         var name = hash + ".gesb";
         File.WriteAllBytes(Path.Combine(output, name), binary);

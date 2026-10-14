@@ -15,7 +15,7 @@ internal static partial class GesCompiler
         _ = module ?? throw new ArgumentNullException(nameof(module));
         var compileOptions = options ?? new GesCompileOptions();
         var program = new BinaryCompiler(module, compileOptions).Build();
-        GameEventScriptProgramValidator.Validate(program);
+        program.Validate();
         return program;
     }
 

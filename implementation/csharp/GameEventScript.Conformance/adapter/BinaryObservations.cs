@@ -34,7 +34,7 @@ internal static class BinaryObservations
         GameEventScriptProgram program;
         try
         {
-            program = GameEventScriptProgramReader.Read(bytes, new GesProgramReadOptions
+            program = GameEventScriptProgram.Read(bytes, new GesProgramReadOptions
             {
                 Retention = GesProgramRetention.PreserveAll,
                 Limits = new GesProgramReadLimits { MaxFileBytes = MaxResourceBytes }
@@ -55,9 +55,9 @@ internal static class BinaryObservations
                 }
             };
         }
-        var rewritten = GameEventScriptProgramWriter.ToArray(program);
+        var rewritten = program.Encode();
         var compare = input.GetProperty("compareCompiledRuntime").GetBoolean();
-        var compiled = compare ? GameEventScriptProgramWriter.ToArray(AdapterCompiler.Compile(test, input.GetProperty("programVersion").GetUInt64())) : null;
+        var compiled = compare ? AdapterCompiler.Compile(test, input.GetProperty("programVersion").GetUInt64()).Encode() : null;
         var result = new Dictionary<string, object?>
         {
             ["status"] = "ok",

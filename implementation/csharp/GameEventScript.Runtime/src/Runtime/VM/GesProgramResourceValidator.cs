@@ -95,7 +95,7 @@ internal readonly struct GesProgramResourceValidator
         {
             if (routine + 1 < _entries.Length && index == _entries[routine + 1]) routine++;
             if (Frames[index] >= 0) continue;
-            GameEventScriptProgramValidator.ValidateInstructionFrame(_program, _program.Code[index], index, routine < 0 ? 0 : MaximumFrames[routine]);
+            GesProgramValidator.ValidateInstructionFrame(_program, _program.Code[index], index, routine < 0 ? 0 : MaximumFrames[routine]);
         }
 
         if (_program.DebugSymbols is not { } debug) return;
@@ -135,7 +135,7 @@ internal readonly struct GesProgramResourceValidator
                 if (frame is < 0 or > ushort.MaxValue) Invalid("Local register adjustment exceeds the frame bounds.", index);
             }
             MaximumFrames[routine] = Math.Max(MaximumFrames[routine], frame);
-            GameEventScriptProgramValidator.ValidateInstructionFrame(_program, instruction, index, frame);
+            GesProgramValidator.ValidateInstructionFrame(_program, instruction, index, frame);
             if (IsStage(opcode)) stage++;
             Registers[routine] = Math.Max(Registers[routine], frame + stage);
 

@@ -126,7 +126,7 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
                 if (!quiet) CompileReport.WriteCheck(Console.Out, program, sourcePaths, stopwatch.Elapsed, verbose);
                 return 0;
             }
-            var bytes = GameEventScriptProgramWriter.ToArray(program);
+            var bytes = program.Encode();
             ToolFileOutput.Write(outputPath!, bytes);
             stopwatch.Stop();
             if (!quiet) CompileReport.Write(Console.Out, program, sourcePaths, outputPath!, bytes.Length, stopwatch.Elapsed, verbose);

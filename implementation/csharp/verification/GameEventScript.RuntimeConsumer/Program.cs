@@ -14,8 +14,8 @@ internal static class Program
         if (arguments.Length != 1) throw new ArgumentException("Supply the precompiled .gesb fixture path.");
         AssertRuntimeOnly();
         var bytes = File.ReadAllBytes(arguments[0]);
-        var program = GameEventScriptProgramReader.Read(bytes);
-        if (!bytes.AsSpan().SequenceEqual(GameEventScriptProgramWriter.ToArray(program))) throw new InvalidOperationException("The Program codec changed the fixture bytes.");
+        var program = GameEventScriptProgram.Read(bytes);
+        if (!bytes.AsSpan().SequenceEqual(program.Encode())) throw new InvalidOperationException("The Program codec changed the fixture bytes.");
         var host = GameEventScriptHost.CreateBuilder().WithRandomSeed(1).Build();
         long? result = null;
         host.Subscribe("Done", ["result"], (message, _) => result = message.Arguments.GetAsInteger("result"));

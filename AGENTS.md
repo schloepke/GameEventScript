@@ -213,7 +213,7 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   recognizes complete input before executing known current-Program Record
   constructors on the normal VM stack; external constructors are never resolved.
 - `:Record("Type", fields)` reconstructs immutable data without a constructor.
-  `GameEventScriptMessageJson` is an explicit Runtime-only V1 codec; external
+  Message/value JSON (`ToJson`/`FromJson`, Swift `json()`/`init(json:)`) is an explicit Runtime-only V1 codec; external
   exports become Record snapshots. Local Publish retains direct value delivery.
 - `[:split on separator]` returns Nothing for empty pieces; whitespace mode
   collapses the specified Unicode White_Space set. No CSV interpretation.

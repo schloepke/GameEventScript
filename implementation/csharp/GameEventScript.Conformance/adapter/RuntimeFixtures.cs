@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using GameEventScript.Api;
+using GameEventScript.Runtime.Values;
 
 internal sealed class RuntimeFixtures : IGesExtensionRegistry
 {
@@ -63,12 +64,12 @@ internal sealed class RuntimeFixtures : IGesExtensionRegistry
                     call.SetBoolean(wrapped is <= 45d or >= 315d);
                     break;
                 case "toJson":
-                    try { call.SetText(GameEventScriptMessageJson.SerializeValue(call.Arguments[0])); }
+                    try { call.SetText(call.Arguments[0].ToJson()); }
                     catch (GesMessageFormatException exception) { throw new GesExtensionFaultException(exception.Code, exception.Code); }
                     break;
                 case "fromJson":
                     if (call.Arguments[0].ValueKind != GesBytecodeTypeKind.Text) { call.SetNothing(); break; }
-                    try { call.SetValue(GameEventScriptMessageJson.DeserializeValue(call.Arguments[0].AsText()!)); }
+                    try { call.SetValue(GesValue.FromJson(call.Arguments[0].AsText()!)); }
                     catch (GesMessageFormatException exception) { throw new GesExtensionFaultException(exception.Code, exception.Code); }
                     break;
                 default: throw new InvalidOperationException("Configured conformance extension failure.");

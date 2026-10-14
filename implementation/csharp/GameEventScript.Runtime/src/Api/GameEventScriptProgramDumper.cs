@@ -13,7 +13,7 @@ namespace GameEventScript.Api;
 /// <summary>
 /// Creates an assembler-style disassembly of a portable GameEventScript program.
 /// </summary>
-public static class GameEventScriptProgramDumper
+internal static class GesProgramDumper
 {
     private const string CodeIndent = "\t\t\t\t\t";
     private const string RegionSeparator = "// -------------------------------------------------------------------------------";
@@ -22,13 +22,13 @@ public static class GameEventScriptProgramDumper
     /// <summary>
     /// Dumps program metadata, tables, binds, and code as an assembler-like text format.
     /// </summary>
-    public static string Dump(this GameEventScriptProgram program)
+    public static string Dump(GameEventScriptProgram program)
         => Dump(program, includeInstructionAddresses: false);
 
     /// <summary>
     /// Dumps program metadata, tables, binds, and code as an assembler-like text format.
     /// </summary>
-    public static string Dump(this GameEventScriptProgram program, bool includeInstructionAddresses)
+    public static string Dump(GameEventScriptProgram program, bool includeInstructionAddresses)
     {
         var context = new DisassemblyContext(program);
         var builder = new StringBuilder();
@@ -729,12 +729,12 @@ public static class GameEventScriptProgramDumper
         }
     }
 
-    private static void AddBindSignatureComment(List<string> comments, DisassemblyContext context, GesBindingSegment.GameEventScriptBinaryBindEntry entry)
+    private static void AddBindSignatureComment(List<string> comments, DisassemblyContext context, GesBindingSegment.Entry entry)
     {
         comments.Add(FormatBindSignatureComment(context, entry));
     }
 
-    private static string FormatBindSignatureComment(DisassemblyContext context, GesBindingSegment.GameEventScriptBinaryBindEntry entry)
+    private static string FormatBindSignatureComment(DisassemblyContext context, GesBindingSegment.Entry entry)
     {
         var name = Escape(context.ResolveText(entry.Name));
         string signature;
@@ -948,7 +948,7 @@ public static class GameEventScriptProgramDumper
             => (uint)index < (uint)_listLabels.Length ? _listLabels[index] : "U16_" + index.ToString(CultureInfo.InvariantCulture);
 
         internal ListRole GetListRole(int index)
-            => (uint)index < (uint)_listRoles.Length ? _listRoles[index] : GameEventScriptProgramDumper.ListRole.Raw;
+            => (uint)index < (uint)_listRoles.Length ? _listRoles[index] : GesProgramDumper.ListRole.Raw;
 
         internal string BindLabel(int index)
             => (uint)index < (uint)_bindLabels.Length ? _bindLabels[index] : "Bind_" + index.ToString(CultureInfo.InvariantCulture);
@@ -969,7 +969,7 @@ public static class GameEventScriptProgramDumper
 
         internal string Register(ushort registerId, int codeAddress)
         {
-            var physicalName = GameEventScriptProgramDumper.Register(registerId);
+            var physicalName = GesProgramDumper.Register(registerId);
             var debugSymbols = Program.DebugSymbols;
             if (debugSymbols is null)
             {
@@ -998,7 +998,7 @@ public static class GameEventScriptProgramDumper
                 : physicalName;
         }
 
-        internal GesBindingSegment.GameEventScriptBinaryBindEntry? GetBindEntry(GesBinaryBindKind kind, ushort id)
+        internal GesBindingSegment.Entry? GetBindEntry(GesBinaryBindKind kind, ushort id)
         {
             if (_bindsByKindAndId.TryGetValue((kind, id), out var index))
             {
@@ -1064,7 +1064,7 @@ public static class GameEventScriptProgramDumper
             return labels;
         }
 
-        private static string BuildBindLabel(GameEventScriptProgram binary, GesBindingSegment.GameEventScriptBinaryBindEntry entry, int index, HashSet<string> used)
+        private static string BuildBindLabel(GameEventScriptProgram binary, GesBindingSegment.Entry entry, int index, HashSet<string> used)
         {
             var prefix = BindPrefix(entry.Kind);
             var name = entry.Name < binary.StringConstants.Slices.Length
@@ -1175,7 +1175,7 @@ public static class GameEventScriptProgramDumper
             }
         }
 
-        private static void AddNamedCodeLabel(Dictionary<int, string> labels, Dictionary<int, string> comments, GameEventScriptProgram binary, GesBindingSegment.GameEventScriptBinaryBindEntry entry)
+        private static void AddNamedCodeLabel(Dictionary<int, string> labels, Dictionary<int, string> comments, GameEventScriptProgram binary, GesBindingSegment.Entry entry)
         {
             if (entry.EntryAddress == NoAddress || entry.EntryAddress >= binary.Code.Instructions.Length)
             {
@@ -1273,7 +1273,7 @@ public static class GameEventScriptProgramDumper
             }
         }
 
-        private static string FormatCodeLabelComment(GameEventScriptProgram binary, GesBindingSegment.GameEventScriptBinaryBindEntry entry)
+        private static string FormatCodeLabelComment(GameEventScriptProgram binary, GesBindingSegment.Entry entry)
         {
             var kind = entry.Kind switch
             {

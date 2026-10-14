@@ -5,7 +5,7 @@
 final class GesLinkedProgram {
     struct Handler {
         let signature: GesMessageSignature
-        let binding: GameEventScriptBinding
+        let binding: GesBindingSegment.Entry
         let requiredTags: [String]
         let excludedTags: [String]
     }
@@ -14,12 +14,12 @@ final class GesLinkedProgram {
     let textValues: [GesValue]
     let program: GameEventScriptProgram
     var handlers: [Handler] = []
-    var records: [UInt16: GameEventScriptBinding] = [:]
-    var recordsByName: [String: GameEventScriptBinding] = [:]
+    var records: [UInt16: GesBindingSegment.Entry] = [:]
+    var recordsByName: [String: GesBindingSegment.Entry] = [:]
     var extensions: [UInt16: any GesExtensionFunction] = [:]
-    var extensionBindings: [UInt16: GameEventScriptBinding] = [:]
+    var extensionBindings: [UInt16: GesBindingSegment.Entry] = [:]
     var constructors: [UInt16: any GesExternalTypeConstructor] = [:]
-    var constructorBindings: [UInt16: GameEventScriptBinding] = [:]
+    var constructorBindings: [UInt16: GesBindingSegment.Entry] = [:]
     var outbound: [UInt16: GesMessageSignature] = [:]
     private var mapLayouts: [GesMapLayout?]
 

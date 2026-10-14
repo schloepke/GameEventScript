@@ -13,7 +13,7 @@ final class CompilerBootstrapTests: XCTestCase {
         let program = try builder.compile()
         XCTAssertEqual(program.sourceArchive?.map(\.sourceID), [0, 1])
         XCTAssertEqual(program.sourceArchive?.map(\.sourceName), ["UnknownSource", "UnknownSource"])
-        XCTAssertNoThrow(try GameEventScriptProgramReader.read(GameEventScriptProgramWriter.bytes(program)))
+        XCTAssertNoThrow(try GameEventScriptProgram.read(program.encode()))
         let minimal = try builder.withDebugInfo(.none).withProgramVersion(42).compile()
         XCTAssertNil(minimal.sourceArchive)
         XCTAssertNil(minimal.sourceMap)

@@ -24,10 +24,10 @@ public sealed class GameEventScriptProgramReaderAllocationTests
         // multi-megabyte copying of the same argument list for every binding.
         const long maximumAllocatedBytes = 1024 * 1024;
         var bytes = CreateSharedListFixture(bindingCount, argumentCount);
-        _ = GameEventScriptProgramReader.Read(bytes);
+        _ = GameEventScriptProgram.Read(bytes);
 
         var before = GC.GetAllocatedBytesForCurrentThread();
-        var program = GameEventScriptProgramReader.Read(bytes);
+        var program = GameEventScriptProgram.Read(bytes);
         var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 
         TestContext.WriteLine($"Reading {bytes.Length} bytes with {bindingCount} references to one {argumentCount}-element list allocated {allocated} bytes; C# budget: {maximumAllocatedBytes} bytes.");

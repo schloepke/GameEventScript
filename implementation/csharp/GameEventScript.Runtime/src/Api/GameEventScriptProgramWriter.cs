@@ -10,7 +10,7 @@ namespace GameEventScript.Api;
 /// <summary>
 /// Writes immutable programs as canonical Little-Endian <c>.gesb</c> V1 byte images.
 /// </summary>
-public static class GameEventScriptProgramWriter
+internal static class GesProgramWriter
 {
     private const ushort SectionVersion = 1;
     private static readonly UTF8Encoding Utf8 = new(false, true);
@@ -24,7 +24,7 @@ public static class GameEventScriptProgramWriter
     public static int GetEncodedSize(GameEventScriptProgram program)
     {
         _ = program ?? throw new ArgumentNullException(nameof(program));
-        GameEventScriptProgramValidator.Validate(program);
+        program.Validate();
 
         long size = GesBinaryFormat.HeaderSize;
         size = AddSection(size, 16);

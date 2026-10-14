@@ -32,13 +32,13 @@ public sealed class GameEventScriptProgramResourceBoundaryTests
         // Only friend access can create an unchecked Program. This exercises the
         // independent writer/host trust boundaries, beyond the portable reader corpus.
         var invalid = new GameEventScriptProgram(valid.FormatVersion, valid.ModuleName, valid.ProgramVersion, registers, depth, valid.StringConstants, valid.UInt16IndexLists, new GesBindingSegment(bindings), valid.Code);
-        AssertResourceError(() => GameEventScriptProgramValidator.Validate(invalid));
-        AssertResourceError(() => GameEventScriptProgramWriter.GetEncodedSize(invalid));
-        AssertResourceError(() => GameEventScriptProgramWriter.ToArray(invalid));
-        var destination = new byte[GameEventScriptProgramWriter.GetEncodedSize(valid)];
+        AssertResourceError(() => invalid.Validate());
+        AssertResourceError(() => invalid.GetEncodedSize());
+        AssertResourceError(() => invalid.Encode());
+        var destination = new byte[valid.GetEncodedSize()];
         Array.Fill(destination, (byte)0xA5);
         var before = (byte[])destination.Clone();
-        AssertResourceError(() => GameEventScriptProgramWriter.Write(invalid, destination));
+        AssertResourceError(() => invalid.Write(destination));
         CollectionAssert.AreEqual(before, destination);
 
         var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();

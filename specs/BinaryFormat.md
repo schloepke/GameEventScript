@@ -277,7 +277,7 @@ language field are forbidden so identical inputs remain reproducible.
 
 ## Reading, retention, validation, and writing
 
-`GameEventScriptProgramReader` accepts bytes only. `PreserveAll` parses known
+`GameEventScriptProgram.Read`/`read` accepts bytes only. `PreserveAll` parses known
 optional sections and retains unknown optional payloads as immutable opaque sections.
 `PreserveKnown` drops unknown optional sections. `RuntimeOnly` materializes only the
 five required runtime sections. Unknown required sections always fail. A known

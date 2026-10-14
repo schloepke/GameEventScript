@@ -91,9 +91,9 @@ internal sealed class GesLinkedProgram
     internal int[]? StringScalarCounts { get; }
     internal ushort CodeSegmentSize { get; }
     internal OutboundMessageSignature[] OutboundMessageSignatures { get; }
-    internal GameEventScriptBinaryBindEntry[] RecordConstructors { get; }
-    internal GameEventScriptBinaryBindEntry[] ExtensionCallBinds { get; }
-    internal GameEventScriptBinaryBindEntry[] ExternalTypeBinds { get; }
+    internal GesBindingSegment.Entry[] RecordConstructors { get; }
+    internal GesBindingSegment.Entry[] ExtensionCallBinds { get; }
+    internal GesBindingSegment.Entry[] ExternalTypeBinds { get; }
     internal IGesExtensionFunction?[] BoundExtensionCalls { get; }
     internal IGesExternalTypeConstructor?[] BoundExternalTypeConstructors { get; }
     internal Handler[] Handlers { get; }
@@ -202,13 +202,13 @@ internal sealed class GesLinkedProgram
         return signatures;
     }
 
-    private static GameEventScriptBinaryBindEntry[] BuildIdIndexedBindTable(GameEventScriptProgram program, GesBinaryBindKind kind)
+    private static GesBindingSegment.Entry[] BuildIdIndexedBindTable(GameEventScriptProgram program, GesBinaryBindKind kind)
     {
         var maxId = -1;
         foreach (var entry in program.Bindings.Entries)
             if (entry.Kind == kind && entry.Id != ushort.MaxValue && entry.Id > maxId) maxId = entry.Id;
         if (maxId < 0) return [];
-        var result = new GameEventScriptBinaryBindEntry[maxId + 1];
+        var result = new GesBindingSegment.Entry[maxId + 1];
         foreach (var entry in program.Bindings.Entries)
             if (entry.Kind == kind && entry.Id != ushort.MaxValue) result[entry.Id] = entry;
         return result;

@@ -45,14 +45,14 @@ enum ApiObservations {
         if input["message"]?["args"]?.objectValue != nil { return failure("invalidArgumentsShape") }
         do {
             let signature = try Values.signature(input.required("signature"))
-            var message = try input["json"]?.stringValue.map(GameEventScriptMessageJson.deserialize) ?? Values.message(input.required("message"))
-            if input["roundTripJson"]?.boolValue == true { message = try GameEventScriptMessageJson.deserialize(GameEventScriptMessageJson.serialize(message)) }
+            var message = try input["json"]?.stringValue.map { try GameEventScriptMessage(json: $0) } ?? Values.message(input.required("message"))
+            if input["roundTripJson"]?.boolValue == true { message = try GameEventScriptMessage(json: message.json()) }
             var result: [String: Any] = [
                 "name": message.name, "signatureId": signature.signatureId, "messageSignatureId": message.signatureId,
                 "matches": signature.matches(message), "argumentCount": message.arguments.count,
             ]
             let json = input["json"] != nil || input["roundTripJson"] != nil
-            if json { result["json"] = try GameEventScriptMessageJson.serialize(message) }
+            if json { result["json"] = try message.json() }
             if !json || input["includeNormalized"]?.boolValue == true { result["normalized"] = try Values.encodeMessage(message) }
             if let node = input["compareSignature"] {
                 let other = try Values.signature(node)

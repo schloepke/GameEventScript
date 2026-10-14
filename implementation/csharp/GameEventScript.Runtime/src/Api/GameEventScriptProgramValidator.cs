@@ -14,7 +14,7 @@ namespace GameEventScript.Api;
 /// <summary>
 /// Enforces the shared structural and semantic invariants required by the reader, writer, and host linker.
 /// </summary>
-public static class GameEventScriptProgramValidator
+internal static class GesProgramValidator
 {
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
@@ -146,7 +146,7 @@ public static class GameEventScriptProgramValidator
         return bindingIds;
     }
 
-    private static string BuildCallableSignature(GameEventScriptProgram program, GesBindingSegment.GameEventScriptBinaryBindEntry bind, string name)
+    private static string BuildCallableSignature(GameEventScriptProgram program, GesBindingSegment.Entry bind, string name)
     {
         var builder = new StringBuilder(name).Append('(');
         for (var index = 0; index < bind.ArgumentNames.Count; index++)
@@ -382,7 +382,7 @@ public static class GameEventScriptProgramValidator
         }
     }
 
-    private static void ValidateBindingText(GameEventScriptProgram program, GesBindingSegment.GameEventScriptBinaryBindEntry bind, int bindingIndex)
+    private static void ValidateBindingText(GameEventScriptProgram program, GesBindingSegment.Entry bind, int bindingIndex)
     {
         var validName = bind.Kind switch
         {

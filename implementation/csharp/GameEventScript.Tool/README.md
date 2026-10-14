@@ -613,7 +613,7 @@ dotnet ges dump --help
 ```
 
 The command reads and fully validates one `.gesb` file with the existing Reader,
-then uses the portable ProgramDumper to produce the
+then uses the portable `Program.Dump` to produce the
 [GESA representation](../../../specs/AssemblerFormat.md). It uses embedded
 debug information when present and also works with binaries compiled using
 `--no-debug`. Original source files, extension implementations, and host bindings

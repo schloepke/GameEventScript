@@ -40,7 +40,7 @@ public sealed class GameEventScriptProgramModelTests
         var arguments = new ushort[] { 1 };
         var requiredTags = new ushort[] { 2 };
         var excludedTags = new ushort[] { 3 };
-        var bind = new GesBindingSegment.GameEventScriptBinaryBindEntry(
+        var bind = new GesBindingSegment.Entry(
             GesBinaryBindKind.Function,
             name: 0,
             arguments,

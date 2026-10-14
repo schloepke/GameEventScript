@@ -38,10 +38,10 @@
         requiredCallStackDepth: UInt16,
         strings: [String],
         indexLists: [[UInt16]],
-        bindings: [GameEventScriptBinding],
+        bindings: [GesBindingSegment.Entry],
         code: [GesBytecodeInstruction],
         debugSymbols: [GesDebugSymbol]?,
-        sourceMap: GameEventScriptSourceMap?,
+        sourceMap: GesSourceMapSegment?,
         sourceArchive: [GesSourceArchiveEntry]?
     ) throws -> GameEventScriptProgram {
         let result = GameEventScriptProgram(
@@ -60,7 +60,7 @@
             buildMetadata: nil,
             opaqueSections: []
         )
-        try GameEventScriptProgramValidator.validate(result)
+        try result.validate()
         return result
     }
 }

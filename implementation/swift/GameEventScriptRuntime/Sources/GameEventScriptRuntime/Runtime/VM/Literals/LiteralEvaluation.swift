@@ -5,7 +5,7 @@ struct GesLiteralNode {
     let type: String
     let labels: [String]
     let arguments: [GesValue]
-    var constructor: GameEventScriptBinding?
+    var constructor: GesBindingSegment.Entry?
 }
 
 final class GesLiteralEvaluation {

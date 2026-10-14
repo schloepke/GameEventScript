@@ -188,7 +188,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
                 foreach (var path in paths)
                 {
                     activePath = path;
-                    programs.Add(GameEventScriptProgramReader.Read(File.ReadAllBytes(path)));
+                    programs.Add(GameEventScriptProgram.Read(File.ReadAllBytes(path)));
                 }
             }
             else if (paths.Count > 0) programs.Add(RunProgramFiles.Compile(paths, ref activePath));

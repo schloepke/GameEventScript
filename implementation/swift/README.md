@@ -242,7 +242,7 @@ let program = try GesProgramBuilder()
         on Main(args) { emit ConsoleOut(double(21)) }
         """, sourceName: "example.ges")
     .compile()
-let bytes = try GameEventScriptProgramWriter.bytes(program)
+let bytes = try program.encode()
 // The embedding can save bytes, or load program directly into a Host.
 ```
 
@@ -280,7 +280,7 @@ final class Output: GesNativeMessageHandler {
 }
 
 func execute(_ bytes: [UInt8]) throws -> (start: GesStartResult, execution: GesExecutionResult?) {
-    let program = try GameEventScriptProgramReader.read(bytes)
+    let program = try GameEventScriptProgram.read(bytes)
     let host = try GameEventScriptHost.makeBuilder().withRandomSeed(123).build()
     let output = try GesMessageSignature(name: "Done", parameters: ["value"])
     _ = try host.subscribe(output, handler: Output())
@@ -365,10 +365,10 @@ formatting and the helper’s regression controls run in Swift CI.
 
 ## Explicit message JSON exchange
 
-The Runtime provides `GameEventScriptMessageJson` for optional product transport.
-Use `Serialize`/`Deserialize` in C#, or `serialize`/`deserialize` in Swift, for
-messages; the corresponding `SerializeValue`/`serializeValue` methods encode a
-standalone value. Decoding reconstructs immutable data and never runs Record or
+The Runtime provides explicit JSON members for optional product transport:
+`message.ToJson()`/`GameEventScriptMessage.FromJson(json)` in C#, or
+`message.json()`/`GameEventScriptMessage(json:)` in Swift; `GesValue` offers the
+same pair for a standalone value. Decoding reconstructs immutable data and never runs Record or
 native constructors. External objects export as typed Record snapshots. Local
 Publish does not serialize; configure encoding explicitly at your I/O boundary.
 The [message format](../../specs/MessageFormat.md) defines the envelope and errors.

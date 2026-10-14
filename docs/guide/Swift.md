@@ -131,7 +131,7 @@ ges compile damage.ges -o artifacts/damage.gesb
 ```
 
 Then load bytes provided by your application using
-`try GameEventScriptProgramReader.read(bytes)`, where `bytes` is `[UInt8]`.
+`try GameEventScriptProgram.read(bytes)`, where `bytes` is `[UInt8]`.
 Your app performs file or network I/O before this call. The reader and host
 validate the program; they do not require Compiler.
 

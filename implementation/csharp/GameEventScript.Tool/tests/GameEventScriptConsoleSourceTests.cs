@@ -176,7 +176,7 @@ still inside the string')
     }
 
     private void Write(string file, string source) => File.WriteAllText(Path.Combine(_directory, file), source, new UTF8Encoding(false, true));
-    private void WriteBinary(string file, GameEventScriptProgram program) => File.WriteAllBytes(Path.Combine(_directory, file), GameEventScriptProgramWriter.ToArray(program));
+    private void WriteBinary(string file, GameEventScriptProgram program) => File.WriteAllBytes(Path.Combine(_directory, file), program.Encode());
     private DotNetProcessResult Interactive(string input, params string[] paths) => ToolProcess.ExecuteWithInput(_directory, input, ["run", "--interactive", "--quiet", .. paths]);
     private static string Lines(params string[] values) => string.Join(Environment.NewLine, values) + Environment.NewLine;
     private static string WithoutColor(string text) => Regex.Replace(text, "\u001b\\[[0-9;]*m", string.Empty);

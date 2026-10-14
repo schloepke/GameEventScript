@@ -52,7 +52,7 @@ public sealed class GesUnicodeSemanticsTests
 
         Assert.AreEqual(logicalSource, program.SourceArchive!.Sources[0].ResolveText());
         CollectionAssert.AreEqual(new uint[] { 0, 12, 50 }, program.SourceMap!.Sources[0].LineStartByteOffsets.ToArray());
-        GameEventScriptProgramValidator.Validate(program);
+        program.Validate();
     }
 
     private static void AssertToken(GesToken actual, GesTokenKind kind, string text, int line, int column, int endLine, int endColumn)

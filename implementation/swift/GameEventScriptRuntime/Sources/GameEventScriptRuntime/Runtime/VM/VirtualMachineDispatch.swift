@@ -30,7 +30,7 @@ extension GesVirtualMachine {
         var executed = 0
         // The linked Program and the lazily created budget are fixed for the whole slice.
         let runtimeBudget = context.budget
-        let code = linked?.program.code ?? []
+        let code = linked?.program.code.instructions ?? []
         let reserved = runtimeBudget.reserve(budget)
         do {
             while true {

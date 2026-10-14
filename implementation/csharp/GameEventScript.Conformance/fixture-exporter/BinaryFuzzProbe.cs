@@ -29,15 +29,15 @@ internal static class BinaryFuzzProbe
             GameEventScriptProgram program;
             try
             {
-                program = GameEventScriptProgramReader.Read(bytes, options);
+                program = GameEventScriptProgram.Read(bytes, options);
             }
             catch (GesProgramFormatException error)
             {
                 writer.WriteLine("reject:" + error.ErrorCode);
                 continue;
             }
-            var canonical = GameEventScriptProgramWriter.ToArray(program);
-            var second = GameEventScriptProgramWriter.ToArray(GameEventScriptProgramReader.Read(canonical, options));
+            var canonical = program.Encode();
+            var second = GameEventScriptProgram.Read(canonical, options).Encode();
             if (!canonical.AsSpan().SequenceEqual(second)) throw new InvalidOperationException("Unstable accepted binary rewrite.");
             writer.WriteLine("accept:" + Convert.ToBase64String(canonical));
         }

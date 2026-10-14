@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Canonical little-endian `.gesb` encoding, independent of host state and memory layout.
-public enum GameEventScriptProgramWriter {
+enum GesProgramWriter {
     /// Validates a Program and computes its canonical encoded byte count without producing the binary buffer.
     ///
     /// - Throws: `GesProgramFormatError` for invalid Program data.
-    public static func encodedSize(_ program: GameEventScriptProgram) throws -> Int {
-        try GameEventScriptProgramValidator.validate(program)
+    static func encodedSize(_ program: GameEventScriptProgram) throws -> Int {
+        try program.validate()
         var output = GesBinaryOutput(countOnly: true)
         try encode(program, &output, fileSize: 0)
         return output.count
@@ -16,7 +16,7 @@ public enum GameEventScriptProgramWriter {
     /// Validates and encodes a Program as canonical little-endian `.gesb` V1 bytes.
     ///
     /// - Throws: `GesProgramFormatError` for invalid Program data.
-    public static func bytes(_ program: GameEventScriptProgram) throws -> [UInt8] {
+    static func bytes(_ program: GameEventScriptProgram) throws -> [UInt8] {
         let size = try encodedSize(program)
         var output = GesBinaryOutput(capacity: size)
         try encode(program, &output, fileSize: size)
@@ -24,7 +24,7 @@ public enum GameEventScriptProgramWriter {
     }
 
     /// Writes into existing storage, preserving it on validation or capacity failure.
-    @discardableResult public static func write(_ program: GameEventScriptProgram, into destination: inout [UInt8]) throws -> Int {
+    @discardableResult static func write(_ program: GameEventScriptProgram, into destination: inout [UInt8]) throws -> Int {
         let size = try encodedSize(program)
         if destination.count < size { throw GesProgramFormatError(.invalidPayloadLength, message: "Destination is too small") }
         let encoded = try bytes(program)
@@ -38,7 +38,7 @@ public enum GameEventScriptProgramWriter {
         try out.u16(0)
         try out.u32(16)
         try out.u32(UInt32(fileSize))
-        guard let module = p.stringConstants.firstIndex(where: { GesText.scalarEqual($0, p.moduleName) }) else { throw GameEventScriptProgramValidator.failure(.invalidStringIndex) }
+        guard let module = p.stringConstants.firstIndex(where: { GesText.scalarEqual($0, p.moduleName) }) else { throw GesProgramValidator.failure(.invalidStringIndex) }
         try out.section(1, flags: 1, size: 16)
         try out.u16(UInt16(module))
         try out.u16(p.requiredRegisterCount)
@@ -58,9 +58,9 @@ public enum GameEventScriptProgramWriter {
         }
 
         func findList(_ values: [UInt16]) throws -> UInt16 {
-            if let index = p.uint16IndexLists.firstIndex(of: values) { return UInt16(index) }
+            if let index = p.uint16IndexLists.lists.firstIndex(of: values) { return UInt16(index) }
             if values.isEmpty { return .max }
-            throw GameEventScriptProgramValidator.failure(.invalidListIndex)
+            throw GesProgramValidator.failure(.invalidListIndex)
         }
 
         try out.section(4, flags: 1, size: 4 + 20 * p.bindings.count)
@@ -142,7 +142,7 @@ public enum GameEventScriptProgramWriter {
             try out.string(build.compilerVersion)
         }
         for section in p.opaqueSections.sorted(by: { $0.originalOrdinal < $1.originalOrdinal }) {
-            try out.section(section.sectionType, flags: section.flags, size: section.rawPayload.count, version: section.sectionVersion)
+            try out.section(section.sectionType, flags: section.flags.rawValue, size: section.rawPayload.count, version: section.sectionVersion)
             try out.raw(section.rawPayload)
         }
     }
@@ -159,7 +159,7 @@ private struct GesBinaryOutput {
     }
 
     mutating func u8(_ value: UInt8) throws {
-        if count == Int(Int32.max) { throw GameEventScriptProgramValidator.failure(.sectionTooLarge) }
+        if count == Int(Int32.max) { throw GesProgramValidator.failure(.sectionTooLarge) }
         count += 1
         if !countOnly { storage.append(value) }
     }
@@ -180,12 +180,12 @@ private struct GesBinaryOutput {
     }
 
     mutating func length(_ value: Int) throws {
-        if value < 0 || value > Int(Int32.max) { throw GameEventScriptProgramValidator.failure(.sectionTooLarge) }
+        if value < 0 || value > Int(Int32.max) { throw GesProgramValidator.failure(.sectionTooLarge) }
         try u32(UInt32(value))
     }
 
     mutating func raw(_ bytes: [UInt8]) throws {
-        if bytes.count > Int(Int32.max) - count { throw GameEventScriptProgramValidator.failure(.sectionTooLarge) }
+        if bytes.count > Int(Int32.max) - count { throw GesProgramValidator.failure(.sectionTooLarge) }
         count += bytes.count
         if !countOnly { storage.append(contentsOf: bytes) }
     }

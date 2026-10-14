@@ -56,7 +56,7 @@ enum ToolFiles {
     static func isBinary(_ path: String) -> Bool { (path as NSString).pathExtension.lowercased() == "gesb" }
 
     static func read(_ path: String) throws -> GameEventScriptProgram {
-        if isBinary(path) { return try GameEventScriptProgramReader.read(Array(Data(contentsOf: URL(fileURLWithPath: path)))) }
+        if isBinary(path) { return try GameEventScriptProgram.read(Array(Data(contentsOf: URL(fileURLWithPath: path)))) }
         return try compile([path])
     }
 

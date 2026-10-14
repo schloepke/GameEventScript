@@ -25,13 +25,13 @@ enum BinaryFuzzProbe {
             guard let data = Data(base64Encoded: line) else { throw ToolError.invalidArguments("Invalid fuzz transport") }
             let program: GameEventScriptProgram
             do {
-                program = try GameEventScriptProgramReader.read(Array(data), options: options)
+                program = try GameEventScriptProgram.read(Array(data), options: options)
             } catch let error as GesProgramFormatError {
                 file.write(Data(("reject:" + String(describing: error.code) + "\n").utf8))
                 continue
             }
-            let canonical = try GameEventScriptProgramWriter.bytes(program)
-            let second = try GameEventScriptProgramWriter.bytes(GameEventScriptProgramReader.read(canonical, options: options))
+            let canonical = try program.encode()
+            let second = try GameEventScriptProgram.read(canonical, options: options).encode()
             guard canonical == second else { throw ToolError.invalidFixture("Unstable accepted binary rewrite") }
             file.write(Data(("accept:" + Data(canonical).base64EncodedString() + "\n").utf8))
         }

@@ -12,7 +12,7 @@ public struct GesDiagnostic: Sendable {
     /// Affected symbol name when available.
     public let symbol: String?
     /// Role of the affected symbol.
-    public let symbolKind: GesSymbolKind
+    public let symbolKind: GesDiagnosticSymbolKind
     /// Optional original source span.
     public let sourceLocation: GesSourceLocation?
     /// Affected Program name; runtime boundaries may fill missing context.
@@ -28,7 +28,7 @@ public struct GesDiagnostic: Sendable {
         code: String,
         message: String = "",
         symbol: String? = nil,
-        symbolKind: GesSymbolKind = .unknown,
+        symbolKind: GesDiagnosticSymbolKind = .unknown,
         sourceLocation: GesSourceLocation? = nil,
         programName: String? = nil,
         handlerName: String? = nil,

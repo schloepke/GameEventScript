@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Role of the optional symbol identified by a diagnostic.
-public enum GesSymbolKind: Sendable {
+public enum GesDiagnosticSymbolKind: Sendable {
     /// No specific symbol category is available.
     case unknown
     /// A source or external type.

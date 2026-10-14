@@ -23,7 +23,7 @@ internal static class RunProgramFiles
 
     internal static GameEventScriptProgram ReadOne(string path)
     {
-        if (string.Equals(Path.GetExtension(path), ".gesb", StringComparison.OrdinalIgnoreCase)) return GameEventScriptProgramReader.Read(File.ReadAllBytes(path));
+        if (string.Equals(Path.GetExtension(path), ".gesb", StringComparison.OrdinalIgnoreCase)) return GameEventScriptProgram.Read(File.ReadAllBytes(path));
         string? activePath = path;
         return Compile([path], ref activePath);
     }

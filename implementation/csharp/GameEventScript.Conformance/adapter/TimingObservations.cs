@@ -80,7 +80,7 @@ internal static class TimingObservations
         var ast = Measure(() => Builder().BuildModule(options), Warmup);
         var binary = Measure(() => GesCompiler.Compile(ast.Value, options), Warmup);
         var program = binary.Value;
-        if (test.GetProperty("compile").GetProperty("binaryRoundTrip").GetBoolean()) program = GameEventScriptProgramReader.Read(GameEventScriptProgramWriter.ToArray(program));
+        if (test.GetProperty("compile").GetProperty("binaryRoundTrip").GetBoolean()) program = GameEventScriptProgram.Read(program.Encode());
         var load = Measure(() => Load(program), Warmup);
         var samples = run.GetProperty("evidence").GetProperty("samples").EnumerateArray().ToArray();
         var elapsed = samples.Min(s => s.GetProperty("ElapsedMilliseconds").GetDouble());

@@ -78,7 +78,7 @@ foreach (var operation in new[] { "count", "any", "all", "first" })
             results.Add(new { operation, variant, length, repetitions, samples, medianNanoseconds = times[samples / 2], minimumNanoseconds = times[0],
                 maximumNanoseconds = times[^1], maxAllocatedBytesPerOperation = allocations.Max() / (double)repetitions,
                 executedOpcodesPerOperation = opcodes / (double)repetitions, codeInstructions = program.Code.Instructions.Count,
-                binaryBytes = GameEventScriptProgramWriter.GetEncodedSize(program), registers = program.RequiredRegisterCount, singleOperationFramesAtBudgetOne = frames });
+                binaryBytes = program.GetEncodedSize(), registers = program.RequiredRegisterCount, singleOperationFramesAtBudgetOne = frames });
         }
 
         subscription.Unsubscribe();

@@ -190,7 +190,7 @@ internal sealed class RunInventory(GameEventScriptHost host, RunWorkspace worksp
 
     internal LoadedProgram[] ActivePrograms() => _programs.Where(entry => entry.Instance.IsAttached).ToArray();
 
-    private static IEnumerable<GameEventScriptBinaryBindEntry> Handlers(LoadedProgram entry)
+    private static IEnumerable<GesBindingSegment.Entry> Handlers(LoadedProgram entry)
         => entry.Instance.Program.Bindings.Entries.Where(binding => binding.Kind is GesBinaryBindKind.MessageHandler or GesBinaryBindKind.MessageNameHandler
             && entry.Instance.Program.StringConstants.Resolve(binding.Name) != "initialization");
 

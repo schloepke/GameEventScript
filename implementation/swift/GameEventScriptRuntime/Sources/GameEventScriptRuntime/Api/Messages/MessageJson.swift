@@ -14,25 +14,29 @@ public struct GesMessageFormatError: Error, Equatable {
 /// Ordered arguments are preserved; external values become immutable Record snapshots.
 /// Limits: 64 data levels, 65536 values and 4194304 UTF-16 code units of JSON.
 /// Decoding never invokes native or script constructors.
-public enum GameEventScriptMessageJson {
-    /// Serializes a complete message graph. Throws for unsupported or over-limit data and failed external getters.
-    public static func serialize(_ message: GameEventScriptMessage) throws -> String {
-        try GesJson.write(GesJson.object([("version", .integer(1)), ("message", try GesMessageJsonCodec().encodeMessage(message, 0))]))
+extension GameEventScriptMessage {
+    /// Reconstructs a V1 message envelope as data only. Throws a stable format error for invalid input.
+    public init(json: String) throws {
+        self = try GesMessageJsonCodec().decodeMessage(GesMessageJsonCodec.envelope(GesJson.read(json), "message"), 0)
     }
 
-    /// Reconstructs a V1 message envelope as data only. Throws a stable format error for invalid input.
-    public static func deserialize(_ json: String) throws -> GameEventScriptMessage {
-        try GesMessageJsonCodec().decodeMessage(GesMessageJsonCodec.envelope(GesJson.read(json), "message"), 0)
+    /// Serializes the complete message graph as a canonical V1 envelope. Throws for unsupported or over-limit data and
+    /// failed external getters.
+    public func json() throws -> String {
+        try GesJson.write(GesJson.object([("version", .integer(1)), ("message", try GesMessageJsonCodec().encodeMessage(self, 0))]))
+    }
+}
+
+/// Explicit V1 value JSON transport with the same limits as message JSON. Decoding never invokes constructors.
+extension GesValue {
+    /// Reconstructs a V1 value envelope without executing constructors. External snapshots become Records.
+    public init(json: String) throws {
+        self = try GesMessageJsonCodec().decode(GesMessageJsonCodec.envelope(GesJson.read(json), "value"), 0)
     }
 
     /// Serializes a value envelope, exporting external objects as Records. Throws for unsupported or over-limit data.
-    public static func serializeValue(_ value: GesValue) throws -> String {
-        try GesJson.write(GesJson.object([("version", .integer(1)), ("value", try GesMessageJsonCodec().encode(value, 0))]))
-    }
-
-    /// Reconstructs a V1 value envelope without executing constructors. External snapshots become Records.
-    public static func deserializeValue(_ json: String) throws -> GesValue {
-        try GesMessageJsonCodec().decode(GesMessageJsonCodec.envelope(GesJson.read(json), "value"), 0)
+    public func json() throws -> String {
+        try GesJson.write(GesJson.object([("version", .integer(1)), ("value", try GesMessageJsonCodec().encode(self, 0))]))
     }
 }
 

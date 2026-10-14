@@ -17,7 +17,7 @@ do {
     case "--number-text": try NumberTextProbe.run(input: args[1], output: args[2])
     case "--message-json":
         let input = try JSONDecoder().decode([String].self, from: Data(contentsOf: URL(fileURLWithPath: args[1])))
-        let normalized = try input.map { try GameEventScriptMessageJson.serialize(GameEventScriptMessageJson.deserialize($0)) }
+        let normalized = try input.map { try GameEventScriptMessage(json: $0).json() }
         try JSONEncoder().encode(normalized).write(to: URL(fileURLWithPath: args[2]))
     default: throw ToolError.invalidArguments("Unknown probe")
     }

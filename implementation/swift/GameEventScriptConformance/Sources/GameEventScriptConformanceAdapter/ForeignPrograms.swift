@@ -14,7 +14,7 @@ enum ForeignPrograms {
         let cacheKey = id + "/" + key
         if let program = cache[cacheKey] { return program }
         guard let encoded = inputs?[id]?[key]?.stringValue, let data = Data(base64Encoded: encoded) else { throw ConformanceExecutionError.invalidInput("Missing foreign Program") }
-        let program = try GameEventScriptProgramReader.read(Array(data))
+        let program = try GameEventScriptProgram.read(Array(data))
         cache[cacheKey] = program
         return program
     }

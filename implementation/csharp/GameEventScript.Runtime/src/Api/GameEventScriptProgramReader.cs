@@ -11,7 +11,7 @@ namespace GameEventScript.Api;
 /// <summary>
 /// Decodes bounded, portable <c>.gesb</c> V1 bytes into an immutable program.
 /// </summary>
-public static class GameEventScriptProgramReader
+internal static class GesProgramReader
 {
     private const ushort KnownFlagMask = (ushort)(GesSectionFlags.Required | GesSectionFlags.CompressionMask);
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
@@ -76,7 +76,7 @@ public static class GameEventScriptProgramReader
             sourceArchive,
             buildMetadata,
             opaqueSections);
-        GameEventScriptProgramValidator.Validate(program);
+        program.Validate();
         return program;
     }
 
@@ -189,7 +189,7 @@ public static class GameEventScriptProgramReader
         var reader = Reader(bytes, section);
         var count = reader.ReadCount(limits.MaxBindings);
         if (count > reader.Remaining / 20 || reader.Remaining != count * 20) Throw(GesProgramFormatErrorCode.InvalidPayloadLength, "BindingSegment length does not match EntryCount.", reader.AbsoluteOffset, section.Type);
-        var entries = new GameEventScriptBinaryBindEntry[count];
+        var entries = new GesBindingSegment.Entry[count];
         var resolvedLists = new IReadOnlyList<ushort>?[lists.Slices.Count];
         for (var index = 0; index < count; index++)
         {
@@ -204,7 +204,7 @@ public static class GameEventScriptProgramReader
             var requiredRegisters = reader.ReadUInt16();
             var requiredDepth = reader.ReadUInt16();
             if (reader.ReadUInt16() != 0) Throw(GesProgramFormatErrorCode.InvalidSectionReserved, "Binding Reserved must be zero.", reader.AbsoluteOffset - 2, section.Type, index);
-            entries[index] = new GameEventScriptBinaryBindEntry(kind, name, arguments, entryAddress, id, requiredTags, excludedTags, requiredRegisters, requiredDepth);
+            entries[index] = new GesBindingSegment.Entry(kind, name, arguments, entryAddress, id, requiredTags, excludedTags, requiredRegisters, requiredDepth);
         }
         reader.RequireEnd();
         return new GesBindingSegment(entries);

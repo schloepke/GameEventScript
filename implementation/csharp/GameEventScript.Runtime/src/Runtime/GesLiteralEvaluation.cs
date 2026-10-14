@@ -8,7 +8,7 @@ using static GameEventScript.Api.GesBindingSegment;
 
 namespace GameEventScript.Runtime;
 // Parser-private nodes never escape into a public value or a Program.
-internal sealed record GesLiteralNode(string Type, string[] Labels, GesValue[] Arguments, GameEventScriptBinaryBindEntry? Constructor = null)
+internal sealed record GesLiteralNode(string Type, string[] Labels, GesValue[] Arguments, GesBindingSegment.Entry? Constructor = null)
 {
     internal GesValue Value => new()
     {

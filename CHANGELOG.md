@@ -35,6 +35,34 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   longer public; configure hosts through the builder. Swift factory methods use
   `make`: `GesMessageSignature.makeMessage(_:)`, `makeSignatureId(name:parameterNames:)`
   and `GesSyntaxHighlighter.makeState()`.
+- Reading, encoding, validating and dumping Programs are members of
+  `GameEventScriptProgram`; the separate reader, writer, validator and dumper
+  types are no longer public. C#: `GameEventScriptProgram.Read(bytes, options)`,
+  `program.Encode()` (formerly `ToArray`), `program.GetEncodedSize()`,
+  `program.Write(destination)`, `program.Validate()` and `program.Dump(...)`.
+  Swift: `GameEventScriptProgram.read(_:options:)`, `program.encode()` (formerly
+  `bytes`), `program.encodedSize()`, `program.write(into:)`, `program.validate()`
+  and `program.dump(includeInstructionAddresses:)`.
+- The Swift Program exposes the same segments as C#: `metadata`,
+  `stringConstants`, `uint16IndexLists`, `bindings`, `code`, `debugSymbols`,
+  `sourceMap`, `sourceArchive` and `buildMetadata` are segment types
+  (`GesStringConstantSegment`, `GesBindingSegment`, `GesCodeSegment`, …) that are
+  also random-access collections over their entries. The binding entry type is
+  `GesBindingSegment.Entry` in both languages (formerly C#
+  `GameEventScriptBinaryBindEntry`, Swift `GameEventScriptBinding`); Swift
+  `GameEventScriptSourceMap` and `GameEventScriptBuildMetadata` become
+  `GesSourceMapSegment` and `GesBuildMetadataSegment`. Swift
+  `GesDebugInfoOptions` moves from the Compiler to the Runtime module, as in C#.
+- Message and value JSON are members of the encoded types; `GameEventScriptMessageJson`
+  is removed. C#: `message.ToJson()`, `GameEventScriptMessage.FromJson(json)`,
+  `value.ToJson()` and `GesValue.FromJson(json)`. Swift: `message.json()`,
+  `GameEventScriptMessage(json:)`, `value.json()` and `GesValue(json:)`.
+- `GesSymbolKind` is renamed to `GesDiagnosticSymbolKind` in both languages to
+  separate it from `GesDebugSymbolKind`.
+- Swift gains `GesDiagnosticCodes` with the same stable codes as C#, and
+  `GesOpaqueSection.flags` is a `GesSectionFlags` option set instead of a raw
+  `UInt16`, as in C#. The C# `GesInstructionFlag` enum is no longer public; both
+  languages expose the raw `UnitAndFlags`/`unitAndFlags` byte.
 
 ### Changed
 

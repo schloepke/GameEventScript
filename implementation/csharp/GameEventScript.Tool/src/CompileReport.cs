@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using GameEventScript.Api;
-using BindEntry = GameEventScript.Api.GesBindingSegment.GameEventScriptBinaryBindEntry;
+using BindEntry = GameEventScript.Api.GesBindingSegment.Entry;
 using BindKind = GameEventScript.Api.GesBinaryBindKind;
 
 namespace GameEventScript.Tool;

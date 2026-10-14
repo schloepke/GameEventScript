@@ -23,7 +23,7 @@ internal static class AdapterCompiler
                 _ => throw new ArgumentException("Invalid debug option.")
             };
         var program = builder.Compile(new GesCompileOptions { DebugInfo = debug, ProgramVersion = programVersion });
-        if (options.GetProperty("binaryRoundTrip").GetBoolean()) program = GameEventScriptProgramReader.Read(GameEventScriptProgramWriter.ToArray(program));
+        if (options.GetProperty("binaryRoundTrip").GetBoolean()) program = GameEventScriptProgram.Read(program.Encode());
         return program;
     }
 }

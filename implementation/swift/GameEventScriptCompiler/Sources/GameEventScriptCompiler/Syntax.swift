@@ -142,6 +142,6 @@ struct GesModule {
     let location: GesSourceLocation
 }
 
-func compileError(_ phase: GesDiagnosticPhase, _ code: String, _ message: String, _ location: GesSourceLocation, symbol: String? = nil, kind: GesSymbolKind = .unknown) -> GesCompileError {
+func compileError(_ phase: GesDiagnosticPhase, _ code: String, _ message: String, _ location: GesSourceLocation, symbol: String? = nil, kind: GesDiagnosticSymbolKind = .unknown) -> GesCompileError {
     .init(diagnostics: [.init(phase: phase, code: code, message: message, symbol: symbol, symbolKind: kind, sourceLocation: location, programName: location.moduleName)])
 }

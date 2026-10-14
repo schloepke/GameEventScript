@@ -71,7 +71,7 @@ final class GesCompiler {
     let catalog: (any GesExternalTypeCatalog)?
     var moduleName = ""
     var constants: [String: GesExpression] = [:], definitions: [String: GesDefinition] = [:], records: [String: GesRecord] = [:]
-    var strings: [String] = [], lists: [[UInt16]] = [], bindings: [GameEventScriptBinding] = []
+    var strings: [String] = [], lists: [[UInt16]] = [], bindings: [GesBindingSegment.Entry] = []
     // Scalar keys preserve the language's identity instead of Swift's canonical equivalence.
     var stringIDs: [[UInt32]: Int] = [:], listIDs: [[UInt16]: Int] = [:]
     var numericLimitExceeded = false
@@ -135,7 +135,7 @@ final class GesCompiler {
 
     func signature(_ name: String, _ labels: [String]) -> String { name + "(" + labels.joined(separator: ",") + ")" }
 
-    func error(_ code: String, _ location: GesSourceLocation, symbol: String? = nil, kind: GesSymbolKind = .unknown, phase: GesDiagnosticPhase = .validate, message: String? = nil) -> GesCompileError {
+    func error(_ code: String, _ location: GesSourceLocation, symbol: String? = nil, kind: GesDiagnosticSymbolKind = .unknown, phase: GesDiagnosticPhase = .validate, message: String? = nil) -> GesCompileError {
         compileError(phase, code, message ?? diagnosticMessage(code, symbol: symbol), location, symbol: symbol, kind: kind)
     }
 
@@ -306,7 +306,7 @@ final class GesCompiler {
         var handlerIDs: [String: Int] = [:]
         var maxRegs = 0
         var maxDepth = 0
-        var executable: [GameEventScriptBinding] = []
+        var executable: [GesBindingSegment.Entry] = []
         for r in routines {
             let d = r.definition
             let offset = code.count
@@ -377,7 +377,7 @@ final class GesCompiler {
         if moduleName.isEmpty { moduleName = anonymousName(materialized.0, materialized.1, maxRegs, maxDepth) }
         _ = text(moduleName)
         try checkLimits()
-        let sourceMap = options.debugInfo.contains(.sourceMap) ? GameEventScriptSourceMap(sources: sourceDescriptors(), entries: spans) : nil
+        let sourceMap = options.debugInfo.contains(.sourceMap) ? GesSourceMapSegment(sources: sourceDescriptors(), entries: spans) : nil
         return try GesCompilerSupport.program(
             moduleName: moduleName,
             programVersion: options.programVersion,
@@ -402,7 +402,7 @@ final class GesCompiler {
         }
     }
 
-    func anonymousName(_ bindings: [GameEventScriptBinding], _ code: [Instruction], _ registers: Int, _ depth: Int) -> String {
+    func anonymousName(_ bindings: [GesBindingSegment.Entry], _ code: [Instruction], _ registers: Int, _ depth: Int) -> String {
         var hash: UInt32 = 2_166_136_261
 
         func mix(_ value: UInt64, _ count: Int) { for shift in 0..<count { hash = (hash ^ UInt32(UInt8(truncatingIfNeeded: value >> (shift * 8)))) &* 16_777_619 } }

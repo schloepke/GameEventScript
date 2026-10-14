@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Bounded, fileless decoding of a complete `.gesb` V1 image.
-public enum GameEventScriptProgramReader {
+enum GesProgramReader {
     /// Decodes and validates a complete `.gesb` byte buffer under the supplied retention and resource limits.
     ///
     /// - Returns: An immutable reusable Program.
     /// - Throws: `GesProgramFormatError` with a stable code and available location context.
-    public static func read(_ bytes: [UInt8], options: GesProgramReadOptions = .init()) throws -> GameEventScriptProgram {
+    static func read(_ bytes: [UInt8], options: GesProgramReadOptions = .init()) throws -> GameEventScriptProgram {
         let limits = options.limits
         guard limits.maxFileBytes >= 16, limits.maxSectionCount >= 1, limits.maxSourceArchiveBytes >= 0, limits.maxRetainedOpaqueBytes >= 0,
             [limits.maxInstructions, limits.maxBindings, limits.maxStringEntries, limits.maxIndexLists].allSatisfy({ (0...65535).contains($0) })
@@ -55,7 +55,7 @@ public enum GameEventScriptProgramReader {
             } else if options.retention == .preserveAll {
                 opaqueBytes += length
                 if opaqueBytes > limits.maxRetainedOpaqueBytes { throw fail(.readerLimitExceeded) }
-                opaque.append(.init(sectionType: type, flags: flags, sectionVersion: version, rawPayload: Array(payload), originalOrdinal: ordinal))
+                opaque.append(.init(sectionType: type, flags: GesSectionFlags(rawValue: flags), sectionVersion: version, rawPayload: Array(payload), originalOrdinal: ordinal))
             }
             offset += 12 + length
             ordinal += 1
@@ -92,7 +92,7 @@ public enum GameEventScriptProgramReader {
         var bindingsReader = try section(4)
         let bindCount = try bindingsReader.count(limits.maxBindings)
         if bindingsReader.remaining != bindCount * 20 { throw bindingsReader.error(.invalidPayloadLength) }
-        var bindings: [GameEventScriptBinding] = []
+        var bindings: [GesBindingSegment.Entry] = []
 
         func list(_ index: UInt16, entry: Int) throws -> [UInt16] {
             if index == .max { return [] }
@@ -128,9 +128,9 @@ public enum GameEventScriptProgramReader {
             code.append(try .init(opcode: opcode, unitAndFlags: codeReader.u8(), word0: codeReader.u16(), word1: codeReader.u16(), word2: codeReader.u16(), payload: codeReader.u64()))
         }
         var debug: [GesDebugSymbol]?
-        var sourceMap: GameEventScriptSourceMap?
+        var sourceMap: GesSourceMapSegment?
         var archive: [GesSourceArchiveEntry]?
-        var build: GameEventScriptBuildMetadata?
+        var build: GesBuildMetadataSegment?
         if options.retention != .runtimeOnly {
             if var reader = sections[32] {
                 var names: [String] = []
@@ -208,7 +208,7 @@ public enum GameEventScriptProgramReader {
             buildMetadata: build,
             opaqueSections: opaque
         )
-        try GameEventScriptProgramValidator.validate(program)
+        try program.validate()
         return program
     }
 }

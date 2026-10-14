@@ -27,7 +27,7 @@ must not match it.
 Source locations use the compiler's portable source contract: source name plus
 1-based Unicode-scalar line/column positions. Program and handler identify the
 runtime/link context. Symbol kinds are the numerically specified
-`GesSymbolKind` values.
+`GesDiagnosticSymbolKind` values.
 
 ## Stable codes
 

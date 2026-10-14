@@ -139,8 +139,8 @@ General rule: `GameEventScriptX` becomes `GesX` and `IGameEventScriptX` becomes
 | `GameEventScriptRandomGenerator` | `GameEventScriptRandomGenerator` | `GesRandomGenerator` |
 | `GameEventScriptMessage` | `GameEventScriptMessage` | unchanged (edge type) |
 | `GameEventScriptMessageArgument(s)`, `…MessageSignature` | same | `GesMessageArgument(s)`, `GesMessageSignature` |
-| `GameEventScriptMessageJson` | `GameEventScriptMessageJson` | JSON members of `GameEventScriptMessage` |
-| `GameEventScriptProgramReader/Writer/Validator/Dumper` | same | members of `GameEventScriptProgram` (`Read`/`read`, `Write`/`write`, `Validate`/`validate`, `Dump`/`dump`) |
+| `GameEventScriptMessageJson` | `GameEventScriptMessageJson` | JSON members: C# `ToJson()`/`FromJson(json)`, Swift `json()`/`init(json:)` on `GameEventScriptMessage` and `GesValue` |
+| `GameEventScriptProgramReader/Writer/Validator/Dumper` | same | members of `GameEventScriptProgram`: `Read`/`read`, `Encode`/`encode`, `GetEncodedSize`/`encodedSize`, `Write(Span)`/`write(into:)`, `Validate`/`validate`, `Dump`/`dump` |
 | `GameEventScriptIntegerRange`/`FloatRange` | `GesIntegerRange`/`GesFloatRange` | `GesIntegerRange`/`GesFloatRange` |
 | `GameEventScriptBytecodeInstructionUnit` | `GesUnit` | `GesQuantityUnit` (the unit of a source `:Quantity`) |
 | `GameEventScriptDebugInfoOptions` (Runtime) | `GameEventScriptDebugInfoOptions` (Compiler) | `GesDebugInfoOptions` in Runtime |
@@ -261,18 +261,21 @@ python3 scripts/port-performance-reference.py compare --port swift --runs 5 --re
       C# 14 for the Compiler project only, internal Host initializer in Swift,
       Swift `make…` factory methods. The C# convenience lives in
       `GesProgramBuilderEntry`; API gates ignore its compiler-generated marker types.
-- [ ] Segment Program model in Swift; Reader/Writer/Validator/Dumper as Program
-      members in both ports.
-- [ ] Move `GesDebugInfoOptions` to the Swift Runtime.
-- [ ] Message JSON as `GameEventScriptMessage` members in both ports.
-- [ ] Show the C# `using static` value-factory style in the guides.
-- [ ] Align public value types (`GesValueSlice`, `GesMapEntry`, `GesSeriesValue`,
-      `GesSpatialValue`, `GesValueKind`): same set in both ports, internal where
-      not needed publicly.
-- [ ] Errors: apply the error mappings; document BCL mappings and port-specific
-      absences here; decide `GesDiagnosticCodes` for Swift.
-- [ ] Disambiguate `GesSymbolKind` versus `GesDebugSymbolKind`.
-- [ ] Update XML/`///` documentation, `specs/PublicApi.md`, both API snapshots,
+- [x] Segment Program model in Swift; Reader/Writer/Validator/Dumper as Program
+      members in both ports (C# `Encode()` replaces `ToArray`, Swift `encode()`
+      replaces `bytes`; Swift segments also conform to `RandomAccessCollection`).
+- [x] Move `GesDebugInfoOptions` to the Swift Runtime.
+- [x] Message JSON as `GameEventScriptMessage` members in both ports; value JSON
+      likewise as `GesValue` members.
+- [x] Show the C# `using static` value-factory style in the guides.
+- [x] Errors: apply the error mappings; Swift gains `GesDiagnosticCodes`. Permanent
+      port-specific types are listed with reasons in `PLATFORM_ONLY` of
+      `scripts/verify-port-names.py` (BCL-mapped Swift errors, the C# exception
+      base class, the C# enum extension container `GesQuantityUnits`). Swift
+      gains `GesSectionFlags`; the C# `GesInstructionFlag` becomes internal.
+- [x] Disambiguate `GesSymbolKind` versus `GesDebugSymbolKind`: renamed to
+      `GesDiagnosticSymbolKind`.
+- [x] Update XML/`///` documentation, `specs/PublicApi.md`, both API snapshots,
       guides, website examples, `scripts/test-guide-examples.py` inputs, and
       `CHANGELOG.md` (breaking change).
 
@@ -287,6 +290,10 @@ python3 scripts/port-performance-reference.py compare --port swift --runs 5 --re
 - [ ] `VM` → `Vm` in namespaces and folders.
 - [ ] Validators in the Program layer with identical split.
 - [ ] Host internals, value types and iterators per the internal mapping table.
+- [ ] Align public value types (`GesValueSlice`, `GesMapEntry`, `GesSeriesValue`,
+      `GesSpatialValue`, `GesValueKind`, Swift `GesText`/`GesNumber`): same set in
+      both ports, internal where not needed publicly. Moved here from phase 1
+      because these types expose the internal value model.
 - [ ] `Ges` prefix for C# AST records and remaining unprefixed internal types.
 - [ ] Rename the C# `GameEventScriptExternalTypes.cs` duplicate and split C#
       collection files (`GameEventScriptProgram.cs`, `GameEventScriptExceptions.cs`)

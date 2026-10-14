@@ -308,9 +308,9 @@ final class GesVirtualMachine {
         processing = false
     }
 
-    func list(_ index: UInt16) -> [UInt16] { program.uint16IndexLists[Int(index)] }
+    func list(_ index: UInt16) -> [UInt16] { program.uint16IndexLists.lists[Int(index)] }
 
-    func text(_ index: UInt16) -> String { program.stringConstants[Int(index)] }
+    func text(_ index: UInt16) -> String { program.stringConstants.values[Int(index)] }
 
     func values(_ index: UInt16) -> [GesValue] { list(index).map { value(Int($0)) } }
 }

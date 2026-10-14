@@ -241,7 +241,7 @@ no public constructor or initializer.
 ### Program
 
 `Program` is the immutable, reusable, language-neutral parsed representation of
-one `.gesb` artifact. Only Compiler and ProgramReader create Programs publicly.
+one `.gesb` artifact. Only the Compiler and `Program.Read` create Programs publicly.
 There is no free-form public Program constructor.
 
 The Program exposes:
@@ -299,8 +299,9 @@ native endianness do not define the binary format.
 The following enum-like types expose the fixed numeric IDs from the bytecode and
 binary specifications and must reject undefined values at validation boundaries:
 
-- `BytecodeOpCode`, `BytecodeTypeKind`, `BytecodeInstructionUnit`,
-  `InstructionFlag`, `BytecodePatternKind`, and `BytecodeSeriesKind`;
+- `BytecodeOpCode`, `BytecodeTypeKind`, `QuantityUnit`, `BytecodePatternKind`,
+  and `BytecodeSeriesKind`; instruction flags are exposed only as the raw
+  `UnitAndFlags` byte;
 - `BinaryBindKind`, `SectionType`, `SectionFlags`, and
   `DebugSymbolKind`.
 
@@ -334,9 +335,9 @@ Program validation.
 
 ## Program codec, validation, and dump API
 
-### ProgramReader
+### Reading
 
-`ProgramReader.Read(bytes, options) -> Program` consumes caller-provided bytes
+The static `Program.Read(bytes, options) -> Program` consumes caller-provided bytes
 only. It performs overflow-safe bounded structural decoding followed by complete
 semantic validation. It retains no caller buffer. Success returns a fully valid
 immutable Program; failure returns/throws `ProgramFormatError` with a stable
@@ -357,24 +358,26 @@ All values are validated before allocation. The shared Default object is
 read-only by convention; a mutable language mapping must snapshot settings at
 the start of Read.
 
-### ProgramWriter
+### Writing
+
+Encoding operations are members of the Program:
 
 | Operation | Contract |
 | --- | --- |
-| `GetEncodedSize(program)` | Fully validates Program and returns the exact canonical byte count with checked arithmetic. |
-| `Write(program, destination)` | Fully validates before modifying destination, requires sufficient caller storage, writes canonical Little Endian `.gesb`, and returns bytes written. |
-| `ToArray(program)` | Allocates exactly the required output byte array and delegates to canonical Write semantics. |
+| `GetEncodedSize()` | Fully validates Program and returns the exact canonical byte count with checked arithmetic. |
+| `Write(destination)` | Fully validates before modifying destination, requires sufficient caller storage, writes canonical Little Endian `.gesb`, and returns bytes written. |
+| `Encode()` | Allocates exactly the required output byte array and delegates to canonical Write semantics. |
 
 The writer reconstructs every known section from structured data. Only opaque
 payloads are copied raw. It performs no file or stream I/O.
 
-### ProgramValidator and ProgramDumper
+### Validation and dump
 
-`ProgramValidator.Validate(program)` is deterministic, side-effect free, and
+`Program.Validate()` is deterministic, side-effect free, and
 performs the same complete semantic checks used by Reader, Writer, and Host.Load.
 It does not link executable callbacks. Failure uses ProgramFormatError.
 
-`ProgramDumper.Dump(program, includeInstructionAddresses = false)` returns
+`Program.Dump(includeInstructionAddresses = false)` returns
 canonical `.gesa` text for a valid Program. It uses embedded debug/source
 segments when available, performs no file I/O, and never changes Program. The
 dumper is not a trust boundary and does not replace explicit Program validation.
@@ -973,13 +976,17 @@ and `runToCompletion` retain the host contracts above. The mutable VM is host-pr
 `GameEventScriptProgram` is a `final`, `Sendable` reference type. Passing it to
 multiple hosts shares one immutable instance rather than copying the Program
 structure. Host-specific links and execution state remain outside that instance.
-Program segments use `let` properties and native Array values with copy-on-write
-storage; callers cannot mutate a Program through a returned array. Int64,
+The Program exposes the same segments as C# (`metadata`, `stringConstants`,
+`uint16IndexLists`, `bindings`, `code`, optional `debugSymbols`, `sourceMap`,
+`sourceArchive` and `buildMetadata`). Swift segments are immutable value types
+that also conform to `RandomAccessCollection` over their entries; their native
+Array views (`slices`, `data`, `entries`, `instructions`, `symbols`, `sources`)
+use copy-on-write storage, so callers cannot mutate a Program through them. Int64,
 UInt64, UInt16, and Double retain their specified transport widths. Instructions
 expose numeric words and payload bits, independently of Swift enum memory layout.
-`GameEventScriptProgramReader.read`, `GameEventScriptProgramWriter.bytes`,
-`encodedSize`, `write(_:into:)`, `GameEventScriptProgramValidator.validate`, and
-`GameEventScriptProgramDumper.dump` are synchronous and accept/return memory.
+`GameEventScriptProgram.read(_:options:)` and the Program members `encode()`,
+`encodedSize()`, `write(into:)`, `validate()` and `dump(includeInstructionAddresses:)`
+are synchronous and accept/return memory.
 Reader options retain the three portable retention modes and bounded read limits.
 
 Invalid public construction uses structured `throws` errors. Signature message
@@ -1163,10 +1170,10 @@ reschedule when new work arrives and cancel wake-ups when closed/disposed.
 
 > **Since: 0.2.0**
 
-C# `GameEventScriptMessageJson.Serialize/Deserialize` and Swift
-`GameEventScriptMessageJson.serialize/deserialize` encode/decode messages;
-`SerializeValue/DeserializeValue` and `serializeValue/deserializeValue` handle
-standalone values. These Runtime-only APIs are synchronous, fileless and Host
+Message and value JSON are members of the types they encode: C#
+`message.ToJson()`/`GameEventScriptMessage.FromJson(json)` and
+`value.ToJson()`/`GesValue.FromJson(json)`; Swift `message.json()`/
+`GameEventScriptMessage(json:)` and `value.json()`/`GesValue(json:)`. These Runtime-only APIs are synchronous, fileless and Host
 independent. They implement [MessageFormat](MessageFormat.md), including ordered
 arguments, numeric normalization, limits, data-only reconstruction and explicit
 external-to-Record export. Encoding may propagate external getter failures.
@@ -1197,6 +1204,6 @@ The public bytecode opcode enumeration assigns `Cartesian` the stable value
 Iterator modes and component output reuse existing instruction words and the
 UInt16 list pool; no mutable iterator is added to the portable Program API.
 
-`GesInstructionFlag.Numeric` aliases bit `0x40` for Move, Add, Subtract,
+The numeric instruction flag (bit `0x40` of `UnitAndFlags`) applies to Move, Add, Subtract,
 Multiply, Divide, Power, IntegerDivide, Modulo, Remainder, Min, Max, Negate, Abs and Clamp only. The same bit retains WithTags semantics on result-bearing sends;
 interpret flags by opcode.

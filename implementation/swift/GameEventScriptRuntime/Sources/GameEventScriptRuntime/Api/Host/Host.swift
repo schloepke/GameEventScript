@@ -99,7 +99,7 @@ public final class GameEventScriptHost {
     ///   initialization, script execution or after failed initial startup. Failed linking adds no registrations.
     public func load(_ program: GameEventScriptProgram, priority: Int = 0) throws -> GesProgramInstance {
         guard !starting, !executingScript, startupResult == nil || isReady else { throw GesApiError.invalidOperation("Loading is not allowed during initialization, script execution, or after a failed start") }
-        try GameEventScriptProgramValidator.validate(program)
+        try program.validate()
         let registers = min(65535, limits.maxRegisterValues > 0 ? limits.maxRegisterValues : 512)
         let depth = min(65535, max(0, limits.maxCallDepth))
         if program.requiredRegisterCount > registers { throw GesDynamicLinkError(code: "link.requiredRegisterCountExceeded", program: program.moduleName) }

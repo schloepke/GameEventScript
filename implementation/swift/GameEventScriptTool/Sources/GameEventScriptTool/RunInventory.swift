@@ -54,7 +54,7 @@ final class RunInventory {
 
     func subscribe(_ name: String, handler: any GesNativeMessageHandler) throws { native.append((name, try host.subscribeMessageName(name, handler: handler))) }
 
-    func handlers(_ program: GameEventScriptProgram) -> [GameEventScriptBinding] { program.bindings.filter { isHandler($0) && program.stringConstants[Int($0.name)] != "initialization" } }
+    func handlers(_ program: GameEventScriptProgram) -> [GesBindingSegment.Entry] { program.bindings.filter { isHandler($0) && program.stringConstants[Int($0.name)] != "initialization" } }
 
     func programs() {
         io.line(toError: true)
@@ -135,7 +135,7 @@ final class RunInventory {
         if let draft, draft.applied == nil { throw ToolError.usage("No successful compile is available for this draft.") }
         if draft?.pending == true { io.line("Draft differs from the last successful compile; showing the previous compiled program.", toError: true) }
         let p = try select(selector, command: ":dump").instance.program
-        var text = GameEventScriptProgramDumper.dump(p)
+        var text = p.dump()
         if io.errorTerminal { text = TextDisplay.expandTabs(text) }
         io.line(toError: true)
         io.write(color ? Highlighting().renderAssembly(text) : text, toError: true)

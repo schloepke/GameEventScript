@@ -23,7 +23,7 @@ public sealed class GameEventScriptRuntimeDistributionTests
         {
             var program = new GesProgramBuilder().WithDebugInfo(debugInfo).AddScript("on Start(value) { emit Done(result: (parse value) + 1) }").Compile();
             var path = Path.Combine(directory, "program.gesb");
-            File.WriteAllBytes(path, GameEventScriptProgramWriter.ToArray(program));
+            File.WriteAllBytes(path, program.Encode());
             var configuration = typeof(GameEventScriptRuntimeDistributionTests).Assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()!.Configuration;
             var consumerDirectory = Path.Combine(TestRepositoryPaths.Root, "artifacts", "csharp", "runtime-consumer", "projects", "bin", configuration, "net8.0");
             var result = DotNetProcess.Execute(Path.Combine(consumerDirectory, "GameEventScript.RuntimeConsumer.dll"), directory, path);

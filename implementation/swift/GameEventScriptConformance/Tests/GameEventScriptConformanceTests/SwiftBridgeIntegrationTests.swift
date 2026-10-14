@@ -53,8 +53,8 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
             }
             """
         let compiled = try GesProgramBuilder().withExternalTypeCatalog(types).addScript(source).compile()
-        let bytes = try GameEventScriptProgramWriter.bytes(compiled)
-        let program = try GameEventScriptProgramReader.read(bytes)
+        let bytes = try compiled.encode()
+        let program = try GameEventScriptProgram.read(bytes)
         let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).withRegistry(extensions).withExternalTypeRegistry(types).build().startForTest()
         var result: GameEventScriptMessage?
         _ = try host.subscribe(.init(name: "Done", parameters: ["name", "score"])) { message, _ in result = message }
@@ -131,6 +131,6 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
         XCTAssertEqual(second.lastResult?.emittedMessages, 1)
         XCTAssertTrue(firstInstance.detach())
         XCTAssertTrue(secondInstance.isAttached)
-        XCTAssertNoThrow(try GameEventScriptProgramWriter.bytes(program))
+        XCTAssertNoThrow(try program.encode())
     }
 }

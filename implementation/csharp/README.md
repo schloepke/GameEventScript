@@ -171,7 +171,7 @@ var program = new GesProgramBuilder()
         on Start(value) { emit Done(value: double(value)) }
         """, "example.ges")
     .Compile();
-byte[] bytes = GameEventScriptProgramWriter.ToArray(program);
+byte[] bytes = program.Encode();
 // The embedding can save bytes, or load program directly into a Host.
 ```
 
@@ -205,7 +205,7 @@ using GameEventScript.Runtime.Values;
 
 static (GesStartResult Start, GesExecutionResult? Execution) Execute(byte[] bytes)
 {
-    var program = GameEventScriptProgramReader.Read(bytes);
+    var program = GameEventScriptProgram.Read(bytes);
     var host = GameEventScriptHost.CreateBuilder().WithRandomSeed(123).Build();
     var output = GesMessageSignature.Create("Done", ["value"]);
     var subscription = host.Subscribe(output, new Output());
@@ -279,10 +279,10 @@ specifications. Deferred work is tracked only in [`BACKLOG.md`](../../BACKLOG.md
 
 ## Explicit message JSON exchange
 
-The Runtime provides `GameEventScriptMessageJson` for optional product transport.
-Use `Serialize`/`Deserialize` in C#, or `serialize`/`deserialize` in Swift, for
-messages; the corresponding `SerializeValue`/`serializeValue` methods encode a
-standalone value. Decoding reconstructs immutable data and never runs Record or
+The Runtime provides explicit JSON members for optional product transport:
+`message.ToJson()`/`GameEventScriptMessage.FromJson(json)` in C#, or
+`message.json()`/`GameEventScriptMessage(json:)` in Swift; `GesValue` offers the
+same pair for a standalone value. Decoding reconstructs immutable data and never runs Record or
 native constructors. External objects export as typed Record snapshots. Local
 Publish does not serialize; configure encoding explicitly at your I/O boundary.
 The [message format](../../specs/MessageFormat.md) defines the envelope and errors.

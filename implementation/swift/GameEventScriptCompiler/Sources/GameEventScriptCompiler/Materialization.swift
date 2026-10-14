@@ -4,7 +4,7 @@
 @_spi(Compiler) import GameEventScriptRuntime
 
 extension GesCompiler {
-    func materialize(_ sourceBindings: [GameEventScriptBinding], _ sourceCode: [Instruction]) -> ([GameEventScriptBinding], [Instruction]) {
+    func materialize(_ sourceBindings: [GesBindingSegment.Entry], _ sourceCode: [Instruction]) -> ([GesBindingSegment.Entry], [Instruction]) {
         let oldStrings = strings
         let oldLists = lists
         strings = []
@@ -27,7 +27,7 @@ extension GesCompiler {
             _ = list(args.map(Int.init))
             _ = list(required.map(Int.init))
             _ = list(excluded.map(Int.init))
-            return GameEventScriptBinding(
+            return GesBindingSegment.Entry(
                 kind: binding.kind,
                 name: resolve(binding.name),
                 argumentNames: args,

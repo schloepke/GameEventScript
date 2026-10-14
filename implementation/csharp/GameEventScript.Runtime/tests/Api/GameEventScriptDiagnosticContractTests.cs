@@ -12,7 +12,7 @@ public sealed class GameEventScriptDiagnosticContractTests
     public void ProgramFormatAndLinkExceptionsExposePortableDiagnostics()
     {
         var format = Assert.ThrowsExactly<GesProgramFormatException>(() =>
-            GameEventScriptProgramReader.Read([0x00]));
+            GameEventScriptProgram.Read([0x00]));
         Assert.AreEqual(GesDiagnosticPhase.Decode, format.Diagnostic.Phase);
         Assert.AreEqual("decode.invalidHeaderSize", format.Diagnostic.Code);
 

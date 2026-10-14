@@ -109,7 +109,7 @@ private func compileSource(_ count: Int32, dump: Bool, nameLength: Int = 0) -> I
     do {
         let program = try GesProgramBuilder().withDebugInfo(dump ? .all : [.symbols, .sourceMap]).addScript(source, sourceName: sourceName).compile()
         if dump {
-            let text = GameEventScriptProgramDumper.dump(program)
+            let text = program.dump()
             let highlighted = Highlighting.assemblerHighlighter.highlight(text)
             let spans = highlighted.spans.map { "[\($0.start),\($0.length),\(jsonString($0.kind.rawValue))]" }.joined(separator: ",")
             return respond("{\"diagnostics\":[],\"dump\":\(jsonString(text)),\"complete\":\(highlighted.isComplete),\"spans\":[\(spans)]}")

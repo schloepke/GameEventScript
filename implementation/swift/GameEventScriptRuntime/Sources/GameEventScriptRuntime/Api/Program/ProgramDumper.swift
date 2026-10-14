@@ -3,10 +3,10 @@
 
 /// Deterministic GESA presentation of a validated Program, including retained source/debug data.
 /// Dumping neither executes code nor accesses files; it is outside the runtime hot path.
-public enum GameEventScriptProgramDumper {
+enum GesProgramDumper {
     /// Renders a validated Program as deterministic GESA text, optionally including instruction addresses. Performs no
     /// execution or file I/O.
-    public static func dump(_ program: GameEventScriptProgram, includeInstructionAddresses: Bool = false) -> String { GesProgramDump(program).dump(addresses: includeInstructionAddresses) }
+    static func dump(_ program: GameEventScriptProgram, includeInstructionAddresses: Bool = false) -> String { GesProgramDump(program).dump(addresses: includeInstructionAddresses) }
 }
 
 private final class GesProgramDump {
@@ -86,7 +86,7 @@ private final class GesProgramDump {
     func dump(addresses: Bool) -> String {
         output = separator + "\n//  Module: " + p.moduleName + "\n//  Type: Game Event Script Assembler\n//  Format version: " + String(p.formatVersion) + ".0\n" + separator + "\n\n"
         output += ".gesb " + String(p.formatVersion) + "\n.module " + quote(p.moduleName) + "\n.program-version " + String(p.programVersion) + "\n"
-        for source in p.sourceArchive ?? [] {
+        for source in p.sourceArchive?.sources ?? [] {
             let name = "Source: " + source.sourceName
             region(name, segment: "source " + quote(source.sourceName))
             let value = normalizeLines(source.text)
@@ -252,7 +252,7 @@ private final class GesProgramDump {
         return p.bindings.firstIndex { $0.kind == kind && $0.id == id }
     }
 
-    func signature(_ binding: GameEventScriptBinding, escaped: Bool, tags: Bool) -> String {
+    func signature(_ binding: GesBindingSegment.Entry, escaped: Bool, tags: Bool) -> String {
         func resolve(_ id: UInt16) -> String { escaped ? escape(text(id)) : text(id) }
 
         var result = resolve(binding.name)

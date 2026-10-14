@@ -81,7 +81,7 @@ internal static class MessageApiObservations
         GameEventScriptMessage message;
         try { signature = Signature(input.GetProperty("signature")); }
         catch (ArgumentException) { return Error("invalidMessage"); }
-        try { message = input.TryGetProperty("json", out var json) ? GameEventScriptMessageJson.Deserialize(json.GetString()!) : Message(input.GetProperty("message")); }
+        try { message = input.TryGetProperty("json", out var json) ? GameEventScriptMessage.FromJson(json.GetString()!) : Message(input.GetProperty("message")); }
         catch (ArgumentException)
         {
             // Ask the public normalizer for labels; never classify English exception text.
@@ -93,7 +93,7 @@ internal static class MessageApiObservations
             catch (ArgumentException) { return Error("invalidArgument"); }
             return Error("invalidMessage");
         }
-        if (input.TryGetProperty("roundTripJson", out var roundTrip) && roundTrip.GetBoolean()) message = GameEventScriptMessageJson.Deserialize(GameEventScriptMessageJson.Serialize(message));
+        if (input.TryGetProperty("roundTripJson", out var roundTrip) && roundTrip.GetBoolean()) message = GameEventScriptMessage.FromJson(message.ToJson());
         var jsonMode = input.TryGetProperty("json", out _) || input.TryGetProperty("roundTripJson", out _);
         var result = new Dictionary<string, object?>
         {
@@ -103,7 +103,7 @@ internal static class MessageApiObservations
             ["matches"] = signature.Matches(message),
             ["argumentCount"] = message.Arguments.Count
         };
-        result[jsonMode ? "json" : "normalized"] = jsonMode ? GameEventScriptMessageJson.Serialize(message) : RuntimeValues.EncodeMessage(message);
+        result[jsonMode ? "json" : "normalized"] = jsonMode ? message.ToJson() : RuntimeValues.EncodeMessage(message);
         if (input.TryGetProperty("includeNormalized", out var normalized) && normalized.GetBoolean()) result["normalized"] = RuntimeValues.EncodeMessage(message);
         if (input.TryGetProperty("compareSignature", out var signatureInput))
         {

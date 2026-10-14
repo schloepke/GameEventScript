@@ -95,7 +95,7 @@ final class Tool {
         let program = try ToolFiles.compile(paths, debug: debug)
         var fileSize = 0
         if let output {
-            let bytes = try GameEventScriptProgramWriter.bytes(program)
+            let bytes = try program.encode()
             try ToolFiles.write(Data(bytes), to: output)
             fileSize = bytes.count
         }
@@ -176,11 +176,11 @@ final class Tool {
             try ToolFiles.ensureDistinct(path, from: [input])
         }
         let program: GameEventScriptProgram
-        do { program = try GameEventScriptProgramReader.read(Array(Data(contentsOf: URL(fileURLWithPath: input)))) } catch let error as GesProgramFormatError {
+        do { program = try GameEventScriptProgram.read(Array(Data(contentsOf: URL(fileURLWithPath: input)))) } catch let error as GesProgramFormatError {
             io.report(error, fallback: input)
             return 1
         }
-        var text = GameEventScriptProgramDumper.dump(program, includeInstructionAddresses: addresses)
+        var text = program.dump(includeInstructionAddresses: addresses)
         if output == nil && io.outputTerminal { text = TextDisplay.expandTabs(text) }
         if let output {
             let data = Data(text.utf8)
@@ -193,4 +193,4 @@ final class Tool {
     }
 }
 
-func isHandler(_ binding: GameEventScriptBinding) -> Bool { binding.kind == .messageHandler || binding.kind == .messageNameHandler }
+func isHandler(_ binding: GesBindingSegment.Entry) -> Bool { binding.kind == .messageHandler || binding.kind == .messageNameHandler }

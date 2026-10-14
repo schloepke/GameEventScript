@@ -19,7 +19,7 @@ namespace GameEventScript.Api;
 /// of named arguments. Additionally, it generates a unique signature ID for
 /// efficient message identification and dispatch during runtime.
 /// </remarks>
-public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
+public sealed partial class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
 {
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptMessage"/> using the specified name and arguments.

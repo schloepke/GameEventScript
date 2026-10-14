@@ -17,9 +17,9 @@ internal static class Program
         var compiled = new GesProgramBuilder()
             .AddScript("on Start(value) { emit Done(result: (parse value) + 1) }", "package-consumer.ges")
             .Compile();
-        var encoded = GameEventScriptProgramWriter.ToArray(compiled);
+        var encoded = compiled.Encode();
         if (arguments.Length == 1) File.WriteAllBytes(arguments[0], encoded);
-        var loaded = GameEventScriptProgramReader.Read(encoded);
+        var loaded = GameEventScriptProgram.Read(encoded);
         var host = GameEventScriptHost.CreateBuilder().WithRandomSeed(1).Build();
         long? result = null;
         host.Subscribe("Done", ["result"], (message, _) => result = message.Arguments.GetAsInteger("result"));

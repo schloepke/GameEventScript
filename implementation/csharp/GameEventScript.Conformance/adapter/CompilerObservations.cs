@@ -10,7 +10,7 @@ internal static class CompilerObservations
         phase = diagnostic.Phase.ToString().ToLowerInvariant(),
         code = diagnostic.Code,
         symbol = diagnostic.Symbol,
-        symbolKind = diagnostic.SymbolKind == GesSymbolKind.Unknown ? null : char.ToLowerInvariant(diagnostic.SymbolKind.ToString()[0]) + diagnostic.SymbolKind.ToString()[1..],
+        symbolKind = diagnostic.SymbolKind == GesDiagnosticSymbolKind.Unknown ? null : char.ToLowerInvariant(diagnostic.SymbolKind.ToString()[0]) + diagnostic.SymbolKind.ToString()[1..],
         sourceName = diagnostic.SourceLocation?.SourceName,
         line = diagnostic.SourceLocation?.Line,
         column = diagnostic.SourceLocation?.Column,

@@ -86,7 +86,7 @@ enum GameEventScriptVirtualMachine {
                 case .castNumeric: GesCasts.number(state.value(x), sink: state.output(d))
                 case .constructData:
                     if let positions = state.linked!.dataConstructionPositions(type: instruction.word1, labels: instruction.a) {
-                        try GesDataConstruction.create(state.text(instruction.word1), positions: positions, state.values(instruction.word2), context, sink: state.output(d))
+                        try GesDataConstruction.create(state.text(instruction.word1), positions: positions, registers: instruction.word2, state, context, sink: state.output(d))
                     } else {
                         state.setNothing(d)
                     }

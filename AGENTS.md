@@ -44,11 +44,22 @@ sh scripts/test-csharp-conformance.sh
 - Prefer language-neutral contracts that map cleanly to Swift, Kotlin, Go, Rust,
   C/C++, C#, and Unity.
 - C# is the reference for deliberately chosen implementation architecture as well
-  as behavior, especially on the hot path. Preserve its inline VM dispatch and
-  owner-local, typed register operations when porting; these avoid unnecessary
-  value copies without relying on language-specific ref/in/out features.
-  Architectural deviations require an explicit rationale and performance
-  validation; passing Conformance alone does not establish architecture parity.
+  as behavior. Preserve its owner-local, typed register operations when porting;
+  these avoid unnecessary value copies without relying on language-specific
+  ref/in/out features. Architectural deviations require an explicit rationale and
+  performance validation; passing Conformance alone does not establish
+  architecture parity.
+- Optimize for performance first, then for library/binary size. Hot-path code
+  duplication is acceptable when it is measurably faster. Size reductions through
+  reuse or consolidation are welcome at any time, provided they do not noticeably
+  reduce performance (before/after comparison on the affected workloads;
+  zero-allocation paths stay at zero). This is an implementation detail per port,
+  not an architecture rule.
+- Opcode handlers are `Execute<OpCode>` members of `GesVirtualMachine`, callable
+  only from dispatch (C# `private` in the partial class; Swift `internal`,
+  enforced by the port gate). Trivial opcodes may stay in dispatch. Do not add
+  inlining attributes by default; keep one only with a measured benefit and a
+  short rationale comment.
 - Keep Reflection, Attributes, `System.Type`, delegate-based adapters,
   unordered public dictionary-input adapters, locks, threads, Tasks, and other
   CLR conveniences in `CSharpBridge`.
@@ -57,9 +68,23 @@ sh scripts/test-csharp-conformance.sh
 - Standard-library `TryGetValue`, `TryAdd`, and `TryParse` calls are accepted in
   portable C# code. Do not introduce public GES-level `Try...out` contracts.
 - Use `rg` for source and file searches.
-- Internal types use the `Ges` prefix; public API types keep `GameEventScript`.
-  Abbreviations are written as words (`Ges`, `Vm`, never `GES`/`VM`), and
-  corresponding internal types use identical names in the C# and Swift ports.
+- Only the API edge types `GameEventScriptHost`, `GameEventScriptProgram` and
+  `GameEventScriptMessage` use the `GameEventScript` prefix: a Program runs in a
+  Host and receives Messages. All other library types, public or internal, use
+  `Ges`; Bridge types use `GesBridge`. Nested, private/fileprivate, executable
+  and test types are exempt. Abbreviations are written as words (`Ges`, `Vm`,
+  never `GES`/`VM`).
+- Ports provide the same functionality, concepts and structure so a developer
+  can move between them easily, while each port follows its language's API
+  design guidelines and feels native, because most users work with one port in
+  their own language. Idioms may change spelling and mechanics, never the
+  primary concepts: every port uses the same edge types and roles (for example a
+  Host, not a Runner in one port and a Host in another).
+- Corresponding types use identical names in the C# and Swift ports, apart from
+  the language-idiomatic mappings in `implementation/PortMapping.md` (for example
+  `Exception`/`Error`, `CreateBuilder()`/`makeBuilder()`). File names are free.
+  The port convergence is in progress; `PortMapping.md` tracks the remaining
+  phases and is removed when they are complete.
 - Preserve unrelated user changes and never revert them without an explicit
   request.
 

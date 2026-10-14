@@ -1,0 +1,287 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+# C# and Swift port convergence plan
+
+This is a temporary working plan. It records the naming and structure decisions
+for converging the C# and Swift ports and the phases that implement them. Work
+through the phases in order; remove this document in the change that completes
+the last phase. The permanent rules are summarized in `AGENTS.md`.
+
+## Rules
+
+### Principle
+
+Ports provide the same functionality, concepts and structure, so a developer who
+knows one port finds their way in another. Each port nevertheless follows its
+language's API design guidelines and should feel as native as possible, because
+the usual case is one developer using one port in their own language. Idioms may
+change spelling and mechanics (factories, errors, builders, literals), never the
+primary concepts: every port works with the same edge types and roles.
+
+### Prefixes
+
+- `GameEventScript` is reserved for the three API edge types, the core nouns of
+  the model (a Program runs in a Host and receives Messages):
+  `GameEventScriptHost`, `GameEventScriptProgram` and `GameEventScriptMessage`.
+- Edge types bundle their own input/output: Program reading/writing and Message
+  JSON encoding/decoding are members of the edge type, not separate types.
+- Every other library type, public or internal, uses `Ges`. Bridge types use
+  `GesBridge`.
+- Exempt: nested types, `private`/`fileprivate` types, executables (CLI,
+  Conformance adapters) and tests, and technically required types such as
+  C# `IsExternalInit`.
+- Bridge attributes and macros keep their short names: `[GesType]`/`@GesType`,
+  `[GesField]`/`@GesField`, `[GesConstruct]`/`@GesConstruct`, and so on. They
+  mark user types and are not Bridge objects.
+- Abbreviations are written as words: `Ges`, `Vm`, `Api`; never `GES`, `VM`, `API`.
+- No type may share its name with a Swift module (for example
+  `GameEventScriptCompiler`, `GameEventScriptSyntaxHighlighter`); such a type
+  breaks module qualification.
+
+### Identical names, idiomatic spelling
+
+Corresponding types and members use identical names in both ports. File names
+are free. Only these language-idiomatic mappings may differ:
+
+| Concept | C# | Swift | Later Java/Kotlin |
+|---|---|---|---|
+| Error type | `GesXException` | `GesXError` | `GesXException` |
+| Platform argument/state errors | BCL `ArgumentException`, `InvalidOperationException` | `GesApiError` | platform exceptions |
+| Interface | `IGesX` | `GesX` (protocol) | `GesX` |
+| Direct creation of data types | constructor or `Create(...)` | throwing or plain `init` | constructor |
+| Value creation | `GesValue.GesInteger(5)`; with `using static`, `GesInteger(5)` | `GesValue.integer(5)`; in context, `.integer(5)` | `GesValue.integer(5)`; with static import, `integer(5)` |
+| Builder creation | `new GesXBuilder()` | `GesXBuilder()` | constructor |
+| Builder convenience on target type | `GameEventScriptHost.CreateBuilder()` | `GameEventScriptHost.makeBuilder()` | `newBuilder()` |
+| Builder completion | `Build()` | `build()` | `build()` |
+| Other factory methods | `CreateX(...)` | `makeX(...)` | `newX(...)` / `createX(...)` |
+| Immutable list exposure | `GesReadOnlyArray<T>` / read-only spans | `[T]` | read-only list |
+| Cross-package internals | `internal` + `InternalsVisibleTo` | `@_spi(Compiler)` / `@_spi(Bridge)` public | module-internal |
+| Type-erased wrapper | object or interface | `GesAnyX` | interface |
+
+An error type may be absent from a port that cannot produce that error.
+
+C# value factories keep the `Ges` member prefix because C# methods and types share
+PascalCase: after `using static`, `Integer(5)`, `List(...)` or `Range(...)` would
+read like type names and collide with `List<T>` and `System.Range`. Swift and
+Java/Kotlin factories are lower-case and resolve through the expected type or
+the static import, so they omit the redundant prefix.
+
+### Creation
+
+- Root objects (`GameEventScriptHost`, `GameEventScriptProgram`) are created
+  through builders. Their own constructors/initializers are internal.
+- `GameEventScriptMessage` uses the idiomatic constructor/initializer and JSON
+  members (C# `GameEventScriptMessage.FromJson(...)`/`message.ToJson()`, Swift
+  `GameEventScriptMessage(json:)`/`message.json()`).
+- Builders are directly creatable. A builder accessor on the target type is only
+  a convenience.
+- `GameEventScriptProgram.CreateBuilder()` is a C# 14 static extension member in
+  the Compiler package. The Compiler project may use C# 14 while still targeting
+  netstandard2.1; the compiler embeds the required marker attribute. C# 9
+  consumers such as Unity cannot use the extension syntax and use
+  `new GesProgramBuilder()`. Swift provides
+  `GameEventScriptProgram.makeBuilder()` as a Compiler-module extension.
+- Values are created through static factories on `GesValue`; its constructors are
+  internal where the language allows it (the C# struct default value remains
+  Nothing).
+- Message arguments, signatures, options and limits use the idiomatic
+  constructor/initializer.
+- No central value factory and no `Host.createMessage`: factories stay on their
+  type, and platform conveniences (C# tuples, Swift literals) belong in the
+  Bridge or in idiomatic Swift literal conformances.
+
+### Layers
+
+- Core (Runtime, Compiler) is normative, portable and structurally identical in
+  both ports: same types, same layers (`Api`, `Program`, `Runtime/Vm`,
+  `Runtime/Values`, compiler phases).
+- Bridge adapts the Core to the platform (threads, locks, dispatchers,
+  Reflection versus KeyPath/macros, delegates versus closures). The same role
+  has the same name; platform-only types are allowed.
+- SyntaxHighlighter is a separate module with the entry type
+  `GesSyntaxHighlighter`.
+
+### Performance and size
+
+- Optimize for performance first, then for library/binary size. Hot-path
+  duplication is acceptable when it is measurably faster.
+- Size reductions are welcome at any time if they do not noticeably reduce
+  performance: at most about 3% slower on the affected workloads, zero-allocation
+  paths stay at zero.
+- The 3% is a cumulative budget, not a per-change allowance. Compare against the
+  frozen reference measurement taken at the start of phase 0 on the same machine
+  and toolchain (median of repeated runs), not against the previous change.
+- Inlining attributes (`AggressiveInlining`, `NoInlining`, `@inline(__always)`,
+  `@inline(never)`) are added only with a measured benefit and a short rationale
+  comment.
+- Opcode handlers are `Execute<OpCode>` members of `GesVirtualMachine`, named after
+  the `GesBytecodeOpCode` case and callable only from dispatch: C# `private`
+  members of the partial class, Swift `internal` members whose calls the port gate
+  restricts to the dispatch file and `Opcodes`. Trivial opcodes may stay in
+  dispatch; the set need not be identical across ports.
+
+## Decided mappings
+
+General rule: `GameEventScriptX` becomes `GesX` and `IGameEventScriptX` becomes
+`IGesX`. The following entries deviate from that rule or merge diverging names.
+
+### Public API
+
+| C# today | Swift today | Target |
+|---|---|---|
+| `GameEventScriptBuilder` | `GameEventScriptBuilder` | `GesProgramBuilder` |
+| `GameEventScriptHostBuilder` | `GameEventScriptHostBuilder` | `GesHostBuilder` |
+| `GameEventScriptInstance` | `GameEventScriptInstance` | `GesProgramInstance` |
+| `GameEventScriptRandomGenerator` | `GameEventScriptRandomGenerator` | `GesRandomGenerator` |
+| `GameEventScriptMessage` | `GameEventScriptMessage` | unchanged (edge type) |
+| `GameEventScriptMessageArgument(s)`, `…MessageSignature` | same | `GesMessageArgument(s)`, `GesMessageSignature` |
+| `GameEventScriptMessageJson` | `GameEventScriptMessageJson` | JSON members of `GameEventScriptMessage` |
+| `GameEventScriptProgramReader/Writer/Validator/Dumper` | same | members of `GameEventScriptProgram` (`Read`/`read`, `Write`/`write`, `Validate`/`validate`, `Dump`/`dump`) |
+| `GameEventScriptIntegerRange`/`FloatRange` | `GesIntegerRange`/`GesFloatRange` | `GesIntegerRange`/`GesFloatRange` |
+| `GameEventScriptBytecodeInstructionUnit` | `GesUnit` | `GesQuantityUnit` (the unit of a source `:Quantity`) |
+| `GameEventScriptDebugInfoOptions` (Runtime) | `GameEventScriptDebugInfoOptions` (Compiler) | `GesDebugInfoOptions` in Runtime |
+| Program segments (`…CodeSegment`, `…BindingSegment`, …) | flat Program properties | segment model in both ports: `GesCodeSegment`, `GesStringConstantSegment`, `GesBindingSegment`, `GesDebugSymbolsSegment`, `GesSourceMapSegment`, `GesSourceArchiveSegment`, `GesBuildMetadataSegment`, … |
+| `GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry` | `GameEventScriptBinding` | `GesBindingSegment.Entry` (nested) |
+| `IGameEventScriptExternalTypeCatalog` + class `GameEventScriptExternalTypeCatalog` | `…CatalogProtocol` + struct | `IGesExternalTypeCatalog`/`GesExternalTypeCatalog` + `GesDeclaredExternalTypeCatalog` |
+| `GameEventScriptExtensionFaultException` | `GameEventScriptExtensionFault` | `GesExtensionFaultException` / `GesExtensionFaultError` |
+| BCL exceptions | `GameEventScriptAPIError` | `GesApiError` (Swift only) |
+| `GameEventScriptSyntaxHighlighter`, `…AnsiRenderer`, `…Highlight*`, `…Syntax*` | same | `GesSyntaxHighlighter`, `GesAnsiRenderer`, `GesHighlight*`, `GesSyntax*` |
+| – | `GameEventScriptCompilerSupport` (`@_spi`) | `GesCompilerSupport` |
+| `signature.CreateMessage(...)` | `signature.createMessage(...)` | `CreateMessage` / `makeMessage` |
+| public `GameEventScriptHost` constructor path | public `GameEventScriptHost.init(...)` | internal; builders only |
+
+### Bridge
+
+| C# today | Swift today | Target |
+|---|---|---|
+| `GameEventScriptCSharpHostRunner` | `GameEventScriptSwiftHostRunner` | `GesBridgeHostRunner` |
+| – | `GameEventScriptSwiftRegistration` | `GesBridgeHostRunnerRegistration` |
+| `…CSharpExtensionRegistryBuilder` + `…CSharpExtensions` | `…SwiftExtensionRegistry` | `GesBridgeExtensionRegistry` (+ `GesBridgeExtensionRegistryBuilder` in C#) |
+| internal Reflection extension functions | `…SwiftExtension` | `GesBridgeExtension` |
+| `…CSharpExternalTypeRegistry` | `…SwiftExternalTypeRegistry` | `GesBridgeExternalTypeRegistry` |
+| `…CSharpNativeMessageHandler` (internal) | `…SwiftMessageHandler` | `GesBridgeMessageHandler` |
+| host-extension publish callbacks | `…SwiftPublishSink` | `GesBridgePublishSink` |
+| `…CSharpValue` | `…SwiftValue` | `GesBridgeValueConversion` |
+| – | `…SwiftValueConvertible` | `GesBridgeValueConvertible` |
+| ? | `…SwiftConversionError` | `GesBridgeConversionException` / `GesBridgeConversionError` |
+| – | `…SwiftField<Root>`, `…SwiftConstructor<Root>`, `…SwiftType<Root>`, `…SwiftTypeBinding` | `GesBridgeFieldBinding<Root>`, `GesBridgeConstructorBinding<Root>`, `GesBridgeTypeBinding<Root>`, `GesBridgeAnyTypeBinding` |
+| `…CSharpHostExtensions`, `…CSharpContextExtensions`, `…CSharpMessage`, `…CSharpExternalTypes` | – | `GesBridgeHostExtensions`, `GesBridgeContextExtensions`, …; fold script-extension registration into `GesBridgeExtensionRegistry` |
+
+### Internal
+
+| C# today | Swift today | Target |
+|---|---|---|
+| namespace/folder `Runtime.VM` | folder `Runtime/VM` | `Vm` |
+| `GesValueRangeInteger`/`Float` | (public ranges) | merge into or rename next to `GesIntegerRange`/`GesFloatRange` |
+| `GameEventScriptNumber`/`Text` | public `GesNumber`/`GesText` | internal `GesNumber`/`GesText` |
+| `GameEventScriptSystemClock` | `GesSystemClock` | `GesSystemClock` |
+| `GesExternalValue` (class) | – | rename; conflicts with the Swift protocol name |
+| `GesValueVectorPoint` | `GesSpatialValue` | one name |
+| `GesSeries` | `GesSeriesValue` + empty `enum GesSeries` | one name |
+| `IGesIterator` + concrete iterators | `class GesIterator` | one model and name |
+| `GesVmCompoundIterators` | `GesCompoundSources` | one name |
+| `MessageRingQueue`, `PendingMessage`, `SubscriptionEntry` (nested) | `GesMessageQueue`, `GesPendingMessage`, `GesSubscriptionEntry` | Swift names, top-level internal in both |
+| `GesProgramCallGraphValidator` (in `VM`), debug checks in `…ProgramValidator` | call graph in resource validator, `ProgramDebugValidator` | `GesProgramResourceValidator`, `GesProgramInternalValueValidator`, `GesProgramCallGraphValidator`, `GesProgramDebugValidator` in the Program layer |
+| `TextNumberCast`, `TextLiteralReader` | `TextNumberCast`, `MessageNames` | `Ges` prefix |
+| ~100 AST records (`BinaryExpressionNode`, …) | `GesExpression.Kind` cases | `Ges` prefix in C#; typed cases in Swift |
+| `GesVmRegister*` static classes, `GesVm<Op>` / `<Op>Registers` methods | `execute<Op>` extensions | `Execute<OpCode>` members |
+| `SetMessageHandler`, `SetRange`, `SetExternalType`, `SetTextPointer`, `StageTagConstant`, `RaiseError`, `ModifyLocalRegisters`, `EnsureRegisterCapacity` | `setHandler`, `setIntegerRange`/`setFloatRange`, `setExternal`, `setTextConstant`, `stageTag`, `fail`, `modifyLocals`, `grow` | one name per operation |
+
+## Phases
+
+Each phase is one or more commits on the current task branch. Every phase ends
+with:
+
+```bash
+dotnet test GameEventScript.sln --configuration Release --filter "TestCategory!=Performance|TestCategory=Allocation"
+sh scripts/test-csharp-conformance.sh
+./scripts/test-swift.sh
+python3 scripts/verify-swift-api.py
+python3 scripts/verify-port-names.py
+```
+
+Phases touching the VM or value hot paths additionally run the C# performance
+gate and `scripts/test-swift-performance.sh` and compare against the frozen
+reference measurement.
+
+### Phase 0 – Rules and gate
+
+- [x] Record decisions in this document and summarize the rules in `AGENTS.md`.
+- [ ] Take and store the frozen C# and Swift reference measurements.
+- [ ] Add `scripts/verify-port-names.py`: extract library types and opcode
+      handler names from both ports, apply the idiomatic mappings, fail on
+      unmapped differences, restrict Swift `execute…` calls to dispatch and
+      `Opcodes`. Start with an explicit exception list that shrinks per phase.
+- [ ] Add its regression controls and wire it into C# and Swift CI.
+
+### Phase 1 – Public API
+
+- [ ] Apply the prefix rule and the public mapping table in both ports.
+- [ ] Builders: direct creation, `CreateBuilder()`/`makeBuilder()` conveniences,
+      C# 14 for the Compiler project only, internal Host initializer in Swift.
+- [ ] Segment Program model in Swift; Reader/Writer/Validator/Dumper as Program
+      members in both ports.
+- [ ] Move `GesDebugInfoOptions` to the Swift Runtime.
+- [ ] Message JSON as `GameEventScriptMessage` members in both ports.
+- [ ] Show the C# `using static` value-factory style in the guides.
+- [ ] Align public value types (`GesValueSlice`, `GesMapEntry`, `GesSeriesValue`,
+      `GesSpatialValue`, `GesValueKind`): same set in both ports, internal where
+      not needed publicly.
+- [ ] Errors: apply the error mappings; document BCL mappings and port-specific
+      absences here; decide `GesDiagnosticCodes` for Swift.
+- [ ] Disambiguate `GesSymbolKind` versus `GesDebugSymbolKind`.
+- [ ] Update XML/`///` documentation, `specs/PublicApi.md`, both API snapshots,
+      guides, website examples, `scripts/test-guide-examples.py` inputs, and
+      `CHANGELOG.md` (breaking change).
+
+### Phase 2 – Bridge
+
+- [ ] Apply the Bridge mapping table in both ports.
+- [ ] Consolidate value conversion and extension registration entry points.
+- [ ] Update Bridge tests, macros and documentation.
+
+### Phase 3 – Internal names and layers
+
+- [ ] `VM` → `Vm` in namespaces and folders.
+- [ ] Validators in the Program layer with identical split.
+- [ ] Host internals, value types and iterators per the internal mapping table.
+- [ ] `Ges` prefix for C# AST records and remaining unprefixed internal types.
+- [ ] Rename the C# `GameEventScriptExternalTypes.cs` duplicate and split C#
+      collection files (`GameEventScriptProgram.cs`, `GameEventScriptExceptions.cs`)
+      where it helps navigation.
+
+### Phase 4 – VM handlers
+
+- [ ] C#: convert `GesVmRegister*` classes into `private Execute<OpCode>` members
+      of `partial class GesVirtualMachine`, one file per opcode under
+      `Runtime/Vm/Opcodes/{Core,Math,Collections}`; stateless helpers under
+      `Support`. Commit per opcode group.
+- [ ] Align handler names with opcode cases (`IntegerDivide`, `LogN`,
+      `KeysOfMap`, separate `HasAny`/`HasAll`, `ContainsAny`/`ContainsAll`, …).
+- [ ] Align VM setter and staging names per the internal mapping table.
+- [ ] Swift: fix handler names that do not match their opcode
+      (`compoundIterator` in `IteratorCreate`), remove empty namespace files,
+      move helper extensions off the VM-opcode files where they do not belong.
+- [ ] Re-measure every existing inlining attribute per group in both ports
+      (C# 14 `AggressiveInlining`, Swift 38 `@inline(__always)` and 120
+      `@inline(never)`); keep only measured benefits with a rationale comment.
+
+### Phase 5 – Compiler
+
+- [ ] Swift: typed `GesTokenKind`, `GesBinaryOperator`, `GesUnaryOperator`
+      instead of strings.
+- [ ] Identical phase types in both ports: `GesLexer`, `GesParser`,
+      `GesAstValidator`, `GesShadowingValidator`, `GesAstOptimizer`,
+      `GesBinaryBuilder`. Analyze first how Swift distributes AST optimization.
+- [ ] Named optimization passes behind `IGesBinaryOptimizationPass` /
+      `GesBinaryOptimizationPass` with the C# pass names.
+- [ ] Verify byte-identical `.gesb` output for the corpus and the
+      `compile.loop-invariants` snapshot.
+
+### Phase 6 – Tools and adapters (low priority)
+
+- [ ] Align shared CLI concepts (`RunSession`, `RunWorkspace`, `RunConsole`,
+      `RunInventory`, `RunProfiler`) and Conformance adapter observation names
+      where both ports have the concept.
+- [ ] Remove this document and its reference in `AGENTS.md`.

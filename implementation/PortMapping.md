@@ -209,9 +209,14 @@ gate and `scripts/test-swift-performance.sh` and compare against the frozen
 reference measurement:
 
 ```bash
-python3 scripts/port-performance-reference.py compare --port csharp --runs 5 --reference implementation/port-performance-reference/csharp.json
-python3 scripts/port-performance-reference.py compare --port swift --runs 5 --reference implementation/port-performance-reference/swift.json
+python3 scripts/port-performance-reference.py compare --port csharp --runs 5 --reference implementation/port-performance-reference/csharp.json --baseline-commit 30811af3
+python3 scripts/port-performance-reference.py compare --port swift --runs 5 --reference implementation/port-performance-reference/swift.json --baseline-commit 30811af3
 ```
+
+`--baseline-commit` builds the reference revision in a temporary worktree and
+measures it interleaved with the candidate, so machine drift affects both sides
+equally; allocations are always compared with the frozen files. `30811af3`
+contains exactly the measured reference sources plus the recalibrated corpus.
 
 ### Frozen reference
 
@@ -224,6 +229,12 @@ python3 scripts/port-performance-reference.py compare --port swift --runs 5 --re
   C# noise alone therefore uses about 1.8 of the 3 percentage points; repeat a
   C# comparison or raise `--runs` before attributing a result between 1.02 and
   1.03 to a change.
+- Drift: at the end of phase 1 the unchanged reference sources measured 1.046
+  (C#) against the frozen file, while the phase 1 result measured interleaved
+  against them was 1.0004 (C#) and 0.9955 (Swift). Elapsed-time budgets
+  therefore use the interleaved baseline, not the frozen file.
+- Phase 1 also removed a 24-byte Swift compile allocation introduced by an
+  eagerly computed index-list offset table; offsets are now derived on demand.
 - Pre-existing C# gate failure at capture time, not caused by the convergence:
   `performance.core/case-0004` measures `program-load.allocated` 18.125 KiB
   against the stored corpus reference 16.10 KiB (budget 16.91 KiB),

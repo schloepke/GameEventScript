@@ -142,10 +142,19 @@ public struct GesStringConstantSegment: Sendable, RandomAccessCollection {
 
 /// One resolved UInt16 index list.
 public struct GesUInt16IndexList: Sendable, RandomAccessCollection {
-    let values: [UInt16]
+    // The segment's lists share storage; the offset is derived on demand so Programs need no extra index table.
+    private let lists: [[UInt16]]
+    private let index: Int
+
+    init(lists: [[UInt16]], index: Int) {
+        self.lists = lists
+        self.index = index
+    }
+
+    private var values: [UInt16] { lists[index] }
 
     /// First element offset in the segment's `data`.
-    public let start: Int
+    public var start: Int { lists[..<index].reduce(0) { $0 + $1.count } }
 
     /// Number of elements.
     public var length: Int { values.count }
@@ -178,16 +187,8 @@ public struct GesUInt16IndexListSegment: Sendable, RandomAccessCollection {
 
     // Lists as stored arrays; the VM reads them directly.
     let lists: [[UInt16]]
-    private let starts: [Int]
 
-    init(lists: [[UInt16]]) {
-        self.lists = lists
-        var start = 0
-        starts = lists.map { list in
-            defer { start += list.count }
-            return start
-        }
-    }
+    init(lists: [[UInt16]]) { self.lists = lists }
 
     /// Creates a segment from element slices into one shared buffer.
     public init(slices: [SliceEntry], data: [UInt16]) {
@@ -195,7 +196,13 @@ public struct GesUInt16IndexListSegment: Sendable, RandomAccessCollection {
     }
 
     /// Element ranges of all lists in index order.
-    public var slices: [SliceEntry] { zip(starts, lists).map { SliceEntry(start: $0, length: $1.count) } }
+    public var slices: [SliceEntry] {
+        var start = 0
+        return lists.map { list in
+            defer { start += list.count }
+            return SliceEntry(start: start, length: list.count)
+        }
+    }
 
     /// Concatenated elements of all lists.
     public var data: [UInt16] { lists.flatMap { $0 } }
@@ -210,7 +217,7 @@ public struct GesUInt16IndexListSegment: Sendable, RandomAccessCollection {
     public var endIndex: Int { lists.count }
 
     /// The list at `index`.
-    public subscript(index: Int) -> GesUInt16IndexList { GesUInt16IndexList(values: lists[index], start: starts[index]) }
+    public subscript(index: Int) -> GesUInt16IndexList { GesUInt16IndexList(lists: lists, index: index) }
 }
 
 /// A logical instruction; its encoding never depends on native memory layout.

@@ -906,7 +906,6 @@ symbol {"access":"public","declaration":"let sourceStartByteOffset: UInt32","kin
 symbol {"access":"public","declaration":"let sources: [GesSourceArchiveEntry]","kind":"swift.property","path":"GameEventScriptRuntime.GesSourceArchiveSegment.sources"}
 symbol {"access":"public","declaration":"let sources: [GesSourceMapSource]","kind":"swift.property","path":"GameEventScriptRuntime.GesSourceMapSegment.sources"}
 symbol {"access":"public","declaration":"let start: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesStringConstantSegment.SliceEntry.start"}
-symbol {"access":"public","declaration":"let start: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesUInt16IndexList.start"}
 symbol {"access":"public","declaration":"let start: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesUInt16IndexListSegment.SliceEntry.start"}
 symbol {"access":"public","declaration":"let state: GesExecutionState","kind":"swift.property","path":"GameEventScriptRuntime.GesExecutionResult.state"}
 symbol {"access":"public","declaration":"let state: GesStartState","kind":"swift.property","path":"GameEventScriptRuntime.GesStartResult.state"}
@@ -1244,6 +1243,7 @@ symbol {"access":"public","declaration":"var signedWord2: Int16 { get }","kind":
 symbol {"access":"public","declaration":"var slices: [GesStringConstantSegment.SliceEntry] { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesStringConstantSegment.slices"}
 symbol {"access":"public","declaration":"var slices: [GesUInt16IndexListSegment.SliceEntry] { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesUInt16IndexListSegment.slices"}
 symbol {"access":"public","declaration":"var spatialValue: GesSpatialValue? { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesValue.spatialValue"}
+symbol {"access":"public","declaration":"var start: Int { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesUInt16IndexList.start"}
 symbol {"access":"public","declaration":"var startIndex: Int { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesBindingSegment.startIndex"}
 symbol {"access":"public","declaration":"var startIndex: Int { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesCodeSegment.startIndex"}
 symbol {"access":"public","declaration":"var startIndex: Int { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesDebugSymbolsSegment.startIndex"}

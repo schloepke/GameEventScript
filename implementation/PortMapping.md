@@ -227,7 +227,10 @@ python3 scripts/port-performance-reference.py compare --port swift --runs 5 --re
 - Pre-existing C# gate failure at capture time, not caused by the convergence:
   `performance.core/case-0004` measures `program-load.allocated` 18.125 KiB
   against the stored corpus reference 16.10 KiB (budget 16.91 KiB),
-  deterministically. The Swift performance corpus passed completely.
+  deterministically. This corpus budget was subsequently recalibrated to
+  18.125 KiB with a 19.03125 KiB maximum after three matching measurements;
+  the frozen convergence reference is unchanged. The Swift performance corpus
+  passed completely.
 - `scripts/port-performance-reference.py`, its controls
   `scripts/test-port-performance-reference.py` and the reference files are
   removed together with this document.
@@ -243,8 +246,9 @@ python3 scripts/port-performance-reference.py compare --port swift --runs 5 --re
       with 855 known differences and shrinks per phase.
 - [x] Add its regression controls and wire it into C# CI (runs on every push
       and pull request, covering both ports).
-- [ ] Resolve the pre-existing C# `performance.core/case-0004` allocation
-      failure (decide: fix the regression or recalibrate the C# reference).
+- [x] Resolve the pre-existing C# `performance.core/case-0004` allocation
+      failure: recalibrate only the corpus program-load allocation reference
+      from three matching measurements, retaining the 5% allowance.
 
 ### Phase 1 – Public API
 

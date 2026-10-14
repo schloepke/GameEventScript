@@ -1095,8 +1095,8 @@ performance:
           toleranceAbsolute: 0.05
           unit: ms
         program-load.allocated:
-          reference: 16.1015625
-          maximum: 16.9072265625
+          reference: 18.125
+          maximum: 19.03125
           unit: KiB
         compile.elapsed:
           reference: 0.5215

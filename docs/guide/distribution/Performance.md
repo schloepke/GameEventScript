@@ -105,3 +105,16 @@ C# evidence: `artifacts/conformance/python/performance-before-refresh.json`,
 `performance-after-refresh.json`. Swift evidence is linked in its baseline guide.
 The refreshed references are development evidence; they do not replace a clean
 revision-bound release verification.
+
+### C# program-load allocation follow-up — 2026-10-14
+
+Three independent measurements of `performance.core/case-0004` consistently
+report 18.125 KiB (18560 B) for `program-load.allocated`, compared with the old
+16.1015625 KiB (16488 B) reference: +2072 B (+12.57%). The higher load cost is
+accepted for the current implementation. Each run passes every other metric
+and correctness check for this case. The new maximum is 19.03125 KiB (19488 B),
+retaining the 5% allowance. Execution-allocation and elapsed-time references,
+Swift references and the frozen port-convergence reference remain unchanged.
+
+Evidence: `artifacts/conformance/csharp-load-calibration/run-{1,2,3}.json`.
+Fresh verification: `artifacts/conformance/csharp-load-calibration/verified.json`.

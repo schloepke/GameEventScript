@@ -4,7 +4,7 @@
 /// Ordered callback arguments, optionally borrowed from an active VM register frame.
 public struct GesValueArguments {
     private let values: [GesValue]
-    private let state: GesVmState?
+    private let state: GesVirtualMachine?
     private let indexes: [UInt16]
     /// Number of arguments in the current view.
     public var count: Int { state == nil ? values.count : indexes.count }
@@ -16,7 +16,7 @@ public struct GesValueArguments {
         indexes = []
     }
 
-    init(state: GesVmState, indexes: [UInt16]) {
+    init(state: GesVirtualMachine, indexes: [UInt16]) {
         self.state = state
         self.indexes = indexes
         values = []

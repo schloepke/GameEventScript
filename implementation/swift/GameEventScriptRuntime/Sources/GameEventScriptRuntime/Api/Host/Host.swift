@@ -31,7 +31,7 @@ public final class GameEventScriptHost {
     private var initializationDiagnostic: GesStartDiagnostic?
     private var initializationPublications: [GesDeferredPublication] = []
     private var startupPublications: [GesDeferredPublication] = []
-    private var vm: GesVmState?
+    private var vm: GesVirtualMachine?
     private var nextID: Int64 = 0
     private var nextOrder: Int64 = 0
     private var opcodes = 0, processed = 0, emitted = 0, published = 0
@@ -109,7 +109,7 @@ public final class GameEventScriptHost {
         if program.requiredCallStackDepth > depth { throw GameEventScriptDynamicLinkError(code: "link.requiredCallStackDepthExceeded", program: program.moduleName) }
         let linked = try GesLinkedProgram(program, extensions: extensions, types: externalTypes)
         if queueFull && linked.handlers.contains(where: { $0.signature.name == "initialization" }) { throw GameEventScriptDynamicLinkError(code: "link.initializationQueueFull", program: program.moduleName) }
-        if vm == nil { vm = GesVmState(maxRegisters: registers, maxCallDepth: depth) }
+        if vm == nil { vm = GesVirtualMachine(maxRegisters: registers, maxCallDepth: depth) }
         vm!.prepareCapacity(Int(program.requiredRegisterCount))
         let id = try registrationID()
         linked.profiler = profiler?.createProgramProfiler(program)
@@ -219,7 +219,7 @@ public final class GameEventScriptHost {
             }
             if scriptActive {
                 executingScript = true
-                let executed = GameEventScriptVirtualMachine.runSlice(vm!, context: context, budget: remaining)
+                let executed = vm!.runSlice(context: context, budget: remaining)
                 executingScript = false
                 opcodes += executed
                 if initializationInstance != nil { initializationOpcodes += executed }
@@ -268,7 +268,7 @@ public final class GameEventScriptHost {
                 executingScript = true
                 defer { executingScript = false }
                 do {
-                    try GameEventScriptVirtualMachine.begin(vm!, linked: next.instance!.linked, message: active!.message, matchArguments: next.matchArguments, entry: next.address, signature: next.dispatchSignature)
+                    try vm!.begin(linked: next.instance!.linked, message: active!.message, matchArguments: next.matchArguments, entry: next.address, signature: next.dispatchSignature)
                     scriptActive = true
                 } catch let fault as GesRuntimeError {
                     record(fault.diagnostic)

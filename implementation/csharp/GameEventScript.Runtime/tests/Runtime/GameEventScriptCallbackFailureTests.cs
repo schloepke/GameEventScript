@@ -118,7 +118,7 @@ public sealed class GameEventScriptCallbackFailureTests
         host.Load(GameEventScriptBuilder.Create().AddScript("module callbacks\non Start {}").Compile());
         host.RunToCompletion();
         // Force the internal Begin guard before the VM has its own handler context.
-        host.VmState!.State = GesVmState.StateValue.Processing;
+        host.VirtualMachine!.State = GesVirtualMachine.StateValue.Processing;
         Assert.IsTrue(host.Receive(Create("Start")));
 
         var result = host.RunToCompletion();
@@ -129,7 +129,7 @@ public sealed class GameEventScriptCallbackFailureTests
         Assert.AreEqual(GameEventScriptDiagnosticCodes.RuntimeVmStateConflict, diagnostics[0].Code);
         Assert.AreEqual("callbacks", diagnostics[0].ProgramName);
         Assert.AreEqual("Start()", diagnostics[0].HandlerName);
-        Assert.AreEqual(GesVmState.StateValue.Ready, host.VmState.State);
+        Assert.AreEqual(GesVirtualMachine.StateValue.Ready, host.VirtualMachine.State);
         Assert.IsTrue(host.Receive(Create("Start")));
         Assert.AreEqual(GameEventScriptExecutionState.Completed, host.RunToCompletion().State);
         Assert.HasCount(1, diagnostics);

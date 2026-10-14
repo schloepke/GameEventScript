@@ -8,12 +8,12 @@ using GameEventScript.Runtime.Values;
 using static GameEventScript.Api.GameEventScriptBindingSegment;
 using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static GameEventScript.Runtime.Values.GesValue.GesValueFlags;
-using static GameEventScript.Runtime.VM.GesVmState.StateValue;
+using static GameEventScript.Runtime.VM.GesVirtualMachine.StateValue;
 
 namespace GameEventScript.Runtime.VM;
 
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-internal partial class GesVmState
+internal partial class GesVirtualMachine
 {
     private const int InitialRegisterCapacity = 32;
 
@@ -72,7 +72,7 @@ internal partial class GesVmState
     internal readonly int MaxRegisterCount;
 
     internal GameEventScriptMessage? ProcessingMessage { get; private set; }
-    internal GesVmState(ushort registerSize, ushort stackSize)
+    internal GesVirtualMachine(ushort registerSize, ushort stackSize)
     {
         MaxRegisterCount = registerSize;
         EmptyList = [];

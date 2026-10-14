@@ -9,7 +9,7 @@
     import Musl
 #endif
 
-extension GesVmState {
+extension GesVirtualMachine {
     @inline(never)
     func executeAsin(_ target: Int, _ x: Int) {
         guard registers[x].isNumeric, !registers[x].hasUnit else { return registers[target].setNothing() }

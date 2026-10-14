@@ -28,24 +28,24 @@ public sealed class GameEventScriptHostSteppingTests
     }
 
     [TestMethod]
-    public void LoadedProgramsShareOneFullyResetHostVmState()
+    public void LoadedProgramsShareOneFullyResetHostVirtualMachine()
     {
         var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         host.Load(Compile("on First { emit Done }"));
-        var vmState = host.VmState;
+        var vm = host.VirtualMachine;
         host.Load(Compile("on Second { emit Done }"));
         host.Subscribe("Done", [], (_, _) => { });
 
-        Assert.AreSame(vmState, host.VmState);
+        Assert.AreSame(vm, host.VirtualMachine);
         host.Receive(Create("First"));
         host.Receive(Create("Second"));
         host.RunToCompletion();
 
-        Assert.IsNotNull(vmState);
-        Assert.AreEqual(GesVmState.StateValue.Ready, vmState.State);
-        Assert.IsNull(vmState.ActiveProgram);
-        Assert.IsNull(vmState.ProcessingMessage);
-        Assert.IsTrue(vmState.RegisterValues.All(value => value.IsNothing));
+        Assert.IsNotNull(vm);
+        Assert.AreEqual(GesVirtualMachine.StateValue.Ready, vm.State);
+        Assert.IsNull(vm.ActiveProgram);
+        Assert.IsNull(vm.ProcessingMessage);
+        Assert.IsTrue(vm.RegisterValues.All(value => value.IsNothing));
     }
 
     [TestMethod]

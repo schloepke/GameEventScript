@@ -9,20 +9,20 @@ namespace GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterIterators
 {
-    internal static void GesVmIteratorCreate(this GesVmState vmState, ushort destinationRegister, in GesValue x)
+    internal static void GesVmIteratorCreate(this GesVirtualMachine vm, ushort destinationRegister, in GesValue x)
     {
-        if (x.CreateIterator() is { } iterator) vmState.SetIterator(destinationRegister, iterator);
-        else vmState.SetNothing(destinationRegister);
+        if (x.CreateIterator() is { } iterator) vm.SetIterator(destinationRegister, iterator);
+        else vm.SetNothing(destinationRegister);
     }
 
-    internal static bool GesVmIteratorNext(this GesVmState vmState, ushort destinationRegister, in GesValue iterator, ushort noMoreAddress)
+    internal static bool GesVmIteratorNext(this GesVirtualMachine vm, ushort destinationRegister, in GesValue iterator, ushort noMoreAddress)
     {
         if (iterator is { Kind: Iterator, ObjectValue: GesIntegerRangeIterator range })
         {
             // Hot loop form: write the integer term in place instead of copying an iterator result.
             if (range.NextInteger() is { } term)
             {
-                vmState.SetInteger(destinationRegister, term);
+                vm.SetInteger(destinationRegister, term);
                 return true;
             }
         }
@@ -31,22 +31,22 @@ internal static class GesVmRegisterIterators
             var next = it.Next();
             if (next.HasValue)
             {
-                vmState.SetValue(destinationRegister, in next.Value);
+                vm.SetValue(destinationRegister, in next.Value);
                 return true;
             }
         }
 
         var result = default(GesValue);
-        vmState.SetValue(destinationRegister, in result);
-        vmState.JumpAddress(noMoreAddress);
+        vm.SetValue(destinationRegister, in result);
+        vm.JumpAddress(noMoreAddress);
         return false;
     }
 
-    internal static void GesVmIteratorClose(this GesVmState vmState, ushort iteratorRegister)
+    internal static void GesVmIteratorClose(this GesVirtualMachine vm, ushort iteratorRegister)
     {
-        var iterator = vmState.Register(iteratorRegister);
+        var iterator = vm.Register(iteratorRegister);
         if (iterator is not { Kind: Iterator, ObjectValue: IDisposable it }) return;
         it.Dispose();
-        vmState.SetNothing(iteratorRegister);
+        vm.SetNothing(iteratorRegister);
     }
 }

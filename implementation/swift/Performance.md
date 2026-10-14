@@ -142,6 +142,26 @@ Evidence is retained under `artifacts/swift/performance-refresh-{1,2,3}`;
 reviewed candidates under `artifacts/swift/performance-refresh-candidates`;
 fresh verification under `artifacts/swift/performance-after-refresh`.
 
+### Follow-up calibration after loop hoisting and VM consolidation
+
+A second 2026-10-14 refresh uses three independent production Release processes
+with five samples per workload. Compared with the preceding references,
+requested execution bytes and allocation counts remain unchanged for all 31
+workloads; all sixteen warmed dispatch cases still allocate zero bytes and zero
+objects. Compilation allocations increase by up to 4.42% (mixed workload:
+875838 → 914510 B). Filter/select/sum loading increases from 17578 to 19114 B
+(+1536 B, 8.74%). These increases are accepted as compile/load costs; this
+comparison does not isolate the VM consolidation from the compiler changes.
+
+The mixed-workload run-time reference changes from 63.067334 to 56.53575 ms
+per 1,000 invocations. References use the median of three process medians for
+time and the largest observed allocation values. Existing tolerances and exact
+zero-allocation requirements remain unchanged; C# references are unaffected.
+
+Evidence: `artifacts/swift/vm-unification-calibration-{1,2,3}`; reviewed candidates:
+`artifacts/swift/vm-unification-candidates`; fresh regression verification:
+`artifacts/swift/vm-unification-verified`.
+
 Performance measurements use the production Release build made by
 `scripts/test-swift-performance.sh`. Run that script after `swift test`, rather
 than measuring its existing executable: a Release test build uses

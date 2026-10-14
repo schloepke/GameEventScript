@@ -11,146 +11,146 @@ namespace GameEventScript.Runtime.VM;
 
 internal static class GesVmIteratorCollectorTerminals
 {
-    internal static void GesVmFirst(this GesVmState vmState, ushort destinationRegister, in GesValue source)
+    internal static void GesVmFirst(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source)
     {
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesValue[] list:
-                if (list.Length > 0) vmState.SetValue(destinationRegister, in list[0]);
-                else vmState.SetNothing(destinationRegister);
+                if (list.Length > 0) vm.SetValue(destinationRegister, in list[0]);
+                else vm.SetNothing(destinationRegister);
                 return;
             case Dice when source.ObjectValue is int[] dice:
-                if (dice.Length > 0) vmState.SetInteger(destinationRegister, dice[0]);
-                else vmState.SetNothing(destinationRegister);
+                if (dice.Length > 0) vm.SetInteger(destinationRegister, dice[0]);
+                else vm.SetNothing(destinationRegister);
                 return;
             case GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
-                if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) vmState.SetInteger(destinationRegister, range.From);
-                else vmState.SetNothing(destinationRegister);
+                if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) vm.SetInteger(destinationRegister, range.From);
+                else vm.SetNothing(destinationRegister);
                 return;
             case GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
-                if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) vmState.SetFloat(destinationRegister, range.From);
-                else vmState.SetNothing(destinationRegister);
+                if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) vm.SetFloat(destinationRegister, range.From);
+                else vm.SetNothing(destinationRegister);
                 return;
             case Map when source.ObjectValue is GesValueMap map:
-                if (map.ValueList.Length > 0) vmState.SetValue(destinationRegister, in map.ValueList[0]);
-                else vmState.SetNothing(destinationRegister);
+                if (map.ValueList.Length > 0) vm.SetValue(destinationRegister, in map.ValueList[0]);
+                else vm.SetNothing(destinationRegister);
                 return;
             case Custom when source.ObjectValue is GesCustomObject customObject:
                 var customMap = customObject.Map;
-                if (customMap.ValueList.Length > 0) vmState.SetValue(destinationRegister, in customMap.ValueList[0]);
-                else vmState.SetNothing(destinationRegister);
+                if (customMap.ValueList.Length > 0) vm.SetValue(destinationRegister, in customMap.ValueList[0]);
+                else vm.SetNothing(destinationRegister);
                 return;
             case Vector or Point when source.ObjectValue is GesValueVectorPoint triplet:
-                vmState.SetFloat(destinationRegister, triplet.X);
+                vm.SetFloat(destinationRegister, triplet.X);
                 return;
             case Text or Tag:
-                FirstFromText(vmState, destinationRegister, in source);
+                FirstFromText(vm, destinationRegister, in source);
                 return;
             case Iterator when source.ObjectValue is IGesIterator iterator:
-                FirstFromIterator(vmState, destinationRegister, iterator);
+                FirstFromIterator(vm, destinationRegister, iterator);
                 return;
             default:
-                vmState.SetNothing(destinationRegister);
+                vm.SetNothing(destinationRegister);
                 return;
         }
     }
-    internal static void GesVmLast(this GesVmState vmState, ushort destinationRegister, in GesValue source)
+    internal static void GesVmLast(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source)
     {
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesValue[] list:
-                if (list.Length > 0) vmState.SetValue(destinationRegister, in list[list.Length - 1]);
-                else vmState.SetNothing(destinationRegister);
+                if (list.Length > 0) vm.SetValue(destinationRegister, in list[list.Length - 1]);
+                else vm.SetNothing(destinationRegister);
                 return;
             case Dice when source.ObjectValue is int[] dice:
-                if (dice.Length > 0) vmState.SetInteger(destinationRegister, dice[^1]);
-                else vmState.SetNothing(destinationRegister);
+                if (dice.Length > 0) vm.SetInteger(destinationRegister, dice[^1]);
+                else vm.SetNothing(destinationRegister);
                 return;
             case GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
-                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step)) is { } lastInteger) vmState.SetInteger(destinationRegister, lastInteger);
-                else vmState.SetNothing(destinationRegister);
+                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step)) is { } lastInteger) vm.SetInteger(destinationRegister, lastInteger);
+                else vm.SetNothing(destinationRegister);
                 return;
             case GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
-                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step)) is { } lastFloat) vmState.SetFloat(destinationRegister, lastFloat);
-                else vmState.SetNothing(destinationRegister);
+                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step)) is { } lastFloat) vm.SetFloat(destinationRegister, lastFloat);
+                else vm.SetNothing(destinationRegister);
                 return;
             case Map when source.ObjectValue is GesValueMap map:
-                if (map.ValueList.Length > 0) vmState.SetValue(destinationRegister, in map.ValueList[map.ValueList.Length - 1]);
-                else vmState.SetNothing(destinationRegister);
+                if (map.ValueList.Length > 0) vm.SetValue(destinationRegister, in map.ValueList[map.ValueList.Length - 1]);
+                else vm.SetNothing(destinationRegister);
                 return;
             case Custom when source.ObjectValue is GesCustomObject customObject:
                 var customMap = customObject.Map;
-                if (customMap.ValueList.Length > 0) vmState.SetValue(destinationRegister, in customMap.ValueList[customMap.ValueList.Length - 1]);
-                else vmState.SetNothing(destinationRegister);
+                if (customMap.ValueList.Length > 0) vm.SetValue(destinationRegister, in customMap.ValueList[customMap.ValueList.Length - 1]);
+                else vm.SetNothing(destinationRegister);
                 return;
             case Vector or Point when source.ObjectValue is GesValueVectorPoint triplet:
-                vmState.SetFloat(destinationRegister, triplet.Z);
+                vm.SetFloat(destinationRegister, triplet.Z);
                 return;
             case Text or Tag:
-                LastFromText(vmState, destinationRegister, in source);
+                LastFromText(vm, destinationRegister, in source);
                 return;
             case Iterator when source.ObjectValue is IGesIterator iterator:
-                LastFromIterator(vmState, destinationRegister, iterator);
+                LastFromIterator(vm, destinationRegister, iterator);
                 return;
             default:
-                vmState.SetNothing(destinationRegister);
+                vm.SetNothing(destinationRegister);
                 return;
         }
     }
-    internal static void GesVmSingle(this GesVmState vmState, ushort destinationRegister, in GesValue source)
+    internal static void GesVmSingle(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source)
     {
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesValue[] list:
-                if (list.Length == 1) vmState.SetValue(destinationRegister, in list[0]);
-                else vmState.SetNothing(destinationRegister);
+                if (list.Length == 1) vm.SetValue(destinationRegister, in list[0]);
+                else vm.SetNothing(destinationRegister);
                 return;
             case Dice when source.ObjectValue is int[] dice:
-                if (dice.Length == 1) vmState.SetInteger(destinationRegister, dice[0]);
-                else vmState.SetNothing(destinationRegister);
+                if (dice.Length == 1) vm.SetInteger(destinationRegister, dice[0]);
+                else vm.SetNothing(destinationRegister);
                 return;
             case GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
-                if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) vmState.SetInteger(destinationRegister, range.From);
-                else vmState.SetNothing(destinationRegister);
+                if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) vm.SetInteger(destinationRegister, range.From);
+                else vm.SetNothing(destinationRegister);
                 return;
             case GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
-                if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) vmState.SetFloat(destinationRegister, range.From);
-                else vmState.SetNothing(destinationRegister);
+                if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) vm.SetFloat(destinationRegister, range.From);
+                else vm.SetNothing(destinationRegister);
                 return;
             case Map when source.ObjectValue is GesValueMap map:
-                if (map.ValueList.Length == 1) vmState.SetValue(destinationRegister, in map.ValueList[0]);
-                else vmState.SetNothing(destinationRegister);
+                if (map.ValueList.Length == 1) vm.SetValue(destinationRegister, in map.ValueList[0]);
+                else vm.SetNothing(destinationRegister);
                 return;
             case Custom when source.ObjectValue is GesCustomObject customObject:
                 var customMap = customObject.Map;
-                if (customMap.ValueList.Length == 1) vmState.SetValue(destinationRegister, in customMap.ValueList[0]);
-                else vmState.SetNothing(destinationRegister);
+                if (customMap.ValueList.Length == 1) vm.SetValue(destinationRegister, in customMap.ValueList[0]);
+                else vm.SetNothing(destinationRegister);
                 return;
             case Text or Tag:
-                SingleFromText(vmState, destinationRegister, in source);
+                SingleFromText(vm, destinationRegister, in source);
                 return;
             case Iterator when source.ObjectValue is IGesIterator iterator:
-                SingleFromIterator(vmState, destinationRegister, iterator);
+                SingleFromIterator(vm, destinationRegister, iterator);
                 return;
             default:
-                vmState.SetNothing(destinationRegister);
+                vm.SetNothing(destinationRegister);
                 return;
         }
     }
-    private static void FirstFromIterator(GesVmState vmState, ushort destinationRegister, IGesIterator iterator)
+    private static void FirstFromIterator(GesVirtualMachine vm, ushort destinationRegister, IGesIterator iterator)
     {
         try
         {
             var item = iterator.Next();
-            if (item.HasValue) vmState.SetValue(destinationRegister, in item.Value);
-            else vmState.SetNothing(destinationRegister);
+            if (item.HasValue) vm.SetValue(destinationRegister, in item.Value);
+            else vm.SetNothing(destinationRegister);
         }
         finally
         {
             if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void LastFromIterator(GesVmState vmState, ushort destinationRegister, IGesIterator iterator)
+    private static void LastFromIterator(GesVirtualMachine vm, ushort destinationRegister, IGesIterator iterator)
     {
         var last = new GesValue();
         var found = false;
@@ -163,47 +163,47 @@ internal static class GesVmIteratorCollectorTerminals
                 found = true;
             }
 
-            if (found) vmState.SetValue(destinationRegister, in last);
-            else vmState.SetNothing(destinationRegister);
+            if (found) vm.SetValue(destinationRegister, in last);
+            else vm.SetNothing(destinationRegister);
         }
         finally
         {
             if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void SingleFromIterator(GesVmState vmState, ushort destinationRegister, IGesIterator iterator)
+    private static void SingleFromIterator(GesVirtualMachine vm, ushort destinationRegister, IGesIterator iterator)
     {
         try
         {
             var item = iterator.Next();
             if (!item.HasValue)
             {
-                vmState.SetNothing(destinationRegister);
+                vm.SetNothing(destinationRegister);
                 return;
             }
 
             var second = iterator.Next();
-            if (second.HasValue) vmState.SetNothing(destinationRegister);
-            else vmState.SetValue(destinationRegister, in item.Value);
+            if (second.HasValue) vm.SetNothing(destinationRegister);
+            else vm.SetValue(destinationRegister, in item.Value);
         }
         finally
         {
             if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void FirstFromText(GesVmState vmState, ushort destinationRegister, in GesValue source)
+    private static void FirstFromText(GesVirtualMachine vm, ushort destinationRegister, in GesValue source)
     {
-        if (GameEventScriptText.ScalarAt(source.TextValue, 0) is { } scalar) vmState.SetText(destinationRegister, scalar);
-        else vmState.SetNothing(destinationRegister);
+        if (GameEventScriptText.ScalarAt(source.TextValue, 0) is { } scalar) vm.SetText(destinationRegister, scalar);
+        else vm.SetNothing(destinationRegister);
     }
-    private static void LastFromText(GesVmState vmState, ushort destinationRegister, in GesValue source)
+    private static void LastFromText(GesVirtualMachine vm, ushort destinationRegister, in GesValue source)
     {
-        if (source.CollectionCount > 0 && GameEventScriptText.ScalarAt(source.TextValue, source.CollectionCount - 1) is { } scalar) vmState.SetText(destinationRegister, scalar);
-        else vmState.SetNothing(destinationRegister);
+        if (source.CollectionCount > 0 && GameEventScriptText.ScalarAt(source.TextValue, source.CollectionCount - 1) is { } scalar) vm.SetText(destinationRegister, scalar);
+        else vm.SetNothing(destinationRegister);
     }
-    private static void SingleFromText(GesVmState vmState, ushort destinationRegister, in GesValue source)
+    private static void SingleFromText(GesVirtualMachine vm, ushort destinationRegister, in GesValue source)
     {
-        if (source.CollectionCount == 1) vmState.SetText(destinationRegister, source.TextValue);
-        else vmState.SetNothing(destinationRegister);
+        if (source.CollectionCount == 1) vm.SetText(destinationRegister, source.TextValue);
+        else vm.SetNothing(destinationRegister);
     }
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesCallbacks {
-    static func extensionCall(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext) throws {
+    static func extensionCall(_ i: GameEventScriptBytecodeInstruction, _ s: GesVirtualMachine, _ c: GameEventScriptContext) throws {
         let destination = Int(i.word0)
         let registers = s.list(i.word2)
         guard let binding = s.linked!.extensionBindings[i.word1], let function = s.linked!.extensions[i.word1], binding.argumentNames.count == registers.count else {

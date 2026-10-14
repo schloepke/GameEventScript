@@ -1,7 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesVmState {
+extension GesVirtualMachine {
     @inline(never)
     func executeImplies(_ target: Int, _ x: Int, _ y: Int) {
         if registers[x].truth == false || registers[y].truth == true { return registers[target].setBoolean(true) }

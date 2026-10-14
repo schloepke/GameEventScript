@@ -9,7 +9,7 @@
     import Musl
 #endif
 
-extension GesVmState {
+extension GesVirtualMachine {
     @inline(never)
     func executeAtan2(_ target: Int, _ x: Int, _ y: Int) {
         if !registers[x].isNumeric || !registers[y].isNumeric || registers[x].unit != registers[y].unit { return registers[target].setNothing() }

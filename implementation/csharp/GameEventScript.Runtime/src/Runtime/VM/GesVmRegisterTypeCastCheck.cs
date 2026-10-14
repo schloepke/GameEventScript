@@ -12,12 +12,12 @@ namespace GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterTypeCastCheck
 {
-    internal static void GesVmCastUnit(this GesVmState vmState, ushort destinationRegister, in GesValue xValue, GameEventScriptBytecodeInstructionUnit unit)
+    internal static void GesVmCastUnit(this GesVirtualMachine vm, ushort destinationRegister, in GesValue xValue, GameEventScriptBytecodeInstructionUnit unit)
     {
-        var dst = GesVmCastUnit(in xValue, unit, vmState);
-        vmState.SetValue(destinationRegister, in dst);
+        var dst = GesVmCastUnit(in xValue, unit, vm);
+        vm.SetValue(destinationRegister, in dst);
     }
-    internal static GesValue GesVmCastUnit(in GesValue xValue, GameEventScriptBytecodeInstructionUnit unit, GesVmState state)
+    internal static GesValue GesVmCastUnit(in GesValue xValue, GameEventScriptBytecodeInstructionUnit unit, GesVirtualMachine state)
     {
         var dst = new GesValue();
         switch (xValue.Kind)
@@ -43,16 +43,16 @@ internal static class GesVmRegisterTypeCastCheck
                 return dst;
         }
     }
-    internal static void GesVmCheckUnit(this GesVmState vmState, ushort destinationRegister, in GesValue xValue, GameEventScriptBytecodeInstructionUnit unit)
+    internal static void GesVmCheckUnit(this GesVirtualMachine vm, ushort destinationRegister, in GesValue xValue, GameEventScriptBytecodeInstructionUnit unit)
     {
-        vmState.SetBoolean(destinationRegister, xValue.Kind is Integer or Float or Vector or Point && xValue.Unit == unit);
+        vm.SetBoolean(destinationRegister, xValue.Kind is Integer or Float or Vector or Point && xValue.Unit == unit);
     }
-    internal static void GesVmCast(this GesVmState vmState, ushort destinationRegister, in GesValue xValue, GameEventScriptBytecodeTypeKind type, GameEventScriptContext? context = null)
+    internal static void GesVmCast(this GesVirtualMachine vm, ushort destinationRegister, in GesValue xValue, GameEventScriptBytecodeTypeKind type, GameEventScriptContext? context = null)
     {
-        var dst = GesVmCast(in xValue, type, vmState, destinationRegister, context);
-        vmState.SetValue(destinationRegister, in dst);
+        var dst = GesVmCast(in xValue, type, vm, destinationRegister, context);
+        vm.SetValue(destinationRegister, in dst);
     }
-    internal static GesValue GesVmCast(in GesValue xValue, GameEventScriptBytecodeTypeKind type, GesVmState state, ushort destinationRegister, GameEventScriptContext? context = null)
+    internal static GesValue GesVmCast(in GesValue xValue, GameEventScriptBytecodeTypeKind type, GesVirtualMachine state, ushort destinationRegister, GameEventScriptContext? context = null)
     {
         var dst = new GesValue();
         switch (type)
@@ -125,69 +125,69 @@ internal static class GesVmRegisterTypeCastCheck
                 return dst;
         }
     }
-    internal static void GesVmCastNumeric(this GesVmState vmState, ushort destinationRegister, in GesValue xValue)
+    internal static void GesVmCastNumeric(this GesVirtualMachine vm, ushort destinationRegister, in GesValue xValue)
     {
-        var dst = GesVmCastNumeric(in xValue, vmState);
-        vmState.SetValue(destinationRegister, in dst);
+        var dst = GesVmCastNumeric(in xValue, vm);
+        vm.SetValue(destinationRegister, in dst);
     }
-    internal static GesValue GesVmCastNumeric(in GesValue xValue, GesVmState state)
+    internal static GesValue GesVmCastNumeric(in GesValue xValue, GesVirtualMachine state)
         => GameEventScriptNumber.Cast(in xValue);
-    internal static void GesVmCastCustom(this GesVmState vmState, ushort destinationRegister, in GesValue xValue, ushort typeTextPointer)
+    internal static void GesVmCastCustom(this GesVirtualMachine vm, ushort destinationRegister, in GesValue xValue, ushort typeTextPointer)
     {
         var dst = new GesValue();
-        var typeName = vmState.FetchStringByPointer(typeTextPointer);
+        var typeName = vm.FetchStringByPointer(typeTextPointer);
         if (IsCustomType(in xValue, typeName))
         {
             if (xValue.Kind is Custom)
             {
                 dst = xValue;
-                vmState.SetValue(destinationRegister, in dst);
+                vm.SetValue(destinationRegister, in dst);
                 return;
             }
 
             dst.SetNothing();
-            vmState.SetValue(destinationRegister, in dst);
+            vm.SetValue(destinationRegister, in dst);
             return;
         }
 
         if (xValue.Kind is Map && xValue.ObjectValue is GesValueMap map)
         {
-            for (ushort recordId = 0; recordId < vmState.RecordConstructors.Length; recordId++)
+            for (ushort recordId = 0; recordId < vm.RecordConstructors.Length; recordId++)
             {
-                var bind = vmState.RecordConstructors[recordId];
+                var bind = vm.RecordConstructors[recordId];
                 if (bind.Kind is not GameEventScriptBinaryBindKind.Record ||
-                    !string.Equals(vmState.FetchStringByPointer(bind.Name), typeName, StringComparison.Ordinal))
+                    !string.Equals(vm.FetchStringByPointer(bind.Name), typeName, StringComparison.Ordinal))
                 {
                     continue;
                 }
 
-                vmState.ClearStage();
+                vm.ClearStage();
                 for (var argumentIndex = 0; argumentIndex < bind.ArgumentNames.Count; argumentIndex++)
                 {
-                    var argumentName = vmState.FetchStringByPointer(bind.ArgumentNames[argumentIndex]);
+                    var argumentName = vm.FetchStringByPointer(bind.ArgumentNames[argumentIndex]);
                     if (map.Get(argumentName) is { } argument)
                     {
                         var stagedArgument = argument;
-                        vmState.StageValue(in stagedArgument);
+                        vm.StageValue(in stagedArgument);
                     }
-                    else vmState.StageNothing();
+                    else vm.StageNothing();
                 }
 
-                vmState.CallRecordConstructor(recordId, destinationRegister);
+                vm.CallRecordConstructor(recordId, destinationRegister);
                 return;
             }
 
             dst.SetNothing();
-            vmState.SetValue(destinationRegister, in dst);
+            vm.SetValue(destinationRegister, in dst);
             return;
         }
 
         dst.SetNothing();
-        vmState.SetValue(destinationRegister, in dst);
+        vm.SetValue(destinationRegister, in dst);
     }
-    internal static void GesVmCheckType(this GesVmState vmState, ushort destinationRegister, in GesValue xValue, GameEventScriptBytecodeTypeKind type)
+    internal static void GesVmCheckType(this GesVirtualMachine vm, ushort destinationRegister, in GesValue xValue, GameEventScriptBytecodeTypeKind type)
     {
-        vmState.SetBoolean(destinationRegister, type switch
+        vm.SetBoolean(destinationRegister, type switch
         {
             Nothing => xValue.IsNothing,
             Map => xValue.Kind is Map or Custom,
@@ -195,32 +195,32 @@ internal static class GesVmRegisterTypeCastCheck
             _ => xValue.IsNotNothing && xValue.Kind == type
         });
     }
-    internal static void GesVmCheckNumeric(this GesVmState vmState, ushort destinationRegister, in GesValue xValue) => vmState.SetBoolean(destinationRegister, xValue.IsNumeric);
-    internal static void GesVmCheckInteger(this GesVmState vmState, ushort destinationRegister, in GesValue xValue)
+    internal static void GesVmCheckNumeric(this GesVirtualMachine vm, ushort destinationRegister, in GesValue xValue) => vm.SetBoolean(destinationRegister, xValue.IsNumeric);
+    internal static void GesVmCheckInteger(this GesVirtualMachine vm, ushort destinationRegister, in GesValue xValue)
     {
         if (!xValue.IsNumeric)
         {
-            vmState.SetBoolean(destinationRegister, false);
+            vm.SetBoolean(destinationRegister, false);
             return;
         }
 
         var number = xValue.AsNumeric;
-        vmState.SetBoolean(destinationRegister, GameEventScriptNumber.CanRepresentAsInteger(number));
+        vm.SetBoolean(destinationRegister, GameEventScriptNumber.CanRepresentAsInteger(number));
     }
-    internal static void GesVmCheckFractional(this GesVmState vmState, ushort destinationRegister, in GesValue xValue)
+    internal static void GesVmCheckFractional(this GesVirtualMachine vm, ushort destinationRegister, in GesValue xValue)
     {
         if (!xValue.IsNumeric)
         {
-            vmState.SetBoolean(destinationRegister, false);
+            vm.SetBoolean(destinationRegister, false);
             return;
         }
 
         var number = xValue.AsNumeric;
-        vmState.SetBoolean(destinationRegister, double.IsFinite(number) && number != Math.Truncate(number));
+        vm.SetBoolean(destinationRegister, double.IsFinite(number) && number != Math.Truncate(number));
     }
-    internal static void GesVmCheckCustomType(this GesVmState vmState, ushort destinationRegister, in GesValue xValue, ushort typeTextPointer)
+    internal static void GesVmCheckCustomType(this GesVirtualMachine vm, ushort destinationRegister, in GesValue xValue, ushort typeTextPointer)
     {
-        vmState.SetBoolean(destinationRegister, IsCustomType(in xValue, vmState.FetchStringByPointer(typeTextPointer)));
+        vm.SetBoolean(destinationRegister, IsCustomType(in xValue, vm.FetchStringByPointer(typeTextPointer)));
     }
     private static GesValue CastText(in GesValue xValue)
     {
@@ -233,7 +233,7 @@ internal static class GesVmRegisterTypeCastCheck
         dst.SetText(xValue.ToText);
         return dst;
     }
-    private static GesValue CastList(GesVmState vmState, in GesValue xValue, GameEventScriptContext? context)
+    private static GesValue CastList(GesVirtualMachine vm, in GesValue xValue, GameEventScriptContext? context)
     {
         var dst = new GesValue();
         switch (xValue.Kind)
@@ -245,7 +245,7 @@ internal static class GesVmRegisterTypeCastCheck
                 var text = xValue.TextValue;
                 if (text.Length == 0)
                 {
-                    dst.SetList(vmState.EmptyList);
+                    dst.SetList(vm.EmptyList);
                     return dst;
                 }
 
@@ -286,7 +286,7 @@ internal static class GesVmRegisterTypeCastCheck
 
                 if (context is not null && !context.RuntimeBudget.CheckRangeLengthWithinLimit(xValue.CollectionCount, "Range length exceeds the configured limit."))
                 {
-                    dst.SetList(vmState.EmptyList);
+                    dst.SetList(vm.EmptyList);
                     return dst;
                 }
 
@@ -311,7 +311,7 @@ internal static class GesVmRegisterTypeCastCheck
 
                 if (context is not null && !context.RuntimeBudget.CheckRangeLengthWithinLimit(xValue.CollectionCount, "Range length exceeds the configured limit."))
                 {
-                    dst.SetList(vmState.EmptyList);
+                    dst.SetList(vm.EmptyList);
                     return dst;
                 }
 
@@ -325,11 +325,11 @@ internal static class GesVmRegisterTypeCastCheck
                 return dst;
             }
             default:
-                dst.SetList(vmState.EmptyList);
+                dst.SetList(vm.EmptyList);
                 return dst;
         }
     }
-    private static GesValue CastMap(GesVmState vmState, in GesValue xValue)
+    private static GesValue CastMap(GesVirtualMachine vm, in GesValue xValue)
     {
         var dst = new GesValue();
         switch (xValue.Kind)

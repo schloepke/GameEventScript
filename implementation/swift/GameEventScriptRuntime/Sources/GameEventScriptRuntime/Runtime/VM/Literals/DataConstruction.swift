@@ -20,7 +20,7 @@ enum GesDataConstruction {
     }
 
     // VM entry: reads the argument registers directly instead of collecting them into arrays.
-    static func create<Output: GesValueOutput>(_ type: String, positions: [Int], registers list: UInt16, _ state: GesVmState, _ context: GameEventScriptContext, sink: Output) throws -> Output.Result {
+    static func create<Output: GesValueOutput>(_ type: String, positions: [Int], registers list: UInt16, _ state: GesVirtualMachine, _ context: GameEventScriptContext, sink: Output) throws -> Output.Result {
         let registers = state.list(list)
         guard registers.count == positions.count else { return sink.nothing }
         var slots = (GesValue.nothing, GesValue.nothing, GesValue.nothing)

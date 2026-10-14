@@ -1,7 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesVmState {
+extension GesVirtualMachine {
     @inline(never)
     func executeLengthSquared2D(_ target: Int, _ x: Int, _ otherRegister: Int) {
         let component0 = x

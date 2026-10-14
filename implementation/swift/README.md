@@ -318,13 +318,13 @@ Runtime sources follow the C# grouping within one unchanged SwiftPM target:
   API. `Api/Program` retains the `Binary`, `Bytecode` and `Validation` subfolders.
 - `Runtime/Values` contains the shared value representation, maps, numeric/text
   helpers, iterators, builders and borrowed value arguments.
-- `Runtime/VM` contains execution state, linked programs, register outputs and
+- `Runtime/VM` contains the virtual machine, linked programs, register outputs and
   literal evaluation. The context calls the existing Host queue operations directly.
 - `Runtime/VM/Opcodes` groups opcode extensions by `Core`, `Math` and
   `Collections`, with one file per opcode entry point and shared algorithms in
   their `Support` subfolders. Simple instructions remain in the inline dispatch
-  in `Runtime/VM/VirtualMachine.swift`; typed register writes remain in
-  `Runtime/VM/VmState.swift`.
+  in `Runtime/VM/VirtualMachineDispatch.swift`; typed register writes remain in
+  `Runtime/VM/VirtualMachine.swift`.
 
 The context retains a weak reference to its owning Host. No closure delegates, wrapper
 objects or argument copies are introduced; register writes and budget checks

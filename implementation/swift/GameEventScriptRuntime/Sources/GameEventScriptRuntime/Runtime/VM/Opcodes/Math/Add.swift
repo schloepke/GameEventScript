@@ -1,7 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesVmState {
+extension GesVirtualMachine {
     // Indices are absolute register offsets decoded by the dispatcher. Integer operands with
     // matching units are the hot case and run inline; everything else, including overflow,
     // takes the complete out-of-line body.

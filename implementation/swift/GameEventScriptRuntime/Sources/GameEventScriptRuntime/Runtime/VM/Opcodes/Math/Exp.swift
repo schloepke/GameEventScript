@@ -9,7 +9,7 @@
     import Musl
 #endif
 
-extension GesVmState {
+extension GesVirtualMachine {
     @inline(never)
     func executeExp(_ target: Int, _ x: Int) {
         return registers[x].hasUnit ? registers[target].setNothing() : registers[target].setFloat(exp(registers[x].asNumber))

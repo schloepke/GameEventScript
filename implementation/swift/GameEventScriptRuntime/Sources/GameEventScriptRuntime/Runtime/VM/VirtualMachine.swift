@@ -1,463 +1,316 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-/// Stateless executor. Every mutable execution resource belongs to the host's reusable state.
-enum GameEventScriptVirtualMachine {
-    static func begin(_ state: GesVmState, linked: GesLinkedProgram, message: GameEventScriptMessage, matchArguments: Bool, entry: Int, signature: String) throws {
-        if state.processing { throw GesRuntimeError(diagnostic: .init(phase: .runtime, code: "runtime.vmStateConflict")) }
-        state.reset()
-        state.linked = linked
-        state.handlerName = signature
-        state.ip = Int(entry)
-        let count = matchArguments ? message.arguments.count : 1
-        guard state.ensure(count) else { return }
-        state.frameLength = count
-        if matchArguments { for index in 0..<count { state.setValue(index, message.arguments[index]) } } else { state.setMessage(0, message) }
-        state.processing = true
+/// The host's reusable, private register virtual machine. It owns the resumable execution state,
+/// executes Programs through `begin` and `runSlice`, and is the only writer of its registers.
+final class GesVirtualMachine {
+    struct Frame {
+        var ip = 0, start = 0, length = 0, destination = 0
+        var predicate = false
+        var literal: GesLiteralEvaluation?
     }
 
-    static func runSlice(_ state: GesVmState, context: GameEventScriptContext, budget: Int) -> Int {
-        if let profiler = state.linked?.profiler {
-            return executeSlice(state, context: context, budget: budget, instrumentation: ActiveInstrumentation(profiler: profiler))
-        }
-        return executeSlice(state, context: context, budget: budget, instrumentation: NoInstrumentation())
+    var linked: GesLinkedProgram?
+    var program: GameEventScriptProgram { linked!.program }
+    var processing = false
+    var error: GameEventScriptDiagnostic?
+    var handlerName: String?
+    var ip = 0, frameStart = 0, frameLength = 0, stageLength = 0
+    // Owned register storage; opcode extensions read fields and mutate through typed setters.
+    // Only ensure() moves it, so every register access re-derives its address from this base.
+    private var registerBase: UnsafeMutablePointer<GesValue>
+    private var registerCapacity: Int
+    private var frames: [Frame]
+    private var depth = 0
+    private let maxRegisters: Int
+    private var pendingCapacity = 0
+    let extensionCall = GesExtensionCall()
+    lazy var constructorCall = GesExternalTypeConstructorCall()
+
+    init(maxRegisters: Int, maxCallDepth: Int) {
+        self.maxRegisters = maxRegisters
+        registerCapacity = min(32, maxRegisters)
+        registerBase = .allocate(capacity: max(1, registerCapacity))
+        registerBase.initialize(repeating: .nothing, count: registerCapacity)
+        frames = [Frame](repeating: .init(), count: maxCallDepth)
     }
 
-    // Specialize the shared loop so the disabled path has no existential call or optional check per opcode.
-    // Opcode extensions normally stay out of line: broad inlining regressed the uninstrumented
-    // compute benchmark. Keep exceptions such as Add measurement-driven, independently of this loop specialization.
+    deinit {
+        registerBase.deinitialize(count: registerCapacity)
+        registerBase.deallocate()
+    }
+
     @inline(__always)
-    private static func executeSlice<Instrumentation: VmInstrumentation>(_ state: GesVmState, context: GameEventScriptContext, budget: Int, instrumentation: Instrumentation) -> Int {
-        var executed = 0
-        // The linked Program and the lazily created budget are fixed for the whole slice.
-        let runtimeBudget = context.budget
-        let code = state.linked?.program.code ?? []
-        let reserved = runtimeBudget.reserve(budget)
-        do {
-            while true {
-                instrumentation.phaseStarting(.stateCheck)
-                if !state.processing { break }
-                instrumentation.phaseStarting(.budgetCheck)
-                if runtimeBudget.isExhausted { break }
-                instrumentation.phaseStarting(.sliceCheck)
-                if executed >= reserved { break }
-                instrumentation.phaseStarting(.fetch)
-                if state.ip < 0 || state.ip >= code.count {
-                    state.fail("runtime.illegalInstructionPointer")
-                    break
-                }
-                let instruction = code[state.ip]
-                state.ip += 1
-                instrumentation.instructionStarting(state.ip - 1)
-                // Keep dispatch in the loop, matching the C# hot path. Case exits still
-                // pass through Advance and the completed-opcode counter below.
-                let d = Int(instruction.word0)
-                let x = Int(instruction.word1)
-                let y = Int(instruction.word2)
-                switch instruction.opcode {
-                case .nop: break
-                case .registerLocals: state.modifyLocals(Int(instruction.signedWord1))
-                case .jump: state.ip = y
-                case .jumpIfTrue: if state.truth(x) == true { state.ip = y }
-                case .jumpIfFalse: if state.truth(x) == false { state.ip = y }
-                case .jumpIfNotTrue: if state.truth(x) != true { state.ip = y }
-                case .jumpIfNothing: if state.isNothing(x) { state.ip = y }
-                case .call: state.call(y, destination: d, predicate: instruction.normalizeResultAsPredicate)
-                case .returnVoid: try state.returnValue()
-                case .returnValue: try state.returnRegister(x)
-                case .createSeries: state.setSeries(d, .init(signatureID: instruction.word2 == 1 ? "fibonacci" : "factorial"))
-                case .callExternal: try GesCallbacks.extensionCall(instruction, state, context)
-                case .emitInstant, .emitAfter, .publishInstant, .publishAfter: try send(instruction, state, context)
-                case .emitMessage, .emitMessageWithTags, .publishMessage, .publishMessageWithTags, .emitMessageValue, .emitMessageValueWithTags, .publishMessageValue, .publishMessageValueWithTags: try message(instruction, state, context)
-                case .cast: try GesCasts.cast(state.value(x), GameEventScriptBytecodeTypeKind(rawValue: instruction.word2)!, context, sink: state.output(d))
-                case .castCustom:
-                    let value = state.value(x)
-                    let type = state.text(instruction.word2)
-                    if value.customTypeName == type {
-                        state.setValue(d, value)
-                    } else if value.kind == .map, let binding = state.linked!.recordsByName[type] {
-                        state.clearStage()
-                        for name in binding.argumentNames { state.stageValue(value.asMap!.get(state.text(name)) ?? .nothing) }
-                        if state.processing { state.call(Int(binding.entryAddress), destination: d) }
-                    } else {
-                        state.setNothing(d)
-                    }
-                case .castUnit: GesCasts.unit(state.value(x), instruction.decodedUnit, sink: state.output(d))
-                case .castNumeric: GesCasts.number(state.value(x), sink: state.output(d))
-                case .constructData:
-                    if let positions = state.linked!.dataConstructionPositions(type: instruction.word1, labels: instruction.a) {
-                        try GesDataConstruction.create(state.text(instruction.word1), positions: positions, registers: instruction.word2, state, context, sink: state.output(d))
-                    } else {
-                        state.setNothing(d)
-                    }
-                case .splitText: GesTextSplit.split(state.value(x), state.value(y), whitespace: instruction.a == 1, sink: state.output(d))
-                case .parseLiteral: try GesLiteralParser.evaluate(state.value(x), context: context, state: state, destination: d)
-                case .checkType: state.setBoolean(d, GesCasts.check(state.value(x), GameEventScriptBytecodeTypeKind(rawValue: instruction.word2)!))
-                case .checkCustomType: state.setBoolean(d, state.value(x).customTypeName == state.text(instruction.word2))
-                case .checkUnit:
-                    let value = state.value(x)
-                    state.setBoolean(d, ((value.kind == .integer || value.kind == .float) || value.spatialValue != nil) && value.unit == instruction.decodedUnit)
-                case .checkNumeric: state.setBoolean(d, state.value(x).isNumeric)
-                case .checkInteger:
-                    let v = state.value(x)
-                    state.setBoolean(d, v.isNumeric && GesNumber.exactInteger(v.asNumber) != nil)
-                case .checkFractional:
-                    let v = state.value(x)
-                    let n = v.asNumber
-                    state.setBoolean(d, v.isNumeric && n.isFinite && n != n.rounded(.towardZero))
-                case .move:
-                    if instruction.unitAndFlags & 0x40 != 0 { state.numericCopy(d, x) } else { state.move(d, x) }
-                case .memberAccess: try state.value(y).member(state.text(instruction.word1), sink: state.output(d))
-                case .indexAccess: state.value(y).index(Int64(instruction.word1), sink: state.output(d))
-                case .propertyAccess:
-                    let key = state.value(x)
-                    let value = state.value(y)
-                    if let integer = key.integerValue { value.index(integer, sink: state.output(d)) } else if let text = key.textValue { try value.member(text, sink: state.output(d)) } else { state.setNothing(d) }
-                case .bindHandler: if let message = state.value(x).signatureValue?.createMessage(state.values(instruction.word2)) { state.setMessage(d, message) } else { state.setNothing(d) }
-                case .loadNothing: state.setNothing(d)
-                case .loadTrue: state.setBoolean(d, true)
-                case .loadFalse: state.setBoolean(d, false)
-                case .loadInteger: state.setInteger(d, instruction.integer, unit: instruction.decodedUnit)
-                case .loadFloat: state.setFloat(d, instruction.float, unit: instruction.decodedUnit)
-                case .loadPercentage: state.setPercentage(d, instruction.float)
-                case .loadText: state.loadText(d, constant: instruction.word1)
-                case .loadTag: state.loadText(d, constant: instruction.word1, tag: true)
-                case .loadHandler, .loadMessage:
-                    let shape = state.list(instruction.opcode == .loadHandler ? instruction.word2 : instruction.word1)
-                    if shape.isEmpty || (instruction.opcode == .loadMessage && state.list(instruction.word2).count != shape.count - 1) {
-                        state.fail("runtime.invalidMessageShape")
-                        break
-                    }
-                    let signature = try GameEventScriptMessageSignature(name: state.text(shape[0]), parameters: shape.dropFirst().map(state.text))
-                    if instruction.opcode == .loadHandler { state.setHandler(d, signature) } else if let message = signature.createMessage(state.values(instruction.word2)) { state.setMessage(d, message) } else { state.setNothing(d) }
-                case .stageRegister: state.stageRegister(x)
-                case .stageNothing: state.stageNothing()
-                case .stageTrue: state.stageBoolean(true)
-                case .stageFalse: state.stageBoolean(false)
-                case .stageInteger: state.stageInteger(instruction.integer, unit: instruction.decodedUnit)
-                case .stageFloat: state.stageFloat(instruction.float, unit: instruction.decodedUnit)
-                case .stagePercentage: state.stagePercentage(instruction.float)
-                case .stageText: state.stageTextConstant(instruction.word1)
-                case .stageTag: state.stageTextConstant(instruction.word1, tag: true)
-                case .createDice:
-                    let count = Int(instruction.signedWord1)
-                    let sides = Int(instruction.signedWord2)
-                    if count <= 0 || sides <= 0 || !runtimeBudget.dice(count: count, sides: sides) {
-                        state.setDice(d, [])
-                        break
-                    }
-                    state.setDice(d, (0..<count).map { _ in Int32(context.random.nextInclusiveInteger(1, Int64(sides))) })
-                case .createVector, .createPoint:
-                    spatial(state, destination: d, start: Int(instruction.signedWord1), point: instruction.opcode == .createPoint)
-                    state.clearStage()
-                case .createList:
-                    state.setList(d, (0..<state.stageLength).map(state.staged))
-                    state.clearStage()
-                case .createMap:
-                    let layout = state.linked!.mapLayout(instruction.word1)
-                    if layout.inputCount == state.stageLength {
-                        var entries: [GesMapEntry] = []
-                        entries.reserveCapacity(layout.keys.count)
-                        for index in layout.keys.indices { entries.append(.init(key: layout.keys[index], value: state.staged(layout.sources[index]))) }
-                        state.setMap(d, GesValueMap(canonical: entries))
-                    } else {
-                        state.setNothing(d)
-                    }
-                    state.clearStage()
-                case .createRange, .createRangeWithStep:
-                    range(state.value(x), state.value(y), instruction.opcode == .createRangeWithStep ? state.value(Int(instruction.a)) : .integer(1), sink: state.output(d))
-                case .createRangeIterator, .createRangeIteratorWithStep, .createRangeIteratorShort:
-                    let value: GesValue
-                    if instruction.opcode == .createRangeIteratorShort {
-                        value = .integerRange(from: Int64(instruction.signedWord1), to: Int64(instruction.signedWord2), step: Int64(Int16(bitPattern: instruction.a)))
-                    } else {
-                        value = range(state.value(x), state.value(y), instruction.opcode == .createRangeIteratorWithStep ? state.value(Int(instruction.a)) : .integer(1), sink: GesValueFactory())
-                    }
-                    iterator(state, d, value, context, checkRangeLimit: true)
-                case .createRecord:
-                    guard let binding = state.linked!.records[instruction.word1] else {
-                        state.fail("runtime.invalidRecordBinding")
-                        break
-                    }
-                    state.call(Int(binding.entryAddress), destination: d)
-                case .createRecordValue:
-                    let value = state.value(x)
-                    if let fields = value.asMap, value.kind == .map { state.setRecord(d, typeName: state.text(instruction.word2), fields: fields) } else { state.setNothing(d) }
-                case .createExternalType:
-                    try GesCallbacks.constructor(instruction, state, context)
-                    state.clearStage()
-                case .hasValue: state.setBoolean(d, state.value(x).hasValue)
-                case .isEmpty: state.setBoolean(d, !state.value(x).hasValue)
-                case .default:
-                    let value = state.value(x)
-                    state.setValue(d, value.hasValue ? value : state.value(y))
-                case .randomPush:
-                    let seed = state.value(x)
-                    if !context.random.push(seed: seed.kind == .integer && !seed.hasUnit ? seed.asInteger : nil) { runtimeBudget.exhaust("MaxRandomScopeDepth", context.runtimeLimits.maxRandomScopeDepth) }
-                case .randomPushConstant: if !context.random.push(seed: instruction.integer) { runtimeBudget.exhaust("MaxRandomScopeDepth", context.runtimeLimits.maxRandomScopeDepth) }
-                case .randomPop: if !context.random.pop() && !runtimeBudget.isExhausted { state.fail("runtime.randomStackUnderflow") }
-                case .iteratorCreate, .iteratorCreateOrJump:
-                    try compoundIterator(state, instruction, context)
-                    if instruction.opcode == .iteratorCreateOrJump, state.isRegisterData(d) { state.ip = y }
-                case .cartesian:
-                    cartesian(state, d, state.value(x), state.value(y), runtimeBudget)
-                case .iteratorNext where instruction.unitAndFlags & 32 != 0:
-                    if nextComponents(state, instruction) { _ = runtimeBudget.loop() }
-                case .iteratorNext:
-                    if let iterator = state.iterator(x), iterator.isIntegerRange {
-                        if let term = iterator.nextIntegerTerm() {
-                            state.setInteger(d, term)
-                            _ = runtimeBudget.loop()
-                        } else {
-                            state.setNothing(d)
-                            state.ip = y
-                        }
-                    } else if let iterator = state.iterator(x), (iterator.isSourceIterator ? iterator.nextFromSource(sink: state.output(d)) : iterator.next(sink: state.output(d))) != nil {
-                        _ = runtimeBudget.loop()
-                    } else {
-                        state.setNothing(d)
-                        state.ip = y
-                    }
-                case .iteratorClose:
-                    if let iterator = state.iterator(x) { iterator.close() }
-                    state.setNothing(x)
-                case .listBuilderCreate, .mapBuilderCreate, .distinctBuilderCreate, .groupBuilderCreate, .orderBuilderCreate:
-                    let kind: GesCollectionBuilder.Kind
-                    switch instruction.opcode {
-                    case .listBuilderCreate: kind = .list
-                    case .mapBuilderCreate: kind = .map
-                    case .distinctBuilderCreate: kind = .distinct
-                    case .groupBuilderCreate: kind = .group
-                    default: kind = .order
-                    }
-                    state.createBuilder(d, kind)
-                case .listBuilderAdd, .mapBuilderAdd, .distinctBuilderAdd, .groupBuilderAdd, .orderBuilderAdd:
-                    if let builder = state.builder(x) {
-                        if instruction.opcode == .listBuilderAdd { builder.add(value: state.value(y), budget: runtimeBudget) } else { builder.add(key: state.value(y), value: state.value(Int(instruction.a)), budget: runtimeBudget) }
-                    }
-                case .listBuilderFinish, .mapBuilderFinish, .distinctBuilderFinish, .groupBuilderFinish, .orderBuilderFinishAscending, .orderBuilderFinishDescending:
-                    if let builder = state.builder(x) { builder.finish(descending: instruction.opcode == .orderBuilderFinishDescending, sink: state.output(d)) } else { state.setNothing(d) }
-                case .or: state.executeOr(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .and: state.executeAnd(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .xor: state.executeXor(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .implies: state.executeImplies(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .not: state.executeNot(state.frameStart + d, state.frameStart + x)
-                case .equal: state.executeEqual(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .notEqual: state.executeNotEqual(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .less: state.executeLess(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .greater: state.executeGreater(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .lessOrEqual: state.executeLessOrEqual(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .greaterOrEqual: state.executeGreaterOrEqual(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .add:
-                    if instruction.unitAndFlags & 0x40 != 0 { state.executeAddNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y) } else { state.executeAdd(state.frameStart + d, state.frameStart + x, state.frameStart + y) }
-                case .subtract:
-                    if instruction.unitAndFlags & 0x40 != 0 {
-                        state.executeSubtractNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                    } else {
-                        state.executeSubtract(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                    }
-                case .multiply:
-                    if instruction.unitAndFlags & 0x40 != 0 {
-                        state.executeMultiplyNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                    } else {
-                        state.executeMultiply(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                    }
-                case .divide:
-                    if instruction.unitAndFlags & 0x40 != 0 {
-                        state.executeDivideNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                    } else {
-                        state.executeDivide(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                    }
-                case .power:
-                    if instruction.unitAndFlags & 0x40 != 0 { state.executePowerNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y) } else { state.executePower(state.frameStart + d, state.frameStart + x, state.frameStart + y) }
-                case .integerDivide:
-                    if instruction.unitAndFlags & 0x40 != 0 {
-                        state.executeIntegerDivideNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                    } else {
-                        state.executeIntegerDivide(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                    }
-                case .modulo:
-                    if instruction.unitAndFlags & 0x40 != 0 {
-                        state.executeModuloNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                    } else {
-                        state.executeModulo(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                    }
-                case .remainder:
-                    if instruction.unitAndFlags & 0x40 != 0 {
-                        state.executeRemainderNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                    } else {
-                        state.executeRemainder(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                    }
-                case .min: if instruction.unitAndFlags & 0x40 != 0 { state.executeMinNumeric(d, x, y) } else { state.executeMin(d, x, y) }
-                case .max: if instruction.unitAndFlags & 0x40 != 0 { state.executeMaxNumeric(d, x, y) } else { state.executeMax(d, x, y) }
-                case .negate: if instruction.unitAndFlags & 0x40 != 0 { state.executeNegateNumeric(state.frameStart + d, state.frameStart + x) } else { state.executeNegate(state.frameStart + d, state.frameStart + x) }
-                case .abs: if instruction.unitAndFlags & 0x40 != 0 { state.executeAbsNumeric(state.frameStart + d, state.frameStart + x) } else { state.executeAbs(state.frameStart + d, state.frameStart + x) }
-                case .logN: state.executeLogN(state.frameStart + d, state.frameStart + x)
-                case .chance: state.executeChance(d, x, context)
-                case .clamp:
-                    if instruction.unitAndFlags & 0x40 != 0 {
-                        state.executeClampNumeric(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a))
-                    } else {
-                        state.executeClamp(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a))
-                    }
-                case .randomTake: state.executeRandomTake(d, x, y, context)
-                case .randomTakeFloat: state.executeRandomTakeFloat(d, x, y, context)
-                case .term: state.executeTerm(d, x, y)
-                case .exp: state.executeExp(state.frameStart + d, state.frameStart + x)
-                case .floor: state.executeFloor(state.frameStart + d, state.frameStart + x)
-                case .ceil: state.executeCeil(state.frameStart + d, state.frameStart + x)
-                case .truncate: state.executeTruncate(state.frameStart + d, state.frameStart + x)
-                case .roundHalfEven: state.executeRoundHalfEven(state.frameStart + d, state.frameStart + x)
-                case .roundHalfUp: state.executeRoundHalfUp(state.frameStart + d, state.frameStart + x)
-                case .roundHalfDown: state.executeRoundHalfDown(state.frameStart + d, state.frameStart + x)
-                case .degreeToRadians: state.executeDegreeToRadians(state.frameStart + d, state.frameStart + x)
-                case .degreeFromRadians: state.executeDegreeFromRadians(state.frameStart + d, state.frameStart + x)
-                case .wrapDegree: state.executeWrapDegree(state.frameStart + d, state.frameStart + x)
-                case .sin: state.executeSin(state.frameStart + d, state.frameStart + x)
-                case .cos: state.executeCos(state.frameStart + d, state.frameStart + x)
-                case .tan: state.executeTan(state.frameStart + d, state.frameStart + x)
-                case .asin: state.executeAsin(state.frameStart + d, state.frameStart + x)
-                case .acos: state.executeAcos(state.frameStart + d, state.frameStart + x)
-                case .atan: state.executeAtan(state.frameStart + d, state.frameStart + x)
-                case .atan2: state.executeAtan2(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .hypot2D: state.executeHypot2D(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .hypot3D: state.executeHypot3D(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a))
-                case .distance: state.executeDistance(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .distance2D: state.executeDistance2D(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a), state.frameStart + Int(instruction.b))
-                case .distance3D:
-                    state.executeDistance3D(
-                        state.frameStart + d,
-                        state.frameStart + x,
-                        state.frameStart + y,
-                        state.frameStart + Int(instruction.a),
-                        state.frameStart + Int(instruction.b),
-                        state.frameStart + Int(instruction.c),
-                        state.frameStart + Int(instruction.d)
-                    )
-                case .distanceSquared: state.executeDistanceSquared(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .distanceSquared2D: state.executeDistanceSquared2D(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a), state.frameStart + Int(instruction.b))
-                case .distanceSquared3D:
-                    state.executeDistanceSquared3D(
-                        state.frameStart + d,
-                        state.frameStart + x,
-                        state.frameStart + y,
-                        state.frameStart + Int(instruction.a),
-                        state.frameStart + Int(instruction.b),
-                        state.frameStart + Int(instruction.c),
-                        state.frameStart + Int(instruction.d)
-                    )
-                case .lengthSquared: state.executeLengthSquared(state.frameStart + d, state.frameStart + x)
-                case .lengthSquared2D: state.executeLengthSquared2D(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .lengthSquared3D: state.executeLengthSquared3D(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a))
-                case .normalize: state.executeNormalize(state.frameStart + d, state.frameStart + x)
-                case .normalize2D: state.executeNormalize2D(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .normalize3D: state.executeNormalize3D(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a))
-                case .dot: state.executeDot(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .dot2D: state.executeDot2D(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a), state.frameStart + Int(instruction.b))
-                case .dot3D:
-                    state.executeDot3D(
-                        state.frameStart + d,
-                        state.frameStart + x,
-                        state.frameStart + y,
-                        state.frameStart + Int(instruction.a),
-                        state.frameStart + Int(instruction.b),
-                        state.frameStart + Int(instruction.c),
-                        state.frameStart + Int(instruction.d)
-                    )
-                case .cross: state.executeCross(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .cross2D: state.executeCross2D(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a), state.frameStart + Int(instruction.b))
-                case .cross3D:
-                    state.executeCross3D(
-                        state.frameStart + d,
-                        state.frameStart + x,
-                        state.frameStart + y,
-                        state.frameStart + Int(instruction.a),
-                        state.frameStart + Int(instruction.b),
-                        state.frameStart + Int(instruction.c),
-                        state.frameStart + Int(instruction.d)
-                    )
-                case .angleBetween: state.executeAngleBetween(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .angleBetween2D: state.executeAngleBetween2D(state.frameStart + d, state.frameStart + x, state.frameStart + y, state.frameStart + Int(instruction.a), state.frameStart + Int(instruction.b))
-                case .angleBetween3D:
-                    state.executeAngleBetween3D(
-                        state.frameStart + d,
-                        state.frameStart + x,
-                        state.frameStart + y,
-                        state.frameStart + Int(instruction.a),
-                        state.frameStart + Int(instruction.b),
-                        state.frameStart + Int(instruction.c),
-                        state.frameStart + Int(instruction.d)
-                    )
-                case .takeFirst: state.executeTakeFirst(d, x, Int(instruction.signedWord2))
-                case .dropFirst: state.executeDropFirst(d, x, Int(instruction.signedWord2))
-                case .takeLast: state.executeTakeLast(d, x, Int(instruction.signedWord2))
-                case .dropLast: state.executeDropLast(d, x, Int(instruction.signedWord2))
-                case .takeHighest: state.executeTakeHighest(d, x, Int(instruction.signedWord2))
-                case .takeLowest: state.executeTakeLowest(d, x, Int(instruction.signedWord2))
-                case .dropHighest: state.executeDropHighest(d, x, Int(instruction.signedWord2))
-                case .dropLowest: state.executeDropLowest(d, x, Int(instruction.signedWord2))
-                case .oneRandom: state.executeOneRandom(d, x, context)
-                case .takeRandom: state.executeTakeRandom(d, x, Int(instruction.signedWord2), context)
-                case .oneWeighted: state.executeOneWeighted(d, x, y, context)
-                case .takeWeighted: state.executeTakeWeighted(d, x, Int(instruction.signedWord2), Int(instruction.a), context)
-                case .count: state.executeCount(d, x)
-                case .startsWith: state.executeStartsWith(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .endsWith: state.executeEndsWith(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .contains: state.executeContains(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .containsAny: state.executeContainsAny(d, x, y)
-                case .containsAll: state.executeContainsAll(d, x, y)
-                case .hasAny: state.executeHasAny(d, x)
-                case .hasAll: state.executeHasAll(d, x)
-                case .containsValue: state.executeContainsValue(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .union: state.executeUnion(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .intersect: state.executeIntersect(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .zip: state.executeZip(state.frameStart + d, state.frameStart + x, state.frameStart + y)
-                case .keysOfMap: try state.executeKeysOfMap(d, x)
-                case .valuesOfMap: try state.executeValuesOfMap(d, x)
-                case .entriesOfMap: try state.executeEntriesOfMap(d, x)
-                case .first: state.executeFirst(d, x)
-                case .last: state.executeLast(d, x)
-                case .single: state.executeSingle(d, x)
-                case .distinct: state.executeDistinct(d, x)
-                case .sortAscending: state.executeSortAscending(d, x)
-                case .sortDescending: state.executeSortDescending(d, x)
-                case .reverse: state.executeReverse(d, x)
-                case .shuffle: state.executeShuffle(d, x, context)
-                case .hasPattern: state.executeHasPattern(d, x, Int(instruction.signedWord2), instruction.a, Int(instruction.b))
-                case .takePattern: state.executeTakePattern(d, x, Int(instruction.signedWord2), instruction.a, Int(instruction.b))
-                }
-                instrumentation.phaseStarting(.advance)
-                executed += 1
-            }
-        } catch let fault as GameEventScriptExtensionFault { state.fail(fault.diagnostic) } catch let fault as GesRuntimeError { state.fail(fault.diagnostic) } catch { state.fail("runtime.unhandledFailure", error: error) }
-        instrumentation.finishSlice()
-        runtimeBudget.complete(executed: executed, reserved: reserved, processing: state.processing)
-        return executed
+    var registers: GesRegisterFile { GesRegisterFile(base: registerBase, count: registerCapacity) }
+
+    func prepareCapacity(_ capacity: Int) {
+        if processing {
+            pendingCapacity = max(pendingCapacity, capacity)
+            return
+        }
+        ensure(capacity)
     }
-}
 
-private protocol VmInstrumentation {
-    func phaseStarting(_ phase: GameEventScriptProfilePhase)
+    @discardableResult func ensure(_ count: Int) -> Bool {
+        if count <= registerCapacity { return true }
+        if count > maxRegisters {
+            fail("runtime.registerOverflow")
+            return false
+        }
+        grow(to: min(maxRegisters, max(count, max(1, registerCapacity) * 2)))
+        return true
+    }
 
-    func instructionStarting(_ address: Int)
+    // Growth runs between register operations only: handler entry prewarms the Program's
+    // static requirement, so in practice only dynamic literal parsing reaches this path.
+    private func grow(to capacity: Int) {
+        let storage = UnsafeMutablePointer<GesValue>.allocate(capacity: capacity)
+        storage.moveInitialize(from: registerBase, count: registerCapacity)
+        (storage + registerCapacity).initialize(repeating: .nothing, count: capacity - registerCapacity)
+        registerBase.deallocate()
+        registerBase = storage
+        registerCapacity = capacity
+    }
 
-    func finishSlice()
-}
+    func value(_ index: Int) -> GesValue { registers[frameStart + index].registerValue }
 
-private struct NoInstrumentation: VmInstrumentation {
-    @inline(__always) func phaseStarting(_ phase: GameEventScriptProfilePhase) {}
+    func slot(_ index: Int) -> GesValue { registers[frameStart + index] }
 
-    @inline(__always) func instructionStarting(_ address: Int) {}
+    // Borrow register-owned VM objects in place instead of copying the whole slot.
+    @inline(__always)
+    func iterator(_ index: Int) -> GesIterator? { registers[frameStart + index].iteratorValue }
 
-    @inline(__always) func finishSlice() {}
-}
+    @inline(__always)
+    func builder(_ index: Int) -> GesCollectionBuilder? { registers[frameStart + index].builderValue }
 
-private struct ActiveInstrumentation: VmInstrumentation {
-    let profiler: any GameEventScriptProgramProfiler
+    @inline(__always)
+    func isRegisterData(_ index: Int) -> Bool { registers[frameStart + index].isRegisterData }
 
-    @inline(__always) func phaseStarting(_ phase: GameEventScriptProfilePhase) { profiler.phaseStarting(phase) }
+    // Copy existing values (arguments, callbacks, collection members); computed results use typed setters.
+    func setValue(_ index: Int, _ value: GesValue) { registers[frameStart + index] = value }
 
-    @inline(__always) func instructionStarting(_ address: Int) { profiler.instructionStarting(address) }
+    func output(_ index: Int) -> GesRegisterOutput { .init(state: self, index: index) }
 
-    @inline(__always) func finishSlice() { profiler.finishSlice() }
+    func loadText(_ index: Int, constant: UInt16, tag: Bool = false) { registers[frameStart + index].setTextConstant(linked!.textValues[Int(constant)], tag: tag) }
+
+    func stageTextConstant(_ constant: UInt16, tag: Bool = false) { if let index = reserveStage() { loadText(index, constant: constant, tag: tag) } }
+
+    func setText(_ index: Int, _ value: String) { registers[frameStart + index].setText(value) }
+
+    func setTag(_ index: Int, _ value: String) throws { try registers[frameStart + index].setTag(value) }
+
+    func setVector(_ index: Int, x: Double, y: Double, z: Double, unit: GesUnit) { registers[frameStart + index].setVector(x: x, y: y, z: z, unit: unit) }
+
+    func setPoint(_ index: Int, x: Double, y: Double, z: Double, unit: GesUnit) { registers[frameStart + index].setPoint(x: x, y: y, z: z, unit: unit) }
+
+    func setDice(_ index: Int, _ value: [Int32]) { registers[frameStart + index].setDice(value) }
+
+    func setList(_ index: Int, _ value: [GesValue]) { registers[frameStart + index].setList(value) }
+
+    func setMap(_ index: Int, _ value: [GesMapEntry]) { registers[frameStart + index].setMap(value) }
+
+    func setMap(_ index: Int, _ value: GesValueMap) { registers[frameStart + index].setMap(value) }
+
+    func setRecord(_ index: Int, typeName: String, entries: [GesMapEntry]) { registers[frameStart + index].setRecord(typeName: typeName, entries: entries) }
+
+    func setRecord(_ index: Int, typeName: String, fields: GesValueMap) { registers[frameStart + index].setRecord(typeName: typeName, fields: fields) }
+
+    func setIntegerRange(_ index: Int, from: Int64, to: Int64, step: Int64) { registers[frameStart + index].setIntegerRange(from: from, to: to, step: step) }
+
+    func setFloatRange(_ index: Int, from: Double, to: Double, step: Double) { registers[frameStart + index].setFloatRange(from: from, to: to, step: step) }
+
+    func setMessage(_ index: Int, _ value: GameEventScriptMessage) { registers[frameStart + index].setMessage(value) }
+
+    func setHandler(_ index: Int, _ value: GameEventScriptMessageSignature) { registers[frameStart + index].setHandler(value) }
+
+    func setSeries(_ index: Int, _ value: GesSeriesValue) { registers[frameStart + index].setSeries(value) }
+
+    func setIterator(_ index: Int, _ iterator: GesIterator) { registers[frameStart + index].setIterator(iterator) }
+
+    func createBuilder(_ index: Int, _ kind: GesCollectionBuilder.Kind) { registers[frameStart + index].setBuilder(GesCollectionBuilder(kind)) }
+
+    // Typed owner-local access keeps full GesValue operands/results out of the dispatch boundary.
+    @inline(__always)
+    func setInteger(_ index: Int, _ value: Int64, unit: GesUnit = .none) {
+        registers[frameStart + index].setInteger(value, unit: unit)
+    }
+
+    @inline(__always)
+    func setFloat(_ index: Int, _ value: Double, unit: GesUnit = .none) {
+        registers[frameStart + index].setFloat(value, unit: unit)
+    }
+
+    @inline(__always)
+    func setPercentage(_ index: Int, _ value: Double) {
+        registers[frameStart + index].setPercentage(value)
+    }
+
+    @inline(__always)
+    func setBoolean(_ index: Int, _ value: Bool) {
+        registers[frameStart + index].setBoolean(value)
+    }
+
+    @inline(__always)
+    func setNothing(_ index: Int) {
+        registers[frameStart + index].setNothing()
+    }
+
+    @inline(__always)
+    func integer(_ index: Int) -> Int64? { registers[frameStart + index].integerValue }
+
+    @inline(__always)
+    func unit(_ index: Int) -> GesUnit { registers[frameStart + index].unit }
+
+    @inline(__always)
+    func truth(_ index: Int) -> Bool? { registers[frameStart + index].truth }
+
+    @inline(__always)
+    func isNothing(_ index: Int) -> Bool { registers[frameStart + index].isNothing }
+
+    @inline(__always)
+    func move(_ destination: Int, _ source: Int) {
+        registers[frameStart + destination] = registers[frameStart + source].registerValue
+    }
+
+    @inline(__always)
+    func numericCopy(_ destination: Int, _ source: Int) {
+        let src = frameStart + source
+        let dst = frameStart + destination
+        if !registers[src].isNumeric {
+            registers[dst].setNothing()
+        } else if registers[src].kind == .boolean {
+            registers[dst].setInteger(registers[src].truth == true ? 1 : 0)
+        } else if registers[src].kind == .dice {
+            let sum = registers[src].numericIntegerValue!
+            registers[dst].setInteger(sum)
+        } else if dst != src {
+            registers[dst] = registers[src]
+        }
+    }
+
+    func staged(_ index: Int) -> GesValue { registers[frameStart + frameLength + index].registerValue }
+
+    func stageValue(_ value: GesValue) {
+        let index = frameStart + frameLength + stageLength
+        if ensure(index + 1) {
+            registers[index] = value
+            stageLength += 1
+        }
+    }
+
+    func stageRegister(_ source: Int) {
+        if let index = reserveStage() { registers[frameStart + index] = registers[frameStart + source].registerValue }
+    }
+
+    private func reserveStage() -> Int? {
+        let index = frameLength + stageLength
+        guard ensure(frameStart + index + 1) else { return nil }
+        stageLength += 1
+        return index
+    }
+
+    func stageNothing() { if let index = reserveStage() { setNothing(index) } }
+
+    func stageBoolean(_ value: Bool) { if let index = reserveStage() { setBoolean(index, value) } }
+
+    func stageInteger(_ value: Int64, unit: GesUnit = .none) { if let index = reserveStage() { setInteger(index, value, unit: unit) } }
+
+    func stageFloat(_ value: Double, unit: GesUnit = .none) { if let index = reserveStage() { setFloat(index, value, unit: unit) } }
+
+    func stagePercentage(_ value: Double) { if let index = reserveStage() { setPercentage(index, value) } }
+
+    func stageText(_ value: String) { if let index = reserveStage() { setText(index, value) } }
+
+    func stageTag(_ value: String) throws {
+        guard GesText.isLowerName(value) else { throw GesValueError.invalidTag(value) }
+        if let index = reserveStage() { try setTag(index, value) }
+    }
+
+    func clearStage() {
+        clear(frameStart + frameLength, stageLength)
+        stageLength = 0
+    }
+
+    func modifyLocals(_ delta: Int) {
+        if delta >= 0 {
+            if ensure(frameStart + frameLength + delta) { frameLength += delta }
+        } else if frameLength + delta < 0 {
+            fail("runtime.preparationFailed")
+        } else {
+            clear(frameStart + frameLength + delta, -delta)
+            frameLength += delta
+        }
+    }
+
+    func call(_ address: Int, destination: Int, predicate: Bool = false, literal: GesLiteralEvaluation? = nil) {
+        if depth >= frames.count {
+            fail("runtime.callStackOverflow")
+            return
+        }
+        if !ensure(frameStart + frameLength + stageLength) { return }
+        frames[depth] = .init(ip: ip, start: frameStart, length: frameLength, destination: destination, predicate: predicate, literal: literal)
+        depth += 1
+        ip = address
+        frameStart += frameLength
+        frameLength = stageLength
+        stageLength = 0
+    }
+
+    func returnRegister(_ index: Int) throws { try returnValue(value(index)) }
+
+    func returnValue(_ value: GesValue = .nothing) throws {
+        clear(frameStart, frameLength + stageLength)
+        stageLength = 0
+        if depth == 0 {
+            frameLength = 0
+            processing = false
+            return
+        }
+        depth -= 1
+        let frame = frames[depth]
+        frames[depth] = .init()
+        ip = frame.ip
+        frameStart = frame.start
+        frameLength = frame.length
+        setValue(frame.destination, frame.predicate && value.kind != .boolean ? .nothing : value)
+        try frame.literal?.resume(value)
+    }
+
+    func reset() {
+        for index in 0..<depth { frames[index] = .init() }
+        for index in 0..<registerCapacity { registerBase[index].setNothing() }
+        linked = nil
+        handlerName = nil
+        error = nil
+        processing = false
+        ip = 0
+        frameStart = 0
+        frameLength = 0
+        stageLength = 0
+        depth = 0
+        extensionCall.end()
+        constructorCall.end()
+        if pendingCapacity > 0 {
+            ensure(pendingCapacity)
+            pendingCapacity = 0
+        }
+    }
+
+    private func clear(_ start: Int, _ count: Int) { for index in start..<(start + count) { registers[index].setNothing() } }
+
+    func fail(_ code: String, symbol: String? = nil, error: (any Error)? = nil) { fail(.init(phase: .runtime, code: code, symbol: symbol, technicalDetails: error.map { String(describing: $0) })) }
+
+    func fail(_ diagnostic: GameEventScriptDiagnostic) {
+        var diagnostic = diagnostic
+        if diagnostic.programName == nil { diagnostic.programName = linked?.program.moduleName }
+        if diagnostic.handlerName == nil { diagnostic.handlerName = handlerName }
+        error = diagnostic
+        processing = false
+    }
+
+    func list(_ index: UInt16) -> [UInt16] { program.uint16IndexLists[Int(index)] }
+
+    func text(_ index: UInt16) -> String { program.stringConstants[Int(index)] }
+
+    func values(_ index: UInt16) -> [GesValue] { list(index).map { value(Int($0)) } }
 }

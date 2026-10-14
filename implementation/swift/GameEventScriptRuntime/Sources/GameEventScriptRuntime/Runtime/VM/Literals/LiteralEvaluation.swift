@@ -16,12 +16,12 @@ final class GesLiteralEvaluation {
 
     private var operations: [Operation] = [], results: [GesValue] = []
     private var next = 0
-    private unowned let state: GesVmState
+    private unowned let state: GesVirtualMachine
     private let context: GameEventScriptContext
     private let destination: Int
     private let nodes: [GesLiteralNode]
 
-    init(_ root: GesValue, nodes: [GesLiteralNode], state: GesVmState, context: GameEventScriptContext, destination: Int) {
+    init(_ root: GesValue, nodes: [GesLiteralNode], state: GesVirtualMachine, context: GameEventScriptContext, destination: Int) {
         self.nodes = nodes
         self.state = state
         self.context = context

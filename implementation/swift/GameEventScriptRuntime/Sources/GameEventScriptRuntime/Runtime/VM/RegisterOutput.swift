@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 struct GesRegisterOutput: GesValueOutput {
-    let state: GesVmState
+    let state: GesVirtualMachine
     let index: Int
     var nothing: Void { state.setNothing(index) }
 

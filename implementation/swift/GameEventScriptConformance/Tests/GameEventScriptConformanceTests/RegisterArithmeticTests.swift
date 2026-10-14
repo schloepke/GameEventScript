@@ -68,7 +68,7 @@ final class RegisterArithmeticTests: XCTestCase {
     }
 
     func testRegisterOverwriteReleasesInternalObjects() throws {
-        let state = GesVmState(maxRegisters: 32, maxCallDepth: 4)
+        let state = GesVirtualMachine(maxRegisters: 32, maxCallDepth: 4)
         weak var released: GesIterator?
         do {
             let iterator = try XCTUnwrap(GesIterator(.list([.integer(1)])))
@@ -135,7 +135,7 @@ final class RegisterArithmeticTests: XCTestCase {
     }
 
     func testRecordReusesCanonicalMapStorageWhenOverwritingMapRegister() throws {
-        let state = GesVmState(maxRegisters: 32, maxCallDepth: 4)
+        let state = GesVirtualMachine(maxRegisters: 32, maxCallDepth: 4)
         state.setMap(0, [.init(key: "z", value: .integer(1)), .init(key: "a", value: .integer(2)), .init(key: "z", value: .integer(3))])
         let map = try XCTUnwrap(state.value(0).asMap)
         state.setRecord(0, typeName: "Sample", fields: map)
@@ -155,7 +155,7 @@ final class RegisterArithmeticTests: XCTestCase {
     }
 
     func testTextIdentityCastCanOverwriteItsSource() throws {
-        let state = GesVmState(maxRegisters: 32, maxCallDepth: 4)
+        let state = GesVirtualMachine(maxRegisters: 32, maxCallDepth: 4)
         let host = try GameEventScriptHost()
         let context = GameEventScriptContext(host: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
         state.setText(0, "kept 🐉 e\u{301}")
@@ -171,7 +171,7 @@ final class RegisterArithmeticTests: XCTestCase {
             (.add, .integer(34)), (.subtract, .integer(24)), (.multiply, .integer(145)),
             (.divide, .float(5.8)), (.integerDivide, .integer(5)), (.modulo, .integer(4)), (.remainder, .integer(4)),
         ]
-        let state = GesVmState(maxRegisters: 128, maxCallDepth: 4)
+        let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
         XCTAssertTrue(state.ensure(96))
         state.frameStart = 40
         for (opcode, expected) in cases {
@@ -196,7 +196,7 @@ final class RegisterArithmeticTests: XCTestCase {
     }
 
     func testNumericOpcodesReadInputsBeforeOverwritingEitherRegister() {
-        let state = GesVmState(maxRegisters: 128, maxCallDepth: 4)
+        let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
         XCTAssertTrue(state.ensure(96))
         state.frameStart = 40
         let cases: [(GameEventScriptBytecodeOpCode, GesValue)] = [
@@ -232,7 +232,7 @@ final class RegisterArithmeticTests: XCTestCase {
     }
 
     func testNavigationReadsEveryComponentBeforeOverwritingAnInput() {
-        let state = GesVmState(maxRegisters: 128, maxCallDepth: 4)
+        let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
         XCTAssertTrue(state.ensure(96))
         state.frameStart = 40
         for destination: UInt16 in 0...6 {
@@ -256,7 +256,7 @@ final class RegisterArithmeticTests: XCTestCase {
     }
 
     func testTypedWritesReplaceReferenceValuesAndNormalizeNumbers() {
-        let state = GesVmState(maxRegisters: 128, maxCallDepth: 4)
+        let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
         XCTAssertTrue(state.ensure(96))
         state.frameStart = 40
         state.setValue(0, .list([.text("old")]))
@@ -285,7 +285,7 @@ final class RegisterArithmeticTests: XCTestCase {
     }
 
     func testTypedHelperOutputsCanOverwriteTheirInputs() throws {
-        let state = GesVmState(maxRegisters: 128, maxCallDepth: 4)
+        let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
         XCTAssertTrue(state.ensure(96))
         state.frameStart = 40
         let host = try GameEventScriptHost()
@@ -332,7 +332,7 @@ final class RegisterArithmeticTests: XCTestCase {
     }
 
     func testTypedStagingSurvivesGrowthAndRejectsOverflowWithoutOverwritingLocals() throws {
-        let state = GesVmState(maxRegisters: 40, maxCallDepth: 4)
+        let state = GesVirtualMachine(maxRegisters: 40, maxCallDepth: 4)
         state.frameStart = 1
         state.frameLength = 30
         state.setText(0, "local")

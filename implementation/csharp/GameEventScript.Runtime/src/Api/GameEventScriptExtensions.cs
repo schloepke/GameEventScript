@@ -155,7 +155,7 @@ public sealed class GesExtensionCall
 {
     private GameEventScriptContext? _context;
     private GesValueArguments _arguments = GesValueArguments.Empty;
-    private Runtime.VM.GesVmState? _vmState;
+    private Runtime.VM.GesVirtualMachine? _vm;
     private ushort _destinationRegister;
     private GesValue _result;
     private bool _hasResult;
@@ -203,9 +203,9 @@ public sealed class GesExtensionCall
 
     internal bool HasResult => _hasResult;
 
-    internal void BeginCall(Runtime.VM.GesVmState vmState, ushort destinationRegister, GameEventScriptContext context, GesValueArguments arguments)
+    internal void BeginCall(Runtime.VM.GesVirtualMachine vm, ushort destinationRegister, GameEventScriptContext context, GesValueArguments arguments)
     {
-        _vmState = vmState ?? throw new ArgumentNullException(nameof(vmState));
+        _vm = vm ?? throw new ArgumentNullException(nameof(vm));
         _destinationRegister = destinationRegister;
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _arguments = arguments;
@@ -215,7 +215,7 @@ public sealed class GesExtensionCall
 
     internal void EndCall()
     {
-        _vmState = null;
+        _vm = null;
         _destinationRegister = 0;
         _arguments = GesValueArguments.Empty;
         _result = default;
@@ -235,7 +235,7 @@ public sealed class GesExtensionCall
     {
         _hasResult = true;
         _result = value;
-        _vmState?.SetValue(_destinationRegister, in value);
+        _vm?.SetValue(_destinationRegister, in value);
     }
 
     /// <summary>
@@ -246,7 +246,7 @@ public sealed class GesExtensionCall
     {
         _hasResult = true;
         _result = GesValue.GesBoolean(value);
-        _vmState?.SetBoolean(_destinationRegister, value);
+        _vm?.SetBoolean(_destinationRegister, value);
     }
 
     /// <summary>
@@ -258,7 +258,7 @@ public sealed class GesExtensionCall
     {
         _hasResult = true;
         _result = GesValue.GesInteger(value, unit);
-        _vmState?.SetInteger(_destinationRegister, value, unit);
+        _vm?.SetInteger(_destinationRegister, value, unit);
     }
 
     /// <summary>
@@ -270,7 +270,7 @@ public sealed class GesExtensionCall
     {
         _hasResult = true;
         _result = GesValue.GesFloat(value, unit);
-        _vmState?.SetFloat(_destinationRegister, value, unit);
+        _vm?.SetFloat(_destinationRegister, value, unit);
     }
 
     /// <summary>
@@ -281,7 +281,7 @@ public sealed class GesExtensionCall
     {
         _hasResult = true;
         _result = GesValue.GesPercentage(ratio);
-        _vmState?.SetPercentage(_destinationRegister, ratio);
+        _vm?.SetPercentage(_destinationRegister, ratio);
     }
 
     /// <summary>
@@ -292,7 +292,7 @@ public sealed class GesExtensionCall
     {
         _hasResult = true;
         _result = GesValue.GesText(text);
-        _vmState?.SetText(_destinationRegister, text);
+        _vm?.SetText(_destinationRegister, text);
     }
 
     /// <summary>
@@ -303,6 +303,6 @@ public sealed class GesExtensionCall
     {
         _hasResult = true;
         _result = GesValue.GesTag(tag);
-        _vmState?.SetTag(_destinationRegister, tag);
+        _vm?.SetTag(_destinationRegister, tag);
     }
 }

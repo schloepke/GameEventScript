@@ -57,6 +57,9 @@ sh scripts/test-csharp-conformance.sh
 - Standard-library `TryGetValue`, `TryAdd`, and `TryParse` calls are accepted in
   portable C# code. Do not introduce public GES-level `Try...out` contracts.
 - Use `rg` for source and file searches.
+- Internal types use the `Ges` prefix; public API types keep `GameEventScript`.
+  Abbreviations are written as words (`Ges`, `Vm`, never `GES`/`VM`), and
+  corresponding internal types use identical names in the C# and Swift ports.
 - Preserve unrelated user changes and never revert them without an explicit
   request.
 
@@ -213,9 +216,10 @@ only native handlers or any number of additively loaded Programs.
 - Instance and subscription handles use stable host-local registration IDs and
   store no detach/unsubscribe closures.
 - Each host owns one `GameEventScriptContext`, one logical-message ring queue,
-  one random generator, and at most one lazily created reusable `GesVmState`.
-- `GameEventScriptVirtualMachine` is a stateless executor. Program-specific
-  dynamic links live in `GesLinkedProgram`.
+  one random generator, and at most one lazily created reusable `GesVirtualMachine`.
+- `GesVirtualMachine` owns the resumable execution state and executes it through
+  its `Begin`/`RunSlice` methods. Program-specific dynamic links live in
+  `GesLinkedProgram`.
 - One logical message and all captured handlers complete before the next
   message. Script handlers may pause across frames; native handlers are atomic.
 - `Receive` and `Emit` enqueue locally. `Publish` enqueues locally and then calls
@@ -234,7 +238,7 @@ only native handlers or any number of additively loaded Programs.
 - Optional C# synchronization and automatic pumping live in
   `CSharpBridge/GameEventScriptCSharpHostRunner.cs`.
 
-Hot-path VM mutation goes through `GesVmState.Set...` methods. Read-only register
+Hot-path VM mutation goes through `GesVirtualMachine.Set...` methods. Read-only register
 borrows are accepted. Never hold a mutable destination reference across an
 operation that may grow or replace register storage.
 
@@ -364,10 +368,10 @@ canonical equivalence. Keep Int64 and Binary64 storage separate. Register storag
 follows the C# architecture: one numeric word, an optional
 object reference, kind, unit and cached flags. Typed setters mutate these fields
 in the register array; do not replace this with nested associated-value enums.
-`GesVmState` owns that array as one manually allocated buffer (`GesRegisterFile`),
+`GesVirtualMachine` owns that array as one manually allocated buffer (`GesRegisterFile`),
 the Swift counterpart of C#'s in-place `ref` register access: elements are
 addressed through its base pointer, without per-access exclusivity or copy-on-write
-checks. Only the VM mutates registers, serially; callbacks use the state's
+checks. Only the VM mutates registers, serially; callbacks use the VM's
 accessors. Storage moves only in `ensure`, between instructions. Handler entry
 prewarms the Program requirement, so only dynamic literal parsing grows during
 execution. Access registers through `registers[...]` each time; never keep a view

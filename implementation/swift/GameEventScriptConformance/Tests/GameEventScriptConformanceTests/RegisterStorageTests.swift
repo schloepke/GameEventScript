@@ -9,7 +9,7 @@ import XCTest
 /// Ownership and relocation controls for the manually allocated register file.
 final class RegisterStorageTests: XCTestCase {
     func testRepeatedGrowthPreservesReferencesAndInitializesNewSlots() throws {
-        let state = GesVmState(maxRegisters: 512, maxCallDepth: 8)
+        let state = GesVirtualMachine(maxRegisters: 512, maxCallDepth: 8)
         let values: [GesValue] = [.text("retained text 😀"), .list([.text("nested")]), .map([.init(key: "key", value: .text("value"))])]
         for (index, value) in values.enumerated() { state.setValue(index, value) }
         let iterator = try XCTUnwrap(GesIterator(.list([.integer(7), .integer(9)])))
@@ -31,7 +31,7 @@ final class RegisterStorageTests: XCTestCase {
     }
 
     func testResetAfterGrowthReleasesObjectsAndAllowsReuse() throws {
-        let state = GesVmState(maxRegisters: 512, maxCallDepth: 8)
+        let state = GesVirtualMachine(maxRegisters: 512, maxCallDepth: 8)
         weak var released: GesIterator?
         weak var releasedHighSlot: GesIterator?
         do {
@@ -65,7 +65,7 @@ final class RegisterStorageTests: XCTestCase {
         weak var released: GesIterator?
         weak var releasedHighSlot: GesIterator?
         do {
-            let state = GesVmState(maxRegisters: 512, maxCallDepth: 8)
+            let state = GesVirtualMachine(maxRegisters: 512, maxCallDepth: 8)
             do {
                 let iterator = try XCTUnwrap(GesIterator(.list([.text("owned")])))
                 released = iterator
@@ -100,13 +100,13 @@ final class RegisterStorageTests: XCTestCase {
         for budget in [1, 10000] {
             let host = try GameEventScriptHost.createBuilder().build()
             let context = GameEventScriptContext(host: host, random: .init(), limits: .init(), extensions: nil, observer: nil)
-            let state = GesVmState(maxRegisters: 512, maxCallDepth: 64)
+            let state = GesVirtualMachine(maxRegisters: 512, maxCallDepth: 64)
             state.prepareCapacity(Int(program.requiredRegisterCount))
             let before = state.registers.count
-            try GameEventScriptVirtualMachine.begin(state, linked: linked, message: .init(name: "Start"), matchArguments: true, entry: Int(entry), signature: "Start()")
+            try state.begin(linked: linked, message: .init(name: "Start"), matchArguments: true, entry: Int(entry), signature: "Start()")
             var slices = 0
             while state.processing && slices < 10000 {
-                _ = GameEventScriptVirtualMachine.runSlice(state, context: context, budget: budget)
+                _ = state.runSlice(context: context, budget: budget)
                 slices += 1
             }
             XCTAssertFalse(state.processing)

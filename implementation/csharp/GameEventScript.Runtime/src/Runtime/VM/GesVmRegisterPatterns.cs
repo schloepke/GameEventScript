@@ -11,32 +11,32 @@ namespace GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterPatterns
 {
-    internal static void GesVmHasPattern(this GesVmState vmState, ushort destinationRegister, in GesValue source, GameEventScriptBytecodePatternKind pattern, short count, in GesValue face)
+    internal static void GesVmHasPattern(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source, GameEventScriptBytecodePatternKind pattern, short count, in GesValue face)
     {
         if (pattern == CountFace)
         {
             switch (source.Kind)
             {
                 case Dice when source.ObjectValue is int[] dice:
-                    vmState.SetBoolean(destinationRegister, HasPatternDiceFace(dice, in face, count));
+                    vm.SetBoolean(destinationRegister, HasPatternDiceFace(dice, in face, count));
                     return;
                 case List when source.ObjectValue is GesValue[] list:
-                    vmState.SetBoolean(destinationRegister, HasPatternListFace(list, in face, count));
+                    vm.SetBoolean(destinationRegister, HasPatternListFace(list, in face, count));
                     return;
                 case Iterator when source.ObjectValue is IGesIterator iterator:
                     if (!iterator.IsPatternSequence)
                     {
-                        vmState.SetBoolean(destinationRegister, false);
+                        vm.SetBoolean(destinationRegister, false);
                         return;
                     }
                     var read = ReadIterator(iterator);
-                    vmState.SetBoolean(destinationRegister, HasPatternBufferFace(read.Items, read.Length, in face, count));
+                    vm.SetBoolean(destinationRegister, HasPatternBufferFace(read.Items, read.Length, in face, count));
                     return;
                 case Series:
-                    vmState.SetNothing(destinationRegister);
+                    vm.SetNothing(destinationRegister);
                     return;
                 default:
-                    vmState.SetBoolean(destinationRegister, false);
+                    vm.SetBoolean(destinationRegister, false);
                     return;
             }
         }
@@ -44,30 +44,30 @@ internal static class GesVmRegisterPatterns
         switch (source.Kind)
         {
             case Dice when source.ObjectValue is int[] dice:
-                vmState.SetBoolean(destinationRegister, HasPatternDice(dice, pattern, count));
+                vm.SetBoolean(destinationRegister, HasPatternDice(dice, pattern, count));
                 return;
             case List when source.ObjectValue is GesValue[] list:
-                vmState.SetBoolean(destinationRegister, HasPatternList(list, pattern, count));
+                vm.SetBoolean(destinationRegister, HasPatternList(list, pattern, count));
                 return;
             case Iterator when source.ObjectValue is IGesIterator iterator:
                 if (!iterator.IsPatternSequence)
                 {
-                    vmState.SetBoolean(destinationRegister, false);
+                    vm.SetBoolean(destinationRegister, false);
                     return;
                 }
                 var read = ReadIterator(iterator);
-                vmState.SetBoolean(destinationRegister, HasPatternBuffer(read.Items, read.Length, pattern, count));
+                vm.SetBoolean(destinationRegister, HasPatternBuffer(read.Items, read.Length, pattern, count));
                 return;
             case Series:
-                vmState.SetNothing(destinationRegister);
+                vm.SetNothing(destinationRegister);
                 return;
             default:
-                vmState.SetBoolean(destinationRegister, false);
+                vm.SetBoolean(destinationRegister, false);
                 return;
         }
     }
 
-    internal static void GesVmTakePattern(this GesVmState vmState, ushort destinationRegister, in GesValue source, GameEventScriptBytecodePatternKind pattern, short count, in GesValue face)
+    internal static void GesVmTakePattern(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source, GameEventScriptBytecodePatternKind pattern, short count, in GesValue face)
     {
         if (pattern == CountFace)
         {
@@ -81,7 +81,7 @@ internal static class GesVmRegisterPatterns
                     var result = found < count
                         ? new GesValue()
                         : SetTakenByFace(buffer, buffer.Length, in face, count, diceResult: true);
-                    vmState.SetValue(destinationRegister, in result);
+                    vm.SetValue(destinationRegister, in result);
                     return;
                 case List when source.ObjectValue is GesValue[] list:
                     var matches = 0;
@@ -89,12 +89,12 @@ internal static class GesVmRegisterPatterns
                     result = matches < count
                         ? new GesValue()
                         : SetTakenByFace(list, list.Length, in face, count, diceResult: false);
-                    vmState.SetValue(destinationRegister, in result);
+                    vm.SetValue(destinationRegister, in result);
                     return;
                 case Iterator when source.ObjectValue is IGesIterator iterator:
                     if (!iterator.IsPatternSequence)
                     {
-                        vmState.SetNothing(destinationRegister);
+                        vm.SetNothing(destinationRegister);
                         return;
                     }
                     var read = ReadIterator(iterator);
@@ -103,10 +103,10 @@ internal static class GesVmRegisterPatterns
                     result = iteratorMatches < count
                         ? new GesValue()
                         : SetTakenByFace(read.Items, read.Length, in face, count, diceResult: false);
-                    vmState.SetValue(destinationRegister, in result);
+                    vm.SetValue(destinationRegister, in result);
                     return;
                 default:
-                    vmState.SetNothing(destinationRegister);
+                    vm.SetNothing(destinationRegister);
                     return;
             }
         }
@@ -115,24 +115,24 @@ internal static class GesVmRegisterPatterns
         {
             case Dice when source.ObjectValue is int[] dice:
                 var result = TakePatternDice(dice, pattern, count);
-                vmState.SetValue(destinationRegister, in result);
+                vm.SetValue(destinationRegister, in result);
                 return;
             case List when source.ObjectValue is GesValue[] list:
                 result = TakePatternList(list, pattern, count);
-                vmState.SetValue(destinationRegister, in result);
+                vm.SetValue(destinationRegister, in result);
                 return;
             case Iterator when source.ObjectValue is IGesIterator iterator:
                 if (!iterator.IsPatternSequence)
                 {
-                    vmState.SetNothing(destinationRegister);
+                    vm.SetNothing(destinationRegister);
                     return;
                 }
                 var read = ReadIterator(iterator);
                 result = TakePatternBuffer(read.Items, read.Length, pattern, count, diceResult: false);
-                vmState.SetValue(destinationRegister, in result);
+                vm.SetValue(destinationRegister, in result);
                 return;
             default:
-                vmState.SetNothing(destinationRegister);
+                vm.SetNothing(destinationRegister);
                 return;
         }
     }

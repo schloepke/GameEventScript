@@ -1,7 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesVmState {
+extension GesVirtualMachine {
     // Integer operands are the hot case and run inline in dispatch; every other
     // combination, including overflow, takes the complete out-of-line body.
     @inline(__always)

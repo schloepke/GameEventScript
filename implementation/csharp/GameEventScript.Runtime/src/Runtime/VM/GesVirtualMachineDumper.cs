@@ -8,12 +8,12 @@ using GameEventScript.Runtime.Values;
 
 namespace GameEventScript.Runtime.VM;
 
-internal static class GameEventScriptVmStateDumper
+internal static class GesVirtualMachineDumper
 {
-    internal static string Dump(this GesVmState state)
+    internal static string Dump(this GesVirtualMachine state)
         => Dump(state, includeInstructionAddresses: true);
 
-    internal static string Dump(this GesVmState state, bool includeInstructionAddresses)
+    internal static string Dump(this GesVirtualMachine state, bool includeInstructionAddresses)
     {
         var builder = new StringBuilder();
         builder
@@ -108,7 +108,7 @@ internal static class GameEventScriptVmStateDumper
         builder.AppendLine();
     }
 
-    private static void AppendCallStack(StringBuilder builder, GesVmState state)
+    private static void AppendCallStack(StringBuilder builder, GesVirtualMachine state)
     {
         builder
             .Append("CallFrames: ").AppendLine(state.CallStackPointer.ToString(CultureInfo.InvariantCulture))
@@ -137,7 +137,7 @@ internal static class GameEventScriptVmStateDumper
         }
     }
 
-    private static void AppendStageArea(StringBuilder builder, GesVmState state)
+    private static void AppendStageArea(StringBuilder builder, GesVirtualMachine state)
     {
         var stageStart = state.RegisterFrameStart + state.RegisterFrameLength;
         builder
@@ -151,7 +151,7 @@ internal static class GameEventScriptVmStateDumper
         builder.AppendLine();
     }
 
-    private static void AppendCurrentExecutionFrame(StringBuilder builder, GesVmState state)
+    private static void AppendCurrentExecutionFrame(StringBuilder builder, GesVirtualMachine state)
     {
         builder
             .AppendLine("CurrentExecutionFrame")
@@ -164,7 +164,7 @@ internal static class GameEventScriptVmStateDumper
         AppendRegisters(builder, state, state.RegisterFrameStart, state.RegisterFrameLength, "  ");
     }
 
-    private static void AppendRegisters(StringBuilder builder, GesVmState state, int start, int length, string indent)
+    private static void AppendRegisters(StringBuilder builder, GesVirtualMachine state, int start, int length, string indent)
     {
         if (length == 0)
         {

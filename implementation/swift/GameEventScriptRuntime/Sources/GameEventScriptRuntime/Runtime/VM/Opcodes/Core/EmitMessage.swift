@@ -1,23 +1,23 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GameEventScriptVirtualMachine {
-    static func message(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext) throws {
+extension GesVirtualMachine {
+    func emitMessage(_ i: GameEventScriptBytecodeInstruction, _ c: GameEventScriptContext) throws {
         let valueMessage = [.emitMessageValue, .emitMessageValueWithTags, .publishMessageValue, .publishMessageValueWithTags].contains(i.opcode)
         var message: GameEventScriptMessage?
         if valueMessage {
-            let value = s.value(Int(i.word1))
+            let value = self.value(Int(i.word1))
             message = value.messageValue ?? value.signatureValue?.createMessage([])
         } else {
-            guard let signature = s.linked!.outbound[i.word0] else {
-                s.fail("runtime.invalidMessageBinding")
+            guard let signature = linked!.outbound[i.word0] else {
+                fail("runtime.invalidMessageBinding")
                 return
             }
-            message = signature.createMessage(s.values(i.word2))
+            message = signature.createMessage(values(i.word2))
         }
         guard var message else { return }
         if [.emitMessageWithTags, .emitMessageValueWithTags, .publishMessageWithTags, .publishMessageValueWithTags].contains(i.opcode) {
-            do { message = try tagged(message, s.values(valueMessage ? i.word2 : i.word1)) } catch {
+            do { message = try Self.tagged(message, values(valueMessage ? i.word2 : i.word1)) } catch {
                 if valueMessage { throw error }
                 return
             }

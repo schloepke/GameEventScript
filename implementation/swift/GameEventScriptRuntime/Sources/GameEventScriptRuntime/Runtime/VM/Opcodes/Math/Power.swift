@@ -9,7 +9,7 @@
     import Musl
 #endif
 
-extension GesVmState {
+extension GesVirtualMachine {
     @inline(never)
     func executePower(_ target: Int, _ x: Int, _ y: Int) {
         if registers[x].isNothing || registers[y].isNothing { return registers[target].setNothing() }

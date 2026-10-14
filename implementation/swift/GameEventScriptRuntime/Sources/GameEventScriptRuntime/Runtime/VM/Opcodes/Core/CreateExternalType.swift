@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesCallbacks {
-    static func constructor(_ i: GameEventScriptBytecodeInstruction, _ s: GesVmState, _ c: GameEventScriptContext) throws {
+    static func constructor(_ i: GameEventScriptBytecodeInstruction, _ s: GesVirtualMachine, _ c: GameEventScriptContext) throws {
         let destination = Int(i.word0)
         guard let binding = s.linked!.constructorBindings[i.word1], let constructor = s.linked!.constructors[i.word1] else {
             s.setNothing(destination)

@@ -1,7 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GameEventScriptVirtualMachine {
+extension GesVirtualMachine {
     static func tagged(_ message: GameEventScriptMessage, _ values: [GesValue]) throws -> GameEventScriptMessage {
         var tags: [String] = []
 

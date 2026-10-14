@@ -1,7 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesVmState {
+extension GesVirtualMachine {
     @inline(never)
     func executeNot(_ target: Int, _ x: Int) {
         guard let truth = registers[x].truth else { return registers[target].setNothing() }

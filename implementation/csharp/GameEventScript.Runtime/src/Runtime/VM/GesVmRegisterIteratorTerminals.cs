@@ -11,33 +11,33 @@ namespace GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterIteratorTerminals
 {
-    internal static void GesVmCount(this GesVmState vmState, ushort destinationRegister, in GesValue source)
+    internal static void GesVmCount(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source)
     {
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesValue[] list:
-                vmState.SetInteger(destinationRegister, list.Length);
+                vm.SetInteger(destinationRegister, list.Length);
                 return;
             case Map when source.ObjectValue is GesValueMap map:
-                vmState.SetInteger(destinationRegister, map.Length);
+                vm.SetInteger(destinationRegister, map.Length);
                 return;
             case Dice when source.ObjectValue is int[] dice:
-                vmState.SetInteger(destinationRegister, dice.Length);
+                vm.SetInteger(destinationRegister, dice.Length);
                 return;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
-                vmState.SetInteger(destinationRegister, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step));
+                vm.SetInteger(destinationRegister, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step));
                 return;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
-                vmState.SetInteger(destinationRegister, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step));
+                vm.SetInteger(destinationRegister, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step));
                 return;
             case Vector or Point when source.ObjectValue is GesValueVectorPoint:
-                vmState.SetInteger(destinationRegister, 3);
+                vm.SetInteger(destinationRegister, 3);
                 return;
             case Text or Tag:
-                vmState.SetInteger(destinationRegister, source.CollectionCount);
+                vm.SetInteger(destinationRegister, source.CollectionCount);
                 return;
             case Nothing:
-                vmState.SetInteger(destinationRegister, 0);
+                vm.SetInteger(destinationRegister, 0);
                 return;
         }
 
@@ -45,7 +45,7 @@ internal static class GesVmRegisterIteratorTerminals
         if (source is { Kind: Iterator, ObjectValue: IGesIterator sourceIterator }) iterator = sourceIterator;
         else if (source.CreateIterator() is not { } createdIterator)
         {
-            vmState.SetNothing(destinationRegister);
+            vm.SetNothing(destinationRegister);
             return;
         }
         else
@@ -57,7 +57,7 @@ internal static class GesVmRegisterIteratorTerminals
         try
         {
             while (iterator.Next().HasValue) count++;
-            vmState.SetInteger(destinationRegister, count);
+            vm.SetInteger(destinationRegister, count);
         }
         finally
         {

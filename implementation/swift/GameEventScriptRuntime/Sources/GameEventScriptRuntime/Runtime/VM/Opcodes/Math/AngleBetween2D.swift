@@ -9,7 +9,7 @@
     import Musl
 #endif
 
-extension GesVmState {
+extension GesVirtualMachine {
     @inline(never)
     func executeAngleBetween2D(_ target: Int, _ x: Int, _ otherRegister: Int, _ operandA: Int, _ operandB: Int) {
         let component0 = x

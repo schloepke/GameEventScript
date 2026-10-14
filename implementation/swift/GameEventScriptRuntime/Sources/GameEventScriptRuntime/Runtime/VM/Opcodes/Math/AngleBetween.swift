@@ -9,7 +9,7 @@
     import Musl
 #endif
 
-extension GesVmState {
+extension GesVirtualMachine {
     @inline(never)
     func executeAngleBetween(_ target: Int, _ x: Int, _ y: Int) {
         guard registers[x].unit == registers[y].unit else { return registers[target].setNothing() }

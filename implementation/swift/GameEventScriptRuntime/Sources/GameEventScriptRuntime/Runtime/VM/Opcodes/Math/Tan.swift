@@ -9,7 +9,7 @@
     import Musl
 #endif
 
-extension GesVmState {
+extension GesVirtualMachine {
     @inline(never)
     func executeTan(_ target: Int, _ x: Int) {
         guard registers[x].isNumeric, registers[x].unit == .none || registers[x].unit == .degree else { return registers[target].setNothing() }

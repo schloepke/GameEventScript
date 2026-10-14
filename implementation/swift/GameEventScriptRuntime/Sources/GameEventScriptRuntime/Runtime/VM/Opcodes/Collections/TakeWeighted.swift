@@ -1,7 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesVmState {
+extension GesVirtualMachine {
     @inline(never)
     func executeTakeWeighted(_ destinationRegister: Int, _ sourceRegister: Int, _ countOperand: Int, _ operandA: Int, _ context: GameEventScriptContext) {
         let destination = destinationRegister

@@ -8,7 +8,7 @@ using static GameEventScript.Runtime.VM.GesVmUnitCalculation;
 
 namespace GameEventScript.Runtime.VM;
 
-internal partial class GesVmState
+internal partial class GesVirtualMachine
 {
     internal void MoveNumeric(ushort destination, ushort source)
     {

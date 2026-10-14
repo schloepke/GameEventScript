@@ -85,6 +85,11 @@ sh scripts/test-csharp-conformance.sh
   `Exception`/`Error`, `CreateBuilder()`/`makeBuilder()`). File names are free.
   The port convergence is in progress; `PortMapping.md` tracks the remaining
   phases and is removed when they are complete.
+- `python3 scripts/verify-port-names.py` enforces the prefix, abbreviation,
+  parity and opcode-handler rules against the ratchet baseline
+  `scripts/port-names-baseline.txt`; a new or resolved difference fails until
+  the baseline is regenerated with `--update-baseline`. Its controls are
+  `python3 scripts/test-port-names.py`; C# CI runs both.
 - Preserve unrelated user changes and never revert them without an explicit
   request.
 

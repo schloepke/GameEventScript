@@ -42,6 +42,11 @@ jobs:
       - name: Verify canonical highlighting tables
         run: python3 scripts/sync-highlighter-grammars.py --check
 
+      - name: Verify C# and Swift port names
+        run: |
+          python3 scripts/test-port-names.py
+          python3 scripts/verify-port-names.py
+
       - name: Verify publication package selection
         run: |
           python3 scripts/test-publish-csharp-packages.py

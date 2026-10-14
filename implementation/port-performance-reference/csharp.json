@@ -1,0 +1,614 @@
+{
+ "environment": {
+  "commit": "6f47325da3b1bd69c849f586667104a27b5090bf",
+  "cpu": "Apple M3 Max",
+  "dotnet": "10.0.201",
+  "os": "26.6.2",
+  "swift": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)"
+ },
+ "metrics": {
+  "performance.core/case-0001|ast-build.allocated": {
+   "max": 21.9921875,
+   "median": 21.9921875,
+   "min": 21.9921875,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0001|ast-build.elapsed": {
+   "max": 0.0654,
+   "median": 0.0611,
+   "min": 0.0606,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0001|binary-build.allocated": {
+   "max": 44.1484375,
+   "median": 44.1484375,
+   "min": 44.1484375,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0001|binary-build.elapsed": {
+   "max": 0.1066,
+   "median": 0.105,
+   "min": 0.1039,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0001|compile.allocated": {
+   "max": 78.484375,
+   "median": 78.484375,
+   "min": 78.484375,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0001|compile.elapsed": {
+   "max": 0.209,
+   "median": 0.2014,
+   "min": 0.1983,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0001|program-load.allocated": {
+   "max": 12.34375,
+   "median": 12.34375,
+   "min": 12.34375,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0001|program-load.elapsed": {
+   "max": 0.042,
+   "median": 0.034,
+   "min": 0.0327,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0001|run.allocated": {
+   "max": 132.8125,
+   "median": 132.8125,
+   "min": 132.8125,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0001|run.elapsed": {
+   "max": 2.0418,
+   "median": 1.9965,
+   "min": 1.9727,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0001|run.per-invoke-allocated": {
+   "max": 0.1328125,
+   "median": 0.1328125,
+   "min": 0.1328125,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0001|run.per-invoke-elapsed": {
+   "max": 0.0020418,
+   "median": 0.0019965,
+   "min": 0.0019727,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0002|ast-build.allocated": {
+   "max": 15.0546875,
+   "median": 15.0546875,
+   "min": 15.0546875,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0002|ast-build.elapsed": {
+   "max": 0.0445,
+   "median": 0.0438,
+   "min": 0.0437,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0002|binary-build.allocated": {
+   "max": 44.7890625,
+   "median": 44.7890625,
+   "min": 44.7890625,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0002|binary-build.elapsed": {
+   "max": 0.1353,
+   "median": 0.1346,
+   "min": 0.1326,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0002|compile.allocated": {
+   "max": 72.5078125,
+   "median": 72.5078125,
+   "min": 72.5078125,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0002|compile.elapsed": {
+   "max": 0.22119999999999998,
+   "median": 0.2187,
+   "min": 0.21559999999999999,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0002|program-load.allocated": {
+   "max": 12.6640625,
+   "median": 12.6640625,
+   "min": 12.6640625,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0002|program-load.elapsed": {
+   "max": 0.0421,
+   "median": 0.0398,
+   "min": 0.039,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0002|run.allocated": {
+   "max": 11437.5,
+   "median": 11437.5,
+   "min": 11437.5,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0002|run.elapsed": {
+   "max": 31.2403,
+   "median": 30.4303,
+   "min": 30.009,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0002|run.per-invoke-allocated": {
+   "max": 11.4375,
+   "median": 11.4375,
+   "min": 11.4375,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0002|run.per-invoke-elapsed": {
+   "max": 0.031240300000000002,
+   "median": 0.0304303,
+   "min": 0.030009,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0003|ast-build.allocated": {
+   "max": 19.015625,
+   "median": 19.015625,
+   "min": 19.015625,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0003|ast-build.elapsed": {
+   "max": 0.0565,
+   "median": 0.0554,
+   "min": 0.055,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0003|binary-build.allocated": {
+   "max": 43.6796875,
+   "median": 43.6796875,
+   "min": 43.6796875,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0003|binary-build.elapsed": {
+   "max": 0.12,
+   "median": 0.1195,
+   "min": 0.1194,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0003|compile.allocated": {
+   "max": 77.0859375,
+   "median": 77.0859375,
+   "min": 77.0859375,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0003|compile.elapsed": {
+   "max": 0.21439999999999998,
+   "median": 0.2129,
+   "min": 0.21120000000000003,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0003|program-load.allocated": {
+   "max": 14.390625,
+   "median": 14.390625,
+   "min": 14.390625,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0003|program-load.elapsed": {
+   "max": 0.0387,
+   "median": 0.0376,
+   "min": 0.0365,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0003|run.allocated": {
+   "max": 429.6875,
+   "median": 429.6875,
+   "min": 429.6875,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0003|run.elapsed": {
+   "max": 2.1685,
+   "median": 2.0727,
+   "min": 2.009,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0003|run.per-invoke-allocated": {
+   "max": 0.4296875,
+   "median": 0.4296875,
+   "min": 0.4296875,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0003|run.per-invoke-elapsed": {
+   "max": 0.0021685,
+   "median": 0.0020727000000000002,
+   "min": 0.002009,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0004|ast-build.allocated": {
+   "max": 29.46875,
+   "median": 29.46875,
+   "min": 29.46875,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0004|ast-build.elapsed": {
+   "max": 0.1067,
+   "median": 0.1026,
+   "min": 0.1021,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0004|binary-build.allocated": {
+   "max": 101.65625,
+   "median": 101.65625,
+   "min": 101.65625,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0004|binary-build.elapsed": {
+   "max": 0.3307,
+   "median": 0.319,
+   "min": 0.3125,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0004|compile.allocated": {
+   "max": 149.25,
+   "median": 149.25,
+   "min": 149.25,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0004|compile.elapsed": {
+   "max": 0.5347999999999999,
+   "median": 0.5156999999999999,
+   "min": 0.5125,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0004|program-load.allocated": {
+   "max": 18.125,
+   "median": 18.125,
+   "min": 18.125,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0004|program-load.elapsed": {
+   "max": 0.102,
+   "median": 0.0933,
+   "min": 0.0914,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0004|run.allocated": {
+   "max": 1273.4375,
+   "median": 1273.4375,
+   "min": 1273.4375,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0004|run.elapsed": {
+   "max": 13.7021,
+   "median": 13.4207,
+   "min": 13.1643,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0004|run.per-invoke-allocated": {
+   "max": 1.2734375,
+   "median": 1.2734375,
+   "min": 1.2734375,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0004|run.per-invoke-elapsed": {
+   "max": 0.0137021,
+   "median": 0.0134207,
+   "min": 0.0131643,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0005|ast-build.allocated": {
+   "max": 79.5,
+   "median": 79.5,
+   "min": 79.5,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0005|ast-build.elapsed": {
+   "max": 0.2543,
+   "median": 0.2363,
+   "min": 0.2338,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0005|binary-build.allocated": {
+   "max": 251.015625,
+   "median": 251.015625,
+   "min": 251.015625,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0005|binary-build.elapsed": {
+   "max": 1.0396,
+   "median": 1.0182,
+   "min": 0.9719,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0005|compile.allocated": {
+   "max": 356.9140625,
+   "median": 356.9140625,
+   "min": 356.9140625,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0005|compile.elapsed": {
+   "max": 1.4012,
+   "median": 1.3546,
+   "min": 1.3061,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0005|program-load.allocated": {
+   "max": 26.3984375,
+   "median": 26.3984375,
+   "min": 26.3984375,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0005|program-load.elapsed": {
+   "max": 0.1073,
+   "median": 0.1013,
+   "min": 0.0992,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0005|run.allocated": {
+   "max": 2257.8125,
+   "median": 2257.8125,
+   "min": 2253.53125,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0005|run.elapsed": {
+   "max": 63.1044,
+   "median": 62.2248,
+   "min": 59.3753,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.core/case-0005|run.per-invoke-allocated": {
+   "max": 2.2578125,
+   "median": 2.2578125,
+   "min": 2.25353125,
+   "runs": 5,
+   "unit": "KiB"
+  },
+  "performance.core/case-0005|run.per-invoke-elapsed": {
+   "max": 0.0631044,
+   "median": 0.062224800000000004,
+   "min": 0.059375300000000006,
+   "runs": 5,
+   "unit": "ms"
+  },
+  "performance.low-allocation/exact-completion-observer-off-1000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.low-allocation/exact-completion-observer-off-2000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.low-allocation/exact-completion-observer-on-1000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.low-allocation/exact-completion-observer-on-2000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.low-allocation/exact-frames-observer-off-1000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.low-allocation/exact-frames-observer-off-2000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.low-allocation/exact-frames-observer-on-1000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.low-allocation/exact-frames-observer-on-2000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.low-allocation/message-name-completion-observer-off-1000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.low-allocation/message-name-completion-observer-off-2000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.low-allocation/message-name-completion-observer-on-1000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.low-allocation/message-name-completion-observer-on-2000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.low-allocation/message-name-frames-observer-off-1000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.low-allocation/message-name-frames-observer-off-2000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.low-allocation/message-name-frames-observer-on-1000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.low-allocation/message-name-frames-observer-on-2000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.text-conversion/cast-percentage-1000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.text-conversion/cast-percentage-2000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.text-conversion/cast-separated-number-1000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.text-conversion/cast-separated-number-2000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.text-conversion/format-percentage-1000|run.allocated": {
+   "max": 176000.0,
+   "median": 176000.0,
+   "min": 176000.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.text-conversion/format-percentage-2000|run.allocated": {
+   "max": 352000.0,
+   "median": 352000.0,
+   "min": 352000.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.text-conversion/parse-integer-1000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.text-conversion/parse-integer-2000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.text-conversion/parse-plain-text-1000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  },
+  "performance.text-conversion/parse-plain-text-2000|run.allocated": {
+   "max": 0.0,
+   "median": 0.0,
+   "min": 0.0,
+   "runs": 5,
+   "unit": "B"
+  }
+ },
+ "port": "csharp"
+}

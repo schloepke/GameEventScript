@@ -111,7 +111,10 @@ the static import, so they omit the redundant prefix.
   paths stay at zero.
 - The 3% is a cumulative budget, not a per-change allowance. Compare against the
   frozen reference measurement taken at the start of phase 0 on the same machine
-  and toolchain (median of repeated runs), not against the previous change.
+  and toolchain, not against the previous change. Single elapsed metrics vary by
+  up to about ±20% (C#) and ±10% (Swift) between runs, so the budget applies to
+  the geometric mean of all elapsed ratios over repeated runs; allocation metrics
+  must not grow at all.
 - Inlining attributes (`AggressiveInlining`, `NoInlining`, `@inline(__always)`,
   `@inline(never)`) are added only with a measured benefit and a short rationale
   comment.
@@ -203,17 +206,45 @@ python3 scripts/verify-port-names.py
 
 Phases touching the VM or value hot paths additionally run the C# performance
 gate and `scripts/test-swift-performance.sh` and compare against the frozen
-reference measurement.
+reference measurement:
+
+```bash
+python3 scripts/port-performance-reference.py compare --port csharp --runs 5 --reference implementation/port-performance-reference/csharp.json
+python3 scripts/port-performance-reference.py compare --port swift --runs 5 --reference implementation/port-performance-reference/swift.json
+```
+
+### Frozen reference
+
+- Captured on the source state of `6f47325d` (unchanged code since `03d82419`)
+  with five complete performance-corpus runs per port; see the `environment`
+  block in `implementation/port-performance-reference/*.json` for machine and
+  toolchains. Only that machine/toolchain combination may be compared.
+- Qualification: comparing the unchanged sources against the reference yields an
+  elapsed geometric mean of 1.0176 for C# and 1.0053 for Swift (five runs each).
+  C# noise alone therefore uses about 1.8 of the 3 percentage points; repeat a
+  C# comparison or raise `--runs` before attributing a result between 1.02 and
+  1.03 to a change.
+- Pre-existing C# gate failure at capture time, not caused by the convergence:
+  `performance.core/case-0004` measures `program-load.allocated` 18.125 KiB
+  against the stored corpus reference 16.10 KiB (budget 16.91 KiB),
+  deterministically. The Swift performance corpus passed completely.
+- `scripts/port-performance-reference.py`, its controls
+  `scripts/test-port-performance-reference.py` and the reference files are
+  removed together with this document.
 
 ### Phase 0 – Rules and gate
 
 - [x] Record decisions in this document and summarize the rules in `AGENTS.md`.
-- [ ] Take and store the frozen C# and Swift reference measurements.
-- [ ] Add `scripts/verify-port-names.py`: extract library types and opcode
+- [x] Take and store the frozen C# and Swift reference measurements.
+- [x] Add `scripts/verify-port-names.py`: extract library types and opcode
       handler names from both ports, apply the idiomatic mappings, fail on
       unmapped differences, restrict Swift `execute…` calls to dispatch and
-      `Opcodes`. Start with an explicit exception list that shrinks per phase.
-- [ ] Add its regression controls and wire it into C# and Swift CI.
+      `Opcodes`. The ratchet baseline `scripts/port-names-baseline.txt` starts
+      with 855 known differences and shrinks per phase.
+- [x] Add its regression controls and wire it into C# CI (runs on every push
+      and pull request, covering both ports).
+- [ ] Resolve the pre-existing C# `performance.core/case-0004` allocation
+      failure (decide: fix the regression or recalibrate the C# reference).
 
 ### Phase 1 – Public API
 

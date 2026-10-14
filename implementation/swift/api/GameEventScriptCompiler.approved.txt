@@ -4,35 +4,35 @@
 # Module: GameEventScriptCompiler
 # Update explicitly with: python3 scripts/verify-swift-api.py --update
 
-relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GameEventScriptCompileError :: struct GameEventScriptCompileError","target":"Swift.Error"}
-relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GameEventScriptCompileError :: struct GameEventScriptCompileError","target":"Swift.Sendable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GameEventScriptCompileOptions :: struct GameEventScriptCompileOptions","target":"Swift.Sendable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions :: struct GameEventScriptDebugInfoOptions","target":"Swift.Equatable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions :: struct GameEventScriptDebugInfoOptions","target":"Swift.ExpressibleByArrayLiteral"}
-relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions :: struct GameEventScriptDebugInfoOptions","target":"Swift.OptionSet"}
-relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions :: struct GameEventScriptDebugInfoOptions","target":"Swift.RawRepresentable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions :: struct GameEventScriptDebugInfoOptions","target":"Swift.Sendable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions :: struct GameEventScriptDebugInfoOptions","target":"Swift.SetAlgebra"}
-symbol {"access":"public","declaration":"@discardableResult func addScript(_ text: String, sourceName: String? = nil) -> Self","kind":"swift.method","path":"GameEventScriptCompiler.GameEventScriptBuilder.addScript(_:sourceName:)"}
-symbol {"access":"public","declaration":"@discardableResult func withDebugInfo(_ options: GameEventScriptDebugInfoOptions = .all) -> Self","kind":"swift.method","path":"GameEventScriptCompiler.GameEventScriptBuilder.withDebugInfo(_:)"}
-symbol {"access":"public","declaration":"@discardableResult func withExternalTypeCatalog(_ catalog: any GameEventScriptExternalTypeCatalogProtocol) -> Self","kind":"swift.method","path":"GameEventScriptCompiler.GameEventScriptBuilder.withExternalTypeCatalog(_:)"}
-symbol {"access":"public","declaration":"@discardableResult func withProgramVersion(_ version: UInt64) -> Self","kind":"swift.method","path":"GameEventScriptCompiler.GameEventScriptBuilder.withProgramVersion(_:)"}
-symbol {"access":"public","declaration":"final class GameEventScriptBuilder","kind":"swift.class","path":"GameEventScriptCompiler.GameEventScriptBuilder"}
-symbol {"access":"public","declaration":"func compile(options: GameEventScriptCompileOptions? = nil) throws -> GameEventScriptProgram","kind":"swift.method","path":"GameEventScriptCompiler.GameEventScriptBuilder.compile(options:)"}
-symbol {"access":"public","declaration":"init()","kind":"swift.init","path":"GameEventScriptCompiler.GameEventScriptBuilder.init()"}
-symbol {"access":"public","declaration":"init(debugInfo: GameEventScriptDebugInfoOptions = .all, programVersion: UInt64 = 0)","kind":"swift.init","path":"GameEventScriptCompiler.GameEventScriptCompileOptions.init(debugInfo:programVersion:)"}
-symbol {"access":"public","declaration":"init(diagnostics: [GameEventScriptDiagnostic])","kind":"swift.init","path":"GameEventScriptCompiler.GameEventScriptCompileError.init(diagnostics:)"}
-symbol {"access":"public","declaration":"init(rawValue: UInt8)","kind":"swift.init","path":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions.init(rawValue:)"}
-symbol {"access":"public","declaration":"let diagnostics: [GameEventScriptDiagnostic]","kind":"swift.property","path":"GameEventScriptCompiler.GameEventScriptCompileError.diagnostics"}
-symbol {"access":"public","declaration":"let rawValue: UInt8","kind":"swift.property","path":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions.rawValue"}
-symbol {"access":"public","declaration":"static func create() -> GameEventScriptBuilder","kind":"swift.type.method","path":"GameEventScriptCompiler.GameEventScriptBuilder.create()"}
-symbol {"access":"public","declaration":"static let all: GameEventScriptDebugInfoOptions","kind":"swift.type.property","path":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions.all"}
-symbol {"access":"public","declaration":"static let none: GameEventScriptDebugInfoOptions","kind":"swift.type.property","path":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions.none"}
-symbol {"access":"public","declaration":"static let sourceArchive: GameEventScriptDebugInfoOptions","kind":"swift.type.property","path":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions.sourceArchive"}
-symbol {"access":"public","declaration":"static let sourceMap: GameEventScriptDebugInfoOptions","kind":"swift.type.property","path":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions.sourceMap"}
-symbol {"access":"public","declaration":"static let symbols: GameEventScriptDebugInfoOptions","kind":"swift.type.property","path":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions.symbols"}
-symbol {"access":"public","declaration":"struct GameEventScriptCompileError","kind":"swift.struct","path":"GameEventScriptCompiler.GameEventScriptCompileError"}
-symbol {"access":"public","declaration":"struct GameEventScriptCompileOptions","kind":"swift.struct","path":"GameEventScriptCompiler.GameEventScriptCompileOptions"}
-symbol {"access":"public","declaration":"struct GameEventScriptDebugInfoOptions","kind":"swift.struct","path":"GameEventScriptCompiler.GameEventScriptDebugInfoOptions"}
-symbol {"access":"public","declaration":"var debugInfo: GameEventScriptDebugInfoOptions","kind":"swift.property","path":"GameEventScriptCompiler.GameEventScriptCompileOptions.debugInfo"}
-symbol {"access":"public","declaration":"var programVersion: UInt64","kind":"swift.property","path":"GameEventScriptCompiler.GameEventScriptCompileOptions.programVersion"}
+relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GesCompileError :: struct GesCompileError","target":"Swift.Error"}
+relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GesCompileError :: struct GesCompileError","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GesCompileOptions :: struct GesCompileOptions","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GesDebugInfoOptions :: struct GesDebugInfoOptions","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GesDebugInfoOptions :: struct GesDebugInfoOptions","target":"Swift.ExpressibleByArrayLiteral"}
+relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GesDebugInfoOptions :: struct GesDebugInfoOptions","target":"Swift.OptionSet"}
+relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GesDebugInfoOptions :: struct GesDebugInfoOptions","target":"Swift.RawRepresentable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GesDebugInfoOptions :: struct GesDebugInfoOptions","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptCompiler.GesDebugInfoOptions :: struct GesDebugInfoOptions","target":"Swift.SetAlgebra"}
+symbol {"access":"public","declaration":"@discardableResult func addScript(_ text: String, sourceName: String? = nil) -> Self","kind":"swift.method","path":"GameEventScriptCompiler.GesProgramBuilder.addScript(_:sourceName:)"}
+symbol {"access":"public","declaration":"@discardableResult func withDebugInfo(_ options: GesDebugInfoOptions = .all) -> Self","kind":"swift.method","path":"GameEventScriptCompiler.GesProgramBuilder.withDebugInfo(_:)"}
+symbol {"access":"public","declaration":"@discardableResult func withExternalTypeCatalog(_ catalog: any GesExternalTypeCatalog) -> Self","kind":"swift.method","path":"GameEventScriptCompiler.GesProgramBuilder.withExternalTypeCatalog(_:)"}
+symbol {"access":"public","declaration":"@discardableResult func withProgramVersion(_ version: UInt64) -> Self","kind":"swift.method","path":"GameEventScriptCompiler.GesProgramBuilder.withProgramVersion(_:)"}
+symbol {"access":"public","declaration":"final class GesProgramBuilder","kind":"swift.class","path":"GameEventScriptCompiler.GesProgramBuilder"}
+symbol {"access":"public","declaration":"func compile(options: GesCompileOptions? = nil) throws -> GameEventScriptProgram","kind":"swift.method","path":"GameEventScriptCompiler.GesProgramBuilder.compile(options:)"}
+symbol {"access":"public","declaration":"init()","kind":"swift.init","path":"GameEventScriptCompiler.GesProgramBuilder.init()"}
+symbol {"access":"public","declaration":"init(debugInfo: GesDebugInfoOptions = .all, programVersion: UInt64 = 0)","kind":"swift.init","path":"GameEventScriptCompiler.GesCompileOptions.init(debugInfo:programVersion:)"}
+symbol {"access":"public","declaration":"init(diagnostics: [GesDiagnostic])","kind":"swift.init","path":"GameEventScriptCompiler.GesCompileError.init(diagnostics:)"}
+symbol {"access":"public","declaration":"init(rawValue: UInt8)","kind":"swift.init","path":"GameEventScriptCompiler.GesDebugInfoOptions.init(rawValue:)"}
+symbol {"access":"public","declaration":"let diagnostics: [GesDiagnostic]","kind":"swift.property","path":"GameEventScriptCompiler.GesCompileError.diagnostics"}
+symbol {"access":"public","declaration":"let rawValue: UInt8","kind":"swift.property","path":"GameEventScriptCompiler.GesDebugInfoOptions.rawValue"}
+symbol {"access":"public","declaration":"static func create() -> GesProgramBuilder","kind":"swift.type.method","path":"GameEventScriptCompiler.GesProgramBuilder.create()"}
+symbol {"access":"public","declaration":"static let all: GesDebugInfoOptions","kind":"swift.type.property","path":"GameEventScriptCompiler.GesDebugInfoOptions.all"}
+symbol {"access":"public","declaration":"static let none: GesDebugInfoOptions","kind":"swift.type.property","path":"GameEventScriptCompiler.GesDebugInfoOptions.none"}
+symbol {"access":"public","declaration":"static let sourceArchive: GesDebugInfoOptions","kind":"swift.type.property","path":"GameEventScriptCompiler.GesDebugInfoOptions.sourceArchive"}
+symbol {"access":"public","declaration":"static let sourceMap: GesDebugInfoOptions","kind":"swift.type.property","path":"GameEventScriptCompiler.GesDebugInfoOptions.sourceMap"}
+symbol {"access":"public","declaration":"static let symbols: GesDebugInfoOptions","kind":"swift.type.property","path":"GameEventScriptCompiler.GesDebugInfoOptions.symbols"}
+symbol {"access":"public","declaration":"struct GesCompileError","kind":"swift.struct","path":"GameEventScriptCompiler.GesCompileError"}
+symbol {"access":"public","declaration":"struct GesCompileOptions","kind":"swift.struct","path":"GameEventScriptCompiler.GesCompileOptions"}
+symbol {"access":"public","declaration":"struct GesDebugInfoOptions","kind":"swift.struct","path":"GameEventScriptCompiler.GesDebugInfoOptions"}
+symbol {"access":"public","declaration":"var debugInfo: GesDebugInfoOptions","kind":"swift.property","path":"GameEventScriptCompiler.GesCompileOptions.debugInfo"}
+symbol {"access":"public","declaration":"var programVersion: UInt64","kind":"swift.property","path":"GameEventScriptCompiler.GesCompileOptions.programVersion"}

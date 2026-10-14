@@ -71,24 +71,24 @@ public final class CardGame {
         guard rules.utf8.count <= 131_072 else { throw CardGameError("Rule source exceeds 128 KiB") }
         self.players = players
         bindings = Bindings(playerCount: players.count)
-        var limits = GameEventScriptRuntimeLimits()
+        var limits = GesRuntimeLimits()
         limits.maxQueuedMessagesPerRun = 2048
         limits.maxExecutionSteps = 50_000
         limits.maxLoopIterations = 2048
         limits.maxGeneratedCollectionItems = 2048
         host = try GameEventScriptHost(seed: seed, limits: limits, observer: bindings, extensions: bindings)
         do {
-            let program = try GameEventScriptBuilder.create().withDebugInfo([.symbols, .sourceMap]).addScript(rules, sourceName: "rules.ges").compile()
+            let program = try GesProgramBuilder.create().withDebugInfo([.symbols, .sourceMap]).addScript(rules, sourceName: "rules.ges").compile()
             hasEndRound = program.bindings.contains { binding in
                 program.stringConstants[Int(binding.name)] == "EndRound" && binding.requiredTags.isEmpty
                     && (binding.kind == .messageNameHandler || (binding.kind == .messageHandler && binding.argumentNames.map { program.stringConstants[Int($0)] } == ["number", "players"]))
             }
             _ = try host.load(program)
-        } catch let error as GameEventScriptCompileError {
+        } catch let error as GesCompileError {
             throw CardGameError(error.diagnostics.map(formatDiagnostic).joined(separator: "\n"))
         }
         for (name, labels) in Bindings.commands {
-            _ = try host.subscribe(GameEventScriptMessageSignature(name: name, parameters: labels), handler: bindings)
+            _ = try host.subscribe(GesMessageSignature(name: name, parameters: labels), handler: bindings)
         }
         guard try host.start().state == .ready else { throw CardGameError("GES initialization failed") }
         try event("PrepareGame", [("players", bindings.playerValues)], phase: .prepareGame)
@@ -258,7 +258,7 @@ func message(_ name: String, _ values: [(String, GesValue)]) throws -> GameEvent
     try .init(name: name, arguments: values.map { try .init(name: $0.0, value: $0.1) })
 }
 
-final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtensionRegistry, GameEventScriptRuntimeObserver {
+final class Bindings: GesNativeMessageHandler, GesExtensionRegistry, GesRuntimeObserver {
     enum Phase { case prepareGame, beginRound, beginTurn, action, endTurn, endRound, endGame, idle, finished }
 
     struct Pending {
@@ -329,7 +329,7 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
 
     init(playerCount: Int) { self.playerCount = playerCount }
 
-    func resolve(_ reference: GameEventScriptExtensionReference) throws -> (any GameEventScriptExtensionFunction)? {
+    func resolve(_ reference: GesExtensionReference) throws -> (any GesExtensionFunction)? {
         guard reference.extensionName == "board" else { return nil }
         if reference.functionName == "state", reference.argumentLabels == ["player", "key"] { return BoardExtension(bindings: self, name: "playerstate") }
         if reference.functionName == "setstate", reference.argumentLabels == ["player", "key", "value"] { return BoardExtension(bindings: self, name: "setplayerstate") }
@@ -337,7 +337,7 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
         return BoardExtension(bindings: self, name: reference.functionName)
     }
 
-    func handle(_ message: GameEventScriptMessage, context: GameEventScriptContext) throws {
+    func handle(_ message: GameEventScriptMessage, context: GesContext) throws {
         let args = message.arguments
         switch message.name {
         case "BeginRound", "EndRound": break  // Optional script hooks still have a native recipient.
@@ -474,12 +474,12 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
         lastAction = request.action.kind
     }
 
-    func runtimeError(_ diagnostic: GameEventScriptDiagnostic) { fault = formatDiagnostic(diagnostic) }
+    func runtimeError(_ diagnostic: GesDiagnostic) { fault = formatDiagnostic(diagnostic) }
 
     func runtimeLimitReached(_ limitName: String, detail: String, limit: Int) { fault = "\(limitName): \(detail) (\(limit))" }
 }
 
-private struct BoardExtension: GameEventScriptExtensionFunction {
+private struct BoardExtension: GesExtensionFunction {
     static let signatures: [String: [String]] = [
         "actions": ["player"], "cards": ["zone"], "card": ["id"], "top": ["zone"], "current": [], "playercount": [], "players": [], "next": ["player"], "table": [], "zones": ["player"], "lastaction": [], "roundnumber": [], "direction": [],
         "state": ["key"], "ending": [],
@@ -583,7 +583,7 @@ private func zoneValue(_ zone: Zone) throws -> GesValue {
     ])
 }
 
-func formatDiagnostic(_ diagnostic: GameEventScriptDiagnostic) -> String {
+func formatDiagnostic(_ diagnostic: GesDiagnostic) -> String {
     let location = diagnostic.sourceLocation
     let prefix = location.map { $0.sourceName + ($0.line.map { ":\($0)" } ?? "") + ($0.column.map { ":\($0)" } ?? "") + ": " } ?? ""
     var lines = [prefix + diagnostic.code + (diagnostic.message.isEmpty ? "" : ": " + diagnostic.message)]

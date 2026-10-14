@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 using GameEventScript.Runtime.VM;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime;
 
@@ -74,14 +74,14 @@ internal static class GesDataConstruction
         return result;
     }
 
-    internal static GesValue Create(string type, string[] labels, GesValue[] arguments, GesVirtualMachine state, GameEventScriptContext context)
+    internal static GesValue Create(string type, string[] labels, GesValue[] arguments, GesVirtualMachine state, GesContext context)
     {
         var positions = Positions(type, labels);
         return positions is null ? default : Create(type, positions, arguments, state, context);
     }
 
     // Positions come from Positions(type, labels), resolved once per constant type and label list.
-    internal static GesValue Create(string type, int[] positions, GesValue[] arguments, GesVirtualMachine state, GameEventScriptContext context)
+    internal static GesValue Create(string type, int[] positions, GesValue[] arguments, GesVirtualMachine state, GesContext context)
     {
         if (arguments.Length != positions.Length)
             return default;
@@ -93,7 +93,7 @@ internal static class GesDataConstruction
             return default;
         if (type is "vector" or "point")
         {
-            var unit = arguments.Length == 0 ? GameEventScriptBytecodeInstructionUnit.UnitNone : arguments[0].Unit;
+            var unit = arguments.Length == 0 ? GesQuantityUnit.UnitNone : arguments[0].Unit;
             foreach (var argument in arguments)
                 if (argument.Kind is not (Integer or Float) || argument.Unit != unit)
                     return default;
@@ -111,15 +111,15 @@ internal static class GesDataConstruction
                 return default;
             var unit = values[1].TextValue switch
             {
-                "" or "none" => GameEventScriptBytecodeInstructionUnit.UnitNone,
-                "s" or "second" => GameEventScriptBytecodeInstructionUnit.UnitSecond,
-                "m" or "meter" => GameEventScriptBytecodeInstructionUnit.UnitMeter,
-                "°" or "degree" => GameEventScriptBytecodeInstructionUnit.UnitDegree,
-                _ => GameEventScriptBytecodeInstructionUnit.UnitInvalid
+                "" or "none" => GesQuantityUnit.UnitNone,
+                "s" or "second" => GesQuantityUnit.UnitSecond,
+                "m" or "meter" => GesQuantityUnit.UnitMeter,
+                "°" or "degree" => GesQuantityUnit.UnitDegree,
+                _ => GesQuantityUnit.UnitInvalid
             };
-            if (unit == GameEventScriptBytecodeInstructionUnit.UnitInvalid || number.Kind is not (Integer or Float))
+            if (unit == GesQuantityUnit.UnitInvalid || number.Kind is not (Integer or Float))
                 return default;
-            if (number.Unit != GameEventScriptBytecodeInstructionUnit.UnitNone && number.Unit != unit)
+            if (number.Unit != GesQuantityUnit.UnitNone && number.Unit != unit)
                 return default;
             return number.Kind == Integer ? GesValue.GesInteger(number.IntegerValue, unit) : GesValue.GesFloat(number.FloatValue, unit);
         }
@@ -176,7 +176,7 @@ internal static class GesDataConstruction
         var kind = type switch
         {
             "percentage" => Percentage,
-            "boolean" => GameEventScriptBytecodeTypeKind.Boolean,
+            "boolean" => GesBytecodeTypeKind.Boolean,
             "text" => Text,
             "tag" => Tag,
             "list" => List,
@@ -184,7 +184,7 @@ internal static class GesDataConstruction
             "dice" => Dice,
             "vector" => Vector,
             "point" => Point,
-            "range" => GameEventScriptBytecodeTypeKind.Range,
+            "range" => GesBytecodeTypeKind.Range,
             "series" => Series,
             "message" => Message,
             "handler" => Handler,

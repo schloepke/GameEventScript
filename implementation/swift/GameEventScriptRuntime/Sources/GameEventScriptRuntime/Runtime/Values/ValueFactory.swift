@@ -8,9 +8,9 @@ struct GesValueFactory: GesValueOutput {
 
     func boolean(_ value: Bool) -> GesValue { .boolean(value) }
 
-    func integer(_ value: Int64, unit: GesUnit) -> GesValue { .integer(value, unit: unit) }
+    func integer(_ value: Int64, unit: GesQuantityUnit) -> GesValue { .integer(value, unit: unit) }
 
-    func float(_ value: Double, unit: GesUnit) -> GesValue { .float(value, unit: unit) }
+    func float(_ value: Double, unit: GesQuantityUnit) -> GesValue { .float(value, unit: unit) }
 
     func percentage(_ value: Double) -> GesValue { .percentage(value) }
 
@@ -18,9 +18,9 @@ struct GesValueFactory: GesValueOutput {
 
     func tag(_ value: String) throws -> GesValue { try .tag(value) }
 
-    func vector(x: Double, y: Double, z: Double, unit: GesUnit) -> GesValue { .vector(x: x, y: y, z: z, unit: unit) }
+    func vector(x: Double, y: Double, z: Double, unit: GesQuantityUnit) -> GesValue { .vector(x: x, y: y, z: z, unit: unit) }
 
-    func point(x: Double, y: Double, z: Double, unit: GesUnit) -> GesValue { .point(x: x, y: y, z: z, unit: unit) }
+    func point(x: Double, y: Double, z: Double, unit: GesQuantityUnit) -> GesValue { .point(x: x, y: y, z: z, unit: unit) }
 
     func dice(_ value: [Int32]) -> GesValue { .dice(value) }
 
@@ -36,7 +36,7 @@ struct GesValueFactory: GesValueOutput {
 
     func message(_ value: GameEventScriptMessage) -> GesValue { .message(value) }
 
-    func handler(_ value: GameEventScriptMessageSignature) -> GesValue { .handler(value) }
+    func handler(_ value: GesMessageSignature) -> GesValue { .handler(value) }
 
     func series(_ value: GesSeriesValue) -> GesValue { .series(value) }
 }

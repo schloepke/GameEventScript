@@ -9,9 +9,9 @@ using GameEventScript.Api;
 
 namespace GameEventScript.Tool;
 
-internal sealed class RunProfiler : IGameEventScriptProfiler
+internal sealed class RunProfiler : IGesProfiler
 {
-    internal sealed class Measurement(GameEventScriptProgram program, Func<long>? clock = null) : IGameEventScriptProgramProfiler
+    internal sealed class Measurement(GameEventScriptProgram program, Func<long>? clock = null) : IGesProgramProfiler
     {
         internal readonly GameEventScriptProgram Program = program;
         internal readonly long[] Counts = new long[program.Code.Count];
@@ -24,11 +24,11 @@ internal sealed class RunProfiler : IGameEventScriptProfiler
         private int _phase = -1;
         private long _start;
 
-        public void PhaseStarting(GameEventScriptProfilePhase phase)
+        public void PhaseStarting(GesProfilePhase phase)
         {
             var end = Stopwatch.GetTimestamp();
             ClosePhase(end);
-            if (phase == GameEventScriptProfilePhase.StateCheck) _pending = -1;
+            if (phase == GesProfilePhase.StateCheck) _pending = -1;
             _phase = (int)phase;
             _start = clock?.Invoke() ?? Stopwatch.GetTimestamp();
         }
@@ -45,7 +45,7 @@ internal sealed class RunProfiler : IGameEventScriptProfiler
                 Ticks[address] += _prelude[phase];
                 _prelude[phase] = 0;
             }
-            _phase = (int)GameEventScriptProfilePhase.Execute;
+            _phase = (int)GesProfilePhase.Execute;
             _start = clock?.Invoke() ?? Stopwatch.GetTimestamp();
         }
 
@@ -87,7 +87,7 @@ internal sealed class RunProfiler : IGameEventScriptProfiler
         _frequency = frequency ?? Stopwatch.Frequency;
     }
 
-    public IGameEventScriptProgramProfiler CreateProgramProfiler(GameEventScriptProgram program)
+    public IGesProgramProfiler CreateProgramProfiler(GameEventScriptProgram program)
     {
         var result = new Measurement(program, _clock);
         Programs.Add(result);
@@ -143,7 +143,7 @@ internal sealed class RunProfiler : IGameEventScriptProfiler
         for (var index = 0; index < Programs.Count; index++) output.AppendLine($"| {index + 1} | {Escape(Programs[index].Program.ModuleName)} | {Programs[index].Program.Code.Count} |");
         output.AppendLine("\n## Loop phases\n\n| Phase | Visits | Total ms |\n| --- | ---: | ---: |");
         for (var phase = 0; phase < 6; phase++)
-            output.AppendLine($"| {(GameEventScriptProfilePhase)phase} | {Programs.Sum(p => p.PhaseCounts[phase])} | {Number(totals[phase] / 1_000_000)} |");
+            output.AppendLine($"| {(GesProfilePhase)phase} | {Programs.Sum(p => p.PhaseCounts[phase])} | {Number(totals[phase] / 1_000_000)} |");
         output.AppendLine($"\nTerminal checks without an instruction: {Number((total - instructions.Sum(row => row.Nanoseconds)) / 1_000_000)} ms. "
             + "Phase columns below are mean nanoseconds per instruction start. Execute includes opcode dispatch. Budget reservation/completion is outside the loop and excluded.");
         Table("Opcodes", opcodes.Values, null);

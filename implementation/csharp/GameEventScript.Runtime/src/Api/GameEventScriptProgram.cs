@@ -21,18 +21,18 @@ public sealed class GameEventScriptProgram
         ulong programVersion,
         ushort requiredRegisterCount,
         ushort requiredCallStackDepth,
-        GameEventScriptStringConstantSegment stringConstantSegment,
-        GameEventScriptUInt16IndexListSegment uint16IndexListSegment,
-        GameEventScriptBindingSegment bindingSegment,
-        GameEventScriptCodeSegment codeSegment,
-        GameEventScriptDebugSymbolsSegment? debugSymbolsSegment = null,
-        GameEventScriptSourceMapSegment? sourceMapSegment = null,
-        GameEventScriptSourceArchiveSegment? sourceArchiveSegment = null,
-        GameEventScriptBuildMetadataSegment? buildMetadataSegment = null,
-        IReadOnlyList<GameEventScriptOpaqueSection>? opaqueSections = null)
+        GesStringConstantSegment stringConstantSegment,
+        GesUInt16IndexListSegment uint16IndexListSegment,
+        GesBindingSegment bindingSegment,
+        GesCodeSegment codeSegment,
+        GesDebugSymbolsSegment? debugSymbolsSegment = null,
+        GesSourceMapSegment? sourceMapSegment = null,
+        GesSourceArchiveSegment? sourceArchiveSegment = null,
+        GesBuildMetadataSegment? buildMetadataSegment = null,
+        IReadOnlyList<GesOpaqueSection>? opaqueSections = null)
     {
         FormatVersion = formatVersion;
-        Metadata = new GameEventScriptProgramMetadataSegment(moduleName, requiredRegisterCount, requiredCallStackDepth, programVersion);
+        Metadata = new GesProgramMetadataSegment(moduleName, requiredRegisterCount, requiredCallStackDepth, programVersion);
         StringConstants = stringConstantSegment;
         UInt16IndexLists = uint16IndexListSegment;
         Bindings = bindingSegment;
@@ -41,7 +41,7 @@ public sealed class GameEventScriptProgram
         SourceMap = sourceMapSegment;
         SourceArchive = sourceArchiveSegment;
         BuildMetadata = buildMetadataSegment;
-        OpaqueSections = new GameEventScriptReadOnlyArray<GameEventScriptOpaqueSection>(opaqueSections);
+        OpaqueSections = new GesReadOnlyArray<GesOpaqueSection>(opaqueSections);
     }
 
     /// <summary>
@@ -51,7 +51,7 @@ public sealed class GameEventScriptProgram
     /// <summary>
     /// Gets the metadata.
     /// </summary>
-    public GameEventScriptProgramMetadataSegment Metadata { get; }
+    public GesProgramMetadataSegment Metadata { get; }
     /// <summary>
     /// Gets the module name.
     /// </summary>
@@ -71,45 +71,45 @@ public sealed class GameEventScriptProgram
     /// <summary>
     /// Gets the string constants.
     /// </summary>
-    public GameEventScriptStringConstantSegment StringConstants { get; }
+    public GesStringConstantSegment StringConstants { get; }
     /// <summary>
     /// Gets the u int16 index lists.
     /// </summary>
-    public GameEventScriptUInt16IndexListSegment UInt16IndexLists { get; }
+    public GesUInt16IndexListSegment UInt16IndexLists { get; }
     /// <summary>
     /// Gets the bindings.
     /// </summary>
-    public GameEventScriptBindingSegment Bindings { get; }
+    public GesBindingSegment Bindings { get; }
     /// <summary>
     /// Gets the code.
     /// </summary>
-    public GameEventScriptCodeSegment Code { get; }
+    public GesCodeSegment Code { get; }
     /// <summary>
     /// Gets the debug symbols.
     /// </summary>
-    public GameEventScriptDebugSymbolsSegment? DebugSymbols { get; }
+    public GesDebugSymbolsSegment? DebugSymbols { get; }
     /// <summary>
     /// Gets the source map.
     /// </summary>
-    public GameEventScriptSourceMapSegment? SourceMap { get; }
+    public GesSourceMapSegment? SourceMap { get; }
     /// <summary>
     /// Gets the source archive.
     /// </summary>
-    public GameEventScriptSourceArchiveSegment? SourceArchive { get; }
+    public GesSourceArchiveSegment? SourceArchive { get; }
     /// <summary>
     /// Gets the build metadata.
     /// </summary>
-    public GameEventScriptBuildMetadataSegment? BuildMetadata { get; }
+    public GesBuildMetadataSegment? BuildMetadata { get; }
     /// <summary>
     /// Gets the opaque sections.
     /// </summary>
-    public GameEventScriptReadOnlyArray<GameEventScriptOpaqueSection> OpaqueSections { get; }
+    public GesReadOnlyArray<GesOpaqueSection> OpaqueSections { get; }
 }
 
 /// <summary>
 /// Represents a game event script program metadata segment.
 /// </summary>
-public readonly struct GameEventScriptProgramMetadataSegment
+public readonly struct GesProgramMetadataSegment
 {
     /// <summary>
     /// Initializes a new instance of Game Event Script Program Metadata Segment.
@@ -118,7 +118,7 @@ public readonly struct GameEventScriptProgramMetadataSegment
     /// <param name="requiredRegisterCount">The required register count value.</param>
     /// <param name="requiredCallStackDepth">The required call stack depth value.</param>
     /// <param name="programVersion">The program version value.</param>
-    public GameEventScriptProgramMetadataSegment(string moduleName, ushort requiredRegisterCount, ushort requiredCallStackDepth, ulong programVersion)
+    public GesProgramMetadataSegment(string moduleName, ushort requiredRegisterCount, ushort requiredCallStackDepth, ulong programVersion)
     {
         ModuleName = moduleName ?? string.Empty;
         RequiredRegisterCount = requiredRegisterCount;
@@ -147,22 +147,22 @@ public readonly struct GameEventScriptProgramMetadataSegment
 /// <summary>
 /// Immutable array view used by portable programs and other immutable API models.
 /// </summary>
-public readonly struct GameEventScriptReadOnlyArray<T> : IReadOnlyList<T>
+public readonly struct GesReadOnlyArray<T> : IReadOnlyList<T>
 {
     private readonly T[]? _items;
 
-    private GameEventScriptReadOnlyArray(T[] ownedItems) => _items = ownedItems;
+    private GesReadOnlyArray(T[] ownedItems) => _items = ownedItems;
 
     // The caller transfers exclusive ownership; no mutable reference may escape or be retained.
-    internal static GameEventScriptReadOnlyArray<T> FromOwnedArray(T[] items) => new(items);
+    internal static GesReadOnlyArray<T> FromOwnedArray(T[] items) => new(items);
 
     /// <summary>
-    /// Takes an immutable snapshot, reusing storage only when the input is already a GameEventScriptReadOnlyArray of the same element type.
+    /// Takes an immutable snapshot, reusing storage only when the input is already a GesReadOnlyArray of the same element type.
     /// </summary>
     /// <param name="items">The items value.</param>
-    public GameEventScriptReadOnlyArray(IReadOnlyList<T>? items)
+    public GesReadOnlyArray(IReadOnlyList<T>? items)
     {
-        if (items is GameEventScriptReadOnlyArray<T> immutable)
+        if (items is GesReadOnlyArray<T> immutable)
         {
             _items = immutable._items;
             return;
@@ -214,7 +214,7 @@ public readonly struct GameEventScriptReadOnlyArray<T> : IReadOnlyList<T>
 /// <summary>
 /// Represents a game event script binary format.
 /// </summary>
-public static class GameEventScriptBinaryFormat
+public static class GesBinaryFormat
 {
     /// <summary>
     /// Defines the version value.
@@ -250,7 +250,7 @@ public static class GameEventScriptBinaryFormat
 /// Defines the supported game event script section flags values.
 /// </summary>
 [Flags]
-public enum GameEventScriptSectionFlags : ushort
+public enum GesSectionFlags : ushort
 {
     /// <summary>
     /// Identifies the none value.
@@ -269,7 +269,7 @@ public enum GameEventScriptSectionFlags : ushort
 /// <summary>
 /// Defines the supported game event script section type values.
 /// </summary>
-public enum GameEventScriptSectionType : ushort
+public enum GesSectionType : ushort
 {
     /// <summary>
     /// Identifies the program metadata value.
@@ -321,7 +321,7 @@ public enum GameEventScriptSectionType : ushort
 /// Defines the supported game event script debug info options values.
 /// </summary>
 [Flags]
-public enum GameEventScriptDebugInfoOptions : byte
+public enum GesDebugInfoOptions : byte
 {
     /// <summary>
     /// Identifies the none value.
@@ -348,7 +348,7 @@ public enum GameEventScriptDebugInfoOptions : byte
 /// <summary>
 /// Represents a game event script string constant segment.
 /// </summary>
-public readonly struct GameEventScriptStringConstantSegment
+public readonly struct GesStringConstantSegment
 {
     /// <summary>
     /// Represents a slice entry.
@@ -365,28 +365,28 @@ public readonly struct GameEventScriptStringConstantSegment
         public int Length { get; init; }
     }
 
-    private readonly GameEventScriptReadOnlyArray<SliceEntry> _slices;
-    private readonly GameEventScriptReadOnlyArray<byte> _data;
+    private readonly GesReadOnlyArray<SliceEntry> _slices;
+    private readonly GesReadOnlyArray<byte> _data;
 
     /// <summary>
     /// Initializes a new instance of Game Event Script String Constant Segment.
     /// </summary>
     /// <param name="slices">The slices value.</param>
     /// <param name="data">The data value.</param>
-    public GameEventScriptStringConstantSegment(IReadOnlyList<SliceEntry> slices, IReadOnlyList<byte> data)
+    public GesStringConstantSegment(IReadOnlyList<SliceEntry> slices, IReadOnlyList<byte> data)
     {
-        _slices = new GameEventScriptReadOnlyArray<SliceEntry>(slices);
-        _data = new GameEventScriptReadOnlyArray<byte>(data);
+        _slices = new GesReadOnlyArray<SliceEntry>(slices);
+        _data = new GesReadOnlyArray<byte>(data);
     }
 
     /// <summary>
     /// Gets the slices.
     /// </summary>
-    public GameEventScriptReadOnlyArray<SliceEntry> Slices => _slices;
+    public GesReadOnlyArray<SliceEntry> Slices => _slices;
     /// <summary>
     /// Gets the data.
     /// </summary>
-    public GameEventScriptReadOnlyArray<byte> Data => _data;
+    public GesReadOnlyArray<byte> Data => _data;
 
     /// <summary>
     /// Resolves the size.
@@ -409,11 +409,11 @@ public readonly struct GameEventScriptStringConstantSegment
 /// <summary>
 /// Represents an immutable slice of unsigned 16-bit indices.
 /// </summary>
-public readonly struct GameEventScriptUInt16IndexList
+public readonly struct GesUInt16IndexList
 {
-    private readonly GameEventScriptReadOnlyArray<ushort> _data;
+    private readonly GesReadOnlyArray<ushort> _data;
 
-    internal GameEventScriptUInt16IndexList(GameEventScriptReadOnlyArray<ushort> data, int start, int length)
+    internal GesUInt16IndexList(GesReadOnlyArray<ushort> data, int start, int length)
     {
         _data = data;
         Start = start;
@@ -448,7 +448,7 @@ public readonly struct GameEventScriptUInt16IndexList
 /// <summary>
 /// Represents a game event script u int16 index list segment.
 /// </summary>
-public readonly struct GameEventScriptUInt16IndexListSegment
+public readonly struct GesUInt16IndexListSegment
 {
     /// <summary>
     /// Represents a slice entry.
@@ -465,48 +465,48 @@ public readonly struct GameEventScriptUInt16IndexListSegment
         public int Length { get; init; }
     }
 
-    private readonly GameEventScriptReadOnlyArray<SliceEntry> _slices;
-    private readonly GameEventScriptReadOnlyArray<ushort> _data;
+    private readonly GesReadOnlyArray<SliceEntry> _slices;
+    private readonly GesReadOnlyArray<ushort> _data;
 
     /// <summary>
     /// Initializes a new instance of Game Event Script U Int16 Index List Segment.
     /// </summary>
     /// <param name="slices">The slices value.</param>
     /// <param name="data">The data value.</param>
-    public GameEventScriptUInt16IndexListSegment(IReadOnlyList<SliceEntry> slices, IReadOnlyList<ushort> data)
+    public GesUInt16IndexListSegment(IReadOnlyList<SliceEntry> slices, IReadOnlyList<ushort> data)
     {
-        _slices = new GameEventScriptReadOnlyArray<SliceEntry>(slices);
-        _data = new GameEventScriptReadOnlyArray<ushort>(data);
+        _slices = new GesReadOnlyArray<SliceEntry>(slices);
+        _data = new GesReadOnlyArray<ushort>(data);
     }
 
     /// <summary>
     /// Gets the slices.
     /// </summary>
-    public GameEventScriptReadOnlyArray<SliceEntry> Slices => _slices;
+    public GesReadOnlyArray<SliceEntry> Slices => _slices;
     /// <summary>
     /// Gets the data.
     /// </summary>
-    public GameEventScriptReadOnlyArray<ushort> Data => _data;
+    public GesReadOnlyArray<ushort> Data => _data;
 
     /// <summary>
     /// Resolves the value.
     /// </summary>
     /// <param name="index">The index value.</param>
     /// <returns>The result of the operation.</returns>
-    public GameEventScriptUInt16IndexList Resolve(ushort index) => new(_data, _slices[index].Start, _slices[index].Length);
+    public GesUInt16IndexList Resolve(ushort index) => new(_data, _slices[index].Start, _slices[index].Length);
 }
 
 /// <summary>
 /// Represents a game event script binding segment.
 /// </summary>
-public readonly struct GameEventScriptBindingSegment
+public readonly struct GesBindingSegment
 {
 
     /// <summary>
     /// Represents a game event script binary bind entry.
     /// </summary>
     public readonly struct GameEventScriptBinaryBindEntry(
-        GameEventScriptBinaryBindKind kind,
+        GesBinaryBindKind kind,
         ushort name,
         IReadOnlyList<ushort>? argumentNames,
         ushort entryAddress = 0xFFFF,
@@ -516,9 +516,9 @@ public readonly struct GameEventScriptBindingSegment
         ushort requiredRegisterCount = 0,
         ushort requiredCallStackDepth = 0)
     {
-        private readonly GameEventScriptReadOnlyArray<ushort> _argumentNames = new(argumentNames);
-        private readonly GameEventScriptReadOnlyArray<ushort> _requiredTags = new(requiredTags);
-        private readonly GameEventScriptReadOnlyArray<ushort> _excludedTags = new(excludedTags);
+        private readonly GesReadOnlyArray<ushort> _argumentNames = new(argumentNames);
+        private readonly GesReadOnlyArray<ushort> _requiredTags = new(requiredTags);
+        private readonly GesReadOnlyArray<ushort> _excludedTags = new(excludedTags);
 
         /// <summary>
         /// Gets the id.
@@ -528,7 +528,7 @@ public readonly struct GameEventScriptBindingSegment
         /// <summary>
         /// Gets the kind.
         /// </summary>
-        public GameEventScriptBinaryBindKind Kind { get; } = kind;
+        public GesBinaryBindKind Kind { get; } = kind;
 
         /// <summary>
         /// Gets the name.
@@ -538,17 +538,17 @@ public readonly struct GameEventScriptBindingSegment
         /// <summary>
         /// Gets the argument names.
         /// </summary>
-        public GameEventScriptReadOnlyArray<ushort> ArgumentNames => _argumentNames;
+        public GesReadOnlyArray<ushort> ArgumentNames => _argumentNames;
 
         /// <summary>
         /// Gets the required tags.
         /// </summary>
-        public GameEventScriptReadOnlyArray<ushort> RequiredTags => _requiredTags;
+        public GesReadOnlyArray<ushort> RequiredTags => _requiredTags;
 
         /// <summary>
         /// Gets the excluded tags.
         /// </summary>
-        public GameEventScriptReadOnlyArray<ushort> ExcludedTags => _excludedTags;
+        public GesReadOnlyArray<ushort> ExcludedTags => _excludedTags;
 
         /// <summary>
         /// Gets the entry address.
@@ -567,15 +567,15 @@ public readonly struct GameEventScriptBindingSegment
 
     }
 
-    private readonly GameEventScriptReadOnlyArray<GameEventScriptBinaryBindEntry> _entries;
+    private readonly GesReadOnlyArray<GameEventScriptBinaryBindEntry> _entries;
 
     /// <summary>
     /// Initializes a new instance of Game Event Script Binding Segment.
     /// </summary>
     /// <param name="entries">The entries value.</param>
-    public GameEventScriptBindingSegment(IReadOnlyList<GameEventScriptBinaryBindEntry>? entries)
+    public GesBindingSegment(IReadOnlyList<GameEventScriptBinaryBindEntry>? entries)
     {
-        _entries = new GameEventScriptReadOnlyArray<GameEventScriptBinaryBindEntry>(entries);
+        _entries = new GesReadOnlyArray<GameEventScriptBinaryBindEntry>(entries);
         EntryCount = ToEntryCount(_entries.Count);
     }
 
@@ -587,7 +587,7 @@ public readonly struct GameEventScriptBindingSegment
     /// <summary>
     /// Gets the entries.
     /// </summary>
-    public GameEventScriptReadOnlyArray<GameEventScriptBinaryBindEntry> Entries => _entries;
+    public GesReadOnlyArray<GameEventScriptBinaryBindEntry> Entries => _entries;
 
     private static ushort ToEntryCount(int count) => count > ushort.MaxValue ? throw new ArgumentOutOfRangeException(nameof(count), "GameEventScriptProgram tables cannot exceed 65535 entries.") : checked((ushort)count);
 
@@ -596,16 +596,16 @@ public readonly struct GameEventScriptBindingSegment
 /// <summary>
 /// Represents a game event script code segment.
 /// </summary>
-public readonly struct GameEventScriptCodeSegment
+public readonly struct GesCodeSegment
 {
-    private readonly GameEventScriptReadOnlyArray<GameEventScriptBytecodeInstruction> _instructions;
+    private readonly GesReadOnlyArray<GesBytecodeInstruction> _instructions;
 
     /// <summary>
     /// Initializes a new instance of Game Event Script Code Segment.
     /// </summary>
     /// <param name="instructions">The instructions value.</param>
-    public GameEventScriptCodeSegment(IReadOnlyList<GameEventScriptBytecodeInstruction>? instructions)
-        => _instructions = new GameEventScriptReadOnlyArray<GameEventScriptBytecodeInstruction>(instructions);
+    public GesCodeSegment(IReadOnlyList<GesBytecodeInstruction>? instructions)
+        => _instructions = new GesReadOnlyArray<GesBytecodeInstruction>(instructions);
 
     /// <summary>
     /// Gets the count.
@@ -619,17 +619,17 @@ public readonly struct GameEventScriptCodeSegment
     /// Gets the value at the specified index.
     /// </summary>
     /// <param name="index">The index value.</param>
-    public GameEventScriptBytecodeInstruction this[int index] => _instructions[index];
+    public GesBytecodeInstruction this[int index] => _instructions[index];
     /// <summary>
     /// Gets the instructions.
     /// </summary>
-    public GameEventScriptReadOnlyArray<GameEventScriptBytecodeInstruction> Instructions => _instructions;
+    public GesReadOnlyArray<GesBytecodeInstruction> Instructions => _instructions;
 }
 
 /// <summary>
 /// Defines the supported game event script debug symbol kind values.
 /// </summary>
-public enum GameEventScriptDebugSymbolKind : byte
+public enum GesDebugSymbolKind : byte
 {
     /// <summary>
     /// Identifies the parameter value.
@@ -649,30 +649,30 @@ public enum GameEventScriptDebugSymbolKind : byte
 /// <param name="Name">The name value.</param>
 /// <param name="CodeStart">The code start value.</param>
 /// <param name="CodeLength">The code length value.</param>
-public readonly record struct GameEventScriptDebugSymbol(GameEventScriptDebugSymbolKind Kind, ushort RegisterId, string Name, uint CodeStart, uint CodeLength);
+public readonly record struct GesDebugSymbol(GesDebugSymbolKind Kind, ushort RegisterId, string Name, uint CodeStart, uint CodeLength);
 
 /// <summary>
 /// Represents a game event script debug symbols segment.
 /// </summary>
-public sealed class GameEventScriptDebugSymbolsSegment
+public sealed class GesDebugSymbolsSegment
 {
     /// <summary>
     /// Initializes a new instance of Game Event Script Debug Symbols Segment.
     /// </summary>
     /// <param name="symbols">The symbols value.</param>
-    public GameEventScriptDebugSymbolsSegment(IReadOnlyList<GameEventScriptDebugSymbol>? symbols)
-        => Symbols = new GameEventScriptReadOnlyArray<GameEventScriptDebugSymbol>(symbols);
+    public GesDebugSymbolsSegment(IReadOnlyList<GesDebugSymbol>? symbols)
+        => Symbols = new GesReadOnlyArray<GesDebugSymbol>(symbols);
 
     /// <summary>
     /// Gets the symbols.
     /// </summary>
-    public GameEventScriptReadOnlyArray<GameEventScriptDebugSymbol> Symbols { get; }
+    public GesReadOnlyArray<GesDebugSymbol> Symbols { get; }
 }
 
 /// <summary>
 /// Represents a game event script source map source.
 /// </summary>
-public sealed class GameEventScriptSourceMapSource
+public sealed class GesSourceMapSource
 {
     /// <summary>
     /// Initializes a new instance of Game Event Script Source Map Source.
@@ -682,13 +682,13 @@ public sealed class GameEventScriptSourceMapSource
     /// <param name="sourceByteLength">The source byte length value.</param>
     /// <param name="sha256">The sha256 value.</param>
     /// <param name="lineStartByteOffsets">The line start byte offsets value.</param>
-    public GameEventScriptSourceMapSource(uint sourceId, string sourceName, uint sourceByteLength, IReadOnlyList<byte> sha256, IReadOnlyList<uint> lineStartByteOffsets)
+    public GesSourceMapSource(uint sourceId, string sourceName, uint sourceByteLength, IReadOnlyList<byte> sha256, IReadOnlyList<uint> lineStartByteOffsets)
     {
         SourceId = sourceId;
         SourceName = sourceName ?? string.Empty;
         SourceByteLength = sourceByteLength;
-        Sha256 = new GameEventScriptReadOnlyArray<byte>(sha256);
-        LineStartByteOffsets = new GameEventScriptReadOnlyArray<uint>(lineStartByteOffsets);
+        Sha256 = new GesReadOnlyArray<byte>(sha256);
+        LineStartByteOffsets = new GesReadOnlyArray<uint>(lineStartByteOffsets);
     }
 
     /// <summary>
@@ -706,11 +706,11 @@ public sealed class GameEventScriptSourceMapSource
     /// <summary>
     /// Gets the sha256.
     /// </summary>
-    public GameEventScriptReadOnlyArray<byte> Sha256 { get; }
+    public GesReadOnlyArray<byte> Sha256 { get; }
     /// <summary>
     /// Gets the line start byte offsets.
     /// </summary>
-    public GameEventScriptReadOnlyArray<uint> LineStartByteOffsets { get; }
+    public GesReadOnlyArray<uint> LineStartByteOffsets { get; }
 }
 
 /// <summary>
@@ -721,40 +721,40 @@ public sealed class GameEventScriptSourceMapSource
 /// <param name="SourceId">The source id value.</param>
 /// <param name="SourceStartByteOffset">The source start byte offset value.</param>
 /// <param name="SourceByteLength">The source byte length value.</param>
-public readonly record struct GameEventScriptSourceMapEntry(uint CodeStart, uint CodeLength, uint SourceId, uint SourceStartByteOffset, uint SourceByteLength);
+public readonly record struct GesSourceMapEntry(uint CodeStart, uint CodeLength, uint SourceId, uint SourceStartByteOffset, uint SourceByteLength);
 
 /// <summary>
 /// Represents a game event script source map segment.
 /// </summary>
-public sealed class GameEventScriptSourceMapSegment
+public sealed class GesSourceMapSegment
 {
     /// <summary>
     /// Initializes a new instance of Game Event Script Source Map Segment.
     /// </summary>
     /// <param name="sources">The sources value.</param>
     /// <param name="entries">The entries value.</param>
-    public GameEventScriptSourceMapSegment(IReadOnlyList<GameEventScriptSourceMapSource>? sources, IReadOnlyList<GameEventScriptSourceMapEntry>? entries)
+    public GesSourceMapSegment(IReadOnlyList<GesSourceMapSource>? sources, IReadOnlyList<GesSourceMapEntry>? entries)
     {
-        Sources = new GameEventScriptReadOnlyArray<GameEventScriptSourceMapSource>(sources);
-        Entries = new GameEventScriptReadOnlyArray<GameEventScriptSourceMapEntry>(entries);
+        Sources = new GesReadOnlyArray<GesSourceMapSource>(sources);
+        Entries = new GesReadOnlyArray<GesSourceMapEntry>(entries);
     }
 
     /// <summary>
     /// Gets the sources.
     /// </summary>
-    public GameEventScriptReadOnlyArray<GameEventScriptSourceMapSource> Sources { get; }
+    public GesReadOnlyArray<GesSourceMapSource> Sources { get; }
     /// <summary>
     /// Gets the entries.
     /// </summary>
-    public GameEventScriptReadOnlyArray<GameEventScriptSourceMapEntry> Entries { get; }
+    public GesReadOnlyArray<GesSourceMapEntry> Entries { get; }
 }
 
 /// <summary>
 /// Represents a game event script source archive entry.
 /// </summary>
-public sealed class GameEventScriptSourceArchiveEntry
+public sealed class GesSourceArchiveEntry
 {
-    private readonly GameEventScriptReadOnlyArray<byte> _utf8Content;
+    private readonly GesReadOnlyArray<byte> _utf8Content;
 
     /// <summary>
     /// Initializes a new instance of Game Event Script Source Archive Entry.
@@ -762,11 +762,11 @@ public sealed class GameEventScriptSourceArchiveEntry
     /// <param name="sourceId">The source id value.</param>
     /// <param name="sourceName">The source name value.</param>
     /// <param name="utf8Content">The utf8 content value.</param>
-    public GameEventScriptSourceArchiveEntry(uint sourceId, string sourceName, IReadOnlyList<byte> utf8Content)
+    public GesSourceArchiveEntry(uint sourceId, string sourceName, IReadOnlyList<byte> utf8Content)
     {
         SourceId = sourceId;
         SourceName = sourceName ?? string.Empty;
-        _utf8Content = new GameEventScriptReadOnlyArray<byte>(utf8Content);
+        _utf8Content = new GesReadOnlyArray<byte>(utf8Content);
     }
 
     /// <summary>
@@ -780,7 +780,7 @@ public sealed class GameEventScriptSourceArchiveEntry
     /// <summary>
     /// Gets the utf8 content.
     /// </summary>
-    public GameEventScriptReadOnlyArray<byte> Utf8Content => _utf8Content;
+    public GesReadOnlyArray<byte> Utf8Content => _utf8Content;
     /// <summary>
     /// Resolves the text.
     /// </summary>
@@ -793,32 +793,32 @@ public sealed class GameEventScriptSourceArchiveEntry
 /// <summary>
 /// Represents a game event script source archive segment.
 /// </summary>
-public sealed class GameEventScriptSourceArchiveSegment
+public sealed class GesSourceArchiveSegment
 {
     /// <summary>
     /// Initializes a new instance of Game Event Script Source Archive Segment.
     /// </summary>
     /// <param name="sources">The sources value.</param>
-    public GameEventScriptSourceArchiveSegment(IReadOnlyList<GameEventScriptSourceArchiveEntry>? sources)
-        => Sources = new GameEventScriptReadOnlyArray<GameEventScriptSourceArchiveEntry>(sources);
+    public GesSourceArchiveSegment(IReadOnlyList<GesSourceArchiveEntry>? sources)
+        => Sources = new GesReadOnlyArray<GesSourceArchiveEntry>(sources);
 
     /// <summary>
     /// Gets the sources.
     /// </summary>
-    public GameEventScriptReadOnlyArray<GameEventScriptSourceArchiveEntry> Sources { get; }
+    public GesReadOnlyArray<GesSourceArchiveEntry> Sources { get; }
 }
 
 /// <summary>
 /// Represents a game event script build metadata segment.
 /// </summary>
-public sealed class GameEventScriptBuildMetadataSegment
+public sealed class GesBuildMetadataSegment
 {
     /// <summary>
     /// Initializes a new instance of Game Event Script Build Metadata Segment.
     /// </summary>
     /// <param name="compilerId">The compiler id value.</param>
     /// <param name="compilerVersion">The compiler version value.</param>
-    public GameEventScriptBuildMetadataSegment(string compilerId, string compilerVersion)
+    public GesBuildMetadataSegment(string compilerId, string compilerVersion)
     {
         CompilerId = compilerId ?? string.Empty;
         CompilerVersion = compilerVersion ?? string.Empty;
@@ -837,9 +837,9 @@ public sealed class GameEventScriptBuildMetadataSegment
 /// <summary>
 /// Represents a game event script opaque section.
 /// </summary>
-public sealed class GameEventScriptOpaqueSection
+public sealed class GesOpaqueSection
 {
-    private readonly GameEventScriptReadOnlyArray<byte> _rawPayload;
+    private readonly GesReadOnlyArray<byte> _rawPayload;
 
     /// <summary>
     /// Initializes a new instance of Game Event Script Opaque Section.
@@ -849,12 +849,12 @@ public sealed class GameEventScriptOpaqueSection
     /// <param name="sectionVersion">The section version value.</param>
     /// <param name="rawPayload">The raw payload value.</param>
     /// <param name="originalOrdinal">The original ordinal value.</param>
-    public GameEventScriptOpaqueSection(ushort sectionType, GameEventScriptSectionFlags flags, ushort sectionVersion, IReadOnlyList<byte> rawPayload, int originalOrdinal)
+    public GesOpaqueSection(ushort sectionType, GesSectionFlags flags, ushort sectionVersion, IReadOnlyList<byte> rawPayload, int originalOrdinal)
     {
         SectionType = sectionType;
         Flags = flags;
         SectionVersion = sectionVersion;
-        _rawPayload = new GameEventScriptReadOnlyArray<byte>(rawPayload);
+        _rawPayload = new GesReadOnlyArray<byte>(rawPayload);
         OriginalOrdinal = originalOrdinal;
     }
 
@@ -865,7 +865,7 @@ public sealed class GameEventScriptOpaqueSection
     /// <summary>
     /// Gets the flags.
     /// </summary>
-    public GameEventScriptSectionFlags Flags { get; }
+    public GesSectionFlags Flags { get; }
     /// <summary>
     /// Gets the section version.
     /// </summary>
@@ -873,7 +873,7 @@ public sealed class GameEventScriptOpaqueSection
     /// <summary>
     /// Gets the raw payload.
     /// </summary>
-    public GameEventScriptReadOnlyArray<byte> RawPayload => _rawPayload;
+    public GesReadOnlyArray<byte> RawPayload => _rawPayload;
     /// <summary>
     /// Gets the original ordinal.
     /// </summary>
@@ -883,7 +883,7 @@ public sealed class GameEventScriptOpaqueSection
 /// <summary>
 /// Defines the supported game event script binary bind kind values.
 /// </summary>
-public enum GameEventScriptBinaryBindKind : byte
+public enum GesBinaryBindKind : byte
 {
     /// <summary>
     /// Identifies the message handler value.
@@ -922,7 +922,7 @@ public enum GameEventScriptBinaryBindKind : byte
 /// <summary>
 /// Defines the supported game event script bytecode instruction unit values.
 /// </summary>
-public enum GameEventScriptBytecodeInstructionUnit : byte
+public enum GesQuantityUnit : byte
 {
     /// <summary>
     /// Identifies the unit none value.
@@ -951,7 +951,7 @@ public enum GameEventScriptBytecodeInstructionUnit : byte
 /// Defines the supported game event script instruction flag values.
 /// </summary>
 [Flags]
-public enum GameEventScriptInstructionFlag : byte
+public enum GesInstructionFlag : byte
 {
     /// <summary>
     /// Identifies the none value.
@@ -972,7 +972,7 @@ public enum GameEventScriptInstructionFlag : byte
 /// <summary>
 /// Defines the supported game event script bytecode type kind values.
 /// </summary>
-public enum GameEventScriptBytecodeTypeKind : byte
+public enum GesBytecodeTypeKind : byte
 {
     /// <summary>
     /// Identifies the nothing value.
@@ -1075,7 +1075,7 @@ public enum GameEventScriptBytecodeTypeKind : byte
 /// <summary>
 /// Defines the supported game event script bytecode pattern kind values.
 /// </summary>
-public enum GameEventScriptBytecodePatternKind : ushort
+public enum GesBytecodePatternKind : ushort
 {
     /// <summary>
     /// Identifies the count any value.
@@ -1098,7 +1098,7 @@ public enum GameEventScriptBytecodePatternKind : ushort
 /// <summary>
 /// Defines the supported game event script bytecode series kind values.
 /// </summary>
-public enum GameEventScriptBytecodeSeriesKind : ushort
+public enum GesBytecodeSeriesKind : ushort
 {
     /// <summary>
     /// Identifies the fibonacci value.
@@ -1114,7 +1114,7 @@ public enum GameEventScriptBytecodeSeriesKind : ushort
 /// Represents a game event script bytecode instruction.
 /// </summary>
 [StructLayout(LayoutKind.Sequential, Size = 16)]
-public struct GameEventScriptBytecodeInstruction
+public struct GesBytecodeInstruction
 {
     private const byte UnitMask = 0x1F;
     private const byte InstructionFlagMask = 0xE0;
@@ -1122,7 +1122,7 @@ public struct GameEventScriptBytecodeInstruction
     /// <summary>
     /// Defines the op code value.
     /// </summary>
-    public GameEventScriptBytecodeOpCode OpCode;
+    public GesBytecodeOpCode OpCode;
     /// <summary>
     /// Defines the unit and flags value.
     /// </summary>
@@ -1208,7 +1208,7 @@ public struct GameEventScriptBytecodeInstruction
     /// <summary>
     /// Gets the type kind.
     /// </summary>
-    public GameEventScriptBytecodeTypeKind TypeKind { readonly get => (GameEventScriptBytecodeTypeKind)_word2; set => _word2 = (ushort)value; }
+    public GesBytecodeTypeKind TypeKind { readonly get => (GesBytecodeTypeKind)_word2; set => _word2 = (ushort)value; }
 
     /// <summary>
     /// Gets the au.
@@ -1256,40 +1256,40 @@ public struct GameEventScriptBytecodeInstruction
         set => Payload = unchecked((ulong)BitConverter.DoubleToInt64Bits(value));
     }
 
-    internal GameEventScriptBytecodeInstructionUnit Unit => DecodeUnit(UnitAndFlags);
+    internal GesQuantityUnit Unit => DecodeUnit(UnitAndFlags);
 
-    internal GameEventScriptInstructionFlag InstructionFlags => DecodeInstructionFlags(UnitAndFlags);
+    internal GesInstructionFlag InstructionFlags => DecodeInstructionFlags(UnitAndFlags);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal bool HasInstructionFlag(GameEventScriptInstructionFlag flag)
+    internal bool HasInstructionFlag(GesInstructionFlag flag)
         => HasInstructionFlag(UnitAndFlags, flag);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void AddInstructionFlag(GameEventScriptInstructionFlag flag)
+    internal void AddInstructionFlag(GesInstructionFlag flag)
         => UnitAndFlags = WithInstructionFlag(UnitAndFlags, flag);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static byte EncodeUnitAndFlags(GameEventScriptBytecodeInstructionUnit? unit, GameEventScriptInstructionFlag flags = GameEventScriptInstructionFlag.None)
+    internal static byte EncodeUnitAndFlags(GesQuantityUnit? unit, GesInstructionFlag flags = GesInstructionFlag.None)
         => EncodeUnitAndFlags(unit.ToStoredUnit(), flags);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static byte EncodeUnitAndFlags(GameEventScriptBytecodeInstructionUnit unit, GameEventScriptInstructionFlag flags = GameEventScriptInstructionFlag.None)
+    internal static byte EncodeUnitAndFlags(GesQuantityUnit unit, GesInstructionFlag flags = GesInstructionFlag.None)
         => (byte)(((byte)unit.ToStoredUnit() & UnitMask) | ((byte)flags & InstructionFlagMask));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static GameEventScriptBytecodeInstructionUnit DecodeUnit(byte unitAndFlags)
-        => ((GameEventScriptBytecodeInstructionUnit)(unitAndFlags & UnitMask)).ToStoredUnit();
+    internal static GesQuantityUnit DecodeUnit(byte unitAndFlags)
+        => ((GesQuantityUnit)(unitAndFlags & UnitMask)).ToStoredUnit();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static GameEventScriptInstructionFlag DecodeInstructionFlags(byte unitAndFlags)
-        => (GameEventScriptInstructionFlag)(unitAndFlags & InstructionFlagMask);
+    internal static GesInstructionFlag DecodeInstructionFlags(byte unitAndFlags)
+        => (GesInstructionFlag)(unitAndFlags & InstructionFlagMask);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static bool HasInstructionFlag(byte unitAndFlags, GameEventScriptInstructionFlag flag)
+    internal static bool HasInstructionFlag(byte unitAndFlags, GesInstructionFlag flag)
         => (unitAndFlags & (byte)flag) != 0;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static byte WithInstructionFlag(byte unitAndFlags, GameEventScriptInstructionFlag flag)
+    internal static byte WithInstructionFlag(byte unitAndFlags, GesInstructionFlag flag)
         => (byte)(unitAndFlags | ((byte)flag & InstructionFlagMask));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1300,7 +1300,7 @@ public struct GameEventScriptBytecodeInstruction
 /// <summary>
 /// Defines the supported game event script bytecode op code values.
 /// </summary>
-public enum GameEventScriptBytecodeOpCode : byte
+public enum GesBytecodeOpCode : byte
 {
     #region Group 1 - control, calls, messages, types, values
 

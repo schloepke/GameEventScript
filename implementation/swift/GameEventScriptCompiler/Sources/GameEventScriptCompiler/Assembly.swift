@@ -4,7 +4,7 @@
 @_spi(Compiler) import GameEventScriptRuntime
 
 extension GesCompiler {
-    func assemblyFailure(_ location: GameEventScriptSourceLocation, _ message: String, _ symbol: String? = nil) -> GameEventScriptCompileError {
+    func assemblyFailure(_ location: GesSourceLocation, _ message: String, _ symbol: String? = nil) -> GesCompileError {
         error("compile.invalidAssembly", location, symbol: symbol, phase: .compile, message: message)
     }
 

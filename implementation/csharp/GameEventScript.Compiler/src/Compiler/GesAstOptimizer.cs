@@ -535,13 +535,13 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
             case IntegerLiteralExpressionNode integerLiteral:
                 return GesValue.GesInteger(integerLiteral.Value);
             case UnitIntegerLiteralExpressionNode unitIntegerLiteral:
-                return GameEventScriptBytecodeInstructionUnits.ParseTypeName(unitIntegerLiteral.UnitName) is { } integerUnit
+                return GesQuantityUnits.ParseTypeName(unitIntegerLiteral.UnitName) is { } integerUnit
                     ? GesValue.GesInteger(unitIntegerLiteral.Value, integerUnit)
                     : GesValue.GesNothing();
             case FloatLiteralExpressionNode floatLiteral:
                 return GesValue.GesFloat(floatLiteral.Value);
             case UnitFloatLiteralExpressionNode unitFloatLiteral:
-                return GameEventScriptBytecodeInstructionUnits.ParseTypeName(unitFloatLiteral.UnitName) is { } unit
+                return GesQuantityUnits.ParseTypeName(unitFloatLiteral.UnitName) is { } unit
                     ? GesValue.GesFloat(unitFloatLiteral.Value, unit)
                     : GesValue.GesNothing();
             case PercentageLiteralExpressionNode percentageLiteral:
@@ -621,10 +621,10 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         switch (unary.Operator)
         {
             case GesUnaryOperator.Not:
-                return operand.Kind is GameEventScriptBytecodeTypeKind.Nothing or
-                    GameEventScriptBytecodeTypeKind.List or
-                    GameEventScriptBytecodeTypeKind.Map or
-                    GameEventScriptBytecodeTypeKind.Dice
+                return operand.Kind is GesBytecodeTypeKind.Nothing or
+                    GesBytecodeTypeKind.List or
+                    GesBytecodeTypeKind.Map or
+                    GesBytecodeTypeKind.Dice
                     ? GesValue.GesNothing()
                     : GesValue.GesBoolean(!operand.AsBoolean());
             case GesUnaryOperator.HasValue:
@@ -632,23 +632,23 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
             case GesUnaryOperator.Empty:
                 return GesValue.GesBoolean(!operand.HasValue);
             case GesUnaryOperator.Negate
-                when operand.Kind == GameEventScriptBytecodeTypeKind.Integer &&
+                when operand.Kind == GesBytecodeTypeKind.Integer &&
                      operand.IntegerValue != long.MinValue:
                 return GesValue.GesInteger(-operand.IntegerValue, operand.Unit);
-            case GesUnaryOperator.Abs when operand.Kind is GameEventScriptBytecodeTypeKind.Integer:
+            case GesUnaryOperator.Abs when operand.Kind is GesBytecodeTypeKind.Integer:
                 return operand.IntegerValue == long.MinValue
                     ? GesValue.GesFloat(-(double)operand.IntegerValue, operand.Unit)
                     : GesValue.GesInteger(Math.Abs(operand.IntegerValue), operand.Unit);
-            case GesUnaryOperator.Abs when operand.Kind is GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage:
-                return operand.Kind == GameEventScriptBytecodeTypeKind.Percentage
+            case GesUnaryOperator.Abs when operand.Kind is GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage:
+                return operand.Kind == GesBytecodeTypeKind.Percentage
                     ? GesValue.GesPercentage(Math.Abs(operand.AsNumber()))
                     : GesValue.GesFloat(Math.Abs(operand.AsNumber()), operand.Unit);
             case GesUnaryOperator.NaturalLog:
-                return !operand.Unit.IsNumericUnit() && operand.Kind is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage or GameEventScriptBytecodeTypeKind.Boolean
+                return !operand.Unit.IsNumericUnit() && operand.Kind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean
                     ? GesValue.GesFloat(Math.Log(operand.AsNumber()))
                     : GesValue.GesNothing();
             case GesUnaryOperator.Exp:
-                return !operand.Unit.IsNumericUnit() && operand.Kind is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage or GameEventScriptBytecodeTypeKind.Boolean
+                return !operand.Unit.IsNumericUnit() && operand.Kind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean
                     ? GesValue.GesFloat(Math.Exp(operand.AsNumber()))
                     : GesValue.GesNothing();
             case GesUnaryOperator.Floor:
@@ -657,7 +657,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
             case GesUnaryOperator.RoundHalfEven:
             case GesUnaryOperator.RoundHalfUp:
             case GesUnaryOperator.RoundHalfDown:
-                if (operand.Kind is not (GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage or GameEventScriptBytecodeTypeKind.Boolean))
+                if (operand.Kind is not (GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean))
                 {
                     return GesValue.GesNothing();
                 }
@@ -674,8 +674,8 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
                 };
                 return GesValue.GesInteger(ToIntegerSaturated(rounded));
             case GesUnaryOperator.DegreeToRadians:
-                if ((operand.Unit.IsNumericUnit() && operand.Unit != GameEventScriptBytecodeInstructionUnit.UnitDegree) ||
-                    operand.Kind is not (GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage or GameEventScriptBytecodeTypeKind.Boolean) ||
+                if ((operand.Unit.IsNumericUnit() && operand.Unit != GesQuantityUnit.UnitDegree) ||
+                    operand.Kind is not (GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean) ||
                     !double.IsFinite(operand.AsNumber()))
                 {
                     return GesValue.GesNothing();
@@ -684,16 +684,16 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
                 return GesValue.GesFloat(operand.AsNumber() / 180d * GameEventScriptMathConstants.Pi);
             case GesUnaryOperator.DegreeFromRadians:
                 if (operand.Unit.IsNumericUnit() ||
-                    operand.Kind is not (GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage or GameEventScriptBytecodeTypeKind.Boolean) ||
+                    operand.Kind is not (GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean) ||
                     !double.IsFinite(operand.AsNumber()))
                 {
                     return GesValue.GesNothing();
                 }
 
-                return GesValue.GesFloat(operand.AsNumber() / GameEventScriptMathConstants.Pi * 180d, GameEventScriptBytecodeInstructionUnit.UnitDegree);
+                return GesValue.GesFloat(operand.AsNumber() / GameEventScriptMathConstants.Pi * 180d, GesQuantityUnit.UnitDegree);
             case GesUnaryOperator.WrapDegree:
-                if ((operand.Unit.IsNumericUnit() && operand.Unit != GameEventScriptBytecodeInstructionUnit.UnitDegree) ||
-                    operand.Kind is not (GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage or GameEventScriptBytecodeTypeKind.Boolean) ||
+                if ((operand.Unit.IsNumericUnit() && operand.Unit != GesQuantityUnit.UnitDegree) ||
+                    operand.Kind is not (GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean) ||
                     !double.IsFinite(operand.AsNumber()))
                 {
                     return GesValue.GesNothing();
@@ -701,7 +701,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
 
                 var wrapped = operand.AsNumber() % 360d;
                 if (wrapped < 0d) wrapped += 360d;
-                return GesValue.GesFloat(wrapped == 360d ? 0d : wrapped, GameEventScriptBytecodeInstructionUnit.UnitDegree);
+                return GesValue.GesFloat(wrapped == 360d ? 0d : wrapped, GesQuantityUnit.UnitDegree);
             default:
                 return null;
         }
@@ -739,13 +739,13 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         if (left.IsNothing || right.IsNothing)
         {
             // List subtraction treats Nothing as an element to remove, not scalar propagation.
-            if (binary.Operator == GesBinaryOperator.Subtract && left.Kind == GameEventScriptBytecodeTypeKind.List) return null;
+            if (binary.Operator == GesBinaryOperator.Subtract && left.Kind == GesBytecodeTypeKind.List) return null;
             return GesValue.GesNothing();
         }
 
         var sameUnit = left.Unit == right.Unit;
-        var bothIntegers = left.Kind == GameEventScriptBytecodeTypeKind.Integer &&
-                           right.Kind == GameEventScriptBytecodeTypeKind.Integer;
+        var bothIntegers = left.Kind == GesBytecodeTypeKind.Integer &&
+                           right.Kind == GesBytecodeTypeKind.Integer;
         if (bothIntegers && sameUnit)
         {
             switch (binary.Operator)
@@ -794,7 +794,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
             case GesBinaryOperator.Multiply:
                 return FoldMultiply(left, right, leftNumber, rightNumber);
             case GesBinaryOperator.Divide when rightNumber != 0d && sameUnit:
-                if (left.Kind == GameEventScriptBytecodeTypeKind.Percentage && right.Kind is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float)
+                if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float)
                 {
                     return GesValue.GesPercentage(leftNumber / rightNumber);
                 }
@@ -859,15 +859,15 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
     }
 
     private static bool IsTruthIndeterminate(GesValue value)
-        => value.Kind is GameEventScriptBytecodeTypeKind.Nothing or
-            GameEventScriptBytecodeTypeKind.List or
-            GameEventScriptBytecodeTypeKind.Map or
-            GameEventScriptBytecodeTypeKind.Dice;
+        => value.Kind is GesBytecodeTypeKind.Nothing or
+            GesBytecodeTypeKind.List or
+            GesBytecodeTypeKind.Map or
+            GesBytecodeTypeKind.Dice;
 
     private static GesValue? FoldAdd(GesValue left, GesValue right, double leftNumber, double rightNumber)
     {
-        if (left.Kind == GameEventScriptBytecodeTypeKind.Integer &&
-            right.Kind == GameEventScriptBytecodeTypeKind.Integer &&
+        if (left.Kind == GesBytecodeTypeKind.Integer &&
+            right.Kind == GesBytecodeTypeKind.Integer &&
             left.Unit == right.Unit)
         {
             return GameEventScriptNumber.AddExact(left.IntegerValue, right.IntegerValue) is { } integerResult
@@ -876,18 +876,18 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         }
 
         if (left.Unit == right.Unit &&
-            left.Kind != GameEventScriptBytecodeTypeKind.Percentage &&
-            right.Kind != GameEventScriptBytecodeTypeKind.Percentage)
+            left.Kind != GesBytecodeTypeKind.Percentage &&
+            right.Kind != GesBytecodeTypeKind.Percentage)
         {
             return CreateNumber(leftNumber + rightNumber, left.Unit, false);
         }
 
-        if (left.Kind == GameEventScriptBytecodeTypeKind.Percentage && right.Kind == GameEventScriptBytecodeTypeKind.Percentage)
+        if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind == GesBytecodeTypeKind.Percentage)
         {
             return GesValue.GesPercentage(leftNumber + rightNumber);
         }
 
-        if (right.Kind == GameEventScriptBytecodeTypeKind.Percentage && left.Unit.IsNumericUnit())
+        if (right.Kind == GesBytecodeTypeKind.Percentage && left.Unit.IsNumericUnit())
         {
             return CreateNumber(leftNumber + leftNumber * rightNumber, left.Unit, false);
         }
@@ -897,8 +897,8 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
 
     private static GesValue? FoldSubtract(GesValue left, GesValue right, double leftNumber, double rightNumber)
     {
-        if (left.Kind == GameEventScriptBytecodeTypeKind.Integer &&
-            right.Kind == GameEventScriptBytecodeTypeKind.Integer &&
+        if (left.Kind == GesBytecodeTypeKind.Integer &&
+            right.Kind == GesBytecodeTypeKind.Integer &&
             left.Unit == right.Unit)
         {
             return GameEventScriptNumber.SubtractExact(left.IntegerValue, right.IntegerValue) is { } integerResult
@@ -907,18 +907,18 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         }
 
         if (left.Unit == right.Unit &&
-            left.Kind != GameEventScriptBytecodeTypeKind.Percentage &&
-            right.Kind != GameEventScriptBytecodeTypeKind.Percentage)
+            left.Kind != GesBytecodeTypeKind.Percentage &&
+            right.Kind != GesBytecodeTypeKind.Percentage)
         {
             return CreateNumber(leftNumber - rightNumber, left.Unit, false);
         }
 
-        if (left.Kind == GameEventScriptBytecodeTypeKind.Percentage && right.Kind == GameEventScriptBytecodeTypeKind.Percentage)
+        if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind == GesBytecodeTypeKind.Percentage)
         {
             return GesValue.GesPercentage(leftNumber - rightNumber);
         }
 
-        if (right.Kind == GameEventScriptBytecodeTypeKind.Percentage && left.Unit.IsNumericUnit())
+        if (right.Kind == GesBytecodeTypeKind.Percentage && left.Unit.IsNumericUnit())
         {
             return CreateNumber(leftNumber - leftNumber * rightNumber, left.Unit, false);
         }
@@ -928,10 +928,10 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
 
     private static GesValue? FoldMultiply(GesValue left, GesValue right, double leftNumber, double rightNumber)
     {
-        if (left.Kind == GameEventScriptBytecodeTypeKind.Integer &&
-            right.Kind == GameEventScriptBytecodeTypeKind.Integer)
+        if (left.Kind == GesBytecodeTypeKind.Integer &&
+            right.Kind == GesBytecodeTypeKind.Integer)
         {
-            if (left.Unit == GameEventScriptBytecodeInstructionUnit.UnitNone && right.Unit == GameEventScriptBytecodeInstructionUnit.UnitNone)
+            if (left.Unit == GesQuantityUnit.UnitNone && right.Unit == GesQuantityUnit.UnitNone)
             {
                 return GameEventScriptNumber.MultiplyExact(left.IntegerValue, right.IntegerValue) is { } integerResult
                     ? GesValue.GesInteger(integerResult)
@@ -946,17 +946,17 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
             return null;
         }
 
-        if (left.Kind == GameEventScriptBytecodeTypeKind.Percentage && right.Kind == GameEventScriptBytecodeTypeKind.Percentage)
+        if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind == GesBytecodeTypeKind.Percentage)
         {
             return GesValue.GesPercentage(leftNumber * rightNumber);
         }
 
-        if (left.Kind == GameEventScriptBytecodeTypeKind.Percentage)
+        if (left.Kind == GesBytecodeTypeKind.Percentage)
         {
             return CreateNumber(leftNumber * rightNumber, right.Unit, false);
         }
 
-        if (right.Kind == GameEventScriptBytecodeTypeKind.Percentage)
+        if (right.Kind == GesBytecodeTypeKind.Percentage)
         {
             return CreateNumber(leftNumber * rightNumber, left.Unit, false);
         }
@@ -973,18 +973,18 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
     {
         switch (value.Kind)
         {
-            case GameEventScriptBytecodeTypeKind.Integer:
-            case GameEventScriptBytecodeTypeKind.Float:
-            case GameEventScriptBytecodeTypeKind.Percentage:
+            case GesBytecodeTypeKind.Integer:
+            case GesBytecodeTypeKind.Float:
+            case GesBytecodeTypeKind.Percentage:
                 return double.IsFinite(value.AsNumber()) ? value.AsNumber() : null;
-            case GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean:
                 return value.AsBoolean() ? 1d : 0d;
             default:
                 return null;
         }
     }
 
-    private static GesValue CreateNumber(double number, GameEventScriptBytecodeInstructionUnit unit, bool preferInteger)
+    private static GesValue CreateNumber(double number, GesQuantityUnit unit, bool preferInteger)
     {
         if (!double.IsFinite(number))
         {
@@ -1000,32 +1000,32 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         return GesValue.GesFloat(number, unit);
     }
 
-    private static GameEventScriptBytecodeInstructionUnit? ProductUnit(GameEventScriptBytecodeInstructionUnit left, GameEventScriptBytecodeInstructionUnit right)
+    private static GesQuantityUnit? ProductUnit(GesQuantityUnit left, GesQuantityUnit right)
     {
         if (left.IsNumericUnit() && right.IsNumericUnit())
         {
             return null;
         }
 
-        return left is GameEventScriptBytecodeInstructionUnit.UnitNone ? right : left;
+        return left is GesQuantityUnit.UnitNone ? right : left;
     }
 
-    private static GameEventScriptBytecodeInstructionUnit DivideResultUnit(GameEventScriptBytecodeInstructionUnit unit)
-        => unit.IsNumericUnit() ? GameEventScriptBytecodeInstructionUnit.UnitNone : unit;
+    private static GesQuantityUnit DivideResultUnit(GesQuantityUnit unit)
+        => unit.IsNumericUnit() ? GesQuantityUnit.UnitNone : unit;
 
     private static ExpressionNode? ConvertValueToLiteral(GesValue value)
     {
         switch (value.Kind)
         {
-            case GameEventScriptBytecodeTypeKind.Nothing:
+            case GesBytecodeTypeKind.Nothing:
                 return new NothingLiteralExpressionNode();
-            case GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean:
                 return new BooleanLiteralExpressionNode(value.AsBoolean());
-            case GameEventScriptBytecodeTypeKind.Integer:
+            case GesBytecodeTypeKind.Integer:
                 return value.Unit.IsNumericUnit()
                     ? new UnitIntegerLiteralExpressionNode(value.IntegerValue, value.Unit.ToTypeName())
                     : new IntegerLiteralExpressionNode(value.IntegerValue);
-            case GameEventScriptBytecodeTypeKind.Float:
+            case GesBytecodeTypeKind.Float:
                 if (double.IsNaN(value.AsNumber()) || double.IsInfinity(value.AsNumber()))
                 {
                     return null;
@@ -1034,13 +1034,13 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
                 return value.Unit.IsNumericUnit()
                     ? new UnitFloatLiteralExpressionNode(value.AsNumber(), value.Unit.ToTypeName())
                     : new FloatLiteralExpressionNode(value.AsNumber());
-            case GameEventScriptBytecodeTypeKind.Percentage:
+            case GesBytecodeTypeKind.Percentage:
                 return new PercentageLiteralExpressionNode(value.AsNumber());
-            case GameEventScriptBytecodeTypeKind.Text:
+            case GesBytecodeTypeKind.Text:
                 return new TextLiteralExpressionNode(value.TextValue);
-            case GameEventScriptBytecodeTypeKind.Tag:
+            case GesBytecodeTypeKind.Tag:
                 return new TagLiteralExpressionNode(value.TextValue);
-            case GameEventScriptBytecodeTypeKind.Vector:
+            case GesBytecodeTypeKind.Vector:
                 return new TypeConstructorExpressionNode(
                     "vector",
                     new ArgumentListNode([
@@ -1048,7 +1048,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
                         new ArgumentNode(null, CreateFloatLiteral(value.Y, value.Unit)),
                         new ArgumentNode(null, CreateFloatLiteral(value.Z, value.Unit))
                     ]));
-            case GameEventScriptBytecodeTypeKind.Point:
+            case GesBytecodeTypeKind.Point:
                 return new TypeConstructorExpressionNode(
                     "point",
                     new ArgumentListNode([
@@ -1056,7 +1056,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
                         new ArgumentNode(null, CreateFloatLiteral(value.Y, value.Unit)),
                         new ArgumentNode(null, CreateFloatLiteral(value.Z, value.Unit))
                     ]));
-            case GameEventScriptBytecodeTypeKind.List:
+            case GesBytecodeTypeKind.List:
             {
                 var source = value.AsList();
                 var items = new ExpressionNode[source.Length];
@@ -1072,7 +1072,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
 
                 return new ListLiteralExpressionNode(items);
             }
-            case GameEventScriptBytecodeTypeKind.Map:
+            case GesBytecodeTypeKind.Map:
             {
                 if (value.AsMap() is not { } map)
                 {
@@ -1098,7 +1098,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         }
     }
 
-    private static ExpressionNode CreateFloatLiteral(double value, GameEventScriptBytecodeInstructionUnit? unit)
+    private static ExpressionNode CreateFloatLiteral(double value, GesQuantityUnit? unit)
         => unit is { } valueUnit && valueUnit.IsNumericUnit()
             ? new UnitFloatLiteralExpressionNode(value, valueUnit.ToTypeName())
             : new FloatLiteralExpressionNode(value);

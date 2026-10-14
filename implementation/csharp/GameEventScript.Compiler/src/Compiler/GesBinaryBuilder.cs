@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using GameEventScript.Api;
-using static GameEventScript.Api.GameEventScriptBindingSegment;
+using static GameEventScript.Api.GesBindingSegment;
 
 namespace GameEventScript.Compiler;
 
@@ -160,7 +160,7 @@ internal sealed partial class GesBinaryBuilder
     }
 
     public GesBindRef AddBind(
-        GameEventScriptBinaryBindKind kind,
+        GesBinaryBindKind kind,
         string name,
         IReadOnlyList<string>? argumentNames = null,
         GesLabelRef? entryLabel = null,
@@ -184,9 +184,9 @@ internal sealed partial class GesBinaryBuilder
     }
 
     internal GesBinaryBuilder AddOpcode(
-        GameEventScriptBytecodeOpCode opcode,
-        GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone,
-        GameEventScriptInstructionFlag flags = GameEventScriptInstructionFlag.None,
+        GesBytecodeOpCode opcode,
+        GesQuantityUnit unit = GesQuantityUnit.UnitNone,
+        GesInstructionFlag flags = GesInstructionFlag.None,
         GesOperand dst = default,
         GesOperand x = default,
         GesOperand y = default,
@@ -269,7 +269,7 @@ internal sealed partial class GesBinaryBuilder
 
     private ushort[] ResolveBinds(BinaryMaterializer builder, Func<string, ushort> resolveText, IReadOnlyDictionary<int, ushort> labelAddresses, ProgramResourceAnalysis resourceAnalysis)
     {
-        var nextIds = new Dictionary<GameEventScriptBinaryBindKind, ushort>();
+        var nextIds = new Dictionary<GesBinaryBindKind, ushort>();
         var result = new ushort[_binds.Count];
         var orderedBinds = new BindPlan[_binds.Count];
         for (var index = 0; index < _binds.Count; index++)
@@ -316,14 +316,14 @@ internal sealed partial class GesBinaryBuilder
         private ulong _programVersion;
         private ushort _requiredRegisterCount;
         private ushort _requiredCallStackDepth;
-        private GameEventScriptDebugSymbolsSegment? _debugSymbols;
-        private GameEventScriptSourceMapSegment? _sourceMap;
-        private GameEventScriptSourceArchiveSegment? _sourceArchive;
+        private GesDebugSymbolsSegment? _debugSymbols;
+        private GesSourceMapSegment? _sourceMap;
+        private GesSourceArchiveSegment? _sourceArchive;
         private readonly List<string> _textConstants = [];
         private readonly Dictionary<string, ushort> _textIndexes = [];
         private readonly List<ushort[]> _uint16Slices = [];
         private readonly List<GameEventScriptBinaryBindEntry> _binds = [];
-        private readonly List<GameEventScriptBytecodeInstruction> _instructions = [];
+        private readonly List<GesBytecodeInstruction> _instructions = [];
 
         public BinaryMaterializer WithVersion(ushort version)
         {
@@ -350,7 +350,7 @@ internal sealed partial class GesBinaryBuilder
             return this;
         }
 
-        public BinaryMaterializer WithDebugSegments(GameEventScriptDebugSymbolsSegment? debugSymbols, GameEventScriptSourceMapSegment? sourceMap, GameEventScriptSourceArchiveSegment? sourceArchive)
+        public BinaryMaterializer WithDebugSegments(GesDebugSymbolsSegment? debugSymbols, GesSourceMapSegment? sourceMap, GesSourceArchiveSegment? sourceArchive)
         {
             _debugSymbols = debugSymbols;
             _sourceMap = sourceMap;
@@ -393,7 +393,7 @@ internal sealed partial class GesBinaryBuilder
             return this;
         }
 
-        public BinaryMaterializer AddInstruction(GameEventScriptBytecodeInstruction instruction)
+        public BinaryMaterializer AddInstruction(GesBytecodeInstruction instruction)
         {
             _instructions.Add(instruction);
             return this;
@@ -411,12 +411,12 @@ internal sealed partial class GesBinaryBuilder
                 _requiredCallStackDepth,
                 BuildTextTable(_textConstants),
                 BuildUInt16Table(_uint16Slices),
-                new GameEventScriptBindingSegment(_binds),
-                new GameEventScriptCodeSegment(CopyInstructions(_instructions)),
+                new GesBindingSegment(_binds),
+                new GesCodeSegment(CopyInstructions(_instructions)),
                 _debugSymbols,
                 _sourceMap,
                 _sourceArchive,
-                buildMetadataSegment: new GameEventScriptBuildMetadataSegment(GameEventScriptCompilerMetadata.CompilerId, GameEventScriptCompilerMetadata.CompilerVersion));
+                buildMetadataSegment: new GesBuildMetadataSegment(GameEventScriptCompilerMetadata.CompilerId, GameEventScriptCompilerMetadata.CompilerVersion));
         }
 
         private string ResolveModuleName()
@@ -538,14 +538,14 @@ internal sealed partial class GesBinaryBuilder
             }
         }
 
-        private static GameEventScriptStringConstantSegment BuildTextTable(IReadOnlyList<string> values)
+        private static GesStringConstantSegment BuildTextTable(IReadOnlyList<string> values)
         {
             var totalLength = 0;
-            var slices = new GameEventScriptStringConstantSegment.SliceEntry[values.Count];
+            var slices = new GesStringConstantSegment.SliceEntry[values.Count];
             for (var index = 0; index < values.Count; index++)
             {
                 var byteCount = Encoding.UTF8.GetByteCount(values[index]);
-                slices[index] = new GameEventScriptStringConstantSegment.SliceEntry
+                slices[index] = new GesStringConstantSegment.SliceEntry
                 {
                     Start = totalLength,
                     Length = byteCount
@@ -560,17 +560,17 @@ internal sealed partial class GesBinaryBuilder
                 offset += Encoding.UTF8.GetBytes(values[index], 0, values[index].Length, data, offset);
             }
 
-            return new GameEventScriptStringConstantSegment(slices, data);
+            return new GesStringConstantSegment(slices, data);
         }
 
-        private static GameEventScriptUInt16IndexListSegment BuildUInt16Table(IReadOnlyList<ushort[]> values)
+        private static GesUInt16IndexListSegment BuildUInt16Table(IReadOnlyList<ushort[]> values)
         {
             var totalLength = 0;
-            var slices = new GameEventScriptUInt16IndexListSegment.SliceEntry[values.Count];
+            var slices = new GesUInt16IndexListSegment.SliceEntry[values.Count];
             for (var index = 0; index < values.Count; index++)
             {
                 var value = values[index];
-                slices[index] = new GameEventScriptUInt16IndexListSegment.SliceEntry
+                slices[index] = new GesUInt16IndexListSegment.SliceEntry
                 {
                     Start = totalLength,
                     Length = value.Length
@@ -587,13 +587,13 @@ internal sealed partial class GesBinaryBuilder
                 offset += value.Length;
             }
 
-            return new GameEventScriptUInt16IndexListSegment(slices, data);
+            return new GesUInt16IndexListSegment(slices, data);
         }
 
-        private static GameEventScriptBytecodeInstruction[] CopyInstructions(IReadOnlyList<GameEventScriptBytecodeInstruction> source)
+        private static GesBytecodeInstruction[] CopyInstructions(IReadOnlyList<GesBytecodeInstruction> source)
         {
             if (source.Count == 0) return [];
-            var result = new GameEventScriptBytecodeInstruction[source.Count];
+            var result = new GesBytecodeInstruction[source.Count];
             for (var index = 0; index < source.Count; index++)
             {
                 result[index] = source[index];
@@ -603,21 +603,21 @@ internal sealed partial class GesBinaryBuilder
         }
     }
 
-    private static int BindKindOrder(GameEventScriptBinaryBindKind kind)
+    private static int BindKindOrder(GesBinaryBindKind kind)
         => kind switch
         {
-            GameEventScriptBinaryBindKind.MessageHandler or
-                GameEventScriptBinaryBindKind.MessageNameHandler => 0,
-            GameEventScriptBinaryBindKind.Record => 1,
-            GameEventScriptBinaryBindKind.Predicate => 2,
-            GameEventScriptBinaryBindKind.Function => 3,
-            GameEventScriptBinaryBindKind.OutboundMessage => 4,
-            GameEventScriptBinaryBindKind.ExtensionCall => 5,
-            GameEventScriptBinaryBindKind.ExternalType => 6,
+            GesBinaryBindKind.MessageHandler or
+                GesBinaryBindKind.MessageNameHandler => 0,
+            GesBinaryBindKind.Record => 1,
+            GesBinaryBindKind.Predicate => 2,
+            GesBinaryBindKind.Function => 3,
+            GesBinaryBindKind.OutboundMessage => 4,
+            GesBinaryBindKind.ExtensionCall => 5,
+            GesBinaryBindKind.ExternalType => 6,
             _ => 7
         };
 
-    private static int RoutineKindOrder(GameEventScriptBinaryBindKind? kind)
+    private static int RoutineKindOrder(GesBinaryBindKind? kind)
         => kind.HasValue ? BindKindOrder(kind.Value) : 7;
 
     private static int CompareRoutinePlanForOutput(RoutinePlan left, RoutinePlan right)
@@ -697,14 +697,14 @@ internal sealed partial class GesBinaryBuilder
         return true;
     }
 
-    private static ushort NextId(GameEventScriptBinaryBindKind kind, Dictionary<GameEventScriptBinaryBindKind, ushort> nextIds)
+    private static ushort NextId(GesBinaryBindKind kind, Dictionary<GesBinaryBindKind, ushort> nextIds)
     {
         nextIds.TryGetValue(kind, out var id);
         nextIds[kind] = checked((ushort)(id + 1));
         return id;
     }
 
-    private GameEventScriptBytecodeInstruction EncodeInstruction(
+    private GesBytecodeInstruction EncodeInstruction(
         InstructionPlan plan,
         IReadOnlyDictionary<int, ushort> registerMap,
         IReadOnlyDictionary<int, ushort> labelAddresses,
@@ -713,10 +713,10 @@ internal sealed partial class GesBinaryBuilder
         Func<IReadOnlyList<GesRegisterRef>, ushort> resolveList,
         Func<IReadOnlyList<string>, ushort> resolveTextList)
     {
-        var instruction = new GameEventScriptBytecodeInstruction
+        var instruction = new GesBytecodeInstruction
         {
             OpCode = plan.OpCode,
-            UnitAndFlags = GameEventScriptBytecodeInstruction.EncodeUnitAndFlags(plan.Unit, plan.Flags)
+            UnitAndFlags = GesBytecodeInstruction.EncodeUnitAndFlags(plan.Unit, plan.Flags)
         };
 
         instruction = ApplyDestination(instruction, plan.Destination, registerMap, bindIds, resolveList);
@@ -734,7 +734,7 @@ internal sealed partial class GesBinaryBuilder
         return instruction;
     }
 
-    private static GameEventScriptBytecodeInstruction ApplyDestination(GameEventScriptBytecodeInstruction instruction, GesOperand operand, IReadOnlyDictionary<int, ushort> registerMap, IReadOnlyList<ushort> bindIds, Func<IReadOnlyList<GesRegisterRef>, ushort> resolveList)
+    private static GesBytecodeInstruction ApplyDestination(GesBytecodeInstruction instruction, GesOperand operand, IReadOnlyDictionary<int, ushort> registerMap, IReadOnlyList<ushort> bindIds, Func<IReadOnlyList<GesRegisterRef>, ushort> resolveList)
     {
         if (operand.Kind == GesOperandKind.None) return instruction;
         switch (operand.Kind)
@@ -753,8 +753,8 @@ internal sealed partial class GesBinaryBuilder
         }
     }
 
-    private static GameEventScriptBytecodeInstruction ApplyX(
-        GameEventScriptBytecodeInstruction instruction,
+    private static GesBytecodeInstruction ApplyX(
+        GesBytecodeInstruction instruction,
         GesOperand operand,
         IReadOnlyDictionary<int, ushort> registerMap,
         IReadOnlyDictionary<int, ushort> labelAddresses,
@@ -799,8 +799,8 @@ internal sealed partial class GesBinaryBuilder
         }
     }
 
-    private static GameEventScriptBytecodeInstruction ApplyY(
-        GameEventScriptBytecodeInstruction instruction,
+    private static GesBytecodeInstruction ApplyY(
+        GesBytecodeInstruction instruction,
         GesOperand operand,
         IReadOnlyDictionary<int, ushort> registerMap,
         IReadOnlyDictionary<int, ushort> labelAddresses,
@@ -841,8 +841,8 @@ internal sealed partial class GesBinaryBuilder
         }
     }
 
-    private static GameEventScriptBytecodeInstruction ApplySecondaryList(
-        GameEventScriptBytecodeInstruction instruction,
+    private static GesBytecodeInstruction ApplySecondaryList(
+        GesBytecodeInstruction instruction,
         GesOperand operand,
         IReadOnlyDictionary<int, ushort> registerMap,
         Func<IReadOnlyList<GesRegisterRef>, ushort> resolveList,
@@ -862,8 +862,8 @@ internal sealed partial class GesBinaryBuilder
         }
     }
 
-    private static GameEventScriptBytecodeInstruction ApplyAux(
-        GameEventScriptBytecodeInstruction instruction,
+    private static GesBytecodeInstruction ApplyAux(
+        GesBytecodeInstruction instruction,
         GesOperand operand,
         int index,
         IReadOnlyDictionary<int, ushort> registerMap,
@@ -1276,7 +1276,7 @@ internal sealed partial class GesBinaryBuilder
         public string DisplayName => Name ?? $"L_{Id}";
     }
 
-    private sealed record BindPlan(int Index, GameEventScriptBinaryBindKind Kind, string Name, IReadOnlyList<string> ArgumentNames, GesLabelRef? EntryLabel, ushort? Id, IReadOnlyList<string> RequiredTags, IReadOnlyList<string> ExcludedTags);
+    private sealed record BindPlan(int Index, GesBinaryBindKind Kind, string Name, IReadOnlyList<string> ArgumentNames, GesLabelRef? EntryLabel, ushort? Id, IReadOnlyList<string> RequiredTags, IReadOnlyList<string> ExcludedTags);
 
     private struct RegisterInterval(int registerId, int start, int end)
     {
@@ -1286,18 +1286,18 @@ internal sealed partial class GesBinaryBuilder
         public bool HasValue { get; } = true;
     }
 
-    internal readonly record struct PlanItem(GesLabelRef? Label, InstructionPlan? Instruction, GameEventScriptSourceLocation? SourceRange)
+    internal readonly record struct PlanItem(GesLabelRef? Label, InstructionPlan? Instruction, GesSourceLocation? SourceRange)
     {
-        public static PlanItem ForLabel(GesLabelRef label, GameEventScriptSourceLocation? sourceRange = null) => new(label, null, sourceRange);
+        public static PlanItem ForLabel(GesLabelRef label, GesSourceLocation? sourceRange = null) => new(label, null, sourceRange);
 
-        public static PlanItem ForInstruction(InstructionPlan instruction, GameEventScriptSourceLocation? sourceRange = null) => new(null, instruction, sourceRange);
+        public static PlanItem ForInstruction(InstructionPlan instruction, GesSourceLocation? sourceRange = null) => new(null, instruction, sourceRange);
     }
 
     internal sealed record InstructionPlan(
         int RoutineId,
-        GameEventScriptBytecodeOpCode OpCode,
-        GameEventScriptBytecodeInstructionUnit Unit,
-        GameEventScriptInstructionFlag Flags,
+        GesBytecodeOpCode OpCode,
+        GesQuantityUnit Unit,
+        GesInstructionFlag Flags,
         GesOperand Destination,
         GesOperand X,
         GesOperand Y,
@@ -1352,7 +1352,7 @@ internal readonly struct GesOperand
     public readonly string? TextValue;
     public readonly IReadOnlyList<GesRegisterRef>? RegisterListValue;
     public readonly IReadOnlyList<string>? TextListValue;
-    public readonly GameEventScriptBytecodeTypeKind TypeKind;
+    public readonly GesBytecodeTypeKind TypeKind;
     public readonly ushort UShort;
     public readonly short Short;
 
@@ -1364,7 +1364,7 @@ internal readonly struct GesOperand
         string? text = null,
         IReadOnlyList<GesRegisterRef>? registerList = null,
         IReadOnlyList<string>? textList = null,
-        GameEventScriptBytecodeTypeKind typeKind = GameEventScriptBytecodeTypeKind.Nothing,
+        GesBytecodeTypeKind typeKind = GesBytecodeTypeKind.Nothing,
         ushort uShort = 0,
         short @short = 0)
     {
@@ -1392,7 +1392,7 @@ internal readonly struct GesOperand
 
     public static GesOperand TextList(IReadOnlyList<string> texts) => new(GesOperandKind.TextList, textList: CopyTextList(texts));
 
-    public static GesOperand Type(GameEventScriptBytecodeTypeKind typeKind) => new(GesOperandKind.Type, typeKind: typeKind);
+    public static GesOperand Type(GesBytecodeTypeKind typeKind) => new(GesOperandKind.Type, typeKind: typeKind);
 
     public static GesOperand U16(ushort value) => new(GesOperandKind.UShort, uShort: value);
 

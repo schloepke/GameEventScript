@@ -9,11 +9,11 @@ enum BinaryObservations {
         let input = try test.required("binary")
         guard let bytes = Data(base64Encoded: try input.text("data")) else { throw ConformanceExecutionError.invalidInput("Invalid Base64") }
         let program: GameEventScriptProgram
-        do { program = try GameEventScriptProgramReader.read(Array(bytes)) } catch let error as GameEventScriptProgramFormatError {
+        do { program = try GameEventScriptProgramReader.read(Array(bytes)) } catch let error as GesProgramFormatError {
             return [
                 "status": "ok",
                 "binary": [
-                    "outcome": error.code.rawValue <= GameEventScriptProgramFormatErrorCode.tooManyEntries.rawValue ? "readError" : "validationError", "errorCode": title(error.code),
+                    "outcome": error.code.rawValue <= GesProgramFormatErrorCode.tooManyEntries.rawValue ? "readError" : "validationError", "errorCode": title(error.code),
                     "byteOffset": nullable(error.byteOffset), "sectionType": nullable(error.sectionType), "entryIndex": nullable(error.entryIndex),
                 ],
             ]

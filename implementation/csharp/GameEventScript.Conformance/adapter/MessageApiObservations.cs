@@ -58,12 +58,12 @@ internal static class MessageApiObservations
         }
     }
 
-    private static GameEventScriptMessageSignature Signature(JsonElement input) => GameEventScriptMessageSignature.Create(input.GetProperty("name").GetString()!, input.GetProperty("parameters").EnumerateArray().Select(p => p.GetString()!).ToArray());
+    private static GesMessageSignature Signature(JsonElement input) => GesMessageSignature.Create(input.GetProperty("name").GetString()!, input.GetProperty("parameters").EnumerateArray().Select(p => p.GetString()!).ToArray());
 
     private static GameEventScriptMessage Message(JsonElement input) => GameEventScriptMessage.Create(
         input.GetProperty("name").GetString()!,
         input.GetProperty("args").EnumerateArray()
-            .Select(a => new GameEventScriptMessageArgument(a.GetProperty("name").GetString()!, ValueApiObservations.Construct(a.GetProperty("value"))))
+            .Select(a => new GesMessageArgument(a.GetProperty("name").GetString()!, ValueApiObservations.Construct(a.GetProperty("value"))))
             .ToArray(),
         input.GetProperty("tags").EnumerateArray().Select(t => t.GetString()!).ToArray()
     );
@@ -71,13 +71,13 @@ internal static class MessageApiObservations
     internal static object Run(JsonElement input)
     {
         try { return RunCore(input); }
-        catch (GameEventScriptMessageFormatException exception) { return Error(exception.Code); }
+        catch (GesMessageFormatException exception) { return Error(exception.Code); }
     }
 
     private static object RunCore(JsonElement input)
     {
         if (input.GetProperty("message").GetProperty("args").ValueKind == JsonValueKind.Object) return Error("invalidArgumentsShape");
-        GameEventScriptMessageSignature signature;
+        GesMessageSignature signature;
         GameEventScriptMessage message;
         try { signature = Signature(input.GetProperty("signature")); }
         catch (ArgumentException) { return Error("invalidMessage"); }
@@ -87,7 +87,7 @@ internal static class MessageApiObservations
             // Ask the public normalizer for labels; never classify English exception text.
             try
             {
-                var names = input.GetProperty("message").GetProperty("args").EnumerateArray().Select(a => GameEventScriptMessageSignature.NormalizeParameterName(a.GetProperty("name").GetString())).Where(n => n != "_").ToArray();
+                var names = input.GetProperty("message").GetProperty("args").EnumerateArray().Select(a => GesMessageSignature.NormalizeParameterName(a.GetProperty("name").GetString())).Where(n => n != "_").ToArray();
                 if (names.Distinct(StringComparer.Ordinal).Count() != names.Length) return Error("duplicateArgumentName");
             }
             catch (ArgumentException) { return Error("invalidArgument"); }

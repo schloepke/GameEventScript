@@ -252,7 +252,7 @@ internal static class GesShadowingValidator
                 VisitOptional(fold.Seed, scope, script, errors);
                 var foldScope = CreateBinderScope(scope, fold.Accumulator, fold, script, errors);
                 if (fold.Accumulator == fold.Identifier)
-                    errors.Add(script, "Fold bindings must be distinct", fold.Identifier, GameEventScriptSymbolKind.Variable, GameEventScriptDiagnosticCodes.ValidateDuplicateVariable, fold);
+                    errors.Add(script, "Fold bindings must be distinct", fold.Identifier, GesSymbolKind.Variable, GesDiagnosticCodes.ValidateDuplicateVariable, fold);
                 else foldScope = CreateBinderScope(foldScope, fold.Identifier, fold, script, errors);
                 VisitExpression(fold.Projection, foldScope, script, errors);
                 break;
@@ -296,10 +296,10 @@ internal static class GesShadowingValidator
         {
             var name = names[index];
             if (name != identifier && !GameEventScript.Runtime.GameEventScriptText.IsVariableName(name))
-                errors.Add(script, "Invalid component binding name", name, GameEventScriptSymbolKind.Variable, GameEventScriptDiagnosticCodes.ValidateInvalidIdentifierCase, node);
+                errors.Add(script, "Invalid component binding name", name, GesSymbolKind.Variable, GesDiagnosticCodes.ValidateInvalidIdentifierCase, node);
             if (parent.ContainsVisible(name)) AddShadowError(script, errors, name, node);
             if (child.ContainsVisible(name) && !parent.ContainsVisible(name))
-                errors.Add(script, "Bindings must be distinct", name, GameEventScriptSymbolKind.Variable, GameEventScriptDiagnosticCodes.ValidateDuplicateVariable, node);
+                errors.Add(script, "Bindings must be distinct", name, GesSymbolKind.Variable, GesDiagnosticCodes.ValidateDuplicateVariable, node);
             child.Declare(name);
         }
         return child;
@@ -342,5 +342,5 @@ internal static class GesShadowingValidator
     }
 
     private static void AddShadowError(ParsedScript script, GesValidationErrors errors, string name, ScriptNode node)
-        => errors.Add(script, $"Binding '{name}' shadows a binding from an enclosing scope", name, GameEventScriptSymbolKind.Variable, GameEventScriptDiagnosticCodes.ValidateShadowedVariable, node);
+        => errors.Add(script, $"Binding '{name}' shadows a binding from an enclosing scope", name, GesSymbolKind.Variable, GesDiagnosticCodes.ValidateShadowedVariable, node);
 }

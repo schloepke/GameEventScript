@@ -97,7 +97,7 @@ Terminal output uses four-column tab stops; files and redirected output retain t
             }
             return 0;
         }
-        catch (GameEventScriptProgramFormatException exception)
+        catch (GesProgramFormatException exception)
         {
             var context = new List<string>();
             if (exception.ByteOffset is { } offset) context.Add($"byteOffset={offset}");

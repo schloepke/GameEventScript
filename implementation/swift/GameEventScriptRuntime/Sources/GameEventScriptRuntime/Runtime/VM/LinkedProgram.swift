@@ -4,23 +4,23 @@
 /// Host-specific resolution; this object is never retained by the portable Program.
 final class GesLinkedProgram {
     struct Handler {
-        let signature: GameEventScriptMessageSignature
+        let signature: GesMessageSignature
         let binding: GameEventScriptBinding
         let requiredTags: [String]
         let excludedTags: [String]
     }
 
-    var profiler: (any GameEventScriptProgramProfiler)?
+    var profiler: (any GesProgramProfiler)?
     let textValues: [GesValue]
     let program: GameEventScriptProgram
     var handlers: [Handler] = []
     var records: [UInt16: GameEventScriptBinding] = [:]
     var recordsByName: [String: GameEventScriptBinding] = [:]
-    var extensions: [UInt16: any GameEventScriptExtensionFunction] = [:]
+    var extensions: [UInt16: any GesExtensionFunction] = [:]
     var extensionBindings: [UInt16: GameEventScriptBinding] = [:]
-    var constructors: [UInt16: any GameEventScriptExternalTypeConstructor] = [:]
+    var constructors: [UInt16: any GesExternalTypeConstructor] = [:]
     var constructorBindings: [UInt16: GameEventScriptBinding] = [:]
-    var outbound: [UInt16: GameEventScriptMessageSignature] = [:]
+    var outbound: [UInt16: GesMessageSignature] = [:]
     private var mapLayouts: [GesMapLayout?]
 
     private var dataPositions: [UInt32: [Int]?] = [:]
@@ -43,7 +43,7 @@ final class GesLinkedProgram {
         return layout
     }
 
-    init(_ program: GameEventScriptProgram, extensions: (any GameEventScriptExtensionRegistry)?, types: (any GameEventScriptExternalTypeRegistry)?) throws {
+    init(_ program: GameEventScriptProgram, extensions: (any GesExtensionRegistry)?, types: (any GesExternalTypeRegistry)?) throws {
         self.program = program
         textValues = program.stringConstants.map(GesValue.text)
         mapLayouts = .init(repeating: nil, count: program.uint16IndexLists.count)
@@ -67,15 +67,15 @@ final class GesLinkedProgram {
             case .extensionCall:
                 if binding.id == .max { continue }
                 let parts = name.split(separator: ".")
-                let reference = try GameEventScriptExtensionReference(extensionName: String(parts[0]), functionName: String(parts[1]), argumentLabels: labels)
-                guard let function = try extensions?.resolve(reference) else { throw GameEventScriptDynamicLinkError(code: "link.missingExtension", program: program.moduleName, symbol: reference.signatureID) }
+                let reference = try GesExtensionReference(extensionName: String(parts[0]), functionName: String(parts[1]), argumentLabels: labels)
+                guard let function = try extensions?.resolve(reference) else { throw GesDynamicLinkError(code: "link.missingExtension", program: program.moduleName, symbol: reference.signatureID) }
                 self.extensions[binding.id] = function
                 extensionBindings[binding.id] = binding
             case .externalType:
                 if binding.id == .max { continue }
-                let reference = try GameEventScriptExternalTypeConstructorReference(typeName: name, argumentLabels: labels)
-                guard let constructor = try types?.resolve(reference) else { throw GameEventScriptDynamicLinkError(code: "link.missingExternalTypeConstructor", program: program.moduleName, symbol: reference.signatureID) }
-                if constructor.definition.signatureID != reference.signatureID { throw GameEventScriptDynamicLinkError(code: "link.mismatchedExternalTypeConstructor", program: program.moduleName, symbol: reference.signatureID) }
+                let reference = try GesExternalTypeConstructorReference(typeName: name, argumentLabels: labels)
+                guard let constructor = try types?.resolve(reference) else { throw GesDynamicLinkError(code: "link.missingExternalTypeConstructor", program: program.moduleName, symbol: reference.signatureID) }
+                if constructor.definition.signatureID != reference.signatureID { throw GesDynamicLinkError(code: "link.mismatchedExternalTypeConstructor", program: program.moduleName, symbol: reference.signatureID) }
                 constructors[binding.id] = constructor
                 constructorBindings[binding.id] = binding
             default: break

@@ -3,14 +3,14 @@
 
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 using static GameEventScript.Runtime.VM.GesVmUnitCalculation;
 
 namespace GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterRandom
 {
-    internal static void GesVmRandom(this GesVirtualMachine vm, ushort destinationRegister, in GesValue from, in GesValue to, GameEventScriptRandomGenerator randomGenerator)
+    internal static void GesVmRandom(this GesVirtualMachine vm, ushort destinationRegister, in GesValue from, in GesValue to, GesRandomGenerator randomGenerator)
     {
         switch (from.Kind)
         {
@@ -91,7 +91,7 @@ internal static class GesVmRegisterRandom
                 return;
         }
     }
-    internal static void GesVmRandomFloat(this GesVirtualMachine vm, ushort destinationRegister, in GesValue from, in GesValue to, GameEventScriptRandomGenerator randomGenerator)
+    internal static void GesVmRandomFloat(this GesVirtualMachine vm, ushort destinationRegister, in GesValue from, in GesValue to, GesRandomGenerator randomGenerator)
     {
         if (from.Kind is Nothing || to.Kind is Nothing)
         {

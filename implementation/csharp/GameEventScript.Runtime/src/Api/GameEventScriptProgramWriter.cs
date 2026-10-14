@@ -20,13 +20,13 @@ public static class GameEventScriptProgramWriter
     /// </summary>
     /// <param name="program">The immutable program to encode.</param>
     /// <returns>The required destination size in bytes.</returns>
-    /// <exception cref="GameEventScriptProgramFormatException">Thrown when the program is invalid or cannot be represented by V1.</exception>
+    /// <exception cref="GesProgramFormatException">Thrown when the program is invalid or cannot be represented by V1.</exception>
     public static int GetEncodedSize(GameEventScriptProgram program)
     {
         _ = program ?? throw new ArgumentNullException(nameof(program));
         GameEventScriptProgramValidator.Validate(program);
 
-        long size = GameEventScriptBinaryFormat.HeaderSize;
+        long size = GesBinaryFormat.HeaderSize;
         size = AddSection(size, 16);
         size = AddSection(size, GetStringConstantsSize(program.StringConstants));
         size = AddSection(size, GetIndexListsSize(program.UInt16IndexLists));
@@ -40,7 +40,7 @@ public static class GameEventScriptProgramWriter
             size = AddSection(size, program.OpaqueSections[index].RawPayload.Count);
 
         if (size > uint.MaxValue || size > int.MaxValue)
-            throw Format(GameEventScriptProgramFormatErrorCode.SectionTooLarge, "The encoded program exceeds the V1 file-size range.");
+            throw Format(GesProgramFormatErrorCode.SectionTooLarge, "The encoded program exceeds the V1 file-size range.");
         return checked((int)size);
     }
 
@@ -63,7 +63,7 @@ public static class GameEventScriptProgramWriter
     /// <param name="destination">The destination span, which may be larger than the encoded image.</param>
     /// <returns>The number of destination bytes written.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="destination"/> is too small.</exception>
-    /// <exception cref="GameEventScriptProgramFormatException">Thrown when the program is invalid or cannot be represented by V1.</exception>
+    /// <exception cref="GesProgramFormatException">Thrown when the program is invalid or cannot be represented by V1.</exception>
     public static int Write(GameEventScriptProgram program, Span<byte> destination)
     {
         _ = program ?? throw new ArgumentNullException(nameof(program));
@@ -71,48 +71,48 @@ public static class GameEventScriptProgramWriter
         if (destination.Length < size) throw new ArgumentException("Destination is smaller than the encoded program.", nameof(destination));
 
         var writer = new SpanWriter(destination[..size]);
-        writer.WriteByte(GameEventScriptBinaryFormat.MagicG);
-        writer.WriteByte(GameEventScriptBinaryFormat.MagicE);
-        writer.WriteByte(GameEventScriptBinaryFormat.MagicS);
-        writer.WriteByte(GameEventScriptBinaryFormat.MagicB);
-        writer.WriteUInt16(GameEventScriptBinaryFormat.Version);
+        writer.WriteByte(GesBinaryFormat.MagicG);
+        writer.WriteByte(GesBinaryFormat.MagicE);
+        writer.WriteByte(GesBinaryFormat.MagicS);
+        writer.WriteByte(GesBinaryFormat.MagicB);
+        writer.WriteUInt16(GesBinaryFormat.Version);
         writer.WriteUInt16(0);
-        writer.WriteUInt32(GameEventScriptBinaryFormat.HeaderSize);
+        writer.WriteUInt32(GesBinaryFormat.HeaderSize);
         writer.WriteUInt32(checked((uint)size));
 
-        WriteSectionHeader(ref writer, GameEventScriptSectionType.ProgramMetadata, GameEventScriptSectionFlags.Required, 16);
+        WriteSectionHeader(ref writer, GesSectionType.ProgramMetadata, GesSectionFlags.Required, 16);
         WriteProgramMetadata(ref writer, program);
-        WriteSectionHeader(ref writer, GameEventScriptSectionType.StringConstants, GameEventScriptSectionFlags.Required, GetStringConstantsSize(program.StringConstants));
+        WriteSectionHeader(ref writer, GesSectionType.StringConstants, GesSectionFlags.Required, GetStringConstantsSize(program.StringConstants));
         WriteStringConstants(ref writer, program.StringConstants);
-        WriteSectionHeader(ref writer, GameEventScriptSectionType.UInt16IndexLists, GameEventScriptSectionFlags.Required, GetIndexListsSize(program.UInt16IndexLists));
+        WriteSectionHeader(ref writer, GesSectionType.UInt16IndexLists, GesSectionFlags.Required, GetIndexListsSize(program.UInt16IndexLists));
         WriteIndexLists(ref writer, program.UInt16IndexLists);
-        WriteSectionHeader(ref writer, GameEventScriptSectionType.Bindings, GameEventScriptSectionFlags.Required, GetBindingsSize(program.Bindings));
+        WriteSectionHeader(ref writer, GesSectionType.Bindings, GesSectionFlags.Required, GetBindingsSize(program.Bindings));
         WriteBindings(ref writer, program);
-        WriteSectionHeader(ref writer, GameEventScriptSectionType.Code, GameEventScriptSectionFlags.Required, GetCodeSize(program.Code));
+        WriteSectionHeader(ref writer, GesSectionType.Code, GesSectionFlags.Required, GetCodeSize(program.Code));
         WriteCode(ref writer, program.Code);
 
         if (program.DebugSymbols is not null)
         {
             var payloadSize = GetDebugSymbolsSize(program.DebugSymbols);
-            WriteSectionHeader(ref writer, GameEventScriptSectionType.DebugSymbols, GameEventScriptSectionFlags.None, payloadSize);
+            WriteSectionHeader(ref writer, GesSectionType.DebugSymbols, GesSectionFlags.None, payloadSize);
             WriteDebugSymbols(ref writer, program.DebugSymbols);
         }
         if (program.SourceMap is not null)
         {
             var payloadSize = GetSourceMapSize(program.SourceMap);
-            WriteSectionHeader(ref writer, GameEventScriptSectionType.SourceMap, GameEventScriptSectionFlags.None, payloadSize);
+            WriteSectionHeader(ref writer, GesSectionType.SourceMap, GesSectionFlags.None, payloadSize);
             WriteSourceMap(ref writer, program.SourceMap);
         }
         if (program.SourceArchive is not null)
         {
             var payloadSize = GetSourceArchiveSize(program.SourceArchive);
-            WriteSectionHeader(ref writer, GameEventScriptSectionType.SourceArchive, GameEventScriptSectionFlags.None, payloadSize);
+            WriteSectionHeader(ref writer, GesSectionType.SourceArchive, GesSectionFlags.None, payloadSize);
             WriteSourceArchive(ref writer, program.SourceArchive);
         }
         if (program.BuildMetadata is not null)
         {
             var payloadSize = GetBuildMetadataSize(program.BuildMetadata);
-            WriteSectionHeader(ref writer, GameEventScriptSectionType.BuildMetadata, GameEventScriptSectionFlags.None, payloadSize);
+            WriteSectionHeader(ref writer, GesSectionType.BuildMetadata, GesSectionFlags.None, payloadSize);
             WriteBuildMetadata(ref writer, program.BuildMetadata);
         }
 
@@ -122,7 +122,7 @@ public static class GameEventScriptProgramWriter
         }
         else if (program.OpaqueSections.Count > 1)
         {
-            var opaque = new GameEventScriptOpaqueSection[program.OpaqueSections.Count];
+            var opaque = new GesOpaqueSection[program.OpaqueSections.Count];
             for (var index = 0; index < opaque.Length; index++) opaque[index] = program.OpaqueSections[index];
             Array.Sort(opaque, static (left, right) => left.OriginalOrdinal.CompareTo(right.OriginalOrdinal));
             for (var index = 0; index < opaque.Length; index++) WriteOpaqueSection(ref writer, opaque[index]);
@@ -131,7 +131,7 @@ public static class GameEventScriptProgramWriter
         return writer.Offset;
     }
 
-    private static void WriteOpaqueSection(ref SpanWriter writer, GameEventScriptOpaqueSection section)
+    private static void WriteOpaqueSection(ref SpanWriter writer, GesOpaqueSection section)
     {
         WriteSectionHeader(ref writer, section.SectionType, section.Flags, section.RawPayload.Count, section.SectionVersion);
         writer.WriteBytes(section.RawPayload.AsSpan());
@@ -146,14 +146,14 @@ public static class GameEventScriptProgramWriter
         writer.WriteUInt64(program.ProgramVersion);
     }
 
-    private static int GetStringConstantsSize(GameEventScriptStringConstantSegment segment)
+    private static int GetStringConstantsSize(GesStringConstantSegment segment)
     {
         long size = 4;
         for (var index = 0; index < segment.Slices.Count; index++) size += 4L + segment.Slices[index].Length;
         return CheckedPayloadSize(size);
     }
 
-    private static void WriteStringConstants(ref SpanWriter writer, GameEventScriptStringConstantSegment segment)
+    private static void WriteStringConstants(ref SpanWriter writer, GesStringConstantSegment segment)
     {
         writer.WriteUInt32(checked((uint)segment.Slices.Count));
         for (var index = 0; index < segment.Slices.Count; index++)
@@ -164,14 +164,14 @@ public static class GameEventScriptProgramWriter
         }
     }
 
-    private static int GetIndexListsSize(GameEventScriptUInt16IndexListSegment segment)
+    private static int GetIndexListsSize(GesUInt16IndexListSegment segment)
     {
         long size = 4;
         for (var index = 0; index < segment.Slices.Count; index++) size += 4L + 2L * segment.Slices[index].Length;
         return CheckedPayloadSize(size);
     }
 
-    private static void WriteIndexLists(ref SpanWriter writer, GameEventScriptUInt16IndexListSegment segment)
+    private static void WriteIndexLists(ref SpanWriter writer, GesUInt16IndexListSegment segment)
     {
         writer.WriteUInt32(checked((uint)segment.Slices.Count));
         for (var index = 0; index < segment.Slices.Count; index++)
@@ -182,7 +182,7 @@ public static class GameEventScriptProgramWriter
         }
     }
 
-    private static int GetBindingsSize(GameEventScriptBindingSegment segment)
+    private static int GetBindingsSize(GesBindingSegment segment)
         => CheckedPayloadSize(4L + 20L * segment.Entries.Count);
 
     private static void WriteBindings(ref SpanWriter writer, GameEventScriptProgram program)
@@ -205,10 +205,10 @@ public static class GameEventScriptProgramWriter
         }
     }
 
-    private static int GetCodeSize(GameEventScriptCodeSegment segment)
+    private static int GetCodeSize(GesCodeSegment segment)
         => CheckedPayloadSize(4L + 16L * segment.Count);
 
-    private static void WriteCode(ref SpanWriter writer, GameEventScriptCodeSegment segment)
+    private static void WriteCode(ref SpanWriter writer, GesCodeSegment segment)
     {
         writer.WriteUInt32(checked((uint)segment.Count));
         for (var index = 0; index < segment.Count; index++)
@@ -223,7 +223,7 @@ public static class GameEventScriptProgramWriter
         }
     }
 
-    private static int GetDebugSymbolsSize(GameEventScriptDebugSymbolsSegment segment)
+    private static int GetDebugSymbolsSize(GesDebugSymbolsSegment segment)
     {
         var names = BuildDebugNames(segment);
         long size = 4 + 4L + 16L * segment.Symbols.Count;
@@ -231,7 +231,7 @@ public static class GameEventScriptProgramWriter
         return CheckedPayloadSize(size);
     }
 
-    private static void WriteDebugSymbols(ref SpanWriter writer, GameEventScriptDebugSymbolsSegment segment)
+    private static void WriteDebugSymbols(ref SpanWriter writer, GesDebugSymbolsSegment segment)
     {
         var names = BuildDebugNames(segment);
         writer.WriteUInt32(checked((uint)names.Count));
@@ -249,7 +249,7 @@ public static class GameEventScriptProgramWriter
         }
     }
 
-    private static List<string> BuildDebugNames(GameEventScriptDebugSymbolsSegment segment)
+    private static List<string> BuildDebugNames(GesDebugSymbolsSegment segment)
     {
         var names = new List<string>();
         for (var index = 0; index < segment.Symbols.Count; index++)
@@ -260,7 +260,7 @@ public static class GameEventScriptProgramWriter
         return names;
     }
 
-    private static int GetSourceMapSize(GameEventScriptSourceMapSegment segment)
+    private static int GetSourceMapSize(GesSourceMapSegment segment)
     {
         long size = 4;
         for (var index = 0; index < segment.Sources.Count; index++)
@@ -272,7 +272,7 @@ public static class GameEventScriptProgramWriter
         return CheckedPayloadSize(size);
     }
 
-    private static void WriteSourceMap(ref SpanWriter writer, GameEventScriptSourceMapSegment segment)
+    private static void WriteSourceMap(ref SpanWriter writer, GesSourceMapSegment segment)
     {
         writer.WriteUInt32(checked((uint)segment.Sources.Count));
         for (var index = 0; index < segment.Sources.Count; index++)
@@ -296,7 +296,7 @@ public static class GameEventScriptProgramWriter
         }
     }
 
-    private static int GetSourceArchiveSize(GameEventScriptSourceArchiveSegment segment)
+    private static int GetSourceArchiveSize(GesSourceArchiveSegment segment)
     {
         long size = 4;
         for (var index = 0; index < segment.Sources.Count; index++)
@@ -307,7 +307,7 @@ public static class GameEventScriptProgramWriter
         return CheckedPayloadSize(size);
     }
 
-    private static void WriteSourceArchive(ref SpanWriter writer, GameEventScriptSourceArchiveSegment segment)
+    private static void WriteSourceArchive(ref SpanWriter writer, GesSourceArchiveSegment segment)
     {
         writer.WriteUInt32(checked((uint)segment.Sources.Count));
         for (var index = 0; index < segment.Sources.Count; index++)
@@ -320,23 +320,23 @@ public static class GameEventScriptProgramWriter
         }
     }
 
-    private static int GetBuildMetadataSize(GameEventScriptBuildMetadataSegment segment)
+    private static int GetBuildMetadataSize(GesBuildMetadataSegment segment)
         => CheckedPayloadSize(8L + Utf8.GetByteCount(segment.CompilerId) + Utf8.GetByteCount(segment.CompilerVersion));
 
-    private static void WriteBuildMetadata(ref SpanWriter writer, GameEventScriptBuildMetadataSegment segment)
+    private static void WriteBuildMetadata(ref SpanWriter writer, GesBuildMetadataSegment segment)
     {
         writer.WriteString(segment.CompilerId);
         writer.WriteString(segment.CompilerVersion);
     }
 
-    private static ushort FindString(GameEventScriptStringConstantSegment segment, string value)
+    private static ushort FindString(GesStringConstantSegment segment, string value)
     {
         for (var index = 0; index < segment.Slices.Count; index++)
             if (string.Equals(segment.Resolve(checked((ushort)index)), value, StringComparison.Ordinal)) return checked((ushort)index);
-        throw Format(GameEventScriptProgramFormatErrorCode.InvalidStringIndex, "ModuleName is not present in StringConstantSegment.");
+        throw Format(GesProgramFormatErrorCode.InvalidStringIndex, "ModuleName is not present in StringConstantSegment.");
     }
 
-    private static ushort FindList(GameEventScriptUInt16IndexListSegment segment, GameEventScriptReadOnlyArray<ushort> values)
+    private static ushort FindList(GesUInt16IndexListSegment segment, GesReadOnlyArray<ushort> values)
     {
         for (var index = 0; index < segment.Slices.Count; index++)
         {
@@ -348,13 +348,13 @@ public static class GameEventScriptProgramWriter
             if (equal) return checked((ushort)index);
         }
         if (values.Count == 0) return ushort.MaxValue;
-        throw Format(GameEventScriptProgramFormatErrorCode.InvalidListIndex, "A binding list is not present in UInt16IndexListSegment.");
+        throw Format(GesProgramFormatErrorCode.InvalidListIndex, "A binding list is not present in UInt16IndexListSegment.");
     }
 
-    private static void WriteSectionHeader(ref SpanWriter writer, GameEventScriptSectionType type, GameEventScriptSectionFlags flags, int payloadLength, ushort version = SectionVersion)
+    private static void WriteSectionHeader(ref SpanWriter writer, GesSectionType type, GesSectionFlags flags, int payloadLength, ushort version = SectionVersion)
         => WriteSectionHeader(ref writer, (ushort)type, flags, payloadLength, version);
 
-    private static void WriteSectionHeader(ref SpanWriter writer, ushort type, GameEventScriptSectionFlags flags, int payloadLength, ushort version)
+    private static void WriteSectionHeader(ref SpanWriter writer, ushort type, GesSectionFlags flags, int payloadLength, ushort version)
     {
         writer.WriteUInt16(type);
         writer.WriteUInt16((ushort)flags);
@@ -364,16 +364,16 @@ public static class GameEventScriptProgramWriter
     }
 
     private static long AddSection(long total, int payloadLength)
-        => checked(total + GameEventScriptBinaryFormat.SectionHeaderSize + payloadLength);
+        => checked(total + GesBinaryFormat.SectionHeaderSize + payloadLength);
 
     private static int CheckedPayloadSize(long value)
     {
         if (value < 0 || value > uint.MaxValue || value > int.MaxValue)
-            throw Format(GameEventScriptProgramFormatErrorCode.SectionTooLarge, "A section payload exceeds the V1 size range.");
+            throw Format(GesProgramFormatErrorCode.SectionTooLarge, "A section payload exceeds the V1 size range.");
         return checked((int)value);
     }
 
-    private static GameEventScriptProgramFormatException Format(GameEventScriptProgramFormatErrorCode code, string message)
+    private static GesProgramFormatException Format(GesProgramFormatErrorCode code, string message)
         => new(code, message);
 
     private ref struct SpanWriter

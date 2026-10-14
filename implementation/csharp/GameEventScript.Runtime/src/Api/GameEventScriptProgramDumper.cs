@@ -316,7 +316,7 @@ public static class GameEventScriptProgramDumper
         builder.AppendLine();
     }
 
-    private static GameEventScriptSourceMapEntry? FindSourceMapping(GameEventScriptSourceMapSegment? sourceMap, uint codeAddress)
+    private static GesSourceMapEntry? FindSourceMapping(GesSourceMapSegment? sourceMap, uint codeAddress)
     {
         if (sourceMap is null) return null;
         for (var index = 0; index < sourceMap.Entries.Count; index++)
@@ -327,13 +327,13 @@ public static class GameEventScriptProgramDumper
         return null;
     }
 
-    private static GameEventScriptSourceMapSource? FindSource(GameEventScriptSourceMapSegment sourceMap, uint sourceId)
+    private static GesSourceMapSource? FindSource(GesSourceMapSegment sourceMap, uint sourceId)
     {
         for (var index = 0; index < sourceMap.Sources.Count; index++) if (sourceMap.Sources[index].SourceId == sourceId) return sourceMap.Sources[index];
         return null;
     }
 
-    private static int ResolveSourceLine(GameEventScriptSourceMapSource source, uint byteOffset)
+    private static int ResolveSourceLine(GesSourceMapSource source, uint byteOffset)
     {
         var result = 0;
         for (var index = 1; index < source.LineStartByteOffsets.Count; index++)
@@ -344,7 +344,7 @@ public static class GameEventScriptProgramDumper
         return result;
     }
 
-    private static string? ResolveSourceText(GameEventScriptSourceArchiveSegment? archive, uint sourceId)
+    private static string? ResolveSourceText(GesSourceArchiveSegment? archive, uint sourceId)
     {
         if (archive is null) return null;
         for (var index = 0; index < archive.Sources.Count; index++) if (archive.Sources[index].SourceId == sourceId) return archive.Sources[index].ResolveText();
@@ -365,7 +365,7 @@ public static class GameEventScriptProgramDumper
         return end < 0 ? normalized[start..] : normalized.Substring(start, end - start);
     }
 
-    private static string FormatOperand(DisassemblyContext context, GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part, int operandIndex, int codeAddress)
+    private static string FormatOperand(DisassemblyContext context, GesBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part, int operandIndex, int codeAddress)
     {
         string RegisterAtAddress(ushort registerId) => context.Register(registerId, codeAddress);
 
@@ -402,7 +402,7 @@ public static class GameEventScriptProgramDumper
 
             ItemBindingRegister => RegisterAtAddress(operandIndex >= 3 ? instruction.AU : instruction.YRegister),
             AuxItemBindingRegister => RegisterAtAddress(instruction.AU),
-            WeightRegister => RegisterAtAddress(instruction.OpCode == GameEventScriptBytecodeOpCode.TakeWeighted ? instruction.AU : instruction.YRegister),
+            WeightRegister => RegisterAtAddress(instruction.OpCode == GesBytecodeOpCode.TakeWeighted ? instruction.AU : instruction.YRegister),
             StepRegister => RegisterAtAddress(instruction.AU),
             MinimumRegister => RegisterAtAddress(instruction.YRegister),
             MaximumRegister => RegisterAtAddress(instruction.AU),
@@ -415,7 +415,7 @@ public static class GameEventScriptProgramDumper
             DiceCount => Immediate(instruction.Count),
             DiceSideCount => Immediate(instruction.ImmediateY),
             ComponentCount => Immediate(instruction.ImmediateX),
-            CountImmediate => Immediate(instruction.OpCode == GameEventScriptBytecodeOpCode.SplitText ? instruction.AU : instruction.ImmediateY),
+            CountImmediate => Immediate(instruction.OpCode == GesBytecodeOpCode.SplitText ? instruction.AU : instruction.ImmediateY),
             IndexImmediate => Immediate(instruction.Index),
             FromImmediate => Immediate(instruction.ImmediateX),
             ToImmediate => Immediate(instruction.ImmediateY),
@@ -439,13 +439,13 @@ public static class GameEventScriptProgramDumper
             Tag => FormatTextReference(context, instruction.StringIndex),
             MemberName => FormatTextReference(context, instruction.StringIndex),
             TypeKind => instruction.TypeKind.ToString(),
-            PatternKind => ((GameEventScriptBytecodePatternKind)instruction.AU).ToString(),
-            SeriesKind => ((GameEventScriptBytecodeSeriesKind)instruction.TypeOperand).ToString(),
+            PatternKind => ((GesBytecodePatternKind)instruction.AU).ToString(),
+            SeriesKind => ((GesBytecodeSeriesKind)instruction.TypeOperand).ToString(),
             CustomTypeName => FormatTextReference(context, instruction.SecondaryStringIndex),
             TypeName => FormatTextReference(context, instruction.StringIndex),
 
-            MessageShapeList => context.ListLabel(instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage ? instruction.SecondaryListIndex : instruction.ListIndex),
-            ArgumentNameList => context.ListLabel(instruction.OpCode == GameEventScriptBytecodeOpCode.ConstructData ? instruction.AU : instruction.ListIndex),
+            MessageShapeList => context.ListLabel(instruction.OpCode == GesBytecodeOpCode.LoadMessage ? instruction.SecondaryListIndex : instruction.ListIndex),
+            ArgumentNameList => context.ListLabel(instruction.OpCode == GesBytecodeOpCode.ConstructData ? instruction.AU : instruction.ListIndex),
             ArgumentRegisterList => context.ListLabel(instruction.ListIndex),
             ItemRegisterList => context.ListLabel(instruction.ListIndex),
             SourceRegisterList => context.ListLabel(instruction.XRegister),
@@ -454,7 +454,7 @@ public static class GameEventScriptProgramDumper
             ValueRegisterList => context.ListLabel(instruction.ListIndex),
             CaptureRegisterList => context.ListLabel(CaptureRegisterListIndex(instruction)),
             TagRegisterList => context.ListLabel(GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode) ? instruction.AU
-                : instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessageWithTags or GameEventScriptBytecodeOpCode.PublishMessageWithTags
+                : instruction.OpCode is GesBytecodeOpCode.EmitMessageWithTags or GesBytecodeOpCode.PublishMessageWithTags
                 ? instruction.SecondaryListIndex
                 : instruction.ListIndex),
             RecordReference => context.RecordLabel(instruction.BindId),
@@ -464,36 +464,36 @@ public static class GameEventScriptProgramDumper
         };
     }
 
-    private static ushort CaptureRegisterListIndex(GameEventScriptBytecodeInstruction instruction)
+    private static ushort CaptureRegisterListIndex(GesBytecodeInstruction instruction)
         => instruction.BU;
 
-    private static void AppendInstructionFlags(StringBuilder builder, GameEventScriptBytecodeInstruction instruction)
+    private static void AppendInstructionFlags(StringBuilder builder, GesBytecodeInstruction instruction)
     {
-        if (instruction.OpCode is GameEventScriptBytecodeOpCode.IteratorCreate or GameEventScriptBytecodeOpCode.IteratorCreateOrJump)
+        if (instruction.OpCode is GesBytecodeOpCode.IteratorCreate or GesBytecodeOpCode.IteratorCreateOrJump)
         {
             var mode = instruction.UnitAndFlags >> 5;
             if (mode != 0) builder.Append(" mode=").Append(mode switch { 1 => "Union", 2 => "Intersect", 3 => "Difference", 4 => "Lockstep", 5 => "Cartesian", 6 => "Entries", _ => "Invalid" });
             return;
         }
-        if (instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorNext)
+        if (instruction.OpCode == GesBytecodeOpCode.IteratorNext)
         {
             if (instruction.UnitAndFlags != 0) builder.Append(" output=Components");
             return;
         }
-        if (instruction.OpCode is GameEventScriptBytecodeOpCode.Move
-            or GameEventScriptBytecodeOpCode.Add
-            or GameEventScriptBytecodeOpCode.Subtract
-            or GameEventScriptBytecodeOpCode.Multiply
-            or GameEventScriptBytecodeOpCode.Divide
-            or GameEventScriptBytecodeOpCode.Power
-            or GameEventScriptBytecodeOpCode.IntegerDivide
-            or GameEventScriptBytecodeOpCode.Modulo
-            or GameEventScriptBytecodeOpCode.Remainder
-            or GameEventScriptBytecodeOpCode.Min
-            or GameEventScriptBytecodeOpCode.Max
-            or GameEventScriptBytecodeOpCode.Negate
-            or GameEventScriptBytecodeOpCode.Abs
-            or GameEventScriptBytecodeOpCode.Clamp)
+        if (instruction.OpCode is GesBytecodeOpCode.Move
+            or GesBytecodeOpCode.Add
+            or GesBytecodeOpCode.Subtract
+            or GesBytecodeOpCode.Multiply
+            or GesBytecodeOpCode.Divide
+            or GesBytecodeOpCode.Power
+            or GesBytecodeOpCode.IntegerDivide
+            or GesBytecodeOpCode.Modulo
+            or GesBytecodeOpCode.Remainder
+            or GesBytecodeOpCode.Min
+            or GesBytecodeOpCode.Max
+            or GesBytecodeOpCode.Negate
+            or GesBytecodeOpCode.Abs
+            or GesBytecodeOpCode.Clamp)
         {
             if ((instruction.UnitAndFlags & 0x40) != 0) builder.Append(" mode=Numeric");
             return;
@@ -504,14 +504,14 @@ public static class GameEventScriptProgramDumper
             if (sendFlags != 0) builder.Append(" flags=").Append(sendFlags == 0x40 ? "WithTags" : sendFlags == 0x80 ? "Indirect" : "WithTags, Indirect");
             return;
         }
-        var flags = GameEventScriptBytecodeInstruction.DecodeInstructionFlags(instruction.UnitAndFlags);
-        if (flags != GameEventScriptInstructionFlag.None)
+        var flags = GesBytecodeInstruction.DecodeInstructionFlags(instruction.UnitAndFlags);
+        if (flags != GesInstructionFlag.None)
         {
-            builder.Append(" flags=").Append(flags == GameEventScriptInstructionFlag.NormalizeResultAsPredicate ? "NormalizeResultAsPredicate" : flags.ToString());
+            builder.Append(" flags=").Append(flags == GesInstructionFlag.NormalizeResultAsPredicate ? "NormalizeResultAsPredicate" : flags.ToString());
         }
     }
 
-    private static void AppendInstructionComment(StringBuilder builder, DisassemblyContext context, GameEventScriptBytecodeInstruction instruction, ReadOnlySpan<GameEventScriptOpcodePrinter.OperandPart> operands)
+    private static void AppendInstructionComment(StringBuilder builder, DisassemblyContext context, GesBytecodeInstruction instruction, ReadOnlySpan<GameEventScriptOpcodePrinter.OperandPart> operands)
     {
         var comments = new List<string>();
         foreach (var operand in operands)
@@ -529,10 +529,10 @@ public static class GameEventScriptProgramDumper
                     AddTextComment(comments, context, instruction.SecondaryStringIndex);
                     break;
                 case MessageShapeList:
-                    AddListTextComment(comments, context, instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage ? instruction.SecondaryListIndex : instruction.ListIndex);
+                    AddListTextComment(comments, context, instruction.OpCode == GesBytecodeOpCode.LoadMessage ? instruction.SecondaryListIndex : instruction.ListIndex);
                     break;
                 case ArgumentNameList:
-                    AddListTextComment(comments, context, instruction.OpCode == GameEventScriptBytecodeOpCode.ConstructData ? instruction.AU : instruction.ListIndex);
+                    AddListTextComment(comments, context, instruction.OpCode == GesBytecodeOpCode.ConstructData ? instruction.AU : instruction.ListIndex);
                     break;
                 case KeyNameList:
                     AddListTextComment(comments, context, instruction.SecondaryListIndex);
@@ -572,7 +572,7 @@ public static class GameEventScriptProgramDumper
         }
     }
 
-    private static void AppendRegisters(StringBuilder builder, GameEventScriptUInt16IndexList values)
+    private static void AppendRegisters(StringBuilder builder, GesUInt16IndexList values)
     {
         for (var index = 0; index < values.Length; index++)
         {
@@ -585,7 +585,7 @@ public static class GameEventScriptProgramDumper
         }
     }
 
-    private static void AppendTextLabels(StringBuilder builder, DisassemblyContext context, GameEventScriptUInt16IndexList values)
+    private static void AppendTextLabels(StringBuilder builder, DisassemblyContext context, GesUInt16IndexList values)
     {
         for (var index = 0; index < values.Length; index++)
         {
@@ -611,7 +611,7 @@ public static class GameEventScriptProgramDumper
         }
     }
 
-    private static void AppendU16Values(StringBuilder builder, GameEventScriptUInt16IndexList values)
+    private static void AppendU16Values(StringBuilder builder, GesUInt16IndexList values)
     {
         for (var index = 0; index < values.Length; index++)
         {
@@ -704,7 +704,7 @@ public static class GameEventScriptProgramDumper
 
     private static void AddOutboundMessageComment(List<string> comments, DisassemblyContext context, ushort id)
     {
-        if (context.GetBindEntry(GameEventScriptBinaryBindKind.OutboundMessage, id) is { } entry)
+        if (context.GetBindEntry(GesBinaryBindKind.OutboundMessage, id) is { } entry)
         {
             AddBindSignatureComment(comments, context, entry);
         }
@@ -712,33 +712,33 @@ public static class GameEventScriptProgramDumper
 
     private static void AddRecordComment(List<string> comments, DisassemblyContext context, ushort id)
     {
-        if (context.GetBindEntry(GameEventScriptBinaryBindKind.Record, id) is { } entry)
+        if (context.GetBindEntry(GesBinaryBindKind.Record, id) is { } entry)
         {
             AddBindSignatureComment(comments, context, entry);
         }
     }
 
-    private static void AddExternalReferenceComment(List<string> comments, DisassemblyContext context, GameEventScriptBytecodeOpCode opCode, ushort id)
+    private static void AddExternalReferenceComment(List<string> comments, DisassemblyContext context, GesBytecodeOpCode opCode, ushort id)
     {
-        var kind = opCode == GameEventScriptBytecodeOpCode.CreateExternalType
-            ? GameEventScriptBinaryBindKind.ExternalType
-            : GameEventScriptBinaryBindKind.ExtensionCall;
+        var kind = opCode == GesBytecodeOpCode.CreateExternalType
+            ? GesBinaryBindKind.ExternalType
+            : GesBinaryBindKind.ExtensionCall;
         if (context.GetBindEntry(kind, id) is { } entry)
         {
             AddBindSignatureComment(comments, context, entry);
         }
     }
 
-    private static void AddBindSignatureComment(List<string> comments, DisassemblyContext context, GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry entry)
+    private static void AddBindSignatureComment(List<string> comments, DisassemblyContext context, GesBindingSegment.GameEventScriptBinaryBindEntry entry)
     {
         comments.Add(FormatBindSignatureComment(context, entry));
     }
 
-    private static string FormatBindSignatureComment(DisassemblyContext context, GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry entry)
+    private static string FormatBindSignatureComment(DisassemblyContext context, GesBindingSegment.GameEventScriptBinaryBindEntry entry)
     {
         var name = Escape(context.ResolveText(entry.Name));
         string signature;
-        if (entry.Kind == GameEventScriptBinaryBindKind.MessageNameHandler)
+        if (entry.Kind == GesBinaryBindKind.MessageNameHandler)
         {
             signature = "\"" + name + " as message\"";
         }
@@ -779,7 +779,7 @@ public static class GameEventScriptProgramDumper
         }
     }
 
-    private static void AppendListComment(StringBuilder builder, DisassemblyContext context, GameEventScriptUInt16IndexList values, ListRole role)
+    private static void AppendListComment(StringBuilder builder, DisassemblyContext context, GesUInt16IndexList values, ListRole role)
     {
         if (values.Length == 0 || role != ListRole.Texts)
         {
@@ -816,8 +816,8 @@ public static class GameEventScriptProgramDumper
 
     private static string FormatUnit(byte unitAndFlags)
     {
-        var unit = GameEventScriptBytecodeInstruction.DecodeUnit(unitAndFlags);
-        return unit == GameEventScriptBytecodeInstructionUnit.UnitNone ? string.Empty : "unit:" + unit.ToTypeName();
+        var unit = GesBytecodeInstruction.DecodeUnit(unitAndFlags);
+        return unit == GesQuantityUnit.UnitNone ? string.Empty : "unit:" + unit.ToTypeName();
     }
 
     private static string Immediate(long value)
@@ -899,7 +899,7 @@ public static class GameEventScriptProgramDumper
         private readonly string[] _textLabels;
         private readonly string[] _listLabels;
         private readonly ListRole[] _listRoles;
-        private readonly Dictionary<(GameEventScriptBinaryBindKind Kind, ushort Id), int> _bindsByKindAndId = [];
+        private readonly Dictionary<(GesBinaryBindKind Kind, ushort Id), int> _bindsByKindAndId = [];
 
         internal DisassemblyContext(GameEventScriptProgram program)
         {
@@ -954,15 +954,15 @@ public static class GameEventScriptProgramDumper
             => (uint)index < (uint)_bindLabels.Length ? _bindLabels[index] : "Bind_" + index.ToString(CultureInfo.InvariantCulture);
 
         internal string OutboundMessageLabel(ushort id)
-            => BindLabel(GameEventScriptBinaryBindKind.OutboundMessage, id, "Outbound_" + id.ToString(CultureInfo.InvariantCulture));
+            => BindLabel(GesBinaryBindKind.OutboundMessage, id, "Outbound_" + id.ToString(CultureInfo.InvariantCulture));
 
         internal string RecordLabel(ushort id)
-            => BindLabel(GameEventScriptBinaryBindKind.Record, id, "Record_" + id.ToString(CultureInfo.InvariantCulture));
+            => BindLabel(GesBinaryBindKind.Record, id, "Record_" + id.ToString(CultureInfo.InvariantCulture));
 
-        internal string ExternalReferenceLabel(GameEventScriptBytecodeOpCode opCode, ushort id)
-            => opCode == GameEventScriptBytecodeOpCode.CreateExternalType
-                ? BindLabel(GameEventScriptBinaryBindKind.ExternalType, id, "ExternalType_" + id.ToString(CultureInfo.InvariantCulture))
-                : BindLabel(GameEventScriptBinaryBindKind.ExtensionCall, id, "External_" + id.ToString(CultureInfo.InvariantCulture));
+        internal string ExternalReferenceLabel(GesBytecodeOpCode opCode, ushort id)
+            => opCode == GesBytecodeOpCode.CreateExternalType
+                ? BindLabel(GesBinaryBindKind.ExternalType, id, "ExternalType_" + id.ToString(CultureInfo.InvariantCulture))
+                : BindLabel(GesBinaryBindKind.ExtensionCall, id, "External_" + id.ToString(CultureInfo.InvariantCulture));
 
         internal string ResolveText(ushort index)
             => index < Program.StringConstants.Slices.Length ? Program.StringConstants.Resolve(index) : "#" + index.ToString(CultureInfo.InvariantCulture);
@@ -977,7 +977,7 @@ public static class GameEventScriptProgramDumper
             }
 
             var symbols = debugSymbols.Symbols;
-            GameEventScriptDebugSymbol? bestMatch = null;
+            GesDebugSymbol? bestMatch = null;
             var address = checked((uint)codeAddress);
             for (var index = 0; index < symbols.Count; index++)
             {
@@ -998,7 +998,7 @@ public static class GameEventScriptProgramDumper
                 : physicalName;
         }
 
-        internal GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry? GetBindEntry(GameEventScriptBinaryBindKind kind, ushort id)
+        internal GesBindingSegment.GameEventScriptBinaryBindEntry? GetBindEntry(GesBinaryBindKind kind, ushort id)
         {
             if (_bindsByKindAndId.TryGetValue((kind, id), out var index))
             {
@@ -1008,7 +1008,7 @@ public static class GameEventScriptProgramDumper
             return null;
         }
 
-        private string BindLabel(GameEventScriptBinaryBindKind kind, ushort id, string fallback)
+        private string BindLabel(GesBinaryBindKind kind, ushort id, string fallback)
             => _bindsByKindAndId.TryGetValue((kind, id), out var index) ? BindLabel(index) : fallback;
 
         private static string[] BuildTextLabels(GameEventScriptProgram binary)
@@ -1046,7 +1046,7 @@ public static class GameEventScriptProgramDumper
             return labels;
         }
 
-        private static string[] BuildBindLabels(GameEventScriptProgram binary, Dictionary<(GameEventScriptBinaryBindKind Kind, ushort Id), int> bindsByKindAndId)
+        private static string[] BuildBindLabels(GameEventScriptProgram binary, Dictionary<(GesBinaryBindKind Kind, ushort Id), int> bindsByKindAndId)
         {
             var entries = binary.Bindings.Entries;
             var labels = new string[entries.Count];
@@ -1064,7 +1064,7 @@ public static class GameEventScriptProgramDumper
             return labels;
         }
 
-        private static string BuildBindLabel(GameEventScriptProgram binary, GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry entry, int index, HashSet<string> used)
+        private static string BuildBindLabel(GameEventScriptProgram binary, GesBindingSegment.GameEventScriptBinaryBindEntry entry, int index, HashSet<string> used)
         {
             var prefix = BindPrefix(entry.Kind);
             var name = entry.Name < binary.StringConstants.Slices.Length
@@ -1142,7 +1142,7 @@ public static class GameEventScriptProgramDumper
             AddScopedCodeLabels(codeLabels, codeLabelNames);
         }
 
-        private static void AddCodeLabelsForOperand(SortedSet<int> labels, GameEventScriptProgram binary, GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part)
+        private static void AddCodeLabelsForOperand(SortedSet<int> labels, GameEventScriptProgram binary, GesBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part)
         {
             switch (part)
             {
@@ -1175,15 +1175,15 @@ public static class GameEventScriptProgramDumper
             }
         }
 
-        private static void AddNamedCodeLabel(Dictionary<int, string> labels, Dictionary<int, string> comments, GameEventScriptProgram binary, GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry entry)
+        private static void AddNamedCodeLabel(Dictionary<int, string> labels, Dictionary<int, string> comments, GameEventScriptProgram binary, GesBindingSegment.GameEventScriptBinaryBindEntry entry)
         {
             if (entry.EntryAddress == NoAddress || entry.EntryAddress >= binary.Code.Instructions.Length)
             {
                 return;
             }
 
-            if (entry.Kind is not (GameEventScriptBinaryBindKind.MessageHandler or GameEventScriptBinaryBindKind.MessageNameHandler or GameEventScriptBinaryBindKind.Function or
-                GameEventScriptBinaryBindKind.Predicate or GameEventScriptBinaryBindKind.Record))
+            if (entry.Kind is not (GesBinaryBindKind.MessageHandler or GesBinaryBindKind.MessageNameHandler or GesBinaryBindKind.Function or
+                GesBinaryBindKind.Predicate or GesBinaryBindKind.Record))
             {
                 return;
             }
@@ -1273,20 +1273,20 @@ public static class GameEventScriptProgramDumper
             }
         }
 
-        private static string FormatCodeLabelComment(GameEventScriptProgram binary, GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry entry)
+        private static string FormatCodeLabelComment(GameEventScriptProgram binary, GesBindingSegment.GameEventScriptBinaryBindEntry entry)
         {
             var kind = entry.Kind switch
             {
-                GameEventScriptBinaryBindKind.MessageHandler => "handler",
-                GameEventScriptBinaryBindKind.MessageNameHandler => "handler",
-                GameEventScriptBinaryBindKind.Predicate => "predicate",
-                GameEventScriptBinaryBindKind.Record => "record",
+                GesBinaryBindKind.MessageHandler => "handler",
+                GesBinaryBindKind.MessageNameHandler => "handler",
+                GesBinaryBindKind.Predicate => "predicate",
+                GesBinaryBindKind.Record => "record",
                 _ => "function"
             };
             var name = entry.Name < binary.StringConstants.Slices.Length
                 ? binary.StringConstants.Resolve(entry.Name)
                 : "#" + entry.Name.ToString(CultureInfo.InvariantCulture);
-            if (entry.Kind == GameEventScriptBinaryBindKind.MessageNameHandler)
+            if (entry.Kind == GesBinaryBindKind.MessageNameHandler)
             {
                 return kind + " " + name + " as message";
             }
@@ -1309,12 +1309,12 @@ public static class GameEventScriptProgramDumper
             return builder.Append(')').ToString();
         }
 
-        private static string CodeLabelPrefix(GameEventScriptBinaryBindKind kind)
+        private static string CodeLabelPrefix(GesBinaryBindKind kind)
             => kind switch
             {
-                GameEventScriptBinaryBindKind.Function => "function_",
-                GameEventScriptBinaryBindKind.Predicate => "predicate_",
-                GameEventScriptBinaryBindKind.Record => "record_",
+                GesBinaryBindKind.Function => "function_",
+                GesBinaryBindKind.Predicate => "predicate_",
+                GesBinaryBindKind.Record => "record_",
                 _ => string.Empty
             };
 
@@ -1353,31 +1353,31 @@ public static class GameEventScriptProgramDumper
             return builder.ToString();
         }
 
-        private static string BindPrefix(GameEventScriptBinaryBindKind kind)
+        private static string BindPrefix(GesBinaryBindKind kind)
             => kind switch
             {
-                GameEventScriptBinaryBindKind.MessageHandler => "Handler",
-                GameEventScriptBinaryBindKind.MessageNameHandler => "Handler",
-                GameEventScriptBinaryBindKind.Function => "Function",
-                GameEventScriptBinaryBindKind.Predicate => "Predicate",
-                GameEventScriptBinaryBindKind.ExtensionCall => "Extension",
-                GameEventScriptBinaryBindKind.OutboundMessage => "Outbound",
-                GameEventScriptBinaryBindKind.Record => "Record",
-                GameEventScriptBinaryBindKind.ExternalType => "ExternalType",
+                GesBinaryBindKind.MessageHandler => "Handler",
+                GesBinaryBindKind.MessageNameHandler => "Handler",
+                GesBinaryBindKind.Function => "Function",
+                GesBinaryBindKind.Predicate => "Predicate",
+                GesBinaryBindKind.ExtensionCall => "Extension",
+                GesBinaryBindKind.OutboundMessage => "Outbound",
+                GesBinaryBindKind.Record => "Record",
+                GesBinaryBindKind.ExternalType => "ExternalType",
                 _ => "Bind"
             };
 
         private static ListRole PreferListRole(ListRole current, ListRole candidate)
             => current == ListRole.Raw ? candidate : current;
 
-        private static (ushort Index, string Prefix, ListRole Role)? GetListIndex(GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part)
+        private static (ushort Index, string Prefix, ListRole Role)? GetListIndex(GesBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part)
         {
             switch (part)
             {
                 case MessageShapeList:
-                    return (instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage ? instruction.SecondaryListIndex : instruction.ListIndex, "Shape", ListRole.Texts);
+                    return (instruction.OpCode == GesBytecodeOpCode.LoadMessage ? instruction.SecondaryListIndex : instruction.ListIndex, "Shape", ListRole.Texts);
                 case ArgumentNameList:
-                    return (instruction.OpCode == GameEventScriptBytecodeOpCode.ConstructData ? instruction.AU : instruction.ListIndex, "Names", ListRole.Texts);
+                    return (instruction.OpCode == GesBytecodeOpCode.ConstructData ? instruction.AU : instruction.ListIndex, "Names", ListRole.Texts);
                 case KeyNameList:
                     return (instruction.SecondaryListIndex, "Keys", ListRole.Texts);
                 case ArgumentRegisterList:
@@ -1394,7 +1394,7 @@ public static class GameEventScriptProgramDumper
                     return (CaptureRegisterListIndex(instruction), "Captures", ListRole.Registers);
                 case TagRegisterList:
                     var index = GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode) ? instruction.AU
-                : instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessageWithTags or GameEventScriptBytecodeOpCode.PublishMessageWithTags
+                : instruction.OpCode is GesBytecodeOpCode.EmitMessageWithTags or GesBytecodeOpCode.PublishMessageWithTags
                         ? instruction.SecondaryListIndex
                         : instruction.ListIndex;
                     return (index, "Tags", ListRole.Registers);

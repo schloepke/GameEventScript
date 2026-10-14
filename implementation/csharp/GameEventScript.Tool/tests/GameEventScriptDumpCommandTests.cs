@@ -80,7 +80,7 @@ public sealed class GameEventScriptDumpCommandTests
     {
         var bytes = File.ReadAllBytes(Path.Combine(TestRepositoryPaths.ConformanceDirectory, "fixtures", "GesbV1", fixture));
         File.WriteAllBytes(Path.Combine(_directory, "invalid.gesb"), bytes);
-        var expected = Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramReader.Read(bytes));
+        var expected = Assert.ThrowsExactly<GesProgramFormatException>(() => GameEventScriptProgramReader.Read(bytes));
         var output = Path.Combine(_directory, "previous.gesa");
         if (existingOutput) File.WriteAllText(output, "previous");
         var result = existingOutput ? Run("dump", "invalid.gesb", "-o", "previous.gesa") : Run("dump", "invalid.gesb");
@@ -158,7 +158,7 @@ public sealed class GameEventScriptDumpCommandTests
 
     private byte[] CreateBinary(string name, bool debug)
     {
-        var program = GameEventScriptBuilder.Create().AddScript(Source, "unavailable-source.ges").WithDebugInfo(debug ? GameEventScriptDebugInfoOptions.All : GameEventScriptDebugInfoOptions.None).Compile();
+        var program = GesProgramBuilder.Create().AddScript(Source, "unavailable-source.ges").WithDebugInfo(debug ? GesDebugInfoOptions.All : GesDebugInfoOptions.None).Compile();
         var bytes = GameEventScriptProgramWriter.ToArray(program);
         File.WriteAllBytes(Path.Combine(_directory, name), bytes);
         return bytes;

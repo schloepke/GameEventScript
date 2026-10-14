@@ -83,12 +83,12 @@ enum GesMath {
     // Numeric ALU results cross the helper boundary as scalars, never full GesValue storage.
     enum IntegerResult {
         case nothing
-        case integer(Int64, unit: GesUnit)
-        case float(Double, unit: GesUnit)
+        case integer(Int64, unit: GesQuantityUnit)
+        case float(Double, unit: GesQuantityUnit)
 
     }
 
-    static func integerArithmetic<Output: GesValueOutput>(_ op: GameEventScriptBytecodeOpCode, _ a: Int64, _ b: Int64, _ leftUnit: GesUnit, _ rightUnit: GesUnit, sink: Output) -> Output.Result {
+    static func integerArithmetic<Output: GesValueOutput>(_ op: GesBytecodeOpCode, _ a: Int64, _ b: Int64, _ leftUnit: GesQuantityUnit, _ rightUnit: GesQuantityUnit, sink: Output) -> Output.Result {
         switch integerArithmeticResult(op, a, b, leftUnit, rightUnit) {
         case .nothing: return sink.nothing
         case .integer(let value, let unit): return sink.integer(value, unit: unit)
@@ -96,7 +96,7 @@ enum GesMath {
         }
     }
 
-    static func integerArithmeticResult(_ op: GameEventScriptBytecodeOpCode, _ a: Int64, _ b: Int64, _ leftUnit: GesUnit, _ rightUnit: GesUnit) -> IntegerResult {
+    static func integerArithmeticResult(_ op: GesBytecodeOpCode, _ a: Int64, _ b: Int64, _ leftUnit: GesQuantityUnit, _ rightUnit: GesQuantityUnit) -> IntegerResult {
         switch op {
         case .add, .subtract:
             guard leftUnit == rightUnit else { return .nothing }
@@ -109,7 +109,7 @@ enum GesMath {
             return overflow ? .float(Double(a) * Double(b), unit: unit) : .integer(result, unit: unit)
         case .divide, .integerDivide:
             guard rightUnit == .none || leftUnit == rightUnit else { return .nothing }
-            let unit: GesUnit = rightUnit == .none ? leftUnit : .none
+            let unit: GesQuantityUnit = rightUnit == .none ? leftUnit : .none
             if op == .integerDivide, b != 0, !(a == .min && b == -1) {
                 var result = a / b
                 if a % b != 0 && (a < 0) != (b < 0) { result -= 1 }
@@ -126,22 +126,22 @@ enum GesMath {
         }
     }
 
-    static func arithmetic(_ op: GameEventScriptBytecodeOpCode, _ a: GesValue, _ b: GesValue) -> GesValue {
+    static func arithmetic(_ op: GesBytecodeOpCode, _ a: GesValue, _ b: GesValue) -> GesValue {
         arithmetic(op, a, b, sink: GesValueFactory())
     }
 
-    static func arithmetic<Output: GesValueOutput>(_ op: GameEventScriptBytecodeOpCode, _ a: GesValue, _ b: GesValue, sink: Output) -> Output.Result {
+    static func arithmetic<Output: GesValueOutput>(_ op: GesBytecodeOpCode, _ a: GesValue, _ b: GesValue, sink: Output) -> Output.Result {
         if op != .power, let av = a.integerValue, let bv = b.integerValue { return integerArithmetic(op, av, bv, a.unit, b.unit, sink: sink) }
         if a.isNothing || b.isNothing { return sink.nothing }
         if op == .power {
             if b.hasUnit || a.asNumber.isNaN || b.asNumber.isNaN || (a.hasUnit && b.asNumber != 0 && b.asNumber != 1) { return sink.nothing }
             return sink.float(pow(a.asNumber, b.asNumber), unit: b.asNumber == 1 ? a.unit : .none)
         }
-        let unit: GesUnit?
+        let unit: GesQuantityUnit?
         if op == .multiply {
             unit = a.hasUnit && b.hasUnit ? nil : a.hasUnit ? a.unit : b.unit
         } else if op == .divide || op == .integerDivide {
-            unit = !b.hasUnit ? a.unit : a.unit == b.unit ? GesUnit.none : nil
+            unit = !b.hasUnit ? a.unit : a.unit == b.unit ? GesQuantityUnit.none : nil
         } else {
             unit = a.unit == b.unit ? a.unit : nil
         }

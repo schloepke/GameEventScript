@@ -8,19 +8,19 @@ namespace GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterSeries
 {
-    internal static void GesVmCreateSeries(this GesVirtualMachine vm, ushort destinationRegister, GameEventScriptBytecodeSeriesKind seriesKind)
+    internal static void GesVmCreateSeries(this GesVirtualMachine vm, ushort destinationRegister, GesBytecodeSeriesKind seriesKind)
     {
         switch (seriesKind)
         {
-            case GameEventScriptBytecodeSeriesKind.Fibonacci:
+            case GesBytecodeSeriesKind.Fibonacci:
                 vm.SetSeries(destinationRegister, GesSeries.Fibonacci());
                 return;
-            case GameEventScriptBytecodeSeriesKind.Factorial:
+            case GesBytecodeSeriesKind.Factorial:
                 vm.SetSeries(destinationRegister, GesSeries.Factorial());
                 return;
             default:
                 vm.SetNothing(destinationRegister);
-                vm.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidSeriesKind, "Unknown series kind.");
+                vm.RaiseError(GesDiagnosticCodes.RuntimeInvalidSeriesKind, "Unknown series kind.");
                 return;
         }
     }

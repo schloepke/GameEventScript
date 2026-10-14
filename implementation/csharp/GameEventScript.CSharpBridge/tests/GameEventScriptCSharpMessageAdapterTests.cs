@@ -13,7 +13,7 @@ public sealed class GameEventScriptCSharpMessageAdapterTests
     [TestMethod]
     public void CSharpDictionaryAdapterBindsValuesInKnownSignatureOrder()
     {
-        var signature = GameEventScriptMessageSignature.Create("Move", ["target", "unit"]);
+        var signature = GesMessageSignature.Create("Move", ["target", "unit"]);
         var message = GameEventScriptCSharpMessage.Create(
             signature,
             new Dictionary<string, GesValue>

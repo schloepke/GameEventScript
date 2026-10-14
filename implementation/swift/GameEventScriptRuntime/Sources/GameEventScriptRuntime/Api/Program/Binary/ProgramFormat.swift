@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Stable classifications for invalid portable Program data or binary framing.
-public enum GameEventScriptProgramFormatErrorCode: Int, Sendable, CaseIterable {
+public enum GesProgramFormatErrorCode: Int, Sendable, CaseIterable {
     /// The input does not begin with the GESB magic bytes.
     case invalidMagic = 1
     /// The file uses an unsupported binary format version.
@@ -82,9 +82,9 @@ public enum GameEventScriptProgramFormatErrorCode: Int, Sendable, CaseIterable {
 }
 
 /// A stable format error and its optional location in the encoded or parsed program.
-public struct GameEventScriptProgramFormatError: Error, Sendable {
+public struct GesProgramFormatError: Error, Sendable {
     /// Stable error classification for machine-readable handling.
-    public let code: GameEventScriptProgramFormatErrorCode
+    public let code: GesProgramFormatErrorCode
     /// Zero-based encoded byte offset when known.
     public let byteOffset: Int?
     /// Raw section identifier when the failure belongs to a section.
@@ -95,7 +95,7 @@ public struct GameEventScriptProgramFormatError: Error, Sendable {
     public let message: String
 
     /// Creates a format error with optional encoded and logical location context.
-    public init(_ code: GameEventScriptProgramFormatErrorCode, message: String = "Invalid GES program", byteOffset: Int? = nil, sectionType: UInt16? = nil, entryIndex: Int? = nil) {
+    public init(_ code: GesProgramFormatErrorCode, message: String = "Invalid GES program", byteOffset: Int? = nil, sectionType: UInt16? = nil, entryIndex: Int? = nil) {
         self.code = code
         self.message = message
         self.byteOffset = byteOffset
@@ -105,7 +105,7 @@ public struct GameEventScriptProgramFormatError: Error, Sendable {
 }
 
 /// Controls which optional sections the binary reader retains.
-public enum GameEventScriptProgramRetention: Sendable {
+public enum GesProgramRetention: Sendable {
     /// Retains known optional sections and permitted opaque sections.
     case preserveAll
     /// Retains known sections and discards opaque optional sections.
@@ -115,7 +115,7 @@ public enum GameEventScriptProgramRetention: Sendable {
 }
 
 /// Independent resource limits applied while decoding untrusted binary inputs.
-public struct GameEventScriptProgramReadLimits: Sendable {
+public struct GesProgramReadLimits: Sendable {
     /// Maximum input bytes; defaults to 64 MiB.
     public var maxFileBytes = 64 * 1024 * 1024
     /// Maximum number of sections; defaults to 256.
@@ -138,21 +138,21 @@ public struct GameEventScriptProgramReadLimits: Sendable {
 }
 
 /// Binary-reader retention policy and resource limits.
-public struct GameEventScriptProgramReadOptions: Sendable {
+public struct GesProgramReadOptions: Sendable {
     /// Which optional data survives reading.
-    public var retention: GameEventScriptProgramRetention
+    public var retention: GesProgramRetention
     /// Resource limits enforced during decoding.
-    public var limits: GameEventScriptProgramReadLimits
+    public var limits: GesProgramReadLimits
 
     /// Creates reader options; defaults to preserving all supported data with standard limits.
-    public init(retention: GameEventScriptProgramRetention = .preserveAll, limits: GameEventScriptProgramReadLimits = .init()) {
+    public init(retention: GesProgramRetention = .preserveAll, limits: GesProgramReadLimits = .init()) {
         self.retention = retention
         self.limits = limits
     }
 }
 
 /// Fixed framing constants for the portable V1 transport.
-public enum GameEventScriptBinaryFormat {
+public enum GesBinaryFormat {
     /// Current portable format version, V1.
     public static let version: UInt16 = 1
     /// File header size in bytes (16).

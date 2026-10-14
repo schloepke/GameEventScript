@@ -3,7 +3,7 @@
 
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime.VM;
 
@@ -51,7 +51,7 @@ internal static class GesVmRegisterMemberIndexAccess
                         vm.SetNothing(destinationRegister);
                         return;
                 }
-            case Handler when obj.ObjectValue is GameEventScriptMessageSignature signature:
+            case Handler when obj.ObjectValue is GesMessageSignature signature:
                 switch (key)
                 {
                     case "name":

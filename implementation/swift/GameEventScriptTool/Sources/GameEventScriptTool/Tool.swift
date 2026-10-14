@@ -126,7 +126,7 @@ final class Tool {
         io.line("Bytecode: \(program.code.count) instructions, \(16 * program.code.count) bytes (instruction data)")
         io.line("Required registers: \(program.requiredRegisterCount)")
         io.line("Required call stack depth: \(program.requiredCallStackDepth)")
-        let groups: [(String, [GameEventScriptBinaryBindKind])] = [("Message bindings", [.messageHandler, .messageNameHandler, .outboundMessage]), ("Required extensions", [.extensionCall]), ("Required external types", [.externalType])]
+        let groups: [(String, [GesBinaryBindKind])] = [("Message bindings", [.messageHandler, .messageNameHandler, .outboundMessage]), ("Required extensions", [.extensionCall]), ("Required external types", [.externalType])]
         for (title, kinds) in groups {
             let entries = program.bindings.filter { kinds.contains($0.kind) }
             io.line("\(title) (\(entries.count)):")
@@ -176,7 +176,7 @@ final class Tool {
             try ToolFiles.ensureDistinct(path, from: [input])
         }
         let program: GameEventScriptProgram
-        do { program = try GameEventScriptProgramReader.read(Array(Data(contentsOf: URL(fileURLWithPath: input)))) } catch let error as GameEventScriptProgramFormatError {
+        do { program = try GameEventScriptProgramReader.read(Array(Data(contentsOf: URL(fileURLWithPath: input)))) } catch let error as GesProgramFormatError {
             io.report(error, fallback: input)
             return 1
         }

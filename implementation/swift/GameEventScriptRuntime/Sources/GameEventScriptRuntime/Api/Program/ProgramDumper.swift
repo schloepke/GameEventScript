@@ -176,7 +176,7 @@ private final class GesProgramDump {
         return output
     }
 
-    func operand(_ i: GameEventScriptBytecodeInstruction, _ part: GesOperand, _ position: Int, _ address: Int) -> String {
+    func operand(_ i: GesBytecodeInstruction, _ part: GesOperand, _ position: Int, _ address: Int) -> String {
         if part.isRegister {
             let register = i.register(part, position)
             let symbol = p.debugSymbols?.filter { $0.registerID == register && address >= $0.codeStart && address < UInt64($0.codeStart) + UInt64($0.codeLength) }.min { $0.codeLength < $1.codeLength }
@@ -195,9 +195,9 @@ private final class GesProgramDump {
         case .integerImmediate: return "#" + String(i.integer)
         case .floatImmediate: return floatImmediate(i.float)
         case .unit: return i.unit == .none ? "" : "unit:" + (i.unit == .meter ? "meter" : i.unit == .second ? "second" : "degree")
-        case .typeKind: return GameEventScriptBytecodeTypeKind(rawValue: i.word2).map(enumName) ?? "Unknown"
-        case .patternKind: return GameEventScriptBytecodePatternKind(rawValue: i.a).map(enumName) ?? "Unknown"
-        case .seriesKind: return GameEventScriptBytecodeSeriesKind(rawValue: i.word2).map(enumName) ?? "Unknown"
+        case .typeKind: return GesBytecodeTypeKind(rawValue: i.word2).map(enumName) ?? "Unknown"
+        case .patternKind: return GesBytecodePatternKind(rawValue: i.a).map(enumName) ?? "Unknown"
+        case .seriesKind: return GesBytecodeSeriesKind(rawValue: i.word2).map(enumName) ?? "Unknown"
         default: return ""
         }
     }
@@ -235,7 +235,7 @@ private final class GesProgramDump {
         return (negative ? "#-" : "#") + formatted
     }
 
-    func comment(_ i: GameEventScriptBytecodeInstruction, _ part: GesOperand) -> String? {
+    func comment(_ i: GesBytecodeInstruction, _ part: GesOperand) -> String? {
         if part.isString { return quote(text(part == .customTypeName ? i.word2 : i.word1)) }
         if part.isTextList {
             let values = p.uint16IndexLists[Int(i.list(part))]
@@ -246,8 +246,8 @@ private final class GesProgramDump {
         return nil
     }
 
-    func binding(_ i: GameEventScriptBytecodeInstruction, _ part: GesOperand) -> Int? {
-        let kind: GameEventScriptBinaryBindKind = part == .outboundMessage ? .outboundMessage : part == .recordReference ? .record : i.opcode == .createExternalType ? .externalType : .extensionCall
+    func binding(_ i: GesBytecodeInstruction, _ part: GesOperand) -> Int? {
+        let kind: GesBinaryBindKind = part == .outboundMessage ? .outboundMessage : part == .recordReference ? .record : i.opcode == .createExternalType ? .externalType : .extensionCall
         let id = part == .outboundMessage && !i.opcode.isResultSend ? i.word0 : i.word1
         return p.bindings.firstIndex { $0.kind == kind && $0.id == id }
     }
@@ -275,7 +275,7 @@ private final class GesProgramDump {
         return text.prefix(1).uppercased() + text.dropFirst()
     }
 
-    func prefix(_ kind: GameEventScriptBinaryBindKind) -> String {
+    func prefix(_ kind: GesBinaryBindKind) -> String {
         switch kind {
         case .messageHandler, .messageNameHandler: "Handler"
         case .extensionCall: "Extension"

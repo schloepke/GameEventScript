@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Independent local delivery and outbound publication outcomes.
-public struct GameEventScriptPublishResult: Sendable {
+public struct GesPublishResult: Sendable {
     /// Whether the message was accepted for local delivery.
     public let localAccepted: Bool
     /// Whether the outbound sink was called.

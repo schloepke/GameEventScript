@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Stable pipeline stage in which a diagnostic originated.
-public enum GameEventScriptDiagnosticPhase: Int, Sendable {
+public enum GesDiagnosticPhase: Int, Sendable {
     /// Source tokenization or grammar recognition.
     case parse = 1
     /// Source semantic validation.

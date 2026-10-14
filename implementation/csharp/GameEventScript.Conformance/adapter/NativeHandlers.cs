@@ -34,18 +34,18 @@ internal static class NativeHandlers
         }
     }
 
-    internal static IGameEventScriptNativeMessageHandler Create(JsonElement definition, HostScenario scenario) => new Handler(definition, scenario);
+    internal static IGesNativeMessageHandler Create(JsonElement definition, HostScenario scenario) => new Handler(definition, scenario);
 
-    private sealed class Handler(JsonElement definition, HostScenario scenario) : IGameEventScriptNativeMessageHandler
+    private sealed class Handler(JsonElement definition, HostScenario scenario) : IGesNativeMessageHandler
     {
         /// <summary>Performs only the declared fixture fault or ordered native emissions.</summary>
-        public void Handle(GameEventScriptMessage message, GameEventScriptContext context)
+        public void Handle(GameEventScriptMessage message, GesContext context)
         {
             if (definition.GetProperty("throw").GetBoolean()) throw new InvalidOperationException("Configured native handler failure.");
             if (definition.GetProperty("faultCode").GetString() is { } code)
             {
                 var fault = definition.GetProperty("faultContext");
-                throw new NativeFault(new GameEventScriptDiagnostic(GameEventScriptDiagnosticPhase.Runtime, code, "Configured native handler fault.",
+                throw new NativeFault(new GesDiagnostic(GesDiagnosticPhase.Runtime, code, "Configured native handler fault.",
                     ProgramName: fault.GetProperty("programName").GetString(), HandlerName: fault.GetProperty("handlerName").GetString()));
             }
             scenario.Apply("native/" + definition.GetProperty("id").GetString(), definition.GetProperty("actions"));
@@ -54,8 +54,8 @@ internal static class NativeHandlers
                 var output = RuntimeValues.DecodeMessage(emit.GetProperty("message"));
                 if (emit.GetProperty("forwardArguments").GetBoolean())
                 {
-                    var arguments = new GameEventScriptMessageArgument[message.Arguments.Count];
-                    for (var index = 0; index < arguments.Length; index++) arguments[index] = new GameEventScriptMessageArgument(message.Arguments.NameAt(index), message.Arguments.ValueAt(index));
+                    var arguments = new GesMessageArgument[message.Arguments.Count];
+                    for (var index = 0; index < arguments.Length; index++) arguments[index] = new GesMessageArgument(message.Arguments.NameAt(index), message.Arguments.ValueAt(index));
                     output = GameEventScriptMessage.Create(output.Name, arguments);
                 }
                 context.Emit(output);
@@ -63,5 +63,5 @@ internal static class NativeHandlers
         }
     }
 
-    private sealed class NativeFault(GameEventScriptDiagnostic diagnostic) : GameEventScriptFatalRuntimeException(diagnostic);
+    private sealed class NativeFault(GesDiagnostic diagnostic) : GesFatalRuntimeException(diagnostic);
 }

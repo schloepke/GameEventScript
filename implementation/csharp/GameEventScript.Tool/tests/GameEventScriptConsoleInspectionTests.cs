@@ -187,8 +187,8 @@ on undeliverable as rejected { emit ConsoleOut(rejected) }
 
     private GameEventScriptProgram Binary(string file, string source, bool debug)
     {
-        var builder = GameEventScriptBuilder.Create().AddScript(source, "unavailable-source.ges");
-        if (!debug) builder.WithDebugInfo(GameEventScriptDebugInfoOptions.None);
+        var builder = GesProgramBuilder.Create().AddScript(source, "unavailable-source.ges");
+        if (!debug) builder.WithDebugInfo(GesDebugInfoOptions.None);
         var program = builder.Compile();
         File.WriteAllBytes(Path.Combine(_directory, file), GameEventScriptProgramWriter.ToArray(program));
         return program;

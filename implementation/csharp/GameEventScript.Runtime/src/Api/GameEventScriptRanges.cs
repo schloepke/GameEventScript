@@ -6,7 +6,7 @@ namespace GameEventScript.Api;
 /// <summary>
 /// Represents a game event script integer range.
 /// </summary>
-public sealed class GameEventScriptIntegerRange(long from, long to, long step)
+public sealed class GesIntegerRange(long from, long to, long step)
 {
     /// <summary>
     /// Gets the from.
@@ -27,7 +27,7 @@ public sealed class GameEventScriptIntegerRange(long from, long to, long step)
 /// <summary>
 /// Represents a game event script float range.
 /// </summary>
-public sealed class GameEventScriptFloatRange(double from, double to, double step)
+public sealed class GesFloatRange(double from, double to, double step)
 {
     /// <summary>
     /// Gets the from.

@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 final class GesExternalStorage: Hashable {
-    let value: any GameEventScriptExternalValue
-    let definition: GameEventScriptExternalTypeDefinition
+    let value: any GesExternalValue
+    let definition: GesExternalTypeDefinition
     private var cachedMap: GesValueMap?
 
-    init(value: any GameEventScriptExternalValue) {
+    init(value: any GesExternalValue) {
         self.value = value
         definition = value.definition
     }
@@ -17,7 +17,7 @@ final class GesExternalStorage: Hashable {
 
     func field(_ name: String) throws -> GesValue? {
         guard let field = definition.fields.first(where: { $0.name == name }) else { return nil }
-        do { return try value.field(name).map { GesExternalNames.coerce($0, kind: field.kind, unit: field.unit) } } catch let fault as GameEventScriptExtensionFault { throw fault } catch let fault as GesRuntimeError { throw fault } catch {
+        do { return try value.field(name).map { GesExternalNames.coerce($0, kind: field.kind, unit: field.unit) } } catch let fault as GesExtensionFaultError { throw fault } catch let fault as GesRuntimeError { throw fault } catch {
             throw GesRuntimeError(diagnostic: .init(phase: .runtime, code: "runtime.externalFieldAccessFailed", symbol: definition.name + "." + name, technicalDetails: String(describing: error)))
         }
     }
@@ -26,7 +26,7 @@ final class GesExternalStorage: Hashable {
         if let cachedMap { return cachedMap }
         var entries: [GesMapEntry] = []
         for field in definition.fields {
-            do { if let result = try self.field(field.name) { entries.append(.init(key: field.name, value: result)) } } catch let fault as GameEventScriptExtensionFault { throw fault } catch let error as GesRuntimeError { throw error } catch {
+            do { if let result = try self.field(field.name) { entries.append(.init(key: field.name, value: result)) } } catch let fault as GesExtensionFaultError { throw fault } catch let error as GesRuntimeError { throw error } catch {
                 throw GesRuntimeError(diagnostic: .init(phase: .runtime, code: "runtime.externalFieldAccessFailed", symbol: definition.name + "." + field.name, technicalDetails: String(describing: error)))
             }
         }

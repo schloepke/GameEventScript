@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesCasts {
-    static func unit(_ value: GesValue, _ unit: GesUnit) -> GesValue {
+    static func unit(_ value: GesValue, _ unit: GesQuantityUnit) -> GesValue {
         Self.unit(value, unit, sink: GesValueFactory())
     }
 
-    static func unit<Output: GesValueOutput>(_ value: GesValue, _ unit: GesUnit, sink: Output) -> Output.Result {
+    static func unit<Output: GesValueOutput>(_ value: GesValue, _ unit: GesQuantityUnit, sink: Output) -> Output.Result {
         guard unit == .none || value.unit == .none || value.unit == unit else { return sink.nothing }
         switch value.kind {
         case .integer: return sink.integer(value.asInteger, unit: unit)

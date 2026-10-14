@@ -124,11 +124,11 @@ extension GesCompiler {
 
     func assemblyType(_ e: GesExpression) throws -> Int {
         let name = try assemblyText(e)
-        let types: [String: GameEventScriptBytecodeTypeKind] = [
+        let types: [String: GesBytecodeTypeKind] = [
             "nothing": .nothing, "boolean": .boolean, "percentage": .percentage, "vector": .vector, "point": .point, "series": .series, "tag": .tag, "text": .text, "list": .list, "range": .range, "message": .message, "handler": .handler, "map": .map,
             "dice": .dice,
         ]
-        if name == "Number" { return Int(GameEventScriptBytecodeTypeKind.float.rawValue) }
+        if name == "Number" { return Int(GesBytecodeTypeKind.float.rawValue) }
         guard let type = types[name.lowercased()] else { throw assemblyFailure(e.location, "Unknown assembly type.", name) }
         return Int(type.rawValue)
     }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    func compoundIterator(_ instruction: GameEventScriptBytecodeInstruction, _ context: GameEventScriptContext) throws {
+    func compoundIterator(_ instruction: GesBytecodeInstruction, _ context: GesContext) throws {
         let mode = instruction.unitAndFlags >> 5
         let destination = Int(instruction.word0)
         if mode == 0 {

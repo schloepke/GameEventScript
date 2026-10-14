@@ -26,7 +26,7 @@ final class ExternalTypeTests: XCTestCase {
         let registry = try GameEventScriptSwiftExternalTypeRegistry([type.binding])
         XCTAssertEqual(registry.types.count, 1)
         XCTAssertEqual(try registry.resolve(":Player")?.fields.map(\.name), ["name", "score"])
-        let reference = try GameEventScriptExternalTypeConstructorReference(typeName: "Player", argumentLabels: ["name", "score"])
+        let reference = try GesExternalTypeConstructorReference(typeName: "Player", argumentLabels: ["name", "score"])
         let constructor = try XCTUnwrap(registry.resolve(reference))
         XCTAssertEqual(constructor.definition.parameters.map(\.name), ["score", "name"])
         let call = GesExternalTypeConstructorCall(arguments: .init([.integer(42), .text("Ada")]))
@@ -47,8 +47,8 @@ final class ExternalTypeTests: XCTestCase {
         player.name = "after"
         XCTAssertTrue(try type.unwrap(wrapped) === player)
         XCTAssertEqual(try wrapped.externalValue?.field("name"), .text("after"))
-        let broken = try GameEventScriptSwiftType<Player>("Broken", fields: [.init("name", typeName: "Text", get: { _ in throw try GameEventScriptExtensionFault(code: "app.field", message: "Failed") })])
-        XCTAssertThrowsError(try broken.wrap(Player(name: "", score: 0)).materializedMap()) { XCTAssertEqual(($0 as? GameEventScriptExtensionFault)?.diagnostic.code, "app.field") }
+        let broken = try GameEventScriptSwiftType<Player>("Broken", fields: [.init("name", typeName: "Text", get: { _ in throw try GesExtensionFaultError(code: "app.field", message: "Failed") })])
+        XCTAssertThrowsError(try broken.wrap(Player(name: "", score: 0)).materializedMap()) { XCTAssertEqual(($0 as? GesExtensionFaultError)?.diagnostic.code, "app.field") }
     }
 
     func testDuplicateAndInconsistentBindingsFailBeforeUse() throws {

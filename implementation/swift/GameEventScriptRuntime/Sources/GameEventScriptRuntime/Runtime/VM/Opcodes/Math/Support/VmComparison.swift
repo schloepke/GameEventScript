@@ -56,7 +56,7 @@ enum GesComparison {
         } else if rank(a.kind) != rank(b.kind) {
             comparison = rank(a.kind) < rank(b.kind) ? -1 : 1
         } else if a.spatialValue != nil && a.kind == b.kind && a.unit != b.unit {
-            func unitRank(_ unit: GesUnit) -> Int {
+            func unitRank(_ unit: GesQuantityUnit) -> Int {
                 switch unit {
                 case .none: 0
                 case .degree: 1

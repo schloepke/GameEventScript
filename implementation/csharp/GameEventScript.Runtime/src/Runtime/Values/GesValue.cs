@@ -8,13 +8,13 @@ using System.Runtime.InteropServices;
 using System.Text;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
-using static GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
+using static GameEventScript.Api.GesQuantityUnit;
 using static GameEventScript.Runtime.Values.GesValue.GesValueFlags;
 
 namespace GameEventScript.Runtime.Values;
 
-internal readonly record struct GesNumericWithUnit(double Value, GameEventScriptBytecodeInstructionUnit Unit);
+internal readonly record struct GesNumericWithUnit(double Value, GesQuantityUnit Unit);
 
 /// <summary>
 /// Represents a ges value.
@@ -41,8 +41,8 @@ public struct GesValue : IEquatable<GesValue>
     [FieldOffset(0)] internal double FloatValue;
     [FieldOffset(8)] internal object? ObjectValue;
 
-    [FieldOffset(16)] internal GameEventScriptBytecodeTypeKind Kind;
-    [FieldOffset(17)] internal GameEventScriptBytecodeInstructionUnit Unit;
+    [FieldOffset(16)] internal GesBytecodeTypeKind Kind;
+    [FieldOffset(17)] internal GesQuantityUnit Unit;
     [FieldOffset(18)] internal GesValueFlags Flags;
 
     /// <summary>
@@ -69,7 +69,7 @@ public struct GesValue : IEquatable<GesValue>
     /// <param name="integer">The integer value.</param>
     /// <param name="unit">The unit value.</param>
     /// <returns>The result of the operation.</returns>
-    public static GesValue GesInteger(long integer, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    public static GesValue GesInteger(long integer, GesQuantityUnit unit = UnitNone)
     {
         var value = new GesValue();
         value.SetInteger(integer, unit);
@@ -82,7 +82,7 @@ public struct GesValue : IEquatable<GesValue>
     /// <param name="number">The number value.</param>
     /// <param name="unit">The unit value.</param>
     /// <returns>The result of the operation.</returns>
-    public static GesValue GesFloat(double number, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    public static GesValue GesFloat(double number, GesQuantityUnit unit = UnitNone)
     {
         var value = new GesValue();
         value.SetFloat(number, unit);
@@ -95,7 +95,7 @@ public struct GesValue : IEquatable<GesValue>
     /// <param name="number">The number value.</param>
     /// <param name="unit">The unit value.</param>
     /// <returns>The result of the operation.</returns>
-    public static GesValue GesNumber(double number, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    public static GesValue GesNumber(double number, GesQuantityUnit unit = UnitNone)
         => GesFloat(number, unit);
 
     /// <summary>
@@ -147,7 +147,7 @@ public struct GesValue : IEquatable<GesValue>
     /// <param name="z">The z value.</param>
     /// <param name="unit">The unit value.</param>
     /// <returns>The result of the operation.</returns>
-    public static GesValue GesVector(double x, double y = 0d, double z = 0d, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    public static GesValue GesVector(double x, double y = 0d, double z = 0d, GesQuantityUnit unit = UnitNone)
     {
         var value = new GesValue();
         value.SetVector(x, y, z, unit);
@@ -162,7 +162,7 @@ public struct GesValue : IEquatable<GesValue>
     /// <param name="z">The z value.</param>
     /// <param name="unit">The unit value.</param>
     /// <returns>The result of the operation.</returns>
-    public static GesValue GesPoint(double x, double y = 0d, double z = 0d, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    public static GesValue GesPoint(double x, double y = 0d, double z = 0d, GesQuantityUnit unit = UnitNone)
     {
         var value = new GesValue();
         value.SetPoint(x, y, z, unit);
@@ -303,7 +303,7 @@ public struct GesValue : IEquatable<GesValue>
     /// </summary>
     /// <param name="signature">The signature value.</param>
     /// <returns>The result of the operation.</returns>
-    public static GesValue GesHandler(GameEventScriptMessageSignature signature)
+    public static GesValue GesHandler(GesMessageSignature signature)
     {
         var value = new GesValue();
         value.SetMessageHandler(signature);
@@ -338,26 +338,26 @@ public struct GesValue : IEquatable<GesValue>
     public readonly bool IsNothing => Kind is Nothing || (Kind is Float or Percentage && double.IsNaN(FloatValue));
     internal readonly bool IsNotNothing => Kind is not Nothing && Kind is not Float and not Percentage || Kind is Float or Percentage && !double.IsNaN(FloatValue);
 
-    internal readonly bool IsUnit(GameEventScriptBytecodeInstructionUnit requiredUnit) => Unit == requiredUnit;
+    internal readonly bool IsUnit(GesQuantityUnit requiredUnit) => Unit == requiredUnit;
     /// <summary>
     /// Gets a value indicating whether has unit.
     /// </summary>
     public readonly bool HasUnit => Unit.IsNumericUnit();
     internal readonly bool IsStorageObject => (Flags & StorageObjectFlag) != 0;
 
-    internal readonly GameEventScriptBytecodeTypeKind NumericKind => Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice ? Integer : Kind;
+    internal readonly GesBytecodeTypeKind NumericKind => Kind is GesBytecodeTypeKind.Boolean or Dice ? Integer : Kind;
 
     internal readonly string TextValue => ObjectValue as string ?? (ObjectValue as GesTextPayload)?.Text ?? string.Empty;
 
     /// <summary>
     /// Gets the value kind.
     /// </summary>
-    public readonly GameEventScriptBytecodeTypeKind ValueKind => Kind;
+    public readonly GesBytecodeTypeKind ValueKind => Kind;
 
     /// <summary>
     /// Gets the value unit.
     /// </summary>
-    public readonly GameEventScriptBytecodeInstructionUnit ValueUnit => Unit;
+    public readonly GesQuantityUnit ValueUnit => Unit;
 
     /// <summary>
     /// Performs the as integer operation.
@@ -365,9 +365,9 @@ public struct GesValue : IEquatable<GesValue>
     /// <returns>The result of the operation.</returns>
     public readonly long AsInteger() => Kind switch
     {
-        GameEventScriptBytecodeTypeKind.Integer or Dice => IntegerValue,
+        GesBytecodeTypeKind.Integer or Dice => IntegerValue,
         Float or Percentage => ToIntegerSaturated(FloatValue),
-        GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? 1 : 0,
+        GesBytecodeTypeKind.Boolean => IsTrue ? 1 : 0,
         _ => ToIntegerSaturated(AsNumeric)
     };
 
@@ -377,9 +377,9 @@ public struct GesValue : IEquatable<GesValue>
     /// <returns>The result of the operation.</returns>
     public readonly double AsNumber() => Kind switch
     {
-        GameEventScriptBytecodeTypeKind.Integer or Dice => IntegerValue,
+        GesBytecodeTypeKind.Integer or Dice => IntegerValue,
         Float or Percentage => FloatValue,
-        GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? 1d : 0d,
+        GesBytecodeTypeKind.Boolean => IsTrue ? 1d : 0d,
         _ => AsNumeric
     };
 
@@ -389,8 +389,8 @@ public struct GesValue : IEquatable<GesValue>
     /// <returns>The result of the operation.</returns>
     public readonly bool AsBoolean() => Kind switch
     {
-        GameEventScriptBytecodeTypeKind.Boolean => IsTrue,
-        GameEventScriptBytecodeTypeKind.Integer => IntegerValue != 0,
+        GesBytecodeTypeKind.Boolean => IsTrue,
+        GesBytecodeTypeKind.Integer => IntegerValue != 0,
         Float or Percentage => FloatValue != 0d,
         Vector or Point when ObjectValue is GesValueVectorPoint vector => vector.X != 0d || vector.Y != 0d || vector.Z != 0d,
         _ => IsTrue
@@ -400,7 +400,7 @@ public struct GesValue : IEquatable<GesValue>
     /// Performs the as text operation.
     /// </summary>
     /// <returns>The result of the operation.</returns>
-    public readonly string AsText() => TextValue.Length > 0 || Kind is GameEventScriptBytecodeTypeKind.Text or Tag ? TextValue : ToText;
+    public readonly string AsText() => TextValue.Length > 0 || Kind is GesBytecodeTypeKind.Text or Tag ? TextValue : ToText;
 
     /// <summary>
     /// Gets the x.
@@ -444,7 +444,7 @@ public struct GesValue : IEquatable<GesValue>
     /// <summary>
     /// Gets the handler.
     /// </summary>
-    public readonly GameEventScriptMessageSignature? Handler => ObjectValue as GameEventScriptMessageSignature;
+    public readonly GesMessageSignature? Handler => ObjectValue as GesMessageSignature;
 
     /// <summary>
     /// Gets the custom type name.
@@ -494,15 +494,15 @@ public struct GesValue : IEquatable<GesValue>
     /// <summary>
     /// Gets the integer range.
     /// </summary>
-    public readonly GameEventScriptIntegerRange? IntegerRange => ObjectValue is GesValueRangeInteger range
-        ? new GameEventScriptIntegerRange(range.From, range.To, range.Step)
+    public readonly GesIntegerRange? IntegerRange => ObjectValue is GesValueRangeInteger range
+        ? new GesIntegerRange(range.From, range.To, range.Step)
         : null;
 
     /// <summary>
     /// Gets the float range.
     /// </summary>
-    public readonly GameEventScriptFloatRange? FloatRange => ObjectValue is GesValueRangeFloat range
-        ? new GameEventScriptFloatRange(range.From, range.To, range.Step)
+    public readonly GesFloatRange? FloatRange => ObjectValue is GesValueRangeFloat range
+        ? new GesFloatRange(range.From, range.To, range.Step)
         : null;
 
     /// <summary>
@@ -542,14 +542,14 @@ public struct GesValue : IEquatable<GesValue>
 
     internal void SetBoolean(bool value)
     {
-        Kind = GameEventScriptBytecodeTypeKind.Boolean;
+        Kind = GesBytecodeTypeKind.Boolean;
         Flags = IsNumericFlag | HasValueFlag | (value ? IsTrueFlag : IsFalseFlag);
         Unit = UnitNone;
         IntegerValue = value ? 1 : 0;
         ObjectValue = null;
     }
 
-    internal void SetInteger(long value, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    internal void SetInteger(long value, GesQuantityUnit unit = UnitNone)
     {
         Kind = Integer;
         Flags = IsNumericFlag | HasValueFlag | (value != 0 ? IsTrueFlag : IsFalseFlag);
@@ -558,7 +558,7 @@ public struct GesValue : IEquatable<GesValue>
         ObjectValue = null;
     }
 
-    internal void SetFloat(double value, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    internal void SetFloat(double value, GesQuantityUnit unit = UnitNone)
     {
         if (double.IsNaN(value))
         {
@@ -642,7 +642,7 @@ public struct GesValue : IEquatable<GesValue>
         Flags = StorageObjectFlag | HasValueFlag | IsFalseFlag;
     }
 
-    internal void SetVector(double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    internal void SetVector(double x, double y, double z, GesQuantityUnit unit = UnitNone)
     {
         if (double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z))
         {
@@ -660,10 +660,10 @@ public struct GesValue : IEquatable<GesValue>
         ObjectValue = new GesValueVectorPoint(x, y, z);
     }
 
-    internal void SetVector(GesValueVectorPoint vector, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    internal void SetVector(GesValueVectorPoint vector, GesQuantityUnit unit = UnitNone)
         => SetVector(vector.X, vector.Y, vector.Z, unit);
 
-    internal void SetPoint(double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    internal void SetPoint(double x, double y, double z, GesQuantityUnit unit = UnitNone)
     {
         if (double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z))
         {
@@ -681,7 +681,7 @@ public struct GesValue : IEquatable<GesValue>
         ObjectValue = new GesValueVectorPoint(x, y, z);
     }
 
-    internal void SetPoint(GesValueVectorPoint point, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    internal void SetPoint(GesValueVectorPoint point, GesQuantityUnit unit = UnitNone)
         => SetPoint(point.X, point.Y, point.Z, unit);
 
     internal void SetDice(int[] values)
@@ -722,7 +722,7 @@ public struct GesValue : IEquatable<GesValue>
         ObjectValue = new GesCustomObject(typeName, record);
     }
 
-    internal void SetExternalType(IGameEventScriptExternalValue value)
+    internal void SetExternalType(IGesExternalValue value)
     {
         var externalValue = new GesExternalValue(value);
         Kind = Custom;
@@ -734,7 +734,7 @@ public struct GesValue : IEquatable<GesValue>
 
     internal void SetRange(long from, long to, long step)
     {
-        Kind = GameEventScriptBytecodeTypeKind.Range;
+        Kind = GesBytecodeTypeKind.Range;
         Unit = UnitNone;
         if (step == 0 || (step > 0 && from > to) || (step < 0 && from < to))
         {
@@ -766,7 +766,7 @@ public struct GesValue : IEquatable<GesValue>
         from = GameEventScriptNumber.CanonicalizeZero(from);
         to = GameEventScriptNumber.CanonicalizeZero(to);
         step = GameEventScriptNumber.CanonicalizeZero(step);
-        Kind = GameEventScriptBytecodeTypeKind.Range;
+        Kind = GesBytecodeTypeKind.Range;
         Unit = UnitNone;
         if (step == 0 || (step > 0 && from > to) || (step < 0 && from < to))
         {
@@ -784,9 +784,9 @@ public struct GesValue : IEquatable<GesValue>
 
     private static GesValueRangeInteger _emptyValueRangeInteger = new(0, 0, 0);
 
-    internal void SetMessageHandler(GameEventScriptMessageSignature handler)
+    internal void SetMessageHandler(GesMessageSignature handler)
     {
-        Kind = GameEventScriptBytecodeTypeKind.Handler;
+        Kind = GesBytecodeTypeKind.Handler;
         Flags = StorageObjectFlag | HasValueFlag;
         Unit = UnitNone;
         IntegerValue = 0;
@@ -795,7 +795,7 @@ public struct GesValue : IEquatable<GesValue>
 
     internal void SetMessage(GameEventScriptMessage message)
     {
-        Kind = GameEventScriptBytecodeTypeKind.Message;
+        Kind = GesBytecodeTypeKind.Message;
         Flags = StorageObjectFlag | HasValueFlag;
         Unit = UnitNone;
         IntegerValue = 0;
@@ -872,7 +872,7 @@ public struct GesValue : IEquatable<GesValue>
     {
         Integer => IntegerValue,
         Float or Percentage => FloatValue,
-        GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? 1d : 0d,
+        GesBytecodeTypeKind.Boolean => IsTrue ? 1d : 0d,
         Dice => IntegerValue,
         _ => double.NaN,
     };
@@ -902,7 +902,7 @@ public struct GesValue : IEquatable<GesValue>
                 return IntegerValue == other.IntegerValue;
             case Float or Percentage:
                 return FloatValue.Equals(other.FloatValue);
-            case GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean:
                 return IsTrue == other.IsTrue;
             case Text or Tag:
                 return string.Equals(TextValue, other.TextValue, StringComparison.Ordinal);
@@ -949,13 +949,13 @@ public struct GesValue : IEquatable<GesValue>
                 }
 
                 return true;
-            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger left && other.ObjectValue is GesValueRangeInteger right:
+            case GesBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger left && other.ObjectValue is GesValueRangeInteger right:
                 return left.From == right.From && left.To == right.To && left.Step == right.Step;
-            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat left && other.ObjectValue is GesValueRangeFloat right:
+            case GesBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat left && other.ObjectValue is GesValueRangeFloat right:
                 return left.From.Equals(right.From) && left.To.Equals(right.To) && left.Step.Equals(right.Step);
-            case GameEventScriptBytecodeTypeKind.Handler when ObjectValue is GameEventScriptMessageSignature left && other.ObjectValue is GameEventScriptMessageSignature right:
+            case GesBytecodeTypeKind.Handler when ObjectValue is GesMessageSignature left && other.ObjectValue is GesMessageSignature right:
                 return left.Equals(right);
-            case GameEventScriptBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage left && other.ObjectValue is GameEventScriptMessage right:
+            case GesBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage left && other.ObjectValue is GameEventScriptMessage right:
                 return left.Equals(right);
             case Series when ObjectValue is GesSeries left && other.ObjectValue is GesSeries right:
                 return string.Equals(left.SignatureId, right.SignatureId, StringComparison.Ordinal) && left.Offset == right.Offset;
@@ -979,7 +979,7 @@ public struct GesValue : IEquatable<GesValue>
             case Float or Percentage:
                 hash.Add(FloatValue);
                 break;
-            case GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean:
                 hash.Add(IsTrue);
                 break;
             case Text or Tag:
@@ -1016,20 +1016,20 @@ public struct GesValue : IEquatable<GesValue>
                 }
 
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger range:
                 hash.Add(range.From);
                 hash.Add(range.To);
                 hash.Add(range.Step);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat range:
                 hash.Add(range.From);
                 hash.Add(range.To);
                 hash.Add(range.Step);
                 break;
-            case GameEventScriptBytecodeTypeKind.Handler when ObjectValue is GameEventScriptMessageSignature signature:
+            case GesBytecodeTypeKind.Handler when ObjectValue is GesMessageSignature signature:
                 hash.Add(signature);
                 break;
-            case GameEventScriptBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage message:
+            case GesBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage message:
                 hash.Add(message);
                 break;
             case Series when ObjectValue is GesSeries series:
@@ -1048,9 +1048,9 @@ public struct GesValue : IEquatable<GesValue>
     {
         switch (Kind)
         {
-            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger range:
                 return new GesIntegerRangeIterator(range.From, range.To, range.Step);
-            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat range:
                 return new GesFloatRangeIterator(range.From, range.To, range.Step);
             case List when ObjectValue is GesValue[] list:
                 return new GesListIterator(list);
@@ -1076,7 +1076,7 @@ public struct GesValue : IEquatable<GesValue>
         Integer => FormatNumber(IntegerValue, Unit),
         Float => FormatNumber(FloatValue, Unit),
         Percentage => TextNumberCast.FormatPercentage(FloatValue),
-        GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? "true" : "false",
+        GesBytecodeTypeKind.Boolean => IsTrue ? "true" : "false",
         Text => TextValue,
         Tag => "#" + TextValue,
         Vector when ObjectValue is GesValueVectorPoint vector => FormatTriplet(":Vector", vector, Unit),
@@ -1085,17 +1085,17 @@ public struct GesValue : IEquatable<GesValue>
         List when ObjectValue is GesValue[] list => FormatList(list),
         Map when ObjectValue is GesValueMap map => FormatMap(map),
         Custom when ObjectValue is GesCustomObject custom => FormatRecord(custom.TypeName, custom.Map),
-        GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger range => FormatRange(range.From, range.To, range.Step),
-        GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat range => FormatRange(range.From, range.To, range.Step),
+        GesBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger range => FormatRange(range.From, range.To, range.Step),
+        GesBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat range => FormatRange(range.From, range.To, range.Step),
         Series when ObjectValue is GesSeries series => $":Series({series.SignatureId}, offset: {series.Offset.ToString(CultureInfo.InvariantCulture)})",
-        GameEventScriptBytecodeTypeKind.Handler when ObjectValue is GameEventScriptMessageSignature signature => $":Handler({signature.SignatureId})",
-        GameEventScriptBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage message => FormatMessage(message),
+        GesBytecodeTypeKind.Handler when ObjectValue is GesMessageSignature signature => $":Handler({signature.SignatureId})",
+        GesBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage message => FormatMessage(message),
         _ => Kind.ToString()
     };
 
-    private static string FormatNumber(long value, GameEventScriptBytecodeInstructionUnit unit) => TextNumberCast.Format(value, unit);
-    private static string FormatNumber(double value, GameEventScriptBytecodeInstructionUnit unit) => TextNumberCast.Format(value, unit);
-    private static string FormatTriplet(string typeName, GesValueVectorPoint triplet, GameEventScriptBytecodeInstructionUnit unit)
+    private static string FormatNumber(long value, GesQuantityUnit unit) => TextNumberCast.Format(value, unit);
+    private static string FormatNumber(double value, GesQuantityUnit unit) => TextNumberCast.Format(value, unit);
+    private static string FormatTriplet(string typeName, GesValueVectorPoint triplet, GesQuantityUnit unit)
         => $"{typeName}(x: {FormatNumber(triplet.X, unit)}, y: {FormatNumber(triplet.Y, unit)}, z: {FormatNumber(triplet.Z, unit)})";
     private static string FormatDice(int[] dice)
     {

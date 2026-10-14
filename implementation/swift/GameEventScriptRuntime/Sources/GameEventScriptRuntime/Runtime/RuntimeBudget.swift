@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 final class GesRuntimeBudget {
-    unowned let context: GameEventScriptContext
+    unowned let context: GesContext
     var executionSteps = 0
     var loopIterations = 0
     var callDepth = 0
     private(set) var isExhausted = false
     // Immutable host limits copied once; checks must not retain the unowned context per loop step.
-    let limits: GameEventScriptRuntimeLimits
+    let limits: GesRuntimeLimits
 
-    init(context: GameEventScriptContext) {
+    init(context: GesContext) {
         self.context = context
         limits = context.runtimeLimits
     }

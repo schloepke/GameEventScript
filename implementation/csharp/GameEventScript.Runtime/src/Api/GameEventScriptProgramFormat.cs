@@ -8,7 +8,7 @@ namespace GameEventScript.Api;
 /// <summary>
 /// Defines the supported game event script program retention values.
 /// </summary>
-public enum GameEventScriptProgramRetention
+public enum GesProgramRetention
 {
     /// <summary>
     /// Identifies the preserve all value.
@@ -27,12 +27,12 @@ public enum GameEventScriptProgramRetention
 /// <summary>
 /// Represents a game event script program read limits.
 /// </summary>
-public sealed class GameEventScriptProgramReadLimits
+public sealed class GesProgramReadLimits
 {
     /// <summary>
     /// Gets the default.
     /// </summary>
-    public static GameEventScriptProgramReadLimits Default { get; } = new();
+    public static GesProgramReadLimits Default { get; } = new();
 
     /// <summary>
     /// Gets the max file bytes.
@@ -71,22 +71,22 @@ public sealed class GameEventScriptProgramReadLimits
 /// <summary>
 /// Represents a game event script program read options.
 /// </summary>
-public sealed class GameEventScriptProgramReadOptions
+public sealed class GesProgramReadOptions
 {
     /// <summary>
     /// Gets the retention.
     /// </summary>
-    public GameEventScriptProgramRetention Retention { get; init; } = GameEventScriptProgramRetention.PreserveAll;
+    public GesProgramRetention Retention { get; init; } = GesProgramRetention.PreserveAll;
     /// <summary>
     /// Gets the limits.
     /// </summary>
-    public GameEventScriptProgramReadLimits Limits { get; init; } = GameEventScriptProgramReadLimits.Default;
+    public GesProgramReadLimits Limits { get; init; } = GesProgramReadLimits.Default;
 }
 
 /// <summary>
 /// Defines the supported game event script program format error code values.
 /// </summary>
-public enum GameEventScriptProgramFormatErrorCode
+public enum GesProgramFormatErrorCode
 {
     /// <summary>
     /// Identifies the invalid magic value.
@@ -245,7 +245,7 @@ public enum GameEventScriptProgramFormatErrorCode
 /// <summary>
 /// Represents a game event script program format exception.
 /// </summary>
-public sealed class GameEventScriptProgramFormatException : Exception
+public sealed class GesProgramFormatException : Exception
 {
     /// <summary>
     /// Initializes a new instance of Game Event Script Program Format Exception.
@@ -256,16 +256,16 @@ public sealed class GameEventScriptProgramFormatException : Exception
     /// <param name="sectionType">The section type value.</param>
     /// <param name="entryIndex">The entry index value.</param>
     /// <param name="innerException">The inner exception value.</param>
-    public GameEventScriptProgramFormatException(GameEventScriptProgramFormatErrorCode errorCode, string message, long? byteOffset = null, ushort? sectionType = null, int? entryIndex = null, Exception? innerException = null)
+    public GesProgramFormatException(GesProgramFormatErrorCode errorCode, string message, long? byteOffset = null, ushort? sectionType = null, int? entryIndex = null, Exception? innerException = null)
         : base(message, innerException)
     {
         ErrorCode = errorCode;
         ByteOffset = byteOffset;
         SectionType = sectionType;
         EntryIndex = entryIndex;
-        Diagnostic = new GameEventScriptDiagnostic(
-            GameEventScriptDiagnosticPhase.Decode,
-            GameEventScriptDiagnosticCodes.Decode(errorCode),
+        Diagnostic = new GesDiagnostic(
+            GesDiagnosticPhase.Decode,
+            GesDiagnosticCodes.Decode(errorCode),
             message,
             TechnicalDetails: BuildTechnicalDetails(byteOffset, sectionType, entryIndex));
     }
@@ -273,7 +273,7 @@ public sealed class GameEventScriptProgramFormatException : Exception
     /// <summary>
     /// Gets the error code.
     /// </summary>
-    public GameEventScriptProgramFormatErrorCode ErrorCode { get; }
+    public GesProgramFormatErrorCode ErrorCode { get; }
     /// <summary>
     /// Gets the byte offset.
     /// </summary>
@@ -289,7 +289,7 @@ public sealed class GameEventScriptProgramFormatException : Exception
     /// <summary>
     /// Gets the diagnostic.
     /// </summary>
-    public GameEventScriptDiagnostic Diagnostic { get; }
+    public GesDiagnostic Diagnostic { get; }
 
     private static string? BuildTechnicalDetails(long? byteOffset, ushort? sectionType, int? entryIndex)
     {

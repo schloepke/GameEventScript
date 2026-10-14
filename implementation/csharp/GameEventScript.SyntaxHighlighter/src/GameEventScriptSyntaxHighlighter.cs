@@ -10,11 +10,11 @@ using System.Text.RegularExpressions;
 namespace GameEventScript.SyntaxHighlighter;
 
 /// <summary>Reusable GES/GESA TextMate highlighting without a Compiler, Runtime, UI or terminal dependency.</summary>
-public sealed class GameEventScriptSyntaxHighlighter
+public sealed class GesSyntaxHighlighter
 {
     private static readonly GrammarRule[] Rules = EmbeddedGrammars.CreateRules();
     /// <summary>The selected bundled grammar.</summary>
-    public GameEventScriptSyntaxLanguage Language { get; }
+    public GesSyntaxLanguage Language { get; }
     /// <summary>Maximum UTF-16 input length for one call; larger inputs return an incomplete result.</summary>
     public int MaxInputLength { get; }
     private readonly int[] _roots;
@@ -22,30 +22,30 @@ public sealed class GameEventScriptSyntaxHighlighter
 
     /// <summary>Creates a highlighter. Matching has a cooperative 1000ms per-call budget, plus a 100ms per-regex bound.</summary>
     /// <exception cref="ArgumentOutOfRangeException">The language is unknown or maxInputLength is not positive.</exception>
-    public GameEventScriptSyntaxHighlighter(GameEventScriptSyntaxLanguage language = GameEventScriptSyntaxLanguage.Ges, int maxInputLength = 262144)
+    public GesSyntaxHighlighter(GesSyntaxLanguage language = GesSyntaxLanguage.Ges, int maxInputLength = 262144)
     {
-        if (language is not (GameEventScriptSyntaxLanguage.Ges or GameEventScriptSyntaxLanguage.Gesa)) throw new ArgumentOutOfRangeException(nameof(language));
+        if (language is not (GesSyntaxLanguage.Ges or GesSyntaxLanguage.Gesa)) throw new ArgumentOutOfRangeException(nameof(language));
         if (maxInputLength <= 0) throw new ArgumentOutOfRangeException(nameof(maxInputLength));
         Language = language;
         MaxInputLength = maxInputLength;
-        _roots = language == GameEventScriptSyntaxLanguage.Ges ? EmbeddedGrammars.Source : EmbeddedGrammars.Assembly;
-        _rootScope = language == GameEventScriptSyntaxLanguage.Ges ? "source.gameeventscript" : "source.gameeventscript.assembler";
+        _roots = language == GesSyntaxLanguage.Ges ? EmbeddedGrammars.Source : EmbeddedGrammars.Assembly;
+        _rootScope = language == GesSyntaxLanguage.Ges ? "source.gameeventscript" : "source.gameeventscript.assembler";
     }
 
     /// <summary>Creates an empty line-boundary state. States are immutable and can be retained by editors.</summary>
-    public GameEventScriptHighlightState CreateState() => new(Language, []);
+    public GesHighlightState CreateState() => new(Language, []);
 
     /// <summary>Highlights a complete document, preserving CR, LF, CRLF and all UTF-16 offsets. Invalid source remains highlightable.</summary>
     /// <exception cref="ArgumentNullException">text is null.</exception>
-    public GameEventScriptHighlightResult Highlight(string text) => Run(text, null, false);
+    public GesHighlightResult Highlight(string text) => Run(text, null, false);
 
     /// <summary>Highlights one line with an optional trailing CR, LF or CRLF. Offsets are relative to this line.</summary>
     /// <remarks>Supply the previous line's successful NextState. Reprocess subsequent lines until text and state converge.</remarks>
     /// <exception cref="ArgumentException">The text contains an interior line ending, or the state belongs to another language.</exception>
     /// <exception cref="ArgumentNullException">text is null.</exception>
-    public GameEventScriptHighlightResult HighlightLine(string text, GameEventScriptHighlightState? state = null) => Run(text, state, true);
+    public GesHighlightResult HighlightLine(string text, GesHighlightState? state = null) => Run(text, state, true);
 
-    private GameEventScriptHighlightResult Run(string text, GameEventScriptHighlightState? state, bool singleLine)
+    private GesHighlightResult Run(string text, GesHighlightState? state, bool singleLine)
     {
         if (text is null) throw new ArgumentNullException(nameof(text));
         if (state is not null && state.Language != Language) throw new ArgumentException("State belongs to another language.", nameof(state));
@@ -53,7 +53,7 @@ public sealed class GameEventScriptSyntaxHighlighter
         if (text.Length > MaxInputLength) return new([], null);
         var clock = Stopwatch.StartNew();
         var frames = new List<int>(state?.Frames ?? []);
-        var spans = new List<GameEventScriptHighlightSpan>();
+        var spans = new List<GesHighlightSpan>();
         try
         {
             var start = 0;
@@ -71,7 +71,7 @@ public sealed class GameEventScriptSyntaxHighlighter
         catch (RegexMatchTimeoutException) { return new([], null); }
     }
 
-    private bool Line(string text, int offset, List<int> frames, List<GameEventScriptHighlightSpan> spans, Stopwatch clock)
+    private bool Line(string text, int offset, List<int> frames, List<GesHighlightSpan> spans, Stopwatch clock)
     {
         var length = ContentLength(text);
         var content = text.Substring(0, length);
@@ -139,7 +139,7 @@ public sealed class GameEventScriptSyntaxHighlighter
         return scopes;
     }
 
-    private static void Emit(List<GameEventScriptHighlightSpan> spans, int offset, Match match, List<string> scopes, CaptureRule[] captures)
+    private static void Emit(List<GesHighlightSpan> spans, int offset, Match match, List<string> scopes, CaptureRule[] captures)
     {
         var groups = captures.Where(c => c.Group < match.Groups.Count && match.Groups[c.Group].Success && match.Groups[c.Group].Length > 0)
             .Select(c => (Range: match.Groups[c.Group], c.Scope)).OrderByDescending(c => c.Range.Length).ToArray();
@@ -159,7 +159,7 @@ public sealed class GameEventScriptSyntaxHighlighter
         }
     }
 
-    private static void Add(List<GameEventScriptHighlightSpan> spans, int start, int length, List<string> scopes)
+    private static void Add(List<GesHighlightSpan> spans, int start, int length, List<string> scopes)
     {
         if (length <= 0) return;
         if (spans.Count > 0)

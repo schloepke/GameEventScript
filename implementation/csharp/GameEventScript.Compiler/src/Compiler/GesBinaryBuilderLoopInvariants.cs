@@ -3,7 +3,7 @@
 
 using System;
 using GameEventScript.Api;
-using OpCode = GameEventScript.Api.GameEventScriptBytecodeOpCode;
+using OpCode = GameEventScript.Api.GesBytecodeOpCode;
 
 namespace GameEventScript.Compiler;
 

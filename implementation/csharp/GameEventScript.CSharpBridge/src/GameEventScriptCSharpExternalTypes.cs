@@ -67,7 +67,7 @@ public sealed class GesFieldAttribute : Attribute
     /// </summary>
     /// <param name="name">The name value.</param>
     /// <param name="kind">The kind value.</param>
-    public GesFieldAttribute(string name, GameEventScriptBytecodeTypeKind kind)
+    public GesFieldAttribute(string name, GesBytecodeTypeKind kind)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit: null);
@@ -80,7 +80,7 @@ public sealed class GesFieldAttribute : Attribute
     /// <param name="name">The name value.</param>
     /// <param name="kind">The kind value.</param>
     /// <param name="unit">The unit value.</param>
-    public GesFieldAttribute(string name, GameEventScriptBytecodeTypeKind kind, GameEventScriptBytecodeInstructionUnit unit)
+    public GesFieldAttribute(string name, GesBytecodeTypeKind kind, GesQuantityUnit unit)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit);
@@ -101,12 +101,12 @@ public sealed class GesFieldAttribute : Attribute
     /// <summary>
     /// Gets the kind.
     /// </summary>
-    public GameEventScriptBytecodeTypeKind? Kind { get; }
+    public GesBytecodeTypeKind? Kind { get; }
 
     /// <summary>
     /// Gets the unit.
     /// </summary>
-    public GameEventScriptBytecodeInstructionUnit Unit { get; }
+    public GesQuantityUnit Unit { get; }
 }
 
 /// <summary>
@@ -137,7 +137,7 @@ public sealed class GesParamAttribute : Attribute
     /// </summary>
     /// <param name="name">The name value.</param>
     /// <param name="kind">The kind value.</param>
-    public GesParamAttribute(string name, GameEventScriptBytecodeTypeKind kind)
+    public GesParamAttribute(string name, GesBytecodeTypeKind kind)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit: null);
@@ -150,7 +150,7 @@ public sealed class GesParamAttribute : Attribute
     /// <param name="name">The name value.</param>
     /// <param name="kind">The kind value.</param>
     /// <param name="unit">The unit value.</param>
-    public GesParamAttribute(string name, GameEventScriptBytecodeTypeKind kind, GameEventScriptBytecodeInstructionUnit unit)
+    public GesParamAttribute(string name, GesBytecodeTypeKind kind, GesQuantityUnit unit)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit);
@@ -171,23 +171,23 @@ public sealed class GesParamAttribute : Attribute
     /// <summary>
     /// Gets the kind.
     /// </summary>
-    public GameEventScriptBytecodeTypeKind? Kind { get; }
+    public GesBytecodeTypeKind? Kind { get; }
 
     /// <summary>
     /// Gets the unit.
     /// </summary>
-    public GameEventScriptBytecodeInstructionUnit Unit { get; }
+    public GesQuantityUnit Unit { get; }
 }
 
 /// <summary>
 /// Represents a game event script c sharp external type registry.
 /// </summary>
-public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScriptExternalTypeCatalog, IGameEventScriptExternalTypeRegistry
+public sealed class GameEventScriptCSharpExternalTypeRegistry : IGesExternalTypeCatalog, IGesExternalTypeRegistry
 {
-    private readonly Dictionary<string, GameEventScriptExternalTypeDefinition> _typesByName = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, IGameEventScriptExternalTypeConstructor> _constructors = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, GesExternalTypeDefinition> _typesByName = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, IGesExternalTypeConstructor> _constructors = new(StringComparer.Ordinal);
     private readonly Dictionary<Type, GameEventScriptCSharpExternalTypeBinding> _bindingsByClrType = new();
-    private IReadOnlyList<GameEventScriptExternalTypeDefinition> _types = Array.Empty<GameEventScriptExternalTypeDefinition>();
+    private IReadOnlyList<GesExternalTypeDefinition> _types = Array.Empty<GesExternalTypeDefinition>();
 
     private GameEventScriptCSharpExternalTypeRegistry()
     {
@@ -196,7 +196,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
     /// <summary>
     /// Gets immutable registered type definitions consistent with name and constructor lookup.
     /// </summary>
-    public IReadOnlyList<GameEventScriptExternalTypeDefinition> Types => _types;
+    public IReadOnlyList<GesExternalTypeDefinition> Types => _types;
 
     internal static GameEventScriptCSharpExternalTypeRegistry Create(params Type[] types)
         => Create((IEnumerable<Type>)types);
@@ -210,7 +210,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
             registry.RegisterType(type ?? throw new ArgumentException("External type list contains null.", nameof(types)));
         }
 
-        registry._types = GameEventScriptReadOnlyArray<GameEventScriptExternalTypeDefinition>.FromOwnedArray(registry._typesByName.Values.ToArray());
+        registry._types = GesReadOnlyArray<GesExternalTypeDefinition>.FromOwnedArray(registry._typesByName.Values.ToArray());
         return registry;
     }
 
@@ -219,7 +219,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
     /// </summary>
     /// <param name="typeName">The type name value.</param>
     /// <returns>The result of the operation.</returns>
-    public GameEventScriptExternalTypeDefinition? Resolve(string typeName)
+    public GesExternalTypeDefinition? Resolve(string typeName)
     {
         var normalized = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
         return _typesByName.TryGetValue(normalized, out var definition) ? definition : null;
@@ -230,7 +230,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
     /// </summary>
     /// <param name="reference">The reference value.</param>
     /// <returns>The result of the operation.</returns>
-    public IGameEventScriptExternalTypeConstructor? Resolve(GameEventScriptExternalTypeConstructorReference reference)
+    public IGesExternalTypeConstructor? Resolve(GesExternalTypeConstructorReference reference)
     {
         _ = reference ?? throw new ArgumentNullException(nameof(reference));
         return _constructors.TryGetValue(reference.SignatureId, out var constructor) ? constructor : null;
@@ -248,7 +248,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
         return GameEventScriptCSharpExternalTypeValueConverter.ToValue(value);
     }
 
-    internal IGameEventScriptExternalValue? CreateExternalValue(object value)
+    internal IGesExternalValue? CreateExternalValue(object value)
         => _bindingsByClrType.TryGetValue(value.GetType(), out var binding)
             ? new GameEventScriptCSharpExternalValue(value, binding, this)
             : null;
@@ -265,7 +265,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
             StringComparer.Ordinal);
         var constructors = BuildConstructors(clrType, typeName, fields.Select(field => field.Definition.Name).ToHashSet(StringComparer.Ordinal), this);
 
-        var definition = new GameEventScriptExternalTypeDefinition(
+        var definition = new GesExternalTypeDefinition(
             typeName,
             fields.Select(field => field.Definition).ToArray(),
             constructors.Select(constructor => constructor.Definition).ToArray());
@@ -325,8 +325,8 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
     private static GameEventScriptCSharpExternalFieldBinding CreateFieldBinding(GesFieldAttribute attribute, Func<object, object?> reader)
     {
         var definition = attribute.Kind is { } kind
-            ? new GameEventScriptExternalTypeFieldDefinition(attribute.Name, kind, attribute.Unit)
-            : new GameEventScriptExternalTypeFieldDefinition(attribute.Name, attribute.TypeName);
+            ? new GesExternalTypeFieldDefinition(attribute.Name, kind, attribute.Unit)
+            : new GesExternalTypeFieldDefinition(attribute.Name, attribute.TypeName);
         return new GameEventScriptCSharpExternalFieldBinding(definition, reader);
     }
 
@@ -380,7 +380,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
             .Select(parameter => BuildParameterDefinition(method, fieldNames, parameter))
             .ToArray();
         return new ReflectionExternalTypeConstructor(
-            new GameEventScriptExternalTypeConstructorDefinition(typeName, parameters.Select(parameter => parameter.Definition)),
+            new GesExternalTypeConstructorDefinition(typeName, parameters.Select(parameter => parameter.Definition)),
             parameters,
             invoke,
             registry);
@@ -391,8 +391,8 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
         var attribute = parameter.GetCustomAttribute<GesParamAttribute>() ??
                         throw new ArgumentException($"External GameEventScript constructor '{method.DeclaringType?.FullName}.{method.Name}' parameter '{parameter.Name}' must declare GesParamAttribute.");
         var definition = attribute.Kind is { } kind
-            ? new GameEventScriptExternalTypeParameterDefinition(attribute.Name, kind, attribute.Unit)
-            : new GameEventScriptExternalTypeParameterDefinition(attribute.Name, attribute.TypeName);
+            ? new GesExternalTypeParameterDefinition(attribute.Name, kind, attribute.Unit)
+            : new GesExternalTypeParameterDefinition(attribute.Name, attribute.TypeName);
         if (!fieldNames.Contains(definition.Name))
         {
             throw new ArgumentException($"External GameEventScript constructor '{method.DeclaringType?.FullName}.{method.Name}' parameter '{definition.Name}' is not a declared field.");
@@ -401,15 +401,15 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
         return new ExternalParameterBinding(definition, parameter.ParameterType);
     }
 
-    private sealed record ExternalParameterBinding(GameEventScriptExternalTypeParameterDefinition Definition, Type ClrType);
+    private sealed record ExternalParameterBinding(GesExternalTypeParameterDefinition Definition, Type ClrType);
 
     private sealed class ReflectionExternalTypeConstructor(
-        GameEventScriptExternalTypeConstructorDefinition definition,
+        GesExternalTypeConstructorDefinition definition,
         IReadOnlyList<ExternalParameterBinding> parameters,
         Func<object?[], object?> invoke,
-        GameEventScriptCSharpExternalTypeRegistry registry) : IGameEventScriptExternalTypeConstructor
+        GameEventScriptCSharpExternalTypeRegistry registry) : IGesExternalTypeConstructor
     {
-        public GameEventScriptExternalTypeConstructorDefinition Definition { get; } = definition;
+        public GesExternalTypeConstructorDefinition Definition { get; } = definition;
 
         public void Invoke(GesExternalTypeConstructorCall call)
         {
@@ -445,19 +445,19 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
     }
 }
 
-internal sealed record GameEventScriptCSharpExternalFieldBinding(GameEventScriptExternalTypeFieldDefinition Definition, Func<object, object?> Reader);
+internal sealed record GameEventScriptCSharpExternalFieldBinding(GesExternalTypeFieldDefinition Definition, Func<object, object?> Reader);
 
-internal sealed class GameEventScriptCSharpExternalTypeBinding(GameEventScriptExternalTypeDefinition definition, IReadOnlyDictionary<string, GameEventScriptCSharpExternalFieldBinding> fields)
+internal sealed class GameEventScriptCSharpExternalTypeBinding(GesExternalTypeDefinition definition, IReadOnlyDictionary<string, GameEventScriptCSharpExternalFieldBinding> fields)
 {
-    internal GameEventScriptExternalTypeDefinition Definition { get; } = definition;
+    internal GesExternalTypeDefinition Definition { get; } = definition;
     internal IReadOnlyDictionary<string, GameEventScriptCSharpExternalFieldBinding> Fields { get; } = fields;
 }
 
-internal sealed class GameEventScriptCSharpExternalValue(object instance, GameEventScriptCSharpExternalTypeBinding binding, GameEventScriptCSharpExternalTypeRegistry registry) : IGameEventScriptExternalValue
+internal sealed class GameEventScriptCSharpExternalValue(object instance, GameEventScriptCSharpExternalTypeBinding binding, GameEventScriptCSharpExternalTypeRegistry registry) : IGesExternalValue
 {
     internal object Instance { get; } = instance;
 
-    public GameEventScriptExternalTypeDefinition Definition => binding.Definition;
+    public GesExternalTypeDefinition Definition => binding.Definition;
 
     public GesValue? GetField(string fieldName)
     {
@@ -501,7 +501,7 @@ internal static class GameEventScriptCSharpExternalTypeValueConverter
                 result.SetMessage(message);
                 return result;
             }
-            case GameEventScriptMessageSignature signature:
+            case GesMessageSignature signature:
             {
                 var result = new GesValue();
                 result.SetMessageHandler(signature);

@@ -164,7 +164,7 @@ diagnostic source names; file access remains with the embedding:
 ```csharp
 using GameEventScript.Api;
 
-var program = GameEventScriptBuilder.Create()
+var program = GesProgramBuilder.Create()
     .AddScript("""
         module example
         function double(_ value as :Number) be value + value
@@ -178,10 +178,10 @@ byte[] bytes = GameEventScriptProgramWriter.ToArray(program);
 Repeated `AddScript` calls compile sources jointly. `Compile()` can be repeated;
 previously returned Programs remain immutable. Debug symbols, source maps and
 source archives are included by default. Use
-`.WithDebugInfo(GameEventScriptDebugInfoOptions.None)` for compact output,
+`.WithDebugInfo(GesDebugInfoOptions.None)` for compact output,
 `.WithProgramVersion(...)` to set the portable version, and
 `.WithExternalTypeCatalog(...)` for declarative external types. Runtime bindings
-remain separate. `GameEventScriptCompileException.Diagnostics` exposes stable
+remain separate. `GesCompileException.Diagnostics` exposes stable
 diagnostic codes and structured context, including source locations.
 
 ## Consume the Runtime
@@ -203,11 +203,11 @@ using System;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 
-static (GameEventScriptStartResult Start, GameEventScriptExecutionResult? Execution) Execute(byte[] bytes)
+static (GesStartResult Start, GesExecutionResult? Execution) Execute(byte[] bytes)
 {
     var program = GameEventScriptProgramReader.Read(bytes);
     var host = GameEventScriptHost.CreateBuilder().WithRandomSeed(123).Build();
-    var output = GameEventScriptMessageSignature.Create("Done", ["value"]);
+    var output = GesMessageSignature.Create("Done", ["value"]);
     var subscription = host.Subscribe(output, new Output());
     var instance = host.Load(program);
     try
@@ -216,7 +216,7 @@ static (GameEventScriptStartResult Start, GameEventScriptExecutionResult? Execut
         if (!host.IsReady) return (startup, null);
 
         host.Receive(GameEventScriptMessage.Create("Start", [
-            new GameEventScriptMessageArgument("value", GesValue.GesInteger(42))
+            new GesMessageArgument("value", GesValue.GesInteger(42))
         ]));
         return (startup, host.RunToCompletion());
     }
@@ -227,9 +227,9 @@ static (GameEventScriptStartResult Start, GameEventScriptExecutionResult? Execut
     }
 }
 
-sealed class Output : IGameEventScriptNativeMessageHandler
+sealed class Output : IGesNativeMessageHandler
 {
-    public void Handle(GameEventScriptMessage message, GameEventScriptContext context)
+    public void Handle(GameEventScriptMessage message, GesContext context)
     {
         // Console I/O belongs to this embedding callback, not Runtime.
         Console.WriteLine(message);

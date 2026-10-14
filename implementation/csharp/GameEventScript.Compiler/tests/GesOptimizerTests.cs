@@ -17,7 +17,7 @@ public class GesOptimizerTests
             predicate high(value) be value > 3
             """;
 
-        var module = GameEventScriptBuilder.Create()
+        var module = GesProgramBuilder.Create()
             .AddScript(script, "optimizer.ges")
             .BuildModule();
 
@@ -39,7 +39,7 @@ public class GesOptimizerTests
             }
             """;
 
-        var module = GameEventScriptBuilder.Create()
+        var module = GesProgramBuilder.Create()
             .AddScript(script, "constant-math.ges")
             .BuildModule();
 
@@ -63,7 +63,7 @@ public class GesOptimizerTests
             }
             """;
 
-        var module = GameEventScriptBuilder.Create().AddScript(script, "constants.ges").BuildModule();
+        var module = GesProgramBuilder.Create().AddScript(script, "constants.ges").BuildModule();
         var handler = module.Handlers.Values.SelectMany(handlers => handlers).Single();
         var expression = handler.Statements.OfType<LetStatementNode>().Single().Expression;
 

@@ -51,14 +51,14 @@ public sealed class NumericArithmeticAllocationTests
                 }
             }
             """;
-        var program = GameEventScriptBuilder.Create().AddScript(source).Compile();
-        var host = GameEventScriptHost.CreateBuilder().WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxExecutionSteps = 0, MaxLoopIterations = 0 }).Build();
+        var program = GesProgramBuilder.Create().AddScript(source).Compile();
+        var host = GameEventScriptHost.CreateBuilder().WithRuntimeLimits(new GesRuntimeLimits { MaxExecutionSteps = 0, MaxLoopIterations = 0 }).Build();
         host.Load(program);
-        Assert.AreEqual(GameEventScriptStartState.Ready, host.Start().State);
+        Assert.AreEqual(GesStartState.Ready, host.Start().State);
         var message = GameEventScriptMessage.Create("Start", [new("iterations", GesValue.GesInteger(16))]);
         void Run()
         {
-            if (!host.Receive(message) || host.RunToCompletion().State != GameEventScriptExecutionState.Completed)
+            if (!host.Receive(message) || host.RunToCompletion().State != GesExecutionState.Completed)
                 throw new InvalidOperationException("Numeric allocation workload did not complete.");
         }
         for (var index = 0; index < 10; index++) Run();

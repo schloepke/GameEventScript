@@ -12,7 +12,7 @@ final class ContextOwnershipTests: XCTestCase {
     func testContextDoesNotRetainHost() throws {
         var host: GameEventScriptHost? = try GameEventScriptHost()
         borrowedHost = host
-        let context = GameEventScriptContext(host: host!, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
+        let context = GesContext(host: host!, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
         host = nil
         XCTAssertNil(borrowedHost)
         let message = try GameEventScriptMessage(name: "Test")

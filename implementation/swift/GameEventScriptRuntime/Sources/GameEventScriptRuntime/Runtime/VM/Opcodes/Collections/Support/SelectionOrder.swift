@@ -3,7 +3,7 @@
 
 enum GesSelectionOrder {
     static func compare(_ a: GesValue, _ b: GesValue) -> Int {
-        func unit(_ value: GesUnit) -> Int {
+        func unit(_ value: GesQuantityUnit) -> Int {
             switch value {
             case .none: 0
             case .degree: 1

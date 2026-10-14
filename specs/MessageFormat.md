@@ -87,5 +87,5 @@ Host's opcode budget; the codec operates independently of a Host.
 Stable failure codes are `message.invalidJson`, `message.invalidValue`,
 `message.unsupportedVersion`, `message.unsupportedSeries`, and
 `message.resourceLimit`. In C# they are carried by
-`GameEventScriptMessageFormatException.Code`; in Swift by
-`GameEventScriptMessageFormatError.code`.
+`GesMessageFormatException.Code`; in Swift by
+`GesMessageFormatError.code`.

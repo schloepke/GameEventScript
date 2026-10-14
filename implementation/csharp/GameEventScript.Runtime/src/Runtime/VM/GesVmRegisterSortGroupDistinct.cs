@@ -5,7 +5,7 @@ using System;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime.VM;
 
@@ -175,7 +175,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 vm.SetList(destinationRegister, result);
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length == 0)
@@ -200,7 +200,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 vm.SetNothing(destinationRegister);
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length == 0)
@@ -445,7 +445,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 if (comparison == 0) comparison = leftTriplet.Y.CompareTo(rightTriplet.Y);
                 if (comparison == 0) comparison = leftTriplet.Z.CompareTo(rightTriplet.Z);
                 return comparison;
-            case GameEventScriptBytecodeTypeKind.Boolean when b.Kind is GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean when b.Kind is GesBytecodeTypeKind.Boolean:
                 return a.IsTrue.CompareTo(b.IsTrue);
             default:
                 return 0;
@@ -467,9 +467,9 @@ internal static class GesVmRegisterSortGroupDistinct
                 return 4;
             case Point:
                 return 5;
-            case GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean:
                 return 6;
-            case GameEventScriptBytecodeTypeKind.Range:
+            case GesBytecodeTypeKind.Range:
                 return 8;
             case Message:
                 return 9;

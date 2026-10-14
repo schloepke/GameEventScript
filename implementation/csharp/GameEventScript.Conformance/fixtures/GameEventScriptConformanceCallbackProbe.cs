@@ -11,19 +11,19 @@ namespace GameEventScript.Tests.Conformance;
 /// </summary>
 internal static class GameEventScriptConformanceCallbackProbe
 {
-    internal static readonly GameEventScriptExternalTypeDefinition Definition = new(
+    internal static readonly GesExternalTypeDefinition Definition = new(
         "CallbackProbe",
-        [new GameEventScriptExternalTypeFieldDefinition("failure", GameEventScriptBytecodeTypeKind.Text),
-            new GameEventScriptExternalTypeFieldDefinition("context", GameEventScriptBytecodeTypeKind.Text),
-            new GameEventScriptExternalTypeFieldDefinition("value", GameEventScriptBytecodeTypeKind.Float)],
-        [new GameEventScriptExternalTypeConstructorDefinition("CallbackProbe",
-            [new GameEventScriptExternalTypeParameterDefinition("failure", GameEventScriptBytecodeTypeKind.Text), new GameEventScriptExternalTypeParameterDefinition("context", GameEventScriptBytecodeTypeKind.Text)])]);
+        [new GesExternalTypeFieldDefinition("failure", GesBytecodeTypeKind.Text),
+            new GesExternalTypeFieldDefinition("context", GesBytecodeTypeKind.Text),
+            new GesExternalTypeFieldDefinition("value", GesBytecodeTypeKind.Float)],
+        [new GesExternalTypeConstructorDefinition("CallbackProbe",
+            [new GesExternalTypeParameterDefinition("failure", GesBytecodeTypeKind.Text), new GesExternalTypeParameterDefinition("context", GesBytecodeTypeKind.Text)])]);
 
-    internal static readonly IGameEventScriptExternalTypeConstructor Constructor = new ProbeConstructor();
+    internal static readonly IGesExternalTypeConstructor Constructor = new ProbeConstructor();
 
-    private sealed class ProbeConstructor : IGameEventScriptExternalTypeConstructor
+    private sealed class ProbeConstructor : IGesExternalTypeConstructor
     {
-        public GameEventScriptExternalTypeConstructorDefinition Definition => GameEventScriptConformanceCallbackProbe.Definition.Constructors[0];
+        public GesExternalTypeConstructorDefinition Definition => GameEventScriptConformanceCallbackProbe.Definition.Constructors[0];
 
         public void Invoke(GesExternalTypeConstructorCall call)
         {
@@ -51,9 +51,9 @@ internal static class GameEventScriptConformanceCallbackProbe
         }
     }
 
-    private sealed class ProbeValue(string failure, string context) : IGameEventScriptExternalValue
+    private sealed class ProbeValue(string failure, string context) : IGesExternalValue
     {
-        public GameEventScriptExternalTypeDefinition Definition => GameEventScriptConformanceCallbackProbe.Definition;
+        public GesExternalTypeDefinition Definition => GameEventScriptConformanceCallbackProbe.Definition;
 
         public GesValue? GetField(string fieldName)
         {
@@ -65,15 +65,15 @@ internal static class GameEventScriptConformanceCallbackProbe
         }
     }
 
-    private static GameEventScriptFatalRuntimeException DeclaredFault(string symbol, string context)
+    private static GesFatalRuntimeException DeclaredFault(string symbol, string context)
     {
         const string code = "test.callbackFault";
         const string message = "Configured external declared fault.";
-        if (context == "none") return new GameEventScriptExtensionFaultException(code, message, symbol);
-        return new ContextualFault(new GameEventScriptDiagnostic(GameEventScriptDiagnosticPhase.Runtime, code, message, Symbol: symbol,
+        if (context == "none") return new GesExtensionFaultException(code, message, symbol);
+        return new ContextualFault(new GesDiagnostic(GesDiagnosticPhase.Runtime, code, message, Symbol: symbol,
             ProgramName: context is "program" or "both" ? "reported.program" : null,
             HandlerName: context is "handler" or "both" ? "Reported()" : null));
     }
 
-    private sealed class ContextualFault(GameEventScriptDiagnostic diagnostic) : GameEventScriptFatalRuntimeException(diagnostic);
+    private sealed class ContextualFault(GesDiagnostic diagnostic) : GesFatalRuntimeException(diagnostic);
 }

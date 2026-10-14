@@ -3,8 +3,8 @@
 
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
+using static GameEventScript.Api.GesQuantityUnit;
 
 namespace GameEventScript.Runtime.VM;
 
@@ -51,9 +51,9 @@ internal static class GesVmRegisterVectorPoint
         }
 
         ushort i = 0;
-        GameEventScriptBytecodeInstructionUnit? unitX = null;
-        GameEventScriptBytecodeInstructionUnit? unitY = null;
-        GameEventScriptBytecodeInstructionUnit? unitZ = null;
+        GesQuantityUnit? unitX = null;
+        GesQuantityUnit? unitY = null;
+        GesQuantityUnit? unitZ = null;
         var x = 0.0d;
         var y = 0.0d;
         var z = 0.0d;
@@ -139,9 +139,9 @@ internal static class GesVmRegisterVectorPoint
         }
 
         ushort i = 0;
-        GameEventScriptBytecodeInstructionUnit? unitX = null;
-        GameEventScriptBytecodeInstructionUnit? unitY = null;
-        GameEventScriptBytecodeInstructionUnit? unitZ = null;
+        GesQuantityUnit? unitX = null;
+        GesQuantityUnit? unitY = null;
+        GesQuantityUnit? unitZ = null;
         var x = 0.0d;
         var y = 0.0d;
         var z = 0.0d;

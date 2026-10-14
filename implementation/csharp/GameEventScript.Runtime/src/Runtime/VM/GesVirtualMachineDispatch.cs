@@ -5,27 +5,27 @@ using System;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeOpCode;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeOpCode;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 using static GameEventScript.Runtime.VM.GesVirtualMachine.StateValue;
 
 namespace GameEventScript.Runtime.VM;
 
-internal sealed class GameEventScriptVmException(GameEventScriptDiagnostic diagnostic, Exception? innerException = null)
-    : GameEventScriptFatalRuntimeException(diagnostic, innerException);
+internal sealed class GameEventScriptVmException(GesDiagnostic diagnostic, Exception? innerException = null)
+    : GesFatalRuntimeException(diagnostic, innerException);
 
 internal partial class GesVirtualMachine
 {
-    internal void Begin(GesLinkedProgram program, GameEventScriptMessage message, bool matchArguments, ushort entryAddress, string handlerName, GameEventScriptContext context)
+    internal void Begin(GesLinkedProgram program, GameEventScriptMessage message, bool matchArguments, ushort entryAddress, string handlerName, GesContext context)
     {
         if (State is Processing)
-            throw new GameEventScriptVmException(new GameEventScriptDiagnostic(GameEventScriptDiagnosticPhase.Runtime, GameEventScriptDiagnosticCodes.RuntimeVmStateConflict, "Virtual machine is already processing another message."));
+            throw new GameEventScriptVmException(new GesDiagnostic(GesDiagnosticPhase.Runtime, GesDiagnosticCodes.RuntimeVmStateConflict, "Virtual machine is already processing another message."));
         if (State != Ready) Reset();
         if (!PrepareStateForMessage(program, message, matchArguments, entryAddress, handlerName, context) && ErrorDiagnostic is null)
-            RaiseError(GameEventScriptDiagnosticCodes.RuntimePreparationFailed, "Failed to prepare state for message.");
+            RaiseError(GesDiagnosticCodes.RuntimePreparationFailed, "Failed to prepare state for message.");
     }
 
-    internal int RunSlice(GameEventScriptContext context, int maxSteps)
+    internal int RunSlice(GesContext context, int maxSteps)
     {
         if (maxSteps <= 0) throw new ArgumentOutOfRangeException(nameof(maxSteps), "RunSlice requires a positive integer as max steps");
         var opcodesExecuted = 0;
@@ -36,13 +36,13 @@ internal partial class GesVirtualMachine
         {
             while (true)
             {
-                profiler?.PhaseStarting(GameEventScriptProfilePhase.StateCheck);
+                profiler?.PhaseStarting(GesProfilePhase.StateCheck);
                 if (State != Processing) break;
-                profiler?.PhaseStarting(GameEventScriptProfilePhase.BudgetCheck);
+                profiler?.PhaseStarting(GesProfilePhase.BudgetCheck);
                 if (context.RuntimeBudget.IsExhausted) break;
-                profiler?.PhaseStarting(GameEventScriptProfilePhase.SliceCheck);
+                profiler?.PhaseStarting(GesProfilePhase.SliceCheck);
                 if (opcodesExecuted >= reservedSteps) break;
-                profiler?.PhaseStarting(GameEventScriptProfilePhase.Fetch);
+                profiler?.PhaseStarting(GesProfilePhase.Fetch);
                 var instruction = FetchInstructionAndIncrementInstructionPointer();
                 profiler?.InstructionStarting(InstructionPointer - 1);
                 switch (instruction.OpCode)
@@ -71,19 +71,19 @@ internal partial class GesVirtualMachine
                         break;
 
                     case Call:
-                        CallAddress(instruction.TargetAddress, instruction.DestinationRegister, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
+                        CallAddress(instruction.TargetAddress, instruction.DestinationRegister, instruction.HasInstructionFlag(GesInstructionFlag.NormalizeResultAsPredicate));
                         break;
                     case CreateSeries:
-                        this.GesVmCreateSeries(instruction.DestinationRegister, (GameEventScriptBytecodeSeriesKind)instruction.TypeOperand);
+                        this.GesVmCreateSeries(instruction.DestinationRegister, (GesBytecodeSeriesKind)instruction.TypeOperand);
                         break;
                     case CallExternal:
-                        this.GesVmCallExternal(instruction.DestinationRegister, instruction.BindId, instruction.ListIndex, context, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
+                        this.GesVmCallExternal(instruction.DestinationRegister, instruction.BindId, instruction.ListIndex, context, instruction.HasInstructionFlag(GesInstructionFlag.NormalizeResultAsPredicate));
                         break;
 
-                    case GameEventScriptBytecodeOpCode.ReturnVoid:
+                    case GesBytecodeOpCode.ReturnVoid:
                         ReturnVoid();
                         break;
-                    case GameEventScriptBytecodeOpCode.ReturnValue:
+                    case GesBytecodeOpCode.ReturnValue:
                         ReturnValue(instruction.XRegister);
                         break;
 
@@ -228,10 +228,10 @@ internal partial class GesVirtualMachine
                         this.CreateMessage(instruction.DestinationRegister, Program.UInt16IndexLists.Resolve(instruction.SecondaryListIndex), Program.UInt16IndexLists.Resolve(instruction.ListIndex));
                         break;
 
-                    case GameEventScriptBytecodeOpCode.StageRegister:
+                    case GesBytecodeOpCode.StageRegister:
                         StageRegister(instruction.XRegister);
                         break;
-                    case GameEventScriptBytecodeOpCode.StageNothing:
+                    case GesBytecodeOpCode.StageNothing:
                         StageNothing();
                         break;
                     case StageTrue:
@@ -240,10 +240,10 @@ internal partial class GesVirtualMachine
                     case StageFalse:
                         StageBoolean(false);
                         break;
-                    case GameEventScriptBytecodeOpCode.StageInteger:
+                    case GesBytecodeOpCode.StageInteger:
                         StageInteger(instruction.I64, instruction.Unit);
                         break;
-                    case GameEventScriptBytecodeOpCode.StageFloat:
+                    case GesBytecodeOpCode.StageFloat:
                         StageFloat(instruction.F64, instruction.Unit);
                         break;
                     case StageText:
@@ -252,7 +252,7 @@ internal partial class GesVirtualMachine
                     case StageTag:
                         StageTagConstant(instruction.StringIndex);
                         break;
-                    case GameEventScriptBytecodeOpCode.StagePercentage:
+                    case GesBytecodeOpCode.StagePercentage:
                         StagePercentage(instruction.F64);
                         break;
 
@@ -430,7 +430,7 @@ internal partial class GesVirtualMachine
                         break;
                     case RandomPush:
                         var seed = Register(instruction.XRegister);
-                        var pushed = seed.Kind == Integer && seed.Unit == GameEventScriptBytecodeInstructionUnit.UnitNone
+                        var pushed = seed.Kind == Integer && seed.Unit == GesQuantityUnit.UnitNone
                             ? RandomGenerator.Push(seed.IntegerValue)
                             : RandomGenerator.Push();
                         if (!pushed) context.RecordRandomScopeLimitReached();
@@ -440,7 +440,7 @@ internal partial class GesVirtualMachine
                         break;
                     case RandomPop:
                         if (!RandomGenerator.Pop() && !context.RuntimeBudget.IsExhausted)
-                            RaiseError(GameEventScriptDiagnosticCodes.RuntimeRandomStackUnderflow, "Random scope pop crossed the active handler boundary.");
+                            RaiseError(GesDiagnosticCodes.RuntimeRandomStackUnderflow, "Random scope pop crossed the active handler boundary.");
                         break;
                     case Term:
                         this.GesVmTerm(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
@@ -650,13 +650,13 @@ internal partial class GesVirtualMachine
                     case EntriesOfMap:
                         this.GesVmEntries(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
-                    case GameEventScriptBytecodeOpCode.First:
+                    case GesBytecodeOpCode.First:
                         this.GesVmFirst(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
-                    case GameEventScriptBytecodeOpCode.Last:
+                    case GesBytecodeOpCode.Last:
                         this.GesVmLast(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
-                    case GameEventScriptBytecodeOpCode.Single:
+                    case GesBytecodeOpCode.Single:
                         this.GesVmSingle(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Cartesian:
@@ -751,27 +751,27 @@ internal partial class GesVirtualMachine
                         this.GesVmOrderBuilderFinishDescending(instruction.DestinationRegister, in Register(instruction.XRegister));
                         break;
                     case HasPattern:
-                        this.GesVmHasPattern(instruction.DestinationRegister, Register(instruction.XRegister), (GameEventScriptBytecodePatternKind)instruction.AU, instruction.ImmediateY, Register(instruction.BU));
+                        this.GesVmHasPattern(instruction.DestinationRegister, Register(instruction.XRegister), (GesBytecodePatternKind)instruction.AU, instruction.ImmediateY, Register(instruction.BU));
                         break;
                     case TakePattern:
-                        this.GesVmTakePattern(instruction.DestinationRegister, Register(instruction.XRegister), (GameEventScriptBytecodePatternKind)instruction.AU, instruction.ImmediateY, Register(instruction.BU));
+                        this.GesVmTakePattern(instruction.DestinationRegister, Register(instruction.XRegister), (GesBytecodePatternKind)instruction.AU, instruction.ImmediateY, Register(instruction.BU));
                         break;
 
                     #endregion
 
                     default:
-                        RaiseError(GameEventScriptDiagnosticCodes.RuntimeIllegalOpcode,
+                        RaiseError(GesDiagnosticCodes.RuntimeIllegalOpcode,
                             "Illegal opcode " + instruction.OpCode + ". Execution halted.");
                         break;
                 }
 
-                profiler?.PhaseStarting(GameEventScriptProfilePhase.Advance);
+                profiler?.PhaseStarting(GesProfilePhase.Advance);
                 opcodesExecuted++;
             }
         }
-        catch (GameEventScriptFatalRuntimeException exception)
+        catch (GesFatalRuntimeException exception)
         {
-            // A GameEventScriptExtensionFaultException or GameEventScriptCallbackFailureException
+            // A GesExtensionFaultException or GameEventScriptCallbackFailureException
             // already carries its own TechnicalDetails; only fall back to the CLR type
             // name for internal fatal signals that never set it.
             RaiseError(exception.Diagnostic, exception.Diagnostic.TechnicalDetails ?? exception.GetType().Name);
@@ -779,7 +779,7 @@ internal partial class GesVirtualMachine
         catch (Exception exception)
         {
             RaiseError(
-                GameEventScriptDiagnosticCodes.RuntimeUnhandledFailure,
+                GesDiagnosticCodes.RuntimeUnhandledFailure,
                 "Unhandled VM execution failure.",
                 GameEventScriptRuntimeExceptionText.Describe(exception));
         }

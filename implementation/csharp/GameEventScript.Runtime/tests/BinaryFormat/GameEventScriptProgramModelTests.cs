@@ -15,33 +15,33 @@ public sealed class GameEventScriptProgramModelTests
     public void ProgramGraphTakesDefensiveCopiesOfAllSequenceInputs()
     {
         var rawValues = new[] { 1, 2 };
-        var readOnlyValues = new GameEventScriptReadOnlyArray<int>(rawValues);
-        var wrappedValues = new GameEventScriptReadOnlyArray<int>(Array.AsReadOnly(rawValues));
-        var sharedValues = new GameEventScriptReadOnlyArray<int>(readOnlyValues);
+        var readOnlyValues = new GesReadOnlyArray<int>(rawValues);
+        var wrappedValues = new GesReadOnlyArray<int>(Array.AsReadOnly(rawValues));
+        var sharedValues = new GesReadOnlyArray<int>(readOnlyValues);
         rawValues[0] = 9;
         Assert.AreEqual(1, readOnlyValues[0]);
         Assert.AreEqual(1, wrappedValues[0]);
         Assert.AreEqual(1, sharedValues[0]);
 
-        var stringSlices = new[] { new GameEventScriptStringConstantSegment.SliceEntry { Start = 0, Length = 1 } };
+        var stringSlices = new[] { new GesStringConstantSegment.SliceEntry { Start = 0, Length = 1 } };
         var stringBytes = new byte[] { (byte)'A' };
-        var strings = new GameEventScriptStringConstantSegment(stringSlices, stringBytes);
-        stringSlices[0] = new GameEventScriptStringConstantSegment.SliceEntry();
+        var strings = new GesStringConstantSegment(stringSlices, stringBytes);
+        stringSlices[0] = new GesStringConstantSegment.SliceEntry();
         stringBytes[0] = (byte)'Z';
         Assert.AreEqual("A", strings.Resolve(0));
 
-        var listSlices = new[] { new GameEventScriptUInt16IndexListSegment.SliceEntry { Start = 0, Length = 2 } };
+        var listSlices = new[] { new GesUInt16IndexListSegment.SliceEntry { Start = 0, Length = 2 } };
         var listValues = new ushort[] { 4, 5 };
-        var lists = new GameEventScriptUInt16IndexListSegment(listSlices, listValues);
-        listSlices[0] = new GameEventScriptUInt16IndexListSegment.SliceEntry();
+        var lists = new GesUInt16IndexListSegment(listSlices, listValues);
+        listSlices[0] = new GesUInt16IndexListSegment.SliceEntry();
         listValues[0] = 99;
         Assert.AreEqual((ushort)4, lists.Resolve(0)[0]);
 
         var arguments = new ushort[] { 1 };
         var requiredTags = new ushort[] { 2 };
         var excludedTags = new ushort[] { 3 };
-        var bind = new GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry(
-            GameEventScriptBinaryBindKind.Function,
+        var bind = new GesBindingSegment.GameEventScriptBinaryBindEntry(
+            GesBinaryBindKind.Function,
             name: 0,
             arguments,
             entryAddress: 0,
@@ -56,57 +56,57 @@ public sealed class GameEventScriptProgramModelTests
         Assert.AreEqual((ushort)3, bind.ExcludedTags[0]);
 
         var bindEntries = new[] { bind };
-        var bindings = new GameEventScriptBindingSegment(bindEntries);
+        var bindings = new GesBindingSegment(bindEntries);
         bindEntries[0] = default;
-        Assert.AreEqual(GameEventScriptBinaryBindKind.Function, bindings.Entries[0].Kind);
+        Assert.AreEqual(GesBinaryBindKind.Function, bindings.Entries[0].Kind);
 
         var instructionValues = new[]
         {
-            new GameEventScriptBytecodeInstruction
+            new GesBytecodeInstruction
             {
-                OpCode = GameEventScriptBytecodeOpCode.LoadInteger,
+                OpCode = GesBytecodeOpCode.LoadInteger,
                 DestinationRegister = 2,
                 I64 = 17
             }
         };
-        var code = new GameEventScriptCodeSegment(instructionValues);
+        var code = new GesCodeSegment(instructionValues);
         instructionValues[0] = default;
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, code[0].OpCode);
+        Assert.AreEqual(GesBytecodeOpCode.LoadInteger, code[0].OpCode);
         Assert.AreEqual(17L, code[0].I64);
 
-        var symbolValues = new[] { new GameEventScriptDebugSymbol(GameEventScriptDebugSymbolKind.Local, 2, "value", 0, 1) };
-        var symbols = new GameEventScriptDebugSymbolsSegment(symbolValues);
+        var symbolValues = new[] { new GesDebugSymbol(GesDebugSymbolKind.Local, 2, "value", 0, 1) };
+        var symbols = new GesDebugSymbolsSegment(symbolValues);
         symbolValues[0] = default;
         Assert.AreEqual("value", symbols.Symbols[0].Name);
 
         var hash = new byte[32];
         hash[0] = 7;
         var lineOffsets = new uint[] { 0, 2 };
-        var mapSource = new GameEventScriptSourceMapSource(0, "source.ges", 2, hash, lineOffsets);
+        var mapSource = new GesSourceMapSource(0, "source.ges", 2, hash, lineOffsets);
         hash[0] = 9;
         lineOffsets[1] = 1;
         Assert.AreEqual((byte)7, mapSource.Sha256[0]);
         Assert.AreEqual((uint)2, mapSource.LineStartByteOffsets[1]);
 
         var mapSources = new[] { mapSource };
-        var mapEntries = new[] { new GameEventScriptSourceMapEntry(0, 1, 0, 0, 1) };
-        var sourceMap = new GameEventScriptSourceMapSegment(mapSources, mapEntries);
-        mapSources[0] = new GameEventScriptSourceMapSource(0, "changed.ges", 0, new byte[32], new uint[] { 0 });
+        var mapEntries = new[] { new GesSourceMapEntry(0, 1, 0, 0, 1) };
+        var sourceMap = new GesSourceMapSegment(mapSources, mapEntries);
+        mapSources[0] = new GesSourceMapSource(0, "changed.ges", 0, new byte[32], new uint[] { 0 });
         mapEntries[0] = default;
         Assert.AreEqual("source.ges", sourceMap.Sources[0].SourceName);
         Assert.AreEqual((uint)1, sourceMap.Entries[0].CodeLength);
 
         var sourceBytes = new byte[] { (byte)'o', (byte)'k' };
-        var archiveEntry = new GameEventScriptSourceArchiveEntry(0, "source.ges", sourceBytes);
+        var archiveEntry = new GesSourceArchiveEntry(0, "source.ges", sourceBytes);
         sourceBytes[0] = (byte)'n';
         Assert.AreEqual("ok", archiveEntry.ResolveText());
         var archiveEntries = new[] { archiveEntry };
-        var archive = new GameEventScriptSourceArchiveSegment(archiveEntries);
-        archiveEntries[0] = new GameEventScriptSourceArchiveEntry(0, "changed.ges", Array.Empty<byte>());
+        var archive = new GesSourceArchiveSegment(archiveEntries);
+        archiveEntries[0] = new GesSourceArchiveEntry(0, "changed.ges", Array.Empty<byte>());
         Assert.AreEqual("source.ges", archive.Sources[0].SourceName);
 
         var opaqueBytes = new byte[] { 1, 2 };
-        var opaque = new GameEventScriptOpaqueSection(0x8000, GameEventScriptSectionFlags.None, 1, opaqueBytes, 4);
+        var opaque = new GesOpaqueSection(0x8000, GesSectionFlags.None, 1, opaqueBytes, 4);
         opaqueBytes[0] = 8;
         Assert.AreEqual((byte)1, opaque.RawPayload[0]);
 
@@ -127,7 +127,7 @@ public sealed class GameEventScriptProgramModelTests
             baseProgram.SourceArchive,
             baseProgram.BuildMetadata,
             opaqueSections);
-        opaqueSections[0] = new GameEventScriptOpaqueSection(0x8001, GameEventScriptSectionFlags.None, 1, Array.Empty<byte>(), 5);
+        opaqueSections[0] = new GesOpaqueSection(0x8001, GesSectionFlags.None, 1, Array.Empty<byte>(), 5);
         Assert.AreEqual((ushort)0x8000, program.OpaqueSections[0].SectionType);
     }
 
@@ -138,7 +138,7 @@ public sealed class GameEventScriptProgramModelTests
     [DataRow(1, 2, 1, 30)]
     public void UInt16IndexListReadsValidIndicesRelativeToSlice(int start, int length, int index, int expected)
     {
-        var segment = new GameEventScriptUInt16IndexListSegment([new() { Start = start, Length = length }], new ushort[] { 10, 20, 30 });
+        var segment = new GesUInt16IndexListSegment([new() { Start = start, Length = length }], new ushort[] { 10, 20, 30 });
         var list = segment.Resolve(0);
 
         Assert.AreEqual(start, list.Start);
@@ -153,7 +153,7 @@ public sealed class GameEventScriptProgramModelTests
     [DataRow(int.MaxValue)]
     public void UInt16IndexListRejectsIndicesOutsideSlice(int index)
     {
-        var segment = new GameEventScriptUInt16IndexListSegment([new() { Start = 1, Length = 1 }], new ushort[] { 10, 20, 30 });
+        var segment = new GesUInt16IndexListSegment([new() { Start = 1, Length = 1 }], new ushort[] { 10, 20, 30 });
         var list = segment.Resolve(0);
 
         var exception = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => _ = list[index]);
@@ -170,7 +170,7 @@ public sealed class GameEventScriptProgramModelTests
     [DataRow(3, 0)]
     public void EmptyUInt16IndexListRejectsIndicesRegardlessOfBackingStorage(int start, int index)
     {
-        var segment = new GameEventScriptUInt16IndexListSegment([new() { Start = start, Length = 0 }], new ushort[] { 10, 20, 30 });
+        var segment = new GesUInt16IndexListSegment([new() { Start = start, Length = 0 }], new ushort[] { 10, 20, 30 });
         var list = segment.Resolve(0);
 
         var exception = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => _ = list[index]);
@@ -183,7 +183,7 @@ public sealed class GameEventScriptProgramModelTests
     [DataRow(0)]
     public void DefaultUInt16IndexListRejectsIndices(int index)
     {
-        var list = default(GameEventScriptUInt16IndexList);
+        var list = default(GesUInt16IndexList);
 
         var exception = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => _ = list[index]);
 
@@ -200,11 +200,11 @@ public sealed class GameEventScriptProgramModelTests
     [TestMethod]
     public void InstructionAliasesUseNumericWordsAndPayloadBits()
     {
-        var instruction = new GameEventScriptBytecodeInstruction
+        var instruction = new GesBytecodeInstruction
         {
             DestinationRegister = 0x1234,
             ImmediateX = -2,
-            TypeKind = GameEventScriptBytecodeTypeKind.Custom,
+            TypeKind = GesBytecodeTypeKind.Custom,
             AU = 0x1122,
             BU = 0x3344,
             CU = 0x5566,
@@ -213,7 +213,7 @@ public sealed class GameEventScriptProgramModelTests
 
         Assert.AreEqual((ushort)0x1234, instruction.MessageDestination);
         Assert.AreEqual((ushort)0xFFFE, instruction.XRegister);
-        Assert.AreEqual((ushort)GameEventScriptBytecodeTypeKind.Custom, instruction.TypeOperand);
+        Assert.AreEqual((ushort)GesBytecodeTypeKind.Custom, instruction.TypeOperand);
         Assert.AreEqual(0x7788556633441122UL, instruction.Payload);
 
         instruction.Payload = 0xFEDCBA9876543210UL;
@@ -227,14 +227,14 @@ public sealed class GameEventScriptProgramModelTests
         Assert.AreEqual(0x8000000000000000UL, instruction.Payload);
         instruction.Payload = 0x3FF0000000000000UL;
         Assert.AreEqual(1d, instruction.F64);
-        Assert.AreEqual(16, Marshal.SizeOf<GameEventScriptBytecodeInstruction>());
+        Assert.AreEqual(16, Marshal.SizeOf<GesBytecodeInstruction>());
     }
 
     private static GameEventScriptProgram Compile()
-        => GameEventScriptBuilder.Create()
+        => GesProgramBuilder.Create()
             .AddScript("module portablemodel\n\non Start(value) { emit Done(result: value + 1) }", "portable-model.ges")
             .WithProgramVersion(7)
-            .WithDebugInfo(GameEventScriptDebugInfoOptions.All)
+            .WithDebugInfo(GesDebugInfoOptions.All)
             .Compile();
 
 }

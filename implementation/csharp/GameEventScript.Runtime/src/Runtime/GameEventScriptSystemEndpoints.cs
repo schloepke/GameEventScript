@@ -12,9 +12,9 @@ internal static class GameEventScriptSystemEndpoints
     public const string UndeliverableName = "undeliverable";
     public const string MessageArgumentName = "message";
 
-    public static readonly string InitializationSignatureId = GameEventScriptMessageSignature.CreateSignatureId(InitializationName, []);
+    public static readonly string InitializationSignatureId = GesMessageSignature.CreateSignatureId(InitializationName, []);
 
-    public static readonly string UndeliverableSignatureId = GameEventScriptMessageSignature.CreateSignatureId(UndeliverableName, [MessageArgumentName]);
+    public static readonly string UndeliverableSignatureId = GesMessageSignature.CreateSignatureId(UndeliverableName, [MessageArgumentName]);
 
     public static bool IsInitializationName(string? name)
         => string.Equals(name, InitializationName, System.StringComparison.Ordinal);
@@ -31,7 +31,7 @@ internal static class GameEventScriptSystemEndpoints
     public static GameEventScriptMessage CreateMessageDispatchMessage(GameEventScriptMessage original)
         => GameEventScriptMessage.Create(
             original.Name,
-            [new GameEventScriptMessageArgument(MessageArgumentName, GesValue.GesMessage(original))],
+            [new GesMessageArgument(MessageArgumentName, GesValue.GesMessage(original))],
             original.Tags);
 
 }

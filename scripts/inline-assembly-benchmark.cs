@@ -20,19 +20,19 @@ foreach (var operation in new[] { "count", "any", "all", "first" })
     foreach (var variant in new[] { "opcode", "loop" })
     {
         var source = File.ReadAllText(Path.Combine(sourceRoot, operation + "-" + variant + ".ges"));
-        var program = GameEventScriptBuilder.Create().WithDebugInfo(GameEventScriptDebugInfoOptions.None)
+        var program = GesProgramBuilder.Create().WithDebugInfo(GesDebugInfoOptions.None)
             .AddScript(driver, "driver.ges").AddScript(source, operation + "-" + variant + ".ges").Compile();
         var host = GameEventScriptHost.CreateBuilder().WithRandomSeed(1)
-            .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxExecutionSteps = 0, MaxLoopIterations = 0 }).Build();
+            .WithRuntimeLimits(new GesRuntimeLimits { MaxExecutionSteps = 0, MaxLoopIterations = 0 }).Build();
         var observed = GesValue.GesNothing();
         var deliveries = 0;
         var subscription = host.Subscribe("Result", ["value"], (message, _) => { observed = message.Arguments[0]; deliveries++; });
         host.Load(program);
-        if (host.Start().State != GameEventScriptStartState.Ready) throw new InvalidOperationException("Startup failed.");
+        if (host.Start().State != GesStartState.Ready) throw new InvalidOperationException("Startup failed.");
 
         // Independent semantic oracle. Controls are outside every timed sample.
         GesValue[][] controls = [[], [GesValue.GesNothing()], [GesValue.GesBoolean(false), GesValue.GesNothing(), GesValue.GesBoolean(true)],
-            [GesValue.GesInteger(1), GesValue.GesFloat(double.NaN)], [GesValue.GesFloat(double.NaN)], [GesValue.GesInteger(7, GameEventScriptBytecodeInstructionUnit.UnitMeter)]];
+            [GesValue.GesInteger(1), GesValue.GesFloat(double.NaN)], [GesValue.GesFloat(double.NaN)], [GesValue.GesInteger(7, GesQuantityUnit.UnitMeter)]];
         foreach (var values in controls) Execute(Message(values, 1), Expected(values));
         foreach (var length in new[] { 8, 128, 4096 })
         {
@@ -58,7 +58,7 @@ foreach (var operation in new[] { "count", "any", "all", "first" })
                 var elapsed = Stopwatch.GetTimestamp() - start;
                 allocations[sample] = GC.GetAllocatedBytesForCurrentThread() - allocationStart;
                 times[sample] = elapsed * (1_000_000_000d / Stopwatch.Frequency) / repetitions;
-                if (result.State != GameEventScriptExecutionState.Completed || deliveries != previous + 1 || !Same(observed, expected))
+                if (result.State != GesExecutionState.Completed || deliveries != previous + 1 || !Same(observed, expected))
                     throw new InvalidOperationException("Measurement failed.");
                 opcodes = result.ExecutedOpcodes;
             }
@@ -67,13 +67,13 @@ foreach (var operation in new[] { "count", "any", "all", "first" })
             var previousFrameDeliveries = deliveries;
             host.Receive(frameMessage);
             var frames = 0;
-            GameEventScriptExecutionResult frame;
+            GesExecutionResult frame;
             do
             {
                 frame = host.ExecuteFrame(1);
                 frames++;
-            } while (frame.State == GameEventScriptExecutionState.Paused);
-            if (frame.State != GameEventScriptExecutionState.Completed || deliveries != previousFrameDeliveries + 1 || !Same(observed, expected))
+            } while (frame.State == GesExecutionState.Paused);
+            if (frame.State != GesExecutionState.Completed || deliveries != previousFrameDeliveries + 1 || !Same(observed, expected))
                 throw new InvalidOperationException("Frame-budget control failed.");
             results.Add(new { operation, variant, length, repetitions, samples, medianNanoseconds = times[samples / 2], minimumNanoseconds = times[0],
                 maximumNanoseconds = times[^1], maxAllocatedBytesPerOperation = allocations.Max() / (double)repetitions,
@@ -99,7 +99,7 @@ foreach (var operation in new[] { "count", "any", "all", "first" })
             var previous = deliveries;
             host.Receive(message);
             var result = host.RunToCompletion();
-            if (result.State != GameEventScriptExecutionState.Completed || deliveries != previous + 1 || !Same(observed, expected))
+            if (result.State != GesExecutionState.Completed || deliveries != previous + 1 || !Same(observed, expected))
                 throw new InvalidOperationException($"Control failed for {operation}/{variant}: {result.State}.");
         }
     }

@@ -7,7 +7,7 @@ extension GesVirtualMachine {
         let destination = destinationRegister
         let x = frameStart + sourceRegister
         let face = frameStart + operandB
-        let pattern = GameEventScriptBytecodePatternKind(rawValue: operandA)!
+        let pattern = GesBytecodePatternKind(rawValue: operandA)!
         let count = countOperand
         if registers[x].kind == .series { return setNothing(destination) }
         let values: [GesValue]

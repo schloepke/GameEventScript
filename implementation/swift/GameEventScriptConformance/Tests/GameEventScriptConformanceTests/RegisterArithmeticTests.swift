@@ -11,7 +11,7 @@ final class RegisterArithmeticTests: XCTestCase {
         // C#'s scalar/reference/metadata architecture must not regress to nested payload enums.
         XCTAssertLessThanOrEqual(MemoryLayout<GesValue>.stride, 32)
         XCTAssertEqual(MemoryLayout<GameEventScriptMessage>.stride, MemoryLayout<AnyObject>.stride)
-        XCTAssertEqual(MemoryLayout<GameEventScriptMessageSignature>.stride, MemoryLayout<AnyObject>.stride)
+        XCTAssertEqual(MemoryLayout<GesMessageSignature>.stride, MemoryLayout<AnyObject>.stride)
     }
 
     func testNumericProjectionIsIndependentOfCollectionCount() {
@@ -84,7 +84,7 @@ final class RegisterArithmeticTests: XCTestCase {
     }
 
     func testMessageAndHandlerWrapExistingImmutablePayloads() throws {
-        let signature = try GameEventScriptMessageSignature(name: "Done", parameters: ["value"])
+        let signature = try GesMessageSignature(name: "Done", parameters: ["value"])
         let message = try XCTUnwrap(signature.createMessage([.integer(7)]))
         var value = GesValue.message(message)
         XCTAssertTrue(value.messageValue!.storage === message.storage)
@@ -97,7 +97,7 @@ final class RegisterArithmeticTests: XCTestCase {
     }
 
     func testMessageArgumentsReuseBuffersAndPreserveSnapshots() throws {
-        let signature = try GameEventScriptMessageSignature(name: "Done", parameters: ["_", "value", "_"])
+        let signature = try GesMessageSignature(name: "Done", parameters: ["_", "value", "_"])
         var input: [GesValue] = [.integer(1), .text("kept"), .boolean(true)]
         let message = try XCTUnwrap(signature.createMessage(input))
         let arguments = message.arguments
@@ -107,8 +107,8 @@ final class RegisterArithmeticTests: XCTestCase {
         signature.parameters.withUnsafeBufferPointer { original in
             arguments.signatureLabels.withUnsafeBufferPointer { stored in XCTAssertEqual(original.baseAddress, stored.baseAddress) }
         }
-        let pairs = try [GameEventScriptMessageArgument(value: .integer(1)), GameEventScriptMessageArgument(name: "value", value: .text("kept")), GameEventScriptMessageArgument(value: .boolean(true))]
-        let rebuilt = try GameEventScriptMessageArguments(pairs)
+        let pairs = try [GesMessageArgument(value: .integer(1)), GesMessageArgument(name: "value", value: .text("kept")), GesMessageArgument(value: .boolean(true))]
+        let rebuilt = try GesMessageArguments(pairs)
         XCTAssertEqual(arguments, rebuilt)
         XCTAssertEqual(arguments.hashValue, rebuilt.hashValue)
         XCTAssertEqual(Array(arguments), pairs)
@@ -129,9 +129,9 @@ final class RegisterArithmeticTests: XCTestCase {
         labels[1] = "changed"
         XCTAssertEqual(message.arguments, rebuilt)
         XCTAssertEqual(message.signatureId, "Done(_,value,_)")
-        XCTAssertEqual(Array(GameEventScriptMessageArguments.empty), [])
+        XCTAssertEqual(Array(GesMessageArguments.empty), [])
         XCTAssertNil(signature.createMessage([]))
-        XCTAssertThrowsError(try GameEventScriptMessageArguments([.init(name: "value", value: .integer(1)), .init(name: "value", value: .integer(2))]))
+        XCTAssertThrowsError(try GesMessageArguments([.init(name: "value", value: .integer(1)), .init(name: "value", value: .integer(2))]))
     }
 
     func testRecordReusesCanonicalMapStorageWhenOverwritingMapRegister() throws {
@@ -157,7 +157,7 @@ final class RegisterArithmeticTests: XCTestCase {
     func testTextIdentityCastCanOverwriteItsSource() throws {
         let state = GesVirtualMachine(maxRegisters: 32, maxCallDepth: 4)
         let host = try GameEventScriptHost()
-        let context = GameEventScriptContext(host: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
+        let context = GesContext(host: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
         state.setText(0, "kept 🐉 e\u{301}")
         let snapshot = state.value(0)
         try GesCasts.cast(state.value(0), .text, context, sink: state.output(0))
@@ -167,7 +167,7 @@ final class RegisterArithmeticTests: XCTestCase {
     }
 
     func testIntegerResultsCanOverwriteEitherOperandAfterRegisterGrowth() {
-        let cases: [(GameEventScriptBytecodeOpCode, GesValue)] = [
+        let cases: [(GesBytecodeOpCode, GesValue)] = [
             (.add, .integer(34)), (.subtract, .integer(24)), (.multiply, .integer(145)),
             (.divide, .float(5.8)), (.integerDivide, .integer(5)), (.modulo, .integer(4)), (.remainder, .integer(4)),
         ]
@@ -179,7 +179,7 @@ final class RegisterArithmeticTests: XCTestCase {
                 state.setValue(0, .integer(29))
                 state.setValue(1, .integer(5))
                 state.setValue(2, .text("previous destination"))
-                let instruction = GameEventScriptBytecodeInstruction(opcode: opcode, word0: destination, word1: 0, word2: 1)
+                let instruction = GesBytecodeInstruction(opcode: opcode, word0: destination, word1: 0, word2: 1)
                 switch opcode {
                 case .add: state.executeAdd(state.frameStart + Int(destination), state.frameStart, state.frameStart + 1)
                 case .subtract: state.executeSubtract(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
@@ -199,7 +199,7 @@ final class RegisterArithmeticTests: XCTestCase {
         let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
         XCTAssertTrue(state.ensure(96))
         state.frameStart = 40
-        let cases: [(GameEventScriptBytecodeOpCode, GesValue)] = [
+        let cases: [(GesBytecodeOpCode, GesValue)] = [
             (.add, .integer(6)), (.subtract, .integer(-4)), (.multiply, .integer(5)),
             (.divide, .float(0.2)), (.integerDivide, .integer(0)), (.modulo, .integer(1)),
             (.remainder, .integer(1)), (.power, .float(1)), (.min, .integer(1)), (.max, .integer(5)),
@@ -209,7 +209,7 @@ final class RegisterArithmeticTests: XCTestCase {
                 state.setBoolean(0, true)
                 state.setDice(1, [2, 3])
                 state.setText(2, "old destination")
-                let instruction = GameEventScriptBytecodeInstruction(opcode: opcode, word0: destination, word1: 0, word2: 1)
+                let instruction = GesBytecodeInstruction(opcode: opcode, word0: destination, word1: 0, word2: 1)
                 switch opcode {
                 case .add: state.executeAddNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
                 case .subtract: state.executeSubtractNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
@@ -238,7 +238,7 @@ final class RegisterArithmeticTests: XCTestCase {
         for destination: UInt16 in 0...6 {
             for index in 0..<6 { state.setFloat(index, Double(index + 1), unit: .meter) }
             state.setText(6, "old destination")
-            let instruction = GameEventScriptBytecodeInstruction(opcode: .distanceSquared3D, word0: destination, word1: 0, word2: 1, payload: 2 | (3 << 16) | (4 << 32) | (5 << 48))
+            let instruction = GesBytecodeInstruction(opcode: .distanceSquared3D, word0: destination, word1: 0, word2: 1, payload: 2 | (3 << 16) | (4 << 32) | (5 << 48))
             state.executeDistanceSquared3D(
                 state.frameStart + Int(instruction.word0),
                 state.frameStart + Int(instruction.word1),
@@ -289,7 +289,7 @@ final class RegisterArithmeticTests: XCTestCase {
         XCTAssertTrue(state.ensure(96))
         state.frameStart = 40
         let host = try GameEventScriptHost()
-        let context = GameEventScriptContext(host: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
+        let context = GesContext(host: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
         for destination in [0, 1, 2] {
             state.setText(0, "prefix")
             state.setInteger(1, 12)
@@ -299,9 +299,9 @@ final class RegisterArithmeticTests: XCTestCase {
             state.setFloat(0, 1.25)
             state.setFloat(1, 2.5)
             state.executeMultiply(
-                state.frameStart + Int((GameEventScriptBytecodeInstruction.init(opcode: .multiply, word0: UInt16(destination), word1: 0, word2: 1)).word0),
-                state.frameStart + Int((GameEventScriptBytecodeInstruction.init(opcode: .multiply, word0: UInt16(destination), word1: 0, word2: 1)).word1),
-                state.frameStart + Int((GameEventScriptBytecodeInstruction.init(opcode: .multiply, word0: UInt16(destination), word1: 0, word2: 1)).word2)
+                state.frameStart + Int((GesBytecodeInstruction.init(opcode: .multiply, word0: UInt16(destination), word1: 0, word2: 1)).word0),
+                state.frameStart + Int((GesBytecodeInstruction.init(opcode: .multiply, word0: UInt16(destination), word1: 0, word2: 1)).word1),
+                state.frameStart + Int((GesBytecodeInstruction.init(opcode: .multiply, word0: UInt16(destination), word1: 0, word2: 1)).word2)
             )
             XCTAssertEqual(state.value(destination), .float(3.125))
 

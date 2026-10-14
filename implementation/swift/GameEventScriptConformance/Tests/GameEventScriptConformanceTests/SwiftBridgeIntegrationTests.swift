@@ -9,7 +9,7 @@ import XCTest
 /// Native binding tests live outside the portable Markdown oracle. Compiler is a test-only dependency of the bridge consumer.
 final class SwiftBridgeIntegrationTests: XCTestCase {
     func testRunnerWakesForDelayedMessagesWithoutFurtherInput() throws {
-        let program = try GameEventScriptBuilder().addScript("on Start { emit after 0.02s Done() }").compile()
+        let program = try GesProgramBuilder().addScript("on Start { emit after 0.02s Done() }").compile()
         let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.createBuilder().build())
         defer { runner.close() }
         let done = expectation(description: "Delayed delivery without another Receive")
@@ -52,7 +52,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
                 emit Done(name: player.name, score: player.score)
             }
             """
-        let compiled = try GameEventScriptBuilder().withExternalTypeCatalog(types).addScript(source).compile()
+        let compiled = try GesProgramBuilder().withExternalTypeCatalog(types).addScript(source).compile()
         let bytes = try GameEventScriptProgramWriter.bytes(compiled)
         let program = try GameEventScriptProgramReader.read(bytes)
         let host = try GameEventScriptHost(seed: 1, extensions: extensions, externalTypes: types).startForTest()
@@ -69,7 +69,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
     func testExtensionAndConstructorFailuresRetainDeclaredAndUnexpectedClassification() throws {
         for explicit in [true, false] {
             let fail: () throws -> Void = {
-                if explicit { throw try GameEventScriptExtensionFault(code: "app.failure", message: "Failed") }
+                if explicit { throw try GesExtensionFaultError(code: "app.failure", message: "Failed") }
                 throw Failure.unexpected
             }
             let extensions = try GameEventScriptSwiftExtensionRegistry([.init(namespace: "app", name: "fail") { _ in try fail() }])
@@ -85,7 +85,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
             )
             let types = try GameEventScriptSwiftExternalTypeRegistry([type.binding])
             for (expression, unexpected) in [(":app.fail()", "runtime.extensionCallFailed"), (":Player()", "runtime.externalConstructorFailed")] {
-                let program = try GameEventScriptBuilder().withExternalTypeCatalog(types).addScript("on Start() { emit Done(\(expression)) }").compile()
+                let program = try GesProgramBuilder().withExternalTypeCatalog(types).addScript("on Start() { emit Done(\(expression)) }").compile()
                 let host = try GameEventScriptHost(seed: 1, extensions: extensions, externalTypes: types).startForTest()
                 _ = try host.load(program)
                 host.receive(try .init(name: "Start"))
@@ -98,7 +98,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
     }
 
     func testRunnerSchedulesInitializationAndDetachesProgram() throws {
-        let program = try GameEventScriptBuilder().addScript("on initialization { emit Ready() }\non Start() { emit Done() }").compile()
+        let program = try GesProgramBuilder().addScript("on initialization { emit Ready() }\non Start() { emit Done() }").compile()
         let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 1).startForTest())
         defer { runner.close() }
         let instance = try runner.load(program)
@@ -116,7 +116,7 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
     }
 
     func testImmutableProgramRemainsReusableAcrossRunners() throws {
-        let program = try GameEventScriptBuilder().addScript("on initialization { emit Ready() }").compile()
+        let program = try GesProgramBuilder().addScript("on initialization { emit Ready() }").compile()
         let first = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 1).startForTest())
         let second = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 2).startForTest())
         defer {

@@ -14,12 +14,12 @@ struct GesLiteralParser {
     private var nodes: [GesLiteralNode] = []
     private var state: GesVirtualMachine?
 
-    static func evaluate(_ input: GesValue, context: GameEventScriptContext, state: GesVirtualMachine, destination: Int) throws {
+    static func evaluate(_ input: GesValue, context: GesContext, state: GesVirtualMachine, destination: Int) throws {
         let (value, nodes) = parse(input, context: context, state: state)
         if nodes.isEmpty { state.setValue(destination, value) } else { try GesLiteralEvaluation(value, nodes: nodes, state: state, context: context, destination: destination).run() }
     }
 
-    static func parse(_ input: GesValue, context: GameEventScriptContext, state: GesVirtualMachine? = nil) -> (GesValue, [GesLiteralNode]) {
+    static func parse(_ input: GesValue, context: GesContext, state: GesVirtualMachine? = nil) -> (GesValue, [GesLiteralNode]) {
         guard input.kind == .text, let text = input.textValue else { return (.nothing, []) }
         if text.unicodeScalars.count > 1_048_576 {
             context.budget.exhaust("MaxLiteralInputScalars", 1_048_576)
@@ -190,7 +190,7 @@ struct GesLiteralParser {
         whitespace()
         var result: GesValue
         if handler {
-            guard let signature = try? GameEventScriptMessageSignature(name: name, parameters: labels) else { return nil }
+            guard let signature = try? GesMessageSignature(name: name, parameters: labels) else { return nil }
             result = .handler(signature)
         } else {
             result = node("@message:" + name, labels, args)
@@ -217,7 +217,7 @@ struct GesLiteralParser {
             return nil
         }
         var components = [Double](repeating: 0, count: 3)
-        var unit: GesUnit?
+        var unit: GesQuantityUnit?
         var labeled: Bool?
         var previous = -1
         whitespace()

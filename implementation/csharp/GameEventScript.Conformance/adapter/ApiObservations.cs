@@ -14,10 +14,10 @@ internal static class ApiObservations
         if (test.GetProperty("kind").GetString() == "externalTypeApi")
         {
             var names = input.GetProperty("typeNames").EnumerateArray().Select(n => n.GetString()!).ToArray();
-            var definitions = names.Select(name => new GameEventScriptExternalTypeDefinition(name, [], [])).ToArray();
+            var definitions = names.Select(name => new GesExternalTypeDefinition(name, [], [])).ToArray();
             try
             {
-                var catalog = new GameEventScriptExternalTypeCatalog(definitions);
+                var catalog = new GesDeclaredExternalTypeCatalog(definitions);
                 return new { status = "ok", externalType = new { typeCount = catalog.Types.Count } };
             }
             catch (ArgumentException) when (names.Distinct(StringComparer.Ordinal).Count() != names.Length)
@@ -38,22 +38,22 @@ internal static class ApiObservations
             host.Load(program);
             return new { status = "loaded", diagnostics = Array.Empty<object>() };
         }
-        catch (GameEventScriptDynamicLinkException exception)
+        catch (GesDynamicLinkException exception)
         {
             return new { status = "loadError", diagnostics = new[] { CompilerObservations.Diagnostic(exception.Diagnostic) } };
         }
     }
 
-    private sealed class MismatchRegistry : IGameEventScriptExternalTypeRegistry
+    private sealed class MismatchRegistry : IGesExternalTypeRegistry
     {
         /// <summary>Supplies the deliberate mismatched-constructor fixture for link validation.</summary>
-        public IGameEventScriptExternalTypeConstructor? Resolve(GameEventScriptExternalTypeConstructorReference reference) => new MismatchConstructor();
+        public IGesExternalTypeConstructor? Resolve(GesExternalTypeConstructorReference reference) => new MismatchConstructor();
     }
 
-    private sealed class MismatchConstructor : IGameEventScriptExternalTypeConstructor
+    private sealed class MismatchConstructor : IGesExternalTypeConstructor
     {
         /// <summary>Declares a different type and parameter shape from the compiler catalog.</summary>
-        public GameEventScriptExternalTypeConstructorDefinition Definition { get; } = new("Mismatch", [new GameEventScriptExternalTypeParameterDefinition("value", GameEventScriptBytecodeTypeKind.Float)]);
+        public GesExternalTypeConstructorDefinition Definition { get; } = new("Mismatch", [new GesExternalTypeParameterDefinition("value", GesBytecodeTypeKind.Float)]);
 
         /// <summary>Returns Nothing if invoked; the load-error fixture never starts the host.</summary>
         public void Invoke(GesExternalTypeConstructorCall call) => call.SetNothing();

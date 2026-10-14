@@ -5,8 +5,8 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBindingSegment;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBindingSegment;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 using static GameEventScript.Runtime.Values.GesValue.GesValueFlags;
 using static GameEventScript.Runtime.VM.GesVirtualMachine.StateValue;
 
@@ -48,7 +48,7 @@ internal partial class GesVirtualMachine
 
     internal GesValue[] RegisterValues { get; private set; }
 
-    internal GameEventScriptRandomGenerator RandomGenerator { get; private set; }
+    internal GesRandomGenerator RandomGenerator { get; private set; }
     internal int RandomScopeDepth => RandomGenerator is null ? 0 : RandomGenerator.ScopeDepth;
 
     internal ushort RegisterFrameStart = 0;
@@ -56,14 +56,14 @@ internal partial class GesVirtualMachine
     internal ushort StageLength { get; private set; }
 
     internal string? ErrorMessage { get; private set; }
-    internal GameEventScriptDiagnostic? ErrorDiagnostic { get; private set; }
+    internal GesDiagnostic? ErrorDiagnostic { get; private set; }
     internal string? ActiveHandlerName { get; private set; }
     internal GesLinkedProgram.OutboundMessageSignature[] OutboundMessageSignatures => ActiveProgram!.OutboundMessageSignatures;
     internal GameEventScriptBinaryBindEntry[] RecordConstructors => ActiveProgram!.RecordConstructors;
     internal GameEventScriptBinaryBindEntry[] ExtensionCallBinds => ActiveProgram!.ExtensionCallBinds;
     internal GameEventScriptBinaryBindEntry[] ExternalTypeBinds => ActiveProgram!.ExternalTypeBinds;
-    internal IGameEventScriptExtensionFunction?[] BoundExtensionCalls => ActiveProgram!.BoundExtensionCalls;
-    internal IGameEventScriptExternalTypeConstructor?[] BoundExternalTypeConstructors => ActiveProgram!.BoundExternalTypeConstructors;
+    internal IGesExtensionFunction?[] BoundExtensionCalls => ActiveProgram!.BoundExtensionCalls;
+    internal IGesExternalTypeConstructor?[] BoundExternalTypeConstructors => ActiveProgram!.BoundExternalTypeConstructors;
     internal GesExtensionCall ExtensionCall { get; }
     private GesExternalTypeConstructorCall? _externalTypeConstructorCall;
     internal GesExternalTypeConstructorCall ExternalTypeConstructorCall => _externalTypeConstructorCall ??= new GesExternalTypeConstructorCall();
@@ -92,20 +92,20 @@ internal partial class GesVirtualMachine
         if (State != StateValue.Ready) return false;
 
         if (!EnsureRegisterCapacity(required))
-            throw new GameEventScriptVmException(ErrorDiagnostic ?? new GameEventScriptDiagnostic(
-                GameEventScriptDiagnosticPhase.Runtime,
-                GameEventScriptDiagnosticCodes.RuntimeRegisterOverflow,
+            throw new GameEventScriptVmException(ErrorDiagnostic ?? new GesDiagnostic(
+                GesDiagnosticPhase.Runtime,
+                GesDiagnosticCodes.RuntimeRegisterOverflow,
                 ErrorMessage ?? "VM register capacity could not be prepared."));
         return true;
     }
 
 
-    internal bool PrepareStateForMessage(GesLinkedProgram program, GameEventScriptMessage message, bool callAsArguments, ushort entryAddress, string handlerName, GameEventScriptContext context)
+    internal bool PrepareStateForMessage(GesLinkedProgram program, GameEventScriptMessage message, bool callAsArguments, ushort entryAddress, string handlerName, GesContext context)
     {
-        if (State != Ready) return RaiseError(GameEventScriptDiagnosticCodes.RuntimeVmStateConflict, "State not ready to receive new messages.");
+        if (State != Ready) return RaiseError(GesDiagnosticCodes.RuntimeVmStateConflict, "State not ready to receive new messages.");
         ActiveProgram = program ?? throw new ArgumentNullException(nameof(program));
         ActiveHandlerName = handlerName;
-        if (entryAddress >= CodeSegmentSize) return RaiseError(GameEventScriptDiagnosticCodes.RuntimePreparationFailed, $"Illegal entry address {entryAddress} for message.");
+        if (entryAddress >= CodeSegmentSize) return RaiseError(GesDiagnosticCodes.RuntimePreparationFailed, $"Illegal entry address {entryAddress} for message.");
         InstructionPointer = entryAddress;
         RegisterFrameStart = 0;
         StageLength = 0;
@@ -134,30 +134,30 @@ internal partial class GesVirtualMachine
     internal bool IsRegisterTrue(ushort index) => RegisterValues[index + RegisterFrameStart].IsTrue;
     internal bool IsRegisterFalse(ushort index) => RegisterValues[index + RegisterFrameStart].IsFalse;
     internal bool IsRegisterNotTrue(ushort index) => RegisterValues[index + RegisterFrameStart].IsNotTrue;
-    internal bool IsRegisterNothing(ushort index) => RegisterValues[index + RegisterFrameStart].Kind is GameEventScriptBytecodeTypeKind.Nothing;
+    internal bool IsRegisterNothing(ushort index) => RegisterValues[index + RegisterFrameStart].Kind is GesBytecodeTypeKind.Nothing;
     internal ref readonly GesValue RegisterStaged(ushort index) => ref RegisterValues[index + RegisterFrameStart + RegisterFrameLength];
     internal void SetNothing(ushort index) => RegisterValues[index + RegisterFrameStart].SetNothing();
     internal void SetValue(ushort index, in GesValue value) => RegisterValues[index + RegisterFrameStart] = value;
     internal void SetBoolean(ushort index, bool value) => RegisterValues[index + RegisterFrameStart].SetBoolean(value);
-    internal void SetInteger(ushort index, long value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetInteger(value, unit);
-    internal void SetFloat(ushort index, double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetFloat(value, unit);
+    internal void SetInteger(ushort index, long value, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetInteger(value, unit);
+    internal void SetFloat(ushort index, double value, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetFloat(value, unit);
     internal void SetPercentage(ushort index, double ratio) => RegisterValues[index + RegisterFrameStart].SetPercentage(ratio);
     internal void SetTextPointer(ushort index, ushort pointer) => RegisterValues[index + RegisterFrameStart].SetTextConstant(ActiveProgram!.TextConstants[pointer]);
     internal void SetText(ushort index, string text) => RegisterValues[index + RegisterFrameStart].SetText(text);
     internal void SetTagPointer(ushort index, ushort pointer) => RegisterValues[index + RegisterFrameStart].SetTextConstant(ActiveProgram!.TextConstants[pointer], tag: true);
     internal void SetTag(ushort index, string tag) => RegisterValues[index + RegisterFrameStart].SetTag(tag);
-    internal void SetVector(ushort index, double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetVector(x, y, z, unit);
-    internal void SetVector(ushort index, GesValueVectorPoint vector, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetVector(vector, unit);
-    internal void SetPoint(ushort index, double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetPoint(x, y, z, unit);
-    internal void SetPoint(ushort index, GesValueVectorPoint point, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetPoint(point, unit);
+    internal void SetVector(ushort index, double x, double y, double z, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetVector(x, y, z, unit);
+    internal void SetVector(ushort index, GesValueVectorPoint vector, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetVector(vector, unit);
+    internal void SetPoint(ushort index, double x, double y, double z, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetPoint(x, y, z, unit);
+    internal void SetPoint(ushort index, GesValueVectorPoint point, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetPoint(point, unit);
     internal void SetDice(ushort index, int[] values) => RegisterValues[index + RegisterFrameStart].SetDice(values);
     internal void SetList(ushort index, GesValue[] list) => RegisterValues[index + RegisterFrameStart].SetList(list);
     internal void SetMap(ushort index, GesValueMap valueMap) => RegisterValues[index + RegisterFrameStart].SetMap(valueMap);
     internal void SetRecord(ushort index, string typeName, GesValueMap record) => RegisterValues[index + RegisterFrameStart].SetRecord(typeName, record);
-    internal void SetExternalType(ushort index, IGameEventScriptExternalValue value) => RegisterValues[index + RegisterFrameStart].SetExternalType(value);
+    internal void SetExternalType(ushort index, IGesExternalValue value) => RegisterValues[index + RegisterFrameStart].SetExternalType(value);
     internal void SetRange(ushort index, long from, long to, long step) => RegisterValues[index + RegisterFrameStart].SetRange(from, to, step);
     internal void SetRange(ushort index, double from, double to, double step) => RegisterValues[index + RegisterFrameStart].SetRange(from, to, step);
-    internal void SetMessageHandler(ushort index, GameEventScriptMessageSignature handler) => RegisterValues[index + RegisterFrameStart].SetMessageHandler(handler);
+    internal void SetMessageHandler(ushort index, GesMessageSignature handler) => RegisterValues[index + RegisterFrameStart].SetMessageHandler(handler);
     internal void SetMessage(ushort index, GameEventScriptMessage message) => RegisterValues[index + RegisterFrameStart].SetMessage(message);
     internal void SetSeries(ushort index, GesSeries series) => RegisterValues[index + RegisterFrameStart].SetSeries(series);
     internal void SetIterator(ushort index, IGesIterator value) => RegisterValues[index + RegisterFrameStart].SetIterator(value);
@@ -171,8 +171,8 @@ internal partial class GesVirtualMachine
     {
         State = Error;
         ErrorMessage = message;
-        ErrorDiagnostic = new GameEventScriptDiagnostic(
-            GameEventScriptDiagnosticPhase.Runtime,
+        ErrorDiagnostic = new GesDiagnostic(
+            GesDiagnosticPhase.Runtime,
             code,
             message,
             Symbol: symbol,
@@ -181,7 +181,7 @@ internal partial class GesVirtualMachine
             TechnicalDetails: technicalDetails);
         return false;
     }
-    internal bool RaiseError(GameEventScriptDiagnostic diagnostic, string? technicalDetails = null)
+    internal bool RaiseError(GesDiagnostic diagnostic, string? technicalDetails = null)
     {
         State = Error;
         ErrorMessage = diagnostic.Message;
@@ -222,7 +222,7 @@ internal partial class GesVirtualMachine
         var nextRegisterFrameLength = StageLength;
         if (!EnsureRegisterCapacity(nextRegisterFrameStart + nextRegisterFrameLength)) return false;
         if (CallStackPointer >= CallStack.Length)
-            return RaiseError(GameEventScriptDiagnosticCodes.RuntimeCallStackOverflow, "Call stack overflow.");
+            return RaiseError(GesDiagnosticCodes.RuntimeCallStackOverflow, "Call stack overflow.");
         CallStack[CallStackPointer++] = new CallFrame
         {
             InstructionPointer = InstructionPointer,
@@ -240,14 +240,14 @@ internal partial class GesVirtualMachine
     internal bool CallRecordConstructor(ushort recordId, ushort resultRegister)
     {
         if (recordId >= RecordConstructors.Length)
-            return RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidRecordConstructor, $"Record constructor '{recordId}' was not found.");
+            return RaiseError(GesDiagnosticCodes.RuntimeInvalidRecordConstructor, $"Record constructor '{recordId}' was not found.");
         var bind = RecordConstructors[recordId];
-        if (bind.Kind != GameEventScriptBinaryBindKind.Record)
-            return RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidRecordConstructor, $"Record constructor '{recordId}' has invalid bind kind.");
+        if (bind.Kind != GesBinaryBindKind.Record)
+            return RaiseError(GesDiagnosticCodes.RuntimeInvalidRecordConstructor, $"Record constructor '{recordId}' has invalid bind kind.");
         if (bind.EntryAddress >= CodeSegmentSize)
-            return RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidRecordConstructor, $"Record constructor '{recordId}' has an invalid entry address.");
+            return RaiseError(GesDiagnosticCodes.RuntimeInvalidRecordConstructor, $"Record constructor '{recordId}' has an invalid entry address.");
         if (StageLength != bind.ArgumentNames.Count)
-            return RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidRecordConstructor, $"Record constructor '{recordId}' has the wrong number of arguments.");
+            return RaiseError(GesDiagnosticCodes.RuntimeInvalidRecordConstructor, $"Record constructor '{recordId}' has the wrong number of arguments.");
         return CallAddress(bind.EntryAddress, resultRegister);
     }
     internal void ReturnVoid()
@@ -291,22 +291,22 @@ internal partial class GesVirtualMachine
         RegisterFrameLength = callFrame.RegisterFrameLength;
         StageLength = 0;
         if (!callFrame.ResultRegisterIndex.HasValue) return;
-        if (callFrame.NormalizeResultAsPredicate && result.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !result.IsNothing) result.SetNothing();
+        if (callFrame.NormalizeResultAsPredicate && result.Kind is not GesBytecodeTypeKind.Boolean && !result.IsNothing) result.SetNothing();
         RegisterValues[callFrame.ResultRegisterIndex.Value + RegisterFrameStart] = result;
         callFrame.LiteralContinuation?.Resume(result);
     }
-    internal GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer()
+    internal GesBytecodeInstruction FetchInstructionAndIncrementInstructionPointer()
     {
         if (InstructionPointer < CodeSegmentSize) return Program.Code[InstructionPointer++];
-        throw new GameEventScriptVmException(new GameEventScriptDiagnostic(
-            GameEventScriptDiagnosticPhase.Runtime,
-            GameEventScriptDiagnosticCodes.RuntimeInstructionPointerOutOfRange,
+        throw new GameEventScriptVmException(new GesDiagnostic(
+            GesDiagnosticPhase.Runtime,
+            GesDiagnosticCodes.RuntimeInstructionPointerOutOfRange,
             "Instruction pointer is outside the code segment.",
             ProgramName: ActiveProgram?.Program.ModuleName,
             HandlerName: ActiveHandlerName));
     }
     internal string FetchStringByPointer(ushort index) => StringPool[index];
-    internal GameEventScriptUInt16IndexList FetchUInt16SliceTableByPointer(ushort index) => Program.UInt16IndexLists.Resolve(index);
+    internal GesUInt16IndexList FetchUInt16SliceTableByPointer(ushort index) => Program.UInt16IndexLists.Resolve(index);
     internal void ModifyLocalRegisters(short registerCount)
     {
         switch (registerCount)
@@ -323,7 +323,7 @@ internal partial class GesVirtualMachine
                 var tempRegisterCount = -registerCount;
                 if (RegisterFrameLength < tempRegisterCount)
                 {
-                    RaiseError(GameEventScriptDiagnosticCodes.RuntimePreparationFailed,
+                    RaiseError(GesDiagnosticCodes.RuntimePreparationFailed,
                         "Inconsistent register frame length. Cannot remove more registers than are available.");
                 }
                 else
@@ -360,12 +360,12 @@ internal partial class GesVirtualMachine
         var stageRegisterIndex = AddStageRegister();
         if (stageRegisterIndex >= 0) RegisterValues[stageRegisterIndex].SetBoolean(value);
     }
-    internal void StageInteger(long value, GameEventScriptBytecodeInstructionUnit unit)
+    internal void StageInteger(long value, GesQuantityUnit unit)
     {
         var stageRegisterIndex = AddStageRegister();
         if (stageRegisterIndex >= 0) RegisterValues[stageRegisterIndex].SetInteger(value, unit);
     }
-    internal void StageFloat(double value, GameEventScriptBytecodeInstructionUnit unit)
+    internal void StageFloat(double value, GesQuantityUnit unit)
     {
         var stageRegisterIndex = AddStageRegister();
         if (stageRegisterIndex >= 0) RegisterValues[stageRegisterIndex].SetFloat(value, unit);
@@ -396,7 +396,7 @@ internal partial class GesVirtualMachine
     {
         if (requiredRegisters <= RegisterValues.Length) return true;
         if (requiredRegisters > MaxRegisterCount)
-            return RaiseError(GameEventScriptDiagnosticCodes.RuntimeRegisterOverflow,
+            return RaiseError(GesDiagnosticCodes.RuntimeRegisterOverflow,
                 $"Register overflow. Required {requiredRegisters} registers but maximum is {MaxRegisterCount}.");
         var newLength = RegisterValues.Length;
         do

@@ -17,7 +17,7 @@ namespace GameEventScript.Api;
 /// </summary>
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
-public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScriptMessageSignature>
+public sealed class GesMessageSignature : IEquatable<GesMessageSignature>
 {
     /// <summary>
     /// Represents the default name assigned to a parameter when no explicit label or name
@@ -27,19 +27,19 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
     public const string UnlabeledParameterName = "_";
 
     /// <summary>
-    /// Represents an empty and default instance of the <see cref="GameEventScriptMessageSignature"/> class.
+    /// Represents an empty and default instance of the <see cref="GesMessageSignature"/> class.
     /// This instance serves as a placeholder or null-equivalent for signatures where no specific definition is required.
     /// </summary>
-    public static readonly GameEventScriptMessageSignature Empty = new(string.Empty, []);
+    public static readonly GesMessageSignature Empty = new(string.Empty, []);
 
     /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptMessageSignature"/> representing a message signature
+    /// Creates a new instance of <see cref="GesMessageSignature"/> representing a message signature
     /// with the specified name and parameters.
     /// </summary>
     /// <param name="name">The name of the message. This must be a non-null and non-empty string.</param>
     /// <param name="parameters">An optional collection of parameter names associated with the message. Can be null if the message does not require parameters.</param>
-    /// <returns>A new <see cref="GameEventScriptMessageSignature"/> instance representing the provided message signature.</returns>
-    public static GameEventScriptMessageSignature Create(string name, IEnumerable<string>? parameters) => new(name, parameters);
+    /// <returns>A new <see cref="GesMessageSignature"/> instance representing the provided message signature.</returns>
+    public static GesMessageSignature Create(string name, IEnumerable<string>? parameters) => new(name, parameters);
 
     /// <summary>
     /// Normalizes the given message name by trimming whitespace and ensuring it is not null or empty.
@@ -123,7 +123,7 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
     public IReadOnlyList<string> Parameters { get; }
 
     /// <summary>
-    /// Represents the unique identifier of the message signature within the <see cref="GameEventScriptMessageSignature"/> class.
+    /// Represents the unique identifier of the message signature within the <see cref="GesMessageSignature"/> class.
     /// This identifier is generated based on the name and the parameters of the signature, ensuring distinctness for
     /// different combinations of message definitions.
     /// </summary>
@@ -131,7 +131,7 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
 
     /// <summary>
     /// Determines whether the specified <see cref="GameEventScriptMessage"/> matches the current
-    /// <see cref="GameEventScriptMessageSignature"/> based on the message name and, when enabled, the argument signature.
+    /// <see cref="GesMessageSignature"/> based on the message name and, when enabled, the argument signature.
     /// </summary>
     /// <param name="message">The <see cref="GameEventScriptMessage"/> to check against the current signature.
     /// The message must contain a name and a signature ID for comparison.</param>
@@ -139,12 +139,12 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
     public bool Matches(GameEventScriptMessage message) => string.Equals(Name, message.Name, StringComparison.Ordinal) && string.Equals(SignatureId, message.SignatureId, StringComparison.Ordinal);
 
     /// <inheritdoc />
-    public bool Equals(GameEventScriptMessageSignature? other)
+    public bool Equals(GesMessageSignature? other)
         => other is not null && string.Equals(SignatureId, other.SignatureId, StringComparison.Ordinal);
 
     /// <inheritdoc />
     public override bool Equals(object? obj)
-        => obj is GameEventScriptMessageSignature other && Equals(other);
+        => obj is GesMessageSignature other && Equals(other);
 
     /// <inheritdoc />
     public override int GetHashCode()
@@ -174,7 +174,7 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
         if (arguments.Count != Parameters.Count) return null;
         if (arguments.Count == 0)
         {
-            return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptMessageArguments.Empty, SignatureId);
+            return GameEventScriptMessage.CreatePrecomputed(Name, GesMessageArguments.Empty, SignatureId);
         }
         var values = new GesValue[arguments.Count];
         for (var index = 0; index < arguments.Count; index++)
@@ -182,7 +182,7 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
             values[index] = arguments[index];
         }
 
-        return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptMessageArguments.CreatePrecomputed(Parameters, values), SignatureId);
+        return GameEventScriptMessage.CreatePrecomputed(Name, GesMessageArguments.CreatePrecomputed(Parameters, values), SignatureId);
     }
 
     internal GameEventScriptMessage? CreateMessageFromOwnedValues(GesValue[] arguments)
@@ -191,16 +191,16 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
         if (arguments.Length != Parameters.Count) return null;
         if (arguments.Length == 0)
         {
-            return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptMessageArguments.Empty, SignatureId);
+            return GameEventScriptMessage.CreatePrecomputed(Name, GesMessageArguments.Empty, SignatureId);
         }
 
-        return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptMessageArguments.CreatePrecomputed(Parameters, arguments), SignatureId);
+        return GameEventScriptMessage.CreatePrecomputed(Name, GesMessageArguments.CreatePrecomputed(Parameters, arguments), SignatureId);
     }
 
-    private GameEventScriptMessageSignature(string name, IEnumerable<string>? parameters)
+    private GesMessageSignature(string name, IEnumerable<string>? parameters)
     {
         Name = NormalizeMessageName(name);
-        Parameters = GameEventScriptReadOnlyArray<string>.FromOwnedArray(NormalizeParameterNames(parameters));
+        Parameters = GesReadOnlyArray<string>.FromOwnedArray(NormalizeParameterNames(parameters));
         SignatureId = CreateSignatureId(Name, Parameters);
     }
 

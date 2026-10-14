@@ -131,7 +131,7 @@ not a claim of identical native spelling or a completed 1.0 release.
 
 | Reviewed workflow | C# | Swift | Decision |
 | --- | --- | --- | --- |
-| Compile source | `GameEventScriptBuilder.Create()` → `AddScript` → `Compile` | `GameEventScriptBuilder.create()` → `addScript` → `compile` | Keep source-in-memory builders, repeatable compilation and separate declarative external catalogs. |
+| Compile source | `GesProgramBuilder.Create()` → `AddScript` → `Compile` | `GesProgramBuilder.create()` → `addScript` → `compile` | Keep source-in-memory builders, repeatable compilation and separate declarative external catalogs. |
 | Configure hosts | `GameEventScriptHost.CreateBuilder()` → `With…` → `Build` | `GameEventScriptHost.createBuilder()` → `with…` → `build` | Same configuration responsibilities, including clock, limits, randomness and registries; every build creates an independent host. |
 | Start and dispatch | `Load`, `Subscribe`, `Start`, `Receive`, `ExecuteFrame`, `RunToCompletion` | Corresponding lower-camel-case operations | Preserve the explicit initial loading phase, structured startup/execution results, later-instance results and delayed-work reporting. |
 | Precompiled programs | Runtime Reader/Writer/Validator/Dumper | Runtime Reader/Writer/Validator/Dumper | No Compiler or Bridge dependency is required for codecs or execution. |

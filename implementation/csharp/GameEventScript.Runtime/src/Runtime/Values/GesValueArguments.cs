@@ -14,7 +14,7 @@ public readonly struct GesValueArguments
 {
     private readonly GesValue[]? _values;
     private readonly GesVirtualMachine? _vm;
-    private readonly GameEventScriptUInt16IndexList _registers;
+    private readonly GesUInt16IndexList _registers;
 
     /// <summary>
     /// Defines the empty value.
@@ -33,7 +33,7 @@ public readonly struct GesValueArguments
         Length = _values.Length;
     }
 
-    internal GesValueArguments(GesVirtualMachine vm, GameEventScriptUInt16IndexList registers)
+    internal GesValueArguments(GesVirtualMachine vm, GesUInt16IndexList registers)
     {
         _values = null;
         _vm = vm ?? throw new ArgumentNullException(nameof(vm));
@@ -72,14 +72,14 @@ public readonly struct GesValueArguments
     /// </summary>
     /// <param name="index">The index value.</param>
     /// <returns>The result of the operation.</returns>
-    public GameEventScriptBytecodeTypeKind KindAt(int index) => ValueAt(index).Kind;
+    public GesBytecodeTypeKind KindAt(int index) => ValueAt(index).Kind;
 
     /// <summary>
     /// Performs the unit at operation.
     /// </summary>
     /// <param name="index">The index value.</param>
     /// <returns>The result of the operation.</returns>
-    public GameEventScriptBytecodeInstructionUnit UnitAt(int index) => ValueAt(index).Unit;
+    public GesQuantityUnit UnitAt(int index) => ValueAt(index).Unit;
 
     /// <summary>
     /// Determines whether has value at.
@@ -112,9 +112,9 @@ public readonly struct GesValueArguments
         ref readonly var value = ref ValueAt(index);
         return value.Kind switch
         {
-            GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Dice => value.IntegerValue,
-            GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage => GameEventScriptNumber.ToIntegerSaturated(value.FloatValue),
-            GameEventScriptBytecodeTypeKind.Boolean => value.IsTrue ? 1 : 0,
+            GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Dice => value.IntegerValue,
+            GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage => GameEventScriptNumber.ToIntegerSaturated(value.FloatValue),
+            GesBytecodeTypeKind.Boolean => value.IsTrue ? 1 : 0,
             _ => GameEventScriptNumber.ToIntegerSaturated(value.AsNumeric)
         };
     }
@@ -129,9 +129,9 @@ public readonly struct GesValueArguments
         ref readonly var value = ref ValueAt(index);
         return value.Kind switch
         {
-            GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Dice => value.IntegerValue,
-            GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage => value.FloatValue,
-            GameEventScriptBytecodeTypeKind.Boolean => value.IsTrue ? 1d : 0d,
+            GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Dice => value.IntegerValue,
+            GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage => value.FloatValue,
+            GesBytecodeTypeKind.Boolean => value.IsTrue ? 1d : 0d,
             _ => value.AsNumeric
         };
     }
@@ -146,10 +146,10 @@ public readonly struct GesValueArguments
         ref readonly var value = ref ValueAt(index);
         return value.Kind switch
         {
-            GameEventScriptBytecodeTypeKind.Boolean => value.IsTrue,
-            GameEventScriptBytecodeTypeKind.Integer => value.IntegerValue != 0,
-            GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage => value.FloatValue != 0d,
-            GameEventScriptBytecodeTypeKind.Vector or GameEventScriptBytecodeTypeKind.Point when value.ObjectValue is GesValueVectorPoint vector => vector.X != 0d || vector.Y != 0d || vector.Z != 0d,
+            GesBytecodeTypeKind.Boolean => value.IsTrue,
+            GesBytecodeTypeKind.Integer => value.IntegerValue != 0,
+            GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage => value.FloatValue != 0d,
+            GesBytecodeTypeKind.Vector or GesBytecodeTypeKind.Point when value.ObjectValue is GesValueVectorPoint vector => vector.X != 0d || vector.Y != 0d || vector.Z != 0d,
             _ => value.IsTrue
         };
     }
@@ -162,7 +162,7 @@ public readonly struct GesValueArguments
     public string GetAsText(int index)
     {
         ref readonly var value = ref ValueAt(index);
-        return value.TextValue.Length > 0 || value.Kind is GameEventScriptBytecodeTypeKind.Text or GameEventScriptBytecodeTypeKind.Tag
+        return value.TextValue.Length > 0 || value.Kind is GesBytecodeTypeKind.Text or GesBytecodeTypeKind.Tag
             ? value.TextValue
             : value.ToText;
     }

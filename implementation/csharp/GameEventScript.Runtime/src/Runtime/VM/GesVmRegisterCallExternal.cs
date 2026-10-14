@@ -4,18 +4,18 @@
 using System;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterCallExternal
 {
-    internal static void GesVmCallExternal(this GesVirtualMachine state, ushort destinationRegister, ushort externalBindId, ushort argumentRegisterList, GameEventScriptContext context, bool isPredicate)
+    internal static void GesVmCallExternal(this GesVirtualMachine state, ushort destinationRegister, ushort externalBindId, ushort argumentRegisterList, GesContext context, bool isPredicate)
     {
-        if (externalBindId >= state.ExtensionCallBinds.Length || state.ExtensionCallBinds[externalBindId].Kind != GameEventScriptBinaryBindKind.ExtensionCall)
+        if (externalBindId >= state.ExtensionCallBinds.Length || state.ExtensionCallBinds[externalBindId].Kind != GesBinaryBindKind.ExtensionCall)
         {
             state.SetNothing(destinationRegister);
-            state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidExtensionBinding,
+            state.RaiseError(GesDiagnosticCodes.RuntimeInvalidExtensionBinding,
                 $"External extension bind id '{externalBindId}' was not found.");
             return;
         }
@@ -25,7 +25,7 @@ internal static class GesVmRegisterCallExternal
         if (argumentRegisters.Length != bind.ArgumentNames.Count)
         {
             state.SetNothing(destinationRegister);
-            state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidExtensionBinding,
+            state.RaiseError(GesDiagnosticCodes.RuntimeInvalidExtensionBinding,
                 "External extension call argument count does not match the reference shape.");
             return;
         }
@@ -33,7 +33,7 @@ internal static class GesVmRegisterCallExternal
         if (externalBindId >= state.BoundExtensionCalls.Length || state.BoundExtensionCalls[externalBindId] is not { } function)
         {
             state.SetNothing(destinationRegister);
-            state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidExtensionBinding,
+            state.RaiseError(GesDiagnosticCodes.RuntimeInvalidExtensionBinding,
                 $"External extension bind id '{externalBindId}' was not dynamically bound.");
             return;
         }
@@ -50,9 +50,9 @@ internal static class GesVmRegisterCallExternal
             {
                 function.Invoke(call);
             }
-            catch (GameEventScriptFatalRuntimeException)
+            catch (GesFatalRuntimeException)
             {
-                // A deliberate GameEventScriptExtensionFaultException, or another
+                // A deliberate GesExtensionFaultException, or another
                 // internal fatal signal, is reported as-is by the caller.
                 throw;
             }
@@ -60,7 +60,7 @@ internal static class GesVmRegisterCallExternal
             {
                 var name = state.FetchStringByPointer(bind.Name);
                 state.SetNothing(destinationRegister);
-                state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeExtensionCallFailed,
+                state.RaiseError(GesDiagnosticCodes.RuntimeExtensionCallFailed,
                     $"Extension '{name}' failed unexpectedly.", GameEventScriptRuntimeExceptionText.Describe(exception), symbol: name);
                 return;
             }
@@ -71,7 +71,7 @@ internal static class GesVmRegisterCallExternal
             }
 
             ref readonly var dst = ref state.Register(destinationRegister);
-            if (isPredicate && dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && dst.IsNotNothing)
+            if (isPredicate && dst.Kind is not GesBytecodeTypeKind.Boolean && dst.IsNotNothing)
             {
                 state.SetNothing(destinationRegister);
             }
@@ -82,10 +82,10 @@ internal static class GesVmRegisterCallExternal
             // Always restore the random scope, but retain a callback failure already reported above.
             if (state.State != GesVirtualMachine.StateValue.Error)
             {
-                if (randomFault == GameEventScriptRandomGenerator.ScopeBoundaryFault.BoundaryUnderflow)
-                    state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeRandomStackUnderflow, "Random scope pop crossed the active extension boundary.");
-                else if (randomFault == GameEventScriptRandomGenerator.ScopeBoundaryFault.Unbalanced)
-                    state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeRandomScopeImbalance, "Random scopes were not balanced when the extension returned.");
+                if (randomFault == GesRandomGenerator.ScopeBoundaryFault.BoundaryUnderflow)
+                    state.RaiseError(GesDiagnosticCodes.RuntimeRandomStackUnderflow, "Random scope pop crossed the active extension boundary.");
+                else if (randomFault == GesRandomGenerator.ScopeBoundaryFault.Unbalanced)
+                    state.RaiseError(GesDiagnosticCodes.RuntimeRandomScopeImbalance, "Random scopes were not balanced when the extension returned.");
             }
             call.EndCall();
         }

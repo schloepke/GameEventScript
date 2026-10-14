@@ -11,7 +11,7 @@ enum TextNumberCast {
     static func read<Output: GesValueOutput>(_ input: String, percentage: Bool = false, allowGrouping: Bool = true, percentageMagnitude: Bool = false, sink: Output) -> Output.Result? {
         var text = MessageNames.trim(input)
         guard !text.isEmpty else { return nil }
-        var unit: GesUnit = .none
+        var unit: GesQuantityUnit = .none
         let scaled = percentageMagnitude || text.hasSuffix("%")
         if text.hasSuffix("%") {
             text.removeLast()

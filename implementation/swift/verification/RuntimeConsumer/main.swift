@@ -4,10 +4,10 @@
 import Foundation
 import GameEventScriptRuntime
 
-final class Receiver: GameEventScriptNativeMessageHandler {
+final class Receiver: GesNativeMessageHandler {
     var value: GesValue = .nothing
 
-    func handle(_ message: GameEventScriptMessage, context: GameEventScriptContext) throws { value = message.arguments[0] }
+    func handle(_ message: GameEventScriptMessage, context: GesContext) throws { value = message.arguments[0] }
 }
 
 let receiver = Receiver()

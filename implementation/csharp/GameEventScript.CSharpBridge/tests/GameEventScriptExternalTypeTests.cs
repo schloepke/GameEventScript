@@ -30,7 +30,7 @@ public sealed class GameEventScriptExternalTypeTests
             }
             """;
 
-        var bytecode = GameEventScriptBuilder.Create()
+        var bytecode = GesProgramBuilder.Create()
             .WithExternalTypeCatalog(registry)
             .AddScript(script)
             .Compile();
@@ -52,13 +52,13 @@ public sealed class GameEventScriptExternalTypeTests
         var arguments = received[0].Arguments;
         Assert.IsTrue(arguments.GetAsBoolean("isAim"));
         Assert.AreEqual(90d, arguments.GetAsNumber("bearing"));
-        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitDegree, arguments.UnitAt(arguments.IndexOf("bearing")));
+        Assert.AreEqual(GesQuantityUnit.UnitDegree, arguments.UnitAt(arguments.IndexOf("bearing")));
         Assert.AreEqual(12d, arguments.GetAsNumber("range"));
-        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitMeter, arguments.UnitAt(arguments.IndexOf("range")));
+        Assert.AreEqual(GesQuantityUnit.UnitMeter, arguments.UnitAt(arguments.IndexOf("range")));
         Assert.AreEqual(4, arguments.GetAsInteger("steps"));
-        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitMeter, arguments.UnitAt(arguments.IndexOf("steps")));
+        Assert.AreEqual(GesQuantityUnit.UnitMeter, arguments.UnitAt(arguments.IndexOf("steps")));
         Assert.AreEqual(3d, arguments.GetAsNumber("directionZ"));
-        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitMeter, arguments.UnitAt(arguments.IndexOf("directionZ")));
+        Assert.AreEqual(GesQuantityUnit.UnitMeter, arguments.UnitAt(arguments.IndexOf("directionZ")));
         Assert.AreEqual(106, arguments.GetAsInteger("checksum"));
     }
 
@@ -78,7 +78,7 @@ public sealed class GameEventScriptExternalTypeTests
             }
             """;
 
-        var bytecode = GameEventScriptBuilder.Create()
+        var bytecode = GesProgramBuilder.Create()
             .WithExternalTypeCatalog(registry)
             .AddScript(script)
             .Compile();
@@ -97,11 +97,11 @@ public sealed class GameEventScriptExternalTypeTests
         var arguments = received[0].Arguments;
         Assert.AreEqual(106, arguments.GetAsInteger("score"));
         Assert.AreEqual(95d, arguments.GetAsNumber("lead"));
-        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitDegree, arguments.UnitAt(arguments.IndexOf("lead")));
+        Assert.AreEqual(GesQuantityUnit.UnitDegree, arguments.UnitAt(arguments.IndexOf("lead")));
         Assert.AreEqual(12d, arguments.GetAsNumber("distance"));
-        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitMeter, arguments.UnitAt(arguments.IndexOf("distance")));
+        Assert.AreEqual(GesQuantityUnit.UnitMeter, arguments.UnitAt(arguments.IndexOf("distance")));
         Assert.AreEqual(13, arguments.GetAsInteger("integerDistance"));
-        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitMeter, arguments.UnitAt(arguments.IndexOf("integerDistance")));
+        Assert.AreEqual(GesQuantityUnit.UnitMeter, arguments.UnitAt(arguments.IndexOf("integerDistance")));
     }
 
     [TestMethod]
@@ -109,7 +109,7 @@ public sealed class GameEventScriptExternalTypeTests
     {
         var registry = GameEventScriptCSharpExtensions.CreateRegistry(typeof(ValueExtensionFunctions));
 
-        Assert.IsNotNull(registry.Resolve(new GameEventScriptExtensionReference("value", "value", [GameEventScriptMessageSignature.UnlabeledParameterName])));
+        Assert.IsNotNull(registry.Resolve(new GesExtensionReference("value", "value", [GesMessageSignature.UnlabeledParameterName])));
     }
 
     [TestMethod]
@@ -123,7 +123,7 @@ public sealed class GameEventScriptExternalTypeTests
             .CreateBuilder(baseRegistry)
             .Add(typeof(LocalOverlayExtensionFunctions))
             .Build();
-        var reference = new GameEventScriptExtensionReference("overlay", "value", []);
+        var reference = new GesExtensionReference("overlay", "value", []);
 
         var baseFunction = baseRegistry.Resolve(reference);
         Assert.IsNotNull(baseFunction);
@@ -142,10 +142,10 @@ public sealed class GameEventScriptExternalTypeTests
     {
         [GesConstruct]
         public AimValue(
-            [GesParam("bearing", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree)] double bearing,
-            [GesParam("range", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)] double range,
-            [GesParam("steps", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)] int steps,
-            [GesParam("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)] GesValue direction)
+            [GesParam("bearing", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitDegree)] double bearing,
+            [GesParam("range", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitMeter)] double range,
+            [GesParam("steps", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitMeter)] int steps,
+            [GesParam("direction", GesBytecodeTypeKind.Vector, GesQuantityUnit.UnitMeter)] GesValue direction)
         {
             Bearing = bearing;
             Range = range;
@@ -154,38 +154,38 @@ public sealed class GameEventScriptExternalTypeTests
             Checksum = (int)(bearing + range + steps);
         }
 
-        [GesField("bearing", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree)]
+        [GesField("bearing", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitDegree)]
         public double Bearing { get; }
 
-        [GesField("range", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
+        [GesField("range", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitMeter)]
         public double Range { get; }
 
-        [GesField("steps", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
+        [GesField("steps", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitMeter)]
         public int Steps { get; }
 
-        [GesField("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
+        [GesField("direction", GesBytecodeTypeKind.Vector, GesQuantityUnit.UnitMeter)]
         public GesValue Direction { get; }
 
-        [GesField("checksum", GameEventScriptBytecodeTypeKind.Float)]
+        [GesField("checksum", GesBytecodeTypeKind.Float)]
         public int Checksum { get; }
     }
 
     [GesExtension("aim")]
     private static class AimExtensionFunctions
     {
-        [GesFunction("score", GameEventScriptBytecodeTypeKind.Float)]
+        [GesFunction("score", GesBytecodeTypeKind.Float)]
         public static long Score([GesParam("_", "Aim")] AimValue aim) => aim.Checksum;
 
-        [GesFunction("lead", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree)]
-        public static double Lead([GesParam("heading", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree)] double heading)
+        [GesFunction("lead", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitDegree)]
+        public static double Lead([GesParam("heading", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitDegree)] double heading)
             => heading + 5d;
 
         [GesFunction("distance")]
-        public static (double, GameEventScriptBytecodeInstructionUnit) Distance([GesParam("value", GameEventScriptBytecodeTypeKind.Float)] double value)
-            => (value, GameEventScriptBytecodeInstructionUnit.UnitMeter);
+        public static (double, GesQuantityUnit) Distance([GesParam("value", GesBytecodeTypeKind.Float)] double value)
+            => (value, GesQuantityUnit.UnitMeter);
 
-        [GesFunction("integerDistance", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
-        public static long IntegerDistance([GesParam("value", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)] long value)
+        [GesFunction("integerDistance", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitMeter)]
+        public static long IntegerDistance([GesParam("value", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitMeter)] long value)
             => value + 1;
     }
 
@@ -193,21 +193,21 @@ public sealed class GameEventScriptExternalTypeTests
     private static class ValueExtensionFunctions
     {
         [GesFunction("value")]
-        public static GesValue Value([GesParam("_", GameEventScriptBytecodeTypeKind.Float)] GesValue value)
+        public static GesValue Value([GesParam("_", GesBytecodeTypeKind.Float)] GesValue value)
             => value;
     }
 
     [GesExtension("overlay")]
     private static class BaseOverlayExtensionFunctions
     {
-        [GesFunction("value", GameEventScriptBytecodeTypeKind.Float)]
+        [GesFunction("value", GesBytecodeTypeKind.Float)]
         public static long Value() => 1;
     }
 
     [GesExtension("overlay")]
     private static class LocalOverlayExtensionFunctions
     {
-        [GesFunction("value", GameEventScriptBytecodeTypeKind.Float)]
+        [GesFunction("value", GesBytecodeTypeKind.Float)]
         public static long Value() => 2;
     }
 

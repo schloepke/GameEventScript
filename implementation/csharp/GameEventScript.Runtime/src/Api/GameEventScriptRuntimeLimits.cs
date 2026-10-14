@@ -9,11 +9,11 @@ namespace GameEventScript.Api;
 /// This ensures that scripts execute within predefined boundaries to prevent excessive resource usage
 /// or infinite execution.
 /// </summary>
-public sealed class GameEventScriptRuntimeLimits
+public sealed class GesRuntimeLimits
 {
     /// <summary>
     /// Provides the default configuration for runtime limits used in game event script execution.
-    /// This property returns a shared instance of <see cref="GameEventScriptRuntimeLimits"/>
+    /// This property returns a shared instance of <see cref="GesRuntimeLimits"/>
     /// with predefined limits for event processing, execution steps, and loop iterations.
     /// </summary>
     /// <remarks>
@@ -21,7 +21,7 @@ public sealed class GameEventScriptRuntimeLimits
     /// during the creation of a runtime context or host. This ensures that
     /// reasonable constraints are in place to avoid excessive resource usage during script execution.
     /// </remarks>
-    public static GameEventScriptRuntimeLimits Default { get; } = new();
+    public static GesRuntimeLimits Default { get; } = new();
 
     /// <summary>
     /// Specifies the maximum number of logical messages completed by a pump before

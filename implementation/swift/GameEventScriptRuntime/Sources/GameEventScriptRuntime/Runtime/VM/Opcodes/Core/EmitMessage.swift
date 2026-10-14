@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    func emitMessage(_ i: GameEventScriptBytecodeInstruction, _ c: GameEventScriptContext) throws {
+    func emitMessage(_ i: GesBytecodeInstruction, _ c: GesContext) throws {
         let valueMessage = [.emitMessageValue, .emitMessageValueWithTags, .publishMessageValue, .publishMessageValueWithTags].contains(i.opcode)
         var message: GameEventScriptMessage?
         if valueMessage {

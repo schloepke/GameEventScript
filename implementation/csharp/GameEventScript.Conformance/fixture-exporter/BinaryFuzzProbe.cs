@@ -8,9 +8,9 @@ internal static class BinaryFuzzProbe
 {
     internal static int Run(string input, string output)
     {
-        var options = new GameEventScriptProgramReadOptions
+        var options = new GesProgramReadOptions
         {
-            Limits = new GameEventScriptProgramReadLimits
+            Limits = new GesProgramReadLimits
             {
                 MaxFileBytes = 32768,
                 MaxSectionCount = 64,
@@ -31,7 +31,7 @@ internal static class BinaryFuzzProbe
             {
                 program = GameEventScriptProgramReader.Read(bytes, options);
             }
-            catch (GameEventScriptProgramFormatException error)
+            catch (GesProgramFormatException error)
             {
                 writer.WriteLine("reject:" + error.ErrorCode);
                 continue;

@@ -4,8 +4,8 @@
 using System;
 using System.Collections.Generic;
 using GameEventScript.Api;
-using static GameEventScript.Api.GameEventScriptBinaryBindKind;
-using static GameEventScript.Api.GameEventScriptBytecodeOpCode;
+using static GameEventScript.Api.GesBinaryBindKind;
+using static GameEventScript.Api.GesBytecodeOpCode;
 
 namespace GameEventScript.Runtime.VM;
 
@@ -80,9 +80,9 @@ internal readonly struct GesProgramResourceValidator
             var routine = _entryIndexes[bind.EntryAddress];
             if (bind.RequiredRegisterCount < Registers[routine] || bind.RequiredCallStackDepth < Depths[routine])
             {
-                throw new GameEventScriptProgramFormatException(GameEventScriptProgramFormatErrorCode.InvalidResourceMetadata,
+                throw new GesProgramFormatException(GesProgramFormatErrorCode.InvalidResourceMetadata,
                     $"Handler declares {bind.RequiredRegisterCount} registers and call depth {bind.RequiredCallStackDepth}, but its code requires {Registers[routine]} registers and call depth {Depths[routine]}.",
-                    sectionType: (ushort)GameEventScriptSectionType.Bindings, entryIndex: index);
+                    sectionType: (ushort)GesSectionType.Bindings, entryIndex: index);
             }
         }
     }
@@ -107,8 +107,8 @@ internal readonly struct GesProgramResourceValidator
             var end = routine + 1 < _entries.Length ? _entries[routine + 1] : _program.Code.Count;
             if (routine < 0 || (ulong)symbol.CodeStart + symbol.CodeLength > (ulong)end || symbol.RegisterId >= MaximumFrames[routine])
             {
-                throw new GameEventScriptProgramFormatException(GameEventScriptProgramFormatErrorCode.InvalidDebugSymbol,
-                    "Debug symbol is outside its routine frame or code range.", sectionType: (ushort)GameEventScriptSectionType.DebugSymbols, entryIndex: index);
+                throw new GesProgramFormatException(GesProgramFormatErrorCode.InvalidDebugSymbol,
+                    "Debug symbol is outside its routine frame or code range.", sectionType: (ushort)GesSectionType.DebugSymbols, entryIndex: index);
             }
         }
     }
@@ -174,12 +174,12 @@ internal readonly struct GesProgramResourceValidator
         Pending[count++] = address;
     }
 
-    private static bool IsStage(GameEventScriptBytecodeOpCode opcode)
+    private static bool IsStage(GesBytecodeOpCode opcode)
         => opcode is StageRegister or StageNothing or StageTrue or StageFalse or StageInteger or StageFloat or StageText or StageTag or StagePercentage;
 
-    private static bool ConsumesStage(GameEventScriptBytecodeOpCode opcode)
+    private static bool ConsumesStage(GesBytecodeOpCode opcode)
         => opcode is Call or CreateVector or CreatePoint or CreateList or CreateMap or CreateRecord or CreateExternalType;
 
     private static void Invalid(string message, int instructionIndex)
-        => throw new GameEventScriptProgramFormatException(GameEventScriptProgramFormatErrorCode.InvalidResourceMetadata, message, sectionType: (ushort)GameEventScriptSectionType.Code, entryIndex: instructionIndex);
+        => throw new GesProgramFormatException(GesProgramFormatErrorCode.InvalidResourceMetadata, message, sectionType: (ushort)GesSectionType.Code, entryIndex: instructionIndex);
 }

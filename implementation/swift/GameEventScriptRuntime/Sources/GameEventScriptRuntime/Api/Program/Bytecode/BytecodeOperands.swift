@@ -82,7 +82,7 @@ enum GesOperand: Int, Sendable {
     case externalReference
 }
 
-extension GameEventScriptBytecodeOpCode {
+extension GesBytecodeOpCode {
     var isResultSend: Bool { rawValue >= 0xDA && rawValue <= 0xDD }
 
     var operands: [GesOperand] {

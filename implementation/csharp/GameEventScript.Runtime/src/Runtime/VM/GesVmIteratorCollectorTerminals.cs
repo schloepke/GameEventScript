@@ -5,7 +5,7 @@ using System;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime.VM;
 
@@ -23,11 +23,11 @@ internal static class GesVmIteratorCollectorTerminals
                 if (dice.Length > 0) vm.SetInteger(destinationRegister, dice[0]);
                 else vm.SetNothing(destinationRegister);
                 return;
-            case GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
                 if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) vm.SetInteger(destinationRegister, range.From);
                 else vm.SetNothing(destinationRegister);
                 return;
-            case GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
                 if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) vm.SetFloat(destinationRegister, range.From);
                 else vm.SetNothing(destinationRegister);
                 return;
@@ -66,11 +66,11 @@ internal static class GesVmIteratorCollectorTerminals
                 if (dice.Length > 0) vm.SetInteger(destinationRegister, dice[^1]);
                 else vm.SetNothing(destinationRegister);
                 return;
-            case GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
                 if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step)) is { } lastInteger) vm.SetInteger(destinationRegister, lastInteger);
                 else vm.SetNothing(destinationRegister);
                 return;
-            case GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
                 if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step)) is { } lastFloat) vm.SetFloat(destinationRegister, lastFloat);
                 else vm.SetNothing(destinationRegister);
                 return;
@@ -109,11 +109,11 @@ internal static class GesVmIteratorCollectorTerminals
                 if (dice.Length == 1) vm.SetInteger(destinationRegister, dice[0]);
                 else vm.SetNothing(destinationRegister);
                 return;
-            case GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
                 if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) vm.SetInteger(destinationRegister, range.From);
                 else vm.SetNothing(destinationRegister);
                 return;
-            case GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
                 if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) vm.SetFloat(destinationRegister, range.From);
                 else vm.SetNothing(destinationRegister);
                 return;

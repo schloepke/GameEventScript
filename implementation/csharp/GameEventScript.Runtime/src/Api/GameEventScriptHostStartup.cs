@@ -9,25 +9,25 @@ namespace GameEventScript.Api;
 public sealed partial class GameEventScriptHost
 {
     private readonly MessageRingQueue _startupQueue = new(4);
-    private GameEventScriptStartResult? _startResult;
-    private GameEventScriptStartResult? _initializationFailure;
+    private GesStartResult? _startResult;
+    private GesStartResult? _initializationFailure;
     private int _initializationOpcodes, _initializationEmits, _initializationPublishes;
     private bool _starting;
     private bool _pumping;
     private bool _executingScript;
-    private GameEventScriptInstance? _initializationInstance;
-    private GameEventScriptDiagnostic? _initializationDiagnostic;
+    private GesProgramInstance? _initializationInstance;
+    private GesDiagnostic? _initializationDiagnostic;
     private List<DeferredPublication>? _initializationPublications;
     private List<DeferredPublication>? _startupPublications;
 
     /// <summary>Gets whether the initial load group started successfully. Pending messages and later instance failures do not change this value.</summary>
-    public bool IsReady => _startResult is { State: GameEventScriptStartState.Ready };
+    public bool IsReady => _startResult is { State: GesStartState.Ready };
 
     /// <summary>Initializes the complete initial load group in load order without dispatching ordinary messages.</summary>
     /// <returns>The shared startup outcome. Repeated calls return the original result without running initialization again.</returns>
     /// <remarks>Register all programs and native handlers before calling this method. A failed start is terminal; create a new host to retry.</remarks>
     /// <exception cref="InvalidOperationException">The host is already executing a callback or initialization.</exception>
-    public GameEventScriptStartResult Start()
+    public GesStartResult Start()
     {
         if (_pumping || _starting) throw new InvalidOperationException("A host cannot be started recursively.");
         if (_startResult is { } existing) return existing;
@@ -46,11 +46,11 @@ public sealed partial class GameEventScriptHost
                 processed += execution.ProcessedMessages;
                 emitted += execution.EmittedMessages;
                 published += execution.PublishedMessages;
-                if (execution.State is GameEventScriptExecutionState.RuntimeError or GameEventScriptExecutionState.RuntimeLimitReached)
+                if (execution.State is GesExecutionState.RuntimeError or GesExecutionState.RuntimeLimitReached)
                 {
-                    var state = execution.State == GameEventScriptExecutionState.RuntimeError
-                        ? GameEventScriptStartState.RuntimeError : GameEventScriptStartState.RuntimeLimitReached;
-                    var failure = new GameEventScriptStartResult(state, execution.Diagnostic ?? _initializationFailure?.Diagnostic ?? InitializationLimitDiagnostic(null), opcodes, processed, emitted, published);
+                    var state = execution.State == GesExecutionState.RuntimeError
+                        ? GesStartState.RuntimeError : GesStartState.RuntimeLimitReached;
+                    var failure = new GesStartResult(state, execution.Diagnostic ?? _initializationFailure?.Diagnostic ?? InitializationLimitDiagnostic(null), opcodes, processed, emitted, published);
                     _startResult = failure;
                     while (_instances is { } instance)
                     {
@@ -66,9 +66,9 @@ public sealed partial class GameEventScriptHost
                     return failure;
                 }
             }
-            var ready = new GameEventScriptStartResult(GameEventScriptStartState.Ready, null, opcodes, processed, emitted, published);
+            var ready = new GesStartResult(GesStartState.Ready, null, opcodes, processed, emitted, published);
             for (var instance = _instances; instance is not null; instance = instance.NextRegistration)
-                instance.StartResult ??= new(GameEventScriptStartState.Ready);
+                instance.StartResult ??= new(GesStartState.Ready);
             _startResult = ready;
             FlushPublications(_startupPublications);
             return ready;
@@ -84,7 +84,7 @@ public sealed partial class GameEventScriptHost
     private void CompleteInitialization()
     {
         if (_initializationInstance is not { } instance) return;
-        instance.StartResult = new(GameEventScriptStartState.Ready, null, _initializationOpcodes, 1, _initializationEmits, _initializationPublishes);
+        instance.StartResult = new(GesStartState.Ready, null, _initializationOpcodes, 1, _initializationEmits, _initializationPublishes);
         _initializationInstance = null;
         _initializationDiagnostic = null;
         if (_starting && _initializationPublications is { Count: > 0 } publications)
@@ -96,7 +96,7 @@ public sealed partial class GameEventScriptHost
         else FlushPublications(_initializationPublications);
     }
 
-    private void FailInitialization(GameEventScriptStartState state)
+    private void FailInitialization(GesStartState state)
     {
         if (_initializationInstance is not { } instance) return;
         instance.StartResult = new(state, _initializationDiagnostic ?? InitializationLimitDiagnostic(instance), _initializationOpcodes, 0, _initializationEmits, _initializationPublishes);
@@ -110,8 +110,8 @@ public sealed partial class GameEventScriptHost
         RemoveFailedDelayed();
     }
 
-    private static GameEventScriptDiagnostic InitializationLimitDiagnostic(GameEventScriptInstance? instance)
-        => new(GameEventScriptDiagnosticPhase.Runtime, GameEventScriptDiagnosticCodes.RuntimeInitializationLimitReached, "Initialization exceeded a runtime limit.",
+    private static GesDiagnostic InitializationLimitDiagnostic(GesProgramInstance? instance)
+        => new(GesDiagnosticPhase.Runtime, GesDiagnosticCodes.RuntimeInitializationLimitReached, "Initialization exceeded a runtime limit.",
             ProgramName: instance?.Program.ModuleName, HandlerName: "initialization()");
 
     private void FlushPublications(List<DeferredPublication>? publications)
@@ -126,8 +126,8 @@ public sealed partial class GameEventScriptHost
                 try { accepted = _publishSink!.Publish(publication.Message); }
                 catch (Exception exception)
                 {
-                    _observer?.RuntimeError(new GameEventScriptDiagnostic(GameEventScriptDiagnosticPhase.Runtime,
-                        GameEventScriptDiagnosticCodes.RuntimePublishSinkFailure, "Publish sink failed.",
+                    _observer?.RuntimeError(new GesDiagnostic(GesDiagnosticPhase.Runtime,
+                        GesDiagnosticCodes.RuntimePublishSinkFailure, "Publish sink failed.",
                         ProgramName: publication.Instance.Program.ModuleName, HandlerName: "initialization()",
                         TechnicalDetails: GameEventScriptRuntimeExceptionText.Describe(exception)));
                 }
@@ -137,5 +137,5 @@ public sealed partial class GameEventScriptHost
         publications.Clear();
     }
 
-    private readonly record struct DeferredPublication(GameEventScriptMessage Message, bool LocalAccepted, GameEventScriptInstance Instance);
+    private readonly record struct DeferredPublication(GameEventScriptMessage Message, bool LocalAccepted, GesProgramInstance Instance);
 }

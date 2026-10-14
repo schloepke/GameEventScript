@@ -13,9 +13,9 @@ public sealed class GameEventScriptExternalTypeImmutabilityTests
     public void CatalogEnumerationAndLookupRemainConsistent()
     {
         var original = Definition();
-        var catalog = new GameEventScriptExternalTypeCatalog([original]);
+        var catalog = new GesDeclaredExternalTypeCatalog([original]);
 
-        CollectionMutationProbe.ReplaceFirstIfWritable(catalog.Types, new GameEventScriptExternalTypeDefinition("Other", [], []));
+        CollectionMutationProbe.ReplaceFirstIfWritable(catalog.Types, new GesExternalTypeDefinition("Other", [], []));
 
         Assert.AreSame(original, catalog.Types.Single());
         Assert.AreSame(original, catalog.Resolve(":Sample"));
@@ -27,7 +27,7 @@ public sealed class GameEventScriptExternalTypeImmutabilityTests
     {
         var definition = Definition();
 
-        CollectionMutationProbe.ReplaceFirstIfWritable(definition.Fields, new GameEventScriptExternalTypeFieldDefinition("changed", "Text"));
+        CollectionMutationProbe.ReplaceFirstIfWritable(definition.Fields, new GesExternalTypeFieldDefinition("changed", "Text"));
 
         Assert.AreEqual("value", definition.Fields.Single().Name);
         Assert.AreEqual("Number", definition.Fields[0].TypeName);
@@ -40,7 +40,7 @@ public sealed class GameEventScriptExternalTypeImmutabilityTests
         var definition = Definition();
         var original = definition.Constructors[0];
 
-        CollectionMutationProbe.ReplaceFirstIfWritable(definition.Constructors, new GameEventScriptExternalTypeConstructorDefinition("Other", []));
+        CollectionMutationProbe.ReplaceFirstIfWritable(definition.Constructors, new GesExternalTypeConstructorDefinition("Other", []));
 
         Assert.AreSame(original, definition.Constructors.Single());
         Assert.AreEqual(definition.Name, definition.Constructors[0].TypeName);
@@ -52,26 +52,26 @@ public sealed class GameEventScriptExternalTypeImmutabilityTests
         var constructor = Definition().Constructors[0];
         var signature = constructor.SignatureId;
 
-        CollectionMutationProbe.ReplaceFirstIfWritable(constructor.Parameters, new GameEventScriptExternalTypeParameterDefinition("changed", "Text"));
+        CollectionMutationProbe.ReplaceFirstIfWritable(constructor.Parameters, new GesExternalTypeParameterDefinition("changed", "Text"));
 
         Assert.AreEqual("value", constructor.Parameters.Single().Name);
         Assert.AreEqual("Number", constructor.Parameters[0].TypeName);
-        Assert.AreEqual(signature, GameEventScriptExternalTypeConstructorReference.CreateSignatureId("Sample", constructor.Parameters.Select(parameter => parameter.Name).ToArray()));
+        Assert.AreEqual(signature, GesExternalTypeConstructorReference.CreateSignatureId("Sample", constructor.Parameters.Select(parameter => parameter.Name).ToArray()));
     }
 
     [TestMethod]
     public void ConstructionCopiesCallerOwnedSequences()
     {
-        var fields = new[] { new GameEventScriptExternalTypeFieldDefinition("value", "Number") };
-        var parameters = new[] { new GameEventScriptExternalTypeParameterDefinition("value", "Number") };
-        var constructors = new[] { new GameEventScriptExternalTypeConstructorDefinition("Sample", parameters) };
-        var definitions = new[] { new GameEventScriptExternalTypeDefinition("Sample", fields, constructors) };
-        var catalog = new GameEventScriptExternalTypeCatalog(definitions);
+        var fields = new[] { new GesExternalTypeFieldDefinition("value", "Number") };
+        var parameters = new[] { new GesExternalTypeParameterDefinition("value", "Number") };
+        var constructors = new[] { new GesExternalTypeConstructorDefinition("Sample", parameters) };
+        var definitions = new[] { new GesExternalTypeDefinition("Sample", fields, constructors) };
+        var catalog = new GesDeclaredExternalTypeCatalog(definitions);
 
-        fields[0] = new GameEventScriptExternalTypeFieldDefinition("changed", "Text");
-        parameters[0] = new GameEventScriptExternalTypeParameterDefinition("changed", "Text");
-        constructors[0] = new GameEventScriptExternalTypeConstructorDefinition("Other", []);
-        definitions[0] = new GameEventScriptExternalTypeDefinition("Other", [], []);
+        fields[0] = new GesExternalTypeFieldDefinition("changed", "Text");
+        parameters[0] = new GesExternalTypeParameterDefinition("changed", "Text");
+        constructors[0] = new GesExternalTypeConstructorDefinition("Other", []);
+        definitions[0] = new GesExternalTypeDefinition("Other", [], []);
 
         var retained = catalog.Types.Single();
         Assert.AreSame(retained, catalog.Resolve("Sample"));
@@ -89,21 +89,21 @@ public sealed class GameEventScriptExternalTypeImmutabilityTests
         var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(SampleValue));
         var original = registry.Types.Single();
 
-        CollectionMutationProbe.ReplaceFirstIfWritable(registry.Types, new GameEventScriptExternalTypeDefinition("Other", [], []));
+        CollectionMutationProbe.ReplaceFirstIfWritable(registry.Types, new GesExternalTypeDefinition("Other", [], []));
 
         Assert.AreSame(original, registry.Types.Single());
         Assert.AreSame(original, registry.Resolve("Sample"));
         Assert.IsNull(registry.Resolve("Other"));
-        var constructor = registry.Resolve(new GameEventScriptExternalTypeConstructorReference("Sample", ["value"]));
+        var constructor = registry.Resolve(new GesExternalTypeConstructorReference("Sample", ["value"]));
         Assert.IsNotNull(constructor);
         Assert.AreEqual(original.Constructors[0].SignatureId, constructor.Definition.SignatureId);
     }
 
-    private static GameEventScriptExternalTypeDefinition Definition()
+    private static GesExternalTypeDefinition Definition()
     {
-        var field = new GameEventScriptExternalTypeFieldDefinition("value", "Number");
-        var constructor = new GameEventScriptExternalTypeConstructorDefinition("Sample", [new GameEventScriptExternalTypeParameterDefinition("value", "Number")]);
-        return new GameEventScriptExternalTypeDefinition("Sample", [field], [constructor]);
+        var field = new GesExternalTypeFieldDefinition("value", "Number");
+        var constructor = new GesExternalTypeConstructorDefinition("Sample", [new GesExternalTypeParameterDefinition("value", "Number")]);
+        return new GesExternalTypeDefinition("Sample", [field], [constructor]);
     }
 
     [GesType("Sample")]

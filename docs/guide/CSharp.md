@@ -46,7 +46,7 @@ using GameEventScript.Api;
 using GameEventScript.CSharpBridge;
 using GameEventScript.Runtime.Values;
 
-var program = GameEventScriptBuilder.Create()
+var program = GesProgramBuilder.Create()
     .AddScript("""
         module tutorial.damage
         function damage(base, bonus) be base + bonus
@@ -64,16 +64,16 @@ var output = host.Subscribe("Done", ["value"], (message, _) =>
     Console.WriteLine(message.Arguments.GetAsInteger("value")));
 var instance = host.Load(program);
 
-if (host.Start().State != GameEventScriptStartState.Ready)
+if (host.Start().State != GesStartState.Ready)
     throw new InvalidOperationException("Host startup failed.");
 
 host.Receive(GameEventScriptMessage.Create("Calculate", [
-    new GameEventScriptMessageArgument("base", GesValue.GesInteger(30)),
-    new GameEventScriptMessageArgument("bonus", GesValue.GesInteger(12))
+    new GesMessageArgument("base", GesValue.GesInteger(30)),
+    new GesMessageArgument("bonus", GesValue.GesInteger(12))
 ]));
 
 var result = host.RunToCompletion();
-if (result.State != GameEventScriptExecutionState.Completed)
+if (result.State != GesExecutionState.Completed)
     throw new InvalidOperationException($"Execution stopped: {result.State}");
 
 instance.Detach();
@@ -130,7 +130,7 @@ File access remains in your application, not in the portable runtime.
 
 ## Handle failures and delayed work
 
-Compilation failures throw `GameEventScriptCompileException`, whose `Diagnostics`
+Compilation failures throw `GesCompileException`, whose `Diagnostics`
 contain stable codes and source locations. Check startup and execution results;
 do not assume a returned result means all handlers succeeded. Record structured
 diagnostics rather than parsing English messages.

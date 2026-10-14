@@ -20,7 +20,7 @@ internal sealed class GesSyntaxTreeModule
         IReadOnlyDictionary<string, ExpressionNode> constants,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> handlers,
-        IGameEventScriptExternalTypeCatalog? externalTypeDefinitions = null,
+        IGesExternalTypeCatalog? externalTypeDefinitions = null,
         IReadOnlyList<GesSourceDocument>? sources = null)
     {
         ModuleName = moduleName ?? throw new ArgumentNullException(nameof(moduleName));
@@ -38,7 +38,7 @@ internal sealed class GesSyntaxTreeModule
 
     internal IReadOnlyDictionary<string, TypeDefinitionNode> TypeDefinitions { get; }
 
-    internal IGameEventScriptExternalTypeCatalog ExternalTypeDefinitions { get; }
+    internal IGesExternalTypeCatalog ExternalTypeDefinitions { get; }
 
     internal IReadOnlyDictionary<string, GesCallableDefinition> Callables { get; }
 
@@ -49,7 +49,7 @@ internal sealed class GesSyntaxTreeModule
 
 internal sealed record GesSourceDocument(uint SourceId, string SourceName, string Text);
 
-internal sealed class GesCallableDefinition(string name, IReadOnlyList<ParameterNode> parameterList, ExpressionNode expression, GameEventScriptCallableKind kind, GameEventScriptSourceLocation? sourceRange = null)
+internal sealed class GesCallableDefinition(string name, IReadOnlyList<ParameterNode> parameterList, ExpressionNode expression, GameEventScriptCallableKind kind, GesSourceLocation? sourceRange = null)
 {
     public string Name { get; } = name ?? throw new ArgumentNullException(nameof(name));
 
@@ -65,7 +65,7 @@ internal sealed class GesCallableDefinition(string name, IReadOnlyList<Parameter
 
     public GameEventScriptCallableKind Kind { get; } = kind;
 
-    public GameEventScriptSourceLocation? SourceRange { get; } = sourceRange;
+    public GesSourceLocation? SourceRange { get; } = sourceRange;
 }
 
 internal static class GesCallableSignatures

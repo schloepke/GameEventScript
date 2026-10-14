@@ -4,7 +4,7 @@
 using System;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime.VM;
 
@@ -19,7 +19,7 @@ internal static class GesVmRegisterCompare
     {
         switch (a.Kind)
         {
-            case GameEventScriptBytecodeTypeKind.Boolean when b.Kind is GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean when b.Kind is GesBytecodeTypeKind.Boolean:
                 return a.IsTrue == b.IsTrue;
             case Integer when b.Kind is Integer:
                 return a.Unit == b.Unit && a.IntegerValue == b.IntegerValue;
@@ -41,7 +41,7 @@ internal static class GesVmRegisterCompare
                 return !b.HasUnit && GameEventScriptNumber.EqualsWithinUlps(a.IntegerValue, b.AsNumeric, GameEventScriptNumber.RuntimeEqualityUlps);
             case not Dice when a.IsNumeric && b.Kind is Dice && b.ObjectValue is int[] bl:
                 return !a.HasUnit && GameEventScriptNumber.EqualsWithinUlps(b.IntegerValue, a.AsNumeric, GameEventScriptNumber.RuntimeEqualityUlps);
-            case Handler when b.Kind is Handler && a.ObjectValue is GameEventScriptMessageSignature asig && b.ObjectValue is GameEventScriptMessageSignature bsig:
+            case Handler when b.Kind is Handler && a.ObjectValue is GesMessageSignature asig && b.ObjectValue is GesMessageSignature bsig:
                 return asig.Equals(bsig);
             case Message when b.Kind is Message && a.ObjectValue is GameEventScriptMessage amsg && b.ObjectValue is GameEventScriptMessage bmsg:
                 return amsg.Equals(bmsg);
@@ -54,9 +54,9 @@ internal static class GesVmRegisterCompare
                 }
 
                 return true;
-            case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is GesValueRangeInteger ar && b.ObjectValue is GesValueRangeInteger br:
+            case GesBytecodeTypeKind.Range when b.Kind is GesBytecodeTypeKind.Range && a.ObjectValue is GesValueRangeInteger ar && b.ObjectValue is GesValueRangeInteger br:
                 return ar.From == br.From && ar.To == br.To && ar.Step == br.Step;
-            case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is GesValueRangeFloat ar && b.ObjectValue is GesValueRangeFloat br:
+            case GesBytecodeTypeKind.Range when b.Kind is GesBytecodeTypeKind.Range && a.ObjectValue is GesValueRangeFloat ar && b.ObjectValue is GesValueRangeFloat br:
                 return GameEventScriptNumber.EqualsWithinUlps(ar.From, br.From, GameEventScriptNumber.RuntimeEqualityUlps) &&
                        GameEventScriptNumber.EqualsWithinUlps(ar.To, br.To, GameEventScriptNumber.RuntimeEqualityUlps) &&
                        GameEventScriptNumber.EqualsWithinUlps(ar.Step, br.Step, GameEventScriptNumber.RuntimeEqualityUlps);

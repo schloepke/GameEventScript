@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Portable quantity units. The names do not depend on the embedding platform.
-public enum GesUnit: String, Hashable {
+public enum GesQuantityUnit: String, Hashable {
     /// A unitless value.
     case none
     /// Distance measured in meters.
@@ -136,7 +136,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
     private var numericBits: UInt64 = 0
     private var object: AnyObject?
     private var valueKind: GesValueKind = .nothing
-    private var valueUnit: GesUnit = .none
+    private var valueUnit: GesQuantityUnit = .none
     private var flags: UInt8 = 0
 
     private static let trueFlag: UInt8 = 1
@@ -156,7 +156,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
     private init() {}
 
     /// Quantity unit carried by numeric or spatial storage.
-    public var unit: GesUnit { valueUnit }
+    public var unit: GesQuantityUnit { valueUnit }
 
     /// Exact storage kind, including integer versus binary64 distinctions.
     public var kind: GesValueKind { valueKind }
@@ -187,7 +187,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
     }
 
     @inline(__always)
-    mutating func setInteger(_ value: Int64, unit: GesUnit = .none) {
+    mutating func setInteger(_ value: Int64, unit: GesQuantityUnit = .none) {
         valueKind = .integer
         valueUnit = unit
         flags = Self.numericFlag | Self.hasValueFlag | (value != 0 ? Self.trueFlag : Self.falseFlag)
@@ -196,7 +196,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
     }
 
     @inline(__always)
-    mutating func setFloat(_ value: Double, unit: GesUnit = .none) {
+    mutating func setFloat(_ value: Double, unit: GesQuantityUnit = .none) {
         if value.isNaN {
             setNothing()
             return
@@ -225,7 +225,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         releaseObject()
     }
 
-    private mutating func setObject(_ kind: GesValueKind, _ value: AnyObject, unit: GesUnit = .none, hasValue: Bool = true, truth: Bool? = nil, numeric: Bool = false) {
+    private mutating func setObject(_ kind: GesValueKind, _ value: AnyObject, unit: GesQuantityUnit = .none, hasValue: Bool = true, truth: Bool? = nil, numeric: Bool = false) {
         valueKind = kind
         valueUnit = unit
         flags = Self.objectFlag | (hasValue ? Self.hasValueFlag : 0) | (truth == true ? Self.trueFlag : truth == false ? Self.falseFlag : 0) | (numeric ? Self.numericFlag : 0)
@@ -252,7 +252,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         setObject(.tag, GesValueObject(GesTextPayload(text: value, count: value.unicodeScalars.count)), truth: false)
     }
 
-    mutating func setVector(x: Double, y: Double = 0, z: Double = 0, unit: GesUnit = .none) {
+    mutating func setVector(x: Double, y: Double = 0, z: Double = 0, unit: GesQuantityUnit = .none) {
         guard !x.isNaN, !y.isNaN, !z.isNaN else {
             setNothing()
             return
@@ -260,7 +260,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         setObject(.vector, GesValueObject(GesSpatialValue(x: x, y: y, z: z)), unit: unit, truth: x != 0 || y != 0 || z != 0)
     }
 
-    mutating func setPoint(x: Double, y: Double = 0, z: Double = 0, unit: GesUnit = .none) {
+    mutating func setPoint(x: Double, y: Double = 0, z: Double = 0, unit: GesQuantityUnit = .none) {
         guard !x.isNaN, !y.isNaN, !z.isNaN else {
             setNothing()
             return
@@ -315,11 +315,11 @@ public struct GesValue: Hashable, CustomStringConvertible {
 
     mutating func setMessage(_ value: GameEventScriptMessage) { setObject(.message, value.storage) }
 
-    mutating func setHandler(_ value: GameEventScriptMessageSignature) { setObject(.handler, value.storage) }
+    mutating func setHandler(_ value: GesMessageSignature) { setObject(.handler, value.storage) }
 
     mutating func setSeries(_ value: GesSeriesValue) { setObject(.series, GesValueObject(value)) }
 
-    mutating func setExternal(_ value: any GameEventScriptExternalValue) {
+    mutating func setExternal(_ value: any GesExternalValue) {
         let storage = GesExternalStorage(value: value)
         setObject(.external, storage)
     }
@@ -342,7 +342,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
     var registerValue: GesValue { isRegisterData ? self : .nothing }
 
     @inline(__always)
-    var integerOperand: (value: Int64, unit: GesUnit)? { kind == .integer ? (Int64(bitPattern: numericBits), valueUnit) : nil }
+    var integerOperand: (value: Int64, unit: GesQuantityUnit)? { kind == .integer ? (Int64(bitPattern: numericBits), valueUnit) : nil }
 
     /// The canonical absence value.
     public static var nothing: Self { Self() }
@@ -355,14 +355,14 @@ public struct GesValue: Hashable, CustomStringConvertible {
     }
 
     /// Creates an exact signed Int64 value with an optional quantity unit.
-    public static func integer(_ value: Int64, unit: GesUnit = .none) -> Self {
+    public static func integer(_ value: Int64, unit: GesQuantityUnit = .none) -> Self {
         var result = Self()
         result.setInteger(value, unit: unit)
         return result
     }
 
     /// Creates a number, normalizing NaN, zero, and finite integral Int64 values.
-    public static func float(_ value: Double, unit: GesUnit = .none) -> Self {
+    public static func float(_ value: Double, unit: GesQuantityUnit = .none) -> Self {
         var result = Self()
         result.setFloat(value, unit: unit)
         return result
@@ -392,14 +392,14 @@ public struct GesValue: Hashable, CustomStringConvertible {
     }
 
     /// Creates a binary64 vector with optional unit. Any NaN coordinate yields Nothing; signed zeros are normalized.
-    public static func vector(x: Double, y: Double = 0, z: Double = 0, unit: GesUnit = .none) -> Self {
+    public static func vector(x: Double, y: Double = 0, z: Double = 0, unit: GesQuantityUnit = .none) -> Self {
         var result = Self()
         result.setVector(x: x, y: y, z: z, unit: unit)
         return result
     }
 
     /// Creates a binary64 point with optional unit. Any NaN coordinate yields Nothing; signed zeros are normalized.
-    public static func point(x: Double, y: Double = 0, z: Double = 0, unit: GesUnit = .none) -> Self {
+    public static func point(x: Double, y: Double = 0, z: Double = 0, unit: GesQuantityUnit = .none) -> Self {
         var result = Self()
         result.setPoint(x: x, y: y, z: z, unit: unit)
         return result
@@ -463,7 +463,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
     }
 
     /// Wraps a message signature as a Handler value.
-    public static func handler(_ value: GameEventScriptMessageSignature) -> Self {
+    public static func handler(_ value: GesMessageSignature) -> Self {
         var result = Self()
         result.setHandler(value)
         return result
@@ -477,14 +477,14 @@ public struct GesValue: Hashable, CustomStringConvertible {
     }
 
     /// Wraps a host-provided external value and captures its declared type definition.
-    public static func external(_ value: any GameEventScriptExternalValue) -> Self {
+    public static func external(_ value: any GesExternalValue) -> Self {
         var result = Self()
         result.setExternal(value)
         return result
     }
 
     /// Underlying host value for external storage, otherwise nil.
-    public var externalValue: (any GameEventScriptExternalValue)? { externalStorage?.value }
+    public var externalValue: (any GesExternalValue)? { externalStorage?.value }
 
     private var externalStorage: GesExternalStorage? { kind == .external ? unsafeDowncast(object!, to: GesExternalStorage.self) : nil }
 
@@ -581,7 +581,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
     /// Stored Message, or nil for other kinds.
     public var messageValue: GameEventScriptMessage? { kind == .message ? .init(storage: unsafeDowncast(object!, to: GesMessageStorage.self)) : nil }
     /// Stored Handler signature, or nil for other kinds.
-    public var signatureValue: GameEventScriptMessageSignature? { kind == .handler ? .init(storage: unsafeDowncast(object!, to: GesSignatureStorage.self)) : nil }
+    public var signatureValue: GesMessageSignature? { kind == .handler ? .init(storage: unsafeDowncast(object!, to: GesSignatureStorage.self)) : nil }
     /// Stored series descriptor, or nil for other kinds.
     public var seriesValue: GesSeriesValue? { kind == .series ? payload(GesSeriesValue.self) : nil }
 

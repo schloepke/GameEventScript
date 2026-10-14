@@ -5,7 +5,7 @@ using System;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime.VM;
 
@@ -21,12 +21,12 @@ internal static class GesVmRegisterCollectionOperators
             case Nothing:
                 vm.SetNothing(dst);
                 return;
-            case not (List or Dice or GameEventScriptBytecodeTypeKind.Range):
+            case not (List or Dice or GesBytecodeTypeKind.Range):
                 vm.SetBoolean(dst, false);
                 return;
         }
 
-        if (b.Kind is not (List or Dice or GameEventScriptBytecodeTypeKind.Range))
+        if (b.Kind is not (List or Dice or GesBytecodeTypeKind.Range))
         {
             vm.SetBoolean(dst, false);
             return;
@@ -49,10 +49,10 @@ internal static class GesVmRegisterCollectionOperators
             case Dice when a.ObjectValue is int[] value:
                 leftDice = value;
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeInteger value:
+            case GesBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeInteger value:
                 leftRange = value;
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeFloat value:
+            case GesBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeFloat value:
                 leftFloatRange = value;
                 break;
             default:
@@ -68,10 +68,10 @@ internal static class GesVmRegisterCollectionOperators
             case Dice when b.ObjectValue is int[] value:
                 rightDice = value;
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeInteger value:
+            case GesBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeInteger value:
                 rightRange = value;
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeFloat value:
+            case GesBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeFloat value:
                 rightFloatRange = value;
                 break;
             default:
@@ -134,12 +134,12 @@ internal static class GesVmRegisterCollectionOperators
             case Nothing:
                 vm.SetNothing(dst);
                 return;
-            case not (List or Dice or GameEventScriptBytecodeTypeKind.Range):
+            case not (List or Dice or GesBytecodeTypeKind.Range):
                 vm.SetBoolean(dst, false);
                 return;
         }
 
-        if (b.Kind is not (List or Dice or GameEventScriptBytecodeTypeKind.Range))
+        if (b.Kind is not (List or Dice or GesBytecodeTypeKind.Range))
         {
             vm.SetBoolean(dst, false);
             return;
@@ -162,10 +162,10 @@ internal static class GesVmRegisterCollectionOperators
             case Dice when a.ObjectValue is int[] value:
                 leftDice = value;
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeInteger value:
+            case GesBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeInteger value:
                 leftRange = value;
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeFloat value:
+            case GesBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeFloat value:
                 leftFloatRange = value;
                 break;
             default:
@@ -181,10 +181,10 @@ internal static class GesVmRegisterCollectionOperators
             case Dice when b.ObjectValue is int[] value:
                 rightDice = value;
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeInteger value:
+            case GesBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeInteger value:
                 rightRange = value;
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeFloat value:
+            case GesBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeFloat value:
                 rightFloatRange = value;
                 break;
             default:
@@ -278,7 +278,7 @@ internal static class GesVmRegisterCollectionOperators
                     if (iterator is IDisposable disposable) disposable.Dispose();
                 }
             case Dice when b.ObjectValue is int[] dice:
-                if (a.Kind is not Integer || a.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone)
+                if (a.Kind is not Integer || a.Unit is not GesQuantityUnit.UnitNone)
                 {
                     vm.SetBoolean(dst, false);
                     return;
@@ -327,8 +327,8 @@ internal static class GesVmRegisterCollectionOperators
                 value.SetFloat(triplet.Z, b.Unit);
                 vm.SetBoolean(dst, value.EqualsValue(a));
                 return;
-            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeInteger range:
-                if (a.Kind is not Integer || a.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone || range.Step == 0)
+            case GesBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeInteger range:
+                if (a.Kind is not Integer || a.Unit is not GesQuantityUnit.UnitNone || range.Step == 0)
                 {
                     vm.SetBoolean(dst, false);
                     return;
@@ -338,7 +338,7 @@ internal static class GesVmRegisterCollectionOperators
                     ? a.IntegerValue >= range.From && a.IntegerValue <= range.To && unchecked((ulong)a.IntegerValue - (ulong)range.From) % (ulong)range.Step == 0UL
                     : a.IntegerValue <= range.From && a.IntegerValue >= range.To && unchecked((ulong)range.From - (ulong)a.IntegerValue) % unchecked(0UL - (ulong)range.Step) == 0UL);
                 return;
-            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeFloat range:
                 vm.SetBoolean(dst, ContainsFloatRange(in a, range));
                 return;
             case Nothing:
@@ -555,7 +555,7 @@ internal static class GesVmRegisterCollectionOperators
 
                 vm.SetBoolean(dst, false);
                 return;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 var value = range.From;
@@ -581,7 +581,7 @@ internal static class GesVmRegisterCollectionOperators
                 vm.SetBoolean(dst, requireAll);
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 for (var i = 0L; i < length; i++)
@@ -696,7 +696,7 @@ internal static class GesVmRegisterCollectionOperators
                 vm.SetBoolean(dst, requireAll);
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeInteger range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 var value = range.From;
@@ -722,7 +722,7 @@ internal static class GesVmRegisterCollectionOperators
                 vm.SetBoolean(dst, requireAll);
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeFloat range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 for (var i = 0L; i < length; i++)
@@ -784,7 +784,7 @@ internal static class GesVmRegisterCollectionOperators
 
                 break;
             }
-            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeInteger range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 var value = range.From;
@@ -797,7 +797,7 @@ internal static class GesVmRegisterCollectionOperators
 
                 break;
             }
-            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeFloat range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 for (var i = 0L; i < length; i++)
@@ -1155,7 +1155,7 @@ internal static class GesVmRegisterCollectionOperators
                         for (var i = 0; i < leftList.Length; i++)
                         {
                             ref var item = ref leftList[i];
-                            if (item.Kind is not Integer || item.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone) continue;
+                            if (item.Kind is not Integer || item.Unit is not GesQuantityUnit.UnitNone) continue;
                             for (var j = 0; j < rightDice.Length; j++)
                             {
                                 if (removed[j] || item.IntegerValue != rightDice[j]) continue;
@@ -1171,7 +1171,7 @@ internal static class GesVmRegisterCollectionOperators
                         for (var i = 0; i < leftList.Length; i++)
                         {
                             ref var item = ref leftList[i];
-                            if (item.Kind is not Integer || item.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone) continue;
+                            if (item.Kind is not Integer || item.Unit is not GesQuantityUnit.UnitNone) continue;
                             for (var j = 0; j < rightDice.Length; j++)
                             {
                                 if (removed[j] || item.IntegerValue != rightDice[j]) continue;
@@ -1230,7 +1230,7 @@ internal static class GesVmRegisterCollectionOperators
                             for (var j = 0; j < rightList.Length; j++)
                             {
                                 ref var item = ref rightList[j];
-                                if (removed1[j] || item.Kind is not Integer || item.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone || item.IntegerValue != leftDice[i]) continue;
+                                if (removed1[j] || item.Kind is not Integer || item.Unit is not GesQuantityUnit.UnitNone || item.IntegerValue != leftDice[i]) continue;
                                 removed1[j] = true;
                                 resultLength1++;
                                 break;
@@ -1245,7 +1245,7 @@ internal static class GesVmRegisterCollectionOperators
                             for (var j = 0; j < rightList.Length; j++)
                             {
                                 ref var item = ref rightList[j];
-                                if (removed1[j] || item.Kind is not Integer || item.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone || item.IntegerValue != leftDice[i]) continue;
+                                if (removed1[j] || item.Kind is not Integer || item.Unit is not GesQuantityUnit.UnitNone || item.IntegerValue != leftDice[i]) continue;
                                 removed1[j] = true;
                                 list[index1++].SetInteger(leftDice[i]);
                                 break;
@@ -1343,7 +1343,7 @@ internal static class GesVmRegisterCollectionOperators
 
     private static bool ContainsFloatRange(in GesValue value, GesValueRangeFloat range)
     {
-        if (value.Kind is not (Integer or Float) || value.Unit != GameEventScriptBytecodeInstructionUnit.UnitNone) return false;
+        if (value.Kind is not (Integer or Float) || value.Unit != GesQuantityUnit.UnitNone) return false;
         var number = value.AsNumeric;
         // Converting a large Int64 to Binary64 must not make a different integer appear contained.
         if (value.Kind == Integer && (!GameEventScriptNumber.CanRepresentAsInteger(number) || (long)number != value.IntegerValue)) return false;
@@ -1383,7 +1383,7 @@ internal static class GesVmRegisterCollectionOperators
                     if (iterator is IDisposable disposable) disposable.Dispose();
                 }
             case Dice when b.ObjectValue is int[] dice:
-                if (a.Kind is not Integer || a.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone) return false;
+                if (a.Kind is not Integer || a.Unit is not GesQuantityUnit.UnitNone) return false;
                 for (var i = 0; i < dice.Length; i++)
                 {
                     if (dice[i] != a.IntegerValue) continue;
@@ -1403,12 +1403,12 @@ internal static class GesVmRegisterCollectionOperators
                 if (value.EqualsValue(a)) return true;
                 value.SetFloat(triplet.Z, b.Unit);
                 return value.EqualsValue(a);
-            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeInteger range:
-                if (a.Kind is not Integer || a.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone || range.Step == 0) return false;
+            case GesBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeInteger range:
+                if (a.Kind is not Integer || a.Unit is not GesQuantityUnit.UnitNone || range.Step == 0) return false;
                 return range.Step > 0
                     ? a.IntegerValue >= range.From && a.IntegerValue <= range.To && unchecked((ulong)a.IntegerValue - (ulong)range.From) % (ulong)range.Step == 0UL
                     : a.IntegerValue <= range.From && a.IntegerValue >= range.To && unchecked((ulong)range.From - (ulong)a.IntegerValue) % unchecked(0UL - (ulong)range.Step) == 0UL;
-            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeFloat range:
                 return ContainsFloatRange(in a, range);
             case Nothing:
                 return null;

@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesCasts {
-    static func cast(_ value: GesValue, _ kind: GameEventScriptBytecodeTypeKind, _ context: GameEventScriptContext) throws -> GesValue {
+    static func cast(_ value: GesValue, _ kind: GesBytecodeTypeKind, _ context: GesContext) throws -> GesValue {
         try cast(value, kind, context, sink: GesValueFactory())
     }
 
-    static func cast<Output: GesValueOutput>(_ value: GesValue, _ kind: GameEventScriptBytecodeTypeKind, _ context: GameEventScriptContext, sink: Output) throws -> Output.Result {
+    static func cast<Output: GesValueOutput>(_ value: GesValue, _ kind: GesBytecodeTypeKind, _ context: GesContext, sink: Output) throws -> Output.Result {
         switch kind {
         case .nothing: return sink.nothing
         case .boolean: return sink.boolean(value.asBoolean)

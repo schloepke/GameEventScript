@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// One immutable value and its normalized external message argument label.
-public struct GameEventScriptMessageArgument: Hashable {
+public struct GesMessageArgument: Hashable {
     /// The external label, or `_` for a positional argument.
     public let name: String
 
@@ -11,7 +11,7 @@ public struct GameEventScriptMessageArgument: Hashable {
 
     /// Normalizes the supplied label and retains the value using Swift value semantics.
     public init(name: String? = nil, value: GesValue) throws {
-        self.name = try GameEventScriptMessageSignature.normalizeParameterName(name)
+        self.name = try GesMessageSignature.normalizeParameterName(name)
         self.value = value
     }
 
@@ -31,17 +31,17 @@ public struct GameEventScriptMessageArgument: Hashable {
 }
 
 /// Immutable ordered message arguments. Named labels are unique; `_` may repeat.
-public struct GameEventScriptMessageArguments: Sequence, Hashable, CustomStringConvertible {
+public struct GesMessageArguments: Sequence, Hashable, CustomStringConvertible {
     /// An empty ordered argument collection.
-    public static var empty: Self { GameEventScriptMessageArguments(normalizedNames: [], values: []) }
+    public static var empty: Self { GesMessageArguments(normalizedNames: [], values: []) }
 
     private let names: [String]
     private let argumentValues: [GesValue]
 
     /// Copies an ordered argument list and validates named-label uniqueness.
-    public init(_ arguments: [GameEventScriptMessageArgument] = []) throws {
+    public init(_ arguments: [GesMessageArgument] = []) throws {
         var names = Set<String>()
-        for argument in arguments where argument.name != GameEventScriptMessageSignature.unlabeledParameterName { guard names.insert(argument.name).inserted else { throw GameEventScriptMessageError.duplicateArgumentName } }
+        for argument in arguments where argument.name != GesMessageSignature.unlabeledParameterName { guard names.insert(argument.name).inserted else { throw GesMessageError.duplicateArgumentName } }
         self.names = arguments.map(\.name)
         argumentValues = arguments.map(\.value)
     }
@@ -74,7 +74,7 @@ public struct GameEventScriptMessageArguments: Sequence, Hashable, CustomStringC
     public func kindAt(_ index: Int) -> GesValueKind { argumentValues[index].kind }
 
     /// The unit at an existing argument index.
-    public func unitAt(_ index: Int) -> GesUnit { argumentValues[index].unit }
+    public func unitAt(_ index: Int) -> GesQuantityUnit { argumentValues[index].unit }
 
     /// Whether the value at an existing index carries a value.
     public func hasValueAt(_ index: Int) -> Bool { argumentValues[index].hasValue }
@@ -111,8 +111,8 @@ public struct GameEventScriptMessageArguments: Sequence, Hashable, CustomStringC
 
     /// Finds a normalized named label. Positional `_` arguments cannot be found by name.
     public func indexOf(_ name: String?) throws -> Int? {
-        let normalized = try GameEventScriptMessageSignature.normalizeParameterName(name)
-        guard normalized != GameEventScriptMessageSignature.unlabeledParameterName else { return nil }
+        let normalized = try GesMessageSignature.normalizeParameterName(name)
+        guard normalized != GesMessageSignature.unlabeledParameterName else { return nil }
         return names.firstIndex { GesText.scalarEqual($0, normalized) }
     }
 
@@ -121,7 +121,7 @@ public struct GameEventScriptMessageArguments: Sequence, Hashable, CustomStringC
 
     /// Finds the value for a named label, throwing when the label is absent.
     public func value(named name: String) throws -> GesValue {
-        guard let index = try indexOf(name) else { throw GameEventScriptMessageError.missingArgument }
+        guard let index = try indexOf(name) else { throw GesMessageError.missingArgument }
         return argumentValues[index]
     }
 
@@ -130,15 +130,15 @@ public struct GameEventScriptMessageArguments: Sequence, Hashable, CustomStringC
 
     /// An independent cursor over an immutable argument snapshot.
     public struct Iterator: IteratorProtocol {
-        private let arguments: GameEventScriptMessageArguments
+        private let arguments: GesMessageArguments
         private var index = 0
 
-        init(_ arguments: GameEventScriptMessageArguments) { self.arguments = arguments }
+        init(_ arguments: GesMessageArguments) { self.arguments = arguments }
 
         /// Returns the next ordered pair, or nil after all arguments have been visited.
-        public mutating func next() -> GameEventScriptMessageArgument? {
+        public mutating func next() -> GesMessageArgument? {
             guard index < arguments.count else { return nil }
-            let pair = GameEventScriptMessageArgument(normalizedName: arguments.nameAt(index), value: arguments[index])
+            let pair = GesMessageArgument(normalizedName: arguments.nameAt(index), value: arguments[index])
             index += 1
             return pair
         }

@@ -3,31 +3,31 @@
 
 /// Autonomous serial event host. Pumping is synchronous; embedding code serializes access.
 public final class GameEventScriptHost {
-    private let random: GameEventScriptRandomGenerator
-    private let profiler: (any GameEventScriptProfiler)?
-    private let observer: (any GameEventScriptRuntimeObserver)?
-    private let extensions: (any GameEventScriptExtensionRegistry)?
-    private let externalTypes: (any GameEventScriptExternalTypeRegistry)?
-    private let limits: GameEventScriptRuntimeLimits
+    private let random: GesRandomGenerator
+    private let profiler: (any GesProfiler)?
+    private let observer: (any GesRuntimeObserver)?
+    private let extensions: (any GesExtensionRegistry)?
+    private let externalTypes: (any GesExternalTypeRegistry)?
+    private let limits: GesRuntimeLimits
     private let clock: GesClockSource?
     private var delayed: [GesDelayedMessage] = []
-    private let sink: (any GameEventScriptPublishSink)?
-    private lazy var context = GameEventScriptContext(host: self, random: random, limits: limits, extensions: extensions, observer: observer)
+    private let sink: (any GesPublishSink)?
+    private lazy var context = GesContext(host: self, random: random, limits: limits, extensions: extensions, observer: observer)
     private var exact: [String: [GesSubscriptionEntry]] = [:]
     private var byName: [String: [GesSubscriptionEntry]] = [:]
     private var native: [Int64: GesSubscriptionEntry] = [:]
-    private var instances: [Int64: GameEventScriptInstance] = [:]
+    private var instances: [Int64: GesProgramInstance] = [:]
     private var queue = GesMessageQueue()
     private var active: GesPendingMessage?
     private var activeHandler: GesSubscriptionEntry?
     private var scriptActive = false
     private var startupQueue = GesMessageQueue(capacity: 0)
-    private var startupResult: GameEventScriptStartResult?
-    private var initializationFailure: GameEventScriptStartResult?
+    private var startupResult: GesStartResult?
+    private var initializationFailure: GesStartResult?
     private var initializationOpcodes = 0, initializationEmits = 0, initializationPublishes = 0
     private var starting = false
     private var executingScript = false
-    private var initializationInstance: GameEventScriptInstance?
+    private var initializationInstance: GesProgramInstance?
     private var initializationDiagnostic: GesStartDiagnostic?
     private var initializationPublications: [GesDeferredPublication] = []
     private var startupPublications: [GesDeferredPublication] = []
@@ -35,7 +35,7 @@ public final class GameEventScriptHost {
     private var nextID: Int64 = 0
     private var nextOrder: Int64 = 0
     private var opcodes = 0, processed = 0, emitted = 0, published = 0
-    private var diagnostic: GameEventScriptDiagnostic?
+    private var diagnostic: GesDiagnostic?
     private var randomBoundary = 0
     private var pumping = false
     private var idleSinceMicroseconds: Int64?
@@ -43,19 +43,19 @@ public final class GameEventScriptHost {
     /// Creates a loading, single-caller host with a private random stream. Load initial Programs and call `start()`
     /// before receiving messages.
     ///
-    /// - Throws: `GameEventScriptAPIError.invalidArgument` if the random-scope limit is outside 0...65535.
+    /// - Throws: `GesApiError.invalidArgument` if the random-scope limit is outside 0...65535.
     public init(
         seed: Int64? = nil,
         sequence: [Double] = [],
-        limits: GameEventScriptRuntimeLimits = .init(),
-        observer: (any GameEventScriptRuntimeObserver)? = nil,
-        extensions: (any GameEventScriptExtensionRegistry)? = nil,
-        externalTypes: (any GameEventScriptExternalTypeRegistry)? = nil,
-        publishSink: (any GameEventScriptPublishSink)? = nil,
-        clock: (any GameEventScriptClock)? = nil,
-        profiler: (any GameEventScriptProfiler)? = nil
+        limits: GesRuntimeLimits = .init(),
+        observer: (any GesRuntimeObserver)? = nil,
+        extensions: (any GesExtensionRegistry)? = nil,
+        externalTypes: (any GesExternalTypeRegistry)? = nil,
+        publishSink: (any GesPublishSink)? = nil,
+        clock: (any GesClock)? = nil,
+        profiler: (any GesProfiler)? = nil
     ) throws {
-        guard (0...65535).contains(limits.maxRandomScopeDepth) else { throw GameEventScriptAPIError.invalidArgument("Invalid random scope depth") }
+        guard (0...65535).contains(limits.maxRandomScopeDepth) else { throw GesApiError.invalidArgument("Invalid random scope depth") }
         self.limits = limits
         self.observer = observer
         self.profiler = profiler
@@ -63,11 +63,11 @@ public final class GameEventScriptHost {
         self.externalTypes = externalTypes
         sink = publishSink
         self.clock = clock.map(GesClockSource.init)
-        random = GameEventScriptRandomGenerator(seed: seed ?? GameEventScriptRandomGenerator.entropySeed(), sequence: sequence, maxScopeDepth: limits.maxRandomScopeDepth)
+        random = GesRandomGenerator(seed: seed ?? GesRandomGenerator.entropySeed(), sequence: sequence, maxScopeDepth: limits.maxRandomScopeDepth)
     }
 
     /// Creates mutable configuration for independent hosts.
-    public static func createBuilder() -> GameEventScriptHostBuilder { .init() }
+    public static func createBuilder() -> GesHostBuilder { .init() }
 
     /// Whether the complete initial load group started successfully; later instance failures do not clear readiness.
     public private(set) var isReady = false
@@ -100,20 +100,20 @@ public final class GameEventScriptHost {
     /// - Returns: An idempotently detachable Program instance; loading itself does not pump messages.
     /// - Throws: A format or linking error for invalid/unresolvable Programs, or an API error during
     ///   initialization, script execution or after failed initial startup. Failed linking adds no registrations.
-    public func load(_ program: GameEventScriptProgram, priority: Int = 0) throws -> GameEventScriptInstance {
-        guard !starting, !executingScript, startupResult == nil || isReady else { throw GameEventScriptAPIError.invalidOperation("Loading is not allowed during initialization, script execution, or after a failed start") }
+    public func load(_ program: GameEventScriptProgram, priority: Int = 0) throws -> GesProgramInstance {
+        guard !starting, !executingScript, startupResult == nil || isReady else { throw GesApiError.invalidOperation("Loading is not allowed during initialization, script execution, or after a failed start") }
         try GameEventScriptProgramValidator.validate(program)
         let registers = min(65535, limits.maxRegisterValues > 0 ? limits.maxRegisterValues : 512)
         let depth = min(65535, max(0, limits.maxCallDepth))
-        if program.requiredRegisterCount > registers { throw GameEventScriptDynamicLinkError(code: "link.requiredRegisterCountExceeded", program: program.moduleName) }
-        if program.requiredCallStackDepth > depth { throw GameEventScriptDynamicLinkError(code: "link.requiredCallStackDepthExceeded", program: program.moduleName) }
+        if program.requiredRegisterCount > registers { throw GesDynamicLinkError(code: "link.requiredRegisterCountExceeded", program: program.moduleName) }
+        if program.requiredCallStackDepth > depth { throw GesDynamicLinkError(code: "link.requiredCallStackDepthExceeded", program: program.moduleName) }
         let linked = try GesLinkedProgram(program, extensions: extensions, types: externalTypes)
-        if queueFull && linked.handlers.contains(where: { $0.signature.name == "initialization" }) { throw GameEventScriptDynamicLinkError(code: "link.initializationQueueFull", program: program.moduleName) }
+        if queueFull && linked.handlers.contains(where: { $0.signature.name == "initialization" }) { throw GesDynamicLinkError(code: "link.initializationQueueFull", program: program.moduleName) }
         if vm == nil { vm = GesVirtualMachine(maxRegisters: registers, maxCallDepth: depth) }
         vm!.prepareCapacity(Int(program.requiredRegisterCount))
         let id = try registrationID()
         linked.profiler = profiler?.createProgramProfiler(program)
-        let instance = GameEventScriptInstance(host: self, id: id, linked: linked)
+        let instance = GesProgramInstance(host: self, id: id, linked: linked)
         var initialization: [GesSubscriptionEntry] = []
         for handler in linked.handlers {
             let entry = GesSubscriptionEntry(
@@ -146,7 +146,7 @@ public final class GameEventScriptHost {
     ///
     /// - Returns: An idempotently detachable subscription.
     /// - Throws: An API error for invalid tag names or exhausted registration IDs.
-    public func subscribe(_ signature: GameEventScriptMessageSignature, handler: any GameEventScriptNativeMessageHandler, matchingTags: [String] = [], withoutTags: [String] = [], priority: Int = 0) throws -> GameEventScriptSubscription {
+    public func subscribe(_ signature: GesMessageSignature, handler: any GesNativeMessageHandler, matchingTags: [String] = [], withoutTags: [String] = [], priority: Int = 0) throws -> GesSubscription {
         try subscribe(signature, handler: handler, matchingTags: matchingTags, withoutTags: withoutTags, priority: priority, matchArguments: true)
     }
 
@@ -154,19 +154,19 @@ public final class GameEventScriptHost {
     ///
     /// - Returns: An idempotently detachable subscription.
     /// - Throws: An API error for an empty name, invalid tags or exhausted registration IDs.
-    public func subscribeMessageName(_ name: String, handler: any GameEventScriptNativeMessageHandler, matchingTags: [String] = [], withoutTags: [String] = [], priority: Int = 0) throws -> GameEventScriptSubscription {
-        guard !MessageNames.trim(name).isEmpty else { throw GameEventScriptAPIError.invalidArgument("Empty message name") }
+    public func subscribeMessageName(_ name: String, handler: any GesNativeMessageHandler, matchingTags: [String] = [], withoutTags: [String] = [], priority: Int = 0) throws -> GesSubscription {
+        guard !MessageNames.trim(name).isEmpty else { throw GesApiError.invalidArgument("Empty message name") }
         return try subscribe(.init(name: name), handler: handler, matchingTags: matchingTags, withoutTags: withoutTags, priority: priority, matchArguments: false)
     }
 
-    private func subscribe(_ signature: GameEventScriptMessageSignature, handler: any GameEventScriptNativeMessageHandler, matchingTags: [String], withoutTags: [String], priority: Int, matchArguments: Bool) throws -> GameEventScriptSubscription {
+    private func subscribe(_ signature: GesMessageSignature, handler: any GesNativeMessageHandler, matchingTags: [String], withoutTags: [String], priority: Int, matchArguments: Bool) throws -> GesSubscription {
         let required = try GameEventScriptMessage(name: "Tags", tags: matchingTags).tags
         let excluded = try GameEventScriptMessage(name: "Tags", tags: withoutTags).tags
         let id = try registrationID()
         let entry = GesSubscriptionEntry(signature: signature, requiredTags: required, excludedTags: excluded, matchArguments: matchArguments, priority: priority, order: order(), id: id, native: handler, instance: nil, address: 0)
         register(entry)
         native[id] = entry
-        return GameEventScriptSubscription(host: self, id: id)
+        return GesSubscription(host: self, id: id)
     }
 
     /// Enqueues an external message using the current subscription snapshot. Returns false before readiness, for
@@ -181,10 +181,10 @@ public final class GameEventScriptHost {
     ///
     /// - Returns: Execution state, counters and an optional runtime diagnostic.
     /// - Throws: An API error for a nonpositive budget, a host that is not ready or reentrant execution.
-    public func executeFrame(opcodeBudget: Int) throws -> GameEventScriptExecutionResult {
-        guard opcodeBudget > 0 else { throw GameEventScriptAPIError.invalidArgument("Opcode budget must be positive") }
-        guard isReady else { throw GameEventScriptAPIError.invalidOperation("Start the host before processing messages") }
-        guard !pumping else { throw GameEventScriptAPIError.invalidOperation("A host cannot be pumped recursively") }
+    public func executeFrame(opcodeBudget: Int) throws -> GesExecutionResult {
+        guard opcodeBudget > 0 else { throw GesApiError.invalidArgument("Opcode budget must be positive") }
+        guard isReady else { throw GesApiError.invalidOperation("Start the host before processing messages") }
+        guard !pumping else { throw GesApiError.invalidOperation("A host cannot be pumped recursively") }
         pumping = true
         defer {
             pumping = false
@@ -193,7 +193,7 @@ public final class GameEventScriptHost {
         return try executeFrameCore(opcodeBudget: opcodeBudget)
     }
 
-    private func executeFrameCore(opcodeBudget: Int) throws -> GameEventScriptExecutionResult {
+    private func executeFrameCore(opcodeBudget: Int) throws -> GesExecutionResult {
         opcodes = 0
         processed = 0
         emitted = 0
@@ -256,7 +256,7 @@ public final class GameEventScriptHost {
             randomBoundary = context.beginHandler()
             observer?.dispatchStarted(active!.message, signatureID: next.dispatchSignature)
             if let handler = next.native {
-                do { try handler.handle(active!.message, context: context) } catch let fault as GameEventScriptExtensionFault { record(fault.diagnostic) } catch let fault as GesRuntimeError { record(fault.diagnostic) } catch {
+                do { try handler.handle(active!.message, context: context) } catch let fault as GesExtensionFaultError { record(fault.diagnostic) } catch let fault as GesRuntimeError { record(fault.diagnostic) } catch {
                     record(runtimeDiagnostic("runtime.nativeHandlerFailure", error: error))
                 }
                 completeHandler()
@@ -299,7 +299,7 @@ public final class GameEventScriptHost {
     ///
     /// - Returns: Execution state and counters for this call.
     /// - Throws: An API error for invalid lifecycle or reentrant execution.
-    public func runToCompletion() throws -> GameEventScriptExecutionResult {
+    public func runToCompletion() throws -> GesExecutionResult {
         var totalOpcodes = 0
         var totalProcessed = 0
         var totalEmitted = 0
@@ -391,14 +391,14 @@ public final class GameEventScriptHost {
         return accepted
     }
 
-    func publish(_ message: GameEventScriptMessage) -> GameEventScriptPublishResult {
+    func publish(_ message: GameEventScriptMessage) -> GesPublishResult {
         if initializationInstance != nil { initializationPublishes += 1 }
         let fault = random.hasActiveScopeFault
         let accepted = !fault && enqueue(message, initializationOutput: initializationInstance != nil)
         if let instance = initializationInstance {
             if fault {
                 published += 1
-                let result = GameEventScriptPublishResult(localAccepted: false, outboundAttempted: false, outboundAccepted: false)
+                let result = GesPublishResult(localAccepted: false, outboundAttempted: false, outboundAccepted: false)
                 observer?.messagePublished(message, result: result)
                 return result
             }
@@ -409,13 +409,13 @@ public final class GameEventScriptHost {
         let attempted = !fault && sink != nil
         var outbound = false
         if attempted { do { outbound = try sink!.publish(message) } catch { observer?.runtimeError(runtimeDiagnostic("runtime.publishSinkFailure", error: error)) } }
-        let result = GameEventScriptPublishResult(localAccepted: accepted, outboundAttempted: attempted, outboundAccepted: outbound)
+        let result = GesPublishResult(localAccepted: accepted, outboundAttempted: attempted, outboundAccepted: outbound)
         published += 1
         observer?.messagePublished(message, result: result)
         return result
     }
 
-    private func record(_ value: GameEventScriptDiagnostic) {
+    private func record(_ value: GesDiagnostic) {
         var value = value
         if value.programName == nil { value.programName = activeHandler?.instance?.program.moduleName }
         if value.handlerName == nil { value.handlerName = activeHandler?.dispatchSignature }
@@ -424,7 +424,7 @@ public final class GameEventScriptHost {
         observer?.runtimeError(value)
     }
 
-    private func runtimeDiagnostic(_ code: String, error: (any Error)? = nil) -> GameEventScriptDiagnostic {
+    private func runtimeDiagnostic(_ code: String, error: (any Error)? = nil) -> GesDiagnostic {
         .init(phase: .runtime, code: code, programName: activeHandler?.instance?.program.moduleName, handlerName: activeHandler?.dispatchSignature, technicalDetails: error.map { String(describing: $0) })
     }
 
@@ -465,7 +465,7 @@ public final class GameEventScriptHost {
     }
 
     private func registrationID() throws -> Int64 {
-        if nextID == .max { throw GameEventScriptAPIError.invalidOperation("Registration IDs exhausted") }
+        if nextID == .max { throw GesApiError.invalidOperation("Registration IDs exhausted") }
         nextID += 1
         return nextID
     }
@@ -532,8 +532,8 @@ extension GameEventScriptHost {
     ///
     /// - Returns: The retained group initialization result, including runtime failures and limit violations.
     /// - Throws: An API error if startup or pumping is reentered.
-    public func start() throws -> GameEventScriptStartResult {
-        guard !pumping, !starting else { throw GameEventScriptAPIError.invalidOperation("A host cannot be started recursively") }
+    public func start() throws -> GesStartResult {
+        guard !pumping, !starting else { throw GesApiError.invalidOperation("A host cannot be started recursively") }
         if let result = startupResult { return result }
         var totalOpcodes = 0
         var totalProcessed = 0
@@ -553,7 +553,7 @@ extension GameEventScriptHost {
             totalEmitted += execution.emittedMessages
             totalPublished += execution.publishedMessages
             if execution.state == .runtimeError || execution.state == .runtimeLimitReached {
-                let result = GameEventScriptStartResult(
+                let result = GesStartResult(
                     state: execution.state == .runtimeError ? .runtimeError : .runtimeLimitReached,
                     diagnostic: execution.diagnostic ?? initializationFailure?.diagnostic ?? initializationLimitDiagnostic(nil),
                     executedOpcodes: totalOpcodes,
@@ -581,7 +581,7 @@ extension GameEventScriptHost {
                 return result
             }
         }
-        let result = GameEventScriptStartResult(state: .ready, executedOpcodes: totalOpcodes, processedMessages: totalProcessed, emittedMessages: totalEmitted, publishedMessages: totalPublished)
+        let result = GesStartResult(state: .ready, executedOpcodes: totalOpcodes, processedMessages: totalProcessed, emittedMessages: totalEmitted, publishedMessages: totalPublished)
         for instance in instances.values where instance.startResult == nil { instance.startResult = .init(state: .ready) }
         startupResult = result
         isReady = true
@@ -601,7 +601,7 @@ extension GameEventScriptHost {
         if starting { startupPublications.append(contentsOf: publications) } else { flushPublications(publications) }
     }
 
-    private func failInitialization(_ state: GameEventScriptStartState) {
+    private func failInitialization(_ state: GesStartState) {
         guard let instance = initializationInstance else { return }
         instance.startResult = .init(
             state: state,
@@ -620,7 +620,7 @@ extension GameEventScriptHost {
         delayed.removeAll { ($0.owner?.initializationFailed ?? false) || !$0.publish && !$0.pending.hasRecipients }
     }
 
-    private func initializationLimitDiagnostic(_ instance: GameEventScriptInstance?) -> GameEventScriptDiagnostic {
+    private func initializationLimitDiagnostic(_ instance: GesProgramInstance?) -> GesDiagnostic {
         .init(phase: .runtime, code: "runtime.initializationLimitReached", programName: instance?.program.moduleName, handlerName: "initialization()")
     }
 

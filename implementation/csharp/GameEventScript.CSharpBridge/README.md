@@ -28,7 +28,7 @@ using GameEventScript.CSharpBridge;
 using GameEventScript.Runtime;
 
 var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(BotState));
-var program = GameEventScriptBuilder.Create()
+var program = GesProgramBuilder.Create()
     .WithExternalTypeCatalog(registry)
     .AddScript("""
         module tutorial.bindings
@@ -46,32 +46,32 @@ host.Subscribe("Done", ["energy", "nearWall"], (message, _) =>
     Console.WriteLine($"Energy: {message.Arguments.GetAsNumber("energy")}, near wall: {message.Arguments.GetAsBoolean("nearWall")}"));
 host.Load(program);
 
-if (host.Start().State != GameEventScriptStartState.Ready)
+if (host.Start().State != GesStartState.Ready)
     throw new InvalidOperationException("Host startup failed.");
 
 host.Receive(GameEventScriptMessage.Create("Start"));
 var result = host.RunToCompletion();
-if (result.State != GameEventScriptExecutionState.Completed)
+if (result.State != GesExecutionState.Completed)
     throw new InvalidOperationException($"Execution stopped: {result.State}");
 
 [GesType("BotState")]
 public sealed class BotState
 {
-    [GesField("energy", GameEventScriptBytecodeTypeKind.Float)]
+    [GesField("energy", GesBytecodeTypeKind.Float)]
     public double Energy { get; }
 
-    [GesField("distance", GameEventScriptBytecodeTypeKind.Float,
-        GameEventScriptBytecodeInstructionUnit.UnitMeter)]
+    [GesField("distance", GesBytecodeTypeKind.Float,
+        GesQuantityUnit.UnitMeter)]
     public double Distance { get; }
 
-    [GesField("isNearWall", GameEventScriptBytecodeTypeKind.Boolean)]
+    [GesField("isNearWall", GesBytecodeTypeKind.Boolean)]
     public bool IsNearWall => Distance < 5;
 
     [GesConstruct]
     public BotState(
-        [GesParam("energy", GameEventScriptBytecodeTypeKind.Float)] double energy,
-        [GesParam("distance", GameEventScriptBytecodeTypeKind.Float,
-            GameEventScriptBytecodeInstructionUnit.UnitMeter)] double distance)
+        [GesParam("energy", GesBytecodeTypeKind.Float)] double energy,
+        [GesParam("distance", GesBytecodeTypeKind.Float,
+            GesQuantityUnit.UnitMeter)] double distance)
     {
         Energy = energy;
         Distance = distance;
@@ -98,7 +98,7 @@ Unannotated members do not become script fields. A CLR constructor is not expose
 merely because it exists; omit `[GesConstruct]` when scripts should only observe
 native values. Constructor parameters must refer to exposed field names.
 
-The numeric enum spelling `GameEventScriptBytecodeTypeKind.Float` belongs to the
+The numeric enum spelling `GesBytecodeTypeKind.Float` belongs to the
 binding API. The script-visible type remains `:Number`; this does not introduce
 an `:Int`/`:Float` distinction in source code. For textual type declarations,
 attributes also accept a type-name string, such as `[GesField("energy", "Number")]`.
@@ -131,9 +131,9 @@ each script argument carries `[GesParam]`:
 [GesExtension("combat")]
 public static class CombatFunctions
 {
-    [GesFunction("bonus", GameEventScriptBytecodeTypeKind.Float)]
+    [GesFunction("bonus", GesBytecodeTypeKind.Float)]
     public static double Bonus(
-        [GesParam("energy", GameEventScriptBytecodeTypeKind.Float)] double energy)
+        [GesParam("energy", GesBytecodeTypeKind.Float)] double energy)
         => energy * 0.1;
 }
 ```
@@ -158,7 +158,7 @@ host, and let the embedding decide their transport.
 
 Conversion must preserve the declared value kind and unit. For example, checking
 only a numeric magnitude is insufficient when the application needs to distinguish
-seconds from meters. Declared `GameEventScriptExtensionFaultException` errors
+seconds from meters. Declared `GesExtensionFaultException` errors
 retain their diagnostic codes across callback boundaries; unexpected native
 exceptions become the corresponding runtime failure diagnostic.
 

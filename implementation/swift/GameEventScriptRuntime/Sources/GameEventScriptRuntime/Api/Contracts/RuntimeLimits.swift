@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Host safeguards for execution, queues, registers and generated collections.
-public struct GameEventScriptRuntimeLimits: Sendable {
+public struct GesRuntimeLimits: Sendable {
     /// Maximum processed logical messages per pump call; nonpositive disables this scheduling bound.
     public var maxProcessedEventsPerRun = 64
     /// Maximum pending queue size; nonpositive disables the queue bound.

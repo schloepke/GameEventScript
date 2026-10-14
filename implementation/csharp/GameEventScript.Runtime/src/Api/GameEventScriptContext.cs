@@ -10,12 +10,12 @@ namespace GameEventScript.Api;
 /// <summary>
 /// Host-owned context shared by native and GameEventScript handlers.
 /// </summary>
-public sealed class GameEventScriptContext
+public sealed class GesContext
 {
     private readonly GameEventScriptHost _host;
-    private readonly IGameEventScriptRuntimeObserver? _runtimeObserver;
+    private readonly IGesRuntimeObserver? _runtimeObserver;
 
-    internal GameEventScriptContext(GameEventScriptHost host, GameEventScriptRandomGenerator random, GameEventScriptRuntimeLimits runtimeLimits, IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptRuntimeObserver? runtimeObserver)
+    internal GesContext(GameEventScriptHost host, GesRandomGenerator random, GesRuntimeLimits runtimeLimits, IGesExtensionRegistry extensionRegistry, IGesRuntimeObserver? runtimeObserver)
     {
         _host = host ?? throw new ArgumentNullException(nameof(host));
         Random = random ?? throw new ArgumentNullException(nameof(random));
@@ -28,15 +28,15 @@ public sealed class GameEventScriptContext
     /// <summary>
     /// Gets the host-owned random generator currently scoped to this callback.
     /// </summary>
-    public GameEventScriptRandomGenerator Random { get; }
+    public GesRandomGenerator Random { get; }
     /// <summary>
     /// Gets the immutable runtime limits configured for the owning host.
     /// </summary>
-    public GameEventScriptRuntimeLimits RuntimeLimits { get; }
+    public GesRuntimeLimits RuntimeLimits { get; }
     /// <summary>
     /// Gets the extension registry used when programs are linked into the owning host.
     /// </summary>
-    public IGameEventScriptExtensionRegistry ExtensionRegistry { get; }
+    public IGesExtensionRegistry ExtensionRegistry { get; }
     /// <summary>
     /// Gets the number of logical messages waiting in the host queue.
     /// </summary>
@@ -73,7 +73,7 @@ public sealed class GameEventScriptContext
     /// <param name="message">The portable message name.</param>
     /// <param name="arguments">The ordered argument pairs; their order is part of the message signature.</param>
     /// <returns><see langword="true"/> when the local queue accepted the message; otherwise <see langword="false"/>.</returns>
-    public bool Emit(string message, IReadOnlyList<GameEventScriptMessageArgument> arguments) => Emit(GameEventScriptMessage.Create(message, arguments));
+    public bool Emit(string message, IReadOnlyList<GesMessageArgument> arguments) => Emit(GameEventScriptMessage.Create(message, arguments));
 
     /// <summary>
     /// Enqueues a message locally and then offers it to the configured synchronous publish sink.
@@ -82,7 +82,7 @@ public sealed class GameEventScriptContext
     /// <returns>The independent local and outbound acceptance result.</returns>
     /// <remarks>A sink rejection or exception never rolls back successful local enqueue.</remarks>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is <see langword="null"/>.</exception>
-    public GameEventScriptPublishResult Publish(GameEventScriptMessage message)
+    public GesPublishResult Publish(GameEventScriptMessage message)
     {
         _ = message ?? throw new ArgumentNullException(nameof(message));
         return string.IsNullOrWhiteSpace(message.Name) ? default : _host.PublishFromContext(message);
@@ -93,31 +93,31 @@ public sealed class GameEventScriptContext
     /// </summary>
     /// <param name="message">The portable message name.</param>
     /// <returns>The independent local and outbound acceptance result.</returns>
-    public GameEventScriptPublishResult Publish(string message) => Publish(GameEventScriptMessage.Create(message));
+    public GesPublishResult Publish(string message) => Publish(GameEventScriptMessage.Create(message));
     /// <summary>
     /// Creates and publishes a message with ordered arguments.
     /// </summary>
     /// <param name="message">The portable message name.</param>
     /// <param name="arguments">The ordered argument pairs; their order is part of the message signature.</param>
     /// <returns>The independent local and outbound acceptance result.</returns>
-    public GameEventScriptPublishResult Publish(string message, IReadOnlyList<GameEventScriptMessageArgument> arguments) => Publish(GameEventScriptMessage.Create(message, arguments));
+    public GesPublishResult Publish(string message, IReadOnlyList<GesMessageArgument> arguments) => Publish(GameEventScriptMessage.Create(message, arguments));
 
-    internal GameEventScriptRandomGenerator.ScopeBoundary BeginHandler()
+    internal GesRandomGenerator.ScopeBoundary BeginHandler()
     {
         RuntimeBudget.Reset();
         return Random.MarkScopeBoundary();
     }
 
-    internal GameEventScriptRandomGenerator.ScopeBoundary BeginRandomBoundary()
+    internal GesRandomGenerator.ScopeBoundary BeginRandomBoundary()
         => Random.MarkScopeBoundary();
 
-    internal GameEventScriptRandomGenerator.ScopeBoundaryFault EndRandomBoundary(GameEventScriptRandomGenerator.ScopeBoundary boundary)
+    internal GesRandomGenerator.ScopeBoundaryFault EndRandomBoundary(GesRandomGenerator.ScopeBoundary boundary)
     {
         var fault = Random.ReleaseScopeBoundary(boundary);
-        if (fault == GameEventScriptRandomGenerator.ScopeBoundaryFault.LimitExceeded)
+        if (fault == GesRandomGenerator.ScopeBoundaryFault.LimitExceeded)
         {
             RuntimeBudget.Exhaust(
-                nameof(GameEventScriptRuntimeLimits.MaxRandomScopeDepth),
+                nameof(GesRuntimeLimits.MaxRandomScopeDepth),
                 "Random scope depth exceeds the configured limit.",
                 RuntimeLimits.MaxRandomScopeDepth);
         }
@@ -126,7 +126,7 @@ public sealed class GameEventScriptContext
 
     internal void RecordRandomScopeLimitReached()
         => RuntimeBudget.Exhaust(
-            nameof(GameEventScriptRuntimeLimits.MaxRandomScopeDepth),
+            nameof(GesRuntimeLimits.MaxRandomScopeDepth),
             "Random scope depth exceeds the configured limit.",
             RuntimeLimits.MaxRandomScopeDepth);
 

@@ -9,8 +9,8 @@ import GameEventScriptSyntaxHighlighter
 // This adapter is invoked serially by one browser worker. No state is shared across workers.
 // Reactor exports run without the executable main; use lazy static initialization.
 private enum Highlighting {
-    static let highlighter = try! GameEventScriptSyntaxHighlighter()
-    static let assemblerHighlighter = try! GameEventScriptSyntaxHighlighter(language: .gesa)
+    static let highlighter = try! GesSyntaxHighlighter()
+    static let assemblerHighlighter = try! GesSyntaxHighlighter(language: .gesa)
 }
 
 nonisolated(unsafe) private var session: CardGame?
@@ -107,7 +107,7 @@ private func compileSource(_ count: Int32, dump: Bool, nameLength: Int = 0) -> I
     let sourceName = nameLength == 0 ? "rules.ges" : String(decoding: UnsafeBufferPointer(start: input, count: nameLength), as: UTF8.self)
     let source = String(decoding: UnsafeBufferPointer(start: input.advanced(by: nameLength), count: Int(count) - nameLength), as: UTF8.self)
     do {
-        let program = try GameEventScriptBuilder.create().withDebugInfo(dump ? .all : [.symbols, .sourceMap]).addScript(source, sourceName: sourceName).compile()
+        let program = try GesProgramBuilder.create().withDebugInfo(dump ? .all : [.symbols, .sourceMap]).addScript(source, sourceName: sourceName).compile()
         if dump {
             let text = GameEventScriptProgramDumper.dump(program)
             let highlighted = Highlighting.assemblerHighlighter.highlight(text)
@@ -115,7 +115,7 @@ private func compileSource(_ count: Int32, dump: Bool, nameLength: Int = 0) -> I
             return respond("{\"diagnostics\":[],\"dump\":\(jsonString(text)),\"complete\":\(highlighted.isComplete),\"spans\":[\(spans)]}")
         }
         return respond("{\"diagnostics\":[]}")
-    } catch let error as GameEventScriptCompileError {
+    } catch let error as GesCompileError {
         let diagnostics = error.diagnostics.map { diagnostic in
             let location = diagnostic.sourceLocation
             return

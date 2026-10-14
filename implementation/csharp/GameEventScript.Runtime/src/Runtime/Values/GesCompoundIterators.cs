@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 using GameEventScript.Api;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime.Values;
 

@@ -58,12 +58,12 @@ final class GesParser {
 
     func separators() { while current.kind == "newline" || current.syntaxText == ";" { advance() } }
 
-    func location(_ start: GesToken, _ end: GesToken? = nil) -> GameEventScriptSourceLocation {
+    func location(_ start: GesToken, _ end: GesToken? = nil) -> GesSourceLocation {
         let last = end ?? start
         return .init(sourceName: source.name, line: start.line, column: start.column, endLine: last.endLine, endColumn: last.endColumn, moduleName: module, sourceID: source.id)
     }
 
-    func failure(_ message: String, _ token: GesToken? = nil, code: String = "parse.syntax") -> GameEventScriptCompileError { compileError(.parse, code, message, location(token ?? current)) }
+    func failure(_ message: String, _ token: GesToken? = nil, code: String = "parse.syntax") -> GesCompileError { compileError(.parse, code, message, location(token ?? current)) }
 
     func identifier() throws -> String {
         guard current.kind == "word", !Self.reserved.contains(current.syntaxText) else { throw failure("Expected an identifier.") }

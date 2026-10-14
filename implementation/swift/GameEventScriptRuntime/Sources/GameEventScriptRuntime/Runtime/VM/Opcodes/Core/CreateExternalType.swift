@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesCallbacks {
-    static func constructor(_ i: GameEventScriptBytecodeInstruction, _ s: GesVirtualMachine, _ c: GameEventScriptContext) throws {
+    static func constructor(_ i: GesBytecodeInstruction, _ s: GesVirtualMachine, _ c: GesContext) throws {
         let destination = Int(i.word0)
         guard let binding = s.linked!.constructorBindings[i.word1], let constructor = s.linked!.constructors[i.word1] else {
             s.setNothing(destination)
@@ -30,7 +30,7 @@ extension GesCallbacks {
         let call = s.constructorCall
         call.begin(arguments: .init(arguments), typeName: constructor.definition.typeName)
         defer { call.end() }
-        do { try constructor.invoke(call) } catch let fault as GameEventScriptExtensionFault { throw fault } catch let fault as GesRuntimeError { throw fault } catch {
+        do { try constructor.invoke(call) } catch let fault as GesExtensionFaultError { throw fault } catch let fault as GesRuntimeError { throw fault } catch {
             s.setNothing(destination)
             s.fail("runtime.externalConstructorFailed", symbol: constructor.definition.typeName, error: error)
             return

@@ -12,9 +12,9 @@ protocol GesValueOutput {
 
     func boolean(_ value: Bool) -> Result
 
-    func integer(_ value: Int64, unit: GesUnit) -> Result
+    func integer(_ value: Int64, unit: GesQuantityUnit) -> Result
 
-    func float(_ value: Double, unit: GesUnit) -> Result
+    func float(_ value: Double, unit: GesQuantityUnit) -> Result
 
     func percentage(_ value: Double) -> Result
 
@@ -22,9 +22,9 @@ protocol GesValueOutput {
 
     func tag(_ value: String) throws -> Result
 
-    func vector(x: Double, y: Double, z: Double, unit: GesUnit) -> Result
+    func vector(x: Double, y: Double, z: Double, unit: GesQuantityUnit) -> Result
 
-    func point(x: Double, y: Double, z: Double, unit: GesUnit) -> Result
+    func point(x: Double, y: Double, z: Double, unit: GesQuantityUnit) -> Result
 
     func dice(_ value: [Int32]) -> Result
 
@@ -40,7 +40,7 @@ protocol GesValueOutput {
 
     func message(_ value: GameEventScriptMessage) -> Result
 
-    func handler(_ value: GameEventScriptMessageSignature) -> Result
+    func handler(_ value: GesMessageSignature) -> Result
 
     func series(_ value: GesSeriesValue) -> Result
 }

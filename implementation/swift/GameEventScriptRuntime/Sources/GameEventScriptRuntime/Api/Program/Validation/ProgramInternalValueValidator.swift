@@ -51,7 +51,7 @@ enum GesProgramInternalValueValidator {
         }
     }
 
-    private static func allows(_ i: GameEventScriptBytecodeInstruction, _ operand: GesOperand, _ kind: Int) -> Bool {
+    private static func allows(_ i: GesBytecodeInstruction, _ operand: GesOperand, _ kind: Int) -> Bool {
         let op = i.opcode
         if operand == .builderRegister {
             let expected: Int
@@ -75,7 +75,7 @@ enum GesProgramInternalValueValidator {
             ].contains(op)
     }
 
-    private static func internalKind(_ op: GameEventScriptBytecodeOpCode) -> Int {
+    private static func internalKind(_ op: GesBytecodeOpCode) -> Int {
         switch op {
         case .iteratorCreate, .iteratorCreateOrJump, .createRangeIterator, .createRangeIteratorWithStep, .createRangeIteratorShort: return 1
         case .listBuilderCreate: return 2

@@ -11,7 +11,7 @@ public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
     public var name: String { storage.name }
 
     /// The immutable arguments in signature order.
-    public var arguments: GameEventScriptMessageArguments { storage.arguments }
+    public var arguments: GesMessageArguments { storage.arguments }
 
     /// Unique normalized delivery tags in first-occurrence order.
     public var tags: [String] { storage.tags }
@@ -20,10 +20,10 @@ public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
     public var signatureId: String { storage.signatureId }
 
     /// Creates a concrete message, normalizing names and tags and validating argument labels.
-    public init(name: String, arguments: [GameEventScriptMessageArgument] = [], tags: [String] = []) throws {
-        let normalizedName = try GameEventScriptMessageSignature.normalizeMessageName(name)
-        guard !normalizedName.isEmpty else { throw GameEventScriptMessageError.emptyMessageName }
-        let orderedArguments = try GameEventScriptMessageArguments(arguments)
+    public init(name: String, arguments: [GesMessageArgument] = [], tags: [String] = []) throws {
+        let normalizedName = try GesMessageSignature.normalizeMessageName(name)
+        guard !normalizedName.isEmpty else { throw GesMessageError.emptyMessageName }
+        let orderedArguments = try GesMessageArguments(arguments)
         let signatureId = normalizedName + "(" + orderedArguments.signatureLabels.joined(separator: ",") + ")"
         self.init(normalizedName: normalizedName, arguments: orderedArguments, signatureId: signatureId, normalizedTags: try Self.normalizeTags(tags))
     }
@@ -57,7 +57,7 @@ public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
         for tag in tags { GesText.hashScalars(tag, into: &hasher) }
     }
 
-    init(normalizedName: String, arguments: GameEventScriptMessageArguments, signatureId: String, normalizedTags: [String]) {
+    init(normalizedName: String, arguments: GesMessageArguments, signatureId: String, normalizedTags: [String]) {
         storage = GesMessageStorage(name: normalizedName, arguments: arguments, tags: normalizedTags, signatureId: signatureId)
     }
 
@@ -65,7 +65,7 @@ public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
         var normalized = MessageNames.trim(tag)
         if normalized.hasPrefix("#") { normalized.removeFirst() }
         guard !normalized.isEmpty else { return "" }
-        guard GesText.isLowerName(normalized) else { throw GameEventScriptMessageError.invalidTag }
+        guard GesText.isLowerName(normalized) else { throw GesMessageError.invalidTag }
         return normalized
     }
 
@@ -83,11 +83,11 @@ public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
 // Shared immutable payload; wrapping a message/signature in a register never allocates.
 final class GesMessageStorage {
     let name: String
-    let arguments: GameEventScriptMessageArguments
+    let arguments: GesMessageArguments
     let tags: [String]
     let signatureId: String
 
-    init(name: String, arguments: GameEventScriptMessageArguments, tags: [String], signatureId: String) {
+    init(name: String, arguments: GesMessageArguments, tags: [String], signatureId: String) {
         self.name = name
         self.arguments = arguments
         self.tags = tags

@@ -4,8 +4,8 @@
 using GameEventScript.Api;
 using GameEventScript.Runtime;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
+using static GameEventScript.Api.GesQuantityUnit;
 
 namespace GameEventScript.Runtime.VM;
 
@@ -24,10 +24,10 @@ internal static class GesVmRegisterCustomType
 
     internal static void GesVmCreateExternalType(this GesVirtualMachine vm, ushort destinationRegister, ushort externalTypeConstructorBindId, ushort argumentNamesIndex)
     {
-        if (externalTypeConstructorBindId >= vm.ExternalTypeBinds.Length || vm.ExternalTypeBinds[externalTypeConstructorBindId].Kind != GameEventScriptBinaryBindKind.ExternalType)
+        if (externalTypeConstructorBindId >= vm.ExternalTypeBinds.Length || vm.ExternalTypeBinds[externalTypeConstructorBindId].Kind != GesBinaryBindKind.ExternalType)
         {
             vm.SetNothing(destinationRegister);
-            vm.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidExternalTypeBinding,
+            vm.RaiseError(GesDiagnosticCodes.RuntimeInvalidExternalTypeBinding,
                 $"External type constructor bind id '{externalTypeConstructorBindId}' was not found.");
             return;
         }
@@ -44,7 +44,7 @@ internal static class GesVmRegisterCustomType
         for (var labelIndex = 0; labelIndex < labels.Length; labelIndex++)
         {
             labels[labelIndex] = vm.FetchStringByPointer(argumentNames[labelIndex]);
-            if (!string.Equals(labels[labelIndex], GameEventScriptMessageSignature.UnlabeledParameterName, System.StringComparison.Ordinal)) continue;
+            if (!string.Equals(labels[labelIndex], GesMessageSignature.UnlabeledParameterName, System.StringComparison.Ordinal)) continue;
             vm.SetNothing(destinationRegister);
             return;
         }
@@ -52,7 +52,7 @@ internal static class GesVmRegisterCustomType
         if (externalTypeConstructorBindId >= vm.BoundExternalTypeConstructors.Length || vm.BoundExternalTypeConstructors[externalTypeConstructorBindId] is not { } constructor)
         {
             vm.SetNothing(destinationRegister);
-            vm.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidExternalTypeBinding,
+            vm.RaiseError(GesDiagnosticCodes.RuntimeInvalidExternalTypeBinding,
                 $"External type constructor bind id '{externalTypeConstructorBindId}' was not dynamically bound.");
             return;
         }
@@ -83,7 +83,7 @@ internal static class GesVmRegisterCustomType
 
             var source = vm.RegisterStaged((ushort)argumentIndex);
             GesValue converted;
-            if (GameEventScriptBytecodeInstructionUnits.ParseSourceQuantityTypeName(parameter.TypeName) is { } quantityUnit)
+            if (GesQuantityUnits.ParseSourceQuantityTypeName(parameter.TypeName) is { } quantityUnit)
             {
                 converted = GesVmRegisterTypeCastCheck.GesVmCastUnit(in source, quantityUnit, vm);
                 if (converted.IsNothing)
@@ -176,16 +176,16 @@ internal static class GesVmRegisterCustomType
             {
                 constructor.Invoke(call);
             }
-            catch (GameEventScriptFatalRuntimeException)
+            catch (GesFatalRuntimeException)
             {
-                // A deliberate GameEventScriptExtensionFaultException, or another
+                // A deliberate GesExtensionFaultException, or another
                 // internal fatal signal, is reported as-is by the caller.
                 throw;
             }
             catch (System.Exception exception)
             {
                 vm.SetNothing(destinationRegister);
-                vm.RaiseError(GameEventScriptDiagnosticCodes.RuntimeExternalConstructorFailed,
+                vm.RaiseError(GesDiagnosticCodes.RuntimeExternalConstructorFailed,
                     $"External type '{constructor.Definition.TypeName}' constructor failed unexpectedly.",
                     GameEventScriptRuntimeExceptionText.Describe(exception), symbol: constructor.Definition.TypeName);
                 return;

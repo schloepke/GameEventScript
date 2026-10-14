@@ -4,7 +4,7 @@
 using GameEventScript.Api;
 using GameEventScript.Runtime;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime.VM;
 
@@ -40,7 +40,7 @@ internal static class GesVmRegisterRange
             vm.SetNothing(destinationRegister);
         }
     }
-    internal static void GesVmCreateRangeIterator(this GesVirtualMachine vm, ushort destinationRegister, in GesValue from, in GesValue to, GameEventScriptContext context)
+    internal static void GesVmCreateRangeIterator(this GesVirtualMachine vm, ushort destinationRegister, in GesValue from, in GesValue to, GesContext context)
     {
         if (from.Kind is Integer && to.Kind is Integer)
         {
@@ -67,7 +67,7 @@ internal static class GesVmRegisterRange
             vm.SetNothing(destinationRegister);
         }
     }
-    internal static void GesVmCreateRangeIterator(this GesVirtualMachine vm, ushort destinationRegister, in GesValue from, in GesValue to, in GesValue step, GameEventScriptContext context)
+    internal static void GesVmCreateRangeIterator(this GesVirtualMachine vm, ushort destinationRegister, in GesValue from, in GesValue to, in GesValue step, GesContext context)
     {
         if (from.Kind is Integer && to.Kind is Integer && step.Kind is Integer)
         {

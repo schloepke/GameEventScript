@@ -10,7 +10,7 @@
 #endif
 
 /// Monotonic time source borrowed by a serial host. Values must be nonnegative and never decrease.
-public protocol GameEventScriptClock {
+public protocol GesClock {
     /// Elapsed whole microseconds from a stable clock-local origin. Reading does not pump the host.
     var elapsedMicroseconds: Int64 { get }
 }
@@ -18,9 +18,9 @@ public protocol GameEventScriptClock {
 // Keep the full protocol existential out of every Host. Only explicitly injected
 // clocks need this box; default hosts read the system clock without allocating it.
 final class GesClockSource {
-    let value: any GameEventScriptClock
+    let value: any GesClock
 
-    init(_ value: any GameEventScriptClock) { self.value = value }
+    init(_ value: any GesClock) { self.value = value }
 }
 
 enum GesSystemClock {

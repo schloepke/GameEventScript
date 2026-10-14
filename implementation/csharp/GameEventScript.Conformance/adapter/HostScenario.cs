@@ -7,8 +7,8 @@ using GameEventScript.Api;
 
 internal sealed class HostScenario(GameEventScriptHost host, IReadOnlyDictionary<string, GameEventScriptProgram> programs, JsonElement request, VirtualClock clock)
 {
-    private readonly Dictionary<string, GameEventScriptInstance> _instances = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, GameEventScriptSubscription> _subscriptions = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, GesProgramInstance> _instances = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, GesSubscription> _subscriptions = new(StringComparer.Ordinal);
     internal List<object> Actions { get; } = new();
 
     internal void Configure()
@@ -40,7 +40,7 @@ internal sealed class HostScenario(GameEventScriptHost host, IReadOnlyDictionary
                 };
                 results.Add(new { result = (bool?)result, error = (object?)null });
             }
-            catch (GameEventScriptDynamicLinkException exception)
+            catch (GesDynamicLinkException exception)
             {
                 results.Add(new { result = (bool?)null, error = CompilerObservations.Diagnostic(exception.Diagnostic) });
             }
@@ -53,9 +53,9 @@ internal sealed class HostScenario(GameEventScriptHost host, IReadOnlyDictionary
         observation["idleDurationMicroseconds"] = host.IdleDurationMicroseconds?.ToString(CultureInfo.InvariantCulture) ?? "none";
         observation["programStarts"] = _instances.ToDictionary(pair => pair.Key, pair => pair.Value.StartResult?.State switch
         {
-            GameEventScriptStartState.Ready => "ready",
-            GameEventScriptStartState.RuntimeError => "runtimeError",
-            GameEventScriptStartState.RuntimeLimitReached => "runtimeLimitReached",
+            GesStartState.Ready => "ready",
+            GesStartState.RuntimeError => "runtimeError",
+            GesStartState.RuntimeLimitReached => "runtimeLimitReached",
             _ => "pending"
         }, StringComparer.Ordinal);
     }

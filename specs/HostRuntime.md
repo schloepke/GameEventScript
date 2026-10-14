@@ -29,7 +29,7 @@ a seed, entropy bytes, or an immutable sequence configuration, never a live
 mutable generator; building two hosts from the same configuration creates two
 independent streams.
 
-`GameEventScriptInstance` is one host-specific link of one program. `Load` is
+`GesProgramInstance` is one host-specific link of one program. `Load` is
 additive and returns an instance. Linking resolves extension and external-type
 references against that host. The host assigns a stable, non-reused registration
 ID. The instance retains only its host and ID for lifecycle operations; it does
@@ -39,25 +39,25 @@ synchronous call graph or requirements above `MaxRegisterValues` and
 `MaxCallDepth`. It then pre-warms the reusable register storage from the program
 maximum.
 
-`GameEventScriptSubscription` represents one native registration. `Unsubscribe`
+`GesSubscription` represents one native registration. `Unsubscribe`
 uses the same host-owned registration-ID model, is idempotent, and affects future
 snapshots only. Registration IDs are host-local lifecycle identities and are not
 wire or program identities.
 
-Portable native handlers implement `IGameEventScriptNativeMessageHandler` and
+Portable native handlers implement `IGesNativeMessageHandler` and
 receive the message plus the host's context through `Handle`. The Core stores the
 handler object directly and contains no `Action` delegate adapter. C# callers may
-use the `Action<GameEventScriptMessage, GameEventScriptContext>` convenience
+use the `Action<GameEventScriptMessage, GesContext>` convenience
 overloads in `CSharpBridge`; other ports provide their own language-idiomatic
 adapters without changing the Core contract.
 
-An extension function may throw `GameEventScriptExtensionFaultException` to
+An extension function may throw `GesExtensionFaultException` to
 deliberately report a defined failure, or throw any other exception
 unanticipated by the runtime; [Diagnostics](Diagnostics.md) owns the resulting
 stable codes and the shared "current handler only, host stays reusable, never
 `nothing`" contract shared with native handlers and the external-type boundary.
 
-`GameEventScriptContext` is created once per host and passed to native handlers
+`GesContext` is created once per host and passed to native handlers
 and extensions. It exposes the host random stream, limits, `Emit`, and `Publish`.
 Its random generator supports nested `Push()`, `Push(Int64)`, and `Pop()` scopes.
 It does not own a queue, VM, or scheduler. A context or its random generator must
@@ -232,20 +232,20 @@ marker cleanup is expected recovery and adds no second imbalance diagnostic.
 ## External Type Boundary
 
 External types use two deliberately separate inputs. Compilation receives an
-`IGameEventScriptExternalTypeCatalog` containing only declarative type, field,
+`IGesExternalTypeCatalog` containing only declarative type, field,
 constructor, parameter, and signature data. It does not contain executable
 bindings. The resulting program stores only portable external-constructor import
 bindings; it never stores the catalog or its definitions.
 
-Host linking receives an `IGameEventScriptExternalTypeRegistry` that resolves a
-constructor import to an `IGameEventScriptExternalTypeConstructor`. A resolved
+Host linking receives an `IGesExternalTypeRegistry` that resolves a
+constructor import to an `IGesExternalTypeConstructor`. A resolved
 constructor must report exactly the definition requested by the import. Runtime
-values cross the portable boundary as `IGameEventScriptExternalValue`, exposing
+values cross the portable boundary as `IGesExternalValue`, exposing
 their declarative definition and field values without exposing a platform host
 object.
 
 A constructor or a field accessor may likewise throw
-`GameEventScriptExtensionFaultException` or an unanticipated exception; see
+`GesExtensionFaultException` or an unanticipated exception; see
 [Diagnostics](Diagnostics.md) for the resulting codes and contract.
 
 The C# bridge may implement both inputs with one convenience object. Its
@@ -256,20 +256,20 @@ implementation and therefore does not depend on C# reflection.
 
 ## Message Semantics
 
-- Message arguments are ordered `GameEventScriptMessageArgument` name/value
+- Message arguments are ordered `GesMessageArgument` name/value
   pairs. Their order is part of `SignatureId`; neither Core construction nor
   conformance decoding derives it from a map's iteration order.
 - Named argument labels must be unique after portable normalization. Repeated
   `_` labels remain valid because they represent distinct positional arguments.
 - C# tuple construction is a `CSharpBridge` convenience. Its dictionary adapter
-  requires a known `GameEventScriptMessageSignature` and binds values in that
+  requires a known `GesMessageSignature` and binds values in that
   signature's declared order.
 - `Receive(message)` captures current subscription snapshots and queues the
   message locally. It never invokes the outbound sink.
 - `Emit(message)` does the same from a running handler.
 - `Publish(message)` first attempts the same local enqueue and then calls the
-  host's single synchronous `IGameEventScriptPublishSink`, if configured.
-- `GameEventScriptPublishResult` reports `LocalAccepted`, `OutboundAttempted`,
+  host's single synchronous `IGesPublishSink`, if configured.
+- `GesPublishResult` reports `LocalAccepted`, `OutboundAttempted`,
   `OutboundAccepted`, `OutboundDeferred`, and derived `AnyAccepted`. Sink rejection or exception
   never rolls back or corrupts local delivery. The observer sees the result.
 - Queue limits count logical messages, not handler invocations.
@@ -445,7 +445,7 @@ synchronous core contract.
 
 ## Hot-Path Rules
 
-- Script registrations store `GameEventScriptInstance + EntryAddress`; no
+- Script registrations store `GesProgramInstance + EntryAddress`; no
   per-invocation delegate closure, runner object, or invocation interface exists.
 - The queue is a preallocated growing ring of logical message envelopes.
 - Dispatch selection walks captured arrays without constructing handler lists.

@@ -5,8 +5,8 @@ using System;
 using System.Collections.Generic;
 using GameEventScript.Compiler;
 using GameEventScript.Runtime;
-using static GameEventScript.Api.GameEventScriptDiagnosticCodes;
-using static GameEventScript.Api.GameEventScriptSymbolKind;
+using static GameEventScript.Api.GesDiagnosticCodes;
+using static GameEventScript.Api.GesSymbolKind;
 using static GameEventScript.Compiler.GameEventScriptCallableKind;
 
 namespace GameEventScript.Api;
@@ -14,26 +14,26 @@ namespace GameEventScript.Api;
 /// <summary>
 /// Compiles source text into immutable Programs using the optional GameEventScript.Compiler package.
 /// </summary>
-public sealed class GameEventScriptBuilder
+public sealed class GesProgramBuilder
 {
     private readonly List<SourceInput> _sources = [];
-    private GameEventScriptCompileOptions _options = new();
-    private IGameEventScriptExternalTypeCatalog _externalTypeCatalog = GameEventScriptEmptyExternalTypeCatalog.Instance;
+    private GesCompileOptions _options = new();
+    private IGesExternalTypeCatalog _externalTypeCatalog = GameEventScriptEmptyExternalTypeCatalog.Instance;
 
     /// <summary>
-    /// Creates an instance of the GameEventScriptBuilder.
+    /// Creates an instance of the GesProgramBuilder.
     /// </summary>
-    /// <returns>A new instance of the GameEventScriptBuilder.</returns>
-    public static GameEventScriptBuilder Create() => new();
+    /// <returns>A new instance of the GesProgramBuilder.</returns>
+    public static GesProgramBuilder Create() => new();
 
     /// <summary>
     /// Selects the portable debug metadata generated for bytecode dumps and tooling.
     /// </summary>
     /// <param name="options">The independently selectable debug sections. Defaults to all debug sections.</param>
-    /// <returns>The current instance of <see cref="GameEventScriptBuilder"/> with the specified debug setting applied.</returns>
-    public GameEventScriptBuilder WithDebugInfo(GameEventScriptDebugInfoOptions options = GameEventScriptDebugInfoOptions.All)
+    /// <returns>The current instance of <see cref="GesProgramBuilder"/> with the specified debug setting applied.</returns>
+    public GesProgramBuilder WithDebugInfo(GesDebugInfoOptions options = GesDebugInfoOptions.All)
     {
-        _options = new GameEventScriptCompileOptions
+        _options = new GesCompileOptions
         {
             DebugInfo = options,
             ProgramVersion = _options.ProgramVersion
@@ -44,9 +44,9 @@ public sealed class GameEventScriptBuilder
     /// <summary>Sets the stable application-defined program version stored in binary metadata.</summary>
     /// <param name="version">The version, or zero for development/unspecified programs.</param>
     /// <returns>The current builder instance.</returns>
-    public GameEventScriptBuilder WithProgramVersion(ulong version)
+    public GesProgramBuilder WithProgramVersion(ulong version)
     {
-        _options = new GameEventScriptCompileOptions
+        _options = new GesCompileOptions
         {
             DebugInfo = _options.DebugInfo,
             ProgramVersion = version
@@ -59,7 +59,7 @@ public sealed class GameEventScriptBuilder
     /// </summary>
     /// <param name="catalog">The portable external type catalog to use during compilation.</param>
     /// <returns>The current builder instance.</returns>
-    public GameEventScriptBuilder WithExternalTypeCatalog(IGameEventScriptExternalTypeCatalog catalog)
+    public GesProgramBuilder WithExternalTypeCatalog(IGesExternalTypeCatalog catalog)
     {
         _externalTypeCatalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         return this;
@@ -73,9 +73,9 @@ public sealed class GameEventScriptBuilder
     /// An optional string representing the source name of the script (e.g., file name).
     /// </param>
     /// <returns>
-    /// The current instance of <see cref="GameEventScriptBuilder"/> to allow method chaining.
+    /// The current instance of <see cref="GesProgramBuilder"/> to allow method chaining.
     /// </returns>
-    public GameEventScriptBuilder AddScript(string text, string? sourceName = null)
+    public GesProgramBuilder AddScript(string text, string? sourceName = null)
     {
         var source = GameEventScriptText.PrepareSource(text ?? throw new ArgumentNullException(nameof(text)), nameof(text));
         _sources.Add(new SourceInput(source, sourceName));
@@ -87,11 +87,11 @@ public sealed class GameEventScriptBuilder
     /// </summary>
     /// <param name="options">Optional compilation options that specify settings for bytecode generation.</param>
     /// <returns>The generated GameEventScript bytecode.</returns>
-    /// <exception cref="GameEventScriptCompileException">
-    /// Thrown for invalid source, including a <see cref="GameEventScriptDiagnosticCodes.ParseSourceNestingExceeded"/>
+    /// <exception cref="GesCompileException">
+    /// Thrown for invalid source, including a <see cref="GesDiagnosticCodes.ParseSourceNestingExceeded"/>
     /// diagnostic when the portable source nesting limits are exceeded.
     /// </exception>
-    public GameEventScriptProgram Compile(GameEventScriptCompileOptions? options = null)
+    public GameEventScriptProgram Compile(GesCompileOptions? options = null)
     {
         var compileOptions = options ?? _options;
         return GesCompiler.Compile(BuildModule(compileOptions), compileOptions);
@@ -101,10 +101,10 @@ public sealed class GameEventScriptBuilder
     /// Builds and returns a new internal module model based on the configured sources.
     /// </summary>
     /// <returns>A built <see cref="GesSyntaxTreeModule"/> instance.</returns>
-    /// <exception cref="GameEventScriptCompileException">
+    /// <exception cref="GesCompileException">
     /// Thrown when errors are encountered during the build process.
     /// </exception>
-    internal GesSyntaxTreeModule BuildModule(GameEventScriptCompileOptions? options = null)
+    internal GesSyntaxTreeModule BuildModule(GesCompileOptions? options = null)
     {
         var compileOptions = options ?? _options;
         var modules = new ParsedScript[_sources.Count];
@@ -265,7 +265,7 @@ public sealed class GameEventScriptBuilder
         return map;
     }
 
-    private static IReadOnlyDictionary<string, TypeDefinitionNode> BuildValidationTypeDefinitionMap(IReadOnlyDictionary<string, TypeDefinitionNode> scriptTypes, IGameEventScriptExternalTypeCatalog externalTypes,
+    private static IReadOnlyDictionary<string, TypeDefinitionNode> BuildValidationTypeDefinitionMap(IReadOnlyDictionary<string, TypeDefinitionNode> scriptTypes, IGesExternalTypeCatalog externalTypes,
         IReadOnlyList<ParsedScript> modules, GesValidationErrors errors)
     {
         if (externalTypes.Types.Count == 0) return scriptTypes;
@@ -276,7 +276,7 @@ public sealed class GameEventScriptBuilder
             if (map.ContainsKey(externalType.Name))
             {
                 var module = FindModuleWithType(modules, externalType.Name);
-                errors.Add(module, $"Type '{externalType.Name}' is defined both as a script record and an external type", externalType.Name, GameEventScriptSymbolKind.Type, ValidateDuplicateType);
+                errors.Add(module, $"Type '{externalType.Name}' is defined both as a script record and an external type", externalType.Name, GesSymbolKind.Type, ValidateDuplicateType);
                 continue;
             }
 
@@ -319,7 +319,7 @@ public sealed class GameEventScriptBuilder
             {
                 if (!map.TryAdd(typeDefinition.Name, typeDefinition))
                 {
-                    errors.Add(module, $"Type '{typeDefinition.Name}' is defined more than once", typeDefinition.Name, GameEventScriptSymbolKind.Type, ValidateDuplicateType, typeDefinition);
+                    errors.Add(module, $"Type '{typeDefinition.Name}' is defined more than once", typeDefinition.Name, GesSymbolKind.Type, ValidateDuplicateType, typeDefinition);
                 }
             }
         }

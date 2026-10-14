@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    func send(_ i: GameEventScriptBytecodeInstruction, _ c: GameEventScriptContext) throws {
+    func send(_ i: GesBytecodeInstruction, _ c: GesContext) throws {
         var micros: Int64 = 0
         if i.opcode == .emitAfter || i.opcode == .publishAfter {
             let delay = value(Int(i.b))

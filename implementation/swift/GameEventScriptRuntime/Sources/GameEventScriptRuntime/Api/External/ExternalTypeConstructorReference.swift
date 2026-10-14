@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Normalized external constructor identity used by the runtime linker.
-public struct GameEventScriptExternalTypeConstructorReference {
+public struct GesExternalTypeConstructorReference {
     /// Normalized external type name.
     public let typeName: String
     /// Normalized argument labels sorted for constructor identity.

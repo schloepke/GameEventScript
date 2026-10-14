@@ -13,7 +13,7 @@ final class GesVirtualMachine {
     var linked: GesLinkedProgram?
     var program: GameEventScriptProgram { linked!.program }
     var processing = false
-    var error: GameEventScriptDiagnostic?
+    var error: GesDiagnostic?
     var handlerName: String?
     var ip = 0, frameStart = 0, frameLength = 0, stageLength = 0
     // Owned register storage; opcode extensions read fields and mutate through typed setters.
@@ -99,9 +99,9 @@ final class GesVirtualMachine {
 
     func setTag(_ index: Int, _ value: String) throws { try registers[frameStart + index].setTag(value) }
 
-    func setVector(_ index: Int, x: Double, y: Double, z: Double, unit: GesUnit) { registers[frameStart + index].setVector(x: x, y: y, z: z, unit: unit) }
+    func setVector(_ index: Int, x: Double, y: Double, z: Double, unit: GesQuantityUnit) { registers[frameStart + index].setVector(x: x, y: y, z: z, unit: unit) }
 
-    func setPoint(_ index: Int, x: Double, y: Double, z: Double, unit: GesUnit) { registers[frameStart + index].setPoint(x: x, y: y, z: z, unit: unit) }
+    func setPoint(_ index: Int, x: Double, y: Double, z: Double, unit: GesQuantityUnit) { registers[frameStart + index].setPoint(x: x, y: y, z: z, unit: unit) }
 
     func setDice(_ index: Int, _ value: [Int32]) { registers[frameStart + index].setDice(value) }
 
@@ -121,7 +121,7 @@ final class GesVirtualMachine {
 
     func setMessage(_ index: Int, _ value: GameEventScriptMessage) { registers[frameStart + index].setMessage(value) }
 
-    func setHandler(_ index: Int, _ value: GameEventScriptMessageSignature) { registers[frameStart + index].setHandler(value) }
+    func setHandler(_ index: Int, _ value: GesMessageSignature) { registers[frameStart + index].setHandler(value) }
 
     func setSeries(_ index: Int, _ value: GesSeriesValue) { registers[frameStart + index].setSeries(value) }
 
@@ -131,12 +131,12 @@ final class GesVirtualMachine {
 
     // Typed owner-local access keeps full GesValue operands/results out of the dispatch boundary.
     @inline(__always)
-    func setInteger(_ index: Int, _ value: Int64, unit: GesUnit = .none) {
+    func setInteger(_ index: Int, _ value: Int64, unit: GesQuantityUnit = .none) {
         registers[frameStart + index].setInteger(value, unit: unit)
     }
 
     @inline(__always)
-    func setFloat(_ index: Int, _ value: Double, unit: GesUnit = .none) {
+    func setFloat(_ index: Int, _ value: Double, unit: GesQuantityUnit = .none) {
         registers[frameStart + index].setFloat(value, unit: unit)
     }
 
@@ -159,7 +159,7 @@ final class GesVirtualMachine {
     func integer(_ index: Int) -> Int64? { registers[frameStart + index].integerValue }
 
     @inline(__always)
-    func unit(_ index: Int) -> GesUnit { registers[frameStart + index].unit }
+    func unit(_ index: Int) -> GesQuantityUnit { registers[frameStart + index].unit }
 
     @inline(__always)
     func truth(_ index: Int) -> Bool? { registers[frameStart + index].truth }
@@ -213,9 +213,9 @@ final class GesVirtualMachine {
 
     func stageBoolean(_ value: Bool) { if let index = reserveStage() { setBoolean(index, value) } }
 
-    func stageInteger(_ value: Int64, unit: GesUnit = .none) { if let index = reserveStage() { setInteger(index, value, unit: unit) } }
+    func stageInteger(_ value: Int64, unit: GesQuantityUnit = .none) { if let index = reserveStage() { setInteger(index, value, unit: unit) } }
 
-    func stageFloat(_ value: Double, unit: GesUnit = .none) { if let index = reserveStage() { setFloat(index, value, unit: unit) } }
+    func stageFloat(_ value: Double, unit: GesQuantityUnit = .none) { if let index = reserveStage() { setFloat(index, value, unit: unit) } }
 
     func stagePercentage(_ value: Double) { if let index = reserveStage() { setPercentage(index, value) } }
 
@@ -300,7 +300,7 @@ final class GesVirtualMachine {
 
     func fail(_ code: String, symbol: String? = nil, error: (any Error)? = nil) { fail(.init(phase: .runtime, code: code, symbol: symbol, technicalDetails: error.map { String(describing: $0) })) }
 
-    func fail(_ diagnostic: GameEventScriptDiagnostic) {
+    func fail(_ diagnostic: GesDiagnostic) {
         var diagnostic = diagnostic
         if diagnostic.programName == nil { diagnostic.programName = linked?.program.moduleName }
         if diagnostic.handlerName == nil { diagnostic.handlerName = handlerName }

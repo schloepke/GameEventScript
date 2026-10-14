@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// A host-local loaded Program handle. Detachment is idempotent and does not revoke ordinary captured deliveries.
-public final class GameEventScriptInstance {
+public final class GesProgramInstance {
     private weak var host: GameEventScriptHost?
     /// Stable registration identifier, unique within the owning host.
     public let registrationID: Int64
@@ -12,7 +12,7 @@ public final class GameEventScriptInstance {
     /// Whether the owning host still registers this instance.
     public var isAttached: Bool { host?.isAttached(registrationID) ?? false }
     /// Nil while initialization is pending; retains its success or failure result after completion.
-    public internal(set) var startResult: GameEventScriptStartResult? { didSet { initializationFailed = startResult != nil && startResult?.state != .ready } }
+    public internal(set) var startResult: GesStartResult? { didSet { initializationFailed = startResult != nil && startResult?.state != .ready } }
     private(set) var initializationFailed = false
 
     init(host: GameEventScriptHost, id: Int64, linked: GesLinkedProgram) {

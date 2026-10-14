@@ -26,16 +26,16 @@ internal static class TextNumberCast
         while (end > start && text[end - 1] is ' ' or '\t') end--;
         if (start == end) return null;
 
-        var unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
+        var unit = GesQuantityUnit.UnitNone;
         var scaled = percentageMagnitude || text[end - 1] == '%';
         switch (text[end - 1])
         {
             case '%': end--; break;
-            case 'm': unit = GameEventScriptBytecodeInstructionUnit.UnitMeter; end--; break;
-            case 's': unit = GameEventScriptBytecodeInstructionUnit.UnitSecond; end--; break;
-            case '°': unit = GameEventScriptBytecodeInstructionUnit.UnitDegree; end--; break;
+            case 'm': unit = GesQuantityUnit.UnitMeter; end--; break;
+            case 's': unit = GesQuantityUnit.UnitSecond; end--; break;
+            case '°': unit = GesQuantityUnit.UnitDegree; end--; break;
         }
-        if (percentage && unit != GameEventScriptBytecodeInstructionUnit.UnitNone) return null;
+        if (percentage && unit != GesQuantityUnit.UnitNone) return null;
         if (start == end) return null;
         if (text.AsSpan(start, end - start).SequenceEqual("NaN".AsSpan())) return GesValue.GesNothing();
 
@@ -160,19 +160,19 @@ internal static class TextNumberCast
 
     internal static GesValue Percentage(in GesValue value)
     {
-        if (value.Kind == GameEventScriptBytecodeTypeKind.Text) return Read(value.TextValue, percentage: true) ?? GesValue.GesNothing();
-        if (value.Kind == GameEventScriptBytecodeTypeKind.Percentage) return value;
+        if (value.Kind == GesBytecodeTypeKind.Text) return Read(value.TextValue, percentage: true) ?? GesValue.GesNothing();
+        if (value.Kind == GesBytecodeTypeKind.Percentage) return value;
         var ratio = value.AsNumeric;
         return !value.HasUnit && double.IsFinite(ratio) ? GesValue.GesPercentage(ratio) : GesValue.GesNothing();
     }
 
-    internal static string Format(long value, GameEventScriptBytecodeInstructionUnit unit)
+    internal static string Format(long value, GesQuantityUnit unit)
     {
         var text = value.ToString(CultureInfo.InvariantCulture);
         return unit.IsNumericUnit() ? text + unit.ToSuffix() : text;
     }
 
-    internal static string Format(double value, GameEventScriptBytecodeInstructionUnit unit)
+    internal static string Format(double value, GesQuantityUnit unit)
     {
         var text = GameEventScriptNumber.FormatCanonicalFloat(value);
         return unit.IsNumericUnit() ? text + unit.ToSuffix() : text;

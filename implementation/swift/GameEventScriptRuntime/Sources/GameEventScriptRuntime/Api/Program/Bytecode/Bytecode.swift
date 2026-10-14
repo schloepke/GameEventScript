@@ -4,7 +4,7 @@
 // Explicit V1 identifiers; checked against C# by the repository verification gate.
 
 /// V1 section identifiers used by the portable binary reader and writer.
-public enum GameEventScriptSectionType: UInt16, Sendable, CaseIterable {
+public enum GesSectionType: UInt16, Sendable, CaseIterable {
     /// Required program identity and resource requirements.
     case `programMetadata` = 0x0001
     /// Required UTF-8 string table.
@@ -30,7 +30,7 @@ public enum GameEventScriptSectionType: UInt16, Sendable, CaseIterable {
 }
 
 /// Role of a declarative binding in a portable Program.
-public enum GameEventScriptBinaryBindKind: UInt8, Sendable, CaseIterable {
+public enum GesBinaryBindKind: UInt8, Sendable, CaseIterable {
     /// Script handler matching a name and ordered argument labels.
     case `messageHandler` = 0x10
     /// Script handler matching a message name regardless of argument labels.
@@ -51,7 +51,7 @@ public enum GameEventScriptBinaryBindKind: UInt8, Sendable, CaseIterable {
 
 /// Explicit V1 instruction identifiers. Operand layouts and execution semantics are defined in the portable Bytecode
 /// specification.
-public enum GameEventScriptBytecodeOpCode: UInt8, Sendable, CaseIterable {
+public enum GesBytecodeOpCode: UInt8, Sendable, CaseIterable {
     /// No operation.
     case `nop` = 0x00
     /// Adds `Count > 0` active local registers or releases `-Count` registers when `Count < 0`. Entry prologs reserve
@@ -491,7 +491,7 @@ public enum GameEventScriptBytecodeOpCode: UInt8, Sendable, CaseIterable {
 }
 
 /// Portable value and VM-internal storage identifiers used as bytecode operands.
-public enum GameEventScriptBytecodeTypeKind: UInt16, Sendable, CaseIterable {
+public enum GesBytecodeTypeKind: UInt16, Sendable, CaseIterable {
     /// Absence of a value.
     case `nothing` = 0x00
     /// Boolean value.
@@ -541,7 +541,7 @@ public enum GameEventScriptBytecodeTypeKind: UInt16, Sendable, CaseIterable {
 }
 
 /// Dice-pattern identifiers for pattern instructions.
-public enum GameEventScriptBytecodePatternKind: UInt16, Sendable, CaseIterable {
+public enum GesBytecodePatternKind: UInt16, Sendable, CaseIterable {
     /// Count a matching group of any face.
     case `countAny` = 0x00
     /// Count occurrences of a specified face.
@@ -553,7 +553,7 @@ public enum GameEventScriptBytecodePatternKind: UInt16, Sendable, CaseIterable {
 }
 
 /// Built-in lazy numeric series identifiers.
-public enum GameEventScriptBytecodeSeriesKind: UInt16, Sendable, CaseIterable {
+public enum GesBytecodeSeriesKind: UInt16, Sendable, CaseIterable {
     /// The Fibonacci series.
     case `fibonacci` = 0x01
     /// The factorial series.

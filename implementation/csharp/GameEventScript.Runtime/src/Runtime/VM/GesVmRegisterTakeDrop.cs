@@ -5,7 +5,7 @@ using System;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime.VM;
 
@@ -25,10 +25,10 @@ internal static class GesVmRegisterTakeDrop
             case Dice when source.ObjectValue is int[] dice:
                 result = TakeFirstDice(vm, dice, count);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
                 result = TakeFirstRange(vm, range, count);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
                 result = TakeFirstRange(vm, range, count);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
@@ -41,7 +41,7 @@ internal static class GesVmRegisterTakeDrop
 
         vm.SetValue(destinationRegister, in result);
     }
-    internal static void GesVmOneRandom(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source, GameEventScriptRandomGenerator randomGenerator)
+    internal static void GesVmOneRandom(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source, GesRandomGenerator randomGenerator)
     {
         GesValue result;
         switch (source.Kind)
@@ -53,10 +53,10 @@ internal static class GesVmRegisterTakeDrop
                 result = new GesValue();
                 if (dice.Length > 0) result.SetInteger(dice[randomGenerator.NextInclusiveInteger(0, dice.Length - 1)]);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
                 result = OneRandomRange(range, randomGenerator);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
                 result = OneRandomRange(range, randomGenerator);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
@@ -69,7 +69,7 @@ internal static class GesVmRegisterTakeDrop
 
         vm.SetValue(destinationRegister, in result);
     }
-    internal static void GesVmTakeRandom(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source, short count, GameEventScriptRandomGenerator randomGenerator)
+    internal static void GesVmTakeRandom(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source, short count, GesRandomGenerator randomGenerator)
     {
         GesValue result;
         switch (source.Kind)
@@ -80,10 +80,10 @@ internal static class GesVmRegisterTakeDrop
             case Dice when source.ObjectValue is int[] dice:
                 result = TakeRandomDice(dice, count, randomGenerator);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
                 result = TakeRandomRange(vm, range, count, randomGenerator);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
                 result = TakeRandomRange(vm, range, count, randomGenerator);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
@@ -97,7 +97,7 @@ internal static class GesVmRegisterTakeDrop
         vm.SetValue(destinationRegister, in result);
     }
 
-    internal static void GesVmOneWeighted(this GesVirtualMachine vm, ushort destinationRegister, in GesValue itemsValue, in GesValue weightsValue, GameEventScriptRandomGenerator randomGenerator)
+    internal static void GesVmOneWeighted(this GesVirtualMachine vm, ushort destinationRegister, in GesValue itemsValue, in GesValue weightsValue, GesRandomGenerator randomGenerator)
     {
         if (itemsValue is not { Kind: List, ObjectValue: GesValue[] items } ||
             weightsValue is not { Kind: List, ObjectValue: GesValue[] weights } ||
@@ -143,7 +143,7 @@ internal static class GesVmRegisterTakeDrop
         vm.SetValue(destinationRegister, in items[selected]);
     }
 
-    internal static void GesVmTakeWeighted(this GesVirtualMachine vm, ushort destinationRegister, in GesValue itemsValue, in GesValue weightsValue, short count, GameEventScriptRandomGenerator randomGenerator)
+    internal static void GesVmTakeWeighted(this GesVirtualMachine vm, ushort destinationRegister, in GesValue itemsValue, in GesValue weightsValue, short count, GesRandomGenerator randomGenerator)
     {
         if (itemsValue is not { Kind: List, ObjectValue: GesValue[] items } ||
             weightsValue is not { Kind: List, ObjectValue: GesValue[] weights } ||
@@ -230,10 +230,10 @@ internal static class GesVmRegisterTakeDrop
             case Dice when source.ObjectValue is int[] dice:
                 result = DropFirstDice(dice, count);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
                 result = DropFirstRange(in source, range, count);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
                 result = DropFirstRange(in source, range, count);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
@@ -257,10 +257,10 @@ internal static class GesVmRegisterTakeDrop
             case Dice when source.ObjectValue is int[] dice:
                 result = TakeLastDice(dice, count);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
                 result = TakeLastRange(vm, range, count);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
                 result = TakeLastRange(vm, range, count);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
@@ -284,10 +284,10 @@ internal static class GesVmRegisterTakeDrop
             case Dice when source.ObjectValue is int[] dice:
                 result = DropLastDice(dice, count);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
                 result = DropLastRange(in source, range, count);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
                 result = DropLastRange(in source, range, count);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
@@ -311,10 +311,10 @@ internal static class GesVmRegisterTakeDrop
             case Dice when source.ObjectValue is int[] dice:
                 result = TakeFirstDice(vm, dice, count);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
                 result = TakeExtremeRange(vm, range, count, true);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
                 result = TakeExtremeRange(vm, range, count, true);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
@@ -338,10 +338,10 @@ internal static class GesVmRegisterTakeDrop
             case Dice when source.ObjectValue is int[] dice:
                 result = TakeLastDice(dice, count);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
                 result = TakeExtremeRange(vm, range, count, false);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
                 result = TakeExtremeRange(vm, range, count, false);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
@@ -365,10 +365,10 @@ internal static class GesVmRegisterTakeDrop
             case Dice when source.ObjectValue is int[] dice:
                 result = DropFirstDice(dice, count);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
                 result = DropExtremeRange(in source, range, count, true);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
                 result = DropExtremeRange(in source, range, count, true);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
@@ -392,10 +392,10 @@ internal static class GesVmRegisterTakeDrop
             case Dice when source.ObjectValue is int[] dice:
                 result = DropLastDice(dice, count);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
                 result = DropExtremeRange(in source, range, count, false);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
                 result = DropExtremeRange(in source, range, count, false);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
@@ -812,7 +812,7 @@ internal static class GesVmRegisterTakeDrop
             if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static GesValue OneRandomRange(GesValueRangeInteger valueRangeInteger, GameEventScriptRandomGenerator randomGenerator)
+    private static GesValue OneRandomRange(GesValueRangeInteger valueRangeInteger, GesRandomGenerator randomGenerator)
     {
         var dst = new GesValue();
         var length = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
@@ -827,7 +827,7 @@ internal static class GesVmRegisterTakeDrop
         else dst.SetNothing();
         return dst;
     }
-    private static GesValue OneRandomRange(GesValueRangeFloat range, GameEventScriptRandomGenerator randomGenerator)
+    private static GesValue OneRandomRange(GesValueRangeFloat range, GesRandomGenerator randomGenerator)
     {
         var dst = new GesValue();
         var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
@@ -842,7 +842,7 @@ internal static class GesVmRegisterTakeDrop
         else dst.SetNothing();
         return dst;
     }
-    private static GesValue OneRandomIterator(IGesIterator iterator, GameEventScriptRandomGenerator randomGenerator)
+    private static GesValue OneRandomIterator(IGesIterator iterator, GesRandomGenerator randomGenerator)
     {
         var chosen = new GesValue();
         var count = 0;
@@ -862,7 +862,7 @@ internal static class GesVmRegisterTakeDrop
             if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static GesValue TakeRandomList(GesVirtualMachine vm, GesValue[] source, short count, GameEventScriptRandomGenerator randomGenerator)
+    private static GesValue TakeRandomList(GesVirtualMachine vm, GesValue[] source, short count, GesRandomGenerator randomGenerator)
     {
         var dst = new GesValue();
         if (count <= 0 || source.Length == 0)
@@ -878,7 +878,7 @@ internal static class GesVmRegisterTakeDrop
         dst.SetList(list);
         return dst;
     }
-    private static GesValue TakeRandomDice(int[] source, short count, GameEventScriptRandomGenerator randomGenerator)
+    private static GesValue TakeRandomDice(int[] source, short count, GesRandomGenerator randomGenerator)
     {
         var dst = new GesValue();
         if (count <= 0 || source.Length == 0)
@@ -894,7 +894,7 @@ internal static class GesVmRegisterTakeDrop
         dst.SetDice(dice);
         return dst;
     }
-    private static GesValue TakeRandomRange(GesVirtualMachine vm, GesValueRangeInteger valueRangeInteger, short count, GameEventScriptRandomGenerator randomGenerator)
+    private static GesValue TakeRandomRange(GesVirtualMachine vm, GesValueRangeInteger valueRangeInteger, short count, GesRandomGenerator randomGenerator)
     {
         var dst = new GesValue();
         var sourceLength = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
@@ -946,7 +946,7 @@ internal static class GesVmRegisterTakeDrop
         dst.SetList(list);
         return dst;
     }
-    private static GesValue TakeRandomRange(GesVirtualMachine vm, GesValueRangeFloat range, short count, GameEventScriptRandomGenerator randomGenerator)
+    private static GesValue TakeRandomRange(GesVirtualMachine vm, GesValueRangeFloat range, short count, GesRandomGenerator randomGenerator)
     {
         var dst = new GesValue();
         var sourceLength = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
@@ -998,7 +998,7 @@ internal static class GesVmRegisterTakeDrop
         dst.SetList(list);
         return dst;
     }
-    private static GesValue TakeRandomIterator(GesVirtualMachine vm, IGesIterator iterator, short count, GameEventScriptRandomGenerator randomGenerator)
+    private static GesValue TakeRandomIterator(GesVirtualMachine vm, IGesIterator iterator, short count, GesRandomGenerator randomGenerator)
     {
         var dst = new GesValue();
         if (count <= 0)
@@ -1035,7 +1035,7 @@ internal static class GesVmRegisterTakeDrop
             if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static int[] CreateShuffledPrefix(int sourceLength, int prefixLength, GameEventScriptRandomGenerator randomGenerator)
+    private static int[] CreateShuffledPrefix(int sourceLength, int prefixLength, GesRandomGenerator randomGenerator)
     {
         var indices = new int[sourceLength];
         for (var i = 0; i < sourceLength; i++) indices[i] = i;
@@ -1386,7 +1386,7 @@ internal static class GesVmRegisterTakeDrop
                     return comparison != 0 ? comparison : leftTriplet.Z.CompareTo(rightTriplet.Z);
                 }
                 return 0;
-            case GameEventScriptBytecodeTypeKind.Boolean when right.Kind is GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean when right.Kind is GesBytecodeTypeKind.Boolean:
                 return left.IsTrue.CompareTo(right.IsTrue);
             case Dice when right.Kind is Dice && left.ObjectValue is int[] leftDice && right.ObjectValue is int[] rightDice:
             {
@@ -1415,9 +1415,9 @@ internal static class GesVmRegisterTakeDrop
             Percentage => 3,
             Vector => 4,
             Point => 5,
-            GameEventScriptBytecodeTypeKind.Boolean => 6,
+            GesBytecodeTypeKind.Boolean => 6,
             Series => 7,
-            GameEventScriptBytecodeTypeKind.Range => 8,
+            GesBytecodeTypeKind.Range => 8,
             Message => 9,
             Handler => 10,
             List => 11,

@@ -6,7 +6,7 @@ extension GesCasts {
         var x = 0.0
         var y = 0.0
         var z = 0.0
-        var unit = GesUnit.none
+        var unit = GesQuantityUnit.none
         if value.spatialValue != nil {
             x = value.x
             y = value.y

@@ -84,8 +84,8 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
         string? profilePath = null;
         RunProfiler? profiler = null;
         long? seed = null;
-        var maxMessages = GameEventScriptRuntimeLimits.Default.MaxProcessedEventsPerRun;
-        var maxSteps = GameEventScriptRuntimeLimits.Default.MaxExecutionSteps;
+        var maxMessages = GesRuntimeLimits.Default.MaxProcessedEventsPerRun;
+        var maxSteps = GesRuntimeLimits.Default.MaxExecutionSteps;
         var verbose = false;
         var quiet = false;
         var interactive = false;
@@ -205,7 +205,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
             try
             {
                 color = color && !PrettyPrompt.PromptConfiguration.HasUserOptedOutFromColor;
-                var session = new RunSession(seed, new GameEventScriptRuntimeLimits { MaxProcessedEventsPerRun = maxMessages, MaxExecutionSteps = maxSteps }, verbose, color, interactive, profiler: profiler);
+                var session = new RunSession(seed, new GesRuntimeLimits { MaxProcessedEventsPerRun = maxMessages, MaxExecutionSteps = maxSteps }, verbose, color, interactive, profiler: profiler);
                 for (var index = 0; index < programs.Count; index++) session.Inventory.Load(programs[index], binaryCount > 0 ? [paths[index]] : paths);
                 if (scenario is not null) session.Inventory.Load(scenario, scenarioPaths);
                 var runMain = scenario is null && !interactive;
@@ -217,7 +217,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
                 if (!session.Pump()) return 1;
                 if (runMain)
                 {
-                    var message = GameEventScriptMessage.Create("Main", [new GameEventScriptMessageArgument("args", GesValue.GesList(mainArguments.ToArray()))]);
+                    var message = GameEventScriptMessage.Create("Main", [new GesMessageArgument("args", GesValue.GesList(mainArguments.ToArray()))]);
                     if (!session.Host.Receive(message))
                     {
                         Console.Error.WriteLine("error cli.mainRejected: The host rejected Main(args).");
@@ -239,12 +239,12 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
                 if (profiler is not null) profiler.Write(profilePath!);
             }
         }
-        catch (GameEventScriptCompileException exception)
+        catch (GesCompileException exception)
         {
             foreach (var diagnostic in exception.Diagnostics) RunObserver.WriteDiagnostic(diagnostic, "compile");
             return 1;
         }
-        catch (GameEventScriptProgramFormatException exception)
+        catch (GesProgramFormatException exception)
         {
             RunObserver.WriteDiagnostic(exception.Diagnostic, activePath ?? "decode");
             if (exception.ByteOffset is { } offset) Console.Error.WriteLine($"  byteOffset={offset}");
@@ -252,7 +252,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
             if (exception.EntryIndex is { } entry) Console.Error.WriteLine($"  entryIndex={entry}");
             return 1;
         }
-        catch (GameEventScriptDynamicLinkException exception)
+        catch (GesDynamicLinkException exception)
         {
             RunObserver.WriteDiagnostic(exception.Diagnostic, "link");
             return 1;
@@ -283,8 +283,8 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
         foreach (var binding in program.Bindings.Entries)
         {
             if (binding.RequiredTags.Count > 0 || program.StringConstants.Resolve(binding.Name) != "Main") continue;
-            if (binding.Kind == GameEventScriptBinaryBindKind.MessageNameHandler) return true;
-            if (binding.Kind == GameEventScriptBinaryBindKind.MessageHandler && binding.ArgumentNames.Count == 1 && program.StringConstants.Resolve(binding.ArgumentNames[0]) == "args") return true;
+            if (binding.Kind == GesBinaryBindKind.MessageNameHandler) return true;
+            if (binding.Kind == GesBinaryBindKind.MessageHandler && binding.ArgumentNames.Count == 1 && program.StringConstants.Resolve(binding.ArgumentNames[0]) == "args") return true;
         }
         return false;
     }

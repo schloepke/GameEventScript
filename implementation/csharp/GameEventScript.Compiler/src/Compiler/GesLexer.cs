@@ -159,7 +159,7 @@ internal readonly record struct GesToken(GesTokenKind Kind, string Text, int Lin
     public long? GetIntegerValue()
     {
         var value = NumericValue;
-        return value.Kind == Api.GameEventScriptBytecodeTypeKind.Integer ? value.IntegerValue : null;
+        return value.Kind == Api.GesBytecodeTypeKind.Integer ? value.IntegerValue : null;
     }
 
     public override string ToString() => $"{Kind}('{Text}', {Line}:{Column}-{EndLine}:{EndColumn})";

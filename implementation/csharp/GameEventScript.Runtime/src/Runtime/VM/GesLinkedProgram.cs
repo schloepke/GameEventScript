@@ -5,8 +5,8 @@ using System;
 using System.Collections.Generic;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBinaryBindKind;
-using static GameEventScript.Api.GameEventScriptBindingSegment;
+using static GameEventScript.Api.GesBinaryBindKind;
+using static GameEventScript.Api.GesBindingSegment;
 
 namespace GameEventScript.Runtime.VM;
 
@@ -17,7 +17,7 @@ internal sealed class GesLinkedProgram
         internal OutboundMessageSignature(string name, string[] argumentNames, string signatureId)
         {
             Name = name;
-            ArgumentNames = GameEventScriptReadOnlyArray<string>.FromOwnedArray(argumentNames);
+            ArgumentNames = GesReadOnlyArray<string>.FromOwnedArray(argumentNames);
             SignatureId = signatureId;
             IsValid = true;
         }
@@ -28,9 +28,9 @@ internal sealed class GesLinkedProgram
         internal string SignatureId { get; }
     }
 
-    internal readonly struct Handler(GameEventScriptMessageSignature signature, string[] requiredTags, string[] excludedTags, bool matchArguments, ushort entryAddress, ushort requiredRegisterCount, ushort requiredCallStackDepth)
+    internal readonly struct Handler(GesMessageSignature signature, string[] requiredTags, string[] excludedTags, bool matchArguments, ushort entryAddress, ushort requiredRegisterCount, ushort requiredCallStackDepth)
     {
-        internal GameEventScriptMessageSignature Signature { get; } = signature;
+        internal GesMessageSignature Signature { get; } = signature;
         internal string[] RequiredTags { get; } = requiredTags;
         internal string[] ExcludedTags { get; } = excludedTags;
         internal bool MatchArguments { get; } = matchArguments;
@@ -39,9 +39,9 @@ internal sealed class GesLinkedProgram
         internal ushort RequiredCallStackDepth { get; } = requiredCallStackDepth;
     }
 
-    internal IGameEventScriptProgramProfiler? Profiler { get; set; }
+    internal IGesProgramProfiler? Profiler { get; set; }
 
-    internal GesLinkedProgram(GameEventScriptProgram program, IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptExternalTypeRegistry typeRegistry)
+    internal GesLinkedProgram(GameEventScriptProgram program, IGesExtensionRegistry extensionRegistry, IGesExternalTypeRegistry typeRegistry)
     {
         Program = program ?? throw new ArgumentNullException(nameof(program));
         GesProgramCallGraphValidator.Validate(program);
@@ -94,8 +94,8 @@ internal sealed class GesLinkedProgram
     internal GameEventScriptBinaryBindEntry[] RecordConstructors { get; }
     internal GameEventScriptBinaryBindEntry[] ExtensionCallBinds { get; }
     internal GameEventScriptBinaryBindEntry[] ExternalTypeBinds { get; }
-    internal IGameEventScriptExtensionFunction?[] BoundExtensionCalls { get; }
-    internal IGameEventScriptExternalTypeConstructor?[] BoundExternalTypeConstructors { get; }
+    internal IGesExtensionFunction?[] BoundExtensionCalls { get; }
+    internal IGesExternalTypeConstructor?[] BoundExternalTypeConstructors { get; }
     internal Handler[] Handlers { get; }
     internal int RequiredRegisterCapacity { get; }
 
@@ -119,7 +119,7 @@ internal sealed class GesLinkedProgram
             var name = FetchString(bind.Name);
             var arguments = ReadStrings(bind.ArgumentNames);
             handlers[handlerIndex++] = new Handler(
-                GameEventScriptMessageSignature.Create(name, arguments),
+                GesMessageSignature.Create(name, arguments),
                 ReadStrings(bind.RequiredTags),
                 ReadStrings(bind.ExcludedTags),
                 bind.Kind == MessageHandler,
@@ -139,9 +139,9 @@ internal sealed class GesLinkedProgram
         return values;
     }
 
-    private IGameEventScriptExtensionFunction?[] BindExtensions(IGameEventScriptExtensionRegistry registry)
+    private IGesExtensionFunction?[] BindExtensions(IGesExtensionRegistry registry)
     {
-        var result = new IGameEventScriptExtensionFunction?[ExtensionCallBinds.Length];
+        var result = new IGesExtensionFunction?[ExtensionCallBinds.Length];
         for (ushort bindId = 0; bindId < ExtensionCallBinds.Length; bindId++)
         {
             var bind = ExtensionCallBinds[bindId];
@@ -149,11 +149,11 @@ internal sealed class GesLinkedProgram
             var fullName = FetchString(bind.Name);
             var separator = fullName.IndexOf('.');
             if (separator <= 0 || separator >= fullName.Length - 1)
-                throw LinkError(GameEventScriptDiagnosticCodes.LinkInvalidExtensionReference,
+                throw LinkError(GesDiagnosticCodes.LinkInvalidExtensionReference,
                     $"External extension reference '{fullName}' has an invalid name.", fullName);
-            var reference = new GameEventScriptExtensionReference(fullName[..separator], fullName[(separator + 1)..], ReadStrings(bind.ArgumentNames));
+            var reference = new GesExtensionReference(fullName[..separator], fullName[(separator + 1)..], ReadStrings(bind.ArgumentNames));
             result[bindId] = registry.Resolve(reference) ?? throw LinkError(
-                GameEventScriptDiagnosticCodes.LinkMissingExtension,
+                GesDiagnosticCodes.LinkMissingExtension,
                 $"GameEventScript extension '{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.",
                 reference.SignatureId);
         }
@@ -161,21 +161,21 @@ internal sealed class GesLinkedProgram
         return result;
     }
 
-    private IGameEventScriptExternalTypeConstructor?[] BindExternalTypes(IGameEventScriptExternalTypeRegistry registry)
+    private IGesExternalTypeConstructor?[] BindExternalTypes(IGesExternalTypeRegistry registry)
     {
-        var result = new IGameEventScriptExternalTypeConstructor?[ExternalTypeBinds.Length];
+        var result = new IGesExternalTypeConstructor?[ExternalTypeBinds.Length];
         for (ushort bindId = 0; bindId < ExternalTypeBinds.Length; bindId++)
         {
             var bind = ExternalTypeBinds[bindId];
             if (bind.Kind != ExternalType || bind.Id != bindId) continue;
-            var reference = new GameEventScriptExternalTypeConstructorReference(FetchString(bind.Name), ReadStrings(bind.ArgumentNames));
+            var reference = new GesExternalTypeConstructorReference(FetchString(bind.Name), ReadStrings(bind.ArgumentNames));
             var constructor = registry.Resolve(reference) ?? throw LinkError(
-                GameEventScriptDiagnosticCodes.LinkMissingExternalTypeConstructor,
+                GesDiagnosticCodes.LinkMissingExternalTypeConstructor,
                 $"GameEventScript external type constructor ':{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.",
                 reference.SignatureId);
             if (!string.Equals(constructor.Definition.SignatureId, reference.SignatureId, StringComparison.Ordinal))
                 throw LinkError(
-                    GameEventScriptDiagnosticCodes.LinkMismatchedExternalTypeConstructor,
+                    GesDiagnosticCodes.LinkMismatchedExternalTypeConstructor,
                     $"GameEventScript external type constructor registry returned '{constructor.Definition.SignatureId}' for requested reference '{reference.SignatureId}'.",
                     reference.SignatureId);
             result[bindId] = constructor;
@@ -196,13 +196,13 @@ internal sealed class GesLinkedProgram
             var name = FetchString(bind.Name);
             var arguments = ReadStrings(bind.ArgumentNames);
             signatures[index] = new OutboundMessageSignature(name, arguments,
-                GameEventScriptMessageSignature.CreateSignatureId(name, arguments));
+                GesMessageSignature.CreateSignatureId(name, arguments));
         }
 
         return signatures;
     }
 
-    private static GameEventScriptBinaryBindEntry[] BuildIdIndexedBindTable(GameEventScriptProgram program, GameEventScriptBinaryBindKind kind)
+    private static GameEventScriptBinaryBindEntry[] BuildIdIndexedBindTable(GameEventScriptProgram program, GesBinaryBindKind kind)
     {
         var maxId = -1;
         foreach (var entry in program.Bindings.Entries)
@@ -214,7 +214,7 @@ internal sealed class GesLinkedProgram
         return result;
     }
 
-    private static string[] BuildStringPool(GameEventScriptStringConstantSegment table)
+    private static string[] BuildStringPool(GesStringConstantSegment table)
     {
         var strings = new string[table.Slices.Length];
         for (var index = 0; index < strings.Length; index++) strings[index] = table.Resolve((ushort)index);
@@ -250,16 +250,16 @@ internal sealed class GesLinkedProgram
             program.RequiredCallStackDepth != requiredCallStackDepth)
         {
             throw LinkError(
-                GameEventScriptDiagnosticCodes.LinkInvalidProgram,
+                GesDiagnosticCodes.LinkInvalidProgram,
                 $"Program resource metadata is inconsistent. Program requires {program.RequiredRegisterCount} registers and " +
                 $"{program.RequiredCallStackDepth} call-stack entries, but its message handlers require maxima of " +
                 $"{requiredRegisterCount} and {requiredCallStackDepth}.");
         }
     }
 
-    private GameEventScriptDynamicLinkException LinkError(string code, string message, string? symbol = null)
-        => new(new GameEventScriptDiagnostic(
-            GameEventScriptDiagnosticPhase.Link,
+    private GesDynamicLinkException LinkError(string code, string message, string? symbol = null)
+        => new(new GesDiagnostic(
+            GesDiagnosticPhase.Link,
             code,
             message,
             symbol,
@@ -269,7 +269,7 @@ internal sealed class GesLinkedProgram
 // Canonical GesValueMap order for a fixed key list: ascending scalar keys, last duplicate wins.
 internal sealed class GesMapLayout
 {
-    internal GesMapLayout(GameEventScriptUInt16IndexList keyNames, string[] stringPool)
+    internal GesMapLayout(GesUInt16IndexList keyNames, string[] stringPool)
     {
         InputCount = keyNames.Length;
         var keys = new List<string>(keyNames.Length);

@@ -28,7 +28,7 @@ internal abstract record ScriptNode
 {
     // Parser construction assigns metadata before attaching a fresh node to its
     // parent. Subsequent compiler passes retain copy-on-rewrite semantics.
-    public GameEventScriptSourceLocation? SourceRange { get; set; }
+    public GesSourceLocation? SourceRange { get; set; }
 
     // Parser-only source depth, including parentheses removed from the semantic tree.
     public int SourceNesting { get; set; }
@@ -51,12 +51,12 @@ internal sealed record ConstantDefinitionNode(string Name, ExpressionNode Value)
 
 internal sealed record ParameterNode(string? ExternalLabel, string LocalName, string? DeclaredType = null) : ScriptNode
 {
-    public string SignatureLabel => ExternalLabel ?? GameEventScriptMessageSignature.UnlabeledParameterName;
+    public string SignatureLabel => ExternalLabel ?? GesMessageSignature.UnlabeledParameterName;
 }
 
 internal sealed record ArgumentNode(string? Label, ExpressionNode Expression) : ScriptNode
 {
-    public string Name => Label ?? GameEventScriptMessageSignature.UnlabeledParameterName;
+    public string Name => Label ?? GesMessageSignature.UnlabeledParameterName;
 }
 
 internal sealed record ArgumentListNode(IReadOnlyList<ArgumentNode> Arguments) : ScriptNode
@@ -388,7 +388,7 @@ internal sealed record RangeExpressionNode(ExpressionNode FromExpression, Expres
 internal sealed record RandomExpressionNode(ExpressionNode FromExpression, ExpressionNode ToExpression) : ExpressionNode;
 internal sealed record SeededRandomExpressionNode(ExpressionNode SeedExpression, ExpressionNode BodyExpression) : ExpressionNode;
 internal sealed record DiceExpressionNode(int DiceCount, int SideCount) : ExpressionNode;
-internal sealed record SeriesExpressionNode(GameEventScriptBytecodeSeriesKind SeriesKind) : ExpressionNode;
+internal sealed record SeriesExpressionNode(GesBytecodeSeriesKind SeriesKind) : ExpressionNode;
 internal sealed record GeneratedCollectionExpressionNode(string CollectionType, string Identifier, IterationSourceNode Source, ExpressionNode? Predicate, ExpressionNode Projection) : ExpressionNode;
 internal sealed record GuardedChoiceExpressionNode(IReadOnlyList<GuardedChoiceBranchNode> Branches, ExpressionNode OtherwiseExpression) : ExpressionNode;
 internal sealed record GuardedChoiceBranchNode(ExpressionNode ValueExpression, ExpressionNode ConditionExpression) : ScriptNode;

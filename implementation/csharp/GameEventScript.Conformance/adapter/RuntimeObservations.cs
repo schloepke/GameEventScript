@@ -4,7 +4,7 @@
 using System.Text.Json;
 using GameEventScript.Api;
 
-internal sealed class RuntimeObservations(string publishSink) : IGameEventScriptRuntimeObserver, IGameEventScriptPublishSink
+internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObserver, IGesPublishSink
 {
     private readonly List<GameEventScriptMessage> _local = new();
     private readonly List<GameEventScriptMessage> _outbound = new();
@@ -54,21 +54,21 @@ internal sealed class RuntimeObservations(string publishSink) : IGameEventScript
                 if (pump == "completion")
                 {
                     var execution = host.RunToCompletion();
-                    paused = execution.State == GameEventScriptExecutionState.Paused;
-                    waiting = execution.State == GameEventScriptExecutionState.Waiting;
+                    paused = execution.State == GesExecutionState.Paused;
+                    waiting = execution.State == GesExecutionState.Waiting;
                 }
                 else if (pump is "frame" or "frames")
                 {
                     var frames = 0;
-                    GameEventScriptExecutionResult execution;
+                    GesExecutionResult execution;
                     do
                     {
                         if (++frames > 1_000_000) throw new InvalidOperationException("MaxFramesPerStep exceeded.");
                         execution = host.ExecuteFrame(step.GetProperty("budget").GetInt32());
-                        paused |= execution.State == GameEventScriptExecutionState.Paused;
-                        waiting = execution.State == GameEventScriptExecutionState.Waiting;
+                        paused |= execution.State == GesExecutionState.Paused;
+                        waiting = execution.State == GesExecutionState.Waiting;
                     }
-                    while (pump == "frames" && execution.State == GameEventScriptExecutionState.Paused);
+                    while (pump == "frames" && execution.State == GesExecutionState.Paused);
                 }
             }
             var result = observer.Capture();
@@ -82,11 +82,11 @@ internal sealed class RuntimeObservations(string publishSink) : IGameEventScript
         return new { initialization, steps };
     }
 
-    internal static GameEventScriptRuntimeLimits CreateLimits(JsonElement limits)
+    internal static GesRuntimeLimits CreateLimits(JsonElement limits)
     {
-        var defaults = GameEventScriptRuntimeLimits.Default;
+        var defaults = GesRuntimeLimits.Default;
         int Read(string name, int fallback) => limits.TryGetProperty(name, out var item) ? item.GetInt32() : fallback;
-        return new GameEventScriptRuntimeLimits
+        return new GesRuntimeLimits
         {
             MaxProcessedEventsPerRun = Read("maxProcessedEventsPerRun", defaults.MaxProcessedEventsPerRun),
             MaxQueuedMessagesPerRun = Read("maxQueuedMessagesPerRun", defaults.MaxQueuedMessagesPerRun),
@@ -128,7 +128,7 @@ internal sealed class RuntimeObservations(string publishSink) : IGameEventScript
     }
 
     /// <summary>Records publication with all final-delivery acceptance flags.</summary>
-    public void MessagePublished(GameEventScriptMessage message, GameEventScriptPublishResult result)
+    public void MessagePublished(GameEventScriptMessage message, GesPublishResult result)
     {
         _local.Add(message);
         _trace.Add(new()
@@ -168,7 +168,7 @@ internal sealed class RuntimeObservations(string publishSink) : IGameEventScript
     }
 
     /// <summary>Records structured diagnostics in both channels, excluding English diagnostic text.</summary>
-    public void RuntimeError(GameEventScriptDiagnostic diagnostic)
+    public void RuntimeError(GesDiagnostic diagnostic)
     {
         var value = CompilerObservations.Diagnostic(diagnostic);
         _diagnostics.Add(value);

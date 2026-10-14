@@ -22,27 +22,27 @@ internal sealed partial class GesBinaryBuilder
     private int CurrentRoutineId => _routineStack.Count == 0 ? NoRoutineId : _routineStack.Peek();
 
     public GesBinaryRoutineScope BeginHandler(string messageName, IReadOnlyList<string>? argumentNames = null, ushort? id = null, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null)
-        => BeginRoutine(GameEventScriptBinaryBindKind.MessageHandler, messageName, argumentNames, id, requiredTags, excludedTags);
+        => BeginRoutine(GesBinaryBindKind.MessageHandler, messageName, argumentNames, id, requiredTags, excludedTags);
 
     public GesBinaryRoutineScope BeginMessageNameHandler(string messageName, string messageArgumentName = "message", ushort? id = null, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null)
-        => BeginRoutine(GameEventScriptBinaryBindKind.MessageNameHandler, messageName, [messageArgumentName], id, requiredTags, excludedTags);
+        => BeginRoutine(GesBinaryBindKind.MessageNameHandler, messageName, [messageArgumentName], id, requiredTags, excludedTags);
 
     public GesBinaryRoutineScope BeginFunction(string name, IReadOnlyList<string>? argumentNames = null, ushort? id = null)
-        => BeginRoutine(GameEventScriptBinaryBindKind.Function, name, argumentNames, id);
+        => BeginRoutine(GesBinaryBindKind.Function, name, argumentNames, id);
 
     public GesBinaryRoutineScope BeginPredicate(string name, IReadOnlyList<string>? argumentNames = null, ushort? id = null)
-        => BeginRoutine(GameEventScriptBinaryBindKind.Predicate, name, argumentNames, id);
+        => BeginRoutine(GesBinaryBindKind.Predicate, name, argumentNames, id);
 
     public GesBinaryRoutineScope BeginRecordConstructor(string typeName, IReadOnlyList<string>? argumentNames = null, ushort? id = null)
-        => BeginRoutine(GameEventScriptBinaryBindKind.Record, typeName, argumentNames, id);
+        => BeginRoutine(GesBinaryBindKind.Record, typeName, argumentNames, id);
 
     public GesBinaryRoutineScope BeginHelper(string name, IReadOnlyList<string>? argumentNames = null)
         => BeginRoutine(null, name, argumentNames, id: null);
 
-    private GesBinaryRoutineScope BeginRoutine(GameEventScriptBinaryBindKind? kind, string name, IReadOnlyList<string>? argumentNames, ushort? id, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null)
+    private GesBinaryRoutineScope BeginRoutine(GesBinaryBindKind? kind, string name, IReadOnlyList<string>? argumentNames, ushort? id, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null)
         => BeginRoutine(DeclareRoutine(kind, name, argumentNames, id, requiredTags, excludedTags));
 
-    public RoutinePlan DeclareRoutine(GameEventScriptBinaryBindKind? kind, string name, IReadOnlyList<string>? argumentNames = null, ushort? id = null, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null)
+    public RoutinePlan DeclareRoutine(GesBinaryBindKind? kind, string name, IReadOnlyList<string>? argumentNames = null, ushort? id = null, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Routine name must be non-empty.", nameof(name));
         if (kind is null && id.HasValue) throw new ArgumentException("Helper routines cannot have bind ids.", nameof(id));
@@ -146,7 +146,7 @@ internal sealed partial class GesBinaryBuilder
         for (var itemIndex = 0; itemIndex < result.Length; itemIndex++)
         {
             var instruction = result[itemIndex].Instruction;
-            if (instruction is null || instruction.OpCode != GameEventScriptBytecodeOpCode.RegisterLocals) continue;
+            if (instruction is null || instruction.OpCode != GesBytecodeOpCode.RegisterLocals) continue;
             var routineId = instruction.RoutineId;
             if (routineId < 0 || routineId >= registerLocalsIndexes.Length) continue;
             if (registerLocalsIndexes[routineId] < 0) registerLocalsIndexes[routineId] = itemIndex;
@@ -242,11 +242,11 @@ internal sealed partial class GesBinaryBuilder
         }
     }
 
-    internal sealed class RoutinePlan(int id, int parentRoutineId, GameEventScriptBinaryBindKind? kind, string name, GesLabelRef entryLabel, IReadOnlyList<string> argumentNames)
+    internal sealed class RoutinePlan(int id, int parentRoutineId, GesBinaryBindKind? kind, string name, GesLabelRef entryLabel, IReadOnlyList<string> argumentNames)
     {
         public int Id { get; } = id;
         public int ParentRoutineId { get; } = parentRoutineId;
-        public GameEventScriptBinaryBindKind? Kind { get; } = kind;
+        public GesBinaryBindKind? Kind { get; } = kind;
         public string Name { get; } = name;
         public GesLabelRef EntryLabel { get; } = entryLabel;
         public IReadOnlyList<string> ArgumentNames { get; } = argumentNames;

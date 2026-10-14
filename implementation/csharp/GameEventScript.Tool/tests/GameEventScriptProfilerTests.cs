@@ -16,7 +16,7 @@ public sealed class GameEventScriptProfilerTests
     {
         long now = 0;
         var profiler = new RunProfiler(() => now += 10, 1_000_000_000);
-        var program = GameEventScriptBuilder.Create().AddScript("function f(_ x) be x + 1\non Tick { emit Result(f(10)) }", "sample.ges").Compile();
+        var program = GesProgramBuilder.Create().AddScript("function f(_ x) be x + 1\non Tick { emit Result(f(10)) }", "sample.ges").Compile();
         var host = GameEventScriptHost.CreateBuilder().WithProfiler(profiler).Build();
         host.Load(program);
         host.Load(program);
@@ -59,7 +59,7 @@ public sealed class GameEventScriptProfilerTests
     {
         long now = 0;
         var profiler = nativeClock ? new RunProfiler() : new RunProfiler(() => ++now, 1_000_000_000);
-        var program = GameEventScriptBuilder.Create().AddScript("on Tick { emit Result(10) }").Compile();
+        var program = GesProgramBuilder.Create().AddScript("on Tick { emit Result(10) }").Compile();
         var measurement = profiler.CreateProgramProfiler(program);
         for (var index = 0; index < 1000; index++) RecordInstruction();
         measurement.FinishSlice();
@@ -72,12 +72,12 @@ public sealed class GameEventScriptProfilerTests
 
         void RecordInstruction()
         {
-            measurement.PhaseStarting(GameEventScriptProfilePhase.StateCheck);
-            measurement.PhaseStarting(GameEventScriptProfilePhase.BudgetCheck);
-            measurement.PhaseStarting(GameEventScriptProfilePhase.SliceCheck);
-            measurement.PhaseStarting(GameEventScriptProfilePhase.Fetch);
+            measurement.PhaseStarting(GesProfilePhase.StateCheck);
+            measurement.PhaseStarting(GesProfilePhase.BudgetCheck);
+            measurement.PhaseStarting(GesProfilePhase.SliceCheck);
+            measurement.PhaseStarting(GesProfilePhase.Fetch);
             measurement.InstructionStarting(0);
-            measurement.PhaseStarting(GameEventScriptProfilePhase.Advance);
+            measurement.PhaseStarting(GesProfilePhase.Advance);
         }
 
     }
@@ -87,15 +87,15 @@ public sealed class GameEventScriptProfilerTests
     public void FaultAndTerminalChecksRemainSeparate()
     {
         long now = 0;
-        var program = GameEventScriptBuilder.Create().AddScript("on Tick { emit Result(10) }").Compile();
+        var program = GesProgramBuilder.Create().AddScript("on Tick { emit Result(10) }").Compile();
         var measurement = new RunProfiler.Measurement(program, () => now += 10);
-        measurement.PhaseStarting(GameEventScriptProfilePhase.StateCheck);
+        measurement.PhaseStarting(GesProfilePhase.StateCheck);
         measurement.FinishSlice();
         now += 1_000_000;
-        measurement.PhaseStarting(GameEventScriptProfilePhase.StateCheck);
-        measurement.PhaseStarting(GameEventScriptProfilePhase.BudgetCheck);
-        measurement.PhaseStarting(GameEventScriptProfilePhase.SliceCheck);
-        measurement.PhaseStarting(GameEventScriptProfilePhase.Fetch);
+        measurement.PhaseStarting(GesProfilePhase.StateCheck);
+        measurement.PhaseStarting(GesProfilePhase.BudgetCheck);
+        measurement.PhaseStarting(GesProfilePhase.SliceCheck);
+        measurement.PhaseStarting(GesProfilePhase.Fetch);
         measurement.InstructionStarting(0);
         measurement.FinishSlice();
         Assert.AreEqual(50L, measurement.Ticks[0]);
@@ -133,7 +133,7 @@ public sealed class GameEventScriptProfilerTests
     [TestMethod]
     public void ReportWorksWithoutDebugData()
     {
-        var program = GameEventScriptBuilder.Create().WithDebugInfo(GameEventScriptDebugInfoOptions.None).AddScript("on Tick { emit Result(10) }").Compile();
+        var program = GesProgramBuilder.Create().WithDebugInfo(GesDebugInfoOptions.None).AddScript("on Tick { emit Result(10) }").Compile();
         var profiler = new RunProfiler();
         var host = GameEventScriptHost.CreateBuilder().WithProfiler(profiler).Build();
         host.Load(program);

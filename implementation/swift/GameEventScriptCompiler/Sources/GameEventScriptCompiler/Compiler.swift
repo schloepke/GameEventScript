@@ -3,14 +3,14 @@
 
 @_spi(Compiler) import GameEventScriptRuntime
 
-typealias Op = GameEventScriptBytecodeOpCode
-typealias Instruction = GameEventScriptBytecodeInstruction
+typealias Op = GesBytecodeOpCode
+typealias Instruction = GesBytecodeInstruction
 
 final class GesRoutine {
     let definition: GesDefinition
     var key: String { definition.kind.hasSuffix("andler") ? definition.signature + "@\(definition.location.sourceID ?? 0):\(definition.location.line ?? 0):\(definition.location.column ?? 0)" : definition.signature }
     var code: [Instruction] = []
-    var locations: [GameEventScriptSourceLocation] = []
+    var locations: [GesSourceLocation] = []
     var pinned: Set<Int> = []
     var registers: Int
     var maxStage = 0
@@ -20,7 +20,7 @@ final class GesRoutine {
     var calls: [(Int, String)] = []
     var dependencies: Set<String> = []
     var symbols: [(String, Int, Int, Bool)] = []
-    var location: GameEventScriptSourceLocation
+    var location: GesSourceLocation
 
     init(_ definition: GesDefinition) {
         self.definition = definition
@@ -67,8 +67,8 @@ final class GesScope {
 }
 
 final class GesCompiler {
-    let modules: [GesModule], sources: [GesSource], options: GameEventScriptCompileOptions
-    let catalog: (any GameEventScriptExternalTypeCatalogProtocol)?
+    let modules: [GesModule], sources: [GesSource], options: GesCompileOptions
+    let catalog: (any GesExternalTypeCatalog)?
     var moduleName = ""
     var constants: [String: GesExpression] = [:], definitions: [String: GesDefinition] = [:], records: [String: GesRecord] = [:]
     var strings: [String] = [], lists: [[UInt16]] = [], bindings: [GameEventScriptBinding] = []
@@ -81,7 +81,7 @@ final class GesCompiler {
     var operandLayouts: [Int: GesOperandSlots] = [:]
     var sourcePositions: [UInt32: [UInt64: Int]] = [:]
 
-    init(modules: [GesModule], sources: [GesSource], catalog: (any GameEventScriptExternalTypeCatalogProtocol)?, options: GameEventScriptCompileOptions) {
+    init(modules: [GesModule], sources: [GesSource], catalog: (any GesExternalTypeCatalog)?, options: GesCompileOptions) {
         self.modules = modules
         self.sources = sources
         self.catalog = catalog
@@ -120,7 +120,7 @@ final class GesCompiler {
 
     func textList(_ names: [String]) -> Int { list(names.map(text)) }
 
-    func importBinding(_ kind: GameEventScriptBinaryBindKind, _ name: String, _ labels: [String]) -> Int {
+    func importBinding(_ kind: GesBinaryBindKind, _ name: String, _ labels: [String]) -> Int {
         let key = "\(kind.rawValue):" + signature(name, labels)
         if let id = imports[key] { return id }
         guard bindings.count < 65535 else {
@@ -135,7 +135,7 @@ final class GesCompiler {
 
     func signature(_ name: String, _ labels: [String]) -> String { name + "(" + labels.joined(separator: ",") + ")" }
 
-    func error(_ code: String, _ location: GameEventScriptSourceLocation, symbol: String? = nil, kind: GameEventScriptSymbolKind = .unknown, phase: GameEventScriptDiagnosticPhase = .validate, message: String? = nil) -> GameEventScriptCompileError {
+    func error(_ code: String, _ location: GesSourceLocation, symbol: String? = nil, kind: GesSymbolKind = .unknown, phase: GesDiagnosticPhase = .validate, message: String? = nil) -> GesCompileError {
         compileError(phase, code, message ?? diagnosticMessage(code, symbol: symbol), location, symbol: symbol, kind: kind)
     }
 
@@ -301,8 +301,8 @@ final class GesCompiler {
         }
 
         var code: [Instruction] = []
-        var spans: [GameEventScriptSourceMapEntry] = []
-        var symbols: [GameEventScriptDebugSymbol] = []
+        var spans: [GesSourceMapEntry] = []
+        var symbols: [GesDebugSymbol] = []
         var handlerIDs: [String: Int] = [:]
         var maxRegs = 0
         var maxDepth = 0
@@ -337,7 +337,7 @@ final class GesCompiler {
                     }
                 }
             }
-            let kind: GameEventScriptBinaryBindKind = d.kind == "handler" ? .messageHandler : d.kind == "messageNameHandler" ? .messageNameHandler : d.kind == "function" ? .function : d.kind == "predicate" ? .predicate : .record
+            let kind: GesBinaryBindKind = d.kind == "handler" ? .messageHandler : d.kind == "messageNameHandler" ? .messageNameHandler : d.kind == "function" ? .function : d.kind == "predicate" ? .predicate : .record
             let id: Int
             if isHandler {
                 id = handlerIDs[d.name] ?? 0
@@ -378,7 +378,7 @@ final class GesCompiler {
         _ = text(moduleName)
         try checkLimits()
         let sourceMap = options.debugInfo.contains(.sourceMap) ? GameEventScriptSourceMap(sources: sourceDescriptors(), entries: spans) : nil
-        return try GameEventScriptCompilerSupport.program(
+        return try GesCompilerSupport.program(
             moduleName: moduleName,
             programVersion: options.programVersion,
             requiredRegisterCount: UInt16(maxRegs),
@@ -393,12 +393,12 @@ final class GesCompiler {
         )
     }
 
-    func sourceDescriptors() -> [GameEventScriptSourceMapSource] {
+    func sourceDescriptors() -> [GesSourceMapSource] {
         sources.map { source in
             let bytes = Array(source.text.utf8)
             var starts: [UInt32] = [0]
             for i in bytes.indices { if bytes[i] == 10 || bytes[i] == 13 && (i + 1 == bytes.count || bytes[i + 1] != 10) { starts.append(UInt32(i + 1)) } }
-            return .init(sourceID: source.id, sourceName: source.name, sourceByteLength: UInt32(bytes.count), sha256: GameEventScriptCompilerSupport.sha256(bytes), lineStartByteOffsets: starts)
+            return .init(sourceID: source.id, sourceName: source.name, sourceByteLength: UInt32(bytes.count), sha256: GesCompilerSupport.sha256(bytes), lineStartByteOffsets: starts)
         }
     }
 
@@ -440,7 +440,7 @@ final class GesCompiler {
         return "anonymous.m" + String(repeating: "0", count: 8 - hex.count) + hex
     }
 
-    func sourceSpan(_ location: GameEventScriptSourceLocation, address: Int) -> GameEventScriptSourceMapEntry? {
+    func sourceSpan(_ location: GesSourceLocation, address: Int) -> GesSourceMapEntry? {
         guard let id = location.sourceID, Int(id) < sources.count else { return nil }
 
         func key(_ line: Int?, _ column: Int?) -> UInt64 { UInt64(line ?? 0) << 32 | UInt64(column ?? 0) }
@@ -489,11 +489,11 @@ final class GesCompiler {
         case .constant(let name): return constants[name].flatMap(scalarConstant)
         case .cast(let source, "number"), .cast(let source, "numeric"):
             guard let value = scalarConstant(source) else { return nil }
-            let result = GameEventScriptCompilerSupport.castNumber(value)
+            let result = GesCompilerSupport.castNumber(value)
             return result.kind == .float && !result.asNumber.isFinite ? nil : result
         case .binary(let op, let left, let right):
             let operations: [String: Op] = ["+": .add, "-": .subtract, "*": .multiply, "/": .divide, "div": .integerDivide, "mod": .modulo, "rem": .remainder, "^": .power]
-            guard let opcode = operations[op], let a = scalarConstant(left), let b = scalarConstant(right), let result = GameEventScriptCompilerSupport.arithmetic(opcode, a, b), result.kind != .float || result.asNumber.isFinite else { return nil }
+            guard let opcode = operations[op], let a = scalarConstant(left), let b = scalarConstant(right), let result = GesCompilerSupport.arithmetic(opcode, a, b), result.kind != .float || result.asNumber.isFinite else { return nil }
             return result
         case .unary("-", let value):
             guard let value = scalarConstant(value), value.isNumeric else { return nil }
@@ -555,7 +555,7 @@ final class GesCompiler {
             r.emit(check ? .checkUnit : .castUnit, d, value, flags: flag)
             return
         }
-        if let kind = GameEventScriptBytecodeTypeKind.allCases.first(where: { String(describing: $0) == type }) {
+        if let kind = GesBytecodeTypeKind.allCases.first(where: { String(describing: $0) == type }) {
             r.emit(check ? .checkType : .cast, d, value, Int(kind.rawValue))
             return
         }

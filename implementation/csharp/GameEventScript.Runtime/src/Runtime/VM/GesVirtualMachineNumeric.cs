@@ -3,7 +3,7 @@
 
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 using static GameEventScript.Runtime.VM.GesVmUnitCalculation;
 
 namespace GameEventScript.Runtime.VM;
@@ -14,7 +14,7 @@ internal partial class GesVirtualMachine
     {
         ref readonly var value = ref Register(source);
         if (!value.IsNumeric) SetNothing(destination);
-        else if (value.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice) SetInteger(destination, value.IntegerValue);
+        else if (value.Kind is GesBytecodeTypeKind.Boolean or Dice) SetInteger(destination, value.IntegerValue);
         else SetValue(destination, in value);
     }
 
@@ -65,7 +65,7 @@ internal partial class GesVirtualMachine
             SetNothing(dst);
             return;
         }
-        if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice || b.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice)
+        if (a.Kind is GesBytecodeTypeKind.Boolean or Dice || b.Kind is GesBytecodeTypeKind.Boolean or Dice)
         {
             var numeric0 = NumericOperand(in a);
             var numeric1 = NumericOperand(in b);
@@ -85,7 +85,7 @@ internal partial class GesVirtualMachine
             SetNothing(dst);
             return;
         }
-        if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice || b.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice)
+        if (a.Kind is GesBytecodeTypeKind.Boolean or Dice || b.Kind is GesBytecodeTypeKind.Boolean or Dice)
         {
             var numeric0 = NumericOperand(in a);
             var numeric1 = NumericOperand(in b);
@@ -105,7 +105,7 @@ internal partial class GesVirtualMachine
             SetNothing(destinationRegister);
             return;
         }
-        if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice || b.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice)
+        if (a.Kind is GesBytecodeTypeKind.Boolean or Dice || b.Kind is GesBytecodeTypeKind.Boolean or Dice)
         {
             var numeric0 = NumericOperand(in a);
             var numeric1 = NumericOperand(in b);
@@ -125,7 +125,7 @@ internal partial class GesVirtualMachine
             SetNothing(destinationRegister);
             return;
         }
-        if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice || b.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice)
+        if (a.Kind is GesBytecodeTypeKind.Boolean or Dice || b.Kind is GesBytecodeTypeKind.Boolean or Dice)
         {
             var numeric0 = NumericOperand(in a);
             var numeric1 = NumericOperand(in b);
@@ -145,7 +145,7 @@ internal partial class GesVirtualMachine
             SetNothing(destinationRegister);
             return;
         }
-        if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice || b.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice)
+        if (a.Kind is GesBytecodeTypeKind.Boolean or Dice || b.Kind is GesBytecodeTypeKind.Boolean or Dice)
         {
             var numeric0 = NumericOperand(in a);
             var numeric1 = NumericOperand(in b);
@@ -165,7 +165,7 @@ internal partial class GesVirtualMachine
             SetNothing(destinationRegister);
             return;
         }
-        if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice || b.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice)
+        if (a.Kind is GesBytecodeTypeKind.Boolean or Dice || b.Kind is GesBytecodeTypeKind.Boolean or Dice)
         {
             var numeric0 = NumericOperand(in a);
             var numeric1 = NumericOperand(in b);
@@ -185,7 +185,7 @@ internal partial class GesVirtualMachine
             SetNothing(destinationRegister);
             return;
         }
-        if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice || b.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice)
+        if (a.Kind is GesBytecodeTypeKind.Boolean or Dice || b.Kind is GesBytecodeTypeKind.Boolean or Dice)
         {
             var numeric0 = NumericOperand(in a);
             var numeric1 = NumericOperand(in b);
@@ -205,7 +205,7 @@ internal partial class GesVirtualMachine
             SetNothing(destinationRegister);
             return;
         }
-        if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice || b.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice)
+        if (a.Kind is GesBytecodeTypeKind.Boolean or Dice || b.Kind is GesBytecodeTypeKind.Boolean or Dice)
         {
             var numeric0 = NumericOperand(in a);
             var numeric1 = NumericOperand(in b);
@@ -225,7 +225,7 @@ internal partial class GesVirtualMachine
             SetNothing(destinationRegister);
             return;
         }
-        if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice || b.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice)
+        if (a.Kind is GesBytecodeTypeKind.Boolean or Dice || b.Kind is GesBytecodeTypeKind.Boolean or Dice)
         {
             var numeric0 = NumericOperand(in a);
             var numeric1 = NumericOperand(in b);
@@ -244,7 +244,7 @@ internal partial class GesVirtualMachine
             SetNothing(destinationRegister);
             return;
         }
-        if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice)
+        if (a.Kind is GesBytecodeTypeKind.Boolean or Dice)
         {
             var numeric0 = NumericOperand(in a);
             this.GesVmNegate(destinationRegister, in numeric0);
@@ -262,7 +262,7 @@ internal partial class GesVirtualMachine
             SetNothing(destinationRegister);
             return;
         }
-        if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice)
+        if (a.Kind is GesBytecodeTypeKind.Boolean or Dice)
         {
             var numeric0 = NumericOperand(in a);
             this.GesVmAbs(destinationRegister, in numeric0);
@@ -282,7 +282,7 @@ internal partial class GesVirtualMachine
             SetNothing(destinationRegister);
             return;
         }
-        if (value.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice || min.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice || max.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice)
+        if (value.Kind is GesBytecodeTypeKind.Boolean or Dice || min.Kind is GesBytecodeTypeKind.Boolean or Dice || max.Kind is GesBytecodeTypeKind.Boolean or Dice)
         {
             var numeric0 = NumericOperand(in value);
             var numeric1 = NumericOperand(in min);
@@ -295,5 +295,5 @@ internal partial class GesVirtualMachine
     }
 
     private static GesValue NumericOperand(in GesValue value)
-        => value.Kind is GameEventScriptBytecodeTypeKind.Boolean or Dice ? GesValue.GesInteger(value.IntegerValue) : value;
+        => value.Kind is GesBytecodeTypeKind.Boolean or Dice ? GesValue.GesInteger(value.IntegerValue) : value;
 }

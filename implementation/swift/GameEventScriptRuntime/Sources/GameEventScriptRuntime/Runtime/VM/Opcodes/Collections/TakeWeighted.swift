@@ -3,7 +3,7 @@
 
 extension GesVirtualMachine {
     @inline(never)
-    func executeTakeWeighted(_ destinationRegister: Int, _ sourceRegister: Int, _ countOperand: Int, _ operandA: Int, _ context: GameEventScriptContext) {
+    func executeTakeWeighted(_ destinationRegister: Int, _ sourceRegister: Int, _ countOperand: Int, _ operandA: Int, _ context: GesContext) {
         let destination = destinationRegister
         let x = frameStart + sourceRegister
         let y = frameStart + operandA

@@ -161,7 +161,7 @@ Bytecode instructions use explicit numeric words and payload bits. CLR struct
 layout never defines `.gesb` encoding. The binary format is canonical Little
 Endian and known V1 sections are uncompressed. Compilation includes
 DebugSymbols, SourceMap, and SourceArchive by default; size-sensitive builds
-opt out with `GameEventScriptDebugInfoOptions.None`.
+opt out with `GesDebugInfoOptions.None`.
 
 The normative owners are `specs/ProgramModel.md`, `specs/Bytecode.md`,
 `specs/BinaryFormat.md`, and `specs/AssemblerFormat.md`.
@@ -242,10 +242,10 @@ only native handlers or any number of additively loaded Programs.
   or later-instance success. PublishResult.OutboundDeferred reports staging.
   Ordinary Detach keeps its captured-snapshot semantics. See specs/HostRuntime.md.
 - Native `Subscribe` returns an idempotently detachable
-  `GameEventScriptSubscription`.
+  `GesSubscription`.
 - Instance and subscription handles use stable host-local registration IDs and
   store no detach/unsubscribe closures.
-- Each host owns one `GameEventScriptContext`, one logical-message ring queue,
+- Each host owns one `GesContext`, one logical-message ring queue,
   one random generator, and at most one lazily created reusable `GesVirtualMachine`.
 - `GesVirtualMachine` owns the resumable execution state and executes it through
   its `Begin`/`RunSlice` methods. Program-specific dynamic links live in
@@ -253,7 +253,7 @@ only native handlers or any number of additively loaded Programs.
 - One logical message and all captured handlers complete before the next
   message. Script handlers may pause across frames; native handlers are atomic.
 - `Receive` and `Emit` enqueue locally. `Publish` enqueues locally and then calls
-  one optional synchronous `IGameEventScriptPublishSink`.
+  one optional synchronous `IGesPublishSink`.
 - Result-bearing sends use EmitInstant/EmitAfter/PublishInstant/PublishAfter with
   WithTags/Indirect flags; the original eight statement opcodes retain their encoding.
   Time quantities round upward to whole microseconds against an injectable monotonic clock.
@@ -293,15 +293,15 @@ consumption cannot advance the restored parent stream.
 
 ## Messages, extensions, and external types
 
-Message arguments are ordered `GameEventScriptMessageArgument` values. Argument
+Message arguments are ordered `GesMessageArgument` values. Argument
 order and labels define the signature. Core has no tuple or dictionary factory;
 C# conveniences live in `CSharpBridge`, and dictionary binding requires a known
 signature.
 
-Portable native handlers implement `IGameEventScriptNativeMessageHandler`.
-Extensions receive the host's `GameEventScriptContext`. External types use a
+Portable native handlers implement `IGesNativeMessageHandler`.
+Extensions receive the host's `GesContext`. External types use a
 declarative compiler catalog, a separate host runtime registry, and portable
-`IGameEventScriptExternalValue` instances. CLR objects and Reflection-backed
+`IGesExternalValue` instances. CLR objects and Reflection-backed
 implementations remain in `CSharpBridge`.
 
 ## Conformance and verification

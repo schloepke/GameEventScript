@@ -4,5 +4,5 @@
 struct GesDeferredPublication {
     let message: GameEventScriptMessage
     let localAccepted: Bool
-    let instance: GameEventScriptInstance
+    let instance: GesProgramInstance
 }

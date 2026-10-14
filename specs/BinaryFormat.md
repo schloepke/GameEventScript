@@ -292,7 +292,7 @@ The compiler's final materialization, reader, canonical writer, and `Host.Load`
 all invoke the shared program validator. It validates framing, UTF-8, table
 references, bind and opcode forms, code targets, the acyclic synchronous call
 graph, resource declarations, and debug/source ranges. Failures use
-`GameEventScriptProgramFormatException` with a stable error code and, where
+`GesProgramFormatException` with a stable error code and, where
 available, byte offset, section type, and entry index.
 
 Call-graph depth within the V1 data limits is not an additional format error.

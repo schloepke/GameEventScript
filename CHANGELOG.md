@@ -10,6 +10,22 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+### Breaking
+
+- Public API types are renamed so that only the three edge types keep the
+  `GameEventScript` prefix: `GameEventScriptHost`, `GameEventScriptProgram` and
+  `GameEventScriptMessage`. All other public types use `Ges`, identically in C#
+  and Swift, for example `GesContext`, `GesHostBuilder`, `GesMessageArgument`,
+  `GesRuntimeLimits`, `IGesPublishSink` (Swift: `GesPublishSink`) and
+  `GesSyntaxHighlighter`. Deviating names: `GameEventScriptBuilder` becomes
+  `GesProgramBuilder`, `GameEventScriptInstance` becomes `GesProgramInstance`,
+  the C# `GameEventScriptBytecodeInstructionUnit` and Swift `GesUnit` become
+  `GesQuantityUnit`, the concrete `GameEventScriptExternalTypeCatalog` becomes
+  `GesDeclaredExternalTypeCatalog` (the C# interface is `IGesExternalTypeCatalog`,
+  the Swift protocol `GesExternalTypeCatalog`), Swift `GameEventScriptExtensionFault`
+  becomes `GesExtensionFaultError` and Swift `GameEventScriptAPIError` becomes
+  `GesApiError`. Behavior is unchanged; migrate by renaming references.
+
 ### Changed
 
 - The root SwiftPM package now exposes only the four libraries. Build `ges` from

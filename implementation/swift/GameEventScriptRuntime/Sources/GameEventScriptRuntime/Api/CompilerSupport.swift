@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Shared implementation boundary for the separately packaged compiler.
-@_spi(Compiler) public enum GameEventScriptCompilerSupport {
+@_spi(Compiler) public enum GesCompilerSupport {
     /// Recognizes a source numeric literal using the runtime's numeric rules; returns nil for invalid input.
     public static func number(_ text: String, percentage: Bool = false) -> GesValue? { TextNumberCast.read(text, percentage: percentage, allowGrouping: false) }
 
@@ -13,7 +13,7 @@
     public static func castNumber(_ value: GesValue) -> GesValue { GesCasts.number(value) }
 
     /// Evaluates a supported constant arithmetic operation; returns nil for an unsupported opcode.
-    public static func arithmetic(_ opcode: GameEventScriptBytecodeOpCode, _ left: GesValue, _ right: GesValue) -> GesValue? {
+    public static func arithmetic(_ opcode: GesBytecodeOpCode, _ left: GesValue, _ right: GesValue) -> GesValue? {
         switch opcode {
         case .add: return GesMath.add(left, right)
         case .subtract: return GesMath.add(left, right, subtract: true)
@@ -30,7 +30,7 @@
 
     /// Assembles and validates a V1 Program from compiler-produced transport data.
     ///
-    /// - Throws: `GameEventScriptProgramFormatError` for inconsistent data or resource metadata.
+    /// - Throws: `GesProgramFormatError` for inconsistent data or resource metadata.
     public static func program(
         moduleName: String,
         programVersion: UInt64,
@@ -39,10 +39,10 @@
         strings: [String],
         indexLists: [[UInt16]],
         bindings: [GameEventScriptBinding],
-        code: [GameEventScriptBytecodeInstruction],
-        debugSymbols: [GameEventScriptDebugSymbol]?,
+        code: [GesBytecodeInstruction],
+        debugSymbols: [GesDebugSymbol]?,
         sourceMap: GameEventScriptSourceMap?,
-        sourceArchive: [GameEventScriptSourceArchiveEntry]?
+        sourceArchive: [GesSourceArchiveEntry]?
     ) throws -> GameEventScriptProgram {
         let result = GameEventScriptProgram(
             formatVersion: 1,
@@ -65,9 +65,9 @@
     }
 }
 
-extension GameEventScriptCompilerSupport {
+extension GesCompilerSupport {
     /// Logical operand positions: words 0...2, then payload words 3...6.
-    public static func registerSlots(_ instruction: GameEventScriptBytecodeInstruction) -> [Int] {
+    public static func registerSlots(_ instruction: GesBytecodeInstruction) -> [Int] {
         if instruction.opcode == .splitText && instruction.a == 1 { return [0, 1] }
         return instruction.operands.enumerated().compactMap { position, operand in
             guard operand.isRegister else { return nil }
@@ -86,7 +86,7 @@ extension GameEventScriptCompilerSupport {
     }
 
     /// Returns operand positions referencing index lists, selecting text lists or register lists with `text`.
-    public static func listSlots(_ instruction: GameEventScriptBytecodeInstruction, text: Bool) -> [Int] {
+    public static func listSlots(_ instruction: GesBytecodeInstruction, text: Bool) -> [Int] {
         instruction.operands.compactMap { operand in
             guard operand.isList && operand.isTextList == text else { return nil }
             switch operand {
@@ -103,7 +103,7 @@ extension GameEventScriptCompilerSupport {
     }
 
     /// Returns operand positions referencing individual string constants.
-    public static func textSlots(_ instruction: GameEventScriptBytecodeInstruction) -> [Int] {
+    public static func textSlots(_ instruction: GesBytecodeInstruction) -> [Int] {
         instruction.operands.compactMap { operand in operand.isString ? (operand == .customTypeName ? 2 : 1) : nil }
     }
 

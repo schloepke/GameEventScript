@@ -7,7 +7,7 @@ import GameEventScriptRuntime
 final class RunInventory {
     struct Entry {
         let id: Int
-        let instance: GameEventScriptInstance
+        let instance: GesProgramInstance
         let paths: [String]
     }
 
@@ -15,7 +15,7 @@ final class RunInventory {
     let host: GameEventScriptHost
     let io: ToolIO
     private var entries: [Entry] = []
-    private var native: [(String, GameEventScriptSubscription)] = []
+    private var native: [(String, GesSubscription)] = []
     private(set) var nextID: Int
     var active: [Entry] { entries.filter { $0.instance.isAttached } }
 
@@ -26,7 +26,7 @@ final class RunInventory {
         self.nextID = nextID
     }
 
-    @discardableResult func load(_ program: GameEventScriptProgram, paths: [String], id: Int? = nil) throws -> GameEventScriptInstance {
+    @discardableResult func load(_ program: GameEventScriptProgram, paths: [String], id: Int? = nil) throws -> GesProgramInstance {
         let instance = try host.load(program)
         let assignedID = id ?? nextID
         entries.append(Entry(id: assignedID, instance: instance, paths: paths))
@@ -52,7 +52,7 @@ final class RunInventory {
         return count
     }
 
-    func subscribe(_ name: String, handler: any GameEventScriptNativeMessageHandler) throws { native.append((name, try host.subscribeMessageName(name, handler: handler))) }
+    func subscribe(_ name: String, handler: any GesNativeMessageHandler) throws { native.append((name, try host.subscribeMessageName(name, handler: handler))) }
 
     func handlers(_ program: GameEventScriptProgram) -> [GameEventScriptBinding] { program.bindings.filter { isHandler($0) && program.stringConstants[Int($0.name)] != "initialization" } }
 

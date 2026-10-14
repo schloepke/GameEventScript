@@ -116,9 +116,9 @@ struct GesTypeMacro: MemberMacro {
             var unit: String?
             if let expression = args["unit"] {
                 guard let member = expression.as(MemberAccessExprSyntax.self),
-                    member.base == nil || member.base?.trimmedDescription == "GesUnit" || member.base?.trimmedDescription == "GameEventScriptRuntime.GesUnit",
+                    member.base == nil || member.base?.trimmedDescription == "GesQuantityUnit" || member.base?.trimmedDescription == "GameEventScriptRuntime.GesQuantityUnit",
                     ["none", "meter", "second", "degree"].contains(member.declName.baseName.text)
-                else { throw BindingError("@GesField unit must be a literal GesUnit case.") }
+                else { throw BindingError("@GesField unit must be a literal GesQuantityUnit case.") }
                 if member.declName.baseName.text != "none" { unit = member.declName.baseName.text }
             }
             guard unit == nil || explicitType == nil else { throw BindingError("Use either typeName or unit on @GesField, not both.") }

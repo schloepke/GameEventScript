@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Outcome of initial-group or later per-instance initialization.
-public enum GameEventScriptStartState: Sendable {
+public enum GesStartState: Sendable {
     /// All initialization covered by this result succeeded.
     case ready
     /// Initialization failed with a runtime diagnostic.

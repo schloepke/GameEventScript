@@ -63,7 +63,7 @@ internal static class AllocationObservations
             var host = builder.Build();
             host.Load(program);
             host.Start();
-            if (!host.IsReady || host.RunToCompletion().State != GameEventScriptExecutionState.Completed) throw new InvalidOperationException("Initialization failed.");
+            if (!host.IsReady || host.RunToCompletion().State != GesExecutionState.Completed) throw new InvalidOperationException("Initialization failed.");
             _ = Run(host, messages, steps, warmup);
             observer?.Reset();
             var expectedWork = Run(host, messages, steps, 1);
@@ -141,22 +141,22 @@ internal static class AllocationObservations
             {
                 if (!host.Receive(inputs[index])) throw new InvalidOperationException("Allocation input was not accepted.");
                 var step = steps[index];
-                GameEventScriptExecutionResult result;
+                GesExecutionResult result;
                 do
                 {
                     result = !step.Frames ? host.RunToCompletion() : host.ExecuteFrame(step.Budget);
-                    if (result.State is GameEventScriptExecutionState.RuntimeError or GameEventScriptExecutionState.RuntimeLimitReached)
+                    if (result.State is GesExecutionState.RuntimeError or GesExecutionState.RuntimeLimitReached)
                         throw new InvalidOperationException("Allocation workload reported a runtime failure.");
                     opcodes += result.ExecutedOpcodes;
                     processed += result.ProcessedMessages;
                     emitted += result.EmittedMessages;
                     published += result.PublishedMessages;
-                    if (result.State == GameEventScriptExecutionState.Paused)
+                    if (result.State == GesExecutionState.Paused)
                     {
                         pauses++;
                         if (result.ExecutedOpcodes == 0) throw new InvalidOperationException("Allocation workload made no frame progress.");
                     }
-                } while (result.State == GameEventScriptExecutionState.Paused);
+                } while (result.State == GesExecutionState.Paused);
                 if (!host.IsIdle)
                     throw new InvalidOperationException("Allocation workload did not follow its declared pump behavior.");
             }
@@ -173,7 +173,7 @@ internal static class AllocationObservations
         internal CallbackCounters Scale(uint count) => new(Started * count, Completed * count, Emitted * count, Published * count, Limits * count, Errors * count);
     }
 
-    internal sealed class CountingObserver : IGameEventScriptRuntimeObserver
+    internal sealed class CountingObserver : IGesRuntimeObserver
     {
         internal CallbackCounters Counts { get; private set; }
 
@@ -185,10 +185,10 @@ internal static class AllocationObservations
         /// <summary>Counts MessageEmitted callbacks without allocating.</summary>
         public void MessageEmitted(GameEventScriptMessage message, bool accepted) => Counts = Counts with { Emitted = Counts.Emitted + 1 };
         /// <summary>Counts MessagePublished callbacks without allocating.</summary>
-        public void MessagePublished(GameEventScriptMessage message, GameEventScriptPublishResult result) => Counts = Counts with { Published = Counts.Published + 1 };
+        public void MessagePublished(GameEventScriptMessage message, GesPublishResult result) => Counts = Counts with { Published = Counts.Published + 1 };
         /// <summary>Counts RuntimeLimitReached callbacks without allocating.</summary>
         public void RuntimeLimitReached(string limitName, string detail, int limit) => Counts = Counts with { Limits = Counts.Limits + 1 };
         /// <summary>Counts RuntimeError callbacks without allocating.</summary>
-        public void RuntimeError(GameEventScriptDiagnostic diagnostic) => Counts = Counts with { Errors = Counts.Errors + 1 };
+        public void RuntimeError(GesDiagnostic diagnostic) => Counts = Counts with { Errors = Counts.Errors + 1 };
     }
 }

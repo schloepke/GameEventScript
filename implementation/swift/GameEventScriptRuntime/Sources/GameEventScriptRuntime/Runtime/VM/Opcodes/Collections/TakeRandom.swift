@@ -3,7 +3,7 @@
 
 extension GesVirtualMachine {
     @inline(never)
-    func executeTakeRandom(_ destinationRegister: Int, _ sourceRegister: Int, _ countOperand: Int, _ context: GameEventScriptContext) {
+    func executeTakeRandom(_ destinationRegister: Int, _ sourceRegister: Int, _ countOperand: Int, _ context: GesContext) {
         let destination = destinationRegister
         let x = frameStart + sourceRegister
         let count = max(0, countOperand)

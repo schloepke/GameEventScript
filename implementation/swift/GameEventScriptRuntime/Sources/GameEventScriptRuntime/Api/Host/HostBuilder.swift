@@ -2,31 +2,31 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Mutable single-caller configuration. Each build creates an independent Host and private random stream.
-public final class GameEventScriptHostBuilder {
-    private var profiler: (any GameEventScriptProfiler)?
+public final class GesHostBuilder {
+    private var profiler: (any GesProfiler)?
 
     /// Sets optional synchronous opcode instrumentation. Returns this builder. The factory is shared across builds;
     /// callbacks must not reenter a host and access across hosts must be serialized by the caller.
-    @discardableResult public func withProfiler(_ value: any GameEventScriptProfiler) -> Self {
+    @discardableResult public func withProfiler(_ value: any GesProfiler) -> Self {
         profiler = value
         return self
     }
 
-    private var clock: (any GameEventScriptClock)?
+    private var clock: (any GesClock)?
 
     /// Borrows a monotonic microsecond clock for subsequently built hosts. Returns this builder.
-    @discardableResult public func withClock(_ clock: any GameEventScriptClock) -> Self {
+    @discardableResult public func withClock(_ clock: any GesClock) -> Self {
         self.clock = clock
         return self
     }
 
     private var seed: Int64?
     private var sequence: [Double] = []
-    private var limits = GameEventScriptRuntimeLimits()
-    private var observer: (any GameEventScriptRuntimeObserver)?
-    private var extensions: (any GameEventScriptExtensionRegistry)?
-    private var externalTypes: (any GameEventScriptExternalTypeRegistry)?
-    private var sink: (any GameEventScriptPublishSink)?
+    private var limits = GesRuntimeLimits()
+    private var observer: (any GesRuntimeObserver)?
+    private var extensions: (any GesExtensionRegistry)?
+    private var externalTypes: (any GesExternalTypeRegistry)?
+    private var sink: (any GesPublishSink)?
 
     /// Creates a builder with default limits and no native registries, observer or publish sink.
     public init() {}
@@ -42,7 +42,7 @@ public final class GameEventScriptHostBuilder {
     ///
     /// - Throws: An API error for empty entropy.
     @discardableResult public func withRandomEntropy(_ bytes: [UInt8]) throws -> Self {
-        seed = try GameEventScriptRandomGenerator.seedFromEntropy(bytes)
+        seed = try GesRandomGenerator.seedFromEntropy(bytes)
         sequence = []
         return self
     }
@@ -55,31 +55,31 @@ public final class GameEventScriptHostBuilder {
     }
 
     /// Sets host execution and resource limits. Returns this builder.
-    @discardableResult public func withRuntimeLimits(_ value: GameEventScriptRuntimeLimits) -> Self {
+    @discardableResult public func withRuntimeLimits(_ value: GesRuntimeLimits) -> Self {
         limits = value
         return self
     }
 
     /// Sets the synchronous observer for emissions, dispatch and failures. Returns this builder.
-    @discardableResult public func withRuntimeObserver(_ value: any GameEventScriptRuntimeObserver) -> Self {
+    @discardableResult public func withRuntimeObserver(_ value: any GesRuntimeObserver) -> Self {
         observer = value
         return self
     }
 
     /// Sets the runtime extension resolver used while linking Programs. Returns this builder.
-    @discardableResult public func withRegistry(_ value: any GameEventScriptExtensionRegistry) -> Self {
+    @discardableResult public func withRegistry(_ value: any GesExtensionRegistry) -> Self {
         extensions = value
         return self
     }
 
     /// Sets the runtime external-constructor resolver. Returns this builder.
-    @discardableResult public func withExternalTypeRegistry(_ value: any GameEventScriptExternalTypeRegistry) -> Self {
+    @discardableResult public func withExternalTypeRegistry(_ value: any GesExternalTypeRegistry) -> Self {
         externalTypes = value
         return self
     }
 
     /// Sets the optional synchronous outbound publish sink. Returns this builder.
-    @discardableResult public func withPublishSink(_ value: any GameEventScriptPublishSink) -> Self {
+    @discardableResult public func withPublishSink(_ value: any GesPublishSink) -> Self {
         sink = value
         return self
     }

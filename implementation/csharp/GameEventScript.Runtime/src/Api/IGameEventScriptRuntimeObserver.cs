@@ -7,7 +7,7 @@ namespace GameEventScript.Api;
 /// Observes synchronous host behavior without participating in dispatch.
 /// Implementations must not throw and must not recursively pump the observed host.
 /// </summary>
-public interface IGameEventScriptRuntimeObserver
+public interface IGesRuntimeObserver
 {
     /// <summary>
     /// Observes a local emit attempt.
@@ -21,7 +21,7 @@ public interface IGameEventScriptRuntimeObserver
     /// </summary>
     /// <param name="message">The published message.</param>
     /// <param name="result">The independent local and outbound outcomes.</param>
-    void MessagePublished(GameEventScriptMessage message, GameEventScriptPublishResult result);
+    void MessagePublished(GameEventScriptMessage message, GesPublishResult result);
 
     /// <summary>
     /// Observes entry into one matching native or script handler.
@@ -49,5 +49,5 @@ public interface IGameEventScriptRuntimeObserver
     /// Observes a structured runtime diagnostic.
     /// </summary>
     /// <param name="diagnostic">The language-neutral diagnostic.</param>
-    void RuntimeError(GameEventScriptDiagnostic diagnostic);
+    void RuntimeError(GesDiagnostic diagnostic);
 }

@@ -4,7 +4,7 @@
 namespace GameEventScript.Api;
 
 /// <summary>Identifies the outcome of host or instance initialization.</summary>
-public enum GameEventScriptStartState
+public enum GesStartState
 {
     /// <summary>Initialization succeeded; ordinary messages may still be queued.</summary>
     Ready,
@@ -21,9 +21,9 @@ public enum GameEventScriptStartState
 /// <param name="processedMessages">The number of fully completed initialization snapshots.</param>
 /// <param name="emittedMessages">The number of initialization emit attempts.</param>
 /// <param name="publishedMessages">The number of initialization publish attempts.</param>
-public readonly struct GameEventScriptStartResult(
-    GameEventScriptStartState state,
-    GameEventScriptDiagnostic? diagnostic = null,
+public readonly struct GesStartResult(
+    GesStartState state,
+    GesDiagnostic? diagnostic = null,
     int executedOpcodes = 0,
     int processedMessages = 0,
     int emittedMessages = 0,
@@ -31,9 +31,9 @@ public readonly struct GameEventScriptStartResult(
 )
 {
     /// <summary>Gets the initialization outcome.</summary>
-    public GameEventScriptStartState State { get; } = state;
+    public GesStartState State { get; } = state;
     /// <summary>Gets the original failure diagnostic, when present.</summary>
-    public GameEventScriptDiagnostic? Diagnostic { get; } = diagnostic;
+    public GesDiagnostic? Diagnostic { get; } = diagnostic;
     /// <summary>Gets the number of initialization opcodes executed.</summary>
     public int ExecutedOpcodes { get; } = executedOpcodes;
     /// <summary>Gets the number of fully completed initialization snapshots.</summary>

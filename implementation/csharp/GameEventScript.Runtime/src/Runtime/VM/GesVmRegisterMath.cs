@@ -7,8 +7,8 @@ using System.Runtime.CompilerServices;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
+using static GameEventScript.Api.GesQuantityUnit;
 using static GameEventScript.Runtime.VM.GesVmUnitCalculation;
 
 namespace GameEventScript.Runtime.VM;
@@ -1167,7 +1167,7 @@ internal static class GesVmRegisterMath
                 leftIsNumeric = true;
                 leftRank = 1;
                 break;
-            case GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean:
                 leftNumber = a.IsTrue ? 1d : 0d;
                 leftIsNumeric = true;
                 leftRank = 6;
@@ -1186,7 +1186,7 @@ internal static class GesVmRegisterMath
             case Point:
                 leftRank = 5;
                 break;
-            case GameEventScriptBytecodeTypeKind.Range:
+            case GesBytecodeTypeKind.Range:
                 leftRank = 8;
                 break;
             case Message:
@@ -1223,7 +1223,7 @@ internal static class GesVmRegisterMath
                 rightIsNumeric = true;
                 rightRank = 1;
                 break;
-            case GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean:
                 rightNumber = b.IsTrue ? 1d : 0d;
                 rightIsNumeric = true;
                 rightRank = 6;
@@ -1242,7 +1242,7 @@ internal static class GesVmRegisterMath
             case Point:
                 rightRank = 5;
                 break;
-            case GameEventScriptBytecodeTypeKind.Range:
+            case GesBytecodeTypeKind.Range:
                 rightRank = 8;
                 break;
             case Message:
@@ -1309,7 +1309,7 @@ internal static class GesVmRegisterMath
                 }
 
                 break;
-            case GameEventScriptBytecodeTypeKind.Boolean when b.Kind is GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean when b.Kind is GesBytecodeTypeKind.Boolean:
                 comparison = b.IsTrue.CompareTo(a.IsTrue);
                 break;
             default:
@@ -1388,7 +1388,7 @@ internal static class GesVmRegisterMath
                 leftIsNumeric = true;
                 leftRank = 1;
                 break;
-            case GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean:
                 leftNumber = a.IsTrue ? 1d : 0d;
                 leftIsNumeric = true;
                 leftRank = 6;
@@ -1407,7 +1407,7 @@ internal static class GesVmRegisterMath
             case Point:
                 leftRank = 5;
                 break;
-            case GameEventScriptBytecodeTypeKind.Range:
+            case GesBytecodeTypeKind.Range:
                 leftRank = 8;
                 break;
             case Message:
@@ -1444,7 +1444,7 @@ internal static class GesVmRegisterMath
                 rightIsNumeric = true;
                 rightRank = 1;
                 break;
-            case GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean:
                 rightNumber = b.IsTrue ? 1d : 0d;
                 rightIsNumeric = true;
                 rightRank = 6;
@@ -1463,7 +1463,7 @@ internal static class GesVmRegisterMath
             case Point:
                 rightRank = 5;
                 break;
-            case GameEventScriptBytecodeTypeKind.Range:
+            case GesBytecodeTypeKind.Range:
                 rightRank = 8;
                 break;
             case Message:
@@ -1530,7 +1530,7 @@ internal static class GesVmRegisterMath
                 }
 
                 break;
-            case GameEventScriptBytecodeTypeKind.Boolean when b.Kind is GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean when b.Kind is GesBytecodeTypeKind.Boolean:
                 comparison = b.IsTrue.CompareTo(a.IsTrue);
                 break;
             default:
@@ -1988,7 +1988,7 @@ internal static class GesVmRegisterMath
                 index = ret ? GameEventScriptNumber.ToIntegerSaturated(termValue.FloatValue) : 0;
 
                 break;
-            case GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean:
                 index = termValue.IsTrue ? 1 : 0;
                 ret = true;
                 break;

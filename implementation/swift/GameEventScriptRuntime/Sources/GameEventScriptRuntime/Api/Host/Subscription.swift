@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// An idempotently detachable native subscription identified within its owning host.
-public final class GameEventScriptSubscription {
+public final class GesSubscription {
     private weak var host: GameEventScriptHost?
     /// Stable registration identifier, unique within the owning host.
     public let registrationID: Int64

@@ -59,7 +59,7 @@ import GameEventScriptRuntime
 import GameEventScriptCompiler
 import GameEventScriptSwiftBridge
 
-let program = try GameEventScriptBuilder.create()
+let program = try GesProgramBuilder.create()
     .addScript("""
         module tutorial.damage
         function damage(base, bonus) be base + bonus
@@ -73,7 +73,7 @@ let host = try GameEventScriptHost.createBuilder()
     .withRandomSeed(123)
     .build()
 
-let done = try GameEventScriptMessageSignature(name: "Done", parameters: ["value"])
+let done = try GesMessageSignature(name: "Done", parameters: ["value"])
 let output = try host.subscribe(done) { message, _ in
     print(try Int.fromGesValue(message.arguments[0]))
 }

@@ -8,7 +8,7 @@ using System.Linq;
 namespace GameEventScript.SyntaxHighlighter;
 
 /// <summary>The bundled source or assembler grammar used for presentation.</summary>
-public enum GameEventScriptSyntaxLanguage
+public enum GesSyntaxLanguage
 {
     /// <summary>Game Event Script source, including incomplete editor input.</summary>
     Ges,
@@ -17,7 +17,7 @@ public enum GameEventScriptSyntaxLanguage
 }
 
 /// <summary>Theme-independent categories derived from TextMate scopes; these are not compiler tokens.</summary>
-public enum GameEventScriptSyntaxKind
+public enum GesSyntaxKind
 {
     /// <summary>Text without a more specific category, including whitespace.</summary>
     Plain,
@@ -54,18 +54,18 @@ public enum GameEventScriptSyntaxKind
 }
 
 /// <summary>An immutable UTF-16 range with its category and outer-to-inner TextMate scope stack.</summary>
-public sealed class GameEventScriptHighlightSpan
+public sealed class GesHighlightSpan
 {
     /// <summary>Zero-based UTF-16 offset in the supplied document or line.</summary>
     public int Start { get; }
     /// <summary>Range length in UTF-16 code units.</summary>
     public int Length { get; }
     /// <summary>The most specific recognized category.</summary>
-    public GameEventScriptSyntaxKind Kind { get; }
+    public GesSyntaxKind Kind { get; }
     /// <summary>Immutable outer-to-inner TextMate scopes, including the root language scope.</summary>
     public IReadOnlyList<string> Scopes { get; }
 
-    internal GameEventScriptHighlightSpan(int start, int length, string[] scopes)
+    internal GesHighlightSpan(int start, int length, string[] scopes)
     {
         Start = start;
         Length = length;
@@ -75,22 +75,22 @@ public sealed class GameEventScriptHighlightSpan
 }
 
 /// <summary>An immutable, equatable line-boundary state. It is not a serializable editor document or compiler state.</summary>
-public sealed class GameEventScriptHighlightState : IEquatable<GameEventScriptHighlightState>
+public sealed class GesHighlightState : IEquatable<GesHighlightState>
 {
     /// <summary>The language this state belongs to; states cannot be reused for another language.</summary>
-    public GameEventScriptSyntaxLanguage Language { get; }
+    public GesSyntaxLanguage Language { get; }
     internal int[] Frames { get; }
 
-    internal GameEventScriptHighlightState(GameEventScriptSyntaxLanguage language, IEnumerable<int> frames)
+    internal GesHighlightState(GesSyntaxLanguage language, IEnumerable<int> frames)
     {
         Language = language;
         Frames = frames.ToArray();
     }
 
     /// <summary>Compares grammar context for incremental retokenization convergence.</summary>
-    public bool Equals(GameEventScriptHighlightState? other) => other is not null && Language == other.Language && Frames.SequenceEqual(other.Frames);
+    public bool Equals(GesHighlightState? other) => other is not null && Language == other.Language && Frames.SequenceEqual(other.Frames);
     /// <summary>Compares grammar context for incremental retokenization convergence.</summary>
-    public override bool Equals(object? obj) => obj is GameEventScriptHighlightState other && Equals(other);
+    public override bool Equals(object? obj) => obj is GesHighlightState other && Equals(other);
     /// <summary>Returns a hash consistent with grammar-state equality.</summary>
     public override int GetHashCode()
     {
@@ -101,16 +101,16 @@ public sealed class GameEventScriptHighlightState : IEquatable<GameEventScriptHi
 }
 
 /// <summary>A highlighting result. Failed resource bounds return no spans or usable continuation state.</summary>
-public sealed class GameEventScriptHighlightResult
+public sealed class GesHighlightResult
 {
     /// <summary>Ordered, nonoverlapping ranges covering the complete input when successful.</summary>
-    public IReadOnlyList<GameEventScriptHighlightSpan> Spans { get; }
+    public IReadOnlyList<GesHighlightSpan> Spans { get; }
     /// <summary>Whether all input was highlighted within the resource limits.</summary>
     public bool IsComplete { get; }
     /// <summary>Context after the final line, or null when incomplete. Do not cache an incomplete result.</summary>
-    public GameEventScriptHighlightState? NextState { get; }
+    public GesHighlightState? NextState { get; }
 
-    internal GameEventScriptHighlightResult(List<GameEventScriptHighlightSpan> spans, GameEventScriptHighlightState? state)
+    internal GesHighlightResult(List<GesHighlightSpan> spans, GesHighlightState? state)
     {
         Spans = spans.AsReadOnly();
         NextState = state;
@@ -120,28 +120,28 @@ public sealed class GameEventScriptHighlightResult
 
 internal static class ScopeKinds
 {
-    internal static GameEventScriptSyntaxKind Classify(IReadOnlyList<string> scopes)
+    internal static GesSyntaxKind Classify(IReadOnlyList<string> scopes)
     {
         for (var i = scopes.Count - 1; i >= 0; i--)
         {
             var scope = scopes[i];
             bool Is(string prefix) => scope.StartsWith(prefix, StringComparison.Ordinal);
-            if (Is("comment")) return GameEventScriptSyntaxKind.Comment;
-            if (Is("string") || Is("constant.character.escape")) return GameEventScriptSyntaxKind.String;
-            if (Is("constant.numeric") || Is("constant.language.numeric")) return GameEventScriptSyntaxKind.Number;
-            if (Is("variable.other.constant")) return GameEventScriptSyntaxKind.Constant;
-            if (Is("variable.other.register")) return GameEventScriptSyntaxKind.Register;
-            if (Is("variable.other.label") || Is("constant.other.symbol")) return GameEventScriptSyntaxKind.Label;
-            if (Is("entity.name.type.class.message") || Is("entity.name.function.handler")) return GameEventScriptSyntaxKind.Message;
-            if (Is("support.type") || Is("entity.name.type")) return GameEventScriptSyntaxKind.Type;
-            if (Is("entity.name.namespace")) return GameEventScriptSyntaxKind.Module;
-            if (Is("entity.name.function")) return GameEventScriptSyntaxKind.Function;
-            if (Is("entity.other.attribute-name.tag")) return GameEventScriptSyntaxKind.Tag;
-            if (Is("support") || Is("entity")) return GameEventScriptSyntaxKind.Builtin;
-            if (Is("keyword") || Is("constant.language.boolean")) return GameEventScriptSyntaxKind.Keyword;
-            if (Is("variable")) return GameEventScriptSyntaxKind.Identifier;
-            if (Is("punctuation")) return GameEventScriptSyntaxKind.Symbol;
+            if (Is("comment")) return GesSyntaxKind.Comment;
+            if (Is("string") || Is("constant.character.escape")) return GesSyntaxKind.String;
+            if (Is("constant.numeric") || Is("constant.language.numeric")) return GesSyntaxKind.Number;
+            if (Is("variable.other.constant")) return GesSyntaxKind.Constant;
+            if (Is("variable.other.register")) return GesSyntaxKind.Register;
+            if (Is("variable.other.label") || Is("constant.other.symbol")) return GesSyntaxKind.Label;
+            if (Is("entity.name.type.class.message") || Is("entity.name.function.handler")) return GesSyntaxKind.Message;
+            if (Is("support.type") || Is("entity.name.type")) return GesSyntaxKind.Type;
+            if (Is("entity.name.namespace")) return GesSyntaxKind.Module;
+            if (Is("entity.name.function")) return GesSyntaxKind.Function;
+            if (Is("entity.other.attribute-name.tag")) return GesSyntaxKind.Tag;
+            if (Is("support") || Is("entity")) return GesSyntaxKind.Builtin;
+            if (Is("keyword") || Is("constant.language.boolean")) return GesSyntaxKind.Keyword;
+            if (Is("variable")) return GesSyntaxKind.Identifier;
+            if (Is("punctuation")) return GesSyntaxKind.Symbol;
         }
-        return GameEventScriptSyntaxKind.Plain;
+        return GesSyntaxKind.Plain;
     }
 }

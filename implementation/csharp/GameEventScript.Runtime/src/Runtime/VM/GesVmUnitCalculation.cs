@@ -3,13 +3,13 @@
 
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
+using static GameEventScript.Api.GesQuantityUnit;
 
 namespace GameEventScript.Runtime.VM;
 
 internal class GesVmUnitCalculation
 {
-    internal static GameEventScriptBytecodeInstructionUnit? SameUnit(in GesValue a, in GesValue b)
+    internal static GesQuantityUnit? SameUnit(in GesValue a, in GesValue b)
     {
         if (a.Unit == b.Unit)
         {
@@ -18,7 +18,7 @@ internal class GesVmUnitCalculation
 
         return null;
     }
-    internal static GameEventScriptBytecodeInstructionUnit? SameUnit(in GesValue a, in GesValue b, in GesValue c)
+    internal static GesQuantityUnit? SameUnit(in GesValue a, in GesValue b, in GesValue c)
     {
         if (a.Unit == b.Unit && b.Unit == c.Unit)
         {
@@ -27,7 +27,7 @@ internal class GesVmUnitCalculation
 
         return null;
     }
-    internal static GameEventScriptBytecodeInstructionUnit? ProductUnit(in GesValue a, in GesValue b)
+    internal static GesQuantityUnit? ProductUnit(in GesValue a, in GesValue b)
     {
         if (a.HasUnit && b.HasUnit)
         {
@@ -36,7 +36,7 @@ internal class GesVmUnitCalculation
 
         return a.Unit is UnitNone ? b.Unit : a.Unit;
     }
-    internal static GameEventScriptBytecodeInstructionUnit? QuotientUnit(in GesValue a, in GesValue b)
+    internal static GesQuantityUnit? QuotientUnit(in GesValue a, in GesValue b)
     {
         switch (a.HasUnit)
         {

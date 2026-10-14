@@ -4,7 +4,7 @@
 import Foundation
 import GameEventScriptRuntime
 
-final class ConformanceVirtualClock: GameEventScriptClock {
+final class ConformanceVirtualClock: GesClock {
     var elapsedMicroseconds: Int64 = 0
 
     func advance(_ amount: String) -> Bool {
@@ -22,8 +22,8 @@ final class RuntimeScenario {
     let host: GameEventScriptHost
     let collector: RuntimeCollector
     var actionResults: [[String: Any]] = []
-    var instances: [String: GameEventScriptInstance] = [:]
-    var subscriptions: [String: GameEventScriptSubscription] = [:]
+    var instances: [String: GesProgramInstance] = [:]
+    var subscriptions: [String: GesSubscription] = [:]
     var path = "initialization"
 
     init(_ test: Input, programs: [(id: String, program: GameEventScriptProgram)]) throws {
@@ -33,9 +33,9 @@ final class RuntimeScenario {
         host = try Self.makeHost(test, observer: collector, publishSink: collector.sink == "absent" ? nil : collector, clock: clock)
     }
 
-    static func makeHost(_ test: Input, observer: (any GameEventScriptRuntimeObserver)?, publishSink: (any GameEventScriptPublishSink)?, clock: (any GameEventScriptClock)? = nil) throws -> GameEventScriptHost {
-        var limits = GameEventScriptRuntimeLimits()
-        let setters: [String: WritableKeyPath<GameEventScriptRuntimeLimits, Int>] = [
+    static func makeHost(_ test: Input, observer: (any GesRuntimeObserver)?, publishSink: (any GesPublishSink)?, clock: (any GesClock)? = nil) throws -> GameEventScriptHost {
+        var limits = GesRuntimeLimits()
+        let setters: [String: WritableKeyPath<GesRuntimeLimits, Int>] = [
             "maxProcessedEventsPerRun": \.maxProcessedEventsPerRun, "maxQueuedMessagesPerRun": \.maxQueuedMessagesPerRun, "maxExecutionSteps": \.maxExecutionSteps, "maxRegisterValues": \.maxRegisterValues, "maxLoopIterations": \.maxLoopIterations,
             "maxCallDepth": \.maxCallDepth, "maxRandomScopeDepth": \.maxRandomScopeDepth, "maxRangeItems": \.maxRangeItems, "maxGeneratedCollectionItems": \.maxGeneratedCollectionItems, "maxDiceCount": \.maxDiceCount, "maxDiceSides": \.maxDiceSides,
         ]
@@ -49,7 +49,7 @@ final class RuntimeScenario {
                 guard index + 1 < scalars.count, let byte = UInt8(String(decoding: scalars[index...index + 1], as: UTF8.self), radix: 16) else { throw ConformanceExecutionError.invalidInput("Invalid entropy bytes") }
                 bytes.append(byte)
             }
-            seed = try GameEventScriptRandomGenerator.seedFromEntropy(bytes)
+            seed = try GesRandomGenerator.seedFromEntropy(bytes)
         }
         let sequence = try (random?["sequence"]?.arrayValue ?? []).map { try Values.number($0.numberValue ?? $0.stringValue!) }
         return try GameEventScriptHost(
@@ -131,7 +131,7 @@ final class RuntimeScenario {
                 default: throw ConformanceExecutionError.invalidInput("Unknown action")
                 }
                 results.append(["result": result, "error": NSNull()])
-            } catch let error as GameEventScriptDynamicLinkError {
+            } catch let error as GesDynamicLinkError {
                 results.append(["result": NSNull(), "error": CompilerObservations.diagnostic(error.diagnostic)])
             }
         }
@@ -172,7 +172,7 @@ final class RuntimeScenario {
 
 }
 
-private final class RuntimeNativeHandler: GameEventScriptNativeMessageHandler {
+private final class RuntimeNativeHandler: GesNativeMessageHandler {
     let definition: Input
     unowned let scenario: RuntimeScenario
     let id: String
@@ -183,15 +183,15 @@ private final class RuntimeNativeHandler: GameEventScriptNativeMessageHandler {
         self.id = id
     }
 
-    func handle(_ message: GameEventScriptMessage, context: GameEventScriptContext) throws {
+    func handle(_ message: GameEventScriptMessage, context: GesContext) throws {
         if definition["throw"]?.boolValue == true { throw ConformanceExecutionError.invalidInput("Configured native failure") }
         if let code = definition["faultCode"]?.stringValue {
-            throw try GameEventScriptExtensionFault(code: code, message: "Configured native fault", programName: definition["faultContext"]?["programName"]?.stringValue, handlerName: definition["faultContext"]?["handlerName"]?.stringValue)
+            throw try GesExtensionFaultError(code: code, message: "Configured native fault", programName: definition["faultContext"]?["programName"]?.stringValue, handlerName: definition["faultContext"]?["handlerName"]?.stringValue)
         }
         try scenario.actions(definition.values("actions"), path: "native/" + id)
         for emit in definition.values("emit") {
             if emit["forwardArguments"]?.boolValue == true {
-                let arguments = try (0..<message.arguments.count).map { try GameEventScriptMessageArgument(name: message.arguments.nameAt($0), value: message.arguments[$0]) }
+                let arguments = try (0..<message.arguments.count).map { try GesMessageArgument(name: message.arguments.nameAt($0), value: message.arguments[$0]) }
                 context.emit(try .init(name: emit.required("message").text("name"), arguments: arguments))
             } else {
                 context.emit(try Values.message(emit.required("message")))
@@ -200,7 +200,7 @@ private final class RuntimeNativeHandler: GameEventScriptNativeMessageHandler {
     }
 }
 
-final class RuntimeCollector: GameEventScriptRuntimeObserver, GameEventScriptPublishSink {
+final class RuntimeCollector: GesRuntimeObserver, GesPublishSink {
     struct Limit {
         let name: String
         let detail: String
@@ -212,14 +212,14 @@ final class RuntimeCollector: GameEventScriptRuntimeObserver, GameEventScriptPub
         var message: GameEventScriptMessage?
         var signature: String?
         var accepted: Bool?
-        var result: GameEventScriptPublishResult?
+        var result: GesPublishResult?
         var limit: Limit?
-        var diagnostic: GameEventScriptDiagnostic?
+        var diagnostic: GesDiagnostic?
     }
 
     let sink: String
     var local: [GameEventScriptMessage] = [], outbound: [GameEventScriptMessage] = []
-    var limits: [Limit] = [], diagnostics: [GameEventScriptDiagnostic] = [], trace: [Event] = []
+    var limits: [Limit] = [], diagnostics: [GesDiagnostic] = [], trace: [Event] = []
 
     init(sink: String) { self.sink = sink }
 
@@ -242,7 +242,7 @@ final class RuntimeCollector: GameEventScriptRuntimeObserver, GameEventScriptPub
         trace.append(.init(kind: "emit", message: message, accepted: accepted))
     }
 
-    func messagePublished(_ message: GameEventScriptMessage, result: GameEventScriptPublishResult) {
+    func messagePublished(_ message: GameEventScriptMessage, result: GesPublishResult) {
         local.append(message)
         trace.append(.init(kind: "publish", message: message, result: result))
     }
@@ -257,7 +257,7 @@ final class RuntimeCollector: GameEventScriptRuntimeObserver, GameEventScriptPub
         trace.append(.init(kind: "runtimeLimit", limit: value))
     }
 
-    func runtimeError(_ diagnostic: GameEventScriptDiagnostic) {
+    func runtimeError(_ diagnostic: GesDiagnostic) {
         diagnostics.append(diagnostic)
         trace.append(.init(kind: "diagnostic", diagnostic: diagnostic))
     }

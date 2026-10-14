@@ -95,7 +95,7 @@ import GameEventScriptRuntime
 import GameEventScriptSwiftBridge
 
 let host = try GameEventScriptHost.createBuilder().withRandomSeed(123).build()
-let done = try GameEventScriptMessageSignature(name: "Done", parameters: ["value"])
+let done = try GesMessageSignature(name: "Done", parameters: ["value"])
 let subscription = try host.subscribe(done) { message, context in
     let value = try Int.fromGesValue(message.arguments[0])
     print(value)
@@ -111,14 +111,14 @@ required tags and excluded tags, and return the Runtime's ordinary subscription
 handle. Closures are retained at registration and invoked synchronously, without
 creating a new callback wrapper on each delivery. Keep Context and borrowed call
 arguments within their active invocation. Errors propagate to the existing
-Runtime boundary: declared `GameEventScriptExtensionFault` codes survive;
+Runtime boundary: declared `GesExtensionFaultError` codes survive;
 unexpected errors receive the owning Runtime diagnostic.
 
 Ordered `swiftArguments` accept mixed native types and repeated positional
 arguments using a `nil` label. Dictionary binding requires an existing signature:
 
 ```swift
-let signature = try GameEventScriptMessageSignature(name: "Done", parameters: ["name", "score"])
+let signature = try GesMessageSignature(name: "Done", parameters: ["name", "score"])
 let message = try signature.withSwiftArguments(["score": 42, "name": "Ada"])
 // Done(name,score), irrespective of dictionary enumeration order.
 ```

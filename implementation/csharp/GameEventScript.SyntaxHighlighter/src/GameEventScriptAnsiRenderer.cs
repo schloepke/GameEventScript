@@ -8,25 +8,25 @@ using System.Text;
 namespace GameEventScript.SyntaxHighlighter;
 
 /// <summary>Optional pure string renderer. Terminal detection, NO_COLOR, console output and diagnostics belong to the embedding.</summary>
-public static class GameEventScriptAnsiRenderer
+public static class GesAnsiRenderer
 {
     /// <summary>The CLI's default 16-color foreground palette; null leaves text unchanged.</summary>
-    public static int? DefaultColor(GameEventScriptSyntaxKind kind) => kind switch
+    public static int? DefaultColor(GesSyntaxKind kind) => kind switch
     {
-        GameEventScriptSyntaxKind.Comment => 90,
-        GameEventScriptSyntaxKind.String => 32,
-        GameEventScriptSyntaxKind.Number => 34,
-        GameEventScriptSyntaxKind.Keyword => 35,
-        GameEventScriptSyntaxKind.Constant or GameEventScriptSyntaxKind.Register => 33,
-        GameEventScriptSyntaxKind.Builtin or GameEventScriptSyntaxKind.Message or GameEventScriptSyntaxKind.Type or GameEventScriptSyntaxKind.Tag
-            or GameEventScriptSyntaxKind.Function or GameEventScriptSyntaxKind.Module or GameEventScriptSyntaxKind.Label => 36,
+        GesSyntaxKind.Comment => 90,
+        GesSyntaxKind.String => 32,
+        GesSyntaxKind.Number => 34,
+        GesSyntaxKind.Keyword => 35,
+        GesSyntaxKind.Constant or GesSyntaxKind.Register => 33,
+        GesSyntaxKind.Builtin or GesSyntaxKind.Message or GesSyntaxKind.Type or GesSyntaxKind.Tag
+            or GesSyntaxKind.Function or GesSyntaxKind.Module or GesSyntaxKind.Label => 36,
         _ => null
     };
 
     /// <summary>Renders UTF-16 spans using the default palette or a custom category-to-ANSI-color mapping. Source characters are preserved verbatim.</summary>
     /// <exception cref="ArgumentException">Spans overlap, exceed source bounds, split a surrogate pair, or a palette returns a color outside 30..37, 39, 90..97.</exception>
     /// <exception cref="ArgumentNullException">source or spans is null.</exception>
-    public static string Render(string source, IReadOnlyList<GameEventScriptHighlightSpan> spans, Func<GameEventScriptSyntaxKind, int?>? color = null)
+    public static string Render(string source, IReadOnlyList<GesHighlightSpan> spans, Func<GesSyntaxKind, int?>? color = null)
     {
         if (source is null) throw new ArgumentNullException(nameof(source));
         if (spans is null) throw new ArgumentNullException(nameof(spans));

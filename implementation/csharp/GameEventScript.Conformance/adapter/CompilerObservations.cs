@@ -5,12 +5,12 @@ using GameEventScript.Api;
 
 internal static class CompilerObservations
 {
-    internal static object Diagnostic(GameEventScriptDiagnostic diagnostic) => new
+    internal static object Diagnostic(GesDiagnostic diagnostic) => new
     {
         phase = diagnostic.Phase.ToString().ToLowerInvariant(),
         code = diagnostic.Code,
         symbol = diagnostic.Symbol,
-        symbolKind = diagnostic.SymbolKind == GameEventScriptSymbolKind.Unknown ? null : char.ToLowerInvariant(diagnostic.SymbolKind.ToString()[0]) + diagnostic.SymbolKind.ToString()[1..],
+        symbolKind = diagnostic.SymbolKind == GesSymbolKind.Unknown ? null : char.ToLowerInvariant(diagnostic.SymbolKind.ToString()[0]) + diagnostic.SymbolKind.ToString()[1..],
         sourceName = diagnostic.SourceLocation?.SourceName,
         line = diagnostic.SourceLocation?.Line,
         column = diagnostic.SourceLocation?.Column,
@@ -38,10 +38,10 @@ internal static class CompilerObservations
         var handlers = new List<object>();
         foreach (var bind in program.Bindings.Entries)
         {
-            if (bind.Kind is not (GameEventScriptBinaryBindKind.MessageHandler or GameEventScriptBinaryBindKind.MessageNameHandler)) continue;
+            if (bind.Kind is not (GesBinaryBindKind.MessageHandler or GesBinaryBindKind.MessageNameHandler)) continue;
             var name = program.StringConstants.Resolve(bind.Name);
             var parameters = bind.ArgumentNames.Select(argument => program.StringConstants.Resolve(argument)).ToArray();
-            var signature = GameEventScriptMessageSignature.CreateSignatureId(name, parameters);
+            var signature = GesMessageSignature.CreateSignatureId(name, parameters);
             if (!signatures.TryGetValue(name, out var values)) signatures[name] = values = new List<string>();
             values.Add(signature);
             handlers.Add(new { name, signatureId = signature, requiredRegisterCount = bind.RequiredRegisterCount, requiredCallStackDepth = bind.RequiredCallStackDepth });

@@ -22,7 +22,7 @@ public sealed partial class GameEventScriptHost
         else _idleSinceMicroseconds = null;
     }
 
-    private readonly IGameEventScriptClock _clock;
+    private readonly IGesClock _clock;
     private List<DelayedMessage>? _delayed;
 
     /// <summary>Gets whole microseconds until the earliest delayed message, or null when no delayed message remains. Reading never pumps the host.</summary>
@@ -37,7 +37,7 @@ public sealed partial class GameEventScriptHost
             if (IsMessageQueueFull && (HasMatch(message, Get(_exact, message.SignatureId), Get(_byName, message.Name)) ||
                 !GameEventScriptSystemEndpoints.IsUndeliverableName(message.Name) && HasMatch(message, Get(_exact, GameEventScriptSystemEndpoints.UndeliverableSignatureId), Get(_byName, GameEventScriptSystemEndpoints.UndeliverableName))))
             {
-                _context.RuntimeBudget.Exhaust(nameof(GameEventScriptRuntimeLimits.MaxQueuedMessagesPerRun), "Message queue limit reached.", _limits.MaxQueuedMessagesPerRun);
+                _context.RuntimeBudget.Exhaust(nameof(GesRuntimeLimits.MaxQueuedMessagesPerRun), "Message queue limit reached.", _limits.MaxQueuedMessagesPerRun);
                 return false;
             }
             if (publish) PublishFromContext(message);
@@ -48,7 +48,7 @@ public sealed partial class GameEventScriptHost
         if (now < 0 || microseconds > long.MaxValue - now) return false;
         if (IsMessageQueueFull)
         {
-            _context.RuntimeBudget.Exhaust(nameof(GameEventScriptRuntimeLimits.MaxQueuedMessagesPerRun), "Delayed message queue limit reached.", _limits.MaxQueuedMessagesPerRun);
+            _context.RuntimeBudget.Exhaust(nameof(GesRuntimeLimits.MaxQueuedMessagesPerRun), "Delayed message queue limit reached.", _limits.MaxQueuedMessagesPerRun);
             return false;
         }
         var exact = Get(_exact, message.SignatureId);
@@ -93,7 +93,7 @@ public sealed partial class GameEventScriptHost
         {
             var delayed = _delayed[0];
             _delayed.RemoveAt(0);
-            if (delayed.Owner?.StartResult is { State: not GameEventScriptStartState.Ready }) continue;
+            if (delayed.Owner?.StartResult is { State: not GesStartState.Ready }) continue;
             var localAccepted = delayed.Pending.HasRecipients();
             if (localAccepted) _queue.Enqueue(delayed.Pending);
             if (!delayed.Publish) continue;
@@ -104,7 +104,7 @@ public sealed partial class GameEventScriptHost
                 try { accepted = _publishSink!.Publish(delayed.Pending.Message); }
                 catch (Exception exception)
                 {
-                    _observer?.RuntimeError(CreateRuntimeDiagnostic(GameEventScriptDiagnosticCodes.RuntimePublishSinkFailure, "Publish sink failed.", GameEventScriptRuntimeExceptionText.Describe(exception)));
+                    _observer?.RuntimeError(CreateRuntimeDiagnostic(GesDiagnosticCodes.RuntimePublishSinkFailure, "Publish sink failed.", GameEventScriptRuntimeExceptionText.Describe(exception)));
                 }
             }
             _observer?.MessagePublished(delayed.Pending.Message, new(localAccepted, attempted, accepted));
@@ -117,9 +117,9 @@ public sealed partial class GameEventScriptHost
         for (var index = _delayed.Count - 1; index >= 0; index--)
         {
             var item = _delayed[index];
-            if (item.Owner?.StartResult is { State: not GameEventScriptStartState.Ready } || !item.Publish && !item.Pending.HasRecipients()) _delayed.RemoveAt(index);
+            if (item.Owner?.StartResult is { State: not GesStartState.Ready } || !item.Publish && !item.Pending.HasRecipients()) _delayed.RemoveAt(index);
         }
     }
 
-    private readonly record struct DelayedMessage(long Deadline, PendingMessage Pending, bool Publish, GameEventScriptInstance? Owner);
+    private readonly record struct DelayedMessage(long Deadline, PendingMessage Pending, bool Publish, GesProgramInstance? Owner);
 }

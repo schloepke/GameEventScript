@@ -37,7 +37,7 @@ def main():
     printer = (CS / "GameEventScriptOpcodePrinter.cs").read_text()
     expected = {
         lower(op): [lower(part.strip()) for part in parts.split(",") if part.strip()]
-        for op, parts in re.findall(r"GameEventScriptBytecodeOpCode\.(\w+) => \[([^\]]*)\]", printer)
+        for op, parts in re.findall(r"GesBytecodeOpCode\.(\w+) => \[([^\]]*)\]", printer)
     }
     actual = {
         op: re.findall(r"\.(\w+)", parts)
@@ -51,7 +51,7 @@ def main():
         "IteratorNext": [["targetRegister", "iteratorRegister", "jumpTarget"], ["targetRegisterList", "iteratorRegister", "jumpTarget"]],
     }
     for opcode, forms in iterator_forms.items():
-        line = printer.split("GameEventScriptBytecodeOpCode." + opcode + " =>", 1)[1].split("\n", 1)[0]
+        line = printer.split("GesBytecodeOpCode." + opcode + " =>", 1)[1].split("\n", 1)[0]
         found = [[lower(part.strip()) for part in form.split(",")] for form in re.findall(r"\[([^\]]*)\]", line)]
         if found != forms:
             raise RuntimeError(f"Changed dynamic iterator operands: {opcode}")
@@ -62,7 +62,7 @@ def main():
     # Pattern operand arity depends on the instruction payload. Verify the three
     # C# forms and the explicit Swift base plus CountAny/CountFace additions.
     for opcode in ("HasPattern", "TakePattern"):
-        block = printer.split("GameEventScriptBytecodeOpCode." + opcode + " =>", 1)[1].split(",\n\n", 1)[0]
+        block = printer.split("GesBytecodeOpCode." + opcode + " =>", 1)[1].split(",\n\n", 1)[0]
         forms = re.findall(r"\[([^\]]*)\]", block)[:3]
         if forms != ["TargetRegister, IteratorRegister, PatternKind, CountImmediate, FaceRegister", "TargetRegister, IteratorRegister, PatternKind, CountImmediate", "TargetRegister, IteratorRegister, PatternKind"]:
             raise RuntimeError(f"Changed dynamic pattern operands: {opcode}")

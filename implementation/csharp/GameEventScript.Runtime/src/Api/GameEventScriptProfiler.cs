@@ -5,18 +5,18 @@ namespace GameEventScript.Api;
 
 /// <summary>Optional synchronous instrumentation factory. Callbacks must not throw or reenter a host.
 /// Timing, allocation and report policies belong to the embedding. Instances require serialized access.</summary>
-public interface IGameEventScriptProfiler
+public interface IGesProfiler
 {
     /// <summary>Creates independent instrumentation for one loaded Program instance, before execution.
     /// The host retains the returned object until the instance is released; the factory may retain its results.</summary>
     /// <param name="program">Immutable code and optional debug information; duplicate modules remain distinct instances.</param>
     /// <returns>Instrumentation for this instance.</returns>
-    IGameEventScriptProgramProfiler CreateProgramProfiler(GameEventScriptProgram program);
+    IGesProgramProfiler CreateProgramProfiler(GameEventScriptProgram program);
 }
 
 /// <summary>Instruction-boundary callbacks for one loaded instance. Callbacks must not throw, pump a host,
 /// or modify execution. No callback is made while the host waits between slices.</summary>
-public interface IGameEventScriptProgramProfiler
+public interface IGesProgramProfiler
 {
     /// <summary>Called immediately before each fetched instruction executes, including an instruction that faults.
     /// Closes Fetch and starts Execute for this address. Pre-execution phases belong to this instruction.</summary>
@@ -26,7 +26,7 @@ public interface IGameEventScriptProgramProfiler
     /// <summary>Starts a loop phase, closing the preceding interval. Execute starts through InstructionStarting.
     /// Checks before an instruction may terminate the loop without another instruction start.</summary>
     /// <param name="phase">The phase about to execute.</param>
-    void PhaseStarting(GameEventScriptProfilePhase phase);
+    void PhaseStarting(GesProfilePhase phase);
 
     /// <summary>Closes the last phase interval on completion, pause, limit or failure. May be called without
     /// a preceding instruction. Clear pending timing so time outside the VM is never charged to the next slice.</summary>
@@ -34,7 +34,7 @@ public interface IGameEventScriptProgramProfiler
 }
 
 /// <summary>Non-overlapping regions of an instrumented VM loop; timing policies belong to the embedding.</summary>
-public enum GameEventScriptProfilePhase
+public enum GesProfilePhase
 {
     /// <summary>Checks whether the VM remains processing.</summary>
     StateCheck,

@@ -26,7 +26,7 @@ and predicate calls use public callable entry addresses in VM-owned frames.
 Helper expressions run through linear entry addresses and isolate their
 temporary registers from handler locals with temporary frame extensions. Predicate
 calls use `Call` or `CallExternal` with
-`GameEventScriptInstructionFlag.NormalizeResultAsPredicate` set in
+`GesInstructionFlag.NormalizeResultAsPredicate` set in
 `UnitAndFlags`. Local calls use direct `Call` instructions with target entry
 addresses and contiguous staged argument sequences. Extension calls use direct
 `CallExternal` instructions with argument register lists.
@@ -590,7 +590,7 @@ for `pc`-based execution.
 - `CheckInteger dst src`
 - `CheckFractional dst src`
 
-`Cast` and `CheckType` use `TypeOperand` as `GameEventScriptBytecodeTypeKind`.
+`Cast` and `CheckType` use `TypeOperand` as `GesBytecodeTypeKind`.
 Built-in types are direct kind operands. Custom/external record types use
 `CastCustom`/`CheckCustomType` with `TypeOperand` as the type-name `StringPool` index.
 Units are not declared type kinds: unit casts and checks use
@@ -1327,7 +1327,7 @@ Fixed terminal opcodes cover materializers and operations that need full
 collection semantics: map, distinct, group/order/sort/reverse, weighted
 choose/shuffle, dice/card patterns, object matches, and series term/take/drop
 operations. Pattern operations use `HasPattern` or `TakePattern` with `AU`
-holding a `GameEventScriptBytecodePatternKind` value. `CountAny` and
+holding a `GesBytecodePatternKind` value. `CountAny` and
 `CountFace` use `ImmediateY` as the required count; `CountFace` additionally
 uses `BU` as the already-evaluated face register. These opcodes reference only
 source or iterator registers, immediate counts, pattern ids, face registers, and

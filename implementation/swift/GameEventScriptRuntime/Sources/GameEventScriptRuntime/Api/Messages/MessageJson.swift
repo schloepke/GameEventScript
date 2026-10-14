@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Invalid, unsupported or over-limit portable message/value JSON.
-public struct GameEventScriptMessageFormatError: Error, Equatable {
+public struct GesMessageFormatError: Error, Equatable {
     /// Stable language-neutral message.* failure code.
     public let code: String
 
@@ -77,7 +77,7 @@ private final class GesMessageJsonCodec {
         return name
     }
 
-    static func unit(_ value: GesValue) throws -> GesUnit {
+    static func unit(_ value: GesValue) throws -> GesQuantityUnit {
         switch try string(value) {
         case "": .none
         case "s": .second
@@ -105,7 +105,7 @@ private final class GesMessageJsonCodec {
     func decodeMessage(_ value: GesValue, _ depth: Int) throws -> GameEventScriptMessage {
         try enter(depth)
         try Self.fields(value, ["name", "args", "tags"])
-        let args = try Self.list(Self.get(value, "args")).map { item -> GameEventScriptMessageArgument in
+        let args = try Self.list(Self.get(value, "args")).map { item -> GesMessageArgument in
             try Self.fields(item, ["name", "value"])
             let label = try Self.string(Self.get(item, "name"))
             if label != "_" && !GesNames.plain(label) { throw GesJson.error() }
@@ -116,7 +116,7 @@ private final class GesMessageJsonCodec {
             if !GesNames.plain(name) { throw GesJson.error() }
             return name
         }
-        do { return try .init(name: Self.messageName(Self.get(value, "name")), arguments: args, tags: tags) } catch is GameEventScriptMessageError { throw GesJson.error() }
+        do { return try .init(name: Self.messageName(Self.get(value, "name")), arguments: args, tags: tags) } catch is GesMessageError { throw GesJson.error() }
     }
 
     func encode(_ value: GesValue, _ depth: Int) throws -> GesValue {
@@ -248,7 +248,7 @@ private final class GesMessageJsonCodec {
                 if label != "_" && !GesNames.plain(label) { throw GesJson.error() }
                 return label
             }
-            do { return .handler(try .init(name: Self.messageName(get("name")), parameters: labels)) } catch is GameEventScriptMessageError { throw GesJson.error() }
+            do { return .handler(try .init(name: Self.messageName(get("name")), parameters: labels)) } catch is GesMessageError { throw GesJson.error() }
         case "Message":
             try fields("value")
             return .message(try decodeMessage(get("value"), depth + 1))

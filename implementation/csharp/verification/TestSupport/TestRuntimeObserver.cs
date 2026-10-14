@@ -6,20 +6,20 @@ using GameEventScript.Runtime;
 
 namespace GameEventScript.Tests.Native.Runtime;
 
-internal sealed class TestRuntimeObserver : IGameEventScriptRuntimeObserver
+internal sealed class TestRuntimeObserver : IGesRuntimeObserver
 {
     private readonly Action<GameEventScriptMessage>? _messageEmitted;
     private readonly Action<GameEventScriptMessage>? _messagePublished;
-    private readonly Action<GameEventScriptPublishResult>? _publishResult;
+    private readonly Action<GesPublishResult>? _publishResult;
     private readonly Action<string, string, int>? _runtimeLimitReached;
-    private readonly Action<GameEventScriptDiagnostic>? _runtimeError;
+    private readonly Action<GesDiagnostic>? _runtimeError;
 
     private TestRuntimeObserver(
         Action<GameEventScriptMessage>? messageEmitted,
         Action<GameEventScriptMessage>? messagePublished,
         Action<string, string, int>? runtimeLimitReached = null,
-        Action<GameEventScriptPublishResult>? publishResult = null,
-        Action<GameEventScriptDiagnostic>? runtimeError = null)
+        Action<GesPublishResult>? publishResult = null,
+        Action<GesDiagnostic>? runtimeError = null)
     {
         _messageEmitted = messageEmitted;
         _messagePublished = messagePublished;
@@ -35,16 +35,16 @@ internal sealed class TestRuntimeObserver : IGameEventScriptRuntimeObserver
         Action<GameEventScriptMessage>? messageEmitted = null,
         Action<GameEventScriptMessage>? messagePublished = null,
         Action<string, string, int>? runtimeLimitReached = null,
-        Action<GameEventScriptDiagnostic>? runtimeError = null)
+        Action<GesDiagnostic>? runtimeError = null)
         => new(messageEmitted, messagePublished, runtimeLimitReached, runtimeError: runtimeError);
 
-    public static TestRuntimeObserver ObservePublishResults(Action<GameEventScriptPublishResult> publishResult)
+    public static TestRuntimeObserver ObservePublishResults(Action<GesPublishResult> publishResult)
         => new(null, null, null, publishResult);
 
     public void MessageEmitted(GameEventScriptMessage message, bool accepted)
         => _messageEmitted?.Invoke(message);
 
-    public void MessagePublished(GameEventScriptMessage message, GameEventScriptPublishResult result)
+    public void MessagePublished(GameEventScriptMessage message, GesPublishResult result)
     {
         _messagePublished?.Invoke(message);
         _publishResult?.Invoke(result);
@@ -61,7 +61,7 @@ internal sealed class TestRuntimeObserver : IGameEventScriptRuntimeObserver
     public void RuntimeLimitReached(string limitName, string detail, int limit)
         => _runtimeLimitReached?.Invoke(limitName, detail, limit);
 
-    public void RuntimeError(GameEventScriptDiagnostic diagnostic)
+    public void RuntimeError(GesDiagnostic diagnostic)
         => _runtimeError?.Invoke(diagnostic);
 }
 
@@ -75,7 +75,7 @@ internal sealed class TestRuntimeLimitEvent(string name, string detail, int limi
 }
 
 internal sealed class TestPublishSink(Action<GameEventScriptMessage> publish, bool accepted = true)
-    : IGameEventScriptPublishSink
+    : IGesPublishSink
 {
     public bool Publish(GameEventScriptMessage message)
     {

@@ -226,7 +226,7 @@ non-empty diagnostic list. A port may return a result union instead. Diagnostics
 remain the portable failure value.
 
 The C# compiler entry point is
-`GameEventScriptBuilder.Create().AddScript(text, sourceName).Compile(options)`.
+`GesProgramBuilder.Create().AddScript(text, sourceName).Compile(options)`.
 Host construction independently uses `GameEventScriptHost.CreateBuilder()`.
 
 ## Program and bytecode data API
@@ -638,11 +638,11 @@ above.
 > **Since: Unreleased**
 
 `WithProfiler` / `withProfiler` selects an optional synchronous
-`IGameEventScriptProfiler` / `GameEventScriptProfiler` factory. Swift also accepts
+`IGesProfiler` / `GesProfiler` factory. Swift also accepts
 `profiler` in its Host initializer. The Host calls
 `CreateProgramProfiler(program)` / `createProgramProfiler(program)` once per linked
 load instance, before execution. The result implements
-`IGameEventScriptProgramProfiler` / `GameEventScriptProgramProfiler` and remains
+`IGesProgramProfiler` / `GesProgramProfiler` and remains
 host-specific; no instrumentation state enters the immutable Program. Repeated
 loads, including identical Programs or module names, receive separate collectors.
 The factory can retain collectors for reporting after detach.
@@ -890,10 +890,10 @@ contracts remain in [Runner.md](Conformance/Runner.md).
 ### C# and Unity
 
 `GameEventScript.Runtime` supplies Runtime. The optional
-`GameEventScript.Compiler` package supplies `GameEventScriptBuilder`,
-`GameEventScriptCompileOptions`, and `GameEventScriptCompileException` in the
+`GameEventScript.Compiler` package supplies `GesProgramBuilder`,
+`GesCompileOptions`, and `GesCompileException` in the
 `GameEventScript.Api` namespace. Applications compile through
-`GameEventScriptBuilder.Create()`, construct hosts through
+`GesProgramBuilder.Create()`, construct hosts through
 `GameEventScriptHost.CreateBuilder()`, and load precompiled Programs through
 the Reader.
 
@@ -925,14 +925,14 @@ DLL and may choose main-thread/manual pumping instead of the automatic runner.
 
 ### Swift
 
-`GesValue`, `GameEventScriptMessage` and `GameEventScriptMessageSignature`
+`GesValue`, `GameEventScriptMessage` and `GesMessageSignature`
 retain immutable public value semantics. Read-only properties may use shared
 immutable backing storage; copying a value and replacing a VM register never
 mutates another copy. Native register layout is an implementation detail and
 does not define binary or JSON encoding.
 
 Swift message arguments retain ordered signature labels and values in separate
-immutable arrays. Their `Iterator` yields `GameEventScriptMessageArgument` pairs
+immutable arrays. Their `Iterator` yields `GesMessageArgument` pairs
 without creating an intermediate pair array. Returned arrays retain Swift
 copy-on-write semantics; caller mutations cannot change a message.
 
@@ -941,25 +941,25 @@ The Swift mapping separates the `GameEventScriptRuntime`,
 Compiler depends only on Runtime; Conformance depends on both. Runtime has no
 dependency on Compiler, a test framework, or Conformance.
 
-`GameEventScriptBuilder.addScript(_:sourceName:)` accepts source text and assigns
+`GesProgramBuilder.addScript(_:sourceName:)` accepts source text and assigns
 an independent source ID to each addition, even when diagnostic names repeat.
 The builder supports `withDebugInfo`, `withProgramVersion`, and a declarative
 `withExternalTypeCatalog`. `compile(options:)` returns a reusable immutable
 Program; repeated compilation does not mutate earlier results. A supplied
-`GameEventScriptCompileOptions` overrides the builder's options for that call.
-`GameEventScriptDebugInfoOptions` independently selects symbols, source maps,
+`GesCompileOptions` overrides the builder's options for that call.
+`GesDebugInfoOptions` independently selects symbols, source maps,
 and source archives; `.all` is the default and `.none` omits all three. Unknown
 option bits are invalid public arguments. Source diagnostics are thrown as
-`GameEventScriptCompileError` with ordered `GameEventScriptDiagnostic` values.
+`GesCompileError` with ordered `GesDiagnostic` values.
 Compiler internals and the compiler-only Runtime SPI are not public embedding APIs.
 
-Runtime exposes `GesValue`, `GesUnit`, immutable range descriptors, messages,
+Runtime exposes `GesValue`, `GesQuantityUnit`, immutable range descriptors, messages,
 signatures, Program data and codecs, `GameEventScriptHost`, Context, lifecycle
 handles, random generators, diagnostics, and the extension/external-type
 protocols. `GameEventScriptHost.createBuilder()` provides the same mutable
 configuration workflow as C#, including seed, entropy, sequence, limits, observer,
 sink and registries. Every `build()` creates an independent Host. The direct
-initializer remains available. `GameEventScriptBuilder.create()` creates a
+initializer remains available. `GesProgramBuilder.create()` creates a
 compiler builder. `load`, `start`, `isReady`, `subscribe`, `receive`, `executeFrame`,
 and `runToCompletion` retain the host contracts above. The mutable VM is host-private.
 
@@ -977,9 +977,9 @@ Reader options retain the three portable retention modes and bounded read limits
 
 Invalid public construction uses structured `throws` errors. Signature message
 creation returns an optional for mismatched arity. Decode failures use
-`GameEventScriptProgramFormatError`; linking uses `GameEventScriptDynamicLinkError`;
-execution results carry `GameEventScriptDiagnostic`. Explicit callback faults use
-`GameEventScriptExtensionFault`; unexpected errors receive the owning runtime
+`GesProgramFormatError`; linking uses `GesDynamicLinkError`;
+execution results carry `GesDiagnostic`. Explicit callback faults use
+`GesExtensionFaultError`; unexpected errors receive the owning runtime
 boundary's stable classification. Call objects and borrowed argument views must
 not outlive their synchronous callback.
 
@@ -1140,8 +1140,8 @@ reflection objects remain private or embedding-specific.
 
 > **Since: 0.2.0**
 
-C# `IGameEventScriptClock.ElapsedMicroseconds` and Swift
-`GameEventScriptClock.elapsedMicroseconds` provide a borrowed monotonic Int64
+C# `IGesClock.ElapsedMicroseconds` and Swift
+`GesClock.elapsedMicroseconds` provide a borrowed monotonic Int64
 microsecond source. Host builders accept `WithClock` / `withClock`; absent an
 injected source, each host uses an independent origin on the system monotonic
 clock. A shared injected clock is read serially by its embedding.
@@ -1190,6 +1190,6 @@ The public bytecode opcode enumeration assigns `Cartesian` the stable value
 Iterator modes and component output reuse existing instruction words and the
 UInt16 list pool; no mutable iterator is added to the portable Program API.
 
-`GameEventScriptInstructionFlag.Numeric` aliases bit `0x40` for Move, Add, Subtract,
+`GesInstructionFlag.Numeric` aliases bit `0x40` for Move, Add, Subtract,
 Multiply, Divide, Power, IntegerDivide, Modulo, Remainder, Min, Max, Negate, Abs and Clamp only. The same bit retains WithTags semantics on result-bearing sends;
 interpret flags by opcode.

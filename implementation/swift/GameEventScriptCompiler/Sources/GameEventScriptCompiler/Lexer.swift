@@ -135,7 +135,7 @@ struct GesLexer {
                     break
                 }
             }
-            if let value = GameEventScriptCompilerSupport.quotedText(slice(start)) { return token("text", value) }
+            if let value = GesCompilerSupport.quotedText(slice(start)) { return token("text", value) }
             return token("illegal", slice(start))
         }
         let pair = String(first) + String(peek())

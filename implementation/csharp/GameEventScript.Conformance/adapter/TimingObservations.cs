@@ -50,24 +50,24 @@ internal static class TimingObservations
         // Qualified run samples are measured independently of compilation and JSON transport.
         var run = JsonSerializer.SerializeToElement(AllocationObservations.Run(AllocationInput(test)));
         var sources = test.GetProperty("sources").EnumerateArray().Select(s => (Name: s.GetProperty("name").GetString()!, Text: s.GetProperty("text").GetString()!)).ToArray();
-        var debug = GameEventScriptDebugInfoOptions.None;
+        var debug = GesDebugInfoOptions.None;
         foreach (var flag in test.GetProperty("compile").GetProperty("debugInfo").EnumerateArray())
             debug |= flag.GetString() switch
             {
-                "debugSymbols" => GameEventScriptDebugInfoOptions.DebugSymbols,
-                "sourceMap" => GameEventScriptDebugInfoOptions.SourceMap,
-                "sourceArchive" => GameEventScriptDebugInfoOptions.SourceArchive,
+                "debugSymbols" => GesDebugInfoOptions.DebugSymbols,
+                "sourceMap" => GesDebugInfoOptions.SourceMap,
+                "sourceArchive" => GesDebugInfoOptions.SourceArchive,
                 _ => throw new ArgumentException("Invalid debug flag.")
             };
-        var options = new GameEventScriptCompileOptions { DebugInfo = debug };
+        var options = new GesCompileOptions { DebugInfo = debug };
         var limits = RuntimeObservations.CreateLimits(test.GetProperty("runtime").GetProperty("limits"));
-        GameEventScriptBuilder Builder()
+        GesProgramBuilder Builder()
         {
-            var builder = GameEventScriptBuilder.Create().WithExternalTypeCatalog(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Catalog);
+            var builder = GesProgramBuilder.Create().WithExternalTypeCatalog(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Catalog);
             foreach (var source in sources) builder.AddScript(source.Text, source.Name);
             return builder;
         }
-        GameEventScriptInstance Load(GameEventScriptProgram program)
+        GesProgramInstance Load(GameEventScriptProgram program)
         {
             var host = GameEventScriptHost.CreateBuilder().WithRegistry(new RuntimeFixtures()).WithExternalTypeRegistry(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Registry).WithRuntimeLimits(limits).Build();
             host.Start();

@@ -110,11 +110,11 @@ whether coloring is enabled belong to the embedding, not this library.
   dependency. Foundation is also available on supported non-Apple Swift platforms;
   platform availability is verified separately from the API contract.
 
-Both implementations expose `GameEventScriptSyntaxHighlighter`,
-`GameEventScriptSyntaxLanguage`, `GameEventScriptSyntaxKind`,
-`GameEventScriptHighlightSpan`, `GameEventScriptHighlightResult`,
-`GameEventScriptHighlightState` and `GameEventScriptAnsiRenderer`.
-Swift reports invalid API input through `GameEventScriptHighlightingError`.
+Both implementations expose `GesSyntaxHighlighter`,
+`GesSyntaxLanguage`, `GesSyntaxKind`,
+`GesHighlightSpan`, `GesHighlightResult`,
+`GesHighlightState` and `GesAnsiRenderer`.
+Swift reports invalid API input through `GesHighlightingError`.
 
 The shared executable examples live in
 [`conformance/highlighting/SyntaxHighlighting.md`](../conformance/highlighting/SyntaxHighlighting.md).

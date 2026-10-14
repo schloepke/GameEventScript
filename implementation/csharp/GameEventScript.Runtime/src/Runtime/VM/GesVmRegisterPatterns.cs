@@ -4,14 +4,14 @@
 using System;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodePatternKind;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodePatternKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterPatterns
 {
-    internal static void GesVmHasPattern(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source, GameEventScriptBytecodePatternKind pattern, short count, in GesValue face)
+    internal static void GesVmHasPattern(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source, GesBytecodePatternKind pattern, short count, in GesValue face)
     {
         if (pattern == CountFace)
         {
@@ -67,7 +67,7 @@ internal static class GesVmRegisterPatterns
         }
     }
 
-    internal static void GesVmTakePattern(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source, GameEventScriptBytecodePatternKind pattern, short count, in GesValue face)
+    internal static void GesVmTakePattern(this GesVirtualMachine vm, ushort destinationRegister, in GesValue source, GesBytecodePatternKind pattern, short count, in GesValue face)
     {
         if (pattern == CountFace)
         {
@@ -137,7 +137,7 @@ internal static class GesVmRegisterPatterns
         }
     }
 
-    private static bool HasPatternDice(int[] dice, GameEventScriptBytecodePatternKind pattern, short count)
+    private static bool HasPatternDice(int[] dice, GesBytecodePatternKind pattern, short count)
     {
         switch (pattern)
         {
@@ -173,7 +173,7 @@ internal static class GesVmRegisterPatterns
         return matches >= count;
     }
 
-    private static bool HasPatternList(GesValue[] list, GameEventScriptBytecodePatternKind pattern, short count)
+    private static bool HasPatternList(GesValue[] list, GesBytecodePatternKind pattern, short count)
     {
         switch (pattern)
         {
@@ -205,7 +205,7 @@ internal static class GesVmRegisterPatterns
         return matches >= count;
     }
 
-    private static bool HasPatternBuffer(GesValue[] items, int length, GameEventScriptBytecodePatternKind pattern, short count)
+    private static bool HasPatternBuffer(GesValue[] items, int length, GesBytecodePatternKind pattern, short count)
     {
         var list = new GesValue[length];
         for (var i = 0; i < length; i++) list[i] = items[i];
@@ -219,19 +219,19 @@ internal static class GesVmRegisterPatterns
         return matches >= count;
     }
 
-    private static GesValue TakePatternDice(int[] dice, GameEventScriptBytecodePatternKind pattern, short count)
+    private static GesValue TakePatternDice(int[] dice, GesBytecodePatternKind pattern, short count)
     {
         var buffer = new GesValue[dice.Length];
         for (var i = 0; i < dice.Length; i++) buffer[i].SetInteger(dice[i]);
         return TakePatternBuffer(buffer, dice.Length, pattern, count, diceResult: true);
     }
 
-    private static GesValue TakePatternList(GesValue[] list, GameEventScriptBytecodePatternKind pattern, short count)
+    private static GesValue TakePatternList(GesValue[] list, GesBytecodePatternKind pattern, short count)
     {
         return TakePatternBuffer(list, list.Length, pattern, count, diceResult: false);
     }
 
-    private static GesValue TakePatternBuffer(GesValue[] items, int length, GameEventScriptBytecodePatternKind pattern, short count, bool diceResult)
+    private static GesValue TakePatternBuffer(GesValue[] items, int length, GesBytecodePatternKind pattern, short count, bool diceResult)
     {
         switch (pattern)
         {

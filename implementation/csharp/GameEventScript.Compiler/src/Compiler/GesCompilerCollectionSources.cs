@@ -73,11 +73,11 @@ internal static partial class GesCompiler
             // a valid Dice/List combination to List. All-Dice results stay Dice.
             var check = state.AllocateTemporary(_builder, context);
             var valid = _builder.AddLabel("combined_result_valid");
-            _builder.CheckType(check, sources[0], GameEventScriptBytecodeTypeKind.Map);
+            _builder.CheckType(check, sources[0], GesBytecodeTypeKind.Map);
             _builder.JumpIfTrue(check, allowMap ? valid : invalid);
             foreach (var source in sources)
             {
-                _builder.CheckType(check, source, GameEventScriptBytecodeTypeKind.List);
+                _builder.CheckType(check, source, GesBytecodeTypeKind.List);
                 _builder.JumpIfTrue(check, valid);
             }
             _builder.Jump(invalid);
@@ -108,13 +108,13 @@ internal static partial class GesCompiler
             var check = state.AllocateTemporary(_builder, context);
             for (var index = 1; index < combined.Sources.Count; index++)
             {
-                EmitSourceTypeGuard(current, invalid, context, state, GameEventScriptBytecodeTypeKind.List, GameEventScriptBytecodeTypeKind.Map, GameEventScriptBytecodeTypeKind.Dice);
+                EmitSourceTypeGuard(current, invalid, context, state, GesBytecodeTypeKind.List, GesBytecodeTypeKind.Map, GesBytecodeTypeKind.Dice);
                 var right = sources[index];
                 var result = state.AllocateTemporary(_builder, context);
                 if (combined.Operation == "union") _builder.Union(result, current, right);
                 else if (combined.Operation == "intersect") _builder.Intersect(result, current, right);
                 else _builder.Subtract(result, current, right);
-                _builder.CheckType(check, result, GameEventScriptBytecodeTypeKind.Nothing);
+                _builder.CheckType(check, result, GesBytecodeTypeKind.Nothing);
                 _builder.JumpIfTrue(check, invalid);
                 current = result;
             }

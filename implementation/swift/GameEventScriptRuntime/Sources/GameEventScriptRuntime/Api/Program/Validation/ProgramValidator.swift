@@ -5,7 +5,7 @@
 public enum GameEventScriptProgramValidator {
     /// Checks complete Program structure, references, debug data and resource metadata without resolving host imports.
     ///
-    /// - Throws: `GameEventScriptProgramFormatError` with a stable classification on failure.
+    /// - Throws: `GesProgramFormatError` with a stable classification on failure.
     public static func validate(_ p: GameEventScriptProgram) throws {
         if p.formatVersion != 1 { throw failure(.unsupportedFormatVersion) }
         if !GesNames.module(p.moduleName) { throw failure(.invalidProgram, 1) }
@@ -61,9 +61,9 @@ public enum GameEventScriptProgramValidator {
         try GesProgramResourceValidator.validate(p)
     }
 
-    static func failure(_ code: GameEventScriptProgramFormatErrorCode, _ section: UInt16? = nil, _ entry: Int? = nil) -> GameEventScriptProgramFormatError { .init(code, sectionType: section, entryIndex: entry) }
+    static func failure(_ code: GesProgramFormatErrorCode, _ section: UInt16? = nil, _ entry: Int? = nil) -> GesProgramFormatError { .init(code, sectionType: section, entryIndex: entry) }
 
-    static func validateInstruction(_ p: GameEventScriptProgram, _ i: GameEventScriptBytecodeInstruction, _ index: Int, _ ids: Set<UInt64>) throws {
+    static func validateInstruction(_ p: GameEventScriptProgram, _ i: GesBytecodeInstruction, _ index: Int, _ ids: Set<UInt64>) throws {
         if i.opcode.isResultSend {
             if i.unitAndFlags & 0x3f != 0 || i.c != 0 || i.d != 0 || i.unitAndFlags & 0x40 == 0 && i.a != 0 || i.unitAndFlags & 0x80 != 0 && i.word2 != 0
                 || (i.opcode == .emitInstant || i.opcode == .publishInstant) && i.b != 0
@@ -114,11 +114,11 @@ public enum GameEventScriptProgramValidator {
                 }
             } else {
                 switch operand {
-                case .typeKind: if GameEventScriptBytecodeTypeKind(rawValue: i.word2) == nil { throw failure(.invalidOperand, 16, index) }
-                case .patternKind: if GameEventScriptBytecodePatternKind(rawValue: i.a) == nil { throw failure(.invalidOperand, 16, index) }
-                case .seriesKind: if GameEventScriptBytecodeSeriesKind(rawValue: i.word2) == nil { throw failure(.invalidOperand, 16, index) }
+                case .typeKind: if GesBytecodeTypeKind(rawValue: i.word2) == nil { throw failure(.invalidOperand, 16, index) }
+                case .patternKind: if GesBytecodePatternKind(rawValue: i.a) == nil { throw failure(.invalidOperand, 16, index) }
+                case .seriesKind: if GesBytecodeSeriesKind(rawValue: i.word2) == nil { throw failure(.invalidOperand, 16, index) }
                 case .outboundMessage, .recordReference, .externalReference:
-                    let kind: GameEventScriptBinaryBindKind = operand == .outboundMessage ? .outboundMessage : operand == .recordReference ? .record : i.opcode == .callExternal ? .extensionCall : .externalType
+                    let kind: GesBinaryBindKind = operand == .outboundMessage ? .outboundMessage : operand == .recordReference ? .record : i.opcode == .callExternal ? .extensionCall : .externalType
                     let id = operand == .outboundMessage && !i.opcode.isResultSend ? i.word0 : i.word1
                     if !ids.contains(UInt64(kind.rawValue) << 16 | UInt64(id)) { throw failure(.invalidOperand, 16, index) }
                 default: break
@@ -132,7 +132,7 @@ public enum GameEventScriptProgramValidator {
         }
     }
 
-    static func validateFrame(_ p: GameEventScriptProgram, _ i: GameEventScriptBytecodeInstruction, _ index: Int, _ length: Int) throws {
+    static func validateFrame(_ p: GameEventScriptProgram, _ i: GesBytecodeInstruction, _ index: Int, _ length: Int) throws {
         for (position, operand) in i.operands.enumerated() {
             if operand.isRegister && Int(i.register(operand, position)) >= length { throw failure(.invalidOperand, 16, index) }
             if operand.isList && !operand.isTextList && p.uint16IndexLists[Int(i.list(operand))].contains(where: { Int($0) >= length }) { throw failure(.invalidOperand, 16, index) }
@@ -149,7 +149,7 @@ extension GesOperand {
     var isTextList: Bool { self == .messageShapeList || self == .argumentNameList || self == .keyNameList }
 }
 
-extension GameEventScriptBytecodeInstruction {
+extension GesBytecodeInstruction {
     var operands: [GesOperand] {
         // Normal iterators reuse the fixed operand table instead of allocating a dynamic list.
         if (opcode == .iteratorCreate || opcode == .iteratorCreateOrJump) && unitAndFlags == 0 { return opcode.operands }

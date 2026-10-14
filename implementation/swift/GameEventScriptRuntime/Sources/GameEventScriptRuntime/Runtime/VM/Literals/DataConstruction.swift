@@ -2,17 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 enum GesDataConstruction {
-    static func create(_ type: String, _ labels: [String], _ arguments: [GesValue], _ context: GameEventScriptContext) throws -> GesValue {
+    static func create(_ type: String, _ labels: [String], _ arguments: [GesValue], _ context: GesContext) throws -> GesValue {
         try create(type, labels, arguments, context, sink: GesValueFactory())
     }
 
-    static func create<Output: GesValueOutput>(_ type: String, _ labels: [String], _ arguments: [GesValue], _ context: GameEventScriptContext, sink: Output) throws -> Output.Result {
+    static func create<Output: GesValueOutput>(_ type: String, _ labels: [String], _ arguments: [GesValue], _ context: GesContext, sink: Output) throws -> Output.Result {
         guard let positions = GesDataConstructionShape.positions(type, labels) else { return sink.nothing }
         return try create(type, positions: positions, arguments, context, sink: sink)
     }
 
     // Positions come from GesDataConstructionShape, resolved once per constant type/label list.
-    static func create<Output: GesValueOutput>(_ type: String, positions: [Int], _ arguments: [GesValue], _ context: GameEventScriptContext, sink: Output) throws -> Output.Result {
+    static func create<Output: GesValueOutput>(_ type: String, positions: [Int], _ arguments: [GesValue], _ context: GesContext, sink: Output) throws -> Output.Result {
         guard arguments.count == positions.count else { return sink.nothing }
         var slots = (GesValue.nothing, GesValue.nothing, GesValue.nothing)
         for (index, position) in positions.enumerated() { place(arguments[index], at: position, in: &slots) }
@@ -20,7 +20,7 @@ enum GesDataConstruction {
     }
 
     // VM entry: reads the argument registers directly instead of collecting them into arrays.
-    static func create<Output: GesValueOutput>(_ type: String, positions: [Int], registers list: UInt16, _ state: GesVirtualMachine, _ context: GameEventScriptContext, sink: Output) throws -> Output.Result {
+    static func create<Output: GesValueOutput>(_ type: String, positions: [Int], registers list: UInt16, _ state: GesVirtualMachine, _ context: GesContext, sink: Output) throws -> Output.Result {
         let registers = state.list(list)
         guard registers.count == positions.count else { return sink.nothing }
         var slots = (GesValue.nothing, GesValue.nothing, GesValue.nothing)
@@ -38,7 +38,7 @@ enum GesDataConstruction {
         }
     }
 
-    private static func create<Output: GesValueOutput>(_ type: String, count: Int, _ slots: (GesValue, GesValue, GesValue), _ context: GameEventScriptContext, sink: Output) throws -> Output.Result {
+    private static func create<Output: GesValueOutput>(_ type: String, count: Int, _ slots: (GesValue, GesValue, GesValue), _ context: GesContext, sink: Output) throws -> Output.Result {
         let first = slots.0
         switch type {
         case "nothing": return sink.nothing
@@ -78,18 +78,18 @@ enum GesDataConstruction {
     }
 
     // Switches instead of per-call dictionary literals; same exact-name mapping as before.
-    private static func unit(named name: String) -> GesUnit? {
+    private static func unit(named name: String) -> GesQuantityUnit? {
         switch name {
         // Qualified: a bare `.none` in an optional context would mean nil, not the unitless unit.
-        case "", "none": GesUnit.none
-        case "s", "second": GesUnit.second
-        case "m", "meter": GesUnit.meter
-        case "°", "degree": GesUnit.degree
+        case "", "none": GesQuantityUnit.none
+        case "s", "second": GesQuantityUnit.second
+        case "m", "meter": GesQuantityUnit.meter
+        case "°", "degree": GesQuantityUnit.degree
         default: nil
         }
     }
 
-    private static func castKind(_ type: String) -> GameEventScriptBytecodeTypeKind {
+    private static func castKind(_ type: String) -> GesBytecodeTypeKind {
         switch type {
         case "percentage": .percentage
         case "boolean": .boolean

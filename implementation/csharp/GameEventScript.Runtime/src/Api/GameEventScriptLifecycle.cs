@@ -8,12 +8,12 @@ namespace GameEventScript.Api;
 /// <summary>
 /// Represents one host-local loading of a reusable immutable program.
 /// </summary>
-public sealed class GameEventScriptInstance
+public sealed class GesProgramInstance
 {
     private readonly GameEventScriptHost _host;
     private readonly long _registrationId;
 
-    internal GameEventScriptInstance(GameEventScriptHost host, long registrationId, GameEventScriptProgram program, GesLinkedProgram linkedProgram)
+    internal GesProgramInstance(GameEventScriptHost host, long registrationId, GameEventScriptProgram program, GesLinkedProgram linkedProgram)
     {
         _host = host;
         _registrationId = registrationId;
@@ -30,10 +30,10 @@ public sealed class GameEventScriptInstance
     /// </summary>
     public bool IsAttached => _host.IsInstanceAttached(_registrationId);
     /// <summary>Gets the initialization outcome, or null until initialization completes. The result remains available after detachment.</summary>
-    public GameEventScriptStartResult? StartResult { get; internal set; }
+    public GesStartResult? StartResult { get; internal set; }
     internal long RegistrationId => _registrationId;
     internal GesLinkedProgram LinkedProgram { get; }
-    internal GameEventScriptInstance? NextRegistration { get; set; }
+    internal GesProgramInstance? NextRegistration { get; set; }
 
     /// <summary>
     /// Idempotently removes this instance's handlers from future message snapshots.
@@ -46,12 +46,12 @@ public sealed class GameEventScriptInstance
 /// <summary>
 /// Represents one host-local native message subscription.
 /// </summary>
-public sealed class GameEventScriptSubscription
+public sealed class GesSubscription
 {
     private readonly GameEventScriptHost _host;
     private readonly long _registrationId;
 
-    internal GameEventScriptSubscription(GameEventScriptHost host, long registrationId)
+    internal GesSubscription(GameEventScriptHost host, long registrationId)
     {
         _host = host;
         _registrationId = registrationId;

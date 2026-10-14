@@ -15,7 +15,7 @@ enum GesProgramResourceValidator {
             recordNames[p.stringConstants[Int(binding.name)]] = Int(binding.entryAddress)
         }
 
-        func callee(_ i: GameEventScriptBytecodeInstruction) -> Int? {
+        func callee(_ i: GesBytecodeInstruction) -> Int? {
             let address: Int?
             switch i.opcode {
             case .call: address = Int(i.word2)
@@ -61,7 +61,7 @@ enum GesProgramResourceValidator {
         var frames = [Int](repeating: -1, count: p.code.count)
         var stages = frames
 
-        func invalid(_ index: Int) -> GameEventScriptProgramFormatError { GameEventScriptProgramValidator.failure(.invalidResourceMetadata, 16, index) }
+        func invalid(_ index: Int) -> GesProgramFormatError { GameEventScriptProgramValidator.failure(.invalidResourceMetadata, 16, index) }
 
         for binding in executable {
             let routine = indexes[Int(binding.entryAddress)]!
@@ -148,7 +148,7 @@ enum GesProgramResourceValidator {
     }
 }
 
-extension GameEventScriptBytecodeOpCode {
+extension GesBytecodeOpCode {
     var isStage: Bool { [.stageRegister, .stageNothing, .stageTrue, .stageFalse, .stageInteger, .stageFloat, .stageText, .stageTag, .stagePercentage].contains(self) }
     var consumesStage: Bool { [.call, .createVector, .createPoint, .createList, .createMap, .createRecord, .createExternalType].contains(self) }
     var branches: Bool { [.jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing, .iteratorCreateOrJump, .iteratorNext].contains(self) }

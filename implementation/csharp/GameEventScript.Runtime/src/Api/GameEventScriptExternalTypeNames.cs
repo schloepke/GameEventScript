@@ -8,58 +8,58 @@ namespace GameEventScript.Api;
 
 internal static class GameEventScriptExternalTypeNames
 {
-    public static string ToTypeName(GameEventScriptBytecodeTypeKind kind, GameEventScriptBytecodeInstructionUnit? unit)
+    public static string ToTypeName(GesBytecodeTypeKind kind, GesQuantityUnit? unit)
     {
         unit = unit is { } numericUnit && numericUnit.IsNumericUnit() ? numericUnit : null;
 
-        if (unit is not null && kind is not (GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Vector or GameEventScriptBytecodeTypeKind.Point))
+        if (unit is not null && kind is not (GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Vector or GesBytecodeTypeKind.Point))
         {
             throw new ArgumentException($"External GameEventScript type '{kind}' cannot declare a numeric unit.", nameof(unit));
         }
 
         return kind switch
         {
-            GameEventScriptBytecodeTypeKind.Nothing => "Nothing",
-            GameEventScriptBytecodeTypeKind.Tag => "Tag",
-            GameEventScriptBytecodeTypeKind.Text => "Text",
-            GameEventScriptBytecodeTypeKind.Percentage => "Percentage",
-            GameEventScriptBytecodeTypeKind.Vector => "Vector",
-            GameEventScriptBytecodeTypeKind.Point => "Point",
-            GameEventScriptBytecodeTypeKind.Float => unit is null ? "Number" : $"Quantity({unit.Value.ToSuffix()})",
-            GameEventScriptBytecodeTypeKind.Boolean => "Boolean",
-            GameEventScriptBytecodeTypeKind.Series => "Series",
-            GameEventScriptBytecodeTypeKind.Range => "Range",
-            GameEventScriptBytecodeTypeKind.Handler => "Handler",
-            GameEventScriptBytecodeTypeKind.List => "List",
-            GameEventScriptBytecodeTypeKind.Map => "Map",
-            GameEventScriptBytecodeTypeKind.Dice => "Dice",
+            GesBytecodeTypeKind.Nothing => "Nothing",
+            GesBytecodeTypeKind.Tag => "Tag",
+            GesBytecodeTypeKind.Text => "Text",
+            GesBytecodeTypeKind.Percentage => "Percentage",
+            GesBytecodeTypeKind.Vector => "Vector",
+            GesBytecodeTypeKind.Point => "Point",
+            GesBytecodeTypeKind.Float => unit is null ? "Number" : $"Quantity({unit.Value.ToSuffix()})",
+            GesBytecodeTypeKind.Boolean => "Boolean",
+            GesBytecodeTypeKind.Series => "Series",
+            GesBytecodeTypeKind.Range => "Range",
+            GesBytecodeTypeKind.Handler => "Handler",
+            GesBytecodeTypeKind.List => "List",
+            GesBytecodeTypeKind.Map => "Map",
+            GesBytecodeTypeKind.Dice => "Dice",
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown GameEventScript value kind.")
         };
     }
 
-    public static (GameEventScriptBytecodeTypeKind? Kind, GameEventScriptBytecodeInstructionUnit? Unit) GetKindAndUnit(string typeName)
+    public static (GesBytecodeTypeKind? Kind, GesQuantityUnit? Unit) GetKindAndUnit(string typeName)
     {
-        if (GameEventScriptBytecodeInstructionUnits.ParseSourceQuantityTypeName(typeName) is { } unit)
+        if (GesQuantityUnits.ParseSourceQuantityTypeName(typeName) is { } unit)
         {
-            return (GameEventScriptBytecodeTypeKind.Float, unit);
+            return (GesBytecodeTypeKind.Float, unit);
         }
 
         return typeName switch
         {
-            "Nothing" => (GameEventScriptBytecodeTypeKind.Nothing, null),
-            "Tag" => (GameEventScriptBytecodeTypeKind.Tag, null),
-            "Text" => (GameEventScriptBytecodeTypeKind.Text, null),
-            "Percentage" => (GameEventScriptBytecodeTypeKind.Percentage, null),
-            "Vector" => (GameEventScriptBytecodeTypeKind.Vector, null),
-            "Point" => (GameEventScriptBytecodeTypeKind.Point, null),
-            "Number" => (GameEventScriptBytecodeTypeKind.Float, null),
-            "Boolean" => (GameEventScriptBytecodeTypeKind.Boolean, null),
-            "Series" => (GameEventScriptBytecodeTypeKind.Series, null),
-            "Range" => (GameEventScriptBytecodeTypeKind.Range, null),
-            "Handler" => (GameEventScriptBytecodeTypeKind.Handler, null),
-            "List" => (GameEventScriptBytecodeTypeKind.List, null),
-            "Map" => (GameEventScriptBytecodeTypeKind.Map, null),
-            "Dice" => (GameEventScriptBytecodeTypeKind.Dice, null),
+            "Nothing" => (GesBytecodeTypeKind.Nothing, null),
+            "Tag" => (GesBytecodeTypeKind.Tag, null),
+            "Text" => (GesBytecodeTypeKind.Text, null),
+            "Percentage" => (GesBytecodeTypeKind.Percentage, null),
+            "Vector" => (GesBytecodeTypeKind.Vector, null),
+            "Point" => (GesBytecodeTypeKind.Point, null),
+            "Number" => (GesBytecodeTypeKind.Float, null),
+            "Boolean" => (GesBytecodeTypeKind.Boolean, null),
+            "Series" => (GesBytecodeTypeKind.Series, null),
+            "Range" => (GesBytecodeTypeKind.Range, null),
+            "Handler" => (GesBytecodeTypeKind.Handler, null),
+            "List" => (GesBytecodeTypeKind.List, null),
+            "Map" => (GesBytecodeTypeKind.Map, null),
+            "Dice" => (GesBytecodeTypeKind.Dice, null),
             _ => (null, null)
         };
     }

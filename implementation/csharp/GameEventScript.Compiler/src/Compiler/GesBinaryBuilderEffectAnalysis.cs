@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 using GameEventScript.Api;
-using OpCode = GameEventScript.Api.GameEventScriptBytecodeOpCode;
+using OpCode = GameEventScript.Api.GesBytecodeOpCode;
 
 namespace GameEventScript.Compiler;
 
@@ -30,7 +30,7 @@ internal sealed partial class GesBinaryBuilder
                 // With assembly present, optimization runs per routine. Preserve
                 // calls whose bodies are outside the current region conservatively.
                 if (builder._preservedRoutines.Count != 0) _routineHasEffects[routine.Id] = true;
-                if (routine.Kind == GameEventScriptBinaryBindKind.Record) _recordRoutineByName.Add(routine.Name, routine.Id);
+                if (routine.Kind == GesBinaryBindKind.Record) _recordRoutineByName.Add(routine.Name, routine.Id);
             }
 
             var callers = new List<int>?[_routineHasEffects.Length];
@@ -95,7 +95,7 @@ internal sealed partial class GesBinaryBuilder
                 return instruction.Y.Kind == GesOperandKind.Label ? ResolveEntryLabel(instruction.Y.LabelRef.Id) : NoRoutineId;
 
             if (instruction.X.Kind == GesOperandKind.Bind && (uint)instruction.X.BindRef.Id < (uint)_builder._binds.Count &&
-                _builder._binds[instruction.X.BindRef.Id] is { Kind: GameEventScriptBinaryBindKind.Record, EntryLabel: { } label })
+                _builder._binds[instruction.X.BindRef.Id] is { Kind: GesBinaryBindKind.Record, EntryLabel: { } label })
                 return ResolveEntryLabel(label.Id);
 
             return NoRoutineId;
@@ -107,7 +107,7 @@ internal sealed partial class GesBinaryBuilder
         {
             // Dynamic external-field access can call host code. Without a purity contract it is conservative, like an extension call.
             if (instruction.OpCode is OpCode.MemberAccess or OpCode.PropertyAccess or OpCode.KeysOfMap or OpCode.ValuesOfMap or OpCode.EntriesOfMap) return true;
-            if (instruction.OpCode == OpCode.Cast) return instruction.Y.Kind != GesOperandKind.Type || instruction.Y.TypeKind == GameEventScriptBytecodeTypeKind.Map;
+            if (instruction.OpCode == OpCode.Cast) return instruction.Y.Kind != GesOperandKind.Type || instruction.Y.TypeKind == GesBytecodeTypeKind.Map;
             if (CanDiscardResult(instruction.OpCode)) return false;
 
             return instruction.OpCode switch

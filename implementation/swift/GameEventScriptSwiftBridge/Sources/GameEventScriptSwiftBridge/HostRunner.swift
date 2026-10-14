@@ -19,7 +19,7 @@ public struct GameEventScriptSwiftRegistration: Sendable {
     /// Reads whether the instance or subscription is still attached under the runner's gate.
     public var isAttached: Bool { owner.isAttached(registrationID) }
     /// Initialization result for a tracked Program, or nil while pending, detached, or for native subscriptions.
-    public var startResult: GameEventScriptStartResult? { owner.startResult(registrationID) }
+    public var startResult: GesStartResult? { owner.startResult(registrationID) }
 
     /// Idempotently detaches a registration under the serialization gate. Returns true only when this call removes it.
     @discardableResult public func detach() -> Bool { owner.detach(registrationID) }
@@ -31,10 +31,10 @@ public struct GameEventScriptSwiftRegistration: Sendable {
 public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
     private let gate = NSRecursiveLock()
     private var host: GameEventScriptHost?
-    private var instances: [Int64: GameEventScriptInstance] = [:]
-    private var subscriptions: [Int64: GameEventScriptSubscription] = [:]
+    private var instances: [Int64: GesProgramInstance] = [:]
+    private var subscriptions: [Int64: GesSubscription] = [:]
     private var pumping = false
-    private var result: GameEventScriptExecutionResult?
+    private var result: GesExecutionResult?
     private var wakeup: DispatchWorkItem?
     private var scheduled = false
     private static let dispatcher = DispatchQueue(label: "GameEventScript shared dispatch pump")
@@ -48,7 +48,7 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
     }
 
     /// Last completed pump result, read under the serialization gate; nil before the first pump.
-    public var lastResult: GameEventScriptExecutionResult? { locked { result } }
+    public var lastResult: GesExecutionResult? { locked { result } }
     /// Whether the owned host has no active or queued work; true after close.
     public var isIdle: Bool { locked { host?.isIdle ?? true } }
     /// Whether the owned host successfully started; false after close.
@@ -61,7 +61,7 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
     /// Starts the initial Program group under the gate, then schedules ordinary queued work on success.
     ///
     /// - Throws: An API error if the runner is closed or host startup preconditions fail.
-    public func start() throws -> GameEventScriptStartResult {
+    public func start() throws -> GesStartResult {
         try locked {
             let host = try activeHost()
             let result = try host.start()
@@ -70,7 +70,7 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
         }
     }
 
-    fileprivate func startResult(_ id: Int64) -> GameEventScriptStartResult? { locked { instances[id]?.startResult } }
+    fileprivate func startResult(_ id: Int64) -> GesStartResult? { locked { instances[id]?.startResult } }
 
     /// Transfers and enqueues a message under the gate, scheduling a pump when accepted.
     ///
@@ -100,7 +100,7 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
     ///
     /// - Returns: A registration whose lifecycle uses the same gate as execution.
     /// - Throws: An API error if closed, or a registration validation error.
-    public func subscribe(_ signature: GameEventScriptMessageSignature, matchingTags: [String] = [], withoutTags: [String] = [], priority: Int = 0, handler: sending @escaping (GameEventScriptMessage, GameEventScriptContext) throws -> Void) throws
+    public func subscribe(_ signature: GesMessageSignature, matchingTags: [String] = [], withoutTags: [String] = [], priority: Int = 0, handler: sending @escaping (GameEventScriptMessage, GesContext) throws -> Void) throws
         -> GameEventScriptSwiftRegistration
     {
         try locked {
@@ -111,9 +111,9 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
     }
 
     /// Drains existing work; recursive pump requests are rejected before altering host state.
-    @discardableResult public func runToCompletion() throws -> GameEventScriptExecutionResult {
+    @discardableResult public func runToCompletion() throws -> GesExecutionResult {
         try locked {
-            guard !pumping else { throw GameEventScriptAPIError.invalidOperation("A runner cannot be pumped recursively") }
+            guard !pumping else { throw GesApiError.invalidOperation("A runner cannot be pumped recursively") }
             try pump(activeHost())
             return result!
         }
@@ -177,7 +177,7 @@ public final class GameEventScriptSwiftHostRunner: @unchecked Sendable {
     }
 
     private func activeHost() throws -> GameEventScriptHost {
-        guard let host else { throw GameEventScriptAPIError.invalidOperation("The runner is closed") }
+        guard let host else { throw GesApiError.invalidOperation("The runner is closed") }
         return host
     }
 

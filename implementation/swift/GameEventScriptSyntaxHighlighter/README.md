@@ -16,7 +16,7 @@ this directory is its standalone development package.
 ```swift
 import GameEventScriptSyntaxHighlighter
 
-let highlighter = try GameEventScriptSyntaxHighlighter() // .ges by default
+let highlighter = try GesSyntaxHighlighter() // .ges by default
 let result = highlighter.highlight(source)
 if result.isComplete {
     for span in result.spans {
@@ -33,7 +33,7 @@ attributes without changing text or undo history:
 import AppKit
 import GameEventScriptSyntaxHighlighter
 
-func highlight(_ view: NSTextView, using highlighter: GameEventScriptSyntaxHighlighter) {
+func highlight(_ view: NSTextView, using highlighter: GesSyntaxHighlighter) {
     guard let layout = view.layoutManager else { return }
     let source = view.string
     layout.removeTemporaryAttribute(.foregroundColor,
@@ -66,10 +66,10 @@ render it plain and do not cache it as a successful result.
 ## Terminal and GESA
 
 ```swift
-let highlighter = try GameEventScriptSyntaxHighlighter(language: .gesa)
+let highlighter = try GesSyntaxHighlighter(language: .gesa)
 let result = highlighter.highlight(dump)
 let displayed = result.isComplete
-    ? try GameEventScriptAnsiRenderer.render(dump, spans: result.spans)
+    ? try GesAnsiRenderer.render(dump, spans: result.spans)
     : dump
 ```
 

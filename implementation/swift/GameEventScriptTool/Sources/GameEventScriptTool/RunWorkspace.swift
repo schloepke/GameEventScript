@@ -37,7 +37,7 @@ final class RunWorkspace {
         }
 
         func compile() throws -> GameEventScriptProgram {
-            let builder = GameEventScriptBuilder()
+            let builder = GesProgramBuilder()
             for (path, value) in zip(paths, text) { builder.addScript(value, sourceName: path) }
             return try builder.compile()
         }

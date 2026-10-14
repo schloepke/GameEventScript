@@ -45,7 +45,7 @@ internal sealed partial class GesParser
     private readonly GesTokenReader _reader;
     private readonly string? _requestedSourceName;
     private readonly uint? _sourceId;
-    private readonly List<GameEventScriptDiagnostic> _errors;
+    private readonly List<GesDiagnostic> _errors;
     private string? _moduleName;
     private string? _sourceName;
     private int _expressionNesting;
@@ -66,13 +66,13 @@ internal sealed partial class GesParser
 
     private string SourceName => _sourceName ??= string.IsNullOrWhiteSpace(_requestedSourceName) ? "UnknownSource" : _requestedSourceName;
 
-    private GameEventScriptSourceLocation CreateRange(GesToken token)
+    private GesSourceLocation CreateRange(GesToken token)
         => new(SourceName, token.Line, token.Column, token.EndLine, token.EndColumn, ModuleName, _sourceId);
 
-    private GameEventScriptSourceLocation CreateRange(GesToken start, GesToken end)
+    private GesSourceLocation CreateRange(GesToken start, GesToken end)
         => new(SourceName, start.Line, start.Column, end.EndLine, end.EndColumn, ModuleName, _sourceId);
 
-    private GameEventScriptSourceLocation? MergeRanges(ScriptNode? first, ScriptNode? last = null)
+    private GesSourceLocation? MergeRanges(ScriptNode? first, ScriptNode? last = null)
     {
         var start = first?.SourceRange;
         var end = (last ?? first)?.SourceRange;
@@ -85,7 +85,7 @@ internal sealed partial class GesParser
         var endColumn = end.EndColumn ?? end.Column;
         return endLine is null || endColumn is null
             ? null
-            : new GameEventScriptSourceLocation(SourceName, start.Line, start.Column, endLine, endColumn, ModuleName, _sourceId);
+            : new GesSourceLocation(SourceName, start.Line, start.Column, endLine, endColumn, ModuleName, _sourceId);
     }
 
     private T WithRange<T>(T node, GesToken startToken) where T : ScriptNode
@@ -97,7 +97,7 @@ internal sealed partial class GesParser
     private T WithRange<T>(T node, ScriptNode? first, ScriptNode? last = null) where T : ScriptNode
         => WithRange(node, MergeRanges(first, last));
 
-    private T WithRange<T>(T node, GameEventScriptSourceLocation? location) where T : ScriptNode
+    private T WithRange<T>(T node, GesSourceLocation? location) where T : ScriptNode
     {
         var depth = GesSourceNesting.Measure(node);
         if (depth > GesSourceNesting.MaximumExpressionDepth) ThrowNestingLimit(location);
@@ -109,10 +109,10 @@ internal sealed partial class GesParser
     private T CheckNesting<T>(T node) where T : ScriptNode
         => WithRange(node, node.SourceRange);
 
-    private void ThrowNestingLimit(GameEventScriptSourceLocation? location)
-        => throw new GameEventScriptCompileException([new GameEventScriptDiagnostic(
-            GameEventScriptDiagnosticPhase.Parse,
-            GameEventScriptDiagnosticCodes.ParseSourceNestingExceeded,
+    private void ThrowNestingLimit(GesSourceLocation? location)
+        => throw new GesCompileException([new GesDiagnostic(
+            GesDiagnosticPhase.Parse,
+            GesDiagnosticCodes.ParseSourceNestingExceeded,
             "Source exceeds the portable expression or statement nesting limit.",
             SourceLocation: location ?? CreateRange(Current),
             ProgramName: ModuleName)]);
@@ -184,7 +184,7 @@ internal sealed partial class GesParser
 
         if (_errors.Count > 0)
         {
-            throw new GameEventScriptCompileException(_errors);
+            throw new GesCompileException(_errors);
         }
 
         var module = new ParsedScript(ModuleName, SourceName, constantDefinitions, typeDefinitions, predicateDefinitions, functionDefinitions, handlers);
@@ -309,7 +309,7 @@ internal sealed partial class GesParser
 
         var constructorLabel = computedExpression is null
             ? isUnlabeledConstructorParameter
-                ? GameEventScriptMessageSignature.UnlabeledParameterName
+                ? GesMessageSignature.UnlabeledParameterName
                 : name
             : null;
 
@@ -1589,12 +1589,12 @@ internal sealed partial class GesParser
         SkipNewLines();
         if (Match(Fibonacci))
         {
-            return WithRange(new SeriesExpressionNode(GameEventScriptBytecodeSeriesKind.Fibonacci), startToken, Previous);
+            return WithRange(new SeriesExpressionNode(GesBytecodeSeriesKind.Fibonacci), startToken, Previous);
         }
 
         if (Match(Factorial))
         {
-            return WithRange(new SeriesExpressionNode(GameEventScriptBytecodeSeriesKind.Factorial), startToken, Previous);
+            return WithRange(new SeriesExpressionNode(GesBytecodeSeriesKind.Factorial), startToken, Previous);
         }
 
         var token = Current;
@@ -3419,11 +3419,11 @@ internal sealed partial class GesParser
 
     private void AddParseError(GameEventScriptParseException exception)
     {
-        _errors.Add(new GameEventScriptDiagnostic(
-            GameEventScriptDiagnosticPhase.Parse,
-            GameEventScriptDiagnosticCodes.ParseSyntax,
+        _errors.Add(new GesDiagnostic(
+            GesDiagnosticPhase.Parse,
+            GesDiagnosticCodes.ParseSyntax,
             exception.Message,
-            SourceLocation: new GameEventScriptSourceLocation(SourceName, exception.Line, exception.Column, exception.EndLine, exception.EndColumn, ModuleName, _sourceId),
+            SourceLocation: new GesSourceLocation(SourceName, exception.Line, exception.Column, exception.EndLine, exception.EndColumn, ModuleName, _sourceId),
             ProgramName: ModuleName));
     }
 

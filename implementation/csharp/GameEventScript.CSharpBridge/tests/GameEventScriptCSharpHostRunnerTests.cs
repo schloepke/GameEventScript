@@ -10,7 +10,7 @@ namespace GameEventScript.Tests.Native.CSharpBridge;
 [DoNotParallelize]
 public sealed class GameEventScriptCSharpHostRunnerTests
 {
-    private sealed class FrozenClock : IGameEventScriptClock
+    private sealed class FrozenClock : IGesClock
     {
         public long ElapsedMicroseconds => 100;
     }
@@ -46,7 +46,7 @@ public sealed class GameEventScriptCSharpHostRunnerTests
     public void AutomaticRunnerWakesForDelayedMessagesWithoutFurtherInput()
     {
         var host = GameEventScriptHost.CreateBuilder().Build();
-        host.Load(GameEventScriptBuilder.Create().AddScript("on Start { emit after 0.02s Done() }").Compile());
+        host.Load(GesProgramBuilder.Create().AddScript("on Start { emit after 0.02s Done() }").Compile());
         using var done = new ManualResetEventSlim(false);
         host.Subscribe("Done", [], (_, _) => done.Set());
         using var runner = host.RunAutomatically();
@@ -63,7 +63,7 @@ public sealed class GameEventScriptCSharpHostRunnerTests
         var delivered = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         host.Subscribe("Ready", [], (message, _) => delivered.Add(message));
-        if (queuedInitialization) host.Load(GameEventScriptBuilder.Create().AddScript("on initialization { emit Ready() }").Compile());
+        if (queuedInitialization) host.Load(GesProgramBuilder.Create().AddScript("on initialization { emit Ready() }").Compile());
         else Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Ready")));
         Assert.IsFalse(host.IsIdle);
 
@@ -86,10 +86,10 @@ public sealed class GameEventScriptCSharpHostRunnerTests
         var delivered = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         host.Subscribe("Ready", [], (message, _) => delivered.Add(message));
-        host.Load(GameEventScriptBuilder.Create().AddScript("on Start { emit Ready() }").Compile());
-        Assert.AreEqual(GameEventScriptExecutionState.Completed, host.RunToCompletion().State);
+        host.Load(GesProgramBuilder.Create().AddScript("on Start { emit Ready() }").Compile());
+        Assert.AreEqual(GesExecutionState.Completed, host.RunToCompletion().State);
         Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Start")));
-        Assert.AreEqual(GameEventScriptExecutionState.Paused, host.ExecuteFrame(1).State);
+        Assert.AreEqual(GesExecutionState.Paused, host.ExecuteFrame(1).State);
         Assert.IsFalse(host.IsIdle);
 
         using var barrier = new ManualResetEventSlim(false);
@@ -131,7 +131,7 @@ public sealed class GameEventScriptCSharpHostRunnerTests
 
             Assert.HasCount(0, delivered);
             Assert.IsFalse(host.IsIdle);
-            Assert.AreEqual(GameEventScriptExecutionState.Completed, host.RunToCompletion().State);
+            Assert.AreEqual(GesExecutionState.Completed, host.RunToCompletion().State);
             Assert.HasCount(1, delivered);
             Assert.IsTrue(host.IsIdle);
         }

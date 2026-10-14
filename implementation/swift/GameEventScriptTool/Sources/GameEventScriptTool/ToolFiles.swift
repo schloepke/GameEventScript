@@ -48,7 +48,7 @@ enum ToolFiles {
     }
 
     static func compile(_ paths: [String], debug: Bool = true) throws -> GameEventScriptProgram {
-        let builder = GameEventScriptBuilder().withDebugInfo(debug ? .all : .none)
+        let builder = GesProgramBuilder().withDebugInfo(debug ? .all : .none)
         for path in paths { builder.addScript(try source(path), sourceName: path) }
         return try builder.compile()
     }

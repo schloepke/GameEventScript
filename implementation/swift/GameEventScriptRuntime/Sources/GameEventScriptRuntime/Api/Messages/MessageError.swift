@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// A validation failure in the portable ordered message API.
-public enum GameEventScriptMessageError: Error, Equatable {
+public enum GesMessageError: Error, Equatable {
     /// A message name does not follow the ASCII message name grammar.
     case invalidName
     /// An argument label does not follow the ASCII label grammar.

@@ -10,9 +10,9 @@ struct GesRegisterOutput: GesValueOutput {
 
     func boolean(_ value: Bool) { state.setBoolean(index, value) }
 
-    func integer(_ value: Int64, unit: GesUnit) { state.setInteger(index, value, unit: unit) }
+    func integer(_ value: Int64, unit: GesQuantityUnit) { state.setInteger(index, value, unit: unit) }
 
-    func float(_ value: Double, unit: GesUnit) { state.setFloat(index, value, unit: unit) }
+    func float(_ value: Double, unit: GesQuantityUnit) { state.setFloat(index, value, unit: unit) }
 
     func percentage(_ value: Double) { state.setPercentage(index, value) }
 
@@ -20,9 +20,9 @@ struct GesRegisterOutput: GesValueOutput {
 
     func tag(_ value: String) throws { try state.setTag(index, value) }
 
-    func vector(x: Double, y: Double, z: Double, unit: GesUnit) { state.setVector(index, x: x, y: y, z: z, unit: unit) }
+    func vector(x: Double, y: Double, z: Double, unit: GesQuantityUnit) { state.setVector(index, x: x, y: y, z: z, unit: unit) }
 
-    func point(x: Double, y: Double, z: Double, unit: GesUnit) { state.setPoint(index, x: x, y: y, z: z, unit: unit) }
+    func point(x: Double, y: Double, z: Double, unit: GesQuantityUnit) { state.setPoint(index, x: x, y: y, z: z, unit: unit) }
 
     func dice(_ value: [Int32]) { state.setDice(index, value) }
 
@@ -38,7 +38,7 @@ struct GesRegisterOutput: GesValueOutput {
 
     func message(_ value: GameEventScriptMessage) { state.setMessage(index, value) }
 
-    func handler(_ value: GameEventScriptMessageSignature) { state.setHandler(index, value) }
+    func handler(_ value: GesMessageSignature) { state.setHandler(index, value) }
 
     func series(_ value: GesSeriesValue) { state.setSeries(index, value) }
 }

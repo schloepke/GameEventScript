@@ -10,7 +10,7 @@ final class CallbackTests: XCTestCase {
 
     func testClosureSubscriptionsPreservePriorityTagsAndCapturedDelivery() throws {
         let host = try GameEventScriptHost(seed: 1).startForTest()
-        let signature = try GameEventScriptMessageSignature(name: "Start", parameters: ["value"])
+        let signature = try GesMessageSignature(name: "Start", parameters: ["value"])
         var received: [String] = []
         let low = try host.subscribe(signature) { message, _ in received.append("low:\(message.arguments[0])") }
         _ = try host.subscribe(signature, matchingTags: ["ready"], withoutTags: ["skip"], priority: 5) { _, _ in received.append("high") }
@@ -29,7 +29,7 @@ final class CallbackTests: XCTestCase {
         for explicit in [false, true] {
             let host = try GameEventScriptHost(seed: 1).startForTest()
             _ = try host.subscribeMessageName("Start") { _, _ in
-                if explicit { throw try GameEventScriptExtensionFault(code: "app.failed", message: "Failed") }
+                if explicit { throw try GesExtensionFaultError(code: "app.failed", message: "Failed") }
                 throw Failure.unexpected
             }
             host.receive(try .init(name: "Start"))
@@ -42,7 +42,7 @@ final class CallbackTests: XCTestCase {
     }
 
     func testNamedDictionaryBindingUsesSignatureOrderAndRejectsMissingOrPositionalLabels() throws {
-        let signature = try GameEventScriptMessageSignature(name: "Done", parameters: ["z", "a"])
+        let signature = try GesMessageSignature(name: "Done", parameters: ["z", "a"])
         let message = try signature.withSwiftArguments(["a": "hello", " z ": 12])
         XCTAssertEqual(message.signatureId, "Done(z,a)")
         XCTAssertEqual(message.arguments[0], .integer(12))
@@ -50,7 +50,7 @@ final class CallbackTests: XCTestCase {
         XCTAssertThrowsError(try signature.withSwiftArguments(["a": 1]))
         XCTAssertThrowsError(try signature.withSwiftArguments(["a": 1, "other": 2]))
         XCTAssertThrowsError(try signature.withSwiftArguments(["a": 1, " a ": 2]))
-        XCTAssertThrowsError(try GameEventScriptMessageSignature(name: "Done", parameters: ["_"]).withSwiftArguments(["_": 1]))
+        XCTAssertThrowsError(try GesMessageSignature(name: "Done", parameters: ["_"]).withSwiftArguments(["_": 1]))
         let positional = try GameEventScriptMessage(name: "Done", swiftArguments: [(nil, 1), (nil, "two")])
         XCTAssertEqual(positional.signatureId, "Done(_,_)")
     }

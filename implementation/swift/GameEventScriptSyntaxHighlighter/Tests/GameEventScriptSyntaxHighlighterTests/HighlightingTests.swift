@@ -21,7 +21,7 @@ final class HighlightingTests: XCTestCase {
             let name = data["name"] as! String
             let source = data["source"] as! String
             let text = source as NSString
-            let highlighter = try GameEventScriptSyntaxHighlighter(language: data["language"] as! String == "ges" ? .ges : .gesa)
+            let highlighter = try GesSyntaxHighlighter(language: data["language"] as! String == "ges" ? .ges : .gesa)
             let result = highlighter.highlight(source)
             XCTAssertTrue(result.isComplete, name)
             guard result.isComplete else { continue }
@@ -58,15 +58,15 @@ final class HighlightingTests: XCTestCase {
                 state = try XCTUnwrap(incremental.nextState)
             }
             XCTAssertEqual(state, result.nextState, name)
-            let ansi = try GameEventScriptAnsiRenderer.render(source, spans: result.spans)
+            let ansi = try GesAnsiRenderer.render(source, spans: result.spans)
             XCTAssertEqual(ansi.replacingOccurrences(of: "\u{1b}\\[[0-9;]*m", with: "", options: .regularExpression), source, name)
         }
     }
 
     func testEditsChangeContinuationAndStatesWorkAcrossInstances() throws {
-        let highlighter = try GameEventScriptSyntaxHighlighter()
+        let highlighter = try GesSyntaxHighlighter()
         let open = try highlighter.highlightLine("'open\n")
-        let inside = try GameEventScriptSyntaxHighlighter().highlightLine("emit Done()", state: open.nextState)
+        let inside = try GesSyntaxHighlighter().highlightLine("emit Done()", state: open.nextState)
         XCTAssertTrue(inside.spans.allSatisfy { $0.kind == .string })
         let closed = try highlighter.highlightLine("'closed'\n")
         XCTAssertEqual(highlighter.createState(), closed.nextState)
@@ -75,22 +75,22 @@ final class HighlightingTests: XCTestCase {
     }
 
     func testLimitsInvalidApiInputsAndCustomPalette() throws {
-        let highlighter = try GameEventScriptSyntaxHighlighter(maxInputLength: 4)
+        let highlighter = try GesSyntaxHighlighter(maxInputLength: 4)
         XCTAssertFalse(highlighter.highlight("12345").isComplete)
         XCTAssertNil(highlighter.highlight("12345").nextState)
         XCTAssertTrue(highlighter.highlight("12345").spans.isEmpty)
         XCTAssertTrue(highlighter.highlight("").isComplete)
         XCTAssertThrowsError(try highlighter.highlightLine("x\ny"))
-        XCTAssertThrowsError(try highlighter.highlightLine("x", state: GameEventScriptSyntaxHighlighter(language: .gesa).createState()))
-        XCTAssertThrowsError(try GameEventScriptSyntaxHighlighter(maxInputLength: 0))
+        XCTAssertThrowsError(try highlighter.highlightLine("x", state: GesSyntaxHighlighter(language: .gesa).createState()))
+        XCTAssertThrowsError(try GesSyntaxHighlighter(maxInputLength: 0))
         let spans = highlighter.highlight("1234").spans
-        XCTAssertThrowsError(try GameEventScriptAnsiRenderer.render("1", spans: spans))
-        XCTAssertThrowsError(try GameEventScriptAnsiRenderer.render("1234", spans: spans, color: { _ in 123 }))
-        XCTAssertEqual(try GameEventScriptAnsiRenderer.render("1234", spans: spans, color: { _ in 31 }), "\u{1b}[31m1234\u{1b}[0m")
+        XCTAssertThrowsError(try GesAnsiRenderer.render("1", spans: spans))
+        XCTAssertThrowsError(try GesAnsiRenderer.render("1234", spans: spans, color: { _ in 123 }))
+        XCTAssertEqual(try GesAnsiRenderer.render("1234", spans: spans, color: { _ in 31 }), "\u{1b}[31m1234\u{1b}[0m")
     }
 
-    private func expand(_ spans: [GameEventScriptHighlightSpan], length: Int) -> [GameEventScriptHighlightSpan] {
-        var units: [GameEventScriptHighlightSpan] = []
+    private func expand(_ spans: [GesHighlightSpan], length: Int) -> [GesHighlightSpan] {
+        var units: [GesHighlightSpan] = []
         for span in spans {
             XCTAssertEqual(span.start, units.count)
             units += Array(repeating: span, count: span.length)

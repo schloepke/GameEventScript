@@ -9,15 +9,15 @@ internal sealed class GesExternalValue
 {
     private GesValueMap? _map;
 
-    internal GesExternalValue(IGameEventScriptExternalValue value)
+    internal GesExternalValue(IGesExternalValue value)
     {
         Value = value ?? throw new System.ArgumentNullException(nameof(value));
         Definition = value.Definition ?? throw new System.ArgumentException("External value does not provide a type definition.", nameof(value));
     }
 
-    internal IGameEventScriptExternalValue Value { get; }
+    internal IGesExternalValue Value { get; }
 
-    internal GameEventScriptExternalTypeDefinition Definition { get; }
+    internal GesExternalTypeDefinition Definition { get; }
 
     internal string CustomTypeName => Definition.Name;
 
@@ -38,16 +38,16 @@ internal sealed class GesExternalValue
             {
                 sourceValue = Value.GetField(field.Name);
             }
-            catch (GameEventScriptFatalRuntimeException)
+            catch (GesFatalRuntimeException)
             {
-                // A deliberate GameEventScriptExtensionFaultException, or another
+                // A deliberate GesExtensionFaultException, or another
                 // internal fatal signal, is reported as-is by the caller.
                 throw;
             }
             catch (System.Exception exception)
             {
                 throw new GameEventScriptCallbackFailureException(
-                    GameEventScriptDiagnosticCodes.RuntimeExternalFieldAccessFailed,
+                    GesDiagnosticCodes.RuntimeExternalFieldAccessFailed,
                     $"External value '{Definition.Name}' field '{field.Name}' failed unexpectedly.",
                     symbol: Definition.Name + "." + field.Name, exception);
             }

@@ -16,14 +16,14 @@ public sealed class GameEventScriptMessageImmutabilityTests
     {
         var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         var delivered = new List<GameEventScriptMessage>();
-        host.Subscribe(GameEventScriptMessageSignature.Create("Tagged", []), (message, _) => delivered.Add(message), ["green"]);
+        host.Subscribe(GesMessageSignature.Create("Tagged", []), (message, _) => delivered.Add(message), ["green"]);
         var input = GameEventScriptMessage.Create("Tagged", [], ["green"]);
         Assert.IsTrue(host.Receive(input));
 
         MutateFirstItemIfWritable(input.Tags, "red");
         var result = host.RunToCompletion();
 
-        Assert.AreEqual(GameEventScriptExecutionState.Completed, result.State);
+        Assert.AreEqual(GesExecutionState.Completed, result.State);
         Assert.HasCount(1, delivered, "Mutating a public view must not change the tag match captured for an accepted message.");
         CollectionAssert.AreEqual(new[] { "green" }, input.Tags.ToArray());
         CollectionAssert.AreEqual(new[] { "green" }, delivered[0].Tags.ToArray());
@@ -32,7 +32,7 @@ public sealed class GameEventScriptMessageImmutabilityTests
     [TestMethod]
     public void PublicParametersCannotChangeExistingOrFutureMessages()
     {
-        var signature = GameEventScriptMessageSignature.Create("Shape", ["original"]);
+        var signature = GesMessageSignature.Create("Shape", ["original"]);
         var existing = signature.WithArguments(GesValue.GesInteger(7));
 
         MutateFirstItemIfWritable(signature.Parameters, "changed");
@@ -49,10 +49,10 @@ public sealed class GameEventScriptMessageImmutabilityTests
     [DataRow(true)]
     public void PublicArgumentLabelsCannotChangeMessageOrSharedSignature(bool bindThroughSignature)
     {
-        var signature = GameEventScriptMessageSignature.Create("Shape", ["original"]);
+        var signature = GesMessageSignature.Create("Shape", ["original"]);
         var message = bindThroughSignature
             ? signature.WithArguments(GesValue.GesInteger(7))
-            : GameEventScriptMessage.Create("Shape", [new GameEventScriptMessageArgument("original", GesValue.GesInteger(7))]);
+            : GameEventScriptMessage.Create("Shape", [new GesMessageArgument("original", GesValue.GesInteger(7))]);
 
         MutateFirstItemIfWritable(message.Arguments.SignatureLabels, "changed");
 
@@ -66,7 +66,7 @@ public sealed class GameEventScriptMessageImmutabilityTests
     [DataRow(true)]
     public void SignatureMessageFactoriesCopyCallerOwnedValues(bool useWithArguments)
     {
-        var signature = GameEventScriptMessageSignature.Create("Shape", ["original"]);
+        var signature = GesMessageSignature.Create("Shape", ["original"]);
         var values = new[] { GesValue.GesInteger(7) };
         var message = useWithArguments ? signature.WithArguments(values) : signature.CreateMessage((IReadOnlyList<GesValue>)values)!;
         var hash = message.GetHashCode();
@@ -107,10 +107,10 @@ public sealed class GameEventScriptMessageImmutabilityTests
     [DataRow("let handler be Shape(original)\n let message be handler(original: 7)\n emit message with #green")]
     public void ScriptMessageViewsCannotChangeCurrentOrSubsequentDeliveries(string body)
     {
-        var program = GameEventScriptBuilder.Create().AddScript("module immutablemessages\non Start { " + body + "\n }").Compile();
+        var program = GesProgramBuilder.Create().AddScript("module immutablemessages\non Start { " + body + "\n }").Compile();
         var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         var delivered = new List<GameEventScriptMessage>();
-        host.Subscribe(GameEventScriptMessageSignature.Create("Shape", ["original"]), (message, _) =>
+        host.Subscribe(GesMessageSignature.Create("Shape", ["original"]), (message, _) =>
         {
             MutateFirstItemIfWritable(message.Arguments.SignatureLabels, "changed");
             MutateFirstItemIfWritable(message.Tags, "red");
@@ -121,7 +121,7 @@ public sealed class GameEventScriptMessageImmutabilityTests
         for (var iteration = 0; iteration < 2; iteration++)
         {
             Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Start")));
-            Assert.AreEqual(GameEventScriptExecutionState.Completed, host.RunToCompletion().State);
+            Assert.AreEqual(GesExecutionState.Completed, host.RunToCompletion().State);
         }
 
         Assert.HasCount(2, delivered);

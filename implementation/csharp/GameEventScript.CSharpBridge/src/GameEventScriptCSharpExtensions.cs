@@ -22,7 +22,7 @@ public static class GameEventScriptCSharpExtensions
     /// </summary>
     /// <param name="extensionTypes">The extension types value.</param>
     /// <returns>The result of the operation.</returns>
-    public static IGameEventScriptExtensionRegistry CreateRegistry(params Type[] extensionTypes)
+    public static IGesExtensionRegistry CreateRegistry(params Type[] extensionTypes)
         => CreateRegistry((IEnumerable<Type>)extensionTypes);
 
     /// <summary>
@@ -30,7 +30,7 @@ public static class GameEventScriptCSharpExtensions
     /// </summary>
     /// <param name="extensionTypes">The extension types value.</param>
     /// <returns>The result of the operation.</returns>
-    public static IGameEventScriptExtensionRegistry CreateRegistry(IEnumerable<Type> extensionTypes)
+    public static IGesExtensionRegistry CreateRegistry(IEnumerable<Type> extensionTypes)
         => CreateBuilder().AddRange(extensionTypes).Build();
 
     /// <summary>
@@ -45,7 +45,7 @@ public static class GameEventScriptCSharpExtensions
     /// </summary>
     /// <param name="baseRegistry">The base registry value.</param>
     /// <returns>The result of the operation.</returns>
-    public static GameEventScriptCSharpExtensionRegistryBuilder CreateBuilder(IGameEventScriptExtensionRegistry baseRegistry)
+    public static GameEventScriptCSharpExtensionRegistryBuilder CreateBuilder(IGesExtensionRegistry baseRegistry)
         => GameEventScriptCSharpExtensionRegistryBuilder.Create(baseRegistry ?? throw new ArgumentNullException(nameof(baseRegistry)));
 }
 
@@ -72,7 +72,7 @@ public sealed class GesFunctionAttribute(string name) : Attribute
     /// </summary>
     /// <param name="name">The name value.</param>
     /// <param name="returnKind">The return kind value.</param>
-    public GesFunctionAttribute(string name, GameEventScriptBytecodeTypeKind returnKind) : this(name)
+    public GesFunctionAttribute(string name, GesBytecodeTypeKind returnKind) : this(name)
     {
         ReturnTypeName = GameEventScriptExternalTypeNames.ToTypeName(returnKind, unit: null);
         ReturnKind = returnKind;
@@ -84,7 +84,7 @@ public sealed class GesFunctionAttribute(string name) : Attribute
     /// <param name="name">The name value.</param>
     /// <param name="returnKind">The return kind value.</param>
     /// <param name="unit">The unit value.</param>
-    public GesFunctionAttribute(string name, GameEventScriptBytecodeTypeKind returnKind, GameEventScriptBytecodeInstructionUnit unit) : this(name)
+    public GesFunctionAttribute(string name, GesBytecodeTypeKind returnKind, GesQuantityUnit unit) : this(name)
     {
         ReturnTypeName = GameEventScriptExternalTypeNames.ToTypeName(returnKind, unit);
         ReturnKind = returnKind;
@@ -104,12 +104,12 @@ public sealed class GesFunctionAttribute(string name) : Attribute
     /// <summary>
     /// Gets the return kind.
     /// </summary>
-    public GameEventScriptBytecodeTypeKind? ReturnKind { get; }
+    public GesBytecodeTypeKind? ReturnKind { get; }
 
     /// <summary>
     /// Gets the return unit.
     /// </summary>
-    public GameEventScriptBytecodeInstructionUnit ReturnUnit { get; }
+    public GesQuantityUnit ReturnUnit { get; }
 }
 
 /// <summary>
@@ -117,15 +117,15 @@ public sealed class GesFunctionAttribute(string name) : Attribute
 /// </summary>
 public sealed class GameEventScriptCSharpExtensionRegistryBuilder
 {
-    private readonly IGameEventScriptExtensionRegistry? _baseRegistry;
+    private readonly IGesExtensionRegistry? _baseRegistry;
     private readonly List<Type> _extensionTypes = [];
 
-    private GameEventScriptCSharpExtensionRegistryBuilder(IGameEventScriptExtensionRegistry? baseRegistry)
+    private GameEventScriptCSharpExtensionRegistryBuilder(IGesExtensionRegistry? baseRegistry)
     {
         _baseRegistry = baseRegistry;
     }
 
-    internal static GameEventScriptCSharpExtensionRegistryBuilder Create(IGameEventScriptExtensionRegistry? baseRegistry)
+    internal static GameEventScriptCSharpExtensionRegistryBuilder Create(IGesExtensionRegistry? baseRegistry)
         => new(baseRegistry);
 
     /// <summary>
@@ -166,7 +166,7 @@ public sealed class GameEventScriptCSharpExtensionRegistryBuilder
     /// Performs the build operation.
     /// </summary>
     /// <returns>The result of the operation.</returns>
-    public IGameEventScriptExtensionRegistry Build()
+    public IGesExtensionRegistry Build()
     {
         var localRegistry = GameEventScriptCSharpExtensionRegistry.Create(_extensionTypes);
         return _baseRegistry is null
@@ -175,17 +175,17 @@ public sealed class GameEventScriptCSharpExtensionRegistryBuilder
     }
 }
 
-internal sealed class GameEventScriptOverlayExtensionRegistry(IGameEventScriptExtensionRegistry localRegistry, IGameEventScriptExtensionRegistry baseRegistry) : IGameEventScriptExtensionRegistry
+internal sealed class GameEventScriptOverlayExtensionRegistry(IGesExtensionRegistry localRegistry, IGesExtensionRegistry baseRegistry) : IGesExtensionRegistry
 {
-    public IGameEventScriptExtensionFunction? Resolve(GameEventScriptExtensionReference reference)
+    public IGesExtensionFunction? Resolve(GesExtensionReference reference)
         => localRegistry.Resolve(reference) ?? baseRegistry.Resolve(reference);
 }
 
-internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptExtensionRegistry
+internal sealed class GameEventScriptCSharpExtensionRegistry : IGesExtensionRegistry
 {
-    private readonly IReadOnlyDictionary<string, IGameEventScriptExtensionFunction> _functions;
+    private readonly IReadOnlyDictionary<string, IGesExtensionFunction> _functions;
 
-    private GameEventScriptCSharpExtensionRegistry(IReadOnlyDictionary<string, IGameEventScriptExtensionFunction> functions)
+    private GameEventScriptCSharpExtensionRegistry(IReadOnlyDictionary<string, IGesExtensionFunction> functions)
     {
         _functions = functions ?? throw new ArgumentNullException(nameof(functions));
     }
@@ -195,7 +195,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
     public static GameEventScriptCSharpExtensionRegistry Create(IEnumerable<Type> extensionTypes)
     {
         _ = extensionTypes ?? throw new ArgumentNullException(nameof(extensionTypes));
-        var functions = new Dictionary<string, IGameEventScriptExtensionFunction>(StringComparer.Ordinal);
+        var functions = new Dictionary<string, IGesExtensionFunction>(StringComparer.Ordinal);
         foreach (var extensionType in extensionTypes)
         {
             RegisterExtensionType(extensionType ?? throw new ArgumentException("Extension type list contains null.", nameof(extensionTypes)), functions);
@@ -204,13 +204,13 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         return new GameEventScriptCSharpExtensionRegistry(functions);
     }
 
-    public IGameEventScriptExtensionFunction? Resolve(GameEventScriptExtensionReference reference)
+    public IGesExtensionFunction? Resolve(GesExtensionReference reference)
     {
         _ = reference ?? throw new ArgumentNullException(nameof(reference));
         return _functions.GetValueOrDefault(reference.SignatureId);
     }
 
-    private static void RegisterExtensionType(Type extensionType, IDictionary<string, IGameEventScriptExtensionFunction> functions)
+    private static void RegisterExtensionType(Type extensionType, IDictionary<string, IGesExtensionFunction> functions)
     {
         var extensionAttribute = extensionType.GetCustomAttribute<GesExtensionAttribute>() ??
                                  throw new ArgumentException($"CLR extension type '{extensionType.FullName}' must declare GesExtensionAttribute.", nameof(extensionType));
@@ -224,7 +224,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         }
     }
 
-    private static IGameEventScriptExtensionFunction CreateFunction(string extensionName, GesFunctionAttribute attribute, MethodInfo method, out string signatureId)
+    private static IGesExtensionFunction CreateFunction(string extensionName, GesFunctionAttribute attribute, MethodInfo method, out string signatureId)
     {
         if (!method.IsStatic)
         {
@@ -242,7 +242,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         var definitions = scriptParameters
             .Select(parameter => CreateParameterDefinition(method, parameter))
             .ToArray();
-        signatureId = new GameEventScriptExtensionReference(extensionName, attribute.Name, definitions.Select(definition => definition.Name)).SignatureId;
+        signatureId = new GesExtensionReference(extensionName, attribute.Name, definitions.Select(definition => definition.Name)).SignatureId;
         var readers = scriptParameters
             .Select((parameter, index) => CreateArgumentReader(method, parameter.ParameterType, definitions[index]))
             .ToArray();
@@ -270,25 +270,25 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
 
         if (parameterType == typeof(double))
         {
-            RequireParameterKind(method, definition, GameEventScriptBytecodeTypeKind.Float, allowUnitTypes: true);
+            RequireParameterKind(method, definition, GesBytecodeTypeKind.Float, allowUnitTypes: true);
             return FloatArgumentReader.Instance;
         }
 
         if (parameterType == typeof(long))
         {
-            RequireParameterKind(method, definition, GameEventScriptBytecodeTypeKind.Float, allowUnitTypes: false);
+            RequireParameterKind(method, definition, GesBytecodeTypeKind.Float, allowUnitTypes: false);
             return LongArgumentReader.Instance;
         }
 
         if (parameterType == typeof(int))
         {
-            RequireParameterKind(method, definition, GameEventScriptBytecodeTypeKind.Float, allowUnitTypes: false);
+            RequireParameterKind(method, definition, GesBytecodeTypeKind.Float, allowUnitTypes: false);
             return IntArgumentReader.Instance;
         }
 
         if (parameterType == typeof(bool))
         {
-            RequireParameterKind(method, definition, GameEventScriptBytecodeTypeKind.Boolean, allowUnitTypes: false);
+            RequireParameterKind(method, definition, GesBytecodeTypeKind.Boolean, allowUnitTypes: false);
             return BoolArgumentReader.Instance;
         }
 
@@ -307,7 +307,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         return Activator.CreateInstance(typeof(ExternalObjectArgumentReader<>).MakeGenericType(parameterType))!;
     }
 
-    private static void RequireParameterKind(MethodInfo method, ExtensionParameterDefinition definition, GameEventScriptBytecodeTypeKind kind, bool allowUnitTypes)
+    private static void RequireParameterKind(MethodInfo method, ExtensionParameterDefinition definition, GesBytecodeTypeKind kind, bool allowUnitTypes)
     {
         if (definition.Kind is null)
         {
@@ -319,7 +319,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
             return;
         }
 
-        if (allowUnitTypes && definition.Kind == GameEventScriptBytecodeTypeKind.Float)
+        if (allowUnitTypes && definition.Kind == GesBytecodeTypeKind.Float)
         {
             return;
         }
@@ -338,34 +338,34 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
 
         if (returnType == typeof(double))
         {
-            RequireReturnKind(method, attribute, GameEventScriptBytecodeTypeKind.Float);
+            RequireReturnKind(method, attribute, GesBytecodeTypeKind.Float);
             return new FloatReturnConverter(attribute.ReturnUnit);
         }
 
         if (returnType == typeof(long))
         {
-            RequireReturnKind(method, attribute, GameEventScriptBytecodeTypeKind.Float);
+            RequireReturnKind(method, attribute, GesBytecodeTypeKind.Float);
             return new LongReturnConverter(attribute.ReturnUnit);
         }
 
         if (returnType == typeof(int))
         {
-            RequireReturnKind(method, attribute, GameEventScriptBytecodeTypeKind.Float);
+            RequireReturnKind(method, attribute, GesBytecodeTypeKind.Float);
             return new IntReturnConverter(attribute.ReturnUnit);
         }
 
         if (returnType == typeof(bool))
         {
-            RequireReturnKind(method, attribute, GameEventScriptBytecodeTypeKind.Boolean);
+            RequireReturnKind(method, attribute, GesBytecodeTypeKind.Boolean);
             return BoolReturnConverter.Instance;
         }
 
-        if (returnType == typeof(ValueTuple<double, GameEventScriptBytecodeInstructionUnit>))
+        if (returnType == typeof(ValueTuple<double, GesQuantityUnit>))
         {
             return FloatNumericUnitTupleReturnConverter.Instance;
         }
 
-        if (returnType == typeof(ValueTuple<double, GameEventScriptBytecodeInstructionUnit?>))
+        if (returnType == typeof(ValueTuple<double, GesQuantityUnit?>))
         {
             return FloatNullableNumericUnitTupleReturnConverter.Instance;
         }
@@ -373,7 +373,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         throw new ArgumentException($"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' return type '{returnType.FullName}' is not extension-compatible.");
     }
 
-    private static void RequireReturnKind(MethodInfo method, GesFunctionAttribute attribute, GameEventScriptBytecodeTypeKind kind)
+    private static void RequireReturnKind(MethodInfo method, GesFunctionAttribute attribute, GesBytecodeTypeKind kind)
     {
         if (attribute.ReturnKind is not null && attribute.ReturnKind != kind)
         {
@@ -382,7 +382,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         }
     }
 
-    private static IGameEventScriptExtensionFunction CreateAdapter(MethodInfo method, bool hasContext, object[] readers, object returnConverter)
+    private static IGesExtensionFunction CreateAdapter(MethodInfo method, bool hasContext, object[] readers, object returnConverter)
     {
         if (readers.Length > 4)
         {
@@ -405,7 +405,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         args[0] = functionDelegate;
         Array.Copy(readers, 0, args, 1, readers.Length);
         args[^1] = returnConverter;
-        return (IGameEventScriptExtensionFunction)Activator.CreateInstance(adapterType, args)!;
+        return (IGesExtensionFunction)Activator.CreateInstance(adapterType, args)!;
     }
 
     private static Type GetFuncType(Type[] typeArguments)
@@ -468,7 +468,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
             Unit = unit.ToStoredUnit();
         }
 
-        public ExtensionParameterDefinition(string name, GameEventScriptBytecodeTypeKind kind, GameEventScriptBytecodeInstructionUnit? unit)
+        public ExtensionParameterDefinition(string name, GesBytecodeTypeKind kind, GesQuantityUnit? unit)
         {
             Name = NormalizeName(name);
             TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit);
@@ -480,13 +480,13 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
 
         public string TypeName { get; }
 
-        public GameEventScriptBytecodeTypeKind? Kind { get; }
+        public GesBytecodeTypeKind? Kind { get; }
 
-        public GameEventScriptBytecodeInstructionUnit Unit { get; }
+        public GesQuantityUnit Unit { get; }
 
         private static string NormalizeName(string name)
-            => string.Equals(name, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal)
-                ? GameEventScriptMessageSignature.UnlabeledParameterName
+            => string.Equals(name, GesMessageSignature.UnlabeledParameterName, StringComparison.Ordinal)
+                ? GesMessageSignature.UnlabeledParameterName
                 : GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
     }
 
@@ -496,7 +496,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
 
         public bool Read(GesValueArguments arguments, int index, out double value)
         {
-            if (arguments.KindAt(index) is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage)
+            if (arguments.KindAt(index) is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage)
             {
                 value = arguments.GetAsNumber(index);
                 return true;
@@ -513,7 +513,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
 
         public bool Read(GesValueArguments arguments, int index, out long value)
         {
-            if (arguments.KindAt(index) is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage or GameEventScriptBytecodeTypeKind.Boolean)
+            if (arguments.KindAt(index) is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean)
             {
                 value = arguments.GetAsInteger(index);
                 return true;
@@ -548,8 +548,8 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
 
         public bool Read(GesValueArguments arguments, int index, out bool value)
         {
-            if (arguments.KindAt(index) is GameEventScriptBytecodeTypeKind.Boolean or GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage
-                or GameEventScriptBytecodeTypeKind.Vector or GameEventScriptBytecodeTypeKind.Point)
+            if (arguments.KindAt(index) is GesBytecodeTypeKind.Boolean or GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage
+                or GesBytecodeTypeKind.Vector or GesBytecodeTypeKind.Point)
             {
                 value = arguments.GetAsBoolean(index);
                 return true;
@@ -573,17 +573,17 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         public GesValue Convert(GesValue value) => value;
     }
 
-    private sealed class FloatReturnConverter(GameEventScriptBytecodeInstructionUnit? unit) : IExtensionReturnConverter<double>
+    private sealed class FloatReturnConverter(GesQuantityUnit? unit) : IExtensionReturnConverter<double>
     {
         public GesValue Convert(double value) => GesValue.GesFloat(value, unit.ToStoredUnit());
     }
 
-    private sealed class LongReturnConverter(GameEventScriptBytecodeInstructionUnit? unit) : IExtensionReturnConverter<long>
+    private sealed class LongReturnConverter(GesQuantityUnit? unit) : IExtensionReturnConverter<long>
     {
         public GesValue Convert(long value) => GesValue.GesInteger(value, unit.ToStoredUnit());
     }
 
-    private sealed class IntReturnConverter(GameEventScriptBytecodeInstructionUnit? unit) : IExtensionReturnConverter<int>
+    private sealed class IntReturnConverter(GesQuantityUnit? unit) : IExtensionReturnConverter<int>
     {
         public GesValue Convert(int value) => GesValue.GesInteger(value, unit.ToStoredUnit());
     }
@@ -595,29 +595,29 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         public GesValue Convert(bool value) => GesValue.GesBoolean(value);
     }
 
-    private sealed class FloatNumericUnitTupleReturnConverter : IExtensionReturnConverter<(double Value, GameEventScriptBytecodeInstructionUnit Unit)>
+    private sealed class FloatNumericUnitTupleReturnConverter : IExtensionReturnConverter<(double Value, GesQuantityUnit Unit)>
     {
         public static readonly FloatNumericUnitTupleReturnConverter Instance = new();
 
-        public GesValue Convert((double Value, GameEventScriptBytecodeInstructionUnit Unit) value)
+        public GesValue Convert((double Value, GesQuantityUnit Unit) value)
             => GesValue.GesFloat(value.Value, value.Unit);
     }
 
-    private sealed class FloatNullableNumericUnitTupleReturnConverter : IExtensionReturnConverter<(double Value, GameEventScriptBytecodeInstructionUnit? Unit)>
+    private sealed class FloatNullableNumericUnitTupleReturnConverter : IExtensionReturnConverter<(double Value, GesQuantityUnit? Unit)>
     {
         public static readonly FloatNullableNumericUnitTupleReturnConverter Instance = new();
 
-        public GesValue Convert((double Value, GameEventScriptBytecodeInstructionUnit? Unit) value)
+        public GesValue Convert((double Value, GesQuantityUnit? Unit) value)
             => GesValue.GesFloat(value.Value, value.Unit.ToStoredUnit());
     }
 
-    private sealed class AnnotatedExtensionFunction0<R>(Func<R> invoke, IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
+    private sealed class AnnotatedExtensionFunction0<R>(Func<R> invoke, IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
             => call.SetValue(call.Arguments.Length == 0 ? returnConverter.Convert(invoke()) : GesValue.GesNothing());
     }
 
-    private sealed class AnnotatedExtensionFunction1<T1, R>(Func<T1, R> invoke, IExtensionArgumentReader<T1> reader1, IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
+    private sealed class AnnotatedExtensionFunction1<T1, R>(Func<T1, R> invoke, IExtensionArgumentReader<T1> reader1, IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
             => call.SetValue(call.Arguments.Length == 1 && reader1.Read(call.Arguments, 0, out var value1)
@@ -626,7 +626,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
     }
 
     private sealed class AnnotatedExtensionFunction2<T1, T2, R>(Func<T1, T2, R> invoke, IExtensionArgumentReader<T1> reader1, IExtensionArgumentReader<T2> reader2, IExtensionReturnConverter<R> returnConverter)
-        : IGameEventScriptExtensionFunction
+        : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
             => call.SetValue(call.Arguments.Length == 2 &&
@@ -641,7 +641,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         IExtensionArgumentReader<T1> reader1,
         IExtensionArgumentReader<T2> reader2,
         IExtensionArgumentReader<T3> reader3,
-        IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
+        IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
             => call.SetValue(call.Arguments.Length == 3 &&
@@ -658,7 +658,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         IExtensionArgumentReader<T2> reader2,
         IExtensionArgumentReader<T3> reader3,
         IExtensionArgumentReader<T4> reader4,
-        IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
+        IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
             => call.SetValue(call.Arguments.Length == 4 &&
@@ -670,14 +670,14 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
                 : GesValue.GesNothing());
     }
 
-    private sealed class AnnotatedContextExtensionFunction0<R>(Func<GesExtensionCall, R> invoke, IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
+    private sealed class AnnotatedContextExtensionFunction0<R>(Func<GesExtensionCall, R> invoke, IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
             => call.SetValue(call.Arguments.Length == 0 ? returnConverter.Convert(invoke(call)) : GesValue.GesNothing());
     }
 
     private sealed class AnnotatedContextExtensionFunction1<T1, R>(Func<GesExtensionCall, T1, R> invoke, IExtensionArgumentReader<T1> reader1, IExtensionReturnConverter<R> returnConverter)
-        : IGameEventScriptExtensionFunction
+        : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
             => call.SetValue(call.Arguments.Length == 1 && reader1.Read(call.Arguments, 0, out var value1)
@@ -689,7 +689,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         Func<GesExtensionCall, T1, T2, R> invoke,
         IExtensionArgumentReader<T1> reader1,
         IExtensionArgumentReader<T2> reader2,
-        IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
+        IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
             => call.SetValue(call.Arguments.Length == 2 &&
@@ -704,7 +704,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         IExtensionArgumentReader<T1> reader1,
         IExtensionArgumentReader<T2> reader2,
         IExtensionArgumentReader<T3> reader3,
-        IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
+        IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
             => call.SetValue(call.Arguments.Length == 3 &&
@@ -721,7 +721,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         IExtensionArgumentReader<T2> reader2,
         IExtensionArgumentReader<T3> reader3,
         IExtensionArgumentReader<T4> reader4,
-        IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
+        IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
             => call.SetValue(call.Arguments.Length == 4 &&

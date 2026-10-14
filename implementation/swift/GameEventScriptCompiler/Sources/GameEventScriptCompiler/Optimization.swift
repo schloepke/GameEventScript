@@ -14,11 +14,11 @@ extension GesCompiler {
             var writes: [Int: [Int]] = [:]
             for (index, instruction) in routine.code.enumerated() {
                 let fields = instruction.fields
-                for slot in GameEventScriptCompilerSupport.registerSlots(instruction) {
+                for slot in GesCompilerSupport.registerSlots(instruction) {
                     let register = Int(fields[slot])
                     if slot == 0 { writes[register, default: []].append(index) } else { reads[register, default: 0] += 1 }
                 }
-                for slot in GameEventScriptCompilerSupport.listSlots(instruction, text: false) {
+                for slot in GesCompilerSupport.listSlots(instruction, text: false) {
                     for register in lists[Int(fields[slot])] {
                         if slot == 0 { writes[Int(register), default: []].append(index) } else { reads[Int(register), default: 0] += 1 }
                     }
@@ -33,7 +33,7 @@ extension GesCompiler {
                 let instruction = routine.code[writer]
                 if branches.contains(instruction.opcode) { continue }
                 let fields = instruction.fields
-                if GameEventScriptCompilerSupport.registerSlots(instruction).contains(where: { $0 != 0 && fields[$0] == destination }) { continue }
+                if GesCompilerSupport.registerSlots(instruction).contains(where: { $0 != 0 && fields[$0] == destination }) { continue }
                 var blocked = targets.contains(index)
                 for i in (writer + 1)..<index {
                     let candidate = routine.code[i]
@@ -41,11 +41,11 @@ extension GesCompiler {
                         blocked = true
                         break
                     }
-                    if GameEventScriptCompilerSupport.registerSlots(candidate).contains(where: { candidate.fields[$0] == destination }) {
+                    if GesCompilerSupport.registerSlots(candidate).contains(where: { candidate.fields[$0] == destination }) {
                         blocked = true
                         break
                     }
-                    for slot in GameEventScriptCompilerSupport.listSlots(candidate, text: false) where lists[Int(candidate.fields[slot])].contains(destination) { blocked = true }
+                    for slot in GesCompilerSupport.listSlots(candidate, text: false) where lists[Int(candidate.fields[slot])].contains(destination) { blocked = true }
                 }
                 if !blocked {
                     var fields = fields
@@ -89,7 +89,7 @@ extension GesCompiler {
             }
             addresses[routine.code.count] = next
             var code: [Instruction] = []
-            var locations: [GameEventScriptSourceLocation] = []
+            var locations: [GesSourceLocation] = []
             for index in routine.code.indices where !removed.contains(index) {
                 let instruction = routine.code[index]
                 var fields = instruction.fields
@@ -210,7 +210,7 @@ struct GesOperandSlots {
         // Slots depend on the opcode, its flags (iterator modes) and the whitespace split operand.
         let key = Int(instruction.opcode.rawValue) << 16 | Int(instruction.unitAndFlags) << 1 | (instruction.opcode == .splitText && instruction.a == 1 ? 1 : 0)
         if let slots = cache[key] { return slots }
-        let slots = GesOperandSlots(registers: GameEventScriptCompilerSupport.registerSlots(instruction), lists: GameEventScriptCompilerSupport.listSlots(instruction, text: false))
+        let slots = GesOperandSlots(registers: GesCompilerSupport.registerSlots(instruction), lists: GesCompilerSupport.listSlots(instruction, text: false))
         cache[key] = slots
         return slots
     }

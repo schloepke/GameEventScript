@@ -21,11 +21,11 @@ enum NumberTextProbe {
         let percentage: String
     }
 
-    private final class Capture: GameEventScriptNativeMessageHandler {
+    private final class Capture: GesNativeMessageHandler {
         var message: GameEventScriptMessage?
         var count = 0
 
-        func handle(_ message: GameEventScriptMessage, context: GameEventScriptContext) {
+        func handle(_ message: GameEventScriptMessage, context: GesContext) {
             self.message = message
             count += 1
         }
@@ -33,7 +33,7 @@ enum NumberTextProbe {
 
     static func run(input: String, output: String) throws {
         let requests = try JSONDecoder().decode([Request].self, from: Data(contentsOf: URL(fileURLWithPath: input)))
-        let program = try GameEventScriptBuilder().addScript("on Probe(value, text) { emit Result(formatted: value as :Text, number: text as :Number, percentage: text as :Percentage) }").compile()
+        let program = try GesProgramBuilder().addScript("on Probe(value, text) { emit Result(formatted: value as :Text, number: text as :Number, percentage: text as :Percentage) }").compile()
         let host = try GameEventScriptHost(seed: 0)
         let capture = Capture()
         _ = try host.subscribe(.init(name: "Result", parameters: ["formatted", "number", "percentage"]), handler: capture)
@@ -41,7 +41,7 @@ enum NumberTextProbe {
         guard try host.start().state == .ready else { throw ToolError.invalidFixture("Probe host failed to start") }
         var responses: [Response] = []
         for row in requests {
-            let unit: GesUnit
+            let unit: GesQuantityUnit
             switch row.unit {
             case "none": unit = .none
             case "m": unit = .meter

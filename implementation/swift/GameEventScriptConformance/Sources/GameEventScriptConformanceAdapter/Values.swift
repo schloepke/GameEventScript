@@ -21,7 +21,7 @@ extension Input {
 }
 
 enum Values {
-    static func unit(_ node: Input) throws -> GesUnit {
+    static func unit(_ node: Input) throws -> GesQuantityUnit {
         switch node["unit"]?.stringValue?.replacingOccurrences(of: ":", with: "") {
         case nil, "none": return .none
         case "m", "meter": return .meter
@@ -47,10 +47,10 @@ enum Values {
         return value
     }
 
-    static func signature(_ node: Input) throws -> GameEventScriptMessageSignature { try GameEventScriptMessageSignature(name: node.text("name"), parameters: node.values("parameters").map { $0.stringValue }) }
+    static func signature(_ node: Input) throws -> GesMessageSignature { try GesMessageSignature(name: node.text("name"), parameters: node.values("parameters").map { $0.stringValue }) }
 
     static func message(_ node: Input) throws -> GameEventScriptMessage {
-        let arguments = try node.values("args").map { argument in try GameEventScriptMessageArgument(name: argument["name"]?.stringValue, value: decode(argument.required("value"))) }
+        let arguments = try node.values("args").map { argument in try GesMessageArgument(name: argument["name"]?.stringValue, value: decode(argument.required("value"))) }
         return try GameEventScriptMessage(name: node.text("name"), arguments: arguments, tags: node.values("tags").compactMap(\.stringValue))
     }
 

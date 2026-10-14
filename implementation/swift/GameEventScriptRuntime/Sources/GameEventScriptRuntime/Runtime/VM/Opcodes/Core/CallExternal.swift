@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesCallbacks {
-    static func extensionCall(_ i: GameEventScriptBytecodeInstruction, _ s: GesVirtualMachine, _ c: GameEventScriptContext) throws {
+    static func extensionCall(_ i: GesBytecodeInstruction, _ s: GesVirtualMachine, _ c: GesContext) throws {
         let destination = Int(i.word0)
         let registers = s.list(i.word2)
         guard let binding = s.linked!.extensionBindings[i.word1], let function = s.linked!.extensions[i.word1], binding.argumentNames.count == registers.count else {
@@ -18,7 +18,7 @@ extension GesCallbacks {
             if s.error == nil { if fault == .boundaryUnderflow { s.fail("runtime.randomStackUnderflow") } else if fault == .unbalanced { s.fail("runtime.randomScopeImbalance") } }
             call.end()
         }
-        do { try function.invoke(call) } catch let fault as GameEventScriptExtensionFault {
+        do { try function.invoke(call) } catch let fault as GesExtensionFaultError {
             s.fail(fault.diagnostic)
             throw fault
         } catch let fault as GesRuntimeError {

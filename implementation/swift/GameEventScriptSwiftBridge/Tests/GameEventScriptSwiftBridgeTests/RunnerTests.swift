@@ -25,7 +25,7 @@ final class RunnerTests: XCTestCase {
         }
     }
 
-    private struct FrozenClock: GameEventScriptClock {
+    private struct FrozenClock: GesClock {
         var elapsedMicroseconds: Int64 { 100 }
     }
 
@@ -65,8 +65,8 @@ final class RunnerTests: XCTestCase {
     func testConcurrentReceivesSerializeMessageDispatch() throws {
         let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 1).startForTest())
         let trace = Trace()
-        let start = try GameEventScriptMessageSignature(name: "Start", parameters: ["value"])
-        let done = try GameEventScriptMessageSignature(name: "Done", parameters: ["value"])
+        let start = try GesMessageSignature(name: "Start", parameters: ["value"])
+        let done = try GesMessageSignature(name: "Done", parameters: ["value"])
         let first = try runner.subscribe(start) { message, context in
             let number = Int(message.arguments[0].asInteger)
             trace.append(number)
@@ -116,7 +116,7 @@ final class RunnerTests: XCTestCase {
         let host = try GameEventScriptHost(seed: 1).startForTest()
         _ = try host.subscribeMessageName("Start") { _, _ in
             trace.append(1)
-            throw try GameEventScriptExtensionFault(code: "app.runner", message: "Failed")
+            throw try GesExtensionFaultError(code: "app.runner", message: "Failed")
         }
         host.receive(try .init(name: "Start"))
         let runner = GameEventScriptSwiftHostRunner(host)

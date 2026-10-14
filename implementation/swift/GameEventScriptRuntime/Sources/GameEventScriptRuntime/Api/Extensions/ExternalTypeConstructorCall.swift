@@ -19,7 +19,7 @@ public final class GesExternalTypeConstructorCall {
     ///
     /// - Throws: A runtime binding fault when its declared type differs from the constructor's expected type; the
     /// result becomes Nothing.
-    public func setExternalValue(_ value: any GameEventScriptExternalValue) throws {
+    public func setExternalValue(_ value: any GesExternalValue) throws {
         if let expectedTypeName, value.definition.name != expectedTypeName {
             result = .nothing
             throw GesRuntimeError(diagnostic: .init(phase: .runtime, code: "runtime.invalidExternalTypeBinding"))

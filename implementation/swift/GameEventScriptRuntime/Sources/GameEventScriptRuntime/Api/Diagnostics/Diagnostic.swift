@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Stable phase/code and structured context for a source, binary, linking or runtime failure.
-public struct GameEventScriptDiagnostic: Sendable {
+public struct GesDiagnostic: Sendable {
     /// Pipeline stage that owns this diagnostic.
-    public let phase: GameEventScriptDiagnosticPhase
+    public let phase: GesDiagnosticPhase
     /// Stable machine-readable classification; use with phase rather than matching English text.
     public let code: String
     /// Human-readable explanation, not a stable comparison key.
@@ -12,9 +12,9 @@ public struct GameEventScriptDiagnostic: Sendable {
     /// Affected symbol name when available.
     public let symbol: String?
     /// Role of the affected symbol.
-    public let symbolKind: GameEventScriptSymbolKind
+    public let symbolKind: GesSymbolKind
     /// Optional original source span.
-    public let sourceLocation: GameEventScriptSourceLocation?
+    public let sourceLocation: GesSourceLocation?
     /// Affected Program name; runtime boundaries may fill missing context.
     public var programName: String?
     /// Affected handler signature; runtime boundaries may fill missing context.
@@ -24,12 +24,12 @@ public struct GameEventScriptDiagnostic: Sendable {
 
     /// Creates a diagnostic from a stable phase/code pair and optional structured context.
     public init(
-        phase: GameEventScriptDiagnosticPhase,
+        phase: GesDiagnosticPhase,
         code: String,
         message: String = "",
         symbol: String? = nil,
-        symbolKind: GameEventScriptSymbolKind = .unknown,
-        sourceLocation: GameEventScriptSourceLocation? = nil,
+        symbolKind: GesSymbolKind = .unknown,
+        sourceLocation: GesSourceLocation? = nil,
         programName: String? = nil,
         handlerName: String? = nil,
         technicalDetails: String? = nil

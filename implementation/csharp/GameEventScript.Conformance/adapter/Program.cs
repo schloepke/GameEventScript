@@ -7,7 +7,7 @@ using GameEventScript.Api;
 
 const int maxBytes = 32 * 1024 * 1024;
 var capabilities = new[] { "compiler", "program-binary", "bytecode-snapshot", "host", "vm", "observer", "publish-sink", "external-types", "native-handlers", "value-api", "message-api" };
-var implementation = new { id = "csharp", version = typeof(GameEventScriptBuilder).Assembly.GetName().Version!.ToString() };
+var implementation = new { id = "csharp", version = typeof(GesProgramBuilder).Assembly.GetName().Version!.ToString() };
 try
 {
     if (args.SequenceEqual(new[] { "--describe" }))
@@ -82,7 +82,7 @@ try
             }
             observations[id] = CompilerObservations.Success(Text(test, "kind"), AdapterCompiler.Compile(test));
         }
-        catch (GameEventScriptCompileException exception)
+        catch (GesCompileException exception)
         {
             if (Text(test, "kind") is "programBinary" or "scriptApi" or "loadError")
             {

@@ -11,13 +11,13 @@ public sealed class GesProgramEnumValidationTests
     [TestMethod]
     public void ValidityChecksMatchEveryRepresentableTransportValue()
     {
-        Verify<GameEventScriptBytecodeOpCode>(byte.MaxValue, GesProgramEnumValidation.IsDefined);
-        Verify<GameEventScriptBinaryBindKind>(byte.MaxValue, GesProgramEnumValidation.IsDefined);
-        Verify<GameEventScriptBytecodeInstructionUnit>(byte.MaxValue, GesProgramEnumValidation.IsDefined);
-        Verify<GameEventScriptBytecodeTypeKind>(byte.MaxValue, GesProgramEnumValidation.IsDefined);
-        Verify<GameEventScriptBytecodePatternKind>(ushort.MaxValue, GesProgramEnumValidation.IsDefined);
-        Verify<GameEventScriptBytecodeSeriesKind>(ushort.MaxValue, GesProgramEnumValidation.IsDefined);
-        Verify<GameEventScriptDebugSymbolKind>(byte.MaxValue, GesProgramEnumValidation.IsDefined);
+        Verify<GesBytecodeOpCode>(byte.MaxValue, GesProgramEnumValidation.IsDefined);
+        Verify<GesBinaryBindKind>(byte.MaxValue, GesProgramEnumValidation.IsDefined);
+        Verify<GesQuantityUnit>(byte.MaxValue, GesProgramEnumValidation.IsDefined);
+        Verify<GesBytecodeTypeKind>(byte.MaxValue, GesProgramEnumValidation.IsDefined);
+        Verify<GesBytecodePatternKind>(ushort.MaxValue, GesProgramEnumValidation.IsDefined);
+        Verify<GesBytecodeSeriesKind>(ushort.MaxValue, GesProgramEnumValidation.IsDefined);
+        Verify<GesDebugSymbolKind>(byte.MaxValue, GesProgramEnumValidation.IsDefined);
     }
 
     [TestMethod]
@@ -53,14 +53,14 @@ public sealed class GesProgramEnumValidationTests
         var count = 0;
         for (var raw = 0; raw <= ushort.MaxValue; raw++)
         {
-            if (GesProgramEnumValidation.IsDefined((GameEventScriptBytecodePatternKind)raw)) count++;
-            if (GesProgramEnumValidation.IsDefined((GameEventScriptBytecodeSeriesKind)raw)) count++;
+            if (GesProgramEnumValidation.IsDefined((GesBytecodePatternKind)raw)) count++;
+            if (GesProgramEnumValidation.IsDefined((GesBytecodeSeriesKind)raw)) count++;
             if (raw > byte.MaxValue) continue;
-            if (GesProgramEnumValidation.IsDefined((GameEventScriptBytecodeOpCode)raw)) count++;
-            if (GesProgramEnumValidation.IsDefined((GameEventScriptBinaryBindKind)raw)) count++;
-            if (GesProgramEnumValidation.IsDefined((GameEventScriptBytecodeInstructionUnit)raw)) count++;
-            if (GesProgramEnumValidation.IsDefined((GameEventScriptBytecodeTypeKind)raw)) count++;
-            if (GesProgramEnumValidation.IsDefined((GameEventScriptDebugSymbolKind)raw)) count++;
+            if (GesProgramEnumValidation.IsDefined((GesBytecodeOpCode)raw)) count++;
+            if (GesProgramEnumValidation.IsDefined((GesBinaryBindKind)raw)) count++;
+            if (GesProgramEnumValidation.IsDefined((GesQuantityUnit)raw)) count++;
+            if (GesProgramEnumValidation.IsDefined((GesBytecodeTypeKind)raw)) count++;
+            if (GesProgramEnumValidation.IsDefined((GesDebugSymbolKind)raw)) count++;
         }
         return count;
     }

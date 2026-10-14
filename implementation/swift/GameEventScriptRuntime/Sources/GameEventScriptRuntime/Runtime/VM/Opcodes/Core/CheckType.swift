@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesCasts {
-    static func check(_ value: GesValue, _ kind: GameEventScriptBytecodeTypeKind) -> Bool {
+    static func check(_ value: GesValue, _ kind: GesBytecodeTypeKind) -> Bool {
         switch kind {
         case .nothing: value.isNothing
         case .boolean: value.kind == .boolean

@@ -4,13 +4,13 @@
 import GameEventScriptRuntime
 
 /// The fixed, language-neutral fixture catalog specified by Conformance/Environment.md.
-struct RuntimeFixtures: GameEventScriptExtensionRegistry, GameEventScriptExternalTypeRegistry {
+struct RuntimeFixtures: GesExtensionRegistry, GesExternalTypeRegistry {
     // This fixed catalog contains only deeply immutable descriptor values, no callbacks or host state.
     // Reuse it like the C# fixture catalog instead of rebuilding test infrastructure for each compilation.
-    nonisolated(unsafe) static let catalog = try! GameEventScriptExternalTypeCatalog([aim(), probe(), spatialProbe()])
+    nonisolated(unsafe) static let catalog = try! GesDeclaredExternalTypeCatalog([aim(), probe(), spatialProbe()])
     var mismatch = false
 
-    func resolve(_ reference: GameEventScriptExtensionReference) -> (any GameEventScriptExtensionFunction)? {
+    func resolve(_ reference: GesExtensionReference) -> (any GesExtensionFunction)? {
         let name = reference.extensionName + "." + reference.functionName
         let labels = reference.argumentLabels
         let unlabeled = labels.allSatisfy { $0 == "_" }
@@ -26,21 +26,21 @@ struct RuntimeFixtures: GameEventScriptExtensionRegistry, GameEventScriptExterna
         return allowed ? FixtureFunction(name: name) : nil
     }
 
-    func resolve(_ reference: GameEventScriptExternalTypeConstructorReference) throws -> (any GameEventScriptExternalTypeConstructor)? {
+    func resolve(_ reference: GesExternalTypeConstructorReference) throws -> (any GesExternalTypeConstructor)? {
         if mismatch { return FixtureConstructor(definition: try .init(typeName: "Mismatch", parameters: [.init(name: "value", kind: .float)])) }
         for definition in Self.catalog.types { for constructor in definition.constructors where constructor.signatureID == reference.signatureID { return FixtureConstructor(definition: constructor) } }
         return nil
     }
 
-    static func aim() throws -> GameEventScriptExternalTypeDefinition {
-        let fields: [GameEventScriptExternalTypeFieldDefinition] = try [
+    static func aim() throws -> GesExternalTypeDefinition {
+        let fields: [GesExternalTypeFieldDefinition] = try [
             .init(name: "bearing", kind: .float, unit: .degree), .init(name: "range", kind: .float, unit: .meter), .init(name: "steps", kind: .float, unit: .meter), .init(name: "direction", kind: .vector, unit: .meter),
             .init(name: "checksum", kind: .float),
         ]
         return try .init(name: "Aim", fields: fields, constructors: [.init(typeName: "Aim", parameters: fields.prefix(4).map { try .init(name: $0.name, kind: $0.kind!, unit: $0.unit) })])
     }
 
-    static func probe() throws -> GameEventScriptExternalTypeDefinition {
+    static func probe() throws -> GesExternalTypeDefinition {
         try .init(
             name: "CallbackProbe",
             fields: [.init(name: "failure", kind: .text), .init(name: "context", kind: .text), .init(name: "value", kind: .float)],
@@ -48,7 +48,7 @@ struct RuntimeFixtures: GameEventScriptExtensionRegistry, GameEventScriptExterna
         )
     }
 
-    static func spatialProbe() throws -> GameEventScriptExternalTypeDefinition {
+    static func spatialProbe() throws -> GesExternalTypeDefinition {
         try .init(
             name: "SpatialProbe",
             fields: [.init(name: "vector", kind: .vector), .init(name: "point", kind: .point), .init(name: "storedVector", typeName: "Vector"), .init(name: "storedPoint", typeName: "Point")],
@@ -56,7 +56,7 @@ struct RuntimeFixtures: GameEventScriptExtensionRegistry, GameEventScriptExterna
         )
     }
 
-    static func fault(symbol: String, context: String) throws -> GameEventScriptExtensionFault {
+    static func fault(symbol: String, context: String) throws -> GesExtensionFaultError {
         try .init(
             code: "test.callbackFault",
             message: "Configured external fault",
@@ -67,7 +67,7 @@ struct RuntimeFixtures: GameEventScriptExtensionRegistry, GameEventScriptExterna
     }
 }
 
-private struct FixtureFunction: GameEventScriptExtensionFunction {
+private struct FixtureFunction: GesExtensionFunction {
     let name: String
 
     func invoke(_ call: GesExtensionCall) throws {
@@ -87,10 +87,10 @@ private struct FixtureFunction: GameEventScriptExtensionFunction {
             call.setBoolean(angle <= 45 || angle >= 315)
         case "test.vectorSum": if args[0].kind == .vector { call.setFloat(args[0].x + args[0].y + args[0].z, unit: args[0].unit) }
         case "test.toJson":
-            do { call.setText(try GameEventScriptMessageJson.serializeValue(args[0])) } catch let error as GameEventScriptMessageFormatError { throw try GameEventScriptExtensionFault(code: error.code, message: error.code) }
+            do { call.setText(try GameEventScriptMessageJson.serializeValue(args[0])) } catch let error as GesMessageFormatError { throw try GesExtensionFaultError(code: error.code, message: error.code) }
         case "test.fromJson":
             if args[0].kind == .text {
-                do { call.setValue(try GameEventScriptMessageJson.deserializeValue(args[0].textValue!)) } catch let error as GameEventScriptMessageFormatError { throw try GameEventScriptExtensionFault(code: error.code, message: error.code) }
+                do { call.setValue(try GameEventScriptMessageJson.deserializeValue(args[0].textValue!)) } catch let error as GesMessageFormatError { throw try GesExtensionFaultError(code: error.code, message: error.code) }
             }
         case "test.echo": call.setValue(args[0])
         case "test.notify":
@@ -102,14 +102,14 @@ private struct FixtureFunction: GameEventScriptExtensionFunction {
                 call.random.push(seed: 7)
                 _ = call.random.nextInclusiveInteger(1, 100)
             }
-            if name.contains("declaredFault") { throw try GameEventScriptExtensionFault(code: "test.declaredFault", message: "Configured extension fault") }
+            if name.contains("declaredFault") { throw try GesExtensionFaultError(code: "test.declaredFault", message: "Configured extension fault") }
             throw ConformanceExecutionError.invalidInput("Configured extension failure")
         }
     }
 }
 
-private struct FixtureConstructor: GameEventScriptExternalTypeConstructor {
-    let definition: GameEventScriptExternalTypeConstructorDefinition
+private struct FixtureConstructor: GesExternalTypeConstructor {
+    let definition: GesExternalTypeConstructorDefinition
 
     func invoke(_ call: GesExternalTypeConstructorCall) throws {
         if definition.typeName == "Aim" {
@@ -130,11 +130,11 @@ private struct FixtureConstructor: GameEventScriptExternalTypeConstructor {
     }
 }
 
-private final class FixtureValue: GameEventScriptExternalValue {
-    let definition: GameEventScriptExternalTypeDefinition
+private final class FixtureValue: GesExternalValue {
+    let definition: GesExternalTypeDefinition
     let fields: [GesValue]
 
-    init(definition: GameEventScriptExternalTypeDefinition, fields: [GesValue]) {
+    init(definition: GesExternalTypeDefinition, fields: [GesValue]) {
         self.definition = definition
         self.fields = fields
     }

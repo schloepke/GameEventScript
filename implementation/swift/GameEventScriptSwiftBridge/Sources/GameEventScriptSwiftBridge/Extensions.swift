@@ -4,9 +4,9 @@
 import GameEventScriptRuntime
 
 /// One validated extension signature and its synchronous Swift implementation.
-public struct GameEventScriptSwiftExtension: GameEventScriptExtensionFunction {
+public struct GameEventScriptSwiftExtension: GesExtensionFunction {
     /// Validated portable signature used during host linking.
-    public let reference: GameEventScriptExtensionReference
+    public let reference: GesExtensionReference
     private let body: (GesExtensionCall) throws -> Void
 
     /// Validates an extension signature and retains its synchronous implementation.
@@ -15,7 +15,7 @@ public struct GameEventScriptSwiftExtension: GameEventScriptExtensionFunction {
     public init(namespace: String, name: String, parameters: [String] = [], body: @escaping (GesExtensionCall) throws -> Void) throws {
         reference = try .init(extensionName: namespace, functionName: name, argumentLabels: parameters)
         let named = reference.argumentLabels.filter { $0 != "_" }
-        guard Set(named).count == named.count else { throw GameEventScriptMessageError.duplicateArgumentName }
+        guard Set(named).count == named.count else { throw GesMessageError.duplicateArgumentName }
         self.body = body
     }
 
@@ -24,22 +24,22 @@ public struct GameEventScriptSwiftExtension: GameEventScriptExtensionFunction {
 }
 
 /// Immutable extension registrations, indexed once before Host linking.
-public struct GameEventScriptSwiftExtensionRegistry: GameEventScriptExtensionRegistry {
+public struct GameEventScriptSwiftExtensionRegistry: GesExtensionRegistry {
     private let functions: [String: GameEventScriptSwiftExtension]
-    private let fallback: (any GameEventScriptExtensionRegistry)?
+    private let fallback: (any GesExtensionRegistry)?
 
     /// Indexes unique extension signatures and optionally delegates missing imports to a fallback.
     ///
     /// - Throws: An API error for duplicate signatures.
-    public init(_ extensions: [GameEventScriptSwiftExtension], fallback: (any GameEventScriptExtensionRegistry)? = nil) throws {
+    public init(_ extensions: [GameEventScriptSwiftExtension], fallback: (any GesExtensionRegistry)? = nil) throws {
         var functions: [String: GameEventScriptSwiftExtension] = [:]
-        for item in extensions { guard functions.updateValue(item, forKey: item.reference.signatureID) == nil else { throw GameEventScriptAPIError.invalidArgument("Duplicate extension signature: " + item.reference.signatureID) } }
+        for item in extensions { guard functions.updateValue(item, forKey: item.reference.signatureID) == nil else { throw GesApiError.invalidArgument("Duplicate extension signature: " + item.reference.signatureID) } }
         self.functions = functions
         self.fallback = fallback
     }
 
     /// Returns the exact registered function, otherwise queries the optional fallback and propagates resolver errors.
-    public func resolve(_ reference: GameEventScriptExtensionReference) throws -> (any GameEventScriptExtensionFunction)? {
+    public func resolve(_ reference: GesExtensionReference) throws -> (any GesExtensionFunction)? {
         if let function = functions[reference.signatureID] { return function }
         return try fallback?.resolve(reference)
     }
@@ -53,7 +53,7 @@ extension GesExtensionCall {
 extension GesValueArguments {
     /// Strict native conversion with bounds checking; only use during the active callback.
     public func swiftValue<T: GameEventScriptSwiftValueConvertible>(at index: Int, as type: T.Type = T.self) throws -> T {
-        guard index >= 0 && index < count else { throw GameEventScriptAPIError.invalidArgument("Argument index out of range") }
+        guard index >= 0 && index < count else { throw GesApiError.invalidArgument("Argument index out of range") }
         return try T.fromGesValue(self[index])
     }
 }

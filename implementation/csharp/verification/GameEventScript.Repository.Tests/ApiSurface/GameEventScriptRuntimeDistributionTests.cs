@@ -13,15 +13,15 @@ public sealed class GameEventScriptRuntimeDistributionTests
     /// <summary>Loads a precompiled Program and exercises the runtime literal parser and C# message adapters without a compiler assembly.</summary>
     /// <param name="debugInfo">The metadata included in the precompiled fixture.</param>
     [TestMethod]
-    [DataRow(GameEventScriptDebugInfoOptions.None)]
-    [DataRow(GameEventScriptDebugInfoOptions.All)]
-    public void PrecompiledProgramRunsWithRuntimeAndBridgeOnly(GameEventScriptDebugInfoOptions debugInfo)
+    [DataRow(GesDebugInfoOptions.None)]
+    [DataRow(GesDebugInfoOptions.All)]
+    public void PrecompiledProgramRunsWithRuntimeAndBridgeOnly(GesDebugInfoOptions debugInfo)
     {
         var directory = Path.Combine(TestRepositoryPaths.Root, "artifacts", "csharp", "tests", "runtime-consumer", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try
         {
-            var program = GameEventScriptBuilder.Create().WithDebugInfo(debugInfo).AddScript("on Start(value) { emit Done(result: (parse value) + 1) }").Compile();
+            var program = GesProgramBuilder.Create().WithDebugInfo(debugInfo).AddScript("on Start(value) { emit Done(result: (parse value) + 1) }").Compile();
             var path = Path.Combine(directory, "program.gesb");
             File.WriteAllBytes(path, GameEventScriptProgramWriter.ToArray(program));
             var configuration = typeof(GameEventScriptRuntimeDistributionTests).Assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()!.Configuration;

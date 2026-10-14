@@ -8,7 +8,7 @@ struct RunOptions {
     var inputs: [String] = [], scenarios: [String] = [], arguments: [GesValue] = []
     var profilePath: String?
     var seed: Int64?
-    var limits = GameEventScriptRuntimeLimits()
+    var limits = GesRuntimeLimits()
     var verbose = false, quiet = false, interactive = false, color = false, help = false
 
     init(_ args: [String]) throws {
@@ -113,7 +113,7 @@ extension Tool {
         var programs: [GameEventScriptProgram] = []
         if binaries > 0 {
             for path in paths {
-                do { programs.append(try ToolFiles.read(path)) } catch let error as GameEventScriptProgramFormatError {
+                do { programs.append(try ToolFiles.read(path)) } catch let error as GesProgramFormatError {
                     io.report(error, fallback: path)
                     return 1
                 }

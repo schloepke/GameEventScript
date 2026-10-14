@@ -17,14 +17,14 @@ namespace GameEventScript.Api;
 /// message or a collection of compilation errors. It serves as a mechanism for propagating
 /// critical issues encountered when building or validating a Game Event Script.
 /// </remarks>
-public class GameEventScriptCompileException : Exception
+public class GesCompileException : Exception
 {
     /// <summary>
     /// Represents an exception thrown when the Game Event Script compilation process encounters an error.
     /// </summary>
-    public GameEventScriptCompileException(GameEventScriptDiagnostic diagnostic) : base(RequireDiagnostic(diagnostic).Message)
+    public GesCompileException(GesDiagnostic diagnostic) : base(RequireDiagnostic(diagnostic).Message)
     {
-        if (diagnostic.Phase is not (GameEventScriptDiagnosticPhase.Parse or GameEventScriptDiagnosticPhase.Validate or GameEventScriptDiagnosticPhase.Compile))
+        if (diagnostic.Phase is not (GesDiagnosticPhase.Parse or GesDiagnosticPhase.Validate or GesDiagnosticPhase.Compile))
             throw new ArgumentException("A compile exception requires a parse, validate, or compile diagnostic.", nameof(diagnostic));
         Diagnostics = [diagnostic];
     }
@@ -38,14 +38,14 @@ public class GameEventScriptCompileException : Exception
     /// successful script processing. It supports detailed error reporting by encapsulating
     /// a collection of compilation errors.
     /// </remarks>
-    public GameEventScriptCompileException(IReadOnlyList<GameEventScriptDiagnostic> diagnostics) : base(BuildMessage(diagnostics))
+    public GesCompileException(IReadOnlyList<GesDiagnostic> diagnostics) : base(BuildMessage(diagnostics))
     {
         _ = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
-        var copy = new GameEventScriptDiagnostic[diagnostics.Count];
+        var copy = new GesDiagnostic[diagnostics.Count];
         for (var index = 0; index < copy.Length; index++)
         {
             var diagnostic = diagnostics[index] ?? throw new ArgumentException("Diagnostic list contains null.", nameof(diagnostics));
-            if (diagnostic.Phase is not (GameEventScriptDiagnosticPhase.Parse or GameEventScriptDiagnosticPhase.Validate or GameEventScriptDiagnosticPhase.Compile))
+            if (diagnostic.Phase is not (GesDiagnosticPhase.Parse or GesDiagnosticPhase.Validate or GesDiagnosticPhase.Compile))
                 throw new ArgumentException("A compile exception requires parse, validate, or compile diagnostics.", nameof(diagnostics));
             copy[index] = diagnostic;
         }
@@ -60,12 +60,12 @@ public class GameEventScriptCompileException : Exception
     /// The immutable snapshot contains portable phase/code data and optional
     /// symbol/source/program context for each compiler error.
     /// </remarks>
-    public IReadOnlyList<GameEventScriptDiagnostic> Diagnostics { get; }
+    public IReadOnlyList<GesDiagnostic> Diagnostics { get; }
 
-    private static GameEventScriptDiagnostic RequireDiagnostic(GameEventScriptDiagnostic? diagnostic)
+    private static GesDiagnostic RequireDiagnostic(GesDiagnostic? diagnostic)
         => diagnostic ?? throw new ArgumentNullException(nameof(diagnostic));
 
-    private static string BuildMessage(IReadOnlyList<GameEventScriptDiagnostic>? errors)
+    private static string BuildMessage(IReadOnlyList<GesDiagnostic>? errors)
     {
         if (errors is null || errors.Count == 0)
         {

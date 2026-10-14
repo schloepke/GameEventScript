@@ -6,31 +6,31 @@ public enum GameEventScriptProgramReader {
     /// Decodes and validates a complete `.gesb` byte buffer under the supplied retention and resource limits.
     ///
     /// - Returns: An immutable reusable Program.
-    /// - Throws: `GameEventScriptProgramFormatError` with a stable code and available location context.
-    public static func read(_ bytes: [UInt8], options: GameEventScriptProgramReadOptions = .init()) throws -> GameEventScriptProgram {
+    /// - Throws: `GesProgramFormatError` with a stable code and available location context.
+    public static func read(_ bytes: [UInt8], options: GesProgramReadOptions = .init()) throws -> GameEventScriptProgram {
         let limits = options.limits
         guard limits.maxFileBytes >= 16, limits.maxSectionCount >= 1, limits.maxSourceArchiveBytes >= 0, limits.maxRetainedOpaqueBytes >= 0,
             [limits.maxInstructions, limits.maxBindings, limits.maxStringEntries, limits.maxIndexLists].allSatisfy({ (0...65535).contains($0) })
-        else { throw GameEventScriptProgramFormatError(.readerLimitExceeded, message: "Invalid reader limits") }
-        if bytes.count > limits.maxFileBytes { throw GameEventScriptProgramFormatError(.fileTooLarge) }
-        if bytes.count < 16 { throw GameEventScriptProgramFormatError(.invalidHeaderSize) }
+        else { throw GesProgramFormatError(.readerLimitExceeded, message: "Invalid reader limits") }
+        if bytes.count > limits.maxFileBytes { throw GesProgramFormatError(.fileTooLarge) }
+        if bytes.count < 16 { throw GesProgramFormatError(.invalidHeaderSize) }
         var header = GesBinaryCursor(bytes: bytes[...])
-        guard try header.bytes(4) == Array("GESB".utf8) else { throw GameEventScriptProgramFormatError(.invalidMagic) }
-        guard try header.u16() == 1 else { throw GameEventScriptProgramFormatError(.unsupportedFormatVersion, byteOffset: 4) }
-        guard try header.u16() == 0 else { throw GameEventScriptProgramFormatError(.invalidHeaderFlags, byteOffset: 6) }
-        guard try header.u32() == 16 else { throw GameEventScriptProgramFormatError(.invalidHeaderSize, byteOffset: 8) }
-        guard try header.u32() == bytes.count else { throw GameEventScriptProgramFormatError(.fileSizeMismatch, byteOffset: 12) }
+        guard try header.bytes(4) == Array("GESB".utf8) else { throw GesProgramFormatError(.invalidMagic) }
+        guard try header.u16() == 1 else { throw GesProgramFormatError(.unsupportedFormatVersion, byteOffset: 4) }
+        guard try header.u16() == 0 else { throw GesProgramFormatError(.invalidHeaderFlags, byteOffset: 6) }
+        guard try header.u32() == 16 else { throw GesProgramFormatError(.invalidHeaderSize, byteOffset: 8) }
+        guard try header.u32() == bytes.count else { throw GesProgramFormatError(.fileSizeMismatch, byteOffset: 12) }
         let required: Set<UInt16> = [1, 2, 3, 4, 16]
         let known = required.union([32, 33, 34, 48])
         var sections: [UInt16: GesBinaryCursor] = [:]
         var seen: Set<UInt16> = []
-        var opaque: [GameEventScriptOpaqueSection] = []
+        var opaque: [GesOpaqueSection] = []
         var opaqueBytes = 0
         var offset = 16
         var ordinal = 0
         while offset < bytes.count {
-            if ordinal >= limits.maxSectionCount { throw GameEventScriptProgramFormatError(.tooManySections, byteOffset: offset) }
-            if bytes.count - offset < 12 { throw GameEventScriptProgramFormatError(.truncatedSectionHeader, byteOffset: offset) }
+            if ordinal >= limits.maxSectionCount { throw GesProgramFormatError(.tooManySections, byteOffset: offset) }
+            if bytes.count - offset < 12 { throw GesProgramFormatError(.truncatedSectionHeader, byteOffset: offset) }
             var cursor = GesBinaryCursor(bytes: bytes[offset...])
             let type = try cursor.u16()
             let flags = try cursor.u16()
@@ -38,7 +38,7 @@ public enum GameEventScriptProgramReader {
             let reserved = try cursor.u16()
             let length = Int(try cursor.u32())
 
-            func fail(_ code: GameEventScriptProgramFormatErrorCode, _ delta: Int = 0) -> GameEventScriptProgramFormatError { .init(code, byteOffset: offset + delta, sectionType: type) }
+            func fail(_ code: GesProgramFormatErrorCode, _ delta: Int = 0) -> GesProgramFormatError { .init(code, byteOffset: offset + delta, sectionType: type) }
 
             if type == 0 || type == .max { throw fail(.invalidSectionType) }
             if flags & ~0x00f1 != 0 { throw fail(.invalidSectionFlags, 2) }
@@ -62,7 +62,7 @@ public enum GameEventScriptProgramReader {
         }
 
         func section(_ type: UInt16) throws -> GesBinaryCursor {
-            guard let result = sections[type] else { throw GameEventScriptProgramFormatError(.missingRequiredSection, sectionType: type) }
+            guard let result = sections[type] else { throw GesProgramFormatError(.missingRequiredSection, sectionType: type) }
             return result
         }
 
@@ -115,21 +115,21 @@ public enum GameEventScriptProgramReader {
             let registers = try bindingsReader.u16()
             let depth = try bindingsReader.u16()
             if try bindingsReader.u16() != 0 { throw bindingsReader.error(.invalidSectionReserved, offset: bindingsReader.offset - 2, entry: index) }
-            guard let kind = GameEventScriptBinaryBindKind(rawValue: rawKind) else { throw bindingsReader.error(.invalidBindingKind, entry: index) }
+            guard let kind = GesBinaryBindKind(rawValue: rawKind) else { throw bindingsReader.error(.invalidBindingKind, entry: index) }
             bindings.append(.init(kind: kind, name: name, argumentNames: args, entryAddress: address, id: id, requiredTags: tags, excludedTags: excluded, requiredRegisterCount: registers, requiredCallStackDepth: depth))
         }
         var codeReader = try section(16)
         let instructionCount = try codeReader.count(limits.maxInstructions)
         if codeReader.remaining != instructionCount * 16 { throw codeReader.error(.invalidPayloadLength) }
-        var code: [GameEventScriptBytecodeInstruction] = []
+        var code: [GesBytecodeInstruction] = []
         for index in 0..<instructionCount {
             let raw = try codeReader.u8()
-            guard let opcode = GameEventScriptBytecodeOpCode(rawValue: raw) else { throw codeReader.error(.invalidOpcode, entry: index) }
+            guard let opcode = GesBytecodeOpCode(rawValue: raw) else { throw codeReader.error(.invalidOpcode, entry: index) }
             code.append(try .init(opcode: opcode, unitAndFlags: codeReader.u8(), word0: codeReader.u16(), word1: codeReader.u16(), word2: codeReader.u16(), payload: codeReader.u64()))
         }
-        var debug: [GameEventScriptDebugSymbol]?
+        var debug: [GesDebugSymbol]?
         var sourceMap: GameEventScriptSourceMap?
-        var archive: [GameEventScriptSourceArchiveEntry]?
+        var archive: [GesSourceArchiveEntry]?
         var build: GameEventScriptBuildMetadata?
         if options.retention != .runtimeOnly {
             if var reader = sections[32] {
@@ -137,7 +137,7 @@ public enum GameEventScriptProgramReader {
                 for index in 0..<(try reader.count(65535)) { names.append(try reader.string(index)) }
                 let count = try reader.count(65535)
                 if reader.remaining != count * 16 { throw reader.error(.invalidPayloadLength) }
-                var symbols: [GameEventScriptDebugSymbol] = []
+                var symbols: [GesDebugSymbol] = []
                 for index in 0..<count {
                     let raw = try reader.u8()
                     if try reader.u8() != 0 { throw reader.error(.invalidSectionReserved, offset: reader.offset - 1, entry: index) }
@@ -146,14 +146,14 @@ public enum GameEventScriptProgramReader {
                     let start = try reader.u32()
                     let length = try reader.u32()
                     if name >= names.count { throw reader.error(.invalidStringIndex, offset: reader.offset - 12, entry: index) }
-                    guard let kind = GameEventScriptDebugSymbolKind(rawValue: raw) else { throw reader.error(.invalidDebugSymbol, entry: index) }
+                    guard let kind = GesDebugSymbolKind(rawValue: raw) else { throw reader.error(.invalidDebugSymbol, entry: index) }
                     symbols.append(.init(kind: kind, registerID: register, name: names[name], codeStart: start, codeLength: length))
                 }
                 try reader.end()
                 debug = symbols
             }
             if var reader = sections[33] {
-                var sources: [GameEventScriptSourceMapSource] = []
+                var sources: [GesSourceMapSource] = []
                 for index in 0..<(try reader.count(65535)) {
                     let name = try reader.string(index)
                     let length = try reader.u32()
@@ -166,13 +166,13 @@ public enum GameEventScriptProgramReader {
                 }
                 let count = try reader.count(Int(Int32.max))
                 if count > reader.remaining / 20 || reader.remaining != count * 20 { throw reader.error(.invalidPayloadLength) }
-                var entries: [GameEventScriptSourceMapEntry] = []
+                var entries: [GesSourceMapEntry] = []
                 for _ in 0..<count { entries.append(try .init(codeStart: reader.u32(), codeLength: reader.u32(), sourceID: reader.u32(), sourceStartByteOffset: reader.u32(), sourceByteLength: reader.u32())) }
                 try reader.end()
                 sourceMap = .init(sources: sources, entries: entries)
             }
             if var reader = sections[34] {
-                var sources: [GameEventScriptSourceArchiveEntry] = []
+                var sources: [GesSourceArchiveEntry] = []
                 var total = 0
                 for index in 0..<(try reader.count(65535)) {
                     let id = try reader.u32()
@@ -226,7 +226,7 @@ struct GesBinaryCursor {
 
     var remaining: Int { bytes.endIndex - offset }
 
-    func error(_ code: GameEventScriptProgramFormatErrorCode, offset: Int? = nil, entry: Int? = nil) -> GameEventScriptProgramFormatError { .init(code, byteOffset: offset ?? self.offset, sectionType: section, entryIndex: entry) }
+    func error(_ code: GesProgramFormatErrorCode, offset: Int? = nil, entry: Int? = nil) -> GesProgramFormatError { .init(code, byteOffset: offset ?? self.offset, sectionType: section, entryIndex: entry) }
 
     func requireElements(_ count: Int, width: Int = 1, entry: Int? = nil) throws { if count < 0 || count > remaining / width { throw error(.truncatedSectionPayload, entry: entry) } }
 

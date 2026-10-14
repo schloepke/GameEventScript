@@ -11,8 +11,8 @@ public sealed class GameEventScriptRandomGeneratorTests
     [TestMethod]
     public void IntRangeLongSeedsKeepExistingIntSeedSequence()
     {
-        var intSeed = GameEventScriptRandomGenerator.FromSeed(7);
-        var longSeed = GameEventScriptRandomGenerator.FromSeed(7L);
+        var intSeed = GesRandomGenerator.FromSeed(7);
+        var longSeed = GesRandomGenerator.FromSeed(7L);
 
         Assert.AreEqual(
             intSeed.NextInclusiveInteger(long.MinValue, long.MaxValue),
@@ -25,8 +25,8 @@ public sealed class GameEventScriptRandomGeneratorTests
     [TestMethod]
     public void ScopedStreamRestoresItsParentState()
     {
-        var scoped = GameEventScriptRandomGenerator.FromSeed(0L);
-        var control = GameEventScriptRandomGenerator.FromSeed(0L);
+        var scoped = GesRandomGenerator.FromSeed(0L);
+        var control = GesRandomGenerator.FromSeed(0L);
         var expectedFirst = control.NextInclusiveInteger(long.MinValue, long.MaxValue);
         var expectedSecond = control.NextInclusiveInteger(long.MinValue, long.MaxValue);
 
@@ -41,7 +41,7 @@ public sealed class GameEventScriptRandomGeneratorTests
     public void SequenceInputIsCopiedAndFallsBackToThePortableGenerator()
     {
         var values = new[] { 0.25 };
-        var random = GameEventScriptRandomGenerator.FromSequence(values);
+        var random = GesRandomGenerator.FromSequence(values);
         values[0] = 0.75;
 
         Assert.AreEqual(0.25, random.NextFloat(0, 1));
@@ -52,8 +52,8 @@ public sealed class GameEventScriptRandomGeneratorTests
     [TestMethod]
     public void EmptyEntropyUsesTheCSharpArgumentExceptionContract()
     {
-        _ = Assert.ThrowsExactly<ArgumentException>(() => { _ = GameEventScriptRandomGenerator.SeedFromEntropy(ReadOnlySpan<byte>.Empty); });
-        _ = Assert.ThrowsExactly<ArgumentException>(() => { _ = GameEventScriptRandomGenerator.FromEntropy(ReadOnlySpan<byte>.Empty); });
+        _ = Assert.ThrowsExactly<ArgumentException>(() => { _ = GesRandomGenerator.SeedFromEntropy(ReadOnlySpan<byte>.Empty); });
+        _ = Assert.ThrowsExactly<ArgumentException>(() => { _ = GesRandomGenerator.FromEntropy(ReadOnlySpan<byte>.Empty); });
         _ = Assert.ThrowsExactly<ArgumentException>(() => { _ = GameEventScriptHost.CreateBuilder().WithRandomEntropy(ReadOnlySpan<byte>.Empty); });
     }
 

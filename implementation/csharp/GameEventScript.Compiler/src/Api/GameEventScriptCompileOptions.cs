@@ -6,12 +6,12 @@ namespace GameEventScript.Api;
 /// <summary>
 /// Represents a game event script compile options.
 /// </summary>
-public sealed class GameEventScriptCompileOptions
+public sealed class GesCompileOptions
 {
     /// <summary>
     /// Gets the debug info.
     /// </summary>
-    public GameEventScriptDebugInfoOptions DebugInfo { get; init; } = GameEventScriptDebugInfoOptions.All;
+    public GesDebugInfoOptions DebugInfo { get; init; } = GesDebugInfoOptions.All;
 
     /// <summary>
     /// Gets the program version.

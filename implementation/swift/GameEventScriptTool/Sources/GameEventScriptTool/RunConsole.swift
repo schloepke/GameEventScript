@@ -47,7 +47,7 @@ extension Tool {
                 success = false
                 continue
             }
-            var instance: GameEventScriptInstance?
+            var instance: GesProgramInstance?
             var path = "<interactive:\(lineNumber)>"
             do {
                 defer { instance?.detach() }
@@ -92,7 +92,7 @@ extension Tool {
                     if !options.quiet { io.line("Loaded \(path); initialization completed. Handlers remain active.", toError: true) }
                     continue
                 }
-                let program = try GameEventScriptBuilder().addScript("on initialization {\n" + line + "\n}\n", sourceName: path).compile()
+                let program = try GesProgramBuilder().addScript("on initialization {\n" + line + "\n}\n", sourceName: path).compile()
                 let handlers = program.bindings.filter(isHandler)
                 guard handlers.count == 1, program.stringConstants[Int(handlers[0].name)] == "initialization" else {
                     io.line("error cli.interactiveInput: Enter handler-body statements, not additional handler declarations.", toError: true)

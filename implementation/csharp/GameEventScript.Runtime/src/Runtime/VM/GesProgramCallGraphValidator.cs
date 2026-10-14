@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 using GameEventScript.Api;
-using static GameEventScript.Api.GameEventScriptBinaryBindKind;
+using static GameEventScript.Api.GesBinaryBindKind;
 
 namespace GameEventScript.Runtime.VM;
 
@@ -23,7 +23,7 @@ internal static class GesProgramCallGraphValidator
             if (!IsExecutableBind(bind.Kind)) continue;
             if (bind.EntryAddress >= program.Code.Count)
             {
-                throw LinkError(GameEventScriptDiagnosticCodes.LinkInvalidProgram,
+                throw LinkError(GesDiagnosticCodes.LinkInvalidProgram,
                     $"Executable bind id '{bind.Id}' has invalid entry address '{bind.EntryAddress}'.", bind.Id.ToString());
             }
 
@@ -40,11 +40,11 @@ internal static class GesProgramCallGraphValidator
         for (var instructionIndex = 0; instructionIndex < program.Code.Count; instructionIndex++)
         {
             var instruction = program.Code[instructionIndex];
-            if (instruction.OpCode == GameEventScriptBytecodeOpCode.Call)
+            if (instruction.OpCode == GesBytecodeOpCode.Call)
             {
                 if (instruction.TargetAddress >= program.Code.Count)
                 {
-                    throw LinkError(GameEventScriptDiagnosticCodes.LinkInvalidProgram,
+                    throw LinkError(GesDiagnosticCodes.LinkInvalidProgram,
                         $"Call target address '{instruction.TargetAddress}' is outside the instruction table.", instruction.TargetAddress.ToString());
                 }
 
@@ -69,19 +69,19 @@ internal static class GesProgramCallGraphValidator
                 var instruction = program.Code[instructionIndex];
                 switch (instruction.OpCode)
                 {
-                    case GameEventScriptBytecodeOpCode.Call:
+                    case GesBytecodeOpCode.Call:
                         AddCall(calls[routineIndex], instruction.TargetAddress, entryIndexes);
                         break;
-                    case GameEventScriptBytecodeOpCode.CreateRecord:
+                    case GesBytecodeOpCode.CreateRecord:
                         if (!recordEntriesById.TryGetValue(instruction.BindId, out var recordEntry))
                         {
-                            throw LinkError(GameEventScriptDiagnosticCodes.LinkInvalidProgram,
+                            throw LinkError(GesDiagnosticCodes.LinkInvalidProgram,
                                 $"Record-constructor bind id '{instruction.BindId}' was not found.", instruction.BindId.ToString());
                         }
 
                         AddCall(calls[routineIndex], recordEntry, entryIndexes);
                         break;
-                    case GameEventScriptBytecodeOpCode.CastCustom:
+                    case GesBytecodeOpCode.CastCustom:
                         var typeName = program.StringConstants.Resolve(instruction.SecondaryStringIndex);
                         if (recordEntriesByName.TryGetValue(typeName, out var castRecordEntry))
                         {
@@ -106,14 +106,14 @@ internal static class GesProgramCallGraphValidator
         new GesProgramResourceValidator(program, entries, entryIndexes, recordEntriesById, recordEntriesByName).Validate(completed);
     }
 
-    private static bool IsExecutableBind(GameEventScriptBinaryBindKind kind)
+    private static bool IsExecutableBind(GesBinaryBindKind kind)
         => kind is MessageHandler or MessageNameHandler or Function or Predicate or Record;
 
     private static void AddCall(List<int> calls, ushort targetAddress, IReadOnlyDictionary<ushort, int> entryIndexes)
     {
         if (!entryIndexes.TryGetValue(targetAddress, out var targetIndex))
         {
-            throw LinkError(GameEventScriptDiagnosticCodes.LinkInvalidProgram,
+            throw LinkError(GesDiagnosticCodes.LinkInvalidProgram,
                 $"Call target address '{targetAddress}' is not a routine entry point.", targetAddress.ToString());
         }
 
@@ -165,7 +165,7 @@ internal static class GesProgramCallGraphValidator
                 }
 
                 names[^1] = ResolveName(target, entries, entryNames);
-                throw LinkError(GameEventScriptDiagnosticCodes.LinkCyclicCallGraph,
+                throw LinkError(GesDiagnosticCodes.LinkCyclicCallGraph,
                     "Recursive calls are not allowed. Cyclic call path: " + string.Join(" -> ", names) + ".",
                     names[0]);
             }
@@ -181,6 +181,6 @@ internal static class GesProgramCallGraphValidator
         return entryNames.TryGetValue(entry, out var name) ? name : "@" + entry;
     }
 
-    private static GameEventScriptDynamicLinkException LinkError(string code, string message, string? symbol = null)
-        => new(new GameEventScriptDiagnostic(GameEventScriptDiagnosticPhase.Link, code, message, symbol));
+    private static GesDynamicLinkException LinkError(string code, string message, string? symbol = null)
+        => new(new GesDiagnostic(GesDiagnosticPhase.Link, code, message, symbol));
 }

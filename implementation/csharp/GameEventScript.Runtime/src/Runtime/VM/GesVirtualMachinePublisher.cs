@@ -4,19 +4,19 @@
 using System;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime.VM;
 
 internal static class GesVirtualMachinePublisher
 {
-    internal static bool Send(this GesVirtualMachine vm, GameEventScriptBytecodeInstruction instruction, GameEventScriptContext context)
+    internal static bool Send(this GesVirtualMachine vm, GesBytecodeInstruction instruction, GesContext context)
     {
         long microseconds = 0;
-        if (instruction.OpCode is GameEventScriptBytecodeOpCode.EmitAfter or GameEventScriptBytecodeOpCode.PublishAfter)
+        if (instruction.OpCode is GesBytecodeOpCode.EmitAfter or GesBytecodeOpCode.PublishAfter)
         {
             var delay = vm.Register(instruction.BU);
-            if (delay.Kind is not (Integer or Float) || delay.Unit != GameEventScriptBytecodeInstructionUnit.UnitSecond) return false;
+            if (delay.Kind is not (Integer or Float) || delay.Unit != GesQuantityUnit.UnitSecond) return false;
             if (delay.Kind == Integer)
             {
                 if (delay.IntegerValue < 0 || delay.IntegerValue > long.MaxValue / 1_000_000) return false;
@@ -29,11 +29,11 @@ internal static class GesVirtualMachinePublisher
                 microseconds = (long)rounded;
             }
         }
-        var publish = instruction.OpCode is GameEventScriptBytecodeOpCode.PublishInstant or GameEventScriptBytecodeOpCode.PublishAfter;
-        var tags = (instruction.InstructionFlags & GameEventScriptInstructionFlag.WithTags) != 0;
+        var publish = instruction.OpCode is GesBytecodeOpCode.PublishInstant or GesBytecodeOpCode.PublishAfter;
+        var tags = (instruction.InstructionFlags & GesInstructionFlag.WithTags) != 0;
         try
         {
-            if ((instruction.InstructionFlags & GameEventScriptInstructionFlag.Indirect) != 0)
+            if ((instruction.InstructionFlags & GesInstructionFlag.Indirect) != 0)
             {
                 var message = vm.Register(instruction.XRegister);
                 return tags ? vm.GesVmPublishMessageValueWithTags(message, vm.Program.UInt16IndexLists.Resolve(instruction.AU), publish, context, microseconds)
@@ -45,7 +45,7 @@ internal static class GesVirtualMachinePublisher
         catch (ArgumentException) { return false; }
     }
 
-    internal static bool GesVmPublishMessage(this GesVirtualMachine vm, ushort outboundMessageSignatureIndex, GameEventScriptUInt16IndexList argumentRegisters, bool publish, GameEventScriptContext context, long? delay = null)
+    internal static bool GesVmPublishMessage(this GesVirtualMachine vm, ushort outboundMessageSignatureIndex, GesUInt16IndexList argumentRegisters, bool publish, GesContext context, long? delay = null)
     {
         if (outboundMessageSignatureIndex >= vm.OutboundMessageSignatures.Length) return false;
         var signature = vm.OutboundMessageSignatures[outboundMessageSignatureIndex];
@@ -53,10 +53,10 @@ internal static class GesVirtualMachinePublisher
 
         try
         {
-            GameEventScriptMessageArguments arguments;
+            GesMessageArguments arguments;
             if (argumentRegisters.Length == 0)
             {
-                arguments = GameEventScriptMessageArguments.Empty;
+                arguments = GesMessageArguments.Empty;
             }
             else
             {
@@ -66,7 +66,7 @@ internal static class GesVirtualMachinePublisher
                     values[index] = vm.Register(argumentRegisters[index]);
                 }
 
-                arguments = GameEventScriptMessageArguments.CreatePrecomputed(signature.ArgumentNames, values);
+                arguments = GesMessageArguments.CreatePrecomputed(signature.ArgumentNames, values);
             }
 
             var message = GameEventScriptMessage.CreatePrecomputed(signature.Name, arguments, signature.SignatureId);
@@ -80,10 +80,10 @@ internal static class GesVirtualMachinePublisher
     internal static bool GesVmPublishMessageWithTags(
         this GesVirtualMachine vm,
         ushort outboundMessageSignatureIndex,
-        GameEventScriptUInt16IndexList argumentRegisters,
-        GameEventScriptUInt16IndexList tagRegisters,
+        GesUInt16IndexList argumentRegisters,
+        GesUInt16IndexList tagRegisters,
         bool publish,
-        GameEventScriptContext context, long? delay = null)
+        GesContext context, long? delay = null)
     {
         if (outboundMessageSignatureIndex >= vm.OutboundMessageSignatures.Length) return false;
         var signature = vm.OutboundMessageSignatures[outboundMessageSignatureIndex];
@@ -97,10 +97,10 @@ internal static class GesVirtualMachinePublisher
 
         try
         {
-            GameEventScriptMessageArguments arguments;
+            GesMessageArguments arguments;
             if (argumentRegisters.Length == 0)
             {
-                arguments = GameEventScriptMessageArguments.Empty;
+                arguments = GesMessageArguments.Empty;
             }
             else
             {
@@ -110,7 +110,7 @@ internal static class GesVirtualMachinePublisher
                     values[index] = vm.Register(argumentRegisters[index]);
                 }
 
-                arguments = GameEventScriptMessageArguments.CreatePrecomputed(signature.ArgumentNames, values);
+                arguments = GesMessageArguments.CreatePrecomputed(signature.ArgumentNames, values);
             }
 
             var message = GameEventScriptMessage.CreatePrecomputedWithNormalizedTags(signature.Name, arguments, signature.SignatureId, tags.ToArrayOrEmpty());
@@ -121,7 +121,7 @@ internal static class GesVirtualMachinePublisher
             return false;
         }
     }
-    internal static bool GesVmPublishMessageValue(this GesVirtualMachine vm, in GesValue messageValue, bool publish, GameEventScriptContext context, long? delay = null)
+    internal static bool GesVmPublishMessageValue(this GesVirtualMachine vm, in GesValue messageValue, bool publish, GesContext context, long? delay = null)
     {
         if (messageValue.Kind is Message && messageValue.ObjectValue is GameEventScriptMessage msg)
         {
@@ -129,7 +129,7 @@ internal static class GesVirtualMachinePublisher
         }
         return false;
     }
-    internal static bool GesVmPublishMessageValueWithTags(this GesVirtualMachine vm, in GesValue messageValue, GameEventScriptUInt16IndexList tagRegisters, bool publish, GameEventScriptContext context, long? delay = null)
+    internal static bool GesVmPublishMessageValueWithTags(this GesVirtualMachine vm, in GesValue messageValue, GesUInt16IndexList tagRegisters, bool publish, GesContext context, long? delay = null)
     {
         if (messageValue.Kind is not Message || messageValue.ObjectValue is not GameEventScriptMessage msg) return false;
         var tags = new GameEventScriptTagBuffer(tagRegisters.Length);

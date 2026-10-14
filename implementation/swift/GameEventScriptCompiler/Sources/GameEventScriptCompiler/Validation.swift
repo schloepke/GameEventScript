@@ -82,7 +82,7 @@ extension GesCompiler {
             || records[type] != nil || catalog?.types.contains { $0.name == type } == true
     }
 
-    func validateType(_ type: String, _ location: GameEventScriptSourceLocation) throws {
+    func validateType(_ type: String, _ location: GesSourceLocation) throws {
         if !knownType(type) { throw error("validate.invalidTypeConstructor", location, symbol: type, kind: .type, message: "Unknown type ':\(type)' in this program.") }
     }
 
@@ -185,7 +185,7 @@ extension GesCompiler {
         case .constructor(let name, let args):
             if !["__split", "__splitWhitespace"].contains(name) { try validateType(name, e.location) }
             try arguments(args, name)
-            if ["record", "number", "range", "series", "message", "nothing", "percentage", "boolean", "text", "tag", "list", "map", "dice", "handler"].contains(name) && !GameEventScriptCompilerSupport.dataArguments(name, args.map(\.label)) {
+            if ["record", "number", "range", "series", "message", "nothing", "percentage", "boolean", "text", "tag", "list", "map", "dice", "handler"].contains(name) && !GesCompilerSupport.dataArguments(name, args.map(\.label)) {
                 throw error("validate.invalidTypeConstructor", e.location, symbol: name, kind: .type)
             }
             if ["vector", "point"].contains(name) {

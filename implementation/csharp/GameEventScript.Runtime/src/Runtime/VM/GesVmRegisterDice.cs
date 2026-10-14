@@ -9,7 +9,7 @@ internal static class GesVmRegisterDice
 {
     private static readonly int[] EmptyDice = [];
 
-    internal static void GesVmCreateDice(this GesVirtualMachine vm, ushort destinationRegister, short count, short sides, GameEventScriptContext context)
+    internal static void GesVmCreateDice(this GesVirtualMachine vm, ushort destinationRegister, short count, short sides, GesContext context)
     {
         if (count <= 0 || sides <= 0 || !context.RuntimeBudget.CheckDiceWithinLimit(count, sides))
         {

@@ -3,7 +3,7 @@
 
 extension GesVirtualMachine {
     @inline(never)
-    func executeOneRandom(_ destinationRegister: Int, _ sourceRegister: Int, _ context: GameEventScriptContext) {
+    func executeOneRandom(_ destinationRegister: Int, _ sourceRegister: Int, _ context: GesContext) {
         let destination = destinationRegister
         let x = frameStart + sourceRegister
         if registers[x].seriesValue != nil { return setNothing(destination) }

@@ -39,7 +39,7 @@ public sealed class GameEventScriptCompileCommandTests
         var result = Run("compile", "source file.ges");
         AssertSuccess(result);
         var bytes = File.ReadAllBytes(Path.Combine(_directory, "source file.gesb"));
-        var expected = GameEventScriptBuilder.Create().AddScript(Source, "source file.ges").Compile();
+        var expected = GesProgramBuilder.Create().AddScript(Source, "source file.ges").Compile();
         CollectionAssert.AreEqual(GameEventScriptProgramWriter.ToArray(expected), bytes);
         var program = GameEventScriptProgramReader.Read(bytes);
         Assert.IsNotNull(program.DebugSymbols);
@@ -60,7 +60,7 @@ public sealed class GameEventScriptCompileCommandTests
         host.Subscribe("Done", ["result", "text"], (message, _) => received = message.Arguments.GetAsInteger("result"));
         host.Load(program);
         Assert.IsTrue(host.Receive(GameEventScriptCSharpMessage.Create("Start", ("value", GesValue.GesInteger(41)))));
-        Assert.AreEqual(GameEventScriptExecutionState.Completed, host.RunToCompletion().State);
+        Assert.AreEqual(GesExecutionState.Completed, host.RunToCompletion().State);
         Assert.AreEqual(42L, received);
     }
 
@@ -75,7 +75,7 @@ public sealed class GameEventScriptCompileCommandTests
         AssertSuccess(Run("compile", option, "nested output/program.gesb", "--no-debug", "source.ges"));
         Assert.IsFalse(File.Exists(Path.Combine(_directory, "source.gesb")));
         var bytes = File.ReadAllBytes(Path.Combine(_directory, "nested output", "program.gesb"));
-        var expected = GameEventScriptBuilder.Create().AddScript(Source, "source.ges").WithDebugInfo(GameEventScriptDebugInfoOptions.None).Compile();
+        var expected = GesProgramBuilder.Create().AddScript(Source, "source.ges").WithDebugInfo(GesDebugInfoOptions.None).Compile();
         CollectionAssert.AreEqual(GameEventScriptProgramWriter.ToArray(expected), bytes);
         var program = GameEventScriptProgramReader.Read(bytes);
         Assert.IsNull(program.DebugSymbols);
@@ -97,7 +97,7 @@ public sealed class GameEventScriptCompileCommandTests
         AssertSuccess(Run("compile", "source.ges"));
         var updated = File.ReadAllBytes(outputPath);
         Assert.IsFalse(original.SequenceEqual(updated));
-        CollectionAssert.AreEqual(GameEventScriptProgramWriter.ToArray(GameEventScriptBuilder.Create().AddScript(changed, "source.ges").Compile()), updated);
+        CollectionAssert.AreEqual(GameEventScriptProgramWriter.ToArray(GesProgramBuilder.Create().AddScript(changed, "source.ges").Compile()), updated);
         Assert.IsEmpty(Directory.GetFiles(_directory, ".ges-*.tmp"));
     }
 
@@ -121,8 +121,8 @@ public sealed class GameEventScriptCompileCommandTests
         if (existingOutput) File.WriteAllBytes(outputPath, previous);
         var code = failure switch
         {
-            "parse" => GameEventScriptDiagnosticCodes.ParseSyntax,
-            "validate" => GameEventScriptDiagnosticCodes.ValidateDuplicateVariable,
+            "parse" => GesDiagnosticCodes.ParseSyntax,
+            "validate" => GesDiagnosticCodes.ValidateDuplicateVariable,
             "encoding" => "cli.invalidEncoding",
             _ => "cli.io"
         };
@@ -147,7 +147,7 @@ public sealed class GameEventScriptCompileCommandTests
         File.WriteAllText(Path.Combine(_directory, "source.ges"), "on Start {\n let alpha be 1\n let alpha be 2\n let beta be 1\n let beta be 2\n}");
         var result = Run("compile", "source.ges");
         Assert.AreEqual(1, result.ExitCode);
-        Assert.AreEqual(2, result.StandardError.Split(GameEventScriptDiagnosticCodes.ValidateDuplicateVariable, StringSplitOptions.None).Length - 1, result.StandardError);
+        Assert.AreEqual(2, result.StandardError.Split(GesDiagnosticCodes.ValidateDuplicateVariable, StringSplitOptions.None).Length - 1, result.StandardError);
         Assert.IsFalse(File.Exists(Path.Combine(_directory, "source.gesb")));
     }
 
@@ -220,7 +220,7 @@ public sealed class GameEventScriptCompileCommandTests
         File.WriteAllText(path, source);
         var result = Run("compile", "source.ges", "--no-debug", option);
         AssertSuccess(result);
-        var expected = GameEventScriptBuilder.Create().AddScript(source, "source.ges").WithDebugInfo(GameEventScriptDebugInfoOptions.None).Compile();
+        var expected = GesProgramBuilder.Create().AddScript(source, "source.ges").WithDebugInfo(GesDebugInfoOptions.None).Compile();
         var bytes = File.ReadAllBytes(Path.Combine(_directory, "source.gesb"));
         CollectionAssert.AreEqual(GameEventScriptProgramWriter.ToArray(expected), bytes);
         if (quiet) Assert.AreEqual(string.Empty, result.StandardOutput);
@@ -242,7 +242,7 @@ public sealed class GameEventScriptCompileCommandTests
         var failure = Run("compile", "source.ges", option);
         Assert.AreEqual(1, failure.ExitCode);
         Assert.AreEqual(string.Empty, failure.StandardOutput);
-        StringAssert.Contains(failure.StandardError, GameEventScriptDiagnosticCodes.ParseSyntax);
+        StringAssert.Contains(failure.StandardError, GesDiagnosticCodes.ParseSyntax);
         CollectionAssert.AreEqual(bytes, File.ReadAllBytes(Path.Combine(_directory, "source.gesb")));
     }
 
@@ -257,7 +257,7 @@ public sealed class GameEventScriptCompileCommandTests
         var result = Run("compile", "handlers.ges", "-o", "combined.gesb", "definitions.ges");
         AssertSuccess(result);
         var bytes = File.ReadAllBytes(Path.Combine(_directory, "combined.gesb"));
-        var expected = GameEventScriptBuilder.Create().AddScript(handlers, "handlers.ges").AddScript(definitions, "definitions.ges").Compile();
+        var expected = GesProgramBuilder.Create().AddScript(handlers, "handlers.ges").AddScript(definitions, "definitions.ges").Compile();
         CollectionAssert.AreEqual(GameEventScriptProgramWriter.ToArray(expected), bytes);
         var program = GameEventScriptProgramReader.Read(bytes);
         CollectionAssert.AreEqual(new[] { "handlers.ges", "definitions.ges" }, program.SourceArchive!.Sources.Select(source => source.SourceName).ToArray());
@@ -269,7 +269,7 @@ public sealed class GameEventScriptCompileCommandTests
         host.Subscribe("Second", ["result"], (message, _) => received.Add("second:" + message.Arguments.GetAsInteger("result")));
         host.Load(program);
         Assert.IsTrue(host.Receive(GameEventScriptCSharpMessage.Create("Start", ("value", GesValue.GesInteger(41)))));
-        Assert.AreEqual(GameEventScriptExecutionState.Completed, host.RunToCompletion().State);
+        Assert.AreEqual(GesExecutionState.Completed, host.RunToCompletion().State);
         CollectionAssert.AreEqual(new[] { "first:42", "second:42" }, received);
     }
 
@@ -312,9 +312,9 @@ public sealed class GameEventScriptCompileCommandTests
         Assert.AreEqual(string.Empty, result.StandardOutput);
         var code = failure switch
         {
-            "parse" => GameEventScriptDiagnosticCodes.ParseSyntax,
+            "parse" => GesDiagnosticCodes.ParseSyntax,
             "encoding" => "cli.invalidEncoding",
-            "module" => GameEventScriptDiagnosticCodes.ValidateInvalidIdentifierCase,
+            "module" => GesDiagnosticCodes.ValidateInvalidIdentifierCase,
             _ => "cli.io"
         };
         StringAssert.Contains(result.StandardError, code);

@@ -252,7 +252,11 @@ python3 scripts/port-performance-reference.py compare --port swift --runs 5 --re
 
 ### Phase 1 – Public API
 
-- [ ] Apply the prefix rule and the public mapping table in both ports.
+- [x] Rename public types per the prefix rule and the public mapping table in
+      both ports, snapshots, specs, guides and CHANGELOG. Deferred to the
+      structural steps below: Program Reader/Writer/Validator/Dumper, Message
+      JSON, and the Swift-only `GameEventScriptBinding`, `…BuildMetadata` and
+      `…SourceMap` (segment model). Bridge types follow in phase 2.
 - [ ] Builders: direct creation, `CreateBuilder()`/`makeBuilder()` conveniences,
       C# 14 for the Compiler project only, internal Host initializer in Swift.
 - [ ] Segment Program model in Swift; Reader/Writer/Validator/Dumper as Program

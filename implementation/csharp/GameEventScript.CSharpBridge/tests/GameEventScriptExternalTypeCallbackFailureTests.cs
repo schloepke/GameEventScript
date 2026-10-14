@@ -32,8 +32,8 @@ public sealed class GameEventScriptExternalTypeCallbackFailureTests
         var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(clrType);
         var valueExpression = readsField ? "sample.value" : "sample";
         var script = $"on Start {{ let sample be :{clrType.Name}(declared: {(declared ? "true" : "false")}); emit MustNotRun(value: {valueExpression}) }}\non Check {{ emit Done }}";
-        var program = GameEventScriptBuilder.Create().WithExternalTypeCatalog(registry).AddScript(script).Compile();
-        var diagnostics = new List<GameEventScriptDiagnostic>();
+        var program = GesProgramBuilder.Create().WithExternalTypeCatalog(registry).AddScript(script).Compile();
+        var diagnostics = new List<GesDiagnostic>();
         var emitted = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithExternalTypeRegistry(registry)
@@ -44,12 +44,12 @@ public sealed class GameEventScriptExternalTypeCallbackFailureTests
 
         var failed = host.RunToCompletion();
 
-        Assert.AreEqual(GameEventScriptExecutionState.RuntimeError, failed.State);
+        Assert.AreEqual(GesExecutionState.RuntimeError, failed.State);
         Assert.HasCount(1, diagnostics);
         Assert.AreSame(diagnostics[0], failed.Diagnostic);
         Assert.IsEmpty(emitted);
         var diagnostic = diagnostics[0];
-        Assert.AreEqual(GameEventScriptDiagnosticPhase.Runtime, diagnostic.Phase);
+        Assert.AreEqual(GesDiagnosticPhase.Runtime, diagnostic.Phase);
         Assert.AreEqual(program.ModuleName, diagnostic.ProgramName);
         Assert.AreEqual("Start()", diagnostic.HandlerName);
         if (declared)
@@ -61,7 +61,7 @@ public sealed class GameEventScriptExternalTypeCallbackFailureTests
         }
         else
         {
-            Assert.AreEqual(readsField ? GameEventScriptDiagnosticCodes.RuntimeExternalFieldAccessFailed : GameEventScriptDiagnosticCodes.RuntimeExternalConstructorFailed, diagnostic.Code);
+            Assert.AreEqual(readsField ? GesDiagnosticCodes.RuntimeExternalFieldAccessFailed : GesDiagnosticCodes.RuntimeExternalConstructorFailed, diagnostic.Code);
             Assert.AreEqual(readsField ? clrType.Name + ".value" : clrType.Name, diagnostic.Symbol);
             Assert.Contains("Unexpected callback failure.", diagnostic.TechnicalDetails!);
             Assert.Contains(nameof(ThrowCallbackFailure), diagnostic.TechnicalDetails!);
@@ -70,7 +70,7 @@ public sealed class GameEventScriptExternalTypeCallbackFailureTests
         Assert.DoesNotContain(nameof(System.Reflection.TargetInvocationException), diagnostic.TechnicalDetails!);
 
         Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Check")));
-        Assert.AreEqual(GameEventScriptExecutionState.Completed, host.RunToCompletion().State);
+        Assert.AreEqual(GesExecutionState.Completed, host.RunToCompletion().State);
         Assert.HasCount(1, diagnostics);
         Assert.HasCount(1, emitted);
         Assert.AreEqual("Done", emitted[0].Name);
@@ -83,7 +83,7 @@ public sealed class GameEventScriptExternalTypeCallbackFailureTests
     public void ApplicationReflectionWrapperRemainsAnUnexpectedFailure()
     {
         var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(NestedReflectionConstructor));
-        var program = GameEventScriptBuilder.Create().WithExternalTypeCatalog(registry)
+        var program = GesProgramBuilder.Create().WithExternalTypeCatalog(registry)
             .AddScript("module callbacks\non Start { let sample be :NestedReflectionConstructor(); emit MustNotRun(value: sample) }").Compile();
         var host = GameEventScriptHost.CreateBuilder().WithExternalTypeRegistry(registry).Build().StartForTest();
         host.Load(program);
@@ -91,12 +91,12 @@ public sealed class GameEventScriptExternalTypeCallbackFailureTests
 
         var result = host.RunToCompletion();
 
-        Assert.AreEqual(GameEventScriptExecutionState.RuntimeError, result.State);
+        Assert.AreEqual(GesExecutionState.RuntimeError, result.State);
         Assert.AreEqual(0, result.EmittedMessages);
-        Assert.AreEqual(GameEventScriptDiagnosticCodes.RuntimeExternalConstructorFailed, result.Diagnostic!.Code);
+        Assert.AreEqual(GesDiagnosticCodes.RuntimeExternalConstructorFailed, result.Diagnostic!.Code);
         Assert.AreEqual(nameof(NestedReflectionConstructor), result.Diagnostic.Symbol);
         Assert.Contains(nameof(System.Reflection.TargetInvocationException), result.Diagnostic.TechnicalDetails!);
-        Assert.Contains(nameof(GameEventScriptExtensionFaultException), result.Diagnostic.TechnicalDetails!);
+        Assert.Contains(nameof(GesExtensionFaultException), result.Diagnostic.TechnicalDetails!);
         Assert.Contains("Declared callback failure.", result.Diagnostic.TechnicalDetails!);
     }
 
@@ -112,7 +112,7 @@ public sealed class GameEventScriptExternalTypeCallbackFailureTests
     private static void ThrowCallbackFailure(bool declared)
     {
         if (declared)
-            throw new GameEventScriptExtensionFaultException("test.reflectionFault", "Declared callback failure.", "originalSymbol", new InvalidOperationException("Original inner cause."));
+            throw new GesExtensionFaultException("test.reflectionFault", "Declared callback failure.", "originalSymbol", new InvalidOperationException("Original inner cause."));
         throw new InvalidOperationException("Unexpected callback failure.");
     }
 
@@ -120,9 +120,9 @@ public sealed class GameEventScriptExternalTypeCallbackFailureTests
     private sealed class ThrowingConstructor
     {
         [GesConstruct]
-        public ThrowingConstructor([GesParam("declared", GameEventScriptBytecodeTypeKind.Boolean)] bool declared) => ThrowCallbackFailure(declared);
+        public ThrowingConstructor([GesParam("declared", GesBytecodeTypeKind.Boolean)] bool declared) => ThrowCallbackFailure(declared);
 
-        [GesField("declared", GameEventScriptBytecodeTypeKind.Boolean)]
+        [GesField("declared", GesBytecodeTypeKind.Boolean)]
         public bool Declared => false;
     }
 
@@ -132,13 +132,13 @@ public sealed class GameEventScriptExternalTypeCallbackFailureTests
         private ThrowingFactory() { }
 
         [GesConstruct]
-        public static ThrowingFactory Create([GesParam("declared", GameEventScriptBytecodeTypeKind.Boolean)] bool declared)
+        public static ThrowingFactory Create([GesParam("declared", GesBytecodeTypeKind.Boolean)] bool declared)
         {
             ThrowCallbackFailure(declared);
             return new ThrowingFactory();
         }
 
-        [GesField("declared", GameEventScriptBytecodeTypeKind.Boolean)]
+        [GesField("declared", GesBytecodeTypeKind.Boolean)]
         public bool Declared => false;
     }
 
@@ -146,12 +146,12 @@ public sealed class GameEventScriptExternalTypeCallbackFailureTests
     private sealed class ThrowingGetter
     {
         [GesConstruct]
-        public ThrowingGetter([GesParam("declared", GameEventScriptBytecodeTypeKind.Boolean)] bool declared) => Declared = declared;
+        public ThrowingGetter([GesParam("declared", GesBytecodeTypeKind.Boolean)] bool declared) => Declared = declared;
 
-        [GesField("declared", GameEventScriptBytecodeTypeKind.Boolean)]
+        [GesField("declared", GesBytecodeTypeKind.Boolean)]
         public bool Declared { get; }
 
-        [GesField("value", GameEventScriptBytecodeTypeKind.Float)]
+        [GesField("value", GesBytecodeTypeKind.Float)]
         public double Value
         {
             get

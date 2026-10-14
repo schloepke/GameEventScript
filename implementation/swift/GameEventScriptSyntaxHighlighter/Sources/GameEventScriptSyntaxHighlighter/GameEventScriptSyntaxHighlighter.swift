@@ -4,9 +4,9 @@
 import Foundation
 
 /// Reusable TextMate highlighting without a Compiler, Runtime, UI or terminal dependency. Matching uses Foundation internally.
-public final class GameEventScriptSyntaxHighlighter: Sendable {
+public final class GesSyntaxHighlighter: Sendable {
     /// The selected bundled grammar.
-    public let language: GameEventScriptSyntaxLanguage
+    public let language: GesSyntaxLanguage
     /// Maximum UTF-16 input length per call; larger inputs return an incomplete result.
     public let maxInputLength: Int
     private let roots: [Int]
@@ -14,8 +14,8 @@ public final class GameEventScriptSyntaxHighlighter: Sendable {
 
     /// Creates a highlighter with a cooperative 1000ms per-call matching budget.
     /// - Throws: `invalidInputLimit` if the bound is not positive. Foundation progress checks are not a hard real-time deadline.
-    public init(language: GameEventScriptSyntaxLanguage = .ges, maxInputLength: Int = 262_144) throws {
-        guard maxInputLength > 0 else { throw GameEventScriptHighlightingError.invalidInputLimit }
+    public init(language: GesSyntaxLanguage = .ges, maxInputLength: Int = 262_144) throws {
+        guard maxInputLength > 0 else { throw GesHighlightingError.invalidInputLimit }
         self.language = language
         self.maxInputLength = maxInputLength
         roots = language == .ges ? Grammar.shared.source : Grammar.shared.assembly
@@ -23,28 +23,28 @@ public final class GameEventScriptSyntaxHighlighter: Sendable {
     }
 
     /// Creates an empty, immutable line-boundary state that editors may retain.
-    public func createState() -> GameEventScriptHighlightState { .init(language: language, frames: []) }
+    public func createState() -> GesHighlightState { .init(language: language, frames: []) }
 
     /// Highlights a complete document, preserving CR, LF, CRLF and all UTF-16 offsets. Invalid code remains highlightable.
-    public func highlight(_ text: String) -> GameEventScriptHighlightResult { run(text, state: nil) }
+    public func highlight(_ text: String) -> GesHighlightResult { run(text, state: nil) }
 
     /// Highlights one line with an optional trailing CR, LF or CRLF; offsets are relative to this line.
     /// Supply the previous line's successful nextState and reprocess subsequent lines until text and state converge.
     /// - Throws: `expectedSingleLine` for interior line endings, or `incompatibleState` for a different grammar.
-    public func highlightLine(_ text: String, state: GameEventScriptHighlightState? = nil) throws -> GameEventScriptHighlightResult {
-        if let state, state.language != language { throw GameEventScriptHighlightingError.incompatibleState }
+    public func highlightLine(_ text: String, state: GesHighlightState? = nil) throws -> GesHighlightResult {
+        if let state, state.language != language { throw GesHighlightingError.incompatibleState }
         let source = text as NSString
         let content = source.substring(to: Self.contentLength(source))
-        if content.contains("\r") || content.contains("\n") { throw GameEventScriptHighlightingError.expectedSingleLine }
+        if content.contains("\r") || content.contains("\n") { throw GesHighlightingError.expectedSingleLine }
         return run(text, state: state)
     }
 
-    private func run(_ text: String, state: GameEventScriptHighlightState?) -> GameEventScriptHighlightResult {
+    private func run(_ text: String, state: GesHighlightState?) -> GesHighlightResult {
         guard text.utf16.count <= maxInputLength else { return .init(spans: [], nextState: nil) }
         let deadline = ProcessInfo.processInfo.systemUptime + 1.0
         let source = text as NSString
         var frames = state?.frames ?? []
-        var spans: [GameEventScriptHighlightSpan] = []
+        var spans: [GesHighlightSpan] = []
         var start = 0
         repeat {
             var end = start
@@ -61,7 +61,7 @@ public final class GameEventScriptSyntaxHighlighter: Sendable {
         return .init(spans: spans, nextState: .init(language: language, frames: frames))
     }
 
-    private func line(_ text: String, offset: Int, frames: inout [Int], spans: inout [GameEventScriptHighlightSpan], deadline: Double) -> Bool {
+    private func line(_ text: String, offset: Int, frames: inout [Int], spans: inout [GesHighlightSpan], deadline: Double) -> Bool {
         let source = text as NSString
         let length = Self.contentLength(source)
         let content = source.substring(to: length)
@@ -134,7 +134,7 @@ public final class GameEventScriptSyntaxHighlighter: Sendable {
         return scopes
     }
 
-    private static func emit(_ spans: inout [GameEventScriptHighlightSpan], _ offset: Int, _ match: NSTextCheckingResult, _ scopes: [String], _ captures: [CaptureRule]) {
+    private static func emit(_ spans: inout [GesHighlightSpan], _ offset: Int, _ match: NSTextCheckingResult, _ scopes: [String], _ captures: [CaptureRule]) {
         let groups = captures.compactMap { capture -> (NSRange, String, Int)? in
             guard capture.group < match.numberOfRanges else { return nil }
             let range = match.range(at: capture.group)
@@ -149,7 +149,7 @@ public final class GameEventScriptSyntaxHighlighter: Sendable {
         }
     }
 
-    private static func add(_ spans: inout [GameEventScriptHighlightSpan], _ start: Int, _ length: Int, _ scopes: [String]) {
+    private static func add(_ spans: inout [GesHighlightSpan], _ start: Int, _ length: Int, _ scopes: [String]) {
         guard length > 0 else { return }
         if let previous = spans.last, previous.start + previous.length == start, previous.scopes == scopes {
             spans[spans.count - 1] = .init(previous.start, previous.length + length, scopes)

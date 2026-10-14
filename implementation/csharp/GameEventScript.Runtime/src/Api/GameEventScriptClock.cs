@@ -6,13 +6,13 @@ using System.Diagnostics;
 namespace GameEventScript.Api;
 
 /// <summary>Supplies monotonic elapsed time to a serial host. Implementations must never move backwards.</summary>
-public interface IGameEventScriptClock
+public interface IGesClock
 {
     /// <summary>Gets nonnegative elapsed whole microseconds from a stable, clock-local origin.</summary>
     long ElapsedMicroseconds { get; }
 }
 
-internal sealed class GameEventScriptSystemClock : IGameEventScriptClock
+internal sealed class GameEventScriptSystemClock : IGesClock
 {
     private readonly long _origin = Stopwatch.GetTimestamp();
     /// <inheritdoc />

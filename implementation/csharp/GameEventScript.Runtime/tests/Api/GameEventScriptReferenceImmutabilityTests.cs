@@ -14,14 +14,14 @@ public sealed class GameEventScriptReferenceImmutabilityTests
     public void ExtensionLabelsRemainConsistentWithTheirSignature(bool enumerableOnly)
     {
         var input = new[] { "first", "second" };
-        var reference = new GameEventScriptExtensionReference("test", "combine", enumerableOnly ? input.Select(label => label) : input);
+        var reference = new GesExtensionReference("test", "combine", enumerableOnly ? input.Select(label => label) : input);
         input[0] = "changed";
 
         CollectionMutationProbe.ReplaceFirstIfWritable(reference.ArgumentLabels, "changed");
 
         CollectionAssert.AreEqual(new[] { "first", "second" }, reference.ArgumentLabels.ToArray());
         Assert.AreEqual("test.combine(first,second)", reference.SignatureId);
-        Assert.AreEqual(reference.SignatureId, new GameEventScriptExtensionReference(reference.ExtensionName, reference.FunctionName, reference.ArgumentLabels).SignatureId);
+        Assert.AreEqual(reference.SignatureId, new GesExtensionReference(reference.ExtensionName, reference.FunctionName, reference.ArgumentLabels).SignatureId);
     }
 
     [TestMethod]
@@ -30,13 +30,13 @@ public sealed class GameEventScriptReferenceImmutabilityTests
     public void ConstructorLabelsRemainConsistentWithTheirSignature(bool enumerableOnly)
     {
         var input = new[] { "first", "second" };
-        var reference = new GameEventScriptExternalTypeConstructorReference("Sample", enumerableOnly ? input.Select(label => label) : input);
+        var reference = new GesExternalTypeConstructorReference("Sample", enumerableOnly ? input.Select(label => label) : input);
         input[0] = "changed";
 
         CollectionMutationProbe.ReplaceFirstIfWritable(reference.ArgumentLabels, "changed");
 
         CollectionAssert.AreEqual(new[] { "first", "second" }, reference.ArgumentLabels.ToArray());
         Assert.AreEqual("Sample(first,second)", reference.SignatureId);
-        Assert.AreEqual(reference.SignatureId, GameEventScriptExternalTypeConstructorReference.CreateSignatureId(reference.TypeName, reference.ArgumentLabels));
+        Assert.AreEqual(reference.SignatureId, GesExternalTypeConstructorReference.CreateSignatureId(reference.TypeName, reference.ArgumentLabels));
     }
 }

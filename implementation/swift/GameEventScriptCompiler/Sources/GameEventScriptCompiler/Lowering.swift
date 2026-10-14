@@ -179,9 +179,9 @@ extension GesCompiler {
             if let opcode = mapping[op] {
                 if op == "*" && !knownNonList(left, r, scope) && !knownNonList(right, r, scope) {
                     let check = r.temporary()
-                    r.emit(.checkType, check, a, Int(GameEventScriptBytecodeTypeKind.list.rawValue))
+                    r.emit(.checkType, check, a, Int(GesBytecodeTypeKind.list.rawValue))
                     let first = r.emit(.jumpIfNotTrue, 0, check)
-                    r.emit(.checkType, check, b, Int(GameEventScriptBytecodeTypeKind.list.rawValue))
+                    r.emit(.checkType, check, b, Int(GesBytecodeTypeKind.list.rawValue))
                     let second = r.emit(.jumpIfNotTrue, 0, check)
                     r.emit(.cartesian, d, a, b)
                     let done = r.emit(.jump)

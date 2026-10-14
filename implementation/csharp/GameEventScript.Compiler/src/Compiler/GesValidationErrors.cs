@@ -10,18 +10,18 @@ namespace GameEventScript.Compiler;
 
 internal sealed class GesValidationErrors
 {
-    private readonly List<GameEventScriptDiagnostic> _errors = [];
+    private readonly List<GesDiagnostic> _errors = [];
 
     public int Count => _errors.Count;
 
-    public void Add(ParsedScript? module, string message, string symbol, GameEventScriptSymbolKind symbolKind, string code, ScriptNode? sourceNode = null)
+    public void Add(ParsedScript? module, string message, string symbol, GesSymbolKind symbolKind, string code, ScriptNode? sourceNode = null)
     {
         var moduleName = string.IsNullOrWhiteSpace(module?.ModuleName) ? "UnknownModule" : module.ModuleName;
         var sourceName = string.IsNullOrWhiteSpace(module?.SourceName) ? "UnknownSource" : module.SourceName;
         var resolvedSourceNode = sourceNode ?? FindSourceNode(module, symbol, symbolKind);
         var sourceLocation = resolvedSourceNode?.SourceRange ??
                              module?.SourceRange ??
-                             new GameEventScriptSourceLocation(sourceName, ModuleName: moduleName);
+                             new GesSourceLocation(sourceName, ModuleName: moduleName);
 
         if (string.IsNullOrWhiteSpace(sourceLocation.ModuleName) ||
             string.Equals(sourceLocation.ModuleName, "UnknownModule", StringComparison.Ordinal))
@@ -35,8 +35,8 @@ internal sealed class GesValidationErrors
             sourceLocation = sourceLocation with { SourceName = sourceName };
         }
 
-        _errors.Add(new GameEventScriptDiagnostic(
-            GameEventScriptDiagnosticPhase.Validate,
+        _errors.Add(new GesDiagnostic(
+            GesDiagnosticPhase.Validate,
             code,
             message,
             string.IsNullOrEmpty(symbol) ? null : symbol,
@@ -49,11 +49,11 @@ internal sealed class GesValidationErrors
     {
         if (_errors.Count > 0)
         {
-            throw new GameEventScriptCompileException(_errors);
+            throw new GesCompileException(_errors);
         }
     }
 
-    private static ScriptNode? FindSourceNode(ParsedScript? module, string symbol, GameEventScriptSymbolKind symbolKind)
+    private static ScriptNode? FindSourceNode(ParsedScript? module, string symbol, GesSymbolKind symbolKind)
     {
         if (module is null)
         {
@@ -62,15 +62,15 @@ internal sealed class GesValidationErrors
 
         return symbolKind switch
         {
-            GameEventScriptSymbolKind.Type => FindTypeDefinition(module.TypeDefinitions, symbol),
-            GameEventScriptSymbolKind.Predicate => FindPredicateDefinition(module.PredicateDefinitions, symbol),
-            GameEventScriptSymbolKind.Function => FindFunctionDefinition(module.FunctionDefinitions, symbol),
-            GameEventScriptSymbolKind.Handler => FindHandler(module.Handlers, symbol) ??
+            GesSymbolKind.Type => FindTypeDefinition(module.TypeDefinitions, symbol),
+            GesSymbolKind.Predicate => FindPredicateDefinition(module.PredicateDefinitions, symbol),
+            GesSymbolKind.Function => FindFunctionDefinition(module.FunctionDefinitions, symbol),
+            GesSymbolKind.Handler => FindHandler(module.Handlers, symbol) ??
                                                  FindNodeInModule(module, symbol),
-            GameEventScriptSymbolKind.Message => FindHandler(module.Handlers, symbol) ??
+            GesSymbolKind.Message => FindHandler(module.Handlers, symbol) ??
                                                  FindNodeInModule(module, symbol),
-            GameEventScriptSymbolKind.Variable => FindVariableNode(module, symbol),
-            GameEventScriptSymbolKind.GlobalDefinition => FindPredicateDefinition(module.PredicateDefinitions, symbol) ??
+            GesSymbolKind.Variable => FindVariableNode(module, symbol),
+            GesSymbolKind.GlobalDefinition => FindPredicateDefinition(module.PredicateDefinitions, symbol) ??
                                                           FindFunctionDefinition(module.FunctionDefinitions, symbol) ??
                                                           FindConstantDefinition(module.ConstantDefinitions, symbol) ??
                                                           FindNodeInModule(module, symbol),

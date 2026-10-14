@@ -13,7 +13,7 @@ final class RunSession {
     let options: RunOptions
     var messages = 0, opcodes = 0, emits = 0, publishes = 0
 
-    init(options: RunOptions, io: ToolIO, nextID: Int = 1, workspace: RunWorkspace? = nil, profiler: (any GameEventScriptProfiler)? = nil) throws {
+    init(options: RunOptions, io: ToolIO, nextID: Int = 1, workspace: RunWorkspace? = nil, profiler: (any GesProfiler)? = nil) throws {
         self.workspace = workspace ?? RunWorkspace()
         self.options = options
         self.io = io
@@ -95,7 +95,7 @@ final class RunSession {
     func summary() { io.line("Run completed: \(messages) messages, \(opcodes) opcodes, \(emits) emits, \(publishes) publishes.", toError: true) }
 }
 
-final class RunObserver: GameEventScriptRuntimeObserver {
+final class RunObserver: GesRuntimeObserver {
     let io: ToolIO
     let options: RunOptions
     private lazy var highlighting = Highlighting()
@@ -115,7 +115,7 @@ final class RunObserver: GameEventScriptRuntimeObserver {
 
     func messageEmitted(_ message: GameEventScriptMessage, accepted: Bool) { trace("emit " + format(message) + (accepted ? "" : " [not queued]")) }
 
-    func messagePublished(_ message: GameEventScriptMessage, result: GameEventScriptPublishResult) { trace("publish " + format(message) + (result.localAccepted ? "" : " [not queued]")) }
+    func messagePublished(_ message: GameEventScriptMessage, result: GesPublishResult) { trace("publish " + format(message) + (result.localAccepted ? "" : " [not queued]")) }
 
     func dispatchStarted(_ message: GameEventScriptMessage, signatureID: String) { trace("dispatch \(signatureID) <- " + format(message)) }
 
@@ -124,7 +124,7 @@ final class RunObserver: GameEventScriptRuntimeObserver {
         io.line("error cli.runtimeLimit: \(limitName)=\(limit): \(detail)", toError: true)
     }
 
-    func runtimeError(_ diagnostic: GameEventScriptDiagnostic) {
+    func runtimeError(_ diagnostic: GesDiagnostic) {
         failed = true
         io.diagnostic(diagnostic, fallback: "runtime")
     }
@@ -149,17 +149,17 @@ final class RunObserver: GameEventScriptRuntimeObserver {
         io.line(options.color && error ? Highlighting.paint(text, 31) : text, toError: error)
     }
 
-    private struct ConsoleHandler: GameEventScriptNativeMessageHandler {
+    private struct ConsoleHandler: GesNativeMessageHandler {
         let observer: RunObserver
         let error: Bool
 
-        func handle(_ message: GameEventScriptMessage, context: GameEventScriptContext) throws { observer.console(message, error: error) }
+        func handle(_ message: GameEventScriptMessage, context: GesContext) throws { observer.console(message, error: error) }
     }
 
-    private struct ErrorCodeHandler: GameEventScriptNativeMessageHandler {
+    private struct ErrorCodeHandler: GesNativeMessageHandler {
         let observer: RunObserver
 
-        func handle(_ message: GameEventScriptMessage, context: GameEventScriptContext) throws {
+        func handle(_ message: GameEventScriptMessage, context: GesContext) throws {
             guard message.arguments.count == 1, ["code", "_"].contains(message.arguments.nameAt(0)) else { throw try invalid() }
             let value = message.arguments[0]
             if value.kind == .nothing {
@@ -171,7 +171,7 @@ final class RunObserver: GameEventScriptRuntimeObserver {
             observer.exitCode = Int(number)
         }
 
-        private func invalid() throws -> GameEventScriptExtensionFault { try .init(code: "cli.errorCodeArgument", message: "ErrorCode requires one code argument: a unitless integer from 0 to 255, or nothing.") }
+        private func invalid() throws -> GesExtensionFaultError { try .init(code: "cli.errorCodeArgument", message: "ErrorCode requires one code argument: a unitless integer from 0 to 255, or nothing.") }
     }
 }
 

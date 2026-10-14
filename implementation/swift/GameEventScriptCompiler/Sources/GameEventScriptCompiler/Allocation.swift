@@ -3,7 +3,7 @@
 
 @_spi(Compiler) import GameEventScriptRuntime
 
-extension GameEventScriptBytecodeInstruction {
+extension GesBytecodeInstruction {
     var fields: [UInt16] { [word0, word1, word2, a, b, c, d] }
 
     func replacing(_ fields: [UInt16]) -> Self {
@@ -16,8 +16,8 @@ extension GesCompiler {
         var intervals: [Int: (Int, Int)] = [:]
         for (index, instruction) in routine.code.enumerated() {
             let fields = instruction.fields
-            var registers = GameEventScriptCompilerSupport.registerSlots(instruction).map { Int(fields[$0]) }
-            for slot in GameEventScriptCompilerSupport.listSlots(instruction, text: false) { registers += lists[Int(fields[slot])].map(Int.init) }
+            var registers = GesCompilerSupport.registerSlots(instruction).map { Int(fields[$0]) }
+            for slot in GesCompilerSupport.listSlots(instruction, text: false) { registers += lists[Int(fields[slot])].map(Int.init) }
             for register in registers { intervals[register] = (intervals[register]?.0 ?? index, index) }
         }
         // Keep values entering a loop alive through its back edge: a later iteration
@@ -57,8 +57,8 @@ extension GesCompiler {
         for index in routine.code.indices {
             let instruction = routine.code[index]
             var fields = instruction.fields
-            for slot in GameEventScriptCompilerSupport.registerSlots(instruction) { fields[slot] = UInt16(mapping[Int(fields[slot])]!) }
-            for slot in GameEventScriptCompilerSupport.listSlots(instruction, text: false) { fields[slot] = UInt16(list(lists[Int(fields[slot])].map { mapping[Int($0)]! })) }
+            for slot in GesCompilerSupport.registerSlots(instruction) { fields[slot] = UInt16(mapping[Int(fields[slot])]!) }
+            for slot in GesCompilerSupport.listSlots(instruction, text: false) { fields[slot] = UInt16(list(lists[Int(fields[slot])].map { mapping[Int($0)]! })) }
             routine.code[index] = instruction.replacing(fields)
         }
         routine.symbols = routine.symbols.map { ($0.0, mapping[$0.1]!, $0.2, $0.3) }

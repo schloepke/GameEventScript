@@ -3,7 +3,7 @@
 
 extension GesVirtualMachine {
     @inline(never)
-    func executeOneWeighted(_ destinationRegister: Int, _ sourceRegister: Int, _ otherRegister: Int, _ context: GameEventScriptContext) {
+    func executeOneWeighted(_ destinationRegister: Int, _ sourceRegister: Int, _ otherRegister: Int, _ context: GesContext) {
         let destination = destinationRegister
         let x = frameStart + sourceRegister
         let y = frameStart + otherRegister

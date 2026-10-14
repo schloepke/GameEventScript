@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// An immutable message identity: its name and ordered external argument labels.
-public struct GameEventScriptMessageSignature: Hashable, CustomStringConvertible, Sendable {
+public struct GesMessageSignature: Hashable, CustomStringConvertible, Sendable {
     let storage: GesSignatureStorage
 
     init(storage: GesSignatureStorage) { self.storage = storage }
@@ -11,7 +11,7 @@ public struct GameEventScriptMessageSignature: Hashable, CustomStringConvertible
     public static let unlabeledParameterName = "_"
 
     /// An empty identity that cannot construct or match a concrete message.
-    public static let empty = GameEventScriptMessageSignature(normalizedName: "", parameters: [])
+    public static let empty = GesMessageSignature(normalizedName: "", parameters: [])
 
     /// The normalized message name.
     public var name: String { storage.name }
@@ -30,7 +30,7 @@ public struct GameEventScriptMessageSignature: Hashable, CustomStringConvertible
         labels.reserveCapacity(parameters.count)
         for parameter in parameters {
             let label = try Self.normalizeParameterName(parameter)
-            if label != Self.unlabeledParameterName && labels.contains(label) { throw GameEventScriptMessageError.duplicateArgumentName }
+            if label != Self.unlabeledParameterName && labels.contains(label) { throw GesMessageError.duplicateArgumentName }
             labels.append(label)
         }
         self.init(normalizedName: normalizedName, parameters: labels)
@@ -41,7 +41,7 @@ public struct GameEventScriptMessageSignature: Hashable, CustomStringConvertible
     public static func normalizeMessageName(_ name: String?) throws -> String {
         let normalized = MessageNames.trim(name ?? "")
         if normalized.isEmpty || normalized == "initialization" || normalized == "undeliverable" { return normalized }
-        guard GesText.isUpperName(normalized) else { throw GameEventScriptMessageError.invalidName }
+        guard GesText.isUpperName(normalized) else { throw GesMessageError.invalidName }
         return normalized
     }
 
@@ -50,7 +50,7 @@ public struct GameEventScriptMessageSignature: Hashable, CustomStringConvertible
     public static func normalizeParameterName(_ name: String?) throws -> String {
         let normalized = MessageNames.trim(name ?? "")
         if normalized.isEmpty || normalized == unlabeledParameterName { return unlabeledParameterName }
-        guard GesText.isLowerName(normalized) else { throw GameEventScriptMessageError.invalidParameterName }
+        guard GesText.isLowerName(normalized) else { throw GesMessageError.invalidParameterName }
         return normalized
     }
 
@@ -68,12 +68,12 @@ public struct GameEventScriptMessageSignature: Hashable, CustomStringConvertible
     /// Binds ordered values to this signature, or returns nil for an empty name or wrong arity.
     public func createMessage(_ arguments: [GesValue]) -> GameEventScriptMessage? {
         guard !name.isEmpty, arguments.count == parameters.count else { return nil }
-        return GameEventScriptMessage(normalizedName: name, arguments: GameEventScriptMessageArguments(normalizedNames: parameters, values: arguments), signatureId: signatureId, normalizedTags: [])
+        return GameEventScriptMessage(normalizedName: name, arguments: GesMessageArguments(normalizedNames: parameters, values: arguments), signatureId: signatureId, normalizedTags: [])
     }
 
     /// Binds ordered values to this signature, throwing when a concrete message cannot be created.
     public func withArguments(_ arguments: [GesValue]) throws -> GameEventScriptMessage {
-        guard let message = createMessage(arguments) else { throw GameEventScriptMessageError.argumentCountMismatch }
+        guard let message = createMessage(arguments) else { throw GesMessageError.argumentCountMismatch }
         return message
     }
 

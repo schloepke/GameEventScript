@@ -6,7 +6,7 @@ namespace GameEventScript.Api;
 /// <summary>
 /// Identifies why a synchronous host pump returned.
 /// </summary>
-public enum GameEventScriptExecutionState
+public enum GesExecutionState
 {
     /// <summary>
     /// The frame opcode budget ended while work remains.
@@ -31,12 +31,12 @@ public enum GameEventScriptExecutionState
 /// <summary>
 /// Provides an allocation-free summary of one host pump.
 /// </summary>
-public readonly struct GameEventScriptExecutionResult(GameEventScriptExecutionState state, int executedOpcodes, int processedMessages, int emittedMessages, int publishedMessages, GameEventScriptDiagnostic? diagnostic = null)
+public readonly struct GesExecutionResult(GesExecutionState state, int executedOpcodes, int processedMessages, int emittedMessages, int publishedMessages, GesDiagnostic? diagnostic = null)
 {
     /// <summary>
     /// Gets the reason the pump returned.
     /// </summary>
-    public GameEventScriptExecutionState State { get; } = state;
+    public GesExecutionState State { get; } = state;
     /// <summary>
     /// Gets the number of script opcodes executed by this pump.
     /// </summary>
@@ -56,5 +56,5 @@ public readonly struct GameEventScriptExecutionResult(GameEventScriptExecutionSt
     /// <summary>
     /// Gets the first structured runtime diagnostic reported by this pump, if any.
     /// </summary>
-    public GameEventScriptDiagnostic? Diagnostic { get; } = diagnostic;
+    public GesDiagnostic? Diagnostic { get; } = diagnostic;
 }

@@ -21,7 +21,7 @@ tools (since 0.3.0) are separate from these library packages; see [CLI installat
 
 For precompiled `.gesb` execution, reference Runtime and optionally CSharpBridge.
 Source compilation additionally requires Compiler. The direct entry points are
-`GameEventScriptBuilder.Create()` for compilation and
+`GesProgramBuilder.Create()` for compilation and
 `GameEventScriptHost.CreateBuilder()` for host construction.
 File reading belongs to the CLI or embedding, which supplies text through
 `AddScript(text, sourceName)`; the previous Bridge `AddFile` helper is removed.

@@ -26,10 +26,10 @@ namespace GameEventScript.Api;
 /// The name of the GameEventScript module where the location resides. Defaults to "UnknownModule" if not explicitly provided.
 /// </param>
 /// <param name="SourceId">The stable compiler-input identifier, when the location originated from a compiled source document.</param>
-public sealed record GameEventScriptSourceLocation(string SourceName, int? Line = null, int? Column = null, int? EndLine = null, int? EndColumn = null, string ModuleName = "UnknownModule", uint? SourceId = null)
+public sealed record GesSourceLocation(string SourceName, int? Line = null, int? Column = null, int? EndLine = null, int? EndColumn = null, string ModuleName = "UnknownModule", uint? SourceId = null)
 {
     /// <summary>
-    /// Returns a string representation of the GameEventScriptSourceLocation object, including the module name,
+    /// Returns a string representation of the GesSourceLocation object, including the module name,
     /// source name, and optionally, line and column information. If the location spans multiple
     /// lines or columns, the range is included.
     /// </summary>

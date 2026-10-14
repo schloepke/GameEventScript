@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Optional source span; lines and columns are one-based, source IDs identify compiler inputs.
-public struct GameEventScriptSourceLocation: Sendable {
+public struct GesSourceLocation: Sendable {
     /// Display name of the compiler input.
     public let sourceName: String
     /// One-based start line when known.

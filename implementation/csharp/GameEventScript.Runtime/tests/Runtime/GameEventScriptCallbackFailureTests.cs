@@ -39,7 +39,7 @@ public sealed class GameEventScriptCallbackFailureTests
     {
         var definition = FaultyDefinition();
         var constructor = new DelegateExternalTypeConstructor(definition.Constructors[0],
-            _ => throw new GameEventScriptExtensionFaultException("faulty.outOfStock", "No stock left."));
+            _ => throw new GesExtensionFaultException("faulty.outOfStock", "No stock left."));
         var host = BuildHost(definition, constructor, "on Start { let sample be :Faulty(); emit Done(sample: sample) }", out var diagnostics);
 
         Assert.IsTrue(host.Receive(Create("Start")));
@@ -47,7 +47,7 @@ public sealed class GameEventScriptCallbackFailureTests
 
         Assert.HasCount(1, diagnostics);
         // This non-normative CLR fallback is intentionally excluded from Markdown expectations.
-        Assert.AreEqual(nameof(GameEventScriptExtensionFaultException), diagnostics[0].TechnicalDetails);
+        Assert.AreEqual(nameof(GesExtensionFaultException), diagnostics[0].TechnicalDetails);
     }
 
     [TestMethod]
@@ -68,7 +68,7 @@ public sealed class GameEventScriptCallbackFailureTests
 
     [TestMethod]
     public void ExtensionFaultExceptionRejectsTheReservedRuntimePrefix()
-        => Assert.ThrowsExactly<ArgumentException>(() => new GameEventScriptExtensionFaultException("runtime.custom", "boom"));
+        => Assert.ThrowsExactly<ArgumentException>(() => new GesExtensionFaultException("runtime.custom", "boom"));
 
     [TestMethod]
     [DataRow("")]
@@ -77,7 +77,7 @@ public sealed class GameEventScriptCallbackFailureTests
     [DataRow("\u00a0")]
     public void ExtensionFaultExceptionRejectsBlankCodes(string code)
     {
-        var exception = Assert.ThrowsExactly<ArgumentException>(() => new GameEventScriptExtensionFaultException(code, "boom"));
+        var exception = Assert.ThrowsExactly<ArgumentException>(() => new GesExtensionFaultException(code, "boom"));
         Assert.AreEqual("code", exception.ParamName);
     }
 
@@ -86,7 +86,7 @@ public sealed class GameEventScriptCallbackFailureTests
     [DataRow("test.fault", null, "message")]
     public void ExtensionFaultExceptionRejectsNullArguments(string? code, string? message, string parameter)
     {
-        var exception = Assert.ThrowsExactly<ArgumentNullException>(() => new GameEventScriptExtensionFaultException(code!, message!));
+        var exception = Assert.ThrowsExactly<ArgumentNullException>(() => new GesExtensionFaultException(code!, message!));
         Assert.AreEqual(parameter, exception.ParamName);
     }
 
@@ -95,16 +95,16 @@ public sealed class GameEventScriptCallbackFailureTests
     [DataRow("reported.program", "Reported()")]
     public void NativeDiagnosticTransportPreservesIdentityAndOriginalObject(string? programName, string? handlerName)
     {
-        var original = new GameEventScriptDiagnostic(GameEventScriptDiagnosticPhase.Runtime, "faulty.native", "Reported failure.", Symbol: "origin", ProgramName: programName, HandlerName: handlerName, TechnicalDetails: "Original details.");
+        var original = new GesDiagnostic(GesDiagnosticPhase.Runtime, "faulty.native", "Reported failure.", Symbol: "origin", ProgramName: programName, HandlerName: handlerName, TechnicalDetails: "Original details.");
         var unchanged = original with { };
-        var diagnostics = new List<GameEventScriptDiagnostic>();
+        var diagnostics = new List<GesDiagnostic>();
         var host = GameEventScriptHost.CreateBuilder().WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(runtimeError: diagnostics.Add)).Build().StartForTest();
         host.Subscribe("Start", [], (_, _) => throw new ReportedRuntimeException(original));
         Assert.IsTrue(host.Receive(Create("Start")));
 
         var result = host.RunToCompletion();
 
-        Assert.AreEqual(GameEventScriptExecutionState.RuntimeError, result.State);
+        Assert.AreEqual(GesExecutionState.RuntimeError, result.State);
         Assert.HasCount(1, diagnostics);
         Assert.AreSame(diagnostics[0], result.Diagnostic);
         Assert.AreEqual(unchanged, original);
@@ -113,9 +113,9 @@ public sealed class GameEventScriptCallbackFailureTests
     [TestMethod]
     public void VmBeginFailureReportsHostContextAndResetsTheVm()
     {
-        var diagnostics = new List<GameEventScriptDiagnostic>();
+        var diagnostics = new List<GesDiagnostic>();
         var host = GameEventScriptHost.CreateBuilder().WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(runtimeError: diagnostics.Add)).Build().StartForTest();
-        host.Load(GameEventScriptBuilder.Create().AddScript("module callbacks\non Start {}").Compile());
+        host.Load(GesProgramBuilder.Create().AddScript("module callbacks\non Start {}").Compile());
         host.RunToCompletion();
         // Force the internal Begin guard before the VM has its own handler context.
         host.VirtualMachine!.State = GesVirtualMachine.StateValue.Processing;
@@ -123,15 +123,15 @@ public sealed class GameEventScriptCallbackFailureTests
 
         var result = host.RunToCompletion();
 
-        Assert.AreEqual(GameEventScriptExecutionState.RuntimeError, result.State);
+        Assert.AreEqual(GesExecutionState.RuntimeError, result.State);
         Assert.HasCount(1, diagnostics);
         Assert.AreSame(diagnostics[0], result.Diagnostic);
-        Assert.AreEqual(GameEventScriptDiagnosticCodes.RuntimeVmStateConflict, diagnostics[0].Code);
+        Assert.AreEqual(GesDiagnosticCodes.RuntimeVmStateConflict, diagnostics[0].Code);
         Assert.AreEqual("callbacks", diagnostics[0].ProgramName);
         Assert.AreEqual("Start()", diagnostics[0].HandlerName);
         Assert.AreEqual(GesVirtualMachine.StateValue.Ready, host.VirtualMachine.State);
         Assert.IsTrue(host.Receive(Create("Start")));
-        Assert.AreEqual(GameEventScriptExecutionState.Completed, host.RunToCompletion().State);
+        Assert.AreEqual(GesExecutionState.Completed, host.RunToCompletion().State);
         Assert.HasCount(1, diagnostics);
     }
 
@@ -140,7 +140,7 @@ public sealed class GameEventScriptCallbackFailureTests
     [DataRow("reported.program", "Reported()")]
     public void CallbackDiagnosticTransportPreservesIdentityAndOriginalObject(string? programName, string? handlerName)
     {
-        var original = new GameEventScriptDiagnostic(GameEventScriptDiagnosticPhase.Runtime, "faulty.reported", "Reported failure.", Symbol: "origin", ProgramName: programName, HandlerName: handlerName, TechnicalDetails: "Original details.");
+        var original = new GesDiagnostic(GesDiagnosticPhase.Runtime, "faulty.reported", "Reported failure.", Symbol: "origin", ProgramName: programName, HandlerName: handlerName, TechnicalDetails: "Original details.");
         var unchanged = original with { };
         var definition = FaultyDefinition();
         var constructor = new DelegateExternalTypeConstructor(definition.Constructors[0], _ => throw new ReportedRuntimeException(original));
@@ -149,7 +149,7 @@ public sealed class GameEventScriptCallbackFailureTests
         Assert.IsTrue(host.Receive(Create("Start")));
         var result = host.RunToCompletion();
 
-        Assert.AreEqual(GameEventScriptExecutionState.RuntimeError, result.State);
+        Assert.AreEqual(GesExecutionState.RuntimeError, result.State);
         Assert.HasCount(1, diagnostics);
         Assert.AreSame(diagnostics[0], result.Diagnostic);
         Assert.AreEqual(unchanged, original);
@@ -159,7 +159,7 @@ public sealed class GameEventScriptCallbackFailureTests
     public void ExtensionFaultExceptionRendersItsInnerExceptionIntoTechnicalDetailsOnly()
     {
         var inner = new InvalidOperationException("Root cause.");
-        var fault = new GameEventScriptExtensionFaultException("faulty.wrapped", "Public message.", innerException: inner);
+        var fault = new GesExtensionFaultException("faulty.wrapped", "Public message.", innerException: inner);
 
         Assert.AreEqual("faulty.wrapped", fault.Diagnostic.Code);
         Assert.AreEqual("Public message.", fault.Diagnostic.Message);
@@ -167,25 +167,25 @@ public sealed class GameEventScriptCallbackFailureTests
         Assert.Contains("Root cause.", fault.Diagnostic.TechnicalDetails!);
     }
 
-    private static GameEventScriptExternalTypeDefinition FaultyDefinition()
+    private static GesExternalTypeDefinition FaultyDefinition()
         => new(
             "Faulty",
-            [new GameEventScriptExternalTypeFieldDefinition("value", GameEventScriptBytecodeTypeKind.Float)],
-            [new GameEventScriptExternalTypeConstructorDefinition("Faulty", [])]);
+            [new GesExternalTypeFieldDefinition("value", GesBytecodeTypeKind.Float)],
+            [new GesExternalTypeConstructorDefinition("Faulty", [])]);
 
     private static GameEventScriptHost BuildHost(
-        GameEventScriptExternalTypeDefinition definition,
-        IGameEventScriptExternalTypeConstructor constructor,
+        GesExternalTypeDefinition definition,
+        IGesExternalTypeConstructor constructor,
         string script,
-        out List<GameEventScriptDiagnostic> diagnostics)
+        out List<GesDiagnostic> diagnostics)
     {
-        var catalog = new GameEventScriptExternalTypeCatalog([definition]);
-        var bytecode = GameEventScriptBuilder.Create()
+        var catalog = new GesDeclaredExternalTypeCatalog([definition]);
+        var bytecode = GesProgramBuilder.Create()
             .WithExternalTypeCatalog(catalog)
             .AddScript(script)
             .Compile();
 
-        var capturedDiagnostics = new List<GameEventScriptDiagnostic>();
+        var capturedDiagnostics = new List<GesDiagnostic>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithExternalTypeRegistry(new SingleConstructorRegistry(constructor))
             .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(runtimeError: capturedDiagnostics.Add))
@@ -197,27 +197,27 @@ public sealed class GameEventScriptCallbackFailureTests
         return host;
     }
 
-    private sealed class DelegateExternalTypeConstructor(GameEventScriptExternalTypeConstructorDefinition definition, Action<GesExternalTypeConstructorCall> invoke)
-        : IGameEventScriptExternalTypeConstructor
+    private sealed class DelegateExternalTypeConstructor(GesExternalTypeConstructorDefinition definition, Action<GesExternalTypeConstructorCall> invoke)
+        : IGesExternalTypeConstructor
     {
-        public GameEventScriptExternalTypeConstructorDefinition Definition { get; } = definition;
+        public GesExternalTypeConstructorDefinition Definition { get; } = definition;
 
         public void Invoke(GesExternalTypeConstructorCall call) => invoke(call);
     }
 
-    private sealed class DelegateExternalValue(GameEventScriptExternalTypeDefinition definition, Func<string, GesValue?> getField)
-        : IGameEventScriptExternalValue
+    private sealed class DelegateExternalValue(GesExternalTypeDefinition definition, Func<string, GesValue?> getField)
+        : IGesExternalValue
     {
-        public GameEventScriptExternalTypeDefinition Definition { get; } = definition;
+        public GesExternalTypeDefinition Definition { get; } = definition;
 
         public GesValue? GetField(string fieldName) => getField(fieldName);
     }
 
-    private sealed class SingleConstructorRegistry(IGameEventScriptExternalTypeConstructor constructor) : IGameEventScriptExternalTypeRegistry
+    private sealed class SingleConstructorRegistry(IGesExternalTypeConstructor constructor) : IGesExternalTypeRegistry
     {
-        public IGameEventScriptExternalTypeConstructor? Resolve(GameEventScriptExternalTypeConstructorReference reference)
+        public IGesExternalTypeConstructor? Resolve(GesExternalTypeConstructorReference reference)
             => string.Equals(reference.SignatureId, constructor.Definition.SignatureId, StringComparison.Ordinal) ? constructor : null;
     }
 
-    private sealed class ReportedRuntimeException(GameEventScriptDiagnostic diagnostic) : GameEventScriptFatalRuntimeException(diagnostic);
+    private sealed class ReportedRuntimeException(GesDiagnostic diagnostic) : GesFatalRuntimeException(diagnostic);
 }

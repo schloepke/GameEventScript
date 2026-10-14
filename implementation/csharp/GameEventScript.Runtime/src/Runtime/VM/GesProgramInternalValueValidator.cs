@@ -3,8 +3,8 @@
 
 using System;
 using GameEventScript.Api;
-using static GameEventScript.Api.GameEventScriptBytecodeOpCode;
 using static GameEventScript.Api.GameEventScriptOpcodePrinter.OperandPart;
+using static GameEventScript.Api.GesBytecodeOpCode;
 
 namespace GameEventScript.Runtime.VM;
 
@@ -77,7 +77,7 @@ internal static class GesProgramInternalValueValidator
         pending[count++] = address;
     }
 
-    private static bool Allows(GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart operand, int kind)
+    private static bool Allows(GesBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart operand, int kind)
     {
         var op = instruction.OpCode;
         if (operand == BuilderRegister)
@@ -97,10 +97,10 @@ internal static class GesProgramInternalValueValidator
         if (op is ContainsAny or ContainsAll) return operand is LeftRegister or RightRegister or NeedleRegister or CollectionRegister;
         return operand is SourceRegister or SourceIteratorRegister or OperandRegister or CollectionRegister && op is
             TakeFirst or DropFirst or TakeLast or DropLast or TakeHighest or TakeLowest or DropHighest or DropLowest or OneRandom or TakeRandom or
-            Count or HasAny or HasAll or First or Last or GameEventScriptBytecodeOpCode.Single or Distinct or SortAscending or SortDescending or Reverse or Shuffle or HasPattern or TakePattern;
+            Count or HasAny or HasAll or First or Last or GesBytecodeOpCode.Single or Distinct or SortAscending or SortDescending or Reverse or Shuffle or HasPattern or TakePattern;
     }
 
-    private static int InternalKind(GameEventScriptBytecodeOpCode op)
+    private static int InternalKind(GesBytecodeOpCode op)
         => op switch
         {
             IteratorCreate or IteratorCreateOrJump or CreateRangeIterator or CreateRangeIteratorWithStep or CreateRangeIteratorShort => 1,
@@ -113,6 +113,6 @@ internal static class GesProgramInternalValueValidator
         };
 
     private static void Invalid(int index)
-        => throw new GameEventScriptProgramFormatException(GameEventScriptProgramFormatErrorCode.InvalidOperand,
-            "Internal iterator or builder value escapes its permitted operand role.", sectionType: (ushort)GameEventScriptSectionType.Code, entryIndex: index);
+        => throw new GesProgramFormatException(GesProgramFormatErrorCode.InvalidOperand,
+            "Internal iterator or builder value escapes its permitted operand role.", sectionType: (ushort)GesSectionType.Code, entryIndex: index);
 }

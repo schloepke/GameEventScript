@@ -5,17 +5,17 @@ using System;
 using System.Collections.Generic;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterMessages
 {
-    internal static void CreateMessageSignature(this GesVirtualMachine vm, ushort destinationRegister, GameEventScriptUInt16IndexList shape)
+    internal static void CreateMessageSignature(this GesVirtualMachine vm, ushort destinationRegister, GesUInt16IndexList shape)
     {
         if (shape.Length == 0)
         {
-            vm.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidMessageShape,
+            vm.RaiseError(GesDiagnosticCodes.RuntimeInvalidMessageShape,
                 "Cannot create message signature from empty shape.");
             return;
         }
@@ -25,13 +25,13 @@ internal static class GesVmRegisterMessages
         {
             argumentNames[index - 1] = vm.FetchStringByPointer(shape[index]);
         }
-        vm.SetMessageHandler(destinationRegister, GameEventScriptMessageSignature.Create(messageName, argumentNames));
+        vm.SetMessageHandler(destinationRegister, GesMessageSignature.Create(messageName, argumentNames));
     }
-    internal static void CreateMessage(this GesVirtualMachine vm, ushort destinationRegister, GameEventScriptUInt16IndexList shape, GameEventScriptUInt16IndexList argumentRegisters)
+    internal static void CreateMessage(this GesVirtualMachine vm, ushort destinationRegister, GesUInt16IndexList shape, GesUInt16IndexList argumentRegisters)
     {
         if (shape.Length == 0 || argumentRegisters.Length != shape.Length - 1)
         {
-            vm.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidMessageShape,
+            vm.RaiseError(GesDiagnosticCodes.RuntimeInvalidMessageShape,
                 "Message signature shape and argument registers mismatch.");
             return;
         }
@@ -40,8 +40,8 @@ internal static class GesVmRegisterMessages
         {
             try
             {
-                var signatureId = GameEventScriptMessageSignature.CreateSignatureId(messageName, GameEventScriptMessageArguments.Empty.SignatureLabels);
-                vm.SetMessage(destinationRegister, GameEventScriptMessage.CreatePrecomputed(messageName, GameEventScriptMessageArguments.Empty, signatureId));
+                var signatureId = GesMessageSignature.CreateSignatureId(messageName, GesMessageArguments.Empty.SignatureLabels);
+                vm.SetMessage(destinationRegister, GameEventScriptMessage.CreatePrecomputed(messageName, GesMessageArguments.Empty, signatureId));
             }
             catch (ArgumentException)
             {
@@ -60,8 +60,8 @@ internal static class GesVmRegisterMessages
         }
         try
         {
-            var arguments = GameEventScriptMessageArguments.CreatePrecomputed(GameEventScriptReadOnlyArray<string>.FromOwnedArray(argumentNames), values);
-            var signatureId = GameEventScriptMessageSignature.CreateSignatureId(messageName, argumentNames);
+            var arguments = GesMessageArguments.CreatePrecomputed(GesReadOnlyArray<string>.FromOwnedArray(argumentNames), values);
+            var signatureId = GesMessageSignature.CreateSignatureId(messageName, argumentNames);
             vm.SetMessage(destinationRegister, GameEventScriptMessage.CreatePrecomputed(messageName, arguments, signatureId));
         }
         catch (ArgumentException)
@@ -69,9 +69,9 @@ internal static class GesVmRegisterMessages
             vm.SetNothing(destinationRegister);
         }
     }
-    internal static void BindHandler(this GesVirtualMachine vm, ushort destinationRegister, in GesValue handler, GameEventScriptUInt16IndexList argumentRegisters)
+    internal static void BindHandler(this GesVirtualMachine vm, ushort destinationRegister, in GesValue handler, GesUInt16IndexList argumentRegisters)
     {
-        if (handler.Kind is not Handler || handler.ObjectValue is not GameEventScriptMessageSignature signature)
+        if (handler.Kind is not Handler || handler.ObjectValue is not GesMessageSignature signature)
         {
             vm.SetNothing(destinationRegister);
             return;

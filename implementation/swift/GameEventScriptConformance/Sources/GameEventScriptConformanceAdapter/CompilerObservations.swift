@@ -15,12 +15,12 @@ func title(_ value: Any) -> String {
 enum CompilerObservations {
     static func compile(_ test: Input, programID: String? = nil, version: UInt64 = 0) throws -> GameEventScriptProgram {
         if ForeignPrograms.inputs != nil { return try ForeignPrograms.read(test, group: programID) }
-        let builder = GameEventScriptBuilder.create()
+        let builder = GesProgramBuilder.create()
         if ["scriptApi", "loadError"].contains(test["kind"]?.stringValue ?? "") { builder.withExternalTypeCatalog(RuntimeFixtures.catalog) }
         for source in test.values("sources") where programID == nil || source["program"]?.stringValue == programID {
             builder.addScript(try source.text("text"), sourceName: try source.text("name"))
         }
-        var options = GameEventScriptCompileOptions()
+        var options = GesCompileOptions()
         options.debugInfo = []
         options.programVersion = version
         for item in test["compile"]?.values("debugInfo") ?? [] {
@@ -35,7 +35,7 @@ enum CompilerObservations {
         return test["compile"]?["binaryRoundTrip"]?.boolValue == true ? try GameEventScriptProgramReader.read(GameEventScriptProgramWriter.bytes(program)) : program
     }
 
-    static func diagnostic(_ value: GameEventScriptDiagnostic) -> [String: Any] {
+    static func diagnostic(_ value: GesDiagnostic) -> [String: Any] {
         [
             "phase": String(describing: value.phase), "code": value.code, "symbol": nullable(value.symbol),
             "symbolKind": value.symbolKind == .unknown ? NSNull() : String(describing: value.symbolKind) as Any,
@@ -58,7 +58,7 @@ enum CompilerObservations {
         for bind in program.bindings where bind.kind == .messageHandler || bind.kind == .messageNameHandler {
             let name = program.stringConstants[Int(bind.name)]
             let parameters = bind.argumentNames.map { program.stringConstants[Int($0)] }
-            let signature = try! GameEventScriptMessageSignature(name: name, parameters: parameters).signatureId
+            let signature = try! GesMessageSignature(name: name, parameters: parameters).signatureId
             signatures[name, default: []].append(signature)
             handlers.append(["name": name, "signatureId": signature, "requiredRegisterCount": bind.requiredRegisterCount, "requiredCallStackDepth": bind.requiredCallStackDepth])
         }

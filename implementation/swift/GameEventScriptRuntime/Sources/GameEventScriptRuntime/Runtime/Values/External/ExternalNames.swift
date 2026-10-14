@@ -4,20 +4,20 @@
 enum GesExternalNames {
     static func identifier(_ text: String) throws -> String {
         let text = MessageNames.trim(text)
-        guard GesNames.plain(text) else { throw GameEventScriptAPIError.invalidArgument("Invalid external field or extension name") }
+        guard GesNames.plain(text) else { throw GesApiError.invalidArgument("Invalid external field or extension name") }
         return text
     }
 
     static func type(_ text: String) throws -> String {
         var text = MessageNames.trim(text)
         if text.hasPrefix(":") { text.removeFirst() }
-        guard GesNames.type(text) else { throw GameEventScriptAPIError.invalidArgument("Invalid external type name") }
+        guard GesNames.type(text) else { throw GesApiError.invalidArgument("Invalid external type name") }
         return text
     }
 }
 
 extension GesExternalNames {
-    static func kind(_ name: String) -> GameEventScriptBytecodeTypeKind? {
+    static func kind(_ name: String) -> GesBytecodeTypeKind? {
         switch name {
         case "Nothing": .nothing
         case "Boolean": .boolean
@@ -38,9 +38,9 @@ extension GesExternalNames {
         }
     }
 
-    static func typeName(_ kind: GameEventScriptBytecodeTypeKind, _ unit: GesUnit) throws -> String {
+    static func typeName(_ kind: GesBytecodeTypeKind, _ unit: GesQuantityUnit) throws -> String {
         guard [.nothing, .tag, .text, .percentage, .vector, .point, .float, .boolean, .series, .range, .handler, .list, .map, .dice].contains(kind), unit == .none || kind == .float || kind == .vector || kind == .point else {
-            throw GameEventScriptAPIError.invalidArgument("Unsupported external value kind or unit")
+            throw GesApiError.invalidArgument("Unsupported external value kind or unit")
         }
         if (kind == .float || kind == .integer) && unit != .none { return "Quantity(" + unit.suffix + ")" }
         switch kind {
@@ -51,7 +51,7 @@ extension GesExternalNames {
         }
     }
 
-    static func coerce(_ value: GesValue, kind: GameEventScriptBytecodeTypeKind?, unit: GesUnit) -> GesValue {
+    static func coerce(_ value: GesValue, kind: GesBytecodeTypeKind?, unit: GesQuantityUnit) -> GesValue {
         switch kind {
         case .float: return .float(value.asNumber, unit: unit)
         case .vector where value.spatialValue != nil: return .vector(x: value.x, y: value.y, z: value.z, unit: unit == .none ? value.unit : unit)

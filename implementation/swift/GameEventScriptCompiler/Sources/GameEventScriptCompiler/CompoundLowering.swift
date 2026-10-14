@@ -56,10 +56,10 @@ extension GesCompiler {
             scope.values[name] = target
             return target
         }
-        r.emit(.checkType, check, current, Int(GameEventScriptBytecodeTypeKind.map.rawValue))
+        r.emit(.checkType, check, current, Int(GesBytecodeTypeKind.map.rawValue))
         let map = r.emit(.jumpIfTrue, 0, check)
         r.emit(.move, values, current)
-        r.emit(.checkType, check, current, Int(GameEventScriptBytecodeTypeKind.list.rawValue))
+        r.emit(.checkType, check, current, Int(GesBytecodeTypeKind.list.rawValue))
         let list = r.emit(.jumpIfTrue, 0, check)
         r.emit(.move, targets[0], current)
         for target in targets.dropFirst() { r.emit(.loadNothing, target) }
@@ -93,11 +93,11 @@ extension GesCompiler {
         // valid Dice/List combination to List. All-Dice results stay Dice.
         let check = r.temporary()
         var valid: [Int] = []
-        r.emit(.checkType, check, sources[0], Int(GameEventScriptBytecodeTypeKind.map.rawValue))
+        r.emit(.checkType, check, sources[0], Int(GesBytecodeTypeKind.map.rawValue))
         let map = r.emit(.jumpIfTrue, 0, check)
         if allowMap { valid.append(map) } else { invalid.append(map) }
         for source in sources {
-            r.emit(.checkType, check, source, Int(GameEventScriptBytecodeTypeKind.list.rawValue))
+            r.emit(.checkType, check, source, Int(GesBytecodeTypeKind.list.rawValue))
             valid.append(r.emit(.jumpIfTrue, 0, check))
         }
         invalid.append(r.emit(.jump))
@@ -107,7 +107,7 @@ extension GesCompiler {
     func sourceGuard(_ value: Int, _ invalid: inout [Int], _ r: GesRoutine) {
         let check = r.temporary()
         var valid: [Int] = []
-        for type in [GameEventScriptBytecodeTypeKind.list, .map, .dice] {
+        for type in [GesBytecodeTypeKind.list, .map, .dice] {
             r.emit(.checkType, check, value, Int(type.rawValue))
             valid.append(r.emit(.jumpIfTrue, 0, check))
         }
@@ -129,7 +129,7 @@ extension GesCompiler {
             sourceGuard(current, &invalid, r)
             let result = r.temporary()
             r.emit(operation == "union" ? .union : operation == "intersect" ? .intersect : .subtract, result, current, right)
-            r.emit(.checkType, check, result, Int(GameEventScriptBytecodeTypeKind.nothing.rawValue))
+            r.emit(.checkType, check, result, Int(GesBytecodeTypeKind.nothing.rawValue))
             invalid.append(r.emit(.jumpIfTrue, 0, check))
             current = result
         }

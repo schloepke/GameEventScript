@@ -11,20 +11,20 @@ namespace GameEventScript.Api;
 /// <summary>
 /// Defines the contract for i game event script extension registry.
 /// </summary>
-public interface IGameEventScriptExtensionRegistry
+public interface IGesExtensionRegistry
 {
     /// <summary>
     /// Resolves the value.
     /// </summary>
     /// <param name="reference">The reference value.</param>
     /// <returns>The result of the operation.</returns>
-    IGameEventScriptExtensionFunction? Resolve(GameEventScriptExtensionReference reference);
+    IGesExtensionFunction? Resolve(GesExtensionReference reference);
 }
 
 /// <summary>
 /// Defines the contract for i game event script extension function.
 /// </summary>
-public interface IGameEventScriptExtensionFunction
+public interface IGesExtensionFunction
 {
     /// <summary>
     /// Performs the invoke operation.
@@ -33,7 +33,7 @@ public interface IGameEventScriptExtensionFunction
     void Invoke(GesExtensionCall call);
 }
 
-internal sealed class GameEventScriptEmptyExtensionRegistry : IGameEventScriptExtensionRegistry
+internal sealed class GameEventScriptEmptyExtensionRegistry : IGesExtensionRegistry
 {
     public static readonly GameEventScriptEmptyExtensionRegistry Instance = new();
 
@@ -41,13 +41,13 @@ internal sealed class GameEventScriptEmptyExtensionRegistry : IGameEventScriptEx
     {
     }
 
-    public IGameEventScriptExtensionFunction? Resolve(GameEventScriptExtensionReference reference) => null;
+    public IGesExtensionFunction? Resolve(GesExtensionReference reference) => null;
 }
 
 /// <summary>
 /// Represents an immutable normalized extension name, function name, and ordered argument signature.
 /// </summary>
-public sealed class GameEventScriptExtensionReference
+public sealed class GesExtensionReference
 {
     /// <summary>
     /// Initializes a new instance of Game Event Script Extension Reference.
@@ -55,11 +55,11 @@ public sealed class GameEventScriptExtensionReference
     /// <param name="extensionName">The extension name value.</param>
     /// <param name="functionName">The function name value.</param>
     /// <param name="argumentLabels">The argument labels value.</param>
-    public GameEventScriptExtensionReference(string? extensionName, string? functionName, IEnumerable<string?>? argumentLabels)
+    public GesExtensionReference(string? extensionName, string? functionName, IEnumerable<string?>? argumentLabels)
     {
         ExtensionName = NormalizeName(extensionName);
         FunctionName = NormalizeName(functionName);
-        ArgumentLabels = GameEventScriptReadOnlyArray<string>.FromOwnedArray(NormalizeArgumentLabels(argumentLabels));
+        ArgumentLabels = GesReadOnlyArray<string>.FromOwnedArray(NormalizeArgumentLabels(argumentLabels));
         SignatureId = CreateSignatureId(ExtensionName, FunctionName, ArgumentLabels);
     }
 
@@ -104,7 +104,7 @@ public sealed class GameEventScriptExtensionReference
             var index = 0;
             foreach (var label in collection)
             {
-                values[index++] = GameEventScriptMessageSignature.NormalizeParameterName(label);
+                values[index++] = GesMessageSignature.NormalizeParameterName(label);
             }
 
             return values;
@@ -113,7 +113,7 @@ public sealed class GameEventScriptExtensionReference
         var list = new List<string>();
         foreach (var label in argumentLabels)
         {
-            list.Add(GameEventScriptMessageSignature.NormalizeParameterName(label));
+            list.Add(GesMessageSignature.NormalizeParameterName(label));
         }
 
         if (list.Count == 0)
@@ -153,7 +153,7 @@ public sealed class GameEventScriptExtensionReference
 /// </summary>
 public sealed class GesExtensionCall
 {
-    private GameEventScriptContext? _context;
+    private GesContext? _context;
     private GesValueArguments _arguments = GesValueArguments.Empty;
     private Runtime.VM.GesVirtualMachine? _vm;
     private ushort _destinationRegister;
@@ -171,7 +171,7 @@ public sealed class GesExtensionCall
     /// Initializes a new instance of Ges Extension Call.
     /// </summary>
     /// <param name="context">The context value.</param>
-    public GesExtensionCall(GameEventScriptContext context)
+    public GesExtensionCall(GesContext context)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
     }
@@ -179,17 +179,17 @@ public sealed class GesExtensionCall
     /// <summary>
     /// Gets the context.
     /// </summary>
-    public GameEventScriptContext Context => _context ?? throw new InvalidOperationException("Extension context is not initialized.");
+    public GesContext Context => _context ?? throw new InvalidOperationException("Extension context is not initialized.");
 
     /// <summary>
     /// Gets the random.
     /// </summary>
-    public GameEventScriptRandomGenerator Random => Context.Random;
+    public GesRandomGenerator Random => Context.Random;
 
     /// <summary>
     /// Gets the runtime limits.
     /// </summary>
-    public GameEventScriptRuntimeLimits RuntimeLimits => Context.RuntimeLimits;
+    public GesRuntimeLimits RuntimeLimits => Context.RuntimeLimits;
 
     /// <summary>
     /// Gets the arguments.
@@ -203,7 +203,7 @@ public sealed class GesExtensionCall
 
     internal bool HasResult => _hasResult;
 
-    internal void BeginCall(Runtime.VM.GesVirtualMachine vm, ushort destinationRegister, GameEventScriptContext context, GesValueArguments arguments)
+    internal void BeginCall(Runtime.VM.GesVirtualMachine vm, ushort destinationRegister, GesContext context, GesValueArguments arguments)
     {
         _vm = vm ?? throw new ArgumentNullException(nameof(vm));
         _destinationRegister = destinationRegister;
@@ -254,7 +254,7 @@ public sealed class GesExtensionCall
     /// </summary>
     /// <param name="value">The value value.</param>
     /// <param name="unit">The unit value.</param>
-    public void SetInteger(long value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
+    public void SetInteger(long value, GesQuantityUnit unit = GesQuantityUnit.UnitNone)
     {
         _hasResult = true;
         _result = GesValue.GesInteger(value, unit);
@@ -266,7 +266,7 @@ public sealed class GesExtensionCall
     /// </summary>
     /// <param name="value">The value value.</param>
     /// <param name="unit">The unit value.</param>
-    public void SetFloat(double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
+    public void SetFloat(double value, GesQuantityUnit unit = GesQuantityUnit.UnitNone)
     {
         _hasResult = true;
         _result = GesValue.GesFloat(value, unit);

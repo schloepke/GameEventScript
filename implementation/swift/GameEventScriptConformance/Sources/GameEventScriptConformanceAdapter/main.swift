@@ -59,7 +59,7 @@ do {
                 } else {
                     observations[id] = try CompilerObservations.observe(kind, CompilerObservations.compile(test))
                 }
-            } catch let error as GameEventScriptCompileError {
+            } catch let error as GesCompileError {
                 if ["scriptApi", "loadError", "programBinary"].contains(kind) {
                     observations[id] = ["status": "error", "detail": "Runtime input compilation failed."]
                 } else {

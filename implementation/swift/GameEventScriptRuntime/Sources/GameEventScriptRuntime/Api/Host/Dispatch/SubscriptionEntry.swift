@@ -2,26 +2,26 @@
 // SPDX-License-Identifier: Apache-2.0
 
 final class GesSubscriptionEntry {
-    let signature: GameEventScriptMessageSignature
+    let signature: GesMessageSignature
     let requiredTags: [String], excludedTags: [String]
     let matchArguments: Bool
     let priority: Int
     let order: Int64, id: Int64
-    let native: (any GameEventScriptNativeMessageHandler)?
-    let instance: GameEventScriptInstance?
+    let native: (any GesNativeMessageHandler)?
+    let instance: GesProgramInstance?
     let address: Int
     let dispatchSignature: String
 
     init(
-        signature: GameEventScriptMessageSignature,
+        signature: GesMessageSignature,
         requiredTags: [String],
         excludedTags: [String],
         matchArguments: Bool,
         priority: Int,
         order: Int64,
         id: Int64,
-        native: (any GameEventScriptNativeMessageHandler)?,
-        instance: GameEventScriptInstance?,
+        native: (any GesNativeMessageHandler)?,
+        instance: GesProgramInstance?,
         address: Int
     ) {
         self.signature = signature

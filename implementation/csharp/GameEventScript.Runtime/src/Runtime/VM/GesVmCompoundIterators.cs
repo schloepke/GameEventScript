@@ -5,13 +5,13 @@ using System;
 using System.Collections.Generic;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime.VM;
 
 internal static class GesVmCompoundIterators
 {
-    internal static void GesVmIteratorCreate(this GesVirtualMachine state, GameEventScriptBytecodeInstruction instruction, GesRuntimeBudget budget)
+    internal static void GesVmIteratorCreate(this GesVirtualMachine state, GesBytecodeInstruction instruction, GesRuntimeBudget budget)
     {
         var mode = instruction.UnitAndFlags >> 5;
         if (mode == 0)
@@ -188,7 +188,7 @@ internal static class GesVmCompoundIterators
         if (iterator is IDisposable disposable) disposable.Dispose();
     }
 
-    internal static bool GesVmIteratorNextComponents(this GesVirtualMachine state, GameEventScriptBytecodeInstruction instruction)
+    internal static bool GesVmIteratorNextComponents(this GesVirtualMachine state, GesBytecodeInstruction instruction)
     {
         var iterator = state.Register(instruction.XRegister).ObjectValue as IGesIterator;
         var targets = state.FetchUInt16SliceTableByPointer(instruction.DestinationRegister);

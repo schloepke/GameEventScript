@@ -14,7 +14,7 @@ public sealed class GameEventScriptHostSteppingTests
     [TestMethod]
     public void HostReusesOneContext()
     {
-        var contexts = new List<GameEventScriptContext>();
+        var contexts = new List<GesContext>();
         var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
         host.Subscribe("Start", [], (_, context) => contexts.Add(context));
 
@@ -80,7 +80,7 @@ public sealed class GameEventScriptHostSteppingTests
         var observer = TestRuntimeObserver.ObserveMessages(runtimeLimitReached: (name, detail, limit) => limits.Add(new TestRuntimeLimitEvent(name, detail, limit)));
         var host = GameEventScriptHost.CreateBuilder()
             .WithRandomSeed(0L)
-            .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxRandomScopeDepth = 1 })
+            .WithRuntimeLimits(new GesRuntimeLimits { MaxRandomScopeDepth = 1 })
             .WithRuntimeObserver(observer)
             .Build().StartForTest();
         host.Subscribe("Start", [], (message, context) =>
@@ -101,13 +101,13 @@ public sealed class GameEventScriptHostSteppingTests
         var limited = host.RunToCompletion();
         var completed = host.RunToCompletion();
 
-        var expected = GameEventScriptRandomGenerator.FromSeed(0L).NextInclusiveInteger(long.MinValue, long.MaxValue);
-        Assert.AreEqual(GameEventScriptExecutionState.RuntimeLimitReached, limited.State);
-        Assert.AreEqual(GameEventScriptExecutionState.Completed, completed.State);
+        var expected = GesRandomGenerator.FromSeed(0L).NextInclusiveInteger(long.MinValue, long.MaxValue);
+        Assert.AreEqual(GesExecutionState.RuntimeLimitReached, limited.State);
+        Assert.AreEqual(GesExecutionState.Completed, completed.State);
         Assert.IsFalse(rejectedEmitAccepted);
         Assert.AreEqual(expected, followingValue);
         Assert.HasCount(1, limits);
-        Assert.AreEqual(nameof(GameEventScriptRuntimeLimits.MaxRandomScopeDepth), limits[0].Name);
+        Assert.AreEqual(nameof(GesRuntimeLimits.MaxRandomScopeDepth), limits[0].Name);
         Assert.AreEqual(1, limits[0].Limit);
     }
 
@@ -121,7 +121,7 @@ public sealed class GameEventScriptHostSteppingTests
             runtimeLimitReached: (name, detail, limit) => limits.Add(new TestRuntimeLimitEvent(name, detail, limit)));
         var host = GameEventScriptHost.CreateBuilder()
             .WithRandomSeed(0L)
-            .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxRandomScopeDepth = 1 })
+            .WithRuntimeLimits(new GesRuntimeLimits { MaxRandomScopeDepth = 1 })
             .WithRuntimeObserver(observer)
             .WithRegistry(RandomScopeExtensionRegistry.Instance)
             .Build().StartForTest();
@@ -136,12 +136,12 @@ public sealed class GameEventScriptHostSteppingTests
         var limited = host.RunToCompletion();
         var completed = host.RunToCompletion();
 
-        var expected = GameEventScriptRandomGenerator.FromSeed(0L).NextInclusiveInteger(long.MinValue, long.MaxValue);
-        Assert.AreEqual(GameEventScriptExecutionState.RuntimeLimitReached, limited.State);
-        Assert.AreEqual(GameEventScriptExecutionState.Completed, completed.State);
+        var expected = GesRandomGenerator.FromSeed(0L).NextInclusiveInteger(long.MinValue, long.MaxValue);
+        Assert.AreEqual(GesExecutionState.RuntimeLimitReached, limited.State);
+        Assert.AreEqual(GesExecutionState.Completed, completed.State);
         Assert.AreEqual(expected, followingValue);
         Assert.HasCount(1, limits);
-        Assert.AreEqual(nameof(GameEventScriptRuntimeLimits.MaxRandomScopeDepth), limits[0].Name);
+        Assert.AreEqual(nameof(GesRuntimeLimits.MaxRandomScopeDepth), limits[0].Name);
         Assert.IsTrue(emitted.Any(message => message.Name == "Rejected"));
         Assert.IsFalse(emitted.Any(message => message.Name == "Done"));
     }
@@ -149,7 +149,7 @@ public sealed class GameEventScriptHostSteppingTests
     [TestMethod]
     public void ExtensionCannotLeakARandomScopeAcrossItsBoundary()
     {
-        var diagnostics = new List<GameEventScriptDiagnostic>();
+        var diagnostics = new List<GesDiagnostic>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithRandomSeed(0L)
             .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(runtimeError: diagnostics.Add))
@@ -164,11 +164,11 @@ public sealed class GameEventScriptHostSteppingTests
 
         var result = host.RunToCompletion();
 
-        var expected = GameEventScriptRandomGenerator.FromSeed(0L).NextInclusiveInteger(long.MinValue, long.MaxValue);
-        Assert.AreEqual(GameEventScriptExecutionState.RuntimeError, result.State);
+        var expected = GesRandomGenerator.FromSeed(0L).NextInclusiveInteger(long.MinValue, long.MaxValue);
+        Assert.AreEqual(GesExecutionState.RuntimeError, result.State);
         Assert.AreEqual(expected, followingValue);
         Assert.HasCount(1, diagnostics);
-        Assert.AreEqual(GameEventScriptDiagnosticCodes.RuntimeRandomScopeImbalance, diagnostics[0].Code);
+        Assert.AreEqual(GesDiagnosticCodes.RuntimeRandomScopeImbalance, diagnostics[0].Code);
     }
 
     [TestMethod]
@@ -184,15 +184,15 @@ public sealed class GameEventScriptHostSteppingTests
         while (!host.IsIdle)
         {
             var result = ExecuteOneFrameOnNewThread(host);
-            Assert.AreNotEqual(GameEventScriptExecutionState.RuntimeError, result.State);
-            Assert.AreNotEqual(GameEventScriptExecutionState.RuntimeLimitReached, result.State);
+            Assert.AreNotEqual(GesExecutionState.RuntimeError, result.State);
+            Assert.AreNotEqual(GesExecutionState.RuntimeLimitReached, result.State);
         }
         host.Receive(Create("Check"));
         ExecuteOneFrameOnNewThread(host, int.MaxValue);
 
         Assert.HasCount(2, values);
-        Assert.AreEqual(GameEventScriptRandomGenerator.FromSeed(7L).NextInclusiveInteger(1, 100), values[0]);
-        Assert.AreEqual(GameEventScriptRandomGenerator.FromSeed(0L).NextInclusiveInteger(long.MinValue, long.MaxValue), values[1]);
+        Assert.AreEqual(GesRandomGenerator.FromSeed(7L).NextInclusiveInteger(1, 100), values[0]);
+        Assert.AreEqual(GesRandomGenerator.FromSeed(0L).NextInclusiveInteger(long.MinValue, long.MaxValue), values[1]);
     }
 
     [TestMethod]
@@ -311,7 +311,7 @@ public sealed class GameEventScriptHostSteppingTests
     }
 
     private static GameEventScriptProgram Compile(string source)
-        => GameEventScriptBuilder.Create().AddScript(source).Compile();
+        => GesProgramBuilder.Create().AddScript(source).Compile();
 
     private static void UpdateMaximum(ref int target, int candidate)
     {
@@ -324,23 +324,23 @@ public sealed class GameEventScriptHostSteppingTests
         while (Interlocked.CompareExchange(ref target, candidate, current) != current);
     }
 
-    private static GameEventScriptExecutionResult ExecuteOneFrameOnNewThread(GameEventScriptHost host, int budget = 1)
+    private static GesExecutionResult ExecuteOneFrameOnNewThread(GameEventScriptHost host, int budget = 1)
     {
-        var result = default(GameEventScriptExecutionResult);
+        var result = default(GesExecutionResult);
         var thread = new Thread(() => result = host.ExecuteFrame(budget));
         thread.Start();
         thread.Join();
         return result;
     }
 
-    private sealed class RandomScopeExtensionRegistry : IGameEventScriptExtensionRegistry
+    private sealed class RandomScopeExtensionRegistry : IGesExtensionRegistry
     {
         internal static RandomScopeExtensionRegistry Instance { get; } = new();
 
-        private static readonly IGameEventScriptExtensionFunction Overpush = new RandomScopeOverpushExtension();
-        private static readonly IGameEventScriptExtensionFunction Leak = new RandomScopeLeakExtension();
+        private static readonly IGesExtensionFunction Overpush = new RandomScopeOverpushExtension();
+        private static readonly IGesExtensionFunction Leak = new RandomScopeLeakExtension();
 
-        public IGameEventScriptExtensionFunction? Resolve(GameEventScriptExtensionReference reference)
+        public IGesExtensionFunction? Resolve(GesExtensionReference reference)
         {
             if (reference.ExtensionName != "randomTest" || reference.ArgumentLabels.Count != 0) return null;
             return reference.FunctionName switch
@@ -352,7 +352,7 @@ public sealed class GameEventScriptHostSteppingTests
         }
     }
 
-    private sealed class RandomScopeOverpushExtension : IGameEventScriptExtensionFunction
+    private sealed class RandomScopeOverpushExtension : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
         {
@@ -364,7 +364,7 @@ public sealed class GameEventScriptHostSteppingTests
         }
     }
 
-    private sealed class RandomScopeLeakExtension : IGameEventScriptExtensionFunction
+    private sealed class RandomScopeLeakExtension : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
         {

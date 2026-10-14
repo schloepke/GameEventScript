@@ -94,12 +94,12 @@ final class RegisterStorageTests: XCTestCase {
             record :Outer as { \(fields), _ text: :Text, child: :Wide computed by parse text }
             on Start { let value be parse ':Outer(\(arguments), ":Wide(\(arguments))")' }
             """
-        let program = try GameEventScriptBuilder().addScript(source).compile()
+        let program = try GesProgramBuilder().addScript(source).compile()
         let linked = try GesLinkedProgram(program, extensions: nil, types: nil)
         let entry = try XCTUnwrap(program.bindings.first { program.stringConstants[Int($0.name)] == "Start" }).entryAddress
         for budget in [1, 10000] {
             let host = try GameEventScriptHost.createBuilder().build()
-            let context = GameEventScriptContext(host: host, random: .init(), limits: .init(), extensions: nil, observer: nil)
+            let context = GesContext(host: host, random: .init(), limits: .init(), extensions: nil, observer: nil)
             let state = GesVirtualMachine(maxRegisters: 512, maxCallDepth: 64)
             state.prepareCapacity(Int(program.requiredRegisterCount))
             let before = state.registers.count

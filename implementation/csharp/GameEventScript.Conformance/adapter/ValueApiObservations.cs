@@ -82,7 +82,7 @@ internal static class ValueApiObservations
             var arguments = message.GetProperty("args").EnumerateArray().Select(a =>
             {
                 RuntimeValues.Fields(a, "name", "value");
-                return new GameEventScriptMessageArgument(a.GetProperty("name").GetString() ?? throw new ArgumentException("Argument name required."), Construct(a.GetProperty("value")));
+                return new GesMessageArgument(a.GetProperty("name").GetString() ?? throw new ArgumentException("Argument name required."), Construct(a.GetProperty("value")));
             }).ToArray();
             return GesValue.GesMessage(GameEventScriptMessage.Create(name, arguments, message.GetProperty("tags").EnumerateArray().Select(t => t.GetString() ?? throw new ArgumentException("Tag required.")).ToArray()));
         }

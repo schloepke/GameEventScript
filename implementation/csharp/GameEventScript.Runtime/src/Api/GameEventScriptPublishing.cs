@@ -6,7 +6,7 @@ namespace GameEventScript.Api;
 /// <summary>
 /// Receives synchronous outbound publications after the host has attempted local enqueue.
 /// </summary>
-public interface IGameEventScriptPublishSink
+public interface IGesPublishSink
 {
     /// <summary>
     /// Attempts to accept one immutable outbound message.
@@ -20,7 +20,7 @@ public interface IGameEventScriptPublishSink
 /// <summary>
 /// Describes the independent local and outbound outcomes of one publish operation without allocating.
 /// </summary>
-public readonly struct GameEventScriptPublishResult(bool localAccepted, bool outboundAttempted, bool outboundAccepted, bool outboundDeferred = false)
+public readonly struct GesPublishResult(bool localAccepted, bool outboundAttempted, bool outboundAccepted, bool outboundDeferred = false)
 {
     /// <summary>
     /// Gets whether the host's local message queue accepted the publication.

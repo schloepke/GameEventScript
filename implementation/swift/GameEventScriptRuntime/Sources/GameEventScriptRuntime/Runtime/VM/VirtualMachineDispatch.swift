@@ -15,7 +15,7 @@ extension GesVirtualMachine {
         processing = true
     }
 
-    func runSlice(context: GameEventScriptContext, budget: Int) -> Int {
+    func runSlice(context: GesContext, budget: Int) -> Int {
         if let profiler = linked?.profiler {
             return executeSlice(context: context, budget: budget, instrumentation: ActiveInstrumentation(profiler: profiler))
         }
@@ -26,7 +26,7 @@ extension GesVirtualMachine {
     // Opcode extensions normally stay out of line: broad inlining regressed the uninstrumented
     // compute benchmark. Keep exceptions such as Add measurement-driven, independently of this loop specialization.
     @inline(__always)
-    private func executeSlice<Instrumentation: VmInstrumentation>(context: GameEventScriptContext, budget: Int, instrumentation: Instrumentation) -> Int {
+    private func executeSlice<Instrumentation: VmInstrumentation>(context: GesContext, budget: Int, instrumentation: Instrumentation) -> Int {
         var executed = 0
         // The linked Program and the lazily created budget are fixed for the whole slice.
         let runtimeBudget = context.budget
@@ -68,7 +68,7 @@ extension GesVirtualMachine {
                 case .callExternal: try GesCallbacks.extensionCall(instruction, self, context)
                 case .emitInstant, .emitAfter, .publishInstant, .publishAfter: try send(instruction, context)
                 case .emitMessage, .emitMessageWithTags, .publishMessage, .publishMessageWithTags, .emitMessageValue, .emitMessageValueWithTags, .publishMessageValue, .publishMessageValueWithTags: try emitMessage(instruction, context)
-                case .cast: try GesCasts.cast(value(x), GameEventScriptBytecodeTypeKind(rawValue: instruction.word2)!, context, sink: output(d))
+                case .cast: try GesCasts.cast(value(x), GesBytecodeTypeKind(rawValue: instruction.word2)!, context, sink: output(d))
                 case .castCustom:
                     let value = self.value(x)
                     let type = text(instruction.word2)
@@ -91,7 +91,7 @@ extension GesVirtualMachine {
                     }
                 case .splitText: GesTextSplit.split(value(x), value(y), whitespace: instruction.a == 1, sink: output(d))
                 case .parseLiteral: try GesLiteralParser.evaluate(value(x), context: context, state: self, destination: d)
-                case .checkType: setBoolean(d, GesCasts.check(value(x), GameEventScriptBytecodeTypeKind(rawValue: instruction.word2)!))
+                case .checkType: setBoolean(d, GesCasts.check(value(x), GesBytecodeTypeKind(rawValue: instruction.word2)!))
                 case .checkCustomType: setBoolean(d, value(x).customTypeName == text(instruction.word2))
                 case .checkUnit:
                     let value = self.value(x)
@@ -127,7 +127,7 @@ extension GesVirtualMachine {
                         fail("runtime.invalidMessageShape")
                         break
                     }
-                    let signature = try GameEventScriptMessageSignature(name: text(shape[0]), parameters: shape.dropFirst().map(text))
+                    let signature = try GesMessageSignature(name: text(shape[0]), parameters: shape.dropFirst().map(text))
                     if instruction.opcode == .loadHandler { setHandler(d, signature) } else if let message = signature.createMessage(values(instruction.word2)) { setMessage(d, message) } else { setNothing(d) }
                 case .stageRegister: stageRegister(x)
                 case .stageNothing: stageNothing()
@@ -428,7 +428,7 @@ extension GesVirtualMachine {
                 instrumentation.phaseStarting(.advance)
                 executed += 1
             }
-        } catch let fault as GameEventScriptExtensionFault { fail(fault.diagnostic) } catch let fault as GesRuntimeError { fail(fault.diagnostic) } catch { fail("runtime.unhandledFailure", error: error) }
+        } catch let fault as GesExtensionFaultError { fail(fault.diagnostic) } catch let fault as GesRuntimeError { fail(fault.diagnostic) } catch { fail("runtime.unhandledFailure", error: error) }
         instrumentation.finishSlice()
         runtimeBudget.complete(executed: executed, reserved: reserved, processing: processing)
         return executed
@@ -436,7 +436,7 @@ extension GesVirtualMachine {
 }
 
 private protocol VmInstrumentation {
-    func phaseStarting(_ phase: GameEventScriptProfilePhase)
+    func phaseStarting(_ phase: GesProfilePhase)
 
     func instructionStarting(_ address: Int)
 
@@ -444,7 +444,7 @@ private protocol VmInstrumentation {
 }
 
 private struct NoInstrumentation: VmInstrumentation {
-    @inline(__always) func phaseStarting(_ phase: GameEventScriptProfilePhase) {}
+    @inline(__always) func phaseStarting(_ phase: GesProfilePhase) {}
 
     @inline(__always) func instructionStarting(_ address: Int) {}
 
@@ -452,9 +452,9 @@ private struct NoInstrumentation: VmInstrumentation {
 }
 
 private struct ActiveInstrumentation: VmInstrumentation {
-    let profiler: any GameEventScriptProgramProfiler
+    let profiler: any GesProgramProfiler
 
-    @inline(__always) func phaseStarting(_ phase: GameEventScriptProfilePhase) { profiler.phaseStarting(phase) }
+    @inline(__always) func phaseStarting(_ phase: GesProfilePhase) { profiler.phaseStarting(phase) }
 
     @inline(__always) func instructionStarting(_ address: Int) { profiler.instructionStarting(address) }
 

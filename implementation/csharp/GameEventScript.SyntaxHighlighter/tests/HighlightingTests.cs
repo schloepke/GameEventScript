@@ -24,8 +24,8 @@ public sealed class HighlightingTests
             var data = json.RootElement;
             var name = data.GetProperty("name").GetString()!;
             var source = data.GetProperty("source").GetString()!;
-            var language = data.GetProperty("language").GetString() == "ges" ? GameEventScriptSyntaxLanguage.Ges : GameEventScriptSyntaxLanguage.Gesa;
-            var highlighter = new GameEventScriptSyntaxHighlighter(language);
+            var language = data.GetProperty("language").GetString() == "ges" ? GesSyntaxLanguage.Ges : GesSyntaxLanguage.Gesa;
+            var highlighter = new GesSyntaxHighlighter(language);
             var result = highlighter.Highlight(source);
             Assert.IsTrue(result.IsComplete, name);
             var units = Expand(result.Spans, source.Length);
@@ -36,7 +36,7 @@ public sealed class HighlightingTests
                 var start = -1;
                 for (var i = 0; i <= occurrence; i++) start = source.IndexOf(text, start + 1, StringComparison.Ordinal);
                 Assert.IsGreaterThanOrEqualTo(0, start, name);
-                var kind = Enum.Parse<GameEventScriptSyntaxKind>(expected.GetProperty("kind").GetString()!, true);
+                var kind = Enum.Parse<GesSyntaxKind>(expected.GetProperty("kind").GetString()!, true);
                 for (var i = start; i < start + text.Length; i++)
                 {
                     Assert.AreEqual(kind, units[i].Kind, name + ": " + text);
@@ -60,7 +60,7 @@ public sealed class HighlightingTests
                 state = incremental.NextState!;
             }
             Assert.AreEqual(result.NextState, state, name);
-            var ansi = GameEventScriptAnsiRenderer.Render(source, result.Spans);
+            var ansi = GesAnsiRenderer.Render(source, result.Spans);
             Assert.AreEqual(source, Regex.Replace(ansi, "\u001b\\[[0-9;]*m", ""), name);
         }
     }
@@ -68,36 +68,36 @@ public sealed class HighlightingTests
     [TestMethod]
     public void EditChangesContinuationAndStatesWorkAcrossInstances()
     {
-        var highlighter = new GameEventScriptSyntaxHighlighter();
+        var highlighter = new GesSyntaxHighlighter();
         var open = highlighter.HighlightLine("'open\n");
-        var inside = new GameEventScriptSyntaxHighlighter().HighlightLine("emit Done()", open.NextState);
-        Assert.IsTrue(inside.Spans.All(span => span.Kind == GameEventScriptSyntaxKind.String));
+        var inside = new GesSyntaxHighlighter().HighlightLine("emit Done()", open.NextState);
+        Assert.IsTrue(inside.Spans.All(span => span.Kind == GesSyntaxKind.String));
         var closed = highlighter.HighlightLine("'closed'\n");
         Assert.AreEqual(highlighter.CreateState(), closed.NextState);
         Assert.AreNotEqual(open.NextState, closed.NextState);
-        Assert.AreEqual(GameEventScriptSyntaxKind.Keyword, highlighter.HighlightLine("emit Done()", closed.NextState).Spans[0].Kind);
+        Assert.AreEqual(GesSyntaxKind.Keyword, highlighter.HighlightLine("emit Done()", closed.NextState).Spans[0].Kind);
     }
 
     [TestMethod]
     public void BoundsAndInvalidApiInputsAreExplicit()
     {
-        var small = new GameEventScriptSyntaxHighlighter(maxInputLength: 4);
+        var small = new GesSyntaxHighlighter(maxInputLength: 4);
         Assert.IsFalse(small.Highlight("12345").IsComplete);
         Assert.IsNull(small.Highlight("12345").NextState);
         Assert.HasCount(0, small.Highlight("12345").Spans);
         Assert.IsTrue(small.Highlight("").IsComplete);
         Assert.ThrowsExactly<ArgumentException>(() => small.HighlightLine("x\ny"));
-        Assert.ThrowsExactly<ArgumentException>(() => small.HighlightLine("x", new GameEventScriptSyntaxHighlighter(GameEventScriptSyntaxLanguage.Gesa).CreateState()));
-        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new GameEventScriptSyntaxHighlighter(maxInputLength: 0));
+        Assert.ThrowsExactly<ArgumentException>(() => small.HighlightLine("x", new GesSyntaxHighlighter(GesSyntaxLanguage.Gesa).CreateState()));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new GesSyntaxHighlighter(maxInputLength: 0));
         var spans = small.Highlight("1234").Spans;
-        Assert.ThrowsExactly<ArgumentException>(() => GameEventScriptAnsiRenderer.Render("1", spans));
-        Assert.ThrowsExactly<ArgumentException>(() => GameEventScriptAnsiRenderer.Render("1234", spans, _ => 123));
-        Assert.AreEqual("\u001b[31m1234\u001b[0m", GameEventScriptAnsiRenderer.Render("1234", spans, _ => 31));
+        Assert.ThrowsExactly<ArgumentException>(() => GesAnsiRenderer.Render("1", spans));
+        Assert.ThrowsExactly<ArgumentException>(() => GesAnsiRenderer.Render("1234", spans, _ => 123));
+        Assert.AreEqual("\u001b[31m1234\u001b[0m", GesAnsiRenderer.Render("1234", spans, _ => 31));
     }
 
-    private static GameEventScriptHighlightSpan[] Expand(IReadOnlyList<GameEventScriptHighlightSpan> spans, int length)
+    private static GesHighlightSpan[] Expand(IReadOnlyList<GesHighlightSpan> spans, int length)
     {
-        var units = new GameEventScriptHighlightSpan[length];
+        var units = new GesHighlightSpan[length];
         var cursor = 0;
         foreach (var span in spans)
         {

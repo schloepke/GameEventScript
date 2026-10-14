@@ -3,7 +3,7 @@
 
 extension GesVirtualMachine {
     @inline(never)
-    func executeChance(_ destinationRegister: Int, _ sourceRegister: Int, _ context: GameEventScriptContext) {
+    func executeChance(_ destinationRegister: Int, _ sourceRegister: Int, _ context: GesContext) {
         let destination = destinationRegister
         let x = frameStart + sourceRegister
         if !registers[x].numericOnly || registers[x].hasUnit || !registers[x].asNumber.isFinite { return setNothing(destination) }

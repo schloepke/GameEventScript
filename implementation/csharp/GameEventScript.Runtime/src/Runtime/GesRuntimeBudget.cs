@@ -7,14 +7,14 @@ using GameEventScript.Api;
 
 namespace GameEventScript.Runtime;
 
-internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEventScriptRuntimeLimits limits)
+internal sealed class GesRuntimeBudget(GesContext context, GesRuntimeLimits limits)
 {
     private long _executionSteps;
     private long _loopIterations;
     private int _callDepth;
     private bool _exhausted;
 
-    public GameEventScriptRuntimeLimits Limits { get; } = limits;
+    public GesRuntimeLimits Limits { get; } = limits;
 
     public bool IsExhausted => _exhausted;
 

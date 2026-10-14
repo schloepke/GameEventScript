@@ -171,7 +171,7 @@ internal sealed partial class GesBinaryBuilder
             return null;
         }
 
-        public GameEventScriptSourceLocation? GetSourceRange(int index)
+        public GesSourceLocation? GetSourceRange(int index)
         {
             if ((uint)index < (uint)_items.Count)
             {
@@ -197,9 +197,9 @@ internal sealed partial class GesBinaryBuilder
 
         public InstructionPlan CreateInstructionNear(
             int index,
-            GameEventScriptBytecodeOpCode opcode,
-            GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone,
-            GameEventScriptInstructionFlag flags = GameEventScriptInstructionFlag.None,
+            GesBytecodeOpCode opcode,
+            GesQuantityUnit unit = GesQuantityUnit.UnitNone,
+            GesInstructionFlag flags = GesInstructionFlag.None,
             GesOperand dst = default,
             GesOperand x = default,
             GesOperand y = default,
@@ -215,9 +215,9 @@ internal sealed partial class GesBinaryBuilder
 
         public InstructionPlan CreateInstruction(
             int routineId,
-            GameEventScriptBytecodeOpCode opcode,
-            GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone,
-            GameEventScriptInstructionFlag flags = GameEventScriptInstructionFlag.None,
+            GesBytecodeOpCode opcode,
+            GesQuantityUnit unit = GesQuantityUnit.UnitNone,
+            GesInstructionFlag flags = GesInstructionFlag.None,
             GesOperand dst = default,
             GesOperand x = default,
             GesOperand y = default,
@@ -283,7 +283,7 @@ internal sealed partial class GesBinaryBuilder
             _items[index] = PlanItem.ForInstruction(instruction, _items[index].SourceRange);
         }
 
-        public void ReplaceInstruction(int index, InstructionPlan instruction, GameEventScriptSourceLocation? sourceRange)
+        public void ReplaceInstruction(int index, InstructionPlan instruction, GesSourceLocation? sourceRange)
         {
             RequireIndex(index);
             ValidateInstruction(instruction);
@@ -297,35 +297,35 @@ internal sealed partial class GesBinaryBuilder
             _items[index] = PlanItem.ForLabel(label, _items[index].SourceRange);
         }
 
-        public void ReplaceWithLabel(int index, GesLabelRef label, GameEventScriptSourceLocation? sourceRange)
+        public void ReplaceWithLabel(int index, GesLabelRef label, GesSourceLocation? sourceRange)
         {
             RequireIndex(index);
             _builder.RequireLabel(label);
             _items[index] = PlanItem.ForLabel(label, sourceRange);
         }
 
-        public void InsertInstructionBefore(int index, InstructionPlan instruction, GameEventScriptSourceLocation? sourceRange = null)
+        public void InsertInstructionBefore(int index, InstructionPlan instruction, GesSourceLocation? sourceRange = null)
         {
             RequireInsertIndex(index);
             ValidateInstruction(instruction);
             _items.Insert(index, PlanItem.ForInstruction(instruction, sourceRange));
         }
 
-        public void InsertInstructionAfter(int index, InstructionPlan instruction, GameEventScriptSourceLocation? sourceRange = null)
+        public void InsertInstructionAfter(int index, InstructionPlan instruction, GesSourceLocation? sourceRange = null)
         {
             RequireIndex(index);
             ValidateInstruction(instruction);
             _items.Insert(index + 1, PlanItem.ForInstruction(instruction, sourceRange));
         }
 
-        public void InsertLabelBefore(int index, GesLabelRef label, GameEventScriptSourceLocation? sourceRange = null)
+        public void InsertLabelBefore(int index, GesLabelRef label, GesSourceLocation? sourceRange = null)
         {
             RequireInsertIndex(index);
             _builder.RequireLabel(label);
             _items.Insert(index, PlanItem.ForLabel(label, sourceRange));
         }
 
-        public void InsertLabelAfter(int index, GesLabelRef label, GameEventScriptSourceLocation? sourceRange = null)
+        public void InsertLabelAfter(int index, GesLabelRef label, GesSourceLocation? sourceRange = null)
         {
             RequireIndex(index);
             _builder.RequireLabel(label);
@@ -528,11 +528,11 @@ internal sealed partial class GesBinaryBuilder
 
     private static GesLabelRef? ReadJumpTarget(InstructionPlan instruction)
     {
-        if ((instruction.OpCode is GameEventScriptBytecodeOpCode.Jump or
-                GameEventScriptBytecodeOpCode.JumpIfTrue or
-                GameEventScriptBytecodeOpCode.JumpIfFalse or
-                GameEventScriptBytecodeOpCode.JumpIfNotTrue or
-                GameEventScriptBytecodeOpCode.JumpIfNothing) &&
+        if ((instruction.OpCode is GesBytecodeOpCode.Jump or
+                GesBytecodeOpCode.JumpIfTrue or
+                GesBytecodeOpCode.JumpIfFalse or
+                GesBytecodeOpCode.JumpIfNotTrue or
+                GesBytecodeOpCode.JumpIfNothing) &&
             instruction.Y.Kind == GesOperandKind.Label)
         {
             return instruction.Y.LabelRef;
@@ -594,13 +594,13 @@ internal sealed partial class GesBinaryBuilder
 
             switch (instruction.OpCode)
             {
-                case GameEventScriptBytecodeOpCode.Not when value.Kind == ConstantKind.Boolean:
+                case GesBytecodeOpCode.Not when value.Kind == ConstantKind.Boolean:
                     return CreateLoadBoolean(instruction, !value.Boolean);
-                case GameEventScriptBytecodeOpCode.HasValue:
+                case GesBytecodeOpCode.HasValue:
                     return CreateLoadBoolean(instruction, value.Kind != ConstantKind.Nothing);
-                case GameEventScriptBytecodeOpCode.Negate when value.Kind == ConstantKind.Integer && value.Integer != long.MinValue:
+                case GesBytecodeOpCode.Negate when value.Kind == ConstantKind.Integer && value.Integer != long.MinValue:
                     return CreateLoadInteger(instruction, -value.Integer);
-                case GameEventScriptBytecodeOpCode.Abs when value.Kind == ConstantKind.Integer && value.Integer != long.MinValue:
+                case GesBytecodeOpCode.Abs when value.Kind == ConstantKind.Integer && value.Integer != long.MinValue:
                     return CreateLoadInteger(instruction, value.Integer < 0 ? -value.Integer : value.Integer);
                 default:
                     return null;
@@ -623,27 +623,27 @@ internal sealed partial class GesBinaryBuilder
             {
                 switch (instruction.OpCode)
                 {
-                    case GameEventScriptBytecodeOpCode.Equal:
+                    case GesBytecodeOpCode.Equal:
                         return CreateLoadBoolean(instruction, left.Integer == right.Integer);
-                    case GameEventScriptBytecodeOpCode.NotEqual:
+                    case GesBytecodeOpCode.NotEqual:
                         return CreateLoadBoolean(instruction, left.Integer != right.Integer);
-                    case GameEventScriptBytecodeOpCode.Less:
+                    case GesBytecodeOpCode.Less:
                         return CreateLoadBoolean(instruction, left.Integer < right.Integer);
-                    case GameEventScriptBytecodeOpCode.Greater:
+                    case GesBytecodeOpCode.Greater:
                         return CreateLoadBoolean(instruction, left.Integer > right.Integer);
-                    case GameEventScriptBytecodeOpCode.LessOrEqual:
+                    case GesBytecodeOpCode.LessOrEqual:
                         return CreateLoadBoolean(instruction, left.Integer <= right.Integer);
-                    case GameEventScriptBytecodeOpCode.GreaterOrEqual:
+                    case GesBytecodeOpCode.GreaterOrEqual:
                         return CreateLoadBoolean(instruction, left.Integer >= right.Integer);
-                    case GameEventScriptBytecodeOpCode.Add when CanAdd(left.Integer, right.Integer):
+                    case GesBytecodeOpCode.Add when CanAdd(left.Integer, right.Integer):
                         return CreateLoadInteger(instruction, left.Integer + right.Integer);
-                    case GameEventScriptBytecodeOpCode.Subtract when CanSubtract(left.Integer, right.Integer):
+                    case GesBytecodeOpCode.Subtract when CanSubtract(left.Integer, right.Integer):
                         return CreateLoadInteger(instruction, left.Integer - right.Integer);
-                    case GameEventScriptBytecodeOpCode.Multiply when CanMultiply(left.Integer, right.Integer):
+                    case GesBytecodeOpCode.Multiply when CanMultiply(left.Integer, right.Integer):
                         return CreateLoadInteger(instruction, left.Integer * right.Integer);
-                    case GameEventScriptBytecodeOpCode.IntegerDivide when right.Integer != 0 && !(left.Integer == long.MinValue && right.Integer == -1):
+                    case GesBytecodeOpCode.IntegerDivide when right.Integer != 0 && !(left.Integer == long.MinValue && right.Integer == -1):
                         return CreateLoadInteger(instruction, left.Integer / right.Integer);
-                    case GameEventScriptBytecodeOpCode.Modulo when right.Integer != 0 && !(left.Integer == long.MinValue && right.Integer == -1):
+                    case GesBytecodeOpCode.Modulo when right.Integer != 0 && !(left.Integer == long.MinValue && right.Integer == -1):
                         var modulo = left.Integer % right.Integer;
                         if (modulo != 0 && (modulo < 0 && right.Integer > 0 || modulo > 0 && right.Integer < 0)) modulo += right.Integer;
                         return CreateLoadInteger(instruction, modulo);
@@ -654,17 +654,17 @@ internal sealed partial class GesBinaryBuilder
             {
                 switch (instruction.OpCode)
                 {
-                    case GameEventScriptBytecodeOpCode.Equal:
+                    case GesBytecodeOpCode.Equal:
                         return CreateLoadBoolean(instruction, left.Boolean == right.Boolean);
-                    case GameEventScriptBytecodeOpCode.NotEqual:
+                    case GesBytecodeOpCode.NotEqual:
                         return CreateLoadBoolean(instruction, left.Boolean != right.Boolean);
-                    case GameEventScriptBytecodeOpCode.And:
+                    case GesBytecodeOpCode.And:
                         return CreateLoadBoolean(instruction, left.Boolean && right.Boolean);
-                    case GameEventScriptBytecodeOpCode.Or:
+                    case GesBytecodeOpCode.Or:
                         return CreateLoadBoolean(instruction, left.Boolean || right.Boolean);
-                    case GameEventScriptBytecodeOpCode.Xor:
+                    case GesBytecodeOpCode.Xor:
                         return CreateLoadBoolean(instruction, left.Boolean ^ right.Boolean);
-                    case GameEventScriptBytecodeOpCode.Implies:
+                    case GesBytecodeOpCode.Implies:
                         return CreateLoadBoolean(instruction, !left.Boolean || right.Boolean);
                 }
             }
@@ -673,9 +673,9 @@ internal sealed partial class GesBinaryBuilder
             {
                 switch (instruction.OpCode)
                 {
-                    case GameEventScriptBytecodeOpCode.Equal:
+                    case GesBytecodeOpCode.Equal:
                         return CreateLoadBoolean(instruction, left.Kind == ConstantKind.Nothing && right.Kind == ConstantKind.Nothing);
-                    case GameEventScriptBytecodeOpCode.NotEqual:
+                    case GesBytecodeOpCode.NotEqual:
                         return CreateLoadBoolean(instruction, left.Kind != ConstantKind.Nothing || right.Kind != ConstantKind.Nothing);
                 }
             }
@@ -707,13 +707,13 @@ internal sealed partial class GesBinaryBuilder
 
             switch (writer.OpCode)
             {
-                case GameEventScriptBytecodeOpCode.LoadInteger when writer.Unit == GameEventScriptBytecodeInstructionUnit.UnitNone && writer.I64.HasValue:
+                case GesBytecodeOpCode.LoadInteger when writer.Unit == GesQuantityUnit.UnitNone && writer.I64.HasValue:
                     return ConstantValue.IntegerValue(writer.I64.Value);
-                case GameEventScriptBytecodeOpCode.LoadTrue:
+                case GesBytecodeOpCode.LoadTrue:
                     return ConstantValue.BooleanValue(true);
-                case GameEventScriptBytecodeOpCode.LoadFalse:
+                case GesBytecodeOpCode.LoadFalse:
                     return ConstantValue.BooleanValue(false);
-                case GameEventScriptBytecodeOpCode.LoadNothing:
+                case GesBytecodeOpCode.LoadNothing:
                     return ConstantValue.NothingValue;
                 default:
                     return default;
@@ -736,9 +736,9 @@ internal sealed partial class GesBinaryBuilder
         private static InstructionPlan CreateLoadInteger(InstructionPlan source, long value)
             => source with
             {
-                OpCode = GameEventScriptBytecodeOpCode.LoadInteger,
-                Unit = GameEventScriptBytecodeInstructionUnit.UnitNone,
-                Flags = GameEventScriptInstructionFlag.None,
+                OpCode = GesBytecodeOpCode.LoadInteger,
+                Unit = GesQuantityUnit.UnitNone,
+                Flags = GesInstructionFlag.None,
                 X = default,
                 Y = default,
                 A = default,
@@ -754,9 +754,9 @@ internal sealed partial class GesBinaryBuilder
         private static InstructionPlan CreateLoadBoolean(InstructionPlan source, bool value)
             => source with
             {
-                OpCode = value ? GameEventScriptBytecodeOpCode.LoadTrue : GameEventScriptBytecodeOpCode.LoadFalse,
-                Unit = GameEventScriptBytecodeInstructionUnit.UnitNone,
-                Flags = GameEventScriptInstructionFlag.None,
+                OpCode = value ? GesBytecodeOpCode.LoadTrue : GesBytecodeOpCode.LoadFalse,
+                Unit = GesQuantityUnit.UnitNone,
+                Flags = GesInstructionFlag.None,
                 X = default,
                 Y = default,
                 A = default,
@@ -891,7 +891,7 @@ internal sealed partial class GesBinaryBuilder
         }
 
         private static bool HasProgramEffects(RewriteContext context, InstructionPlan instruction, ref EffectAnalysis? effects)
-            => instruction.OpCode == GameEventScriptBytecodeOpCode.CastCustom
+            => instruction.OpCode == GesBytecodeOpCode.CastCustom
                 ? (effects ??= context.AnalyzeEffects()).HasEffects(instruction)
                 : EffectAnalysis.HasDirectEffects(instruction);
     }
@@ -917,7 +917,7 @@ internal sealed partial class GesBinaryBuilder
                     branch.Y.Kind != GesOperandKind.Label ||
                     index + 1 >= context.Count ||
                     context.GetInstruction(index + 1) is not { } jump ||
-                    jump.OpCode != GameEventScriptBytecodeOpCode.Jump ||
+                    jump.OpCode != GesBytecodeOpCode.Jump ||
                     jump.Y.Kind != GesOperandKind.Label)
                 {
                     continue;
@@ -942,16 +942,16 @@ internal sealed partial class GesBinaryBuilder
             return changed;
         }
 
-        private static GameEventScriptBytecodeOpCode? ReadInvertedBranchOpcode(InstructionPlan instruction)
+        private static GesBytecodeOpCode? ReadInvertedBranchOpcode(InstructionPlan instruction)
         {
             switch (instruction.OpCode)
             {
-                case GameEventScriptBytecodeOpCode.JumpIfTrue:
-                    return GameEventScriptBytecodeOpCode.JumpIfFalse;
-                case GameEventScriptBytecodeOpCode.JumpIfFalse:
-                    return GameEventScriptBytecodeOpCode.JumpIfTrue;
-                case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
-                    return GameEventScriptBytecodeOpCode.JumpIfTrue;
+                case GesBytecodeOpCode.JumpIfTrue:
+                    return GesBytecodeOpCode.JumpIfFalse;
+                case GesBytecodeOpCode.JumpIfFalse:
+                    return GesBytecodeOpCode.JumpIfTrue;
+                case GesBytecodeOpCode.JumpIfNotTrue:
+                    return GesBytecodeOpCode.JumpIfTrue;
                 default:
                     return null;
             }
@@ -987,7 +987,7 @@ internal sealed partial class GesBinaryBuilder
                     }
 
                     if (targetInstructionIndex >= 0 &&
-                        context.GetInstruction(targetInstructionIndex) is { OpCode: GameEventScriptBytecodeOpCode.Jump, Y.Kind: GesOperandKind.Label } targetJump &&
+                        context.GetInstruction(targetInstructionIndex) is { OpCode: GesBytecodeOpCode.Jump, Y.Kind: GesOperandKind.Label } targetJump &&
                         targetJump.Y.LabelRef.Id != target.Id)
                     {
                         context.ReplaceInstruction(index, instruction with { Y = targetJump.Y });
@@ -1015,8 +1015,8 @@ internal sealed partial class GesBinaryBuilder
             return changed;
         }
 
-        private static bool IsUnconditionalControlStop(GameEventScriptBytecodeOpCode opcode)
-            => opcode is GameEventScriptBytecodeOpCode.Jump or GameEventScriptBytecodeOpCode.ReturnVoid or GameEventScriptBytecodeOpCode.ReturnValue;
+        private static bool IsUnconditionalControlStop(GesBytecodeOpCode opcode)
+            => opcode is GesBytecodeOpCode.Jump or GesBytecodeOpCode.ReturnVoid or GesBytecodeOpCode.ReturnValue;
     }
 
     private sealed class RegisterPressureReductionPass : IGesBinaryOptimizationPass
@@ -1043,7 +1043,7 @@ internal sealed partial class GesBinaryBuilder
             var remove = new bool[context.Count];
             for (var moveIndex = 0; moveIndex < context.Count; moveIndex++)
             {
-                if (context.GetInstruction(moveIndex) is not { OpCode: GameEventScriptBytecodeOpCode.Move, Flags: GameEventScriptInstructionFlag.None } move ||
+                if (context.GetInstruction(moveIndex) is not { OpCode: GesBytecodeOpCode.Move, Flags: GesInstructionFlag.None } move ||
                     move.X.Kind != GesOperandKind.Register ||
                     move.Destination.Kind != GesOperandKind.Register ||
                     !context.IsTemporary(move.X.RegisterRef))
@@ -1141,63 +1141,63 @@ internal sealed partial class GesBinaryBuilder
             return true;
         }
 
-        private static bool IsControlFlowBoundary(GameEventScriptBytecodeOpCode opcode)
-            => opcode is GameEventScriptBytecodeOpCode.Jump or
-                GameEventScriptBytecodeOpCode.JumpIfTrue or
-                GameEventScriptBytecodeOpCode.JumpIfFalse or
-                GameEventScriptBytecodeOpCode.JumpIfNotTrue or
-                GameEventScriptBytecodeOpCode.JumpIfNothing or
-                GameEventScriptBytecodeOpCode.ReturnVoid or
-                GameEventScriptBytecodeOpCode.ReturnValue or
-                GameEventScriptBytecodeOpCode.RandomPush or
-                GameEventScriptBytecodeOpCode.RandomPushConstant or
-                GameEventScriptBytecodeOpCode.RandomPop or
-                GameEventScriptBytecodeOpCode.IteratorCreateOrJump or
-                GameEventScriptBytecodeOpCode.IteratorNext;
+        private static bool IsControlFlowBoundary(GesBytecodeOpCode opcode)
+            => opcode is GesBytecodeOpCode.Jump or
+                GesBytecodeOpCode.JumpIfTrue or
+                GesBytecodeOpCode.JumpIfFalse or
+                GesBytecodeOpCode.JumpIfNotTrue or
+                GesBytecodeOpCode.JumpIfNothing or
+                GesBytecodeOpCode.ReturnVoid or
+                GesBytecodeOpCode.ReturnValue or
+                GesBytecodeOpCode.RandomPush or
+                GesBytecodeOpCode.RandomPushConstant or
+                GesBytecodeOpCode.RandomPop or
+                GesBytecodeOpCode.IteratorCreateOrJump or
+                GesBytecodeOpCode.IteratorNext;
 
-        private static bool CanRetargetDestination(GameEventScriptBytecodeOpCode opcode)
+        private static bool CanRetargetDestination(GesBytecodeOpCode opcode)
         {
             return opcode switch
             {
-                GameEventScriptBytecodeOpCode.RegisterLocals or
-                    GameEventScriptBytecodeOpCode.Jump or
-                    GameEventScriptBytecodeOpCode.JumpIfTrue or
-                    GameEventScriptBytecodeOpCode.JumpIfFalse or
-                    GameEventScriptBytecodeOpCode.JumpIfNotTrue or
-                    GameEventScriptBytecodeOpCode.JumpIfNothing or
-                    GameEventScriptBytecodeOpCode.Call or
-                    GameEventScriptBytecodeOpCode.CallExternal or
-                    GameEventScriptBytecodeOpCode.ReturnVoid or
-                    GameEventScriptBytecodeOpCode.ReturnValue or
-                    GameEventScriptBytecodeOpCode.EmitMessage or
-                    GameEventScriptBytecodeOpCode.EmitMessageWithTags or
-                    GameEventScriptBytecodeOpCode.EmitMessageValue or
-                    GameEventScriptBytecodeOpCode.EmitMessageValueWithTags or
-                    GameEventScriptBytecodeOpCode.PublishMessage or
-                    GameEventScriptBytecodeOpCode.PublishMessageWithTags or
-                    GameEventScriptBytecodeOpCode.PublishMessageValue or
-                    GameEventScriptBytecodeOpCode.PublishMessageValueWithTags or
-                    GameEventScriptBytecodeOpCode.StageRegister or
-                    GameEventScriptBytecodeOpCode.StageNothing or
-                    GameEventScriptBytecodeOpCode.StageTrue or
-                    GameEventScriptBytecodeOpCode.StageFalse or
-                    GameEventScriptBytecodeOpCode.StageInteger or
-                    GameEventScriptBytecodeOpCode.StageFloat or
-                    GameEventScriptBytecodeOpCode.StageText or
-                    GameEventScriptBytecodeOpCode.StageTag or
-                    GameEventScriptBytecodeOpCode.StagePercentage or
-                    GameEventScriptBytecodeOpCode.CreateRecord or
-                    GameEventScriptBytecodeOpCode.RandomPush or
-                    GameEventScriptBytecodeOpCode.RandomPushConstant or
-                    GameEventScriptBytecodeOpCode.RandomPop or
-                    GameEventScriptBytecodeOpCode.IteratorCreateOrJump or
-                    GameEventScriptBytecodeOpCode.IteratorNext or
-                    GameEventScriptBytecodeOpCode.IteratorClose or
-                    GameEventScriptBytecodeOpCode.ListBuilderAdd or
-                    GameEventScriptBytecodeOpCode.MapBuilderAdd or
-                    GameEventScriptBytecodeOpCode.DistinctBuilderAdd or
-                    GameEventScriptBytecodeOpCode.GroupBuilderAdd or
-                    GameEventScriptBytecodeOpCode.OrderBuilderAdd => false,
+                GesBytecodeOpCode.RegisterLocals or
+                    GesBytecodeOpCode.Jump or
+                    GesBytecodeOpCode.JumpIfTrue or
+                    GesBytecodeOpCode.JumpIfFalse or
+                    GesBytecodeOpCode.JumpIfNotTrue or
+                    GesBytecodeOpCode.JumpIfNothing or
+                    GesBytecodeOpCode.Call or
+                    GesBytecodeOpCode.CallExternal or
+                    GesBytecodeOpCode.ReturnVoid or
+                    GesBytecodeOpCode.ReturnValue or
+                    GesBytecodeOpCode.EmitMessage or
+                    GesBytecodeOpCode.EmitMessageWithTags or
+                    GesBytecodeOpCode.EmitMessageValue or
+                    GesBytecodeOpCode.EmitMessageValueWithTags or
+                    GesBytecodeOpCode.PublishMessage or
+                    GesBytecodeOpCode.PublishMessageWithTags or
+                    GesBytecodeOpCode.PublishMessageValue or
+                    GesBytecodeOpCode.PublishMessageValueWithTags or
+                    GesBytecodeOpCode.StageRegister or
+                    GesBytecodeOpCode.StageNothing or
+                    GesBytecodeOpCode.StageTrue or
+                    GesBytecodeOpCode.StageFalse or
+                    GesBytecodeOpCode.StageInteger or
+                    GesBytecodeOpCode.StageFloat or
+                    GesBytecodeOpCode.StageText or
+                    GesBytecodeOpCode.StageTag or
+                    GesBytecodeOpCode.StagePercentage or
+                    GesBytecodeOpCode.CreateRecord or
+                    GesBytecodeOpCode.RandomPush or
+                    GesBytecodeOpCode.RandomPushConstant or
+                    GesBytecodeOpCode.RandomPop or
+                    GesBytecodeOpCode.IteratorCreateOrJump or
+                    GesBytecodeOpCode.IteratorNext or
+                    GesBytecodeOpCode.IteratorClose or
+                    GesBytecodeOpCode.ListBuilderAdd or
+                    GesBytecodeOpCode.MapBuilderAdd or
+                    GesBytecodeOpCode.DistinctBuilderAdd or
+                    GesBytecodeOpCode.GroupBuilderAdd or
+                    GesBytecodeOpCode.OrderBuilderAdd => false,
                 _ => true
             };
         }
@@ -1224,10 +1224,10 @@ internal sealed partial class GesBinaryBuilder
                 if (remove[index] ||
                     remove[index + 1] ||
                     context.GetInstruction(index) is not { } instruction ||
-                    instruction.OpCode is GameEventScriptBytecodeOpCode.IteratorNext or GameEventScriptBytecodeOpCode.IteratorCreateOrJump ||
+                    instruction.OpCode is GesBytecodeOpCode.IteratorNext or GesBytecodeOpCode.IteratorCreateOrJump ||
                     context.GetInstruction(index + 1) is not { } move ||
-                    move.OpCode != GameEventScriptBytecodeOpCode.Move ||
-                    move.Flags != GameEventScriptInstructionFlag.None ||
+                    move.OpCode != GesBytecodeOpCode.Move ||
+                    move.Flags != GesInstructionFlag.None ||
                     instruction.Destination.Kind != GesOperandKind.Register ||
                     move.X.Kind != GesOperandKind.Register ||
                     move.Destination.Kind != GesOperandKind.Register ||

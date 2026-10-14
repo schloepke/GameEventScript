@@ -10,23 +10,23 @@ namespace GameEventScript.Compiler;
 
 internal static partial class GesCompiler
 {
-    public static GameEventScriptProgram Compile(GesSyntaxTreeModule module, GameEventScriptCompileOptions? options = null)
+    public static GameEventScriptProgram Compile(GesSyntaxTreeModule module, GesCompileOptions? options = null)
     {
         _ = module ?? throw new ArgumentNullException(nameof(module));
-        var compileOptions = options ?? new GameEventScriptCompileOptions();
+        var compileOptions = options ?? new GesCompileOptions();
         var program = new BinaryCompiler(module, compileOptions).Build();
         GameEventScriptProgramValidator.Validate(program);
         return program;
     }
 
-    private static GameEventScriptCompileException CompileFailure(string code, string message, string? symbol = null)
-        => new(new GameEventScriptDiagnostic(
-            GameEventScriptDiagnosticPhase.Compile,
+    private static GesCompileException CompileFailure(string code, string message, string? symbol = null)
+        => new(new GesDiagnostic(
+            GesDiagnosticPhase.Compile,
             code,
             message,
             symbol));
 
-    private sealed partial class BinaryCompiler(GesSyntaxTreeModule module, GameEventScriptCompileOptions options)
+    private sealed partial class BinaryCompiler(GesSyntaxTreeModule module, GesCompileOptions options)
     {
         private readonly GesBinaryBuilder _builder = new GesBinaryBuilder()
             .WithModuleName(module.ModuleName)
@@ -48,14 +48,14 @@ internal static partial class GesCompiler
             for (var index = 0; index < callables.Length; index++)
             {
                 var callable = callables[index];
-                var kind = callable.Kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptBinaryBindKind.Predicate : GameEventScriptBinaryBindKind.Function;
+                var kind = callable.Kind == GameEventScriptCallableKind.PredicateCall ? GesBinaryBindKind.Predicate : GesBinaryBindKind.Function;
                 _callableRoutines.Add(callable.SignatureId, _builder.DeclareRoutine(kind, callable.Name, callable.SignatureLabels));
             }
 
             for (var index = 0; index < types.Length; index++)
             {
                 var type = types[index];
-                _recordConstructors.Add(type.Name, _builder.DeclareRoutine(GameEventScriptBinaryBindKind.Record, type.Name, ReadConstructorArgumentNames(type.Fields)));
+                _recordConstructors.Add(type.Name, _builder.DeclareRoutine(GesBinaryBindKind.Record, type.Name, ReadConstructorArgumentNames(type.Fields)));
             }
 
             EmitCallables(callables);
@@ -240,7 +240,7 @@ internal static partial class GesCompiler
         {
             if (values.Count == 0) return fallback;
             if (values.Count == 1) return values[0];
-            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileInvalidArity, "Message-name handler can only have one message parameter.");
+            throw CompileFailure(GesDiagnosticCodes.CompileInvalidArity, "Message-name handler can only have one message parameter.");
         }
 
         private void EmitRecordConstructors(TypeDefinitionNode[] orderedTypes)
@@ -412,7 +412,7 @@ internal static partial class GesCompiler
                     }
 
                     default:
-                        throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support statement node '{statement.GetType().Name}'.");
+                        throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support statement node '{statement.GetType().Name}'.");
                 }
             }
         }
@@ -470,7 +470,7 @@ internal static partial class GesCompiler
             var tags = EmitExpressionRegisters(send.Tags, context, state);
             GesOperand messageOperand;
             GesOperand arguments = default;
-            var flags = tags.Length > 0 ? GameEventScriptInstructionFlag.WithTags : GameEventScriptInstructionFlag.None;
+            var flags = tags.Length > 0 ? GesInstructionFlag.WithTags : GesInstructionFlag.None;
             if (send.Message is MessageLiteralExpressionNode message)
             {
                 var registers = EmitArgumentExpressionRegisters(message.Arguments, context, state);
@@ -480,11 +480,11 @@ internal static partial class GesCompiler
             else
             {
                 messageOperand = GesOperand.Register(EmitExpressionForRead(send.Message, context, state));
-                flags |= GameEventScriptInstructionFlag.Indirect;
+                flags |= GesInstructionFlag.Indirect;
             }
             var opcode = send.Kind == PublishStatementKind.Publish
-                ? delay is null ? GameEventScriptBytecodeOpCode.PublishInstant : GameEventScriptBytecodeOpCode.PublishAfter
-                : delay is null ? GameEventScriptBytecodeOpCode.EmitInstant : GameEventScriptBytecodeOpCode.EmitAfter;
+                ? delay is null ? GesBytecodeOpCode.PublishInstant : GesBytecodeOpCode.PublishAfter
+                : delay is null ? GesBytecodeOpCode.EmitInstant : GesBytecodeOpCode.EmitAfter;
             _builder.AddOpcode(opcode, flags: flags, dst: GesOperand.Register(destination), x: messageOperand, y: arguments,
                 a: tags.Length > 0 ? GesOperand.RegisterList(tags) : default, b: delay is { } time ? GesOperand.Register(time) : default);
         }
@@ -569,7 +569,7 @@ internal static partial class GesCompiler
                 {
                     if (!module.Constants.TryGetValue(constant.Name, out var value))
                     {
-                        throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"Constant '${constant.Name}' is not defined.", constant.Name);
+                        throw CompileFailure(GesDiagnosticCodes.CompileUnresolvedSymbol, $"Constant '${constant.Name}' is not defined.", constant.Name);
                     }
 
                     return EmitExpressionToRegister(value with { SourceRange = constant.SourceRange }, destination, context, state);
@@ -592,9 +592,9 @@ internal static partial class GesCompiler
                         var numeric = _builder.AddLabel("multiply_numeric");
                         var done = _builder.AddLabel("multiply_done");
                         var check = state.AllocateTemporary(_builder, context);
-                        _builder.CheckType(check, left, GameEventScriptBytecodeTypeKind.List);
+                        _builder.CheckType(check, left, GesBytecodeTypeKind.List);
                         _builder.JumpIfNotTrue(check, numeric);
-                        _builder.CheckType(check, right, GameEventScriptBytecodeTypeKind.List);
+                        _builder.CheckType(check, right, GesBytecodeTypeKind.List);
                         _builder.JumpIfNotTrue(check, numeric);
                         _builder.Cartesian(destination, left, right);
                         _builder.Jump(done);
@@ -749,7 +749,7 @@ internal static partial class GesCompiler
             using var sourceRange = _builder.SourceRange(expression.SourceRange);
             var destination = state.AllocateTemporary(_builder, context);
             if (EmitExpressionToRegister(expression, destination, context, state)) return destination;
-            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support expression node '{expression.GetType().Name}'.");
+            throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support expression node '{expression.GetType().Name}'.");
         }
 
         private GesRegisterRef EmitExpressionForRead(ExpressionNode expression, LoweringContext context, ExpressionState state)
@@ -795,7 +795,7 @@ internal static partial class GesCompiler
                     _builder.Implies(destination, left, right);
                     return;
                 default:
-                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support short-circuit operator '{operation.ToSourceText()}'.");
+                    throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support short-circuit operator '{operation.ToSourceText()}'.");
             }
         }
 
@@ -821,7 +821,7 @@ internal static partial class GesCompiler
                         _builder.Max(destination, destination, next);
                         break;
                     default:
-                        throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support variadic operator '{variadic.Operator}'.");
+                        throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support variadic operator '{variadic.Operator}'.");
                 }
             }
 
@@ -890,7 +890,7 @@ internal static partial class GesCompiler
                     else ThrowInvalidIntrinsicArity(intrinsic, "2, 4 or 6");
                     return;
                 default:
-                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support intrinsic '{intrinsic.Function.ToSourceText()}'.");
+                    throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support intrinsic '{intrinsic.Function.ToSourceText()}'.");
             }
         }
 
@@ -901,7 +901,7 @@ internal static partial class GesCompiler
         }
 
         private static void ThrowInvalidIntrinsicArity(IntrinsicCallExpressionNode intrinsic, string expected)
-            => throw CompileFailure(GameEventScriptDiagnosticCodes.CompileInvalidArity, $"Intrinsic '{intrinsic.Function.ToSourceText()}' expects {expected} arguments but got {intrinsic.Arguments.Count}.", intrinsic.Function.ToSourceText());
+            => throw CompileFailure(GesDiagnosticCodes.CompileInvalidArity, $"Intrinsic '{intrinsic.Function.ToSourceText()}' expects {expected} arguments but got {intrinsic.Arguments.Count}.", intrinsic.Function.ToSourceText());
 
         private void EmitCollectionAccessInto(CollectionAccessExpressionNode access, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
@@ -1032,7 +1032,7 @@ internal static partial class GesCompiler
                     EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { objectMatch }, 0, objectMatch, context, state);
                     return;
                 default:
-                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support selector node '{access.Selector.GetType().Name}'.");
+                    throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support selector node '{access.Selector.GetType().Name}'.");
             }
         }
 
@@ -1309,7 +1309,7 @@ internal static partial class GesCompiler
                 {
                     var noAverageLabel = _builder.AddLabel("pipeline_average_empty");
                     _builder.JumpIfNotTrue(count!.Value, noAverageLabel);
-                    _builder.NumericBinary(GameEventScriptBytecodeOpCode.Divide, destination, sum!.Value, count.Value);
+                    _builder.NumericBinary(GesBytecodeOpCode.Divide, destination, sum!.Value, count.Value);
                     _builder.Jump(closeLabel);
                     _builder.MarkLabel(noAverageLabel);
                     _builder.LoadNothing(destination);
@@ -1335,15 +1335,15 @@ internal static partial class GesCompiler
             {
                 case DistinctSelectorNode { Identifier: not null, Projection: not null }:
                 case OrderBySelectorNode:
-                    EmitSourceTypeGuard(source, invalidIteratorLabel, context, state, GameEventScriptBytecodeTypeKind.List);
+                    EmitSourceTypeGuard(source, invalidIteratorLabel, context, state, GesBytecodeTypeKind.List);
                     return;
                 case GroupBySelectorNode:
-                    EmitSourceTypeGuard(source, invalidIteratorLabel, context, state, GameEventScriptBytecodeTypeKind.List, GameEventScriptBytecodeTypeKind.Map, GameEventScriptBytecodeTypeKind.Custom);
+                    EmitSourceTypeGuard(source, invalidIteratorLabel, context, state, GesBytecodeTypeKind.List, GesBytecodeTypeKind.Map, GesBytecodeTypeKind.Custom);
                     return;
             }
         }
 
-        private void EmitSourceTypeGuard(GesRegisterRef source, GesLabelRef invalidIteratorLabel, LoweringContext context, ExpressionState state, params GameEventScriptBytecodeTypeKind[] allowedKinds)
+        private void EmitSourceTypeGuard(GesRegisterRef source, GesLabelRef invalidIteratorLabel, LoweringContext context, ExpressionState state, params GesBytecodeTypeKind[] allowedKinds)
         {
             var validLabel = _builder.AddLabel("pipeline_source_valid");
             var check = state.AllocateTemporary(_builder, context);
@@ -1416,7 +1416,7 @@ internal static partial class GesCompiler
 
             var value = EmitInlineAggregateValue(terminal, current, context, state);
             if (isAverage) _builder.Add(count!.Value, count.Value, one!.Value);
-            _builder.NumericBinary(GameEventScriptBytecodeOpCode.Add, accumulator, accumulator, value);
+            _builder.NumericBinary(GesBytecodeOpCode.Add, accumulator, accumulator, value);
             _builder.Jump(loopLabel);
 
             _builder.MarkLabel(emptyLabel);
@@ -1427,7 +1427,7 @@ internal static partial class GesCompiler
 
             _builder.MarkLabel(endLabel);
             _builder.IteratorClose(iterator);
-            if (isAverage) _builder.NumericBinary(GameEventScriptBytecodeOpCode.Divide, destination, accumulator, count!.Value);
+            if (isAverage) _builder.NumericBinary(GesBytecodeOpCode.Divide, destination, accumulator, count!.Value);
             _builder.Jump(doneLabel);
 
             _builder.MarkLabel(invalidIteratorLabel);
@@ -1445,7 +1445,7 @@ internal static partial class GesCompiler
                 AverageSelectorNode average => IsIdentityProjection(average.Identifier, average.Projection, average.BindingNames)
                     ? current
                     : EmitSelectorExpressionForRead(average.Identifier, current, average.Projection, context, state, average.BindingNames),
-                _ => throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler cannot aggregate terminal selector node '{terminal.GetType().Name}'.")
+                _ => throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler cannot aggregate terminal selector node '{terminal.GetType().Name}'.")
             };
         }
 
@@ -1466,7 +1466,7 @@ internal static partial class GesCompiler
                         ? current
                         : EmitSelectorExpressionForRead(select.Identifier, current, select.Projection, context, state, select.BindingNames);
                 default:
-                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler cannot inline non-terminal selector node '{selector.GetType().Name}'.");
+                    throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler cannot inline non-terminal selector node '{selector.GetType().Name}'.");
             }
         }
 
@@ -1626,7 +1626,7 @@ internal static partial class GesCompiler
                     return;
                 }
                 default:
-                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler cannot inline terminal selector node '{terminal.GetType().Name}'.");
+                    throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler cannot inline terminal selector node '{terminal.GetType().Name}'.");
             }
         }
 
@@ -1669,7 +1669,7 @@ internal static partial class GesCompiler
 
         private void EmitNumericCopy(GesRegisterRef destination, GesRegisterRef value)
         {
-            _builder.NumericUnary(GameEventScriptBytecodeOpCode.Move, destination, value);
+            _builder.NumericUnary(GesBytecodeOpCode.Move, destination, value);
         }
 
         private void EmitInlineAccumulateSum(GesRegisterRef sum, GesRegisterRef hasSum, GesRegisterRef value, GesLabelRef nextLabel, LoweringContext context, ExpressionState state)
@@ -1680,7 +1680,7 @@ internal static partial class GesCompiler
             _builder.LoadTrue(hasSum);
             _builder.Jump(nextLabel);
             _builder.MarkLabel(addLabel);
-            _builder.NumericBinary(GameEventScriptBytecodeOpCode.Add, sum, sum, value);
+            _builder.NumericBinary(GesBytecodeOpCode.Add, sum, sum, value);
         }
 
         private void EmitFold(GesRegisterRef destination, GesRegisterRef source, FoldSelectorNode fold, LoweringContext context, ExpressionState state, ExpressionNode? iteratorSource = null)
@@ -1753,26 +1753,26 @@ internal static partial class GesCompiler
             switch (pattern)
             {
                 case DiceCountPatternNode { Face: null } count:
-                    if (take) _builder.TakePattern(destination, target, GameEventScriptBytecodePatternKind.CountAny, ToShort(count.Count, "pattern count"));
-                    else _builder.HasPattern(destination, target, GameEventScriptBytecodePatternKind.CountAny, ToShort(count.Count, "pattern count"));
+                    if (take) _builder.TakePattern(destination, target, GesBytecodePatternKind.CountAny, ToShort(count.Count, "pattern count"));
+                    else _builder.HasPattern(destination, target, GesBytecodePatternKind.CountAny, ToShort(count.Count, "pattern count"));
                     return;
                 case DiceCountPatternNode count:
                 {
                     var face = EmitExpressionForRead(count.Face!, context, state);
-                    if (take) _builder.TakePattern(destination, target, GameEventScriptBytecodePatternKind.CountFace, ToShort(count.Count, "pattern count"), face);
-                    else _builder.HasPattern(destination, target, GameEventScriptBytecodePatternKind.CountFace, ToShort(count.Count, "pattern count"), face);
+                    if (take) _builder.TakePattern(destination, target, GesBytecodePatternKind.CountFace, ToShort(count.Count, "pattern count"), face);
+                    else _builder.HasPattern(destination, target, GesBytecodePatternKind.CountFace, ToShort(count.Count, "pattern count"), face);
                     return;
                 }
                 case DiceFullHousePatternNode:
-                    if (take) _builder.TakePattern(destination, target, GameEventScriptBytecodePatternKind.FullHouse);
-                    else _builder.HasPattern(destination, target, GameEventScriptBytecodePatternKind.FullHouse);
+                    if (take) _builder.TakePattern(destination, target, GesBytecodePatternKind.FullHouse);
+                    else _builder.HasPattern(destination, target, GesBytecodePatternKind.FullHouse);
                     return;
                 case DiceStraightPatternNode:
-                    if (take) _builder.TakePattern(destination, target, GameEventScriptBytecodePatternKind.Straight);
-                    else _builder.HasPattern(destination, target, GameEventScriptBytecodePatternKind.Straight);
+                    if (take) _builder.TakePattern(destination, target, GesBytecodePatternKind.Straight);
+                    else _builder.HasPattern(destination, target, GesBytecodePatternKind.Straight);
                     return;
                 default:
-                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support dice pattern node '{pattern.GetType().Name}'.");
+                    throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support dice pattern node '{pattern.GetType().Name}'.");
             }
         }
 
@@ -1911,7 +1911,7 @@ internal static partial class GesCompiler
                         entryMatch = EmitObjectPatternPredicate(member, nested.Pattern, context, state);
                         break;
                     default:
-                        throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support object match value '{entry.Value.GetType().Name}'.");
+                        throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support object match value '{entry.Value.GetType().Name}'.");
                 }
 
                 var combined = state.AllocateTemporary(_builder, context);
@@ -1952,7 +1952,7 @@ internal static partial class GesCompiler
                     _builder.DropLowest(destination, target, count);
                     return;
                 default:
-                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support slice selector '{slice.Operation} {slice.Scope}'.");
+                    throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support slice selector '{slice.Operation} {slice.Scope}'.");
             }
         }
 
@@ -1977,7 +1977,7 @@ internal static partial class GesCompiler
         {
             if (generatedCollection.CollectionType != "list")
             {
-                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support generated collection type '{generatedCollection.CollectionType}'.");
+                throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support generated collection type '{generatedCollection.CollectionType}'.");
             }
 
             var builderRegister = state.AllocateTemporary(_builder, context);
@@ -2076,7 +2076,7 @@ internal static partial class GesCompiler
                 }
 
                 default:
-                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support iteration source '{source.GetType().Name}'.");
+                    throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support iteration source '{source.GetType().Name}'.");
             }
         }
 
@@ -2192,7 +2192,7 @@ internal static partial class GesCompiler
                     _builder.StageNothing();
                     return;
                 default:
-                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler cannot stage non-constant expression '{expression.GetType().Name}' without preparing it first.");
+                    throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler cannot stage non-constant expression '{expression.GetType().Name}' without preparing it first.");
             }
         }
 
@@ -2213,12 +2213,12 @@ internal static partial class GesCompiler
             var callable = GesCallableSignatures.Resolve(module.Callables, call);
             if (callable is null || !_callableRoutines.TryGetValue(callable.SignatureId, out var entry))
             {
-                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript binary compiler could not resolve callable '{call.Name}'.", call.Name);
+                throw CompileFailure(GesDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript binary compiler could not resolve callable '{call.Name}'.", call.Name);
             }
 
             EmitStageArguments(call.Arguments, context, state);
 
-            _builder.Call(destination, entry.EntryLabel, callable.Kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptInstructionFlag.NormalizeResultAsPredicate : GameEventScriptInstructionFlag.None);
+            _builder.Call(destination, entry.EntryLabel, callable.Kind == GameEventScriptCallableKind.PredicateCall ? GesInstructionFlag.NormalizeResultAsPredicate : GesInstructionFlag.None);
         }
 
         private void EmitHandlerBindCallInto(CallExpressionNode call, GesRegisterRef destination, LoweringContext context, ExpressionState state)
@@ -2246,19 +2246,19 @@ internal static partial class GesCompiler
             var callable = GesCallableSignatures.ResolvePredicate(module.Callables, predicate.PredicateName, predicate.Value is null ? 0 : 1);
             if (callable is null || !_callableRoutines.TryGetValue(callable.SignatureId, out var entry))
             {
-                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript binary compiler could not resolve predicate '{predicate.PredicateName}'.", predicate.PredicateName);
+                throw CompileFailure(GesDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript binary compiler could not resolve predicate '{predicate.PredicateName}'.", predicate.PredicateName);
             }
 
             if (predicate.Value is not null) EmitStageArgument(PrepareStageArgument(predicate.Value, context, state));
-            _builder.Call(destination, entry.EntryLabel, GameEventScriptInstructionFlag.NormalizeResultAsPredicate);
+            _builder.Call(destination, entry.EntryLabel, GesInstructionFlag.NormalizeResultAsPredicate);
         }
 
         private void EmitExtensionPredicateInto(ExtensionPredicateExpressionNode extensionPredicate, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
-            var reference = new GameEventScriptExtensionReference(
+            var reference = new GesExtensionReference(
                 extensionPredicate.ExtensionName,
                 extensionPredicate.FunctionName,
-                [GameEventScriptMessageSignature.UnlabeledParameterName]);
+                [GesMessageSignature.UnlabeledParameterName]);
             var argument = EmitExpressionForRead(extensionPredicate.Value, context, state);
             EmitExtensionReferenceInto(reference, destination, [argument], isPredicate: true);
         }
@@ -2267,13 +2267,13 @@ internal static partial class GesCompiler
         {
             var argumentNames = ReadArgumentNames(extensionCall.Arguments);
             var arguments = EmitArgumentExpressionRegisters(extensionCall.Arguments, context, state);
-            var reference = new GameEventScriptExtensionReference(extensionCall.ExtensionName, extensionCall.FunctionName, argumentNames);
+            var reference = new GesExtensionReference(extensionCall.ExtensionName, extensionCall.FunctionName, argumentNames);
             EmitExtensionReferenceInto(reference, destination, arguments, isPredicate);
         }
 
-        private void EmitExtensionReferenceInto(GameEventScriptExtensionReference reference, GesRegisterRef destination, IReadOnlyList<GesRegisterRef> arguments, bool isPredicate)
+        private void EmitExtensionReferenceInto(GesExtensionReference reference, GesRegisterRef destination, IReadOnlyList<GesRegisterRef> arguments, bool isPredicate)
         {
-            _builder.CallExternal(destination, ResolveExtensionCall(reference), arguments, isPredicate ? GameEventScriptInstructionFlag.NormalizeResultAsPredicate : GameEventScriptInstructionFlag.None);
+            _builder.CallExternal(destination, ResolveExtensionCall(reference), arguments, isPredicate ? GesInstructionFlag.NormalizeResultAsPredicate : GesInstructionFlag.None);
         }
 
         private void EmitTypeConstructorInto(TypeConstructorExpressionNode constructor, GesRegisterRef destination, LoweringContext context, ExpressionState state)
@@ -2282,7 +2282,7 @@ internal static partial class GesCompiler
             {
                 var inputs = EmitArgumentExpressionRegisters(constructor.Arguments, context, state);
                 _builder.AddOpcode(
-                    GameEventScriptBytecodeOpCode.SplitText,
+                    GesBytecodeOpCode.SplitText,
                     dst: GesOperand.Register(destination),
                     x: GesOperand.Register(inputs[0]),
                     y: inputs.Length > 1 ? GesOperand.Register(inputs[1]) : default,
@@ -2294,7 +2294,7 @@ internal static partial class GesCompiler
                 (constructor.Arguments.Count != 1 || constructor.Arguments[0].Label is not null || constructor.TypeName == "series"))
             {
                 var inputs = EmitArgumentExpressionRegisters(constructor.Arguments, context, state);
-                _builder.AddOpcode(GameEventScriptBytecodeOpCode.ConstructData, dst: GesOperand.Register(destination), x: GesOperand.Text(constructor.TypeName),
+                _builder.AddOpcode(GesBytecodeOpCode.ConstructData, dst: GesOperand.Register(destination), x: GesOperand.Text(constructor.TypeName),
                     y: GesOperand.RegisterList(inputs), a: GesOperand.TextList(ReadArgumentNames(constructor.Arguments)));
                 return;
             }
@@ -2316,7 +2316,7 @@ internal static partial class GesCompiler
                 {
                     var field = type.Fields[fieldIndex];
                     if (!field.IsConstructorParameter) continue;
-                    if (field.ConstructorLabel == GameEventScriptMessageSignature.UnlabeledParameterName)
+                    if (field.ConstructorLabel == GesMessageSignature.UnlabeledParameterName)
                     {
                         var argument = FindUnlabeledArgument(constructor.Arguments, unlabeledIndex);
                         if (argument is null)
@@ -2352,7 +2352,7 @@ internal static partial class GesCompiler
                 return;
             }
 
-            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support type constructor ':{constructor.TypeName}'.");
+            throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support type constructor ':{constructor.TypeName}'.");
         }
 
         private bool EmitSpatialConstructor(TypeConstructorExpressionNode constructor, GesRegisterRef destination, LoweringContext context, ExpressionState state)
@@ -2368,16 +2368,16 @@ internal static partial class GesCompiler
         {
             if (string.IsNullOrWhiteSpace(typeName))
             {
-                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, "GameEventScript binary compiler requires a type name.");
+                throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, "GameEventScript binary compiler requires a type name.");
             }
 
             if (GetQuantityUnit(typeName) is { } unit)
             {
                 _builder.CastUnit(destination, value, unit);
             }
-            else if (GameEventScriptBytecodeInstructionUnits.IsQuantityTypeName(typeName))
+            else if (GesQuantityUnits.IsQuantityTypeName(typeName))
             {
-                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support quantity type '{typeName}'.");
+                throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support quantity type '{typeName}'.");
             }
             else if (typeName is "number" or "numeric" or "numeric:integer" or "numeric:fractional")
             {
@@ -2397,16 +2397,16 @@ internal static partial class GesCompiler
         {
             if (string.IsNullOrWhiteSpace(typeName))
             {
-                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, "GameEventScript binary compiler requires a type name.");
+                throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, "GameEventScript binary compiler requires a type name.");
             }
 
             if (GetQuantityUnit(typeName) is { } unit)
             {
                 _builder.CheckUnit(destination, value, unit);
             }
-            else if (GameEventScriptBytecodeInstructionUnits.IsQuantityTypeName(typeName))
+            else if (GesQuantityUnits.IsQuantityTypeName(typeName))
             {
-                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support quantity type '{typeName}'.");
+                throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support quantity type '{typeName}'.");
             }
             else if (typeName is "number" or "numeric")
             {
@@ -2516,7 +2516,7 @@ internal static partial class GesCompiler
                     _builder.Atan(destination, operand);
                     return;
                 default:
-                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support unary operator '{operation.ToSourceText()}'.");
+                    throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support unary operator '{operation.ToSourceText()}'.");
             }
         }
 
@@ -2603,23 +2603,23 @@ internal static partial class GesCompiler
                     _builder.Zip(destination, left, right);
                     return;
                 default:
-                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support binary operator '{operation.ToSourceText()}'.");
+                    throw CompileFailure(GesDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support binary operator '{operation.ToSourceText()}'.");
             }
         }
 
         private GesBindRef ResolveOutboundMessage(string name, IReadOnlyList<string> argumentNames)
         {
-            var key = GameEventScriptMessageSignature.CreateSignatureId(name, argumentNames);
+            var key = GesMessageSignature.CreateSignatureId(name, argumentNames);
             if (_outboundMessages.TryGetValue(key, out var bind)) return bind;
-            bind = _builder.AddBind(GameEventScriptBinaryBindKind.OutboundMessage, name, argumentNames);
+            bind = _builder.AddBind(GesBinaryBindKind.OutboundMessage, name, argumentNames);
             _outboundMessages[key] = bind;
             return bind;
         }
 
-        private GesBindRef ResolveExtensionCall(GameEventScriptExtensionReference reference)
+        private GesBindRef ResolveExtensionCall(GesExtensionReference reference)
         {
             if (_extensionCalls.TryGetValue(reference.SignatureId, out var bind)) return bind;
-            bind = _builder.AddBind(GameEventScriptBinaryBindKind.ExtensionCall, reference.ExtensionName + "." + reference.FunctionName, reference.ArgumentLabels);
+            bind = _builder.AddBind(GesBinaryBindKind.ExtensionCall, reference.ExtensionName + "." + reference.FunctionName, reference.ArgumentLabels);
             _extensionCalls[reference.SignatureId] = bind;
             return bind;
         }
@@ -2627,24 +2627,24 @@ internal static partial class GesCompiler
         private GesBindRef ResolveRecordConstructor(TypeDefinitionNode type)
         {
             if (_recordConstructors.TryGetValue(type.Name, out var routine)) return routine.Bind!.Value;
-            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript record constructor ':{type.Name}' was not declared.", type.Name);
+            throw CompileFailure(GesDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript record constructor ':{type.Name}' was not declared.", type.Name);
         }
 
         private GesBindRef ResolveExternalTypeConstructor(string typeName, IReadOnlyList<string> argumentNames)
         {
-            var reference = new GameEventScriptExternalTypeConstructorReference(typeName, argumentNames);
+            var reference = new GesExternalTypeConstructorReference(typeName, argumentNames);
             if (module.ExternalTypeDefinitions.Resolve(reference.TypeName) is not { } typeDefinition)
             {
-                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript external type ':{reference.TypeName}' is not registered.", reference.TypeName);
+                throw CompileFailure(GesDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript external type ':{reference.TypeName}' is not registered.", reference.TypeName);
             }
 
             if (!typeDefinition.HasConstructor(reference.ArgumentLabels))
             {
-                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript external type constructor ':{reference.SignatureId}' is not registered.", reference.SignatureId);
+                throw CompileFailure(GesDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript external type constructor ':{reference.SignatureId}' is not registered.", reference.SignatureId);
             }
 
             if (_externalTypeConstructors.TryGetValue(reference.SignatureId, out var bind)) return bind;
-            bind = _builder.AddBind(GameEventScriptBinaryBindKind.ExternalType, typeName, argumentNames);
+            bind = _builder.AddBind(GesBinaryBindKind.ExternalType, typeName, argumentNames);
             _externalTypeConstructors[reference.SignatureId] = bind;
             return bind;
         }
@@ -2652,17 +2652,17 @@ internal static partial class GesCompiler
         private static IReadOnlyList<string> MessageShape(string name, IReadOnlyList<string> argumentNames)
         {
             var shape = new string[argumentNames.Count + 1];
-            shape[0] = GameEventScriptMessageSignature.NormalizeMessageName(name);
+            shape[0] = GesMessageSignature.NormalizeMessageName(name);
             for (var index = 0; index < argumentNames.Count; index++) shape[index + 1] = argumentNames[index];
             return shape;
         }
 
-        private static GameEventScriptMessageSignature? ClassifyHandlerSignature(ExpressionNode expression, LoweringContext context)
+        private static GesMessageSignature? ClassifyHandlerSignature(ExpressionNode expression, LoweringContext context)
         {
             switch (expression)
             {
                 case HandlerLiteralExpressionNode handler:
-                    return GameEventScriptMessageSignature.Create(handler.Message, handler.SignatureLabels);
+                    return GesMessageSignature.Create(handler.Message, handler.SignatureLabels);
                 case IdentifierExpressionNode identifier:
                     return context.ResolveHandlerSignature(identifier.Name);
                 default:
@@ -2670,7 +2670,7 @@ internal static partial class GesCompiler
             }
         }
 
-        private static bool CallArgumentsMatchHandlerSignature(IReadOnlyList<ArgumentNode> arguments, GameEventScriptMessageSignature signature)
+        private static bool CallArgumentsMatchHandlerSignature(IReadOnlyList<ArgumentNode> arguments, GesMessageSignature signature)
         {
             if (arguments.Count != signature.Parameters.Count) return false;
             for (var index = 0; index < arguments.Count; index++)
@@ -2678,7 +2678,7 @@ internal static partial class GesCompiler
                 var label = arguments[index].Label;
                 if (label is null) continue;
                 if (!string.Equals(
-                        GameEventScriptMessageSignature.NormalizeParameterName(label),
+                        GesMessageSignature.NormalizeParameterName(label),
                         signature.Parameters[index],
                         StringComparison.Ordinal))
                 {
@@ -2762,39 +2762,39 @@ internal static partial class GesCompiler
 
         private static short ToShort(int value, string name)
             => value is < short.MinValue or > short.MaxValue
-                ? throw CompileFailure(GameEventScriptDiagnosticCodes.CompileNumericLimitExceeded, $"GameEventScript binary compiler {name} must fit into Int16.", name)
+                ? throw CompileFailure(GesDiagnosticCodes.CompileNumericLimitExceeded, $"GameEventScript binary compiler {name} must fit into Int16.", name)
                 : (short)value;
 
-        private static GameEventScriptBytecodeInstructionUnit ResolveUnitOrNone(string unitName)
-            => GameEventScriptBytecodeInstructionUnits.ParseTypeName(unitName) ?? GameEventScriptBytecodeInstructionUnit.UnitNone;
+        private static GesQuantityUnit ResolveUnitOrNone(string unitName)
+            => GesQuantityUnits.ParseTypeName(unitName) ?? GesQuantityUnit.UnitNone;
 
         private static bool IsBuiltInCastType(string typeName)
             => typeName is "number" or "numeric" or "numeric:integer" or "numeric:fractional" ||
-               GameEventScriptBytecodeInstructionUnits.IsQuantityTypeName(typeName) ||
+               GesQuantityUnits.IsQuantityTypeName(typeName) ||
                GetBytecodeTypeKind(typeName) is not null;
 
-        private static GameEventScriptBytecodeInstructionUnit? GetQuantityUnit(string typeName)
-            => GameEventScriptBytecodeInstructionUnits.ParseQuantityTypeName(typeName);
+        private static GesQuantityUnit? GetQuantityUnit(string typeName)
+            => GesQuantityUnits.ParseQuantityTypeName(typeName);
 
-        private static GameEventScriptBytecodeTypeKind? GetBytecodeTypeKind(string typeName)
+        private static GesBytecodeTypeKind? GetBytecodeTypeKind(string typeName)
         {
             var typeKind = typeName switch
             {
-                "nothing" => GameEventScriptBytecodeTypeKind.Nothing,
-                "boolean" => GameEventScriptBytecodeTypeKind.Boolean,
-                "percentage" => GameEventScriptBytecodeTypeKind.Percentage,
-                "vector" => GameEventScriptBytecodeTypeKind.Vector,
-                "point" => GameEventScriptBytecodeTypeKind.Point,
-                "series" => GameEventScriptBytecodeTypeKind.Series,
-                "tag" => GameEventScriptBytecodeTypeKind.Tag,
-                "text" => GameEventScriptBytecodeTypeKind.Text,
-                "list" => GameEventScriptBytecodeTypeKind.List,
-                "range" => GameEventScriptBytecodeTypeKind.Range,
-                "message" => GameEventScriptBytecodeTypeKind.Message,
-                "handler" => GameEventScriptBytecodeTypeKind.Handler,
-                "map" => GameEventScriptBytecodeTypeKind.Map,
-                "dice" => GameEventScriptBytecodeTypeKind.Dice,
-                _ => (GameEventScriptBytecodeTypeKind)0
+                "nothing" => GesBytecodeTypeKind.Nothing,
+                "boolean" => GesBytecodeTypeKind.Boolean,
+                "percentage" => GesBytecodeTypeKind.Percentage,
+                "vector" => GesBytecodeTypeKind.Vector,
+                "point" => GesBytecodeTypeKind.Point,
+                "series" => GesBytecodeTypeKind.Series,
+                "tag" => GesBytecodeTypeKind.Tag,
+                "text" => GesBytecodeTypeKind.Text,
+                "list" => GesBytecodeTypeKind.List,
+                "range" => GesBytecodeTypeKind.Range,
+                "message" => GesBytecodeTypeKind.Message,
+                "handler" => GesBytecodeTypeKind.Handler,
+                "map" => GesBytecodeTypeKind.Map,
+                "dice" => GesBytecodeTypeKind.Dice,
+                _ => (GesBytecodeTypeKind)0
             };
 
             return typeName == "nothing" || typeKind != 0 ? typeKind : null;
@@ -2805,7 +2805,7 @@ internal static partial class GesCompiler
     private sealed class LoweringContext
     {
         private readonly Dictionary<string, GesRegisterRef> _registers;
-        private readonly Dictionary<string, GameEventScriptMessageSignature> _handlerSignatures;
+        private readonly Dictionary<string, GesMessageSignature> _handlerSignatures;
         private readonly HashSet<string> _handlerSignatureShadows;
         private readonly LoweringContext? _parent;
         private readonly GesBinaryBuilder.GesBinaryRoutineScope _routine;
@@ -2815,7 +2815,7 @@ internal static partial class GesCompiler
             _routine = routine;
             _parent = parent;
             _registers = new Dictionary<string, GesRegisterRef>(StringComparer.Ordinal);
-            _handlerSignatures = new Dictionary<string, GameEventScriptMessageSignature>(StringComparer.Ordinal);
+            _handlerSignatures = new Dictionary<string, GesMessageSignature>(StringComparer.Ordinal);
             _handlerSignatureShadows = new HashSet<string>(StringComparer.Ordinal);
             RegisterCount = parent?.RegisterCount ?? routine.Arguments.Count;
         }
@@ -2857,10 +2857,10 @@ internal static partial class GesCompiler
         {
             if (_registers.TryGetValue(name, out var register)) return register;
             if (_parent is not null) return _parent.Require(name);
-            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript binary compiler could not resolve identifier '{name}'.", name);
+            throw CompileFailure(GesDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript binary compiler could not resolve identifier '{name}'.", name);
         }
 
-        public void DeclareHandlerSignature(string name, GameEventScriptMessageSignature signature)
+        public void DeclareHandlerSignature(string name, GesMessageSignature signature)
         {
             _handlerSignatures[name] = signature;
             _handlerSignatureShadows.Remove(name);
@@ -2872,7 +2872,7 @@ internal static partial class GesCompiler
             _handlerSignatureShadows.Add(name);
         }
 
-        public GameEventScriptMessageSignature? ResolveHandlerSignature(string name)
+        public GesMessageSignature? ResolveHandlerSignature(string name)
         {
             if (_handlerSignatures.TryGetValue(name, out var signature)) return signature;
             if (_handlerSignatureShadows.Contains(name))

@@ -22,11 +22,11 @@ enum ApiObservations {
             ]
         case "messageApi": return try message(input)
         case "externalTypeApi":
-            let definitions = try input.values("typeNames").map { try GameEventScriptExternalTypeDefinition(name: $0.stringValue!, fields: [], constructors: []) }
+            let definitions = try input.values("typeNames").map { try GesExternalTypeDefinition(name: $0.stringValue!, fields: [], constructors: []) }
             do {
-                let catalog = try GameEventScriptExternalTypeCatalog(definitions)
+                let catalog = try GesDeclaredExternalTypeCatalog(definitions)
                 return ["status": "ok", "externalType": ["typeCount": catalog.types.count]]
-            } catch let error as GameEventScriptAPIError {
+            } catch let error as GesApiError {
                 guard Set(definitions.map(\.name)).count != definitions.count else { throw error }
                 return ["status": "ok", "externalType": ["error": "duplicateTypeName"]]
             }
@@ -35,7 +35,7 @@ enum ApiObservations {
             do {
                 _ = try host.load(CompilerObservations.compile(test))
                 return ["status": "loaded", "diagnostics": []]
-            } catch let error as GameEventScriptDynamicLinkError { return ["status": "loadError", "diagnostics": [CompilerObservations.diagnostic(error.diagnostic)]] }
+            } catch let error as GesDynamicLinkError { return ["status": "loadError", "diagnostics": [CompilerObservations.diagnostic(error.diagnostic)]] }
         }
     }
 
@@ -72,7 +72,7 @@ enum ApiObservations {
             }
             if input["createArguments"] != nil { result["createdMessageSignatureId"] = try signature.createMessage(input.values("createArguments").map { try Values.decode($0) })?.signatureId ?? "<null>" }
             return ["status": "ok", "message": result]
-        } catch let error as GameEventScriptMessageFormatError { return failure(error.code) } catch let error as GameEventScriptMessageError {
+        } catch let error as GesMessageFormatError { return failure(error.code) } catch let error as GesMessageError {
             switch error {
             case .duplicateArgumentName: return failure("duplicateArgumentName")
             case .argumentCountMismatch, .missingArgument: return failure("invalidArgument")

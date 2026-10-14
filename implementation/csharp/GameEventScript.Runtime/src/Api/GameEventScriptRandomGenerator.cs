@@ -13,7 +13,7 @@ namespace GameEventScript.Api;
 /// This class is useful for scenarios where deterministic or non-deterministic random
 /// value generation is required, especially in game event scripts.
 /// </summary>
-public sealed class GameEventScriptRandomGenerator
+public sealed class GesRandomGenerator
 {
     private const int DefaultMaxScopeDepth = 16;
 
@@ -83,43 +83,43 @@ public sealed class GameEventScriptRandomGenerator
     }
 
     /// <summary>
-    /// Creates and returns a new instance of <c>GameEventScriptRandomGenerator</c> using
+    /// Creates and returns a new instance of <c>GesRandomGenerator</c> using
     /// a default portable random generator for generating random values.
     /// </summary>
     /// <returns>
-    /// A new <c>GameEventScriptRandomGenerator</c> initialized with a default generator seed.
+    /// A new <c>GesRandomGenerator</c> initialized with a default generator seed.
     /// </returns>
-    public static GameEventScriptRandomGenerator Create() => new(GatherPlatformEntropy(), null, DefaultMaxScopeDepth);
+    public static GesRandomGenerator Create() => new(GatherPlatformEntropy(), null, DefaultMaxScopeDepth);
 
     /// <summary>
-    /// Creates and returns a new instance of <c>GameEventScriptRandomGenerator</c>
+    /// Creates and returns a new instance of <c>GesRandomGenerator</c>
     /// initialized with the specified deterministic seed.
     /// </summary>
     /// <param name="seed">
     /// The seed value used for deterministic random value generation.
     /// </param>
     /// <returns>
-    /// A new <c>GameEventScriptRandomGenerator</c> initialized with the specified seed.
+    /// A new <c>GesRandomGenerator</c> initialized with the specified seed.
     /// </returns>
-    public static GameEventScriptRandomGenerator FromSeed(int seed) => FromSeed((long)seed);
+    public static GesRandomGenerator FromSeed(int seed) => FromSeed((long)seed);
 
     /// <summary>
-    /// Creates and returns a new instance of <c>GameEventScriptRandomGenerator</c>
+    /// Creates and returns a new instance of <c>GesRandomGenerator</c>
     /// initialized with the specified deterministic 64-bit seed.
     /// </summary>
     /// <param name="seed">
     /// The seed value used for deterministic random value generation.
     /// </param>
     /// <returns>
-    /// A new <c>GameEventScriptRandomGenerator</c> initialized with the specified seed.
+    /// A new <c>GesRandomGenerator</c> initialized with the specified seed.
     /// </returns>
-    public static GameEventScriptRandomGenerator FromSeed(long seed)
+    public static GesRandomGenerator FromSeed(long seed)
     {
-        return new GameEventScriptRandomGenerator(seed, null, DefaultMaxScopeDepth);
+        return new GesRandomGenerator(seed, null, DefaultMaxScopeDepth);
     }
 
     /// <summary>
-    /// Creates and returns a new instance of <c>GameEventScriptRandomGenerator</c>
+    /// Creates and returns a new instance of <c>GesRandomGenerator</c>
     /// initialized to generate random values from a predefined sequence.
     /// </summary>
     /// <param name="values">
@@ -127,10 +127,10 @@ public sealed class GameEventScriptRandomGenerator
     /// of random numbers to be used by the generator.
     /// </param>
     /// <returns>
-    /// A new <c>GameEventScriptRandomGenerator</c> initialized to use the specified
+    /// A new <c>GesRandomGenerator</c> initialized to use the specified
     /// sequence of random values.
     /// </returns>
-    public static GameEventScriptRandomGenerator FromSequence(params double[] values)
+    public static GesRandomGenerator FromSequence(params double[] values)
         => new(GatherPlatformEntropy(), CopySequence(values), DefaultMaxScopeDepth);
 
     /// <summary>
@@ -145,11 +145,11 @@ public sealed class GameEventScriptRandomGenerator
     /// full-entropy seed.
     /// </param>
     /// <returns>
-    /// A new deterministic <see cref="GameEventScriptRandomGenerator"/> seeded
+    /// A new deterministic <see cref="GesRandomGenerator"/> seeded
     /// from the mixed entropy.
     /// </returns>
     /// <exception cref="ArgumentException"><paramref name="entropy"/> is empty.</exception>
-    public static GameEventScriptRandomGenerator FromEntropy(ReadOnlySpan<byte> entropy)
+    public static GesRandomGenerator FromEntropy(ReadOnlySpan<byte> entropy)
         => FromSeed(SeedFromEntropy(entropy));
 
     /// <summary>
@@ -158,7 +158,7 @@ public sealed class GameEventScriptRandomGenerator
     /// is deterministic and endian-neutral, so identical input bytes yield an
     /// identical seed on every platform. Reuse the returned seed with
     /// <see cref="FromSeed(long)"/> or
-    /// <see cref="GameEventScriptHostBuilder.WithRandomSeed(long)"/> to configure
+    /// <see cref="GesHostBuilder.WithRandomSeed(long)"/> to configure
     /// several generators or hosts from one entropy acquisition.
     /// </summary>
     /// <param name="entropy">A non-empty span of entropy bytes.</param>
@@ -274,16 +274,16 @@ public sealed class GameEventScriptRandomGenerator
         return firstBound + (secondBound - firstBound) * NextUnitDouble();
     }
 
-    internal static GameEventScriptRandomGenerator CreateForHost(int maxScopeDepth)
+    internal static GesRandomGenerator CreateForHost(int maxScopeDepth)
         => new(GatherPlatformEntropy(), null, ValidateMaxScopeDepth(maxScopeDepth));
 
-    internal static GameEventScriptRandomGenerator FromSeedForHost(long seed, int maxScopeDepth)
+    internal static GesRandomGenerator FromSeedForHost(long seed, int maxScopeDepth)
         => new(seed, null, ValidateMaxScopeDepth(maxScopeDepth));
 
-    internal static GameEventScriptRandomGenerator FromSequenceForHost(double[] values, long? fallbackSeed, int maxScopeDepth)
+    internal static GesRandomGenerator FromSequenceForHost(double[] values, long? fallbackSeed, int maxScopeDepth)
         => new(fallbackSeed ?? GatherPlatformEntropy(), CopySequence(values), ValidateMaxScopeDepth(maxScopeDepth));
 
-    private GameEventScriptRandomGenerator(long seed, double[]? sequence, int maxScopeDepth)
+    private GesRandomGenerator(long seed, double[]? sequence, int maxScopeDepth)
     {
         _maxScopeDepth = maxScopeDepth;
         Initialize(seed);

@@ -34,9 +34,9 @@ public sealed class CollectionPipelineAllocationTests
 
     private static (long Bytes, double Milliseconds) Measure(string statements, int size)
     {
-        var program = GameEventScriptBuilder.Create().AddScript($"module allocation\non Start(items) {{\n{statements}\n}}", "cartesian.ges")
-            .Compile(new GameEventScriptCompileOptions { DebugInfo = GameEventScriptDebugInfoOptions.None });
-        var host = GameEventScriptHost.CreateBuilder().WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxGeneratedCollectionItems = 100_000 }).Build();
+        var program = GesProgramBuilder.Create().AddScript($"module allocation\non Start(items) {{\n{statements}\n}}", "cartesian.ges")
+            .Compile(new GesCompileOptions { DebugInfo = GesDebugInfoOptions.None });
+        var host = GameEventScriptHost.CreateBuilder().WithRuntimeLimits(new GesRuntimeLimits { MaxGeneratedCollectionItems = 100_000 }).Build();
         host.Load(program);
         host.Start();
         Assert.IsTrue(host.IsReady);
@@ -46,7 +46,7 @@ public sealed class CollectionPipelineAllocationTests
         {
             if (!host.Receive(message)) throw new InvalidOperationException("Benchmark input was rejected.");
             var result = host.RunToCompletion();
-            if (result.State != GameEventScriptExecutionState.Completed || result.ExecutedOpcodes < size * size)
+            if (result.State != GesExecutionState.Completed || result.ExecutedOpcodes < size * size)
                 throw new InvalidOperationException("Benchmark did not complete its Cartesian workload.");
         }
         for (var index = 0; index < 10; index++) Run();

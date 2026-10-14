@@ -34,20 +34,20 @@ internal static class BinaryObservations
         GameEventScriptProgram program;
         try
         {
-            program = GameEventScriptProgramReader.Read(bytes, new GameEventScriptProgramReadOptions
+            program = GameEventScriptProgramReader.Read(bytes, new GesProgramReadOptions
             {
-                Retention = GameEventScriptProgramRetention.PreserveAll,
-                Limits = new GameEventScriptProgramReadLimits { MaxFileBytes = MaxResourceBytes }
+                Retention = GesProgramRetention.PreserveAll,
+                Limits = new GesProgramReadLimits { MaxFileBytes = MaxResourceBytes }
             });
         }
-        catch (GameEventScriptProgramFormatException exception)
+        catch (GesProgramFormatException exception)
         {
             return new
             {
                 status = "ok",
                 binary = new
                 {
-                    outcome = exception.ErrorCode <= GameEventScriptProgramFormatErrorCode.TooManyEntries ? "readError" : "validationError",
+                    outcome = exception.ErrorCode <= GesProgramFormatErrorCode.TooManyEntries ? "readError" : "validationError",
                     errorCode = exception.ErrorCode.ToString(),
                     byteOffset = exception.ByteOffset,
                     sectionType = exception.SectionType,

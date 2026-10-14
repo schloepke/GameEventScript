@@ -14,7 +14,7 @@ struct ActionActivation {
     let mode: String
     let zone: String?
     let area: GesValue?
-    let handler: GameEventScriptMessageSignature
+    let handler: GesMessageSignature
     let player: Int?
     let queued: Bool
     let priority: Int
@@ -78,7 +78,7 @@ extension Bindings {
         guard let entries = value.mapEntries, entries.allSatisfy({ allowed.contains($0.key) }) else { throw CardGameError("Unknown action specification field") }
     }
 
-    func activate(_ args: GameEventScriptMessageArguments) throws {
+    func activate(_ args: GesMessageArguments) throws {
         try requireActionEditing()
         if args.signatureLabels == ["spec"] {
             try activateSpec(args[0])

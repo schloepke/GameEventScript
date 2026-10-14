@@ -46,7 +46,7 @@ final class ToolIO {
         write((toError && colorErrors && !noColor && isDiagnostic ? Highlighting.paint(text, 31) : text) + "\n", toError: toError)
     }
 
-    func diagnostic(_ diagnostic: GameEventScriptDiagnostic, fallback: String) {
+    func diagnostic(_ diagnostic: GesDiagnostic, fallback: String) {
         var prefix = diagnostic.sourceLocation?.sourceName ?? fallback
         if let line = diagnostic.sourceLocation?.line { prefix += "(\(line),\(diagnostic.sourceLocation?.column ?? 1))" }
         let context = [diagnostic.programName.flatMap { $0.isEmpty ? nil : "program=" + $0 }, diagnostic.handlerName.map { "handler=" + $0 }, diagnostic.symbol.map { "symbol=" + $0 }].compactMap { $0 }
@@ -56,9 +56,9 @@ final class ToolIO {
 
     func report(_ failure: any Error, fallback: String = "compile", argumentCode: String = "cli.usage") {
         switch failure {
-        case let error as GameEventScriptCompileError: for value in error.diagnostics { diagnostic(value, fallback: fallback) }
-        case let error as GameEventScriptDynamicLinkError: diagnostic(error.diagnostic, fallback: "link")
-        case let error as GameEventScriptProgramFormatError:
+        case let error as GesCompileError: for value in error.diagnostics { diagnostic(value, fallback: fallback) }
+        case let error as GesDynamicLinkError: diagnostic(error.diagnostic, fallback: "link")
+        case let error as GesProgramFormatError:
             line("\(fallback): error decode.\(error.code): \(error.message)", toError: true)
             if let offset = error.byteOffset { line("  byteOffset=\(offset)", toError: true) }
             if let section = error.sectionType { line(String(format: "  sectionType=0x%04X", section), toError: true) }

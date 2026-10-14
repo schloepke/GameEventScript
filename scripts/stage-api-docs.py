@@ -35,9 +35,9 @@ def validate(language, expected):
         raise RuntimeError(f'Missing or stale {language} API reference. Run python3 scripts/build-api-docs.py --language {language}')
     required = ['reference/index.html', *[
         f'reference/api/{symbol}.html' for symbol in [
-            'GameEventScript.Api.GameEventScriptHost', 'GameEventScript.Api.GameEventScriptBuilder',
+            'GameEventScript.Api.GameEventScriptHost', 'GameEventScript.Api.GesProgramBuilder',
             'GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner',
-            'GameEventScript.SyntaxHighlighter.GameEventScriptSyntaxHighlighter']]] if language == 'csharp' else [
+            'GameEventScript.SyntaxHighlighter.GesSyntaxHighlighter']]] if language == 'csharp' else [
         f'{module.lower()}/documentation/{module.lower()}/index.html' for module in build.SWIFT] + SWIFT_EXTENSION_PAGES
     for relative in required:
         if not (source / relative).is_file():

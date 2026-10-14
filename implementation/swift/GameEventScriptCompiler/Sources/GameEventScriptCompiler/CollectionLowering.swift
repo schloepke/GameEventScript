@@ -183,7 +183,7 @@ extension GesCompiler {
         var guardOK: [Int] = []
         if sourceExpression == nil && prefix.isEmpty && ["distinct", "order", "group"].contains(s.operation) {
             let compare = r.temporary()
-            let types: [GameEventScriptBytecodeTypeKind] = s.operation == "group" ? [.list, .map, .custom] : [.list]
+            let types: [GesBytecodeTypeKind] = s.operation == "group" ? [.list, .map, .custom] : [.list]
             for type in types {
                 r.emit(.checkType, compare, source, Int(type.rawValue))
                 guardOK.append(r.emit(.jumpIfTrue, 0, compare))

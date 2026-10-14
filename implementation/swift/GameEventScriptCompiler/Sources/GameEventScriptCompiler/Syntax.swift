@@ -26,7 +26,7 @@ struct GesParameter {
     let label: String
     let name: String
     let type: String?
-    let location: GameEventScriptSourceLocation
+    let location: GesSourceLocation
 }
 
 struct GesArgument {
@@ -68,11 +68,11 @@ final class GesExpression {
     }
 
     let kind: Kind
-    let location: GameEventScriptSourceLocation
+    let location: GesSourceLocation
     var depth: Int
     var decimalLiteral = false
 
-    init(_ kind: Kind, _ location: GameEventScriptSourceLocation, depth: Int = 1) {
+    init(_ kind: Kind, _ location: GesSourceLocation, depth: Int = 1) {
         self.kind = kind
         self.location = location
         self.depth = depth
@@ -103,7 +103,7 @@ struct GesStatement {
     }
 
     let kind: Kind
-    let location: GameEventScriptSourceLocation
+    let location: GesSourceLocation
 }
 
 struct GesDefinition {
@@ -114,7 +114,7 @@ struct GesDefinition {
     let statements: [GesStatement]
     let required: [String]
     let excluded: [String]
-    let location: GameEventScriptSourceLocation
+    let location: GesSourceLocation
     var signature: String { name + "(" + parameters.map(\.label).joined(separator: ",") + ")" }
 }
 
@@ -125,13 +125,13 @@ struct GesField {
     let minimum: GesExpression?
     let maximum: GesExpression?
     let computed: GesExpression?
-    let location: GameEventScriptSourceLocation
+    let location: GesSourceLocation
 }
 
 struct GesRecord {
     let name: String
     let fields: [GesField]
-    let location: GameEventScriptSourceLocation
+    let location: GesSourceLocation
 }
 
 struct GesModule {
@@ -139,9 +139,9 @@ struct GesModule {
     let definitions: [GesDefinition]
     let constants: [(String, GesExpression)]
     let records: [GesRecord]
-    let location: GameEventScriptSourceLocation
+    let location: GesSourceLocation
 }
 
-func compileError(_ phase: GameEventScriptDiagnosticPhase, _ code: String, _ message: String, _ location: GameEventScriptSourceLocation, symbol: String? = nil, kind: GameEventScriptSymbolKind = .unknown) -> GameEventScriptCompileError {
+func compileError(_ phase: GesDiagnosticPhase, _ code: String, _ message: String, _ location: GesSourceLocation, symbol: String? = nil, kind: GesSymbolKind = .unknown) -> GesCompileError {
     .init(diagnostics: [.init(phase: phase, code: code, message: message, symbol: symbol, symbolKind: kind, sourceLocation: location, programName: location.moduleName)])
 }

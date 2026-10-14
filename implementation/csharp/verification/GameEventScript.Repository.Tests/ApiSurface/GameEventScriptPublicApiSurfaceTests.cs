@@ -32,7 +32,7 @@ public sealed class GameEventScriptPublicApiSurfaceTests
     [TestMethod]
     public void CompilerTypesStayInternal()
     {
-        var leakedTypes = typeof(GameEventScriptBuilder)
+        var leakedTypes = typeof(GesProgramBuilder)
             .Assembly
             .GetExportedTypes()
             .Where(type =>
@@ -48,18 +48,18 @@ public sealed class GameEventScriptPublicApiSurfaceTests
     public void PublicTypesAndDependenciesFollowAssemblyBoundaries()
     {
         var runtime = typeof(GameEventScriptProgram).Assembly;
-        var compiler = typeof(GameEventScriptBuilder).Assembly;
+        var compiler = typeof(GesProgramBuilder).Assembly;
         var bridge = typeof(GameEventScriptCSharpHostRunner).Assembly;
 
         Assert.AreEqual("GameEventScript.Runtime", runtime.GetName().Name);
         Assert.AreEqual("GameEventScript.Compiler", compiler.GetName().Name);
         Assert.AreEqual("GameEventScript.CSharpBridge", bridge.GetName().Name);
-        CollectionAssert.AreEquivalent(new[] { typeof(GameEventScriptBuilder), typeof(GameEventScriptCompileOptions), typeof(GameEventScriptCompileException) }, compiler.GetExportedTypes());
+        CollectionAssert.AreEquivalent(new[] { typeof(GesProgramBuilder), typeof(GesCompileOptions), typeof(GesCompileException) }, compiler.GetExportedTypes());
         Assert.HasCount(0, runtime.GetTypes().Where(type => IsNamespace(type, "GameEventScript.Compiler")));
         Assert.HasCount(0, runtime.GetExportedTypes().Where(type => IsNamespace(type, "GameEventScript.CSharpBridge") || IsNamespace(type, "GameEventScript.Conformance")));
         Assert.IsTrue(bridge.GetExportedTypes().All(type => IsNamespace(type, "GameEventScript.CSharpBridge")));
 
-        AssertProductReferences(typeof(GameEventScriptSyntaxHighlighter).Assembly);
+        AssertProductReferences(typeof(GesSyntaxHighlighter).Assembly);
         AssertProductReferences(runtime);
         AssertProductReferences(compiler, "GameEventScript.Runtime");
         AssertProductReferences(bridge, "GameEventScript.Runtime");
@@ -271,5 +271,5 @@ public sealed class GameEventScriptPublicApiSurfaceTests
     }
 
     private static Assembly[] PublicAssemblies()
-        => [typeof(GameEventScriptProgram).Assembly, typeof(GameEventScriptBuilder).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly, typeof(GameEventScriptSyntaxHighlighter).Assembly];
+        => [typeof(GameEventScriptProgram).Assembly, typeof(GesProgramBuilder).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly, typeof(GesSyntaxHighlighter).Assembly];
 }

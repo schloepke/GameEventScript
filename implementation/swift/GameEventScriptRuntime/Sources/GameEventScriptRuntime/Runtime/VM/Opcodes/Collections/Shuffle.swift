@@ -3,7 +3,7 @@
 
 extension GesVirtualMachine {
     @inline(never)
-    func executeShuffle(_ destinationRegister: Int, _ sourceRegister: Int, _ context: GameEventScriptContext) {
+    func executeShuffle(_ destinationRegister: Int, _ sourceRegister: Int, _ context: GesContext) {
         let destination = destinationRegister
         let x = frameStart + sourceRegister
         guard var values = GesCollectionOperators.materialize(registers[x]) else { return setNothing(destination) }

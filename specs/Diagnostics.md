@@ -27,7 +27,7 @@ must not match it.
 Source locations use the compiler's portable source contract: source name plus
 1-based Unicode-scalar line/column positions. Program and handler identify the
 runtime/link context. Symbol kinds are the numerically specified
-`GameEventScriptSymbolKind` values.
+`GesSymbolKind` values.
 
 ## Stable codes
 
@@ -52,7 +52,7 @@ Compiler lowering/resource analysis uses `compile.unsupportedConstruct`,
 `compile.numericLimitExceeded`, `compile.cyclicCallGraph`,
 `compile.invalidResourceMetadata`, and `compile.invariantViolation`.
 
-Every existing `GameEventScriptProgramFormatErrorCode` maps losslessly to
+Every existing `GesProgramFormatErrorCode` maps losslessly to
 `decode.<lowerCamelErrorCode>`, for example `InvalidMagic` maps to
 `decode.invalidMagic`. The format exception keeps byte offset, section type, and
 entry index as its specialized structured fields as well.
@@ -91,7 +91,7 @@ stream, but must not replace the callback's original failure diagnostic with a
 scope-cleanup diagnostic.
 
 An extension function, external-type constructor, or external-value field
-accessor may throw `GameEventScriptExtensionFaultException` to deliberately
+accessor may throw `GesExtensionFaultException` to deliberately
 report a defined failure with its own caller-chosen code, message, and optional
 symbol; that code must not use the reserved `runtime.` prefix and is therefore
 never one of the codes enumerated above. Any other exception from the same
@@ -102,14 +102,14 @@ current handler; the host remains reusable for subsequently enqueued messages,
 as for any other runtime error. Neither ever evaluates to `nothing`.
 
 Native handlers may likewise deliberately report a caller-chosen fault with
-`GameEventScriptExtensionFaultException`. Unanticipated native-handler exceptions
+`GesExtensionFaultException`. Unanticipated native-handler exceptions
 use `runtime.nativeHandlerFailure`.
 
 ## Transport and execution
 
-Exceptions are only the C# transport mechanism. `GameEventScriptCompileException`,
-`GameEventScriptProgramFormatException`, and
-`GameEventScriptDynamicLinkException` expose portable diagnostic data; callers
+Exceptions are only the C# transport mechanism. `GesCompileException`,
+`GesProgramFormatException`, and
+`GesDynamicLinkException` expose portable diagnostic data; callers
 must branch on phase/code rather than exception message or CLR subtype details.
 
 Runtime handler failures abort and reset only the failing handler. Remaining

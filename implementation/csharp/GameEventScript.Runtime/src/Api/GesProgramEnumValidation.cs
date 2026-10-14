@@ -7,59 +7,59 @@ namespace GameEventScript.Api;
 // Native tests compare every representable value with the declared enums.
 internal static class GesProgramEnumValidation
 {
-    internal static bool IsDefined(GameEventScriptBytecodeOpCode value)
-        => (byte)value <= (byte)GameEventScriptBytecodeOpCode.Default
-            || (byte)value >= (byte)GameEventScriptBytecodeOpCode.Or && (byte)value <= (byte)GameEventScriptBytecodeOpCode.AngleBetween3D
-            || (byte)value >= (byte)GameEventScriptBytecodeOpCode.TakeFirst && (byte)value <= (byte)GameEventScriptBytecodeOpCode.Cartesian;
+    internal static bool IsDefined(GesBytecodeOpCode value)
+        => (byte)value <= (byte)GesBytecodeOpCode.Default
+            || (byte)value >= (byte)GesBytecodeOpCode.Or && (byte)value <= (byte)GesBytecodeOpCode.AngleBetween3D
+            || (byte)value >= (byte)GesBytecodeOpCode.TakeFirst && (byte)value <= (byte)GesBytecodeOpCode.Cartesian;
 
-    internal static bool IsDefined(GameEventScriptBinaryBindKind value)
-        => value is GameEventScriptBinaryBindKind.MessageHandler
-            or GameEventScriptBinaryBindKind.MessageNameHandler
-            or GameEventScriptBinaryBindKind.Function
-            or GameEventScriptBinaryBindKind.Predicate
-            or GameEventScriptBinaryBindKind.ExtensionCall
-            or GameEventScriptBinaryBindKind.OutboundMessage
-            or GameEventScriptBinaryBindKind.Record
-            or GameEventScriptBinaryBindKind.ExternalType;
+    internal static bool IsDefined(GesBinaryBindKind value)
+        => value is GesBinaryBindKind.MessageHandler
+            or GesBinaryBindKind.MessageNameHandler
+            or GesBinaryBindKind.Function
+            or GesBinaryBindKind.Predicate
+            or GesBinaryBindKind.ExtensionCall
+            or GesBinaryBindKind.OutboundMessage
+            or GesBinaryBindKind.Record
+            or GesBinaryBindKind.ExternalType;
 
-    internal static bool IsDefined(GameEventScriptBytecodeInstructionUnit value)
-        => value is GameEventScriptBytecodeInstructionUnit.UnitNone
-            or GameEventScriptBytecodeInstructionUnit.UnitDegree
-            or GameEventScriptBytecodeInstructionUnit.UnitMeter
-            or GameEventScriptBytecodeInstructionUnit.UnitSecond
-            or GameEventScriptBytecodeInstructionUnit.UnitInvalid;
+    internal static bool IsDefined(GesQuantityUnit value)
+        => value is GesQuantityUnit.UnitNone
+            or GesQuantityUnit.UnitDegree
+            or GesQuantityUnit.UnitMeter
+            or GesQuantityUnit.UnitSecond
+            or GesQuantityUnit.UnitInvalid;
 
-    internal static bool IsDefined(GameEventScriptBytecodeTypeKind value)
-        => value is GameEventScriptBytecodeTypeKind.Nothing
-            or GameEventScriptBytecodeTypeKind.Boolean
-            or GameEventScriptBytecodeTypeKind.Integer
-            or GameEventScriptBytecodeTypeKind.Float
-            or GameEventScriptBytecodeTypeKind.Percentage
-            or GameEventScriptBytecodeTypeKind.Tag
-            or GameEventScriptBytecodeTypeKind.Text
-            or GameEventScriptBytecodeTypeKind.Vector
-            or GameEventScriptBytecodeTypeKind.Point
-            or GameEventScriptBytecodeTypeKind.Range
-            or GameEventScriptBytecodeTypeKind.Handler
-            or GameEventScriptBytecodeTypeKind.Message
-            or GameEventScriptBytecodeTypeKind.List
-            or GameEventScriptBytecodeTypeKind.Dice
-            or GameEventScriptBytecodeTypeKind.Map
-            or GameEventScriptBytecodeTypeKind.ListBuilder
-            or GameEventScriptBytecodeTypeKind.MapBuilder
-            or GameEventScriptBytecodeTypeKind.DistinctBuilder
-            or GameEventScriptBytecodeTypeKind.GroupBuilder
-            or GameEventScriptBytecodeTypeKind.OrderBuilder
-            or GameEventScriptBytecodeTypeKind.Iterator
-            or GameEventScriptBytecodeTypeKind.Series
-            or GameEventScriptBytecodeTypeKind.Custom;
+    internal static bool IsDefined(GesBytecodeTypeKind value)
+        => value is GesBytecodeTypeKind.Nothing
+            or GesBytecodeTypeKind.Boolean
+            or GesBytecodeTypeKind.Integer
+            or GesBytecodeTypeKind.Float
+            or GesBytecodeTypeKind.Percentage
+            or GesBytecodeTypeKind.Tag
+            or GesBytecodeTypeKind.Text
+            or GesBytecodeTypeKind.Vector
+            or GesBytecodeTypeKind.Point
+            or GesBytecodeTypeKind.Range
+            or GesBytecodeTypeKind.Handler
+            or GesBytecodeTypeKind.Message
+            or GesBytecodeTypeKind.List
+            or GesBytecodeTypeKind.Dice
+            or GesBytecodeTypeKind.Map
+            or GesBytecodeTypeKind.ListBuilder
+            or GesBytecodeTypeKind.MapBuilder
+            or GesBytecodeTypeKind.DistinctBuilder
+            or GesBytecodeTypeKind.GroupBuilder
+            or GesBytecodeTypeKind.OrderBuilder
+            or GesBytecodeTypeKind.Iterator
+            or GesBytecodeTypeKind.Series
+            or GesBytecodeTypeKind.Custom;
 
-    internal static bool IsDefined(GameEventScriptBytecodePatternKind value)
-        => value is GameEventScriptBytecodePatternKind.CountAny or GameEventScriptBytecodePatternKind.CountFace or GameEventScriptBytecodePatternKind.FullHouse or GameEventScriptBytecodePatternKind.Straight;
+    internal static bool IsDefined(GesBytecodePatternKind value)
+        => value is GesBytecodePatternKind.CountAny or GesBytecodePatternKind.CountFace or GesBytecodePatternKind.FullHouse or GesBytecodePatternKind.Straight;
 
-    internal static bool IsDefined(GameEventScriptBytecodeSeriesKind value)
-        => value is GameEventScriptBytecodeSeriesKind.Fibonacci or GameEventScriptBytecodeSeriesKind.Factorial;
+    internal static bool IsDefined(GesBytecodeSeriesKind value)
+        => value is GesBytecodeSeriesKind.Fibonacci or GesBytecodeSeriesKind.Factorial;
 
-    internal static bool IsDefined(GameEventScriptDebugSymbolKind value)
-        => value is GameEventScriptDebugSymbolKind.Parameter or GameEventScriptDebugSymbolKind.Local;
+    internal static bool IsDefined(GesDebugSymbolKind value)
+        => value is GesDebugSymbolKind.Parameter or GesDebugSymbolKind.Local;
 }

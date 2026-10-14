@@ -4,7 +4,7 @@
 extension GesVirtualMachine {
     func createSpatial(destination: Int, start: Int, point: Bool) {
         var xyz = [0.0, 0.0, 0.0]
-        var unit: GesUnit?
+        var unit: GesQuantityUnit?
         if start == 0 && stageLength > 0 && staged(0).spatialValue != nil {
             if stageLength > 2 { return setNothing(destination) }
             let first = staged(0)

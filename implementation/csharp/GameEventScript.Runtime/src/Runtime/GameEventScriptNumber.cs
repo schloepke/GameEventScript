@@ -21,19 +21,19 @@ internal static class GameEventScriptNumber
 
     internal static GesValue Cast(in GesValue value)
     {
-        if (value.Kind == GameEventScriptBytecodeTypeKind.Integer) return value;
-        if (value.Kind == GameEventScriptBytecodeTypeKind.Text)
+        if (value.Kind == GesBytecodeTypeKind.Integer) return value;
+        if (value.Kind == GesBytecodeTypeKind.Text)
         {
             return TextNumberCast.Read(value.TextValue) ?? GesValue.GesNothing();
         }
 
-        if (value.Kind == GameEventScriptBytecodeTypeKind.Series && value.ObjectValue is GesSeries series)
+        if (value.Kind == GesBytecodeTypeKind.Series && value.ObjectValue is GesSeries series)
         {
             var first = series.GetTerm(0);
             return Cast(in first);
         }
 
-        return GesValue.GesFloat(value.AsNumeric, value.Kind == GameEventScriptBytecodeTypeKind.Float ? value.Unit : GameEventScriptBytecodeInstructionUnit.UnitNone);
+        return GesValue.GesFloat(value.AsNumeric, value.Kind == GesBytecodeTypeKind.Float ? value.Unit : GesQuantityUnit.UnitNone);
     }
 
     internal static GesValue Power(in GesValue value, in GesValue exponent)
@@ -44,7 +44,7 @@ internal static class GameEventScriptNumber
         var right = exponent.AsNumeric;
         if (double.IsNaN(right)) return GesValue.GesFloat(double.NaN);
 
-        var unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
+        var unit = GesQuantityUnit.UnitNone;
         if (value.HasUnit)
         {
             if (right == 1d) unit = value.Unit;

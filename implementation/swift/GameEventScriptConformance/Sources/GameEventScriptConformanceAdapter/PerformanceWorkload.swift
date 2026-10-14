@@ -152,7 +152,7 @@ final class ConformancePerformanceExecution {
     }
 }
 
-private final class PerformanceObserver: GameEventScriptRuntimeObserver, GameEventScriptPublishSink {
+private final class PerformanceObserver: GesRuntimeObserver, GesPublishSink {
     var counts = ConformanceWorkCounters()
     let accept: Bool
 
@@ -160,7 +160,7 @@ private final class PerformanceObserver: GameEventScriptRuntimeObserver, GameEve
 
     func messageEmitted(_ message: GameEventScriptMessage, accepted: Bool) { counts.observedEmits += 1 }
 
-    func messagePublished(_ message: GameEventScriptMessage, result: GameEventScriptPublishResult) { counts.observedPublishes += 1 }
+    func messagePublished(_ message: GameEventScriptMessage, result: GesPublishResult) { counts.observedPublishes += 1 }
 
     func dispatchStarted(_ message: GameEventScriptMessage, signatureID: String) { counts.started += 1 }
 
@@ -168,7 +168,7 @@ private final class PerformanceObserver: GameEventScriptRuntimeObserver, GameEve
 
     func runtimeLimitReached(_ limitName: String, detail: String, limit: Int) { counts.limits += 1 }
 
-    func runtimeError(_ diagnostic: GameEventScriptDiagnostic) { counts.errors += 1 }
+    func runtimeError(_ diagnostic: GesDiagnostic) { counts.errors += 1 }
 
     func publish(_ message: GameEventScriptMessage) throws -> Bool {
         counts.outbound += 1

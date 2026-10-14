@@ -9,7 +9,7 @@ internal static class HostTestStartup
 {
     internal static GameEventScriptHost StartForTest(this GameEventScriptHost host)
     {
-        Assert.AreEqual(GameEventScriptStartState.Ready, host.Start().State);
+        Assert.AreEqual(GesStartState.Ready, host.Start().State);
         return host;
     }
 }

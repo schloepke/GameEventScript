@@ -9,16 +9,16 @@ namespace GameEventScript.Runtime;
 
 internal static class GameEventScriptExternalTypeValueConverter
 {
-    internal static GesValue CoerceToDeclaredType(in GesValue value, GameEventScriptExternalTypeParameterDefinition definition)
+    internal static GesValue CoerceToDeclaredType(in GesValue value, GesExternalTypeParameterDefinition definition)
         => CoerceToDeclaredType(in value, definition.Kind, definition.Unit, definition.TypeName);
 
-    internal static GesValue CoerceToDeclaredType(in GesValue value, GameEventScriptExternalTypeFieldDefinition definition)
+    internal static GesValue CoerceToDeclaredType(in GesValue value, GesExternalTypeFieldDefinition definition)
         => CoerceToDeclaredType(in value, definition.Kind, definition.Unit, definition.TypeName);
 
-    private static GesValue CoerceToDeclaredType(in GesValue value, GameEventScriptBytecodeTypeKind? kind, GameEventScriptBytecodeInstructionUnit? unit, string typeName)
+    private static GesValue CoerceToDeclaredType(in GesValue value, GesBytecodeTypeKind? kind, GesQuantityUnit? unit, string typeName)
     {
-        if (kind == GameEventScriptBytecodeTypeKind.Vector &&
-            unit is not null && unit != GameEventScriptBytecodeInstructionUnit.UnitNone &&
+        if (kind == GesBytecodeTypeKind.Vector &&
+            unit is not null && unit != GesQuantityUnit.UnitNone &&
             value.ObjectValue is GesValueVectorPoint vector)
         {
             var result = new GesValue();
@@ -26,8 +26,8 @@ internal static class GameEventScriptExternalTypeValueConverter
             return result;
         }
 
-        if (kind == GameEventScriptBytecodeTypeKind.Point &&
-            unit is not null && unit != GameEventScriptBytecodeInstructionUnit.UnitNone &&
+        if (kind == GesBytecodeTypeKind.Point &&
+            unit is not null && unit != GesQuantityUnit.UnitNone &&
             value.ObjectValue is GesValueVectorPoint point)
         {
             var result = new GesValue();
@@ -35,7 +35,7 @@ internal static class GameEventScriptExternalTypeValueConverter
             return result;
         }
 
-        if (kind == GameEventScriptBytecodeTypeKind.Float &&
+        if (kind == GesBytecodeTypeKind.Float &&
             unit is not null)
         {
             var result = new GesValue();
@@ -63,13 +63,13 @@ internal static class GameEventScriptExternalTypeValueConverter
                 result.SetPercentage(value.AsNumeric);
                 return result;
             case "degree":
-                result.SetFloat(value.AsNumeric, GameEventScriptBytecodeInstructionUnit.UnitDegree);
+                result.SetFloat(value.AsNumeric, GesQuantityUnit.UnitDegree);
                 return result;
             case "meter":
-                result.SetFloat(value.AsNumeric, GameEventScriptBytecodeInstructionUnit.UnitMeter);
+                result.SetFloat(value.AsNumeric, GesQuantityUnit.UnitMeter);
                 return result;
             case "second":
-                result.SetFloat(value.AsNumeric, GameEventScriptBytecodeInstructionUnit.UnitSecond);
+                result.SetFloat(value.AsNumeric, GesQuantityUnit.UnitSecond);
                 return result;
             case "Number":
                 result.SetFloat(value.AsNumeric);
@@ -85,14 +85,14 @@ internal static class GameEventScriptExternalTypeValueConverter
     private static GesValue CoerceToTag(in GesValue value)
     {
         var result = new GesValue();
-        if (value.Kind == GameEventScriptBytecodeTypeKind.Boolean)
+        if (value.Kind == GesBytecodeTypeKind.Boolean)
         {
             result.SetTag(value.IsTrue ? "true" : "false");
             return result;
         }
 
         var text = value.ToText;
-        if (value.Kind == GameEventScriptBytecodeTypeKind.Text)
+        if (value.Kind == GesBytecodeTypeKind.Text)
         {
             if (GameEventScriptTagRules.NormalizeTextCast(text) is { } normalized)
             {

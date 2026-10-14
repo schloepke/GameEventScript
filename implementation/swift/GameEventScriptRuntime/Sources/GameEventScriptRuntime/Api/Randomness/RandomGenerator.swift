@@ -3,7 +3,7 @@
 
 /// Host-owned xoshiro256** stream with deterministic SplitMix64 seeding and nested scopes.
 /// This mutable object is serial and deliberately does not conform to Sendable.
-public final class GameEventScriptRandomGenerator {
+public final class GesRandomGenerator {
     struct State {
         var sequence: [Double] = []
         var sequenceIndex = 0
@@ -59,7 +59,7 @@ public final class GameEventScriptRandomGenerator {
     ///
     /// - Throws: An API error if `entropy` is empty.
     public static func seedFromEntropy(_ entropy: [UInt8]) throws -> Int64 {
-        guard !entropy.isEmpty else { throw GameEventScriptAPIError.invalidArgument("Entropy must not be empty") }
+        guard !entropy.isEmpty else { throw GesApiError.invalidArgument("Entropy must not be empty") }
         var state: UInt64 = 0x9e37_79b9_7f4a_7c15
         for byte in entropy {
             var mix = state ^ UInt64(byte)

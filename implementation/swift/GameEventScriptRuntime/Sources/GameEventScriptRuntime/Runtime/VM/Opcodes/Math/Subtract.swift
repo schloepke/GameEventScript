@@ -15,21 +15,21 @@ extension GesVirtualMachine {
             return registers[target].setInteger(result, unit: unit)
         case .float where registers[y].kind == .float:
             guard registers[x].unit == registers[y].unit else { return registers[target].setNothing() }
-            let unit: GesUnit = registers[x].unit
+            let unit: GesQuantityUnit = registers[x].unit
             let left = registers[x].floatValue!
             let right = registers[y].floatValue!
             let result = left - right
             return registers[target].setFloat(result, unit: unit)
         case .integer where registers[y].kind == .float:
             guard registers[x].unit == registers[y].unit else { return registers[target].setNothing() }
-            let unit: GesUnit = registers[x].unit
+            let unit: GesQuantityUnit = registers[x].unit
             let left = Double(registers[x].integerValue!)
             let right = registers[y].floatValue!
             let result = left - right
             return registers[target].setFloat(result, unit: unit)
         case .float where registers[y].kind == .integer:
             guard registers[x].unit == registers[y].unit else { return registers[target].setNothing() }
-            let unit: GesUnit = registers[x].unit
+            let unit: GesQuantityUnit = registers[x].unit
             let left = registers[x].floatValue!
             let right = Double(registers[y].integerValue!)
             let result = left - right

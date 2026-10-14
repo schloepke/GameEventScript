@@ -84,8 +84,8 @@ internal static partial class GesCompiler
             }
             else sources = GesOperand.Register(registers[1]);
             var branch = line.Name == "IteratorCreateOrJump";
-            _builder.AddOpcode(branch ? GameEventScriptBytecodeOpCode.IteratorCreateOrJump : GameEventScriptBytecodeOpCode.IteratorCreate,
-                flags: (GameEventScriptInstructionFlag)(mode << 5), dst: GesOperand.Register(registers[0]), x: sources,
+            _builder.AddOpcode(branch ? GesBytecodeOpCode.IteratorCreateOrJump : GesBytecodeOpCode.IteratorCreate,
+                flags: (GesInstructionFlag)(mode << 5), dst: GesOperand.Register(registers[0]), x: sources,
                 y: branch ? GesOperand.Label(labels[AssemblyName(line.Operands[2])]) : default);
         }
     }

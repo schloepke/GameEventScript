@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 using static GameEventScript.Runtime.GesJson;
 
 namespace GameEventScript.Runtime;
@@ -38,7 +38,7 @@ internal sealed class GesMessageJsonCodec
     }
 
     private static GesValue Get(GesValue value, string key) => value.AsMap()?.Get(key) ?? throw Error();
-    private static string String(GesValue value) => value.Kind == GameEventScriptBytecodeTypeKind.Text ? value.TextValue : throw Error();
+    private static string String(GesValue value) => value.Kind == GesBytecodeTypeKind.Text ? value.TextValue : throw Error();
     private static void Fields(GesValue value, params string[] names)
     {
         if (value.Kind != Map || value.AsMap() is not { } map || map.Length != names.Length)
@@ -48,21 +48,21 @@ internal sealed class GesMessageJsonCodec
                 throw Error();
     }
 
-    private static GesValue[] List(GesValue value) => value.Kind == GameEventScriptBytecodeTypeKind.List && value.ObjectValue is GesValue[] items ? items : throw Error();
-    private static GameEventScriptBytecodeInstructionUnit Unit(GesValue value) => String(value) switch
+    private static GesValue[] List(GesValue value) => value.Kind == GesBytecodeTypeKind.List && value.ObjectValue is GesValue[] items ? items : throw Error();
+    private static GesQuantityUnit Unit(GesValue value) => String(value) switch
     {
-        "" => GameEventScriptBytecodeInstructionUnit.UnitNone,
-        "s" => GameEventScriptBytecodeInstructionUnit.UnitSecond,
-        "m" => GameEventScriptBytecodeInstructionUnit.UnitMeter,
-        "°" => GameEventScriptBytecodeInstructionUnit.UnitDegree,
+        "" => GesQuantityUnit.UnitNone,
+        "s" => GesQuantityUnit.UnitSecond,
+        "m" => GesQuantityUnit.UnitMeter,
+        "°" => GesQuantityUnit.UnitDegree,
         _ => throw Error()
     };
-    private static string UnitName(GameEventScriptBytecodeInstructionUnit unit) => unit switch
+    private static string UnitName(GesQuantityUnit unit) => unit switch
     {
-        GameEventScriptBytecodeInstructionUnit.UnitNone => "",
-        GameEventScriptBytecodeInstructionUnit.UnitSecond => "s",
-        GameEventScriptBytecodeInstructionUnit.UnitMeter => "m",
-        GameEventScriptBytecodeInstructionUnit.UnitDegree => "°",
+        GesQuantityUnit.UnitNone => "",
+        GesQuantityUnit.UnitSecond => "s",
+        GesQuantityUnit.UnitMeter => "m",
+        GesQuantityUnit.UnitDegree => "°",
         _ => throw Error()
     };
     private static GesValue Number(GesValue value)
@@ -103,7 +103,7 @@ internal sealed class GesMessageJsonCodec
         Enter(depth);
         Fields(value, "name", "args", "tags");
         var args = List(Get(value, "args"));
-        var arguments = new GameEventScriptMessageArgument[args.Length];
+        var arguments = new GesMessageArgument[args.Length];
         for (var i = 0; i < args.Length; i++)
         {
             Fields(args[i], "name", "value");
@@ -144,13 +144,13 @@ internal sealed class GesMessageJsonCodec
                 return Typed("Number", ("value", Text(NumberText(value))), ("unit", Text(UnitName(value.Unit))));
             case Percentage:
                 return Typed("Percentage", ("value", Text(GameEventScriptNumber.FormatCanonicalFloat(value.FloatValue))));
-            case GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean:
                 return Typed("Boolean", ("value", value));
-            case GameEventScriptBytecodeTypeKind.Text:
+            case GesBytecodeTypeKind.Text:
                 return Typed("Text", ("value", value));
             case Tag:
                 return Typed("Tag", ("value", Text(value.TextValue)));
-            case GameEventScriptBytecodeTypeKind.List:
+            case GesBytecodeTypeKind.List:
                 var source = value.AsList();
                 var values = new GesValue[source.Length];
                 for (var i = 0; i < values.Length; i++)
@@ -188,7 +188,7 @@ internal sealed class GesMessageJsonCodec
                 }
 
                 return Typed("Dice", ("rolls", Array(dice)));
-            case GameEventScriptBytecodeTypeKind.Range:
+            case GesBytecodeTypeKind.Range:
                 if (value.ObjectValue is GesValueRangeInteger integer)
                     return Typed("Range", ("from", Text(integer.From.ToString(CultureInfo.InvariantCulture))), ("to", Text(integer.To.ToString(CultureInfo.InvariantCulture))), ("step", Text(integer.Step.ToString(CultureInfo.InvariantCulture))));
                 if (value.ObjectValue is GesValueRangeFloat real)
@@ -249,7 +249,7 @@ internal sealed class GesMessageJsonCodec
             case "Boolean":
                 Fields(value, "type", "value");
                 var boolean = Get(value, "value");
-                if (boolean.Kind != GameEventScriptBytecodeTypeKind.Boolean)
+                if (boolean.Kind != GesBytecodeTypeKind.Boolean)
                     throw Error();
                 return boolean;
             case "List":
@@ -346,7 +346,7 @@ internal sealed class GesMessageJsonCodec
 
                 try
                 {
-                    return GesValue.GesHandler(GameEventScriptMessageSignature.Create(MessageName(Get(value, "name")), names));
+                    return GesValue.GesHandler(GesMessageSignature.Create(MessageName(Get(value, "name")), names));
                 }
                 catch (ArgumentException)
                 {

@@ -46,7 +46,7 @@ internal static partial class GesCompiler
                 _ => throw AssemblyFailure("Expected a numeric literal.")
             };
 
-        private static GameEventScriptCompileException AssemblyFailure(string message, string? symbol = null)
+        private static GesCompileException AssemblyFailure(string message, string? symbol = null)
             => CompileFailure("compile.invalidAssembly", message, symbol);
 
         private void EmitAssembly(AssemblyBlockNode block, GesRegisterRef? result, LoweringContext outer)
@@ -319,7 +319,7 @@ internal static partial class GesCompiler
         private string AssemblyResultKind(AssemblyLine line, IReadOnlyDictionary<string, string> state)
             => line.Name switch
             {
-                "Cast" when AssemblyType(line.Operands[2]) is GameEventScriptBytecodeTypeKind.Boolean or GameEventScriptBytecodeTypeKind.Nothing => "boolean",
+                "Cast" when AssemblyType(line.Operands[2]) is GesBytecodeTypeKind.Boolean or GesBytecodeTypeKind.Nothing => "boolean",
                 "Call" when line.Operands[1] is CallExpressionNode call && GesCallableSignatures.Resolve(module.Callables, call)?.Kind == GameEventScriptCallableKind.PredicateCall => "boolean",
                 "Move" when line.Operands[1] is BooleanLiteralExpressionNode or NothingLiteralExpressionNode => "boolean",
                 "Not" when AssemblyBooleanOperand(line.Operands[1], state) => "boolean",

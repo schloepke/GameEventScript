@@ -8,21 +8,21 @@ namespace GameEventScript.Api;
 /// <summary>
 /// Represents a game event script bytecode instruction units.
 /// </summary>
-public static class GameEventScriptBytecodeInstructionUnits
+public static class GesQuantityUnits
 {
     /// <summary>
     /// Determines whether is numeric unit.
     /// </summary>
     /// <param name="unit">The unit value.</param>
     /// <returns>The result of the operation.</returns>
-    public static bool IsNumericUnit(this GameEventScriptBytecodeInstructionUnit unit)
-        => unit is GameEventScriptBytecodeInstructionUnit.UnitDegree or GameEventScriptBytecodeInstructionUnit.UnitMeter or GameEventScriptBytecodeInstructionUnit.UnitSecond;
+    public static bool IsNumericUnit(this GesQuantityUnit unit)
+        => unit is GesQuantityUnit.UnitDegree or GesQuantityUnit.UnitMeter or GesQuantityUnit.UnitSecond;
 
-    internal static GameEventScriptBytecodeInstructionUnit ToStoredUnit(this GameEventScriptBytecodeInstructionUnit? unit)
-        => unit is { } value && value.IsNumericUnit() ? value : GameEventScriptBytecodeInstructionUnit.UnitNone;
+    internal static GesQuantityUnit ToStoredUnit(this GesQuantityUnit? unit)
+        => unit is { } value && value.IsNumericUnit() ? value : GesQuantityUnit.UnitNone;
 
-    internal static GameEventScriptBytecodeInstructionUnit ToStoredUnit(this GameEventScriptBytecodeInstructionUnit unit)
-        => unit.IsNumericUnit() ? unit : GameEventScriptBytecodeInstructionUnit.UnitNone;
+    internal static GesQuantityUnit ToStoredUnit(this GesQuantityUnit unit)
+        => unit.IsNumericUnit() ? unit : GesQuantityUnit.UnitNone;
 
     /// <summary>
     /// Determines whether is quantity type name.
@@ -37,12 +37,12 @@ public static class GameEventScriptBytecodeInstructionUnits
     /// </summary>
     /// <param name="unit">The unit value.</param>
     /// <returns>The result of the operation.</returns>
-    public static string ToTypeName(this GameEventScriptBytecodeInstructionUnit unit)
+    public static string ToTypeName(this GesQuantityUnit unit)
         => unit switch
         {
-            GameEventScriptBytecodeInstructionUnit.UnitDegree => "degree",
-            GameEventScriptBytecodeInstructionUnit.UnitMeter => "meter",
-            GameEventScriptBytecodeInstructionUnit.UnitSecond => "second",
+            GesQuantityUnit.UnitDegree => "degree",
+            GesQuantityUnit.UnitMeter => "meter",
+            GesQuantityUnit.UnitSecond => "second",
             _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown GameEventScript numeric unit.")
         };
 
@@ -51,12 +51,12 @@ public static class GameEventScriptBytecodeInstructionUnits
     /// </summary>
     /// <param name="unit">The unit value.</param>
     /// <returns>The result of the operation.</returns>
-    public static string ToSuffix(this GameEventScriptBytecodeInstructionUnit unit)
+    public static string ToSuffix(this GesQuantityUnit unit)
         => unit switch
         {
-            GameEventScriptBytecodeInstructionUnit.UnitDegree => "\u00B0",
-            GameEventScriptBytecodeInstructionUnit.UnitMeter => "m",
-            GameEventScriptBytecodeInstructionUnit.UnitSecond => "s",
+            GesQuantityUnit.UnitDegree => "\u00B0",
+            GesQuantityUnit.UnitMeter => "m",
+            GesQuantityUnit.UnitSecond => "s",
             _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown GameEventScript numeric unit.")
         };
 
@@ -65,12 +65,12 @@ public static class GameEventScriptBytecodeInstructionUnits
     /// </summary>
     /// <param name="typeName">The type name value.</param>
     /// <returns>The result of the operation.</returns>
-    public static GameEventScriptBytecodeInstructionUnit? ParseTypeName(string? typeName)
+    public static GesQuantityUnit? ParseTypeName(string? typeName)
         => typeName switch
         {
-            "degree" or "\u00B0" => GameEventScriptBytecodeInstructionUnit.UnitDegree,
-            "meter" => GameEventScriptBytecodeInstructionUnit.UnitMeter,
-            "second" => GameEventScriptBytecodeInstructionUnit.UnitSecond,
+            "degree" or "\u00B0" => GesQuantityUnit.UnitDegree,
+            "meter" => GesQuantityUnit.UnitMeter,
+            "second" => GesQuantityUnit.UnitSecond,
             _ => null
         };
 
@@ -79,23 +79,23 @@ public static class GameEventScriptBytecodeInstructionUnits
     /// </summary>
     /// <param name="typeName">The type name value.</param>
     /// <returns>The result of the operation.</returns>
-    public static GameEventScriptBytecodeInstructionUnit? ParseQuantityTypeName(string? typeName)
+    public static GesQuantityUnit? ParseQuantityTypeName(string? typeName)
         => typeName != null && typeName.StartsWith("quantity:", StringComparison.Ordinal)
             ? ParseQuantityName(typeName["quantity:".Length..])
             : null;
 
-    internal static GameEventScriptBytecodeInstructionUnit? ParseSourceQuantityTypeName(string? typeName)
+    internal static GesQuantityUnit? ParseSourceQuantityTypeName(string? typeName)
         => typeName is not null && typeName.StartsWith("Quantity(", StringComparison.Ordinal) && typeName.EndsWith(")", StringComparison.Ordinal)
             ? ParseQuantityName(typeName["Quantity(".Length..^1])
             : null;
 
-    private static GameEventScriptBytecodeInstructionUnit? ParseQuantityName(string? quantityName)
+    private static GesQuantityUnit? ParseQuantityName(string? quantityName)
         => quantityName switch
         {
-            "none" => GameEventScriptBytecodeInstructionUnit.UnitNone,
-            "degree" or "°" => GameEventScriptBytecodeInstructionUnit.UnitDegree,
-            "m" or "meter" => GameEventScriptBytecodeInstructionUnit.UnitMeter,
-            "s" or "second" => GameEventScriptBytecodeInstructionUnit.UnitSecond,
+            "none" => GesQuantityUnit.UnitNone,
+            "degree" or "°" => GesQuantityUnit.UnitDegree,
+            "m" or "meter" => GesQuantityUnit.UnitMeter,
+            "s" or "second" => GesQuantityUnit.UnitSecond,
             _ => null
         };
 

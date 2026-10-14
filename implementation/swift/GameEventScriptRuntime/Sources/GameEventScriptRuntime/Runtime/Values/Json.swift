@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 enum GesJson {
-    static func error(_ code: String = "message.invalidValue") -> GameEventScriptMessageFormatError { .init(code: code) }
+    static func error(_ code: String = "message.invalidValue") -> GesMessageFormatError { .init(code: code) }
 
     static func object(_ fields: [(String, GesValue)]) -> GesValue { .map(fields.map { .init(key: $0.0, value: $0.1) }) }
 

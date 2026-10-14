@@ -22,17 +22,17 @@ public final class GameEventScriptProgram: Sendable {
     /// Declarative callable and import entries; contains no host callbacks.
     public let bindings: [GameEventScriptBinding]
     /// Logical bytecode instructions in address order.
-    public let code: [GameEventScriptBytecodeInstruction]
+    public let code: [GesBytecodeInstruction]
     /// Optional register names and lifetimes; nil when absent or not retained.
-    public let debugSymbols: [GameEventScriptDebugSymbol]?
+    public let debugSymbols: [GesDebugSymbol]?
     /// Optional bytecode-to-source mapping.
     public let sourceMap: GameEventScriptSourceMap?
     /// Optional original UTF-8 source documents.
-    public let sourceArchive: [GameEventScriptSourceArchiveEntry]?
+    public let sourceArchive: [GesSourceArchiveEntry]?
     /// Optional compiler identity and version.
     public let buildMetadata: GameEventScriptBuildMetadata?
     /// Preserved opaque sections retained by the selected reader policy.
-    public let opaqueSections: [GameEventScriptOpaqueSection]
+    public let opaqueSections: [GesOpaqueSection]
 
     init(
         formatVersion: UInt16,
@@ -43,12 +43,12 @@ public final class GameEventScriptProgram: Sendable {
         stringConstants: [String],
         uint16IndexLists: [[UInt16]],
         bindings: [GameEventScriptBinding],
-        code: [GameEventScriptBytecodeInstruction],
-        debugSymbols: [GameEventScriptDebugSymbol]?,
+        code: [GesBytecodeInstruction],
+        debugSymbols: [GesDebugSymbol]?,
         sourceMap: GameEventScriptSourceMap?,
-        sourceArchive: [GameEventScriptSourceArchiveEntry]?,
+        sourceArchive: [GesSourceArchiveEntry]?,
         buildMetadata: GameEventScriptBuildMetadata?,
-        opaqueSections: [GameEventScriptOpaqueSection]
+        opaqueSections: [GesOpaqueSection]
     ) {
         self.formatVersion = formatVersion
         self.moduleName = moduleName
@@ -68,9 +68,9 @@ public final class GameEventScriptProgram: Sendable {
 }
 
 /// A logical instruction; its encoding never depends on native memory layout.
-public struct GameEventScriptBytecodeInstruction: Sendable, Equatable {
+public struct GesBytecodeInstruction: Sendable, Equatable {
     /// Operation identifier determining operand interpretation.
-    public let opcode: GameEventScriptBytecodeOpCode
+    public let opcode: GesBytecodeOpCode
     /// Low five bits encode the unit; upper bits encode instruction flags.
     public let unitAndFlags: UInt8
     /// First UInt16 operand word, commonly the destination register.
@@ -83,7 +83,7 @@ public struct GameEventScriptBytecodeInstruction: Sendable, Equatable {
     public let payload: UInt64
 
     /// Creates logical instruction data without validation; the Program validator checks operands and references.
-    public init(opcode: GameEventScriptBytecodeOpCode, unitAndFlags: UInt8 = 0, word0: UInt16 = 0, word1: UInt16 = 0, word2: UInt16 = 0, payload: UInt64 = 0) {
+    public init(opcode: GesBytecodeOpCode, unitAndFlags: UInt8 = 0, word0: UInt16 = 0, word1: UInt16 = 0, word2: UInt16 = 0, payload: UInt64 = 0) {
         self.opcode = opcode
         self.unitAndFlags = unitAndFlags
         self.word0 = word0
@@ -109,10 +109,10 @@ public struct GameEventScriptBytecodeInstruction: Sendable, Equatable {
     /// Payload bits 48...63 interpreted as UInt16.
     public var d: UInt16 { UInt16(truncatingIfNeeded: payload >> 48) }
     /// Decoded degree, meter or second unit; other codes yield none. Validation rejects invalid encodings.
-    public var unit: GesUnit { decodedUnit }
+    public var unit: GesQuantityUnit { decodedUnit }
     // Inlined into VM dispatch; the public accessor shares this single mapping.
     @inline(__always)
-    var decodedUnit: GesUnit {
+    var decodedUnit: GesQuantityUnit {
         switch unitAndFlags & 0x1f {
         case 1: .degree
         case 2: .meter
@@ -127,7 +127,7 @@ public struct GameEventScriptBytecodeInstruction: Sendable, Equatable {
 /// A declarative binding; callbacks and execution state never belong to a Program.
 public struct GameEventScriptBinding: Sendable {
     /// Binding role: executable declaration, message signature or host import.
-    public let kind: GameEventScriptBinaryBindKind
+    public let kind: GesBinaryBindKind
     /// Binding identifier within its kind.
     public let id: UInt16
     /// Index of the binding name in the string table.
@@ -148,7 +148,7 @@ public struct GameEventScriptBinding: Sendable {
     /// Creates binding data. Names and tag values are string-table indexes; omitted IDs and entry addresses use
     /// UInt16.max. The Program validator enforces consistency.
     public init(
-        kind: GameEventScriptBinaryBindKind,
+        kind: GesBinaryBindKind,
         name: UInt16,
         argumentNames: [UInt16] = [],
         entryAddress: UInt16 = .max,
@@ -174,7 +174,7 @@ public struct GameEventScriptBinding: Sendable {
 }
 
 /// Role of a named register in an executable binding.
-public enum GameEventScriptDebugSymbolKind: UInt8, Sendable {
+public enum GesDebugSymbolKind: UInt8, Sendable {
     /// A preloaded callable argument.
     case parameter = 1
     /// A local lexical binding.
@@ -182,9 +182,9 @@ public enum GameEventScriptDebugSymbolKind: UInt8, Sendable {
 }
 
 /// A register name and the instruction interval over which it is valid.
-public struct GameEventScriptDebugSymbol: Sendable {
+public struct GesDebugSymbol: Sendable {
     /// Whether the register names a parameter or a local.
-    public let kind: GameEventScriptDebugSymbolKind
+    public let kind: GesDebugSymbolKind
     /// Zero-based register index in the active frame.
     public let registerID: UInt16
     /// Source-level binding name.
@@ -195,7 +195,7 @@ public struct GameEventScriptDebugSymbol: Sendable {
     public let codeLength: UInt32
 
     /// Creates debug-symbol data with a register and half-open instruction lifetime.
-    public init(kind: GameEventScriptDebugSymbolKind, registerID: UInt16, name: String, codeStart: UInt32, codeLength: UInt32) {
+    public init(kind: GesDebugSymbolKind, registerID: UInt16, name: String, codeStart: UInt32, codeLength: UInt32) {
         self.kind = kind
         self.registerID = registerID
         self.name = name
@@ -205,7 +205,7 @@ public struct GameEventScriptDebugSymbol: Sendable {
 }
 
 /// Source-document identity, checksum and line boundaries used by debug mappings.
-public struct GameEventScriptSourceMapSource: Sendable {
+public struct GesSourceMapSource: Sendable {
     /// Compiler-assigned document identifier.
     public let sourceID: UInt32
     /// Display name of the original source input.
@@ -228,7 +228,7 @@ public struct GameEventScriptSourceMapSource: Sendable {
 }
 
 /// Mapping from a half-open instruction interval to a UTF-8 source span.
-public struct GameEventScriptSourceMapEntry: Sendable {
+public struct GesSourceMapEntry: Sendable {
     /// First instruction address covered by this mapping.
     public let codeStart: UInt32
     /// Number of covered instructions.
@@ -253,19 +253,19 @@ public struct GameEventScriptSourceMapEntry: Sendable {
 /// Source identities and mappings retained in the optional SourceMap section.
 public struct GameEventScriptSourceMap: Sendable {
     /// Source-document identities in stored order.
-    public let sources: [GameEventScriptSourceMapSource]
+    public let sources: [GesSourceMapSource]
     /// Instruction-to-source mappings in stored order.
-    public let entries: [GameEventScriptSourceMapEntry]
+    public let entries: [GesSourceMapEntry]
 
     /// Creates an immutable source map from document identities and mappings.
-    public init(sources: [GameEventScriptSourceMapSource], entries: [GameEventScriptSourceMapEntry]) {
+    public init(sources: [GesSourceMapSource], entries: [GesSourceMapEntry]) {
         self.sources = sources
         self.entries = entries
     }
 }
 
 /// Original UTF-8 contents of one embedded compiler input.
-public struct GameEventScriptSourceArchiveEntry: Sendable {
+public struct GesSourceArchiveEntry: Sendable {
     /// Compiler-assigned source identifier.
     public let sourceID: UInt32
     /// Display name of the source input.
@@ -299,7 +299,7 @@ public struct GameEventScriptBuildMetadata: Sendable {
 }
 
 /// Uninterpreted section retained for lossless rewriting under the reader retention policy.
-public struct GameEventScriptOpaqueSection: Sendable {
+public struct GesOpaqueSection: Sendable {
     /// Raw UInt16 section identifier.
     public let sectionType: UInt16
     /// Raw section flag bits.

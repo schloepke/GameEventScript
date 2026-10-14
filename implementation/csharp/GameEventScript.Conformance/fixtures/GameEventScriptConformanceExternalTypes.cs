@@ -8,53 +8,53 @@ namespace GameEventScript.Tests.Conformance;
 
 internal static class GameEventScriptConformanceExternalTypes
 {
-    private static readonly GameEventScriptExternalTypeDefinition AimDefinition = CreateAimDefinition();
-    private static readonly GameEventScriptExternalTypeDefinition SpatialDefinition = new(
+    private static readonly GesExternalTypeDefinition AimDefinition = CreateAimDefinition();
+    private static readonly GesExternalTypeDefinition SpatialDefinition = new(
         "SpatialProbe",
         [
-            new GameEventScriptExternalTypeFieldDefinition("vector", GameEventScriptBytecodeTypeKind.Vector),
-            new GameEventScriptExternalTypeFieldDefinition("point", GameEventScriptBytecodeTypeKind.Point),
-            new GameEventScriptExternalTypeFieldDefinition("storedVector", "Vector"),
-            new GameEventScriptExternalTypeFieldDefinition("storedPoint", "Point")
+            new GesExternalTypeFieldDefinition("vector", GesBytecodeTypeKind.Vector),
+            new GesExternalTypeFieldDefinition("point", GesBytecodeTypeKind.Point),
+            new GesExternalTypeFieldDefinition("storedVector", "Vector"),
+            new GesExternalTypeFieldDefinition("storedPoint", "Point")
         ],
-        [new GameEventScriptExternalTypeConstructorDefinition("SpatialProbe", [new GameEventScriptExternalTypeParameterDefinition("vector", "Vector"), new GameEventScriptExternalTypeParameterDefinition("point", "Point")])]);
+        [new GesExternalTypeConstructorDefinition("SpatialProbe", [new GesExternalTypeParameterDefinition("vector", "Vector"), new GesExternalTypeParameterDefinition("point", "Point")])]);
 
-    internal static readonly IGameEventScriptExternalTypeCatalog Catalog =
-        new GameEventScriptExternalTypeCatalog([AimDefinition, GameEventScriptConformanceCallbackProbe.Definition, SpatialDefinition]);
+    internal static readonly IGesExternalTypeCatalog Catalog =
+        new GesDeclaredExternalTypeCatalog([AimDefinition, GameEventScriptConformanceCallbackProbe.Definition, SpatialDefinition]);
 
-    internal static readonly IGameEventScriptExternalTypeRegistry Registry =
+    internal static readonly IGesExternalTypeRegistry Registry =
         new TestRuntimeRegistry();
 
-    private static GameEventScriptExternalTypeDefinition CreateAimDefinition()
+    private static GesExternalTypeDefinition CreateAimDefinition()
     {
         const string typeName = "Aim";
-        return new GameEventScriptExternalTypeDefinition(
+        return new GesExternalTypeDefinition(
             typeName,
             [
-                new GameEventScriptExternalTypeFieldDefinition("bearing", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree),
-                new GameEventScriptExternalTypeFieldDefinition("range", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter),
-                new GameEventScriptExternalTypeFieldDefinition("steps", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter),
-                new GameEventScriptExternalTypeFieldDefinition("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter),
-                new GameEventScriptExternalTypeFieldDefinition("checksum", GameEventScriptBytecodeTypeKind.Float)
+                new GesExternalTypeFieldDefinition("bearing", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitDegree),
+                new GesExternalTypeFieldDefinition("range", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitMeter),
+                new GesExternalTypeFieldDefinition("steps", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitMeter),
+                new GesExternalTypeFieldDefinition("direction", GesBytecodeTypeKind.Vector, GesQuantityUnit.UnitMeter),
+                new GesExternalTypeFieldDefinition("checksum", GesBytecodeTypeKind.Float)
             ],
             [
-                new GameEventScriptExternalTypeConstructorDefinition(
+                new GesExternalTypeConstructorDefinition(
                     typeName,
                     [
-                        new GameEventScriptExternalTypeParameterDefinition("bearing", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree),
-                        new GameEventScriptExternalTypeParameterDefinition("range", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter),
-                        new GameEventScriptExternalTypeParameterDefinition("steps", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter),
-                        new GameEventScriptExternalTypeParameterDefinition("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)
+                        new GesExternalTypeParameterDefinition("bearing", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitDegree),
+                        new GesExternalTypeParameterDefinition("range", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitMeter),
+                        new GesExternalTypeParameterDefinition("steps", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitMeter),
+                        new GesExternalTypeParameterDefinition("direction", GesBytecodeTypeKind.Vector, GesQuantityUnit.UnitMeter)
                     ])
             ]);
     }
 
-    private sealed class TestRuntimeRegistry : IGameEventScriptExternalTypeRegistry
+    private sealed class TestRuntimeRegistry : IGesExternalTypeRegistry
     {
         private readonly AimConstructor _constructor = new(AimDefinition.Constructors[0]);
         private readonly SpatialConstructor _spatialConstructor = new();
 
-        public IGameEventScriptExternalTypeConstructor? Resolve(GameEventScriptExternalTypeConstructorReference reference)
+        public IGesExternalTypeConstructor? Resolve(GesExternalTypeConstructorReference reference)
             => string.Equals(reference.SignatureId, _constructor.Definition.SignatureId, StringComparison.Ordinal)
                 ? _constructor
                 : string.Equals(reference.SignatureId, GameEventScriptConformanceCallbackProbe.Constructor.Definition.SignatureId, StringComparison.Ordinal)
@@ -64,33 +64,33 @@ internal static class GameEventScriptConformanceExternalTypes
                         : null;
     }
 
-    private sealed class SpatialConstructor : IGameEventScriptExternalTypeConstructor
+    private sealed class SpatialConstructor : IGesExternalTypeConstructor
     {
-        public GameEventScriptExternalTypeConstructorDefinition Definition { get; } = SpatialDefinition.Constructors[0];
+        public GesExternalTypeConstructorDefinition Definition { get; } = SpatialDefinition.Constructors[0];
 
         public void Invoke(GesExternalTypeConstructorCall call)
             => call.SetExternalValue(new SpatialValue(call.Arguments[0], call.Arguments[1]));
     }
 
-    private sealed class SpatialValue(GesValue vector, GesValue point) : IGameEventScriptExternalValue
+    private sealed class SpatialValue(GesValue vector, GesValue point) : IGesExternalValue
     {
-        public GameEventScriptExternalTypeDefinition Definition { get; } = SpatialDefinition;
+        public GesExternalTypeDefinition Definition { get; } = SpatialDefinition;
 
         public GesValue? GetField(string fieldName)
             => fieldName switch
             {
                 "vector" => vector,
                 "point" => point,
-                "storedVector" => GesValue.GesVector(1, 2, 3, GameEventScriptBytecodeInstructionUnit.UnitMeter),
-                "storedPoint" => GesValue.GesPoint(4, 5, 6, GameEventScriptBytecodeInstructionUnit.UnitSecond),
+                "storedVector" => GesValue.GesVector(1, 2, 3, GesQuantityUnit.UnitMeter),
+                "storedPoint" => GesValue.GesPoint(4, 5, 6, GesQuantityUnit.UnitSecond),
                 _ => null
             };
     }
 
-    private sealed class AimConstructor(GameEventScriptExternalTypeConstructorDefinition definition)
-        : IGameEventScriptExternalTypeConstructor
+    private sealed class AimConstructor(GesExternalTypeConstructorDefinition definition)
+        : IGesExternalTypeConstructor
     {
-        public GameEventScriptExternalTypeConstructorDefinition Definition { get; } = definition;
+        public GesExternalTypeConstructorDefinition Definition { get; } = definition;
 
         public void Invoke(GesExternalTypeConstructorCall call)
         {
@@ -104,17 +104,17 @@ internal static class GameEventScriptConformanceExternalTypes
             var range = call.Arguments.GetAsNumber(1);
             var steps = call.Arguments.GetAsNumber(2);
             call.SetExternalValue(new AimValue(
-                GesValue.GesFloat(bearing, GameEventScriptBytecodeInstructionUnit.UnitDegree),
-                GesValue.GesFloat(range, GameEventScriptBytecodeInstructionUnit.UnitMeter),
-                GesValue.GesFloat(steps, GameEventScriptBytecodeInstructionUnit.UnitMeter),
+                GesValue.GesFloat(bearing, GesQuantityUnit.UnitDegree),
+                GesValue.GesFloat(range, GesQuantityUnit.UnitMeter),
+                GesValue.GesFloat(steps, GesQuantityUnit.UnitMeter),
                 call.Arguments[3],
                 GesValue.GesFloat((long)(bearing + range + steps))));
         }
     }
 
-    private sealed class AimValue(GesValue bearing, GesValue range, GesValue steps, GesValue direction, GesValue checksum) : IGameEventScriptExternalValue
+    private sealed class AimValue(GesValue bearing, GesValue range, GesValue steps, GesValue direction, GesValue checksum) : IGesExternalValue
     {
-        public GameEventScriptExternalTypeDefinition Definition { get; } = AimDefinition;
+        public GesExternalTypeDefinition Definition { get; } = AimDefinition;
 
         public GesValue? GetField(string fieldName)
             => fieldName switch

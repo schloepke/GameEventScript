@@ -11,7 +11,7 @@ namespace GameEventScript.Api;
 /// <summary>
 /// Defines the supported game event script diagnostic phase values.
 /// </summary>
-public enum GameEventScriptDiagnosticPhase
+public enum GesDiagnosticPhase
 {
     /// <summary>
     /// Identifies the parse value.
@@ -42,7 +42,7 @@ public enum GameEventScriptDiagnosticPhase
 /// <summary>
 /// Represents a game event script diagnostic codes.
 /// </summary>
-public static class GameEventScriptDiagnosticCodes
+public static class GesDiagnosticCodes
 {
     /// <summary>Initialization failed because a configured runtime safety limit was exhausted.</summary>
     public const string RuntimeInitializationLimitReached = "runtime.initializationLimitReached";
@@ -250,23 +250,23 @@ public static class GameEventScriptDiagnosticCodes
     public const string RuntimePublishSinkFailure = "runtime.publishSinkFailure";
     /// <summary>
     /// An extension function threw an exception other than a deliberately reported
-    /// <see cref="GameEventScriptExtensionFaultException"/>.
+    /// <see cref="GesExtensionFaultException"/>.
     /// </summary>
     public const string RuntimeExtensionCallFailed = "runtime.extensionCallFailed";
     /// <summary>
     /// An external-type constructor threw an exception other than a deliberately
-    /// reported <see cref="GameEventScriptExtensionFaultException"/>.
+    /// reported <see cref="GesExtensionFaultException"/>.
     /// </summary>
     public const string RuntimeExternalConstructorFailed = "runtime.externalConstructorFailed";
     /// <summary>
-    /// An <see cref="IGameEventScriptExternalValue"/> field access threw an exception
-    /// other than a deliberately reported <see cref="GameEventScriptExtensionFaultException"/>.
+    /// An <see cref="IGesExternalValue"/> field access threw an exception
+    /// other than a deliberately reported <see cref="GesExtensionFaultException"/>.
     /// </summary>
     public const string RuntimeExternalFieldAccessFailed = "runtime.externalFieldAccessFailed";
 
     /// <summary>
     /// The reserved code prefix for internally raised runtime diagnostics. Codes
-    /// passed to <see cref="GameEventScriptExtensionFaultException"/> must not use it.
+    /// passed to <see cref="GesExtensionFaultException"/> must not use it.
     /// </summary>
     internal const string RuntimeCodePrefix = "runtime.";
 
@@ -275,7 +275,7 @@ public static class GameEventScriptDiagnosticCodes
     /// </summary>
     /// <param name="code">The code value.</param>
     /// <returns>The result of the operation.</returns>
-    public static string Decode(GameEventScriptProgramFormatErrorCode code)
+    public static string Decode(GesProgramFormatErrorCode code)
     {
         var name = code.ToString();
         return "decode." + char.ToLowerInvariant(name[0]) + name[1..];
@@ -284,7 +284,7 @@ public static class GameEventScriptDiagnosticCodes
 
 /// <summary>
 /// Formats a caught exception into non-normative diagnostic text for
-/// <see cref="GameEventScriptDiagnostic.TechnicalDetails"/>. The result is never a
+/// <see cref="GesDiagnostic.TechnicalDetails"/>. The result is never a
 /// portable comparison value; only the diagnostic phase, code, and structured
 /// fields are normative.
 /// </summary>
@@ -311,13 +311,13 @@ internal static class GameEventScriptRuntimeExceptionText
 /// <param name="ProgramName">The program name value.</param>
 /// <param name="HandlerName">The handler name value.</param>
 /// <param name="TechnicalDetails">The technical details value.</param>
-public sealed record GameEventScriptDiagnostic(
-    GameEventScriptDiagnosticPhase Phase,
+public sealed record GesDiagnostic(
+    GesDiagnosticPhase Phase,
     string Code,
     string Message,
     string? Symbol = null,
-    GameEventScriptSymbolKind SymbolKind = GameEventScriptSymbolKind.Unknown,
-    GameEventScriptSourceLocation? SourceLocation = null,
+    GesSymbolKind SymbolKind = GesSymbolKind.Unknown,
+    GesSourceLocation? SourceLocation = null,
     string? ProgramName = null,
     string? HandlerName = null,
     string? TechnicalDetails = null)
@@ -341,13 +341,13 @@ public sealed record GameEventScriptDiagnostic(
 /// are critical for parsing, symbol resolution, and error reporting during
 /// the compilation and validation phases of Game Event Scripts.
 /// </remarks>
-public enum GameEventScriptSymbolKind
+public enum GesSymbolKind
 {
     /// <summary>
     /// Represents an unidentified or unclassified symbol encountered during the processing of a Game Event Script.
     /// </summary>
     /// <remarks>
-    /// This value indicates that the symbol does not match any predefined category within the GameEventScriptSymbolKind enum.
+    /// This value indicates that the symbol does not match any predefined category within the GesSymbolKind enum.
     /// It is commonly used as a fallback or default classification when a symbol cannot be resolved or identified.
     /// This may occur due to incomplete, missing, or corrupted script content.
     /// </remarks>
@@ -432,16 +432,16 @@ public enum GameEventScriptSymbolKind
 /// is thrown. It serves as a base class for more specific fatal runtime exceptions
 /// in the Game Event Script framework.
 /// </remarks>
-public abstract class GameEventScriptFatalRuntimeException : Exception
+public abstract class GesFatalRuntimeException : Exception
 {
     /// <inheritdoc />
-    protected GameEventScriptFatalRuntimeException(GameEventScriptDiagnostic diagnostic) : base(RequireDiagnostic(diagnostic).Message)
+    protected GesFatalRuntimeException(GesDiagnostic diagnostic) : base(RequireDiagnostic(diagnostic).Message)
     {
         Diagnostic = diagnostic;
     }
 
     /// <inheritdoc />
-    protected GameEventScriptFatalRuntimeException(GameEventScriptDiagnostic diagnostic, Exception? innerException) : base(RequireDiagnostic(diagnostic).Message, innerException)
+    protected GesFatalRuntimeException(GesDiagnostic diagnostic, Exception? innerException) : base(RequireDiagnostic(diagnostic).Message, innerException)
     {
         Diagnostic = diagnostic;
     }
@@ -449,28 +449,28 @@ public abstract class GameEventScriptFatalRuntimeException : Exception
     /// <summary>
     /// Gets the diagnostic.
     /// </summary>
-    public GameEventScriptDiagnostic Diagnostic { get; }
+    public GesDiagnostic Diagnostic { get; }
 
-    private static GameEventScriptDiagnostic RequireDiagnostic(GameEventScriptDiagnostic? diagnostic)
+    private static GesDiagnostic RequireDiagnostic(GesDiagnostic? diagnostic)
         => diagnostic ?? throw new ArgumentNullException(nameof(diagnostic));
 }
 
 /// <summary>
 /// A deliberate, portable runtime fault that an extension function, native handler, external-type
-/// constructor, or <see cref="IGameEventScriptExternalValue"/> implementation throws
+/// constructor, or <see cref="IGesExternalValue"/> implementation throws
 /// to report a defined failure. It ends the current handler with a diagnosable
 /// runtime error instead of silently evaluating to <c>nothing</c>; the host remains
 /// reusable for subsequently enqueued messages, as for any other runtime error.
 /// </summary>
 /// <remarks>
 /// This is distinct from an unanticipated exception raised by a bug in the same
-/// callback: that case is reported as <see cref="GameEventScriptDiagnosticCodes.RuntimeExtensionCallFailed"/>,
-/// <see cref="GameEventScriptDiagnosticCodes.RuntimeExternalConstructorFailed"/>,
-/// <see cref="GameEventScriptDiagnosticCodes.RuntimeExternalFieldAccessFailed"/>, or
-/// <see cref="GameEventScriptDiagnosticCodes.RuntimeNativeHandlerFailure"/> and
+/// callback: that case is reported as <see cref="GesDiagnosticCodes.RuntimeExtensionCallFailed"/>,
+/// <see cref="GesDiagnosticCodes.RuntimeExternalConstructorFailed"/>,
+/// <see cref="GesDiagnosticCodes.RuntimeExternalFieldAccessFailed"/>, or
+/// <see cref="GesDiagnosticCodes.RuntimeNativeHandlerFailure"/> and
 /// never requires this type.
 /// </remarks>
-public sealed class GameEventScriptExtensionFaultException : GameEventScriptFatalRuntimeException
+public sealed class GesExtensionFaultException : GesFatalRuntimeException
 {
     /// <summary>
     /// Initializes a new instance of Game Event Script Extension Fault Exception.
@@ -485,25 +485,25 @@ public sealed class GameEventScriptExtensionFaultException : GameEventScriptFata
     /// <param name="symbol">An optional symbol identifying the failing construct.</param>
     /// <param name="innerException">
     /// An optional original cause. It is never part of the diagnostic's normative
-    /// fields; when present, it is rendered into <see cref="GameEventScriptDiagnostic.TechnicalDetails"/>
+    /// fields; when present, it is rendered into <see cref="GesDiagnostic.TechnicalDetails"/>
     /// only, which is non-normative logging text.
     /// </param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="code"/> or <paramref name="message"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="code"/> is empty, consists only of whitespace, or starts with the reserved <c>runtime.</c> prefix.</exception>
-    public GameEventScriptExtensionFaultException(string code, string message, string? symbol = null, Exception? innerException = null)
+    public GesExtensionFaultException(string code, string message, string? symbol = null, Exception? innerException = null)
         : base(BuildDiagnostic(code, message, symbol, innerException), innerException)
     {
     }
 
-    private static GameEventScriptDiagnostic BuildDiagnostic(string code, string message, string? symbol, Exception? innerException)
+    private static GesDiagnostic BuildDiagnostic(string code, string message, string? symbol, Exception? innerException)
     {
         if (code is null) throw new ArgumentNullException(nameof(code));
         if (message is null) throw new ArgumentNullException(nameof(message));
         if (string.IsNullOrWhiteSpace(code)) throw new ArgumentException("Extension fault codes must not be empty or whitespace.", nameof(code));
-        if (code.StartsWith(GameEventScriptDiagnosticCodes.RuntimeCodePrefix, StringComparison.Ordinal))
-            throw new ArgumentException($"Extension fault codes must not use the reserved '{GameEventScriptDiagnosticCodes.RuntimeCodePrefix}' prefix.", nameof(code));
-        return new GameEventScriptDiagnostic(
-            GameEventScriptDiagnosticPhase.Runtime,
+        if (code.StartsWith(GesDiagnosticCodes.RuntimeCodePrefix, StringComparison.Ordinal))
+            throw new ArgumentException($"Extension fault codes must not use the reserved '{GesDiagnosticCodes.RuntimeCodePrefix}' prefix.", nameof(code));
+        return new GesDiagnostic(
+            GesDiagnosticPhase.Runtime,
             code,
             message,
             Symbol: symbol,
@@ -514,19 +514,19 @@ public sealed class GameEventScriptExtensionFaultException : GameEventScriptFata
 /// <summary>
 /// Wraps an unanticipated exception caught at the extension, external-type
 /// constructor, or external-value boundary with the failing construct's identity.
-/// It is a <see cref="GameEventScriptFatalRuntimeException"/> so every existing
+/// It is a <see cref="GesFatalRuntimeException"/> so every existing
 /// boundary that already special-cases that base type handles it without change.
 /// </summary>
-internal sealed class GameEventScriptCallbackFailureException : GameEventScriptFatalRuntimeException
+internal sealed class GameEventScriptCallbackFailureException : GesFatalRuntimeException
 {
     internal GameEventScriptCallbackFailureException(string code, string message, string? symbol, Exception innerException)
         : base(BuildDiagnostic(code, message, symbol, innerException), innerException)
     {
     }
 
-    private static GameEventScriptDiagnostic BuildDiagnostic(string code, string message, string? symbol, Exception innerException)
+    private static GesDiagnostic BuildDiagnostic(string code, string message, string? symbol, Exception innerException)
         => new(
-            GameEventScriptDiagnosticPhase.Runtime,
+            GesDiagnosticPhase.Runtime,
             code,
             message,
             Symbol: symbol,
@@ -545,15 +545,15 @@ internal sealed class GameEventScriptCallbackFailureException : GameEventScriptF
 /// runtime environment. It provides relevant error details to help diagnose and resolve
 /// issues during the linking process.
 /// </remarks>
-public sealed class GameEventScriptDynamicLinkException : Exception
+public sealed class GesDynamicLinkException : Exception
 {
     /// <summary>
     /// Initializes a new instance of Game Event Script Dynamic Link Exception.
     /// </summary>
     /// <param name="diagnostic">The diagnostic value.</param>
-    public GameEventScriptDynamicLinkException(GameEventScriptDiagnostic diagnostic) : base(RequireDiagnostic(diagnostic).Message)
+    public GesDynamicLinkException(GesDiagnostic diagnostic) : base(RequireDiagnostic(diagnostic).Message)
     {
-        if (diagnostic.Phase != GameEventScriptDiagnosticPhase.Link)
+        if (diagnostic.Phase != GesDiagnosticPhase.Link)
             throw new ArgumentException("A dynamic-link exception requires a link diagnostic.", nameof(diagnostic));
         Diagnostic = diagnostic;
     }
@@ -561,8 +561,8 @@ public sealed class GameEventScriptDynamicLinkException : Exception
     /// <summary>
     /// Gets the diagnostic.
     /// </summary>
-    public GameEventScriptDiagnostic Diagnostic { get; }
+    public GesDiagnostic Diagnostic { get; }
 
-    private static GameEventScriptDiagnostic RequireDiagnostic(GameEventScriptDiagnostic? diagnostic)
+    private static GesDiagnostic RequireDiagnostic(GesDiagnostic? diagnostic)
         => diagnostic ?? throw new ArgumentNullException(nameof(diagnostic));
 }

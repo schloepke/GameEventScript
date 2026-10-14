@@ -235,7 +235,7 @@ names; it performs no file I/O:
 import GameEventScriptCompiler
 import GameEventScriptRuntime
 
-let program = try GameEventScriptBuilder.create()
+let program = try GesProgramBuilder.create()
     .addScript("""
         module example
         function double(_ value as :Number) be value + value
@@ -251,7 +251,7 @@ previously returned Programs remain immutable. Debug symbols, source maps and
 source archives are included by default. Use `.withDebugInfo(.none)` for compact
 output, `.withProgramVersion(...)` to set the portable version, and
 `.withExternalTypeCatalog(...)` for declarative external types. Runtime bindings
-remain separate. `GameEventScriptCompileError.diagnostics` exposes stable phase,
+remain separate. `GesCompileError.diagnostics` exposes stable phase,
 code, symbol and source location. Invalid public options throw API errors.
 
 ## Consume the Runtime
@@ -273,23 +273,23 @@ Load bytes supplied by the embedding and execute messages:
 ```swift
 import GameEventScriptRuntime
 
-final class Output: GameEventScriptNativeMessageHandler {
-    func handle(_ message: GameEventScriptMessage, context: GameEventScriptContext) throws {
+final class Output: GesNativeMessageHandler {
+    func handle(_ message: GameEventScriptMessage, context: GesContext) throws {
         // Deliver message.arguments to your product; Runtime performs no I/O.
     }
 }
 
-func execute(_ bytes: [UInt8]) throws -> (start: GameEventScriptStartResult, execution: GameEventScriptExecutionResult?) {
+func execute(_ bytes: [UInt8]) throws -> (start: GesStartResult, execution: GesExecutionResult?) {
     let program = try GameEventScriptProgramReader.read(bytes)
     let host = try GameEventScriptHost.createBuilder().withRandomSeed(123).build()
-    let output = try GameEventScriptMessageSignature(name: "Done", parameters: ["value"])
+    let output = try GesMessageSignature(name: "Done", parameters: ["value"])
     _ = try host.subscribe(output, handler: Output())
     let instance = try host.load(program)
     defer { instance.detach() }
     let startup = try host.start()
     guard host.isReady else { return (startup, nil) }
     host.receive(try GameEventScriptMessage(name: "Start", arguments: [
-        GameEventScriptMessageArgument(name: "value", value: .integer(42))
+        GesMessageArgument(name: "value", value: .integer(42))
     ]))
     let result = try host.runToCompletion()
     return (startup, result)

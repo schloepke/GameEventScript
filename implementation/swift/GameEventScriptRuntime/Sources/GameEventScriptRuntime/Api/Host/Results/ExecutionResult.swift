@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Outcome, work counters and optional diagnostic for a host pump call.
-public struct GameEventScriptExecutionResult: Sendable {
+public struct GesExecutionResult: Sendable {
     /// Completion or failure classification for this operation.
-    public let state: GameEventScriptExecutionState
+    public let state: GesExecutionState
     /// Number of script bytecode instructions executed by this operation.
     public let executedOpcodes: Int
     /// Number of logical messages processed by this operation.
@@ -14,5 +14,5 @@ public struct GameEventScriptExecutionResult: Sendable {
     /// Number of publish operations observed during this operation.
     public let publishedMessages: Int
     /// Failure context when supplied, otherwise nil.
-    public let diagnostic: GameEventScriptDiagnostic?
+    public let diagnostic: GesDiagnostic?
 }

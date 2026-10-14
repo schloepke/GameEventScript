@@ -17,23 +17,23 @@ public sealed partial class GameEventScriptHost
 {
     private const int NormalPriority = 0;
     private const int DefaultRegisterLimit = 512;
-    private readonly GameEventScriptRandomGenerator _random;
-    private readonly IGameEventScriptRuntimeObserver? _observer;
-    private readonly IGameEventScriptProfiler? _profiler;
-    private readonly IGameEventScriptExtensionRegistry _extensionRegistry;
-    private readonly IGameEventScriptExternalTypeRegistry _externalTypeRegistry;
-    private readonly GameEventScriptRuntimeLimits _limits;
-    private readonly IGameEventScriptPublishSink? _publishSink;
+    private readonly GesRandomGenerator _random;
+    private readonly IGesRuntimeObserver? _observer;
+    private readonly IGesProfiler? _profiler;
+    private readonly IGesExtensionRegistry _extensionRegistry;
+    private readonly IGesExternalTypeRegistry _externalTypeRegistry;
+    private readonly GesRuntimeLimits _limits;
+    private readonly IGesPublishSink? _publishSink;
     private readonly Dictionary<string, SubscriptionEntry[]> _exact = new(StringComparer.Ordinal);
     private readonly Dictionary<string, SubscriptionEntry[]> _byName = new(StringComparer.Ordinal);
     private readonly MessageRingQueue _queue = new(16);
-    private readonly GameEventScriptContext _context;
+    private readonly GesContext _context;
     private GesVirtualMachine? _vm;
     private PendingMessage _activeMessage;
     private SubscriptionEntry? _activeHandler;
     private bool _hasActiveMessage;
     private bool _scriptHandlerActive;
-    private GameEventScriptInstance? _instances;
+    private GesProgramInstance? _instances;
     private SubscriptionEntry? _nativeSubscriptions;
     private long _nextRegistrationId;
     private long _nextRegistrationOrder;
@@ -41,34 +41,34 @@ public sealed partial class GameEventScriptHost
     private int _stepProcessedMessages;
     private int _stepEmittedMessages;
     private int _stepPublishedMessages;
-    private GameEventScriptDiagnostic? _stepRuntimeDiagnostic;
+    private GesDiagnostic? _stepRuntimeDiagnostic;
     private int _pendingVmWarmupCapacity;
-    private GameEventScriptRandomGenerator.ScopeBoundary _activeRandomBoundary;
+    private GesRandomGenerator.ScopeBoundary _activeRandomBoundary;
 
     internal GameEventScriptHost(
-        GameEventScriptRandomGenerator random,
-        IGameEventScriptRuntimeObserver? observer,
-        IGameEventScriptExtensionRegistry? extensionRegistry,
-        IGameEventScriptExternalTypeRegistry? externalTypeRegistry,
-        GameEventScriptRuntimeLimits? limits,
-        IGameEventScriptPublishSink? publishSink, IGameEventScriptClock? clock = null, IGameEventScriptProfiler? profiler = null)
+        GesRandomGenerator random,
+        IGesRuntimeObserver? observer,
+        IGesExtensionRegistry? extensionRegistry,
+        IGesExternalTypeRegistry? externalTypeRegistry,
+        GesRuntimeLimits? limits,
+        IGesPublishSink? publishSink, IGesClock? clock = null, IGesProfiler? profiler = null)
     {
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _observer = observer;
         _profiler = profiler;
         _extensionRegistry = extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance;
         _externalTypeRegistry = externalTypeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance;
-        _limits = limits ?? GameEventScriptRuntimeLimits.Default;
+        _limits = limits ?? GesRuntimeLimits.Default;
         _publishSink = publishSink;
         _clock = clock ?? new GameEventScriptSystemClock();
-        _context = new GameEventScriptContext(this, _random, _limits, _extensionRegistry, _observer);
+        _context = new GesContext(this, _random, _limits, _extensionRegistry, _observer);
     }
 
     /// <summary>
     /// Creates a builder for an independent host.
     /// </summary>
     /// <returns>A new mutable builder with the portable default configuration.</returns>
-    public static GameEventScriptHostBuilder CreateBuilder() => new();
+    public static GesHostBuilder CreateBuilder() => new();
     /// <summary>
     /// Gets the number of logical messages waiting behind the currently active message.
     /// </summary>
@@ -92,11 +92,11 @@ public sealed partial class GameEventScriptHost
     /// </remarks>
     /// <exception cref="InvalidOperationException">The initial start failed, or loading was called reentrantly from startup or script execution.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="program"/> is <see langword="null"/>.</exception>
-    /// <exception cref="GameEventScriptProgramFormatException">Thrown when the program is structurally or semantically invalid.</exception>
-    /// <exception cref="GameEventScriptDynamicLinkException">Thrown when runtime bindings are unavailable, the program exceeds host limits, or its initialization cannot fit in the queue.</exception>
-    public GameEventScriptInstance Load(GameEventScriptProgram program, int priority = NormalPriority)
+    /// <exception cref="GesProgramFormatException">Thrown when the program is structurally or semantically invalid.</exception>
+    /// <exception cref="GesDynamicLinkException">Thrown when runtime bindings are unavailable, the program exceeds host limits, or its initialization cannot fit in the queue.</exception>
+    public GesProgramInstance Load(GameEventScriptProgram program, int priority = NormalPriority)
     {
-        if (_starting || _executingScript || _startResult is { State: not GameEventScriptStartState.Ready })
+        if (_starting || _executingScript || _startResult is { State: not GesStartState.Ready })
             throw new InvalidOperationException("Loading is not allowed during initialization, script execution, or after a failed start.");
         _ = program ?? throw new ArgumentNullException(nameof(program));
         GameEventScriptProgramValidator.Validate(program);
@@ -107,7 +107,7 @@ public sealed partial class GameEventScriptHost
         if (program.RequiredRegisterCount > maxRegisterCount)
         {
             throw LinkError(
-                GameEventScriptDiagnosticCodes.LinkRequiredRegisterCountExceeded,
+                GesDiagnosticCodes.LinkRequiredRegisterCountExceeded,
                 $"Program requires {program.RequiredRegisterCount} registers but the host limit is {maxRegisterCount}.",
                 program);
         }
@@ -115,7 +115,7 @@ public sealed partial class GameEventScriptHost
         if (program.RequiredCallStackDepth > maxCallStackDepth)
         {
             throw LinkError(
-                GameEventScriptDiagnosticCodes.LinkRequiredCallStackDepthExceeded,
+                GesDiagnosticCodes.LinkRequiredCallStackDepthExceeded,
                 $"Program requires call-stack depth {program.RequiredCallStackDepth} but the host limit is {maxCallStackDepth}.",
                 program);
         }
@@ -126,7 +126,7 @@ public sealed partial class GameEventScriptHost
             for (var index = 0; index < linked.Handlers.Length; index++)
             {
                 if (!GameEventScriptSystemEndpoints.IsInitializationName(linked.Handlers[index].Signature.Name)) continue;
-                throw LinkError(GameEventScriptDiagnosticCodes.LinkInitializationQueueFull, "The host message queue has no capacity for program initialization.", program);
+                throw LinkError(GesDiagnosticCodes.LinkInitializationQueueFull, "The host message queue has no capacity for program initialization.", program);
             }
         }
 
@@ -136,7 +136,7 @@ public sealed partial class GameEventScriptHost
 
         var registrationId = NextRegistrationId();
         linked.Profiler = _profiler?.CreateProgramProfiler(program);
-        var instance = new GameEventScriptInstance(this, registrationId, program, linked);
+        var instance = new GesProgramInstance(this, registrationId, program, linked);
         var initialization = new List<SubscriptionEntry>();
         for (var index = 0; index < linked.Handlers.Length; index++)
         {
@@ -160,13 +160,13 @@ public sealed partial class GameEventScriptHost
             else _startupQueue.Enqueue(pending);
         }
 
-        else if (IsReady) instance.StartResult = new(GameEventScriptStartState.Ready);
+        else if (IsReady) instance.StartResult = new(GesStartState.Ready);
         return instance;
     }
 
-    private static GameEventScriptDynamicLinkException LinkError(string code, string message, GameEventScriptProgram program)
-        => new(new GameEventScriptDiagnostic(
-            GameEventScriptDiagnosticPhase.Link,
+    private static GesDynamicLinkException LinkError(string code, string message, GameEventScriptProgram program)
+        => new(new GesDiagnostic(
+            GesDiagnosticPhase.Link,
             code,
             message,
             ProgramName: program.ModuleName));
@@ -179,8 +179,8 @@ public sealed partial class GameEventScriptHost
     /// <param name="handler">The synchronous native handler.</param>
     /// <param name="priority">The dispatch priority. Higher values run first; equal priorities retain registration order.</param>
     /// <returns>An idempotently removable subscription handle.</returns>
-    public GameEventScriptSubscription Subscribe(string message, IReadOnlyCollection<string> parameterNames, IGameEventScriptNativeMessageHandler handler, int priority = NormalPriority)
-        => Subscribe(GameEventScriptMessageSignature.Create(message, parameterNames), handler, null, null, priority);
+    public GesSubscription Subscribe(string message, IReadOnlyCollection<string> parameterNames, IGesNativeMessageHandler handler, int priority = NormalPriority)
+        => Subscribe(GesMessageSignature.Create(message, parameterNames), handler, null, null, priority);
 
     /// <summary>
     /// Subscribes a native handler to an exact message signature.
@@ -189,7 +189,7 @@ public sealed partial class GameEventScriptHost
     /// <param name="handler">The synchronous native handler.</param>
     /// <param name="priority">The dispatch priority. Higher values run first; equal priorities retain registration order.</param>
     /// <returns>An idempotently removable subscription handle.</returns>
-    public GameEventScriptSubscription Subscribe(GameEventScriptMessageSignature signature, IGameEventScriptNativeMessageHandler handler, int priority = NormalPriority)
+    public GesSubscription Subscribe(GesMessageSignature signature, IGesNativeMessageHandler handler, int priority = NormalPriority)
         => Subscribe(signature, handler, null, null, priority);
 
     /// <summary>
@@ -201,9 +201,9 @@ public sealed partial class GameEventScriptHost
     /// <param name="withoutTags">Tags all of which must be absent, or <see langword="null"/> for no exclusions.</param>
     /// <param name="priority">The dispatch priority. Higher values run first; equal priorities retain registration order.</param>
     /// <returns>An idempotently removable subscription handle.</returns>
-    public GameEventScriptSubscription Subscribe(
-        GameEventScriptMessageSignature signature,
-        IGameEventScriptNativeMessageHandler handler,
+    public GesSubscription Subscribe(
+        GesMessageSignature signature,
+        IGesNativeMessageHandler handler,
         IReadOnlyCollection<string>? matchingTags,
         IReadOnlyCollection<string>? withoutTags = null,
         int priority = NormalPriority)
@@ -218,7 +218,7 @@ public sealed partial class GameEventScriptHost
         Register(entry);
         entry.NextNativeRegistration = _nativeSubscriptions;
         _nativeSubscriptions = entry;
-        return new GameEventScriptSubscription(this, registrationId);
+        return new GesSubscription(this, registrationId);
     }
 
     /// <summary>
@@ -230,9 +230,9 @@ public sealed partial class GameEventScriptHost
     /// <param name="withoutTags">Tags all of which must be absent, or <see langword="null"/> for no exclusions.</param>
     /// <param name="priority">The dispatch priority. Higher values run first; equal priorities retain registration order.</param>
     /// <returns>An idempotently removable subscription handle.</returns>
-    public GameEventScriptSubscription SubscribeMessageName(
+    public GesSubscription SubscribeMessageName(
         string messageName,
-        IGameEventScriptNativeMessageHandler handler,
+        IGesNativeMessageHandler handler,
         IReadOnlyCollection<string>? matchingTags = null,
         IReadOnlyCollection<string>? withoutTags = null,
         int priority = NormalPriority)
@@ -240,14 +240,14 @@ public sealed partial class GameEventScriptHost
         if (string.IsNullOrWhiteSpace(messageName)) throw new ArgumentException("Message name must not be empty.", nameof(messageName));
         _ = handler ?? throw new ArgumentNullException(nameof(handler));
         var registrationId = NextRegistrationId();
-        var entry = SubscriptionEntry.ForNative(registrationId, GameEventScriptMessageSignature.Create(messageName, []), handler,
+        var entry = SubscriptionEntry.ForNative(registrationId, GesMessageSignature.Create(messageName, []), handler,
             GameEventScriptMessage.NormalizeTags(matchingTags),
             GameEventScriptMessage.NormalizeTags(withoutTags),
             matchArguments: false, priority, _nextRegistrationOrder++);
         Register(entry);
         entry.NextNativeRegistration = _nativeSubscriptions;
         _nativeSubscriptions = entry;
-        return new GameEventScriptSubscription(this, registrationId);
+        return new GesSubscription(this, registrationId);
     }
 
     /// <summary>
@@ -272,7 +272,7 @@ public sealed partial class GameEventScriptHost
     /// <remarks>The caller must serialize access to a host. A handler may enqueue and change future subscriptions, but must not recursively pump this host.</remarks>
     /// <exception cref="InvalidOperationException">The host is not ready or is already executing a callback.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="opcodeBudget"/> is not positive.</exception>
-    public GameEventScriptExecutionResult ExecuteFrame(int opcodeBudget)
+    public GesExecutionResult ExecuteFrame(int opcodeBudget)
     {
         if (opcodeBudget <= 0) throw new ArgumentOutOfRangeException(nameof(opcodeBudget), "Opcode budget must be greater than zero.");
         if (!IsReady) throw new InvalidOperationException("Start the host successfully before processing messages.");
@@ -282,7 +282,7 @@ public sealed partial class GameEventScriptHost
         finally { _pumping = false; UpdateIdleDuration(); }
     }
 
-    private GameEventScriptExecutionResult ExecuteFrameCore(int opcodeBudget)
+    private GesExecutionResult ExecuteFrameCore(int opcodeBudget)
     {
         BeginStep();
         var remaining = opcodeBudget;
@@ -295,7 +295,7 @@ public sealed partial class GameEventScriptHost
                 if (!_starting) PromoteDelayed();
                 if (_limits.MaxProcessedEventsPerRun > 0 && _stepProcessedMessages >= _limits.MaxProcessedEventsPerRun && (_starting ? _startupQueue.Count : _queue.Count) > 0)
                 {
-                    _context.RecordRuntimeLimitReached(nameof(GameEventScriptRuntimeLimits.MaxProcessedEventsPerRun), "Message processing limit reached before the host became idle.", _limits.MaxProcessedEventsPerRun);
+                    _context.RecordRuntimeLimitReached(nameof(GesRuntimeLimits.MaxProcessedEventsPerRun), "Message processing limit reached before the host became idle.", _limits.MaxProcessedEventsPerRun);
                     runtimeLimitReached = true;
                     break;
                 }
@@ -315,7 +315,7 @@ public sealed partial class GameEventScriptHost
                 {
                     _vm!.Reset();
                     CompleteActiveHandler();
-                    FailInitialization(GameEventScriptStartState.RuntimeLimitReached);
+                    FailInitialization(GesStartState.RuntimeLimitReached);
                     runtimeLimitReached = true;
                     break;
                 }
@@ -324,11 +324,11 @@ public sealed partial class GameEventScriptHost
                 if (_vm.State == Error)
                 {
                     RecordRuntimeError(_vm.ErrorDiagnostic ?? CreateRuntimeDiagnostic(
-                        GameEventScriptDiagnosticCodes.RuntimeUnhandledFailure,
+                        GesDiagnosticCodes.RuntimeUnhandledFailure,
                         "The VM entered an error state without a diagnostic."));
                     _vm.Reset();
                     CompleteActiveHandler();
-                    FailInitialization(GameEventScriptStartState.RuntimeError);
+                    FailInitialization(GesStartState.RuntimeError);
                     if (_starting) break;
                     continue;
                 }
@@ -337,13 +337,13 @@ public sealed partial class GameEventScriptHost
                 CompleteActiveHandler();
                 if (_initializationInstance is not null && _context.RuntimeBudget.IsExhausted)
                 {
-                    FailInitialization(GameEventScriptStartState.RuntimeLimitReached);
+                    FailInitialization(GesStartState.RuntimeLimitReached);
                     runtimeLimitReached = true;
                     break;
                 }
                 if (_initializationInstance is not null && _initializationDiagnostic is not null)
                 {
-                    FailInitialization(GameEventScriptStartState.RuntimeError);
+                    FailInitialization(GesStartState.RuntimeError);
                     if (_starting) break;
                 }
                 continue;
@@ -362,11 +362,11 @@ public sealed partial class GameEventScriptHost
             if (next.NativeHandler is not null)
             {
                 try { next.NativeHandler.Handle(_activeMessage.Message, _context); }
-                catch (GameEventScriptFatalRuntimeException exception) { RecordRuntimeError(exception.Diagnostic); }
+                catch (GesFatalRuntimeException exception) { RecordRuntimeError(exception.Diagnostic); }
                 catch (Exception exception)
                 {
                     RecordRuntimeError(CreateRuntimeDiagnostic(
-                        GameEventScriptDiagnosticCodes.RuntimeNativeHandlerFailure,
+                        GesDiagnosticCodes.RuntimeNativeHandlerFailure,
                         "Native message handler failed.",
                         GameEventScriptRuntimeExceptionText.Describe(exception)));
                 }
@@ -385,12 +385,12 @@ public sealed partial class GameEventScriptHost
                 _vm!.Begin(next.Instance!.LinkedProgram, _activeMessage.Message,
                     next.MatchArguments, next.EntryAddress, next.DispatchSignatureId, _context);
             }
-            catch (GameEventScriptFatalRuntimeException exception)
+            catch (GesFatalRuntimeException exception)
             {
                 RecordRuntimeError(exception.Diagnostic);
                 _vm!.Reset();
                 CompleteActiveHandler();
-                FailInitialization(GameEventScriptStartState.RuntimeError);
+                FailInitialization(GesStartState.RuntimeError);
                 if (_starting) break;
                 continue;
             }
@@ -407,13 +407,13 @@ public sealed partial class GameEventScriptHost
     /// <returns>A value-type aggregate of all internally executed frames.</returns>
     /// <remarks>The caller must serialize access to a host. No thread or task is created. Future-only work returns Waiting without sleeping.</remarks>
     /// <exception cref="InvalidOperationException">The host is not ready or is already executing a callback.</exception>
-    public GameEventScriptExecutionResult RunToCompletion()
+    public GesExecutionResult RunToCompletion()
     {
         var totalOpcodes = 0;
         var totalProcessed = 0;
         var totalEmitted = 0;
         var totalPublished = 0;
-        GameEventScriptExecutionResult step;
+        GesExecutionResult step;
         do
         {
             step = ExecuteFrame(int.MaxValue);
@@ -422,10 +422,10 @@ public sealed partial class GameEventScriptHost
             totalEmitted += step.EmittedMessages;
             totalPublished += step.PublishedMessages;
         }
-        while (step.State == GameEventScriptExecutionState.Paused &&
+        while (step.State == GesExecutionState.Paused &&
                (step.ExecutedOpcodes > 0 || step.ProcessedMessages > 0 || step.EmittedMessages > 0 || step.PublishedMessages > 0));
 
-        return new GameEventScriptExecutionResult(step.State, totalOpcodes, totalProcessed, totalEmitted, totalPublished, step.Diagnostic);
+        return new GesExecutionResult(step.State, totalOpcodes, totalProcessed, totalEmitted, totalPublished, step.Diagnostic);
     }
 
     internal bool EmitFromContext(GameEventScriptMessage message)
@@ -437,7 +437,7 @@ public sealed partial class GameEventScriptHost
         return accepted;
     }
 
-    internal GameEventScriptPublishResult PublishFromContext(GameEventScriptMessage message)
+    internal GesPublishResult PublishFromContext(GameEventScriptMessage message)
     {
         if (_initializationInstance is not null) _initializationPublishes++;
         var randomScopeFault = _random.HasActiveScopeFault;
@@ -464,13 +464,13 @@ public sealed partial class GameEventScriptHost
             {
                 outboundAccepted = false;
                 _observer?.RuntimeError(CreateRuntimeDiagnostic(
-                    GameEventScriptDiagnosticCodes.RuntimePublishSinkFailure,
+                    GesDiagnosticCodes.RuntimePublishSinkFailure,
                     "Publish sink failed.",
                     GameEventScriptRuntimeExceptionText.Describe(exception)));
             }
         }
 
-        var result = new GameEventScriptPublishResult(localAccepted, attempted, outboundAccepted);
+        var result = new GesPublishResult(localAccepted, attempted, outboundAccepted);
         _stepPublishedMessages++;
         _observer?.MessagePublished(message, result);
         return result;
@@ -485,17 +485,17 @@ public sealed partial class GameEventScriptHost
         _stepRuntimeDiagnostic = null;
     }
 
-    private GameEventScriptExecutionResult CreateResult(bool runtimeLimitReached)
+    private GesExecutionResult CreateResult(bool runtimeLimitReached)
         => new(_stepRuntimeDiagnostic is not null
-                ? GameEventScriptExecutionState.RuntimeError
+                ? GesExecutionState.RuntimeError
                 : runtimeLimitReached
-                ? GameEventScriptExecutionState.RuntimeLimitReached
-                : IsIdle ? GameEventScriptExecutionState.Completed
-                : !_hasActiveMessage && _queue.Count == 0 && !_starting ? GameEventScriptExecutionState.Waiting : GameEventScriptExecutionState.Paused,
+                ? GesExecutionState.RuntimeLimitReached
+                : IsIdle ? GesExecutionState.Completed
+                : !_hasActiveMessage && _queue.Count == 0 && !_starting ? GesExecutionState.Waiting : GesExecutionState.Paused,
             _stepExecutedOpcodes, _stepProcessedMessages, _stepEmittedMessages, _stepPublishedMessages,
             _stepRuntimeDiagnostic);
 
-    private void RecordRuntimeError(GameEventScriptDiagnostic diagnostic)
+    private void RecordRuntimeError(GesDiagnostic diagnostic)
     {
         var programName = diagnostic.ProgramName ?? _activeHandler?.Instance?.Program.ModuleName;
         var handlerName = diagnostic.HandlerName ?? _activeHandler?.DispatchSignatureId;
@@ -506,9 +506,9 @@ public sealed partial class GameEventScriptHost
         _observer?.RuntimeError(diagnostic);
     }
 
-    private GameEventScriptDiagnostic CreateRuntimeDiagnostic(string code, string message, string? technicalDetails = null)
+    private GesDiagnostic CreateRuntimeDiagnostic(string code, string message, string? technicalDetails = null)
         => new(
-            GameEventScriptDiagnosticPhase.Runtime,
+            GesDiagnosticPhase.Runtime,
             code,
             message,
             ProgramName: _activeHandler?.Instance?.Program.ModuleName,
@@ -538,16 +538,16 @@ public sealed partial class GameEventScriptHost
         var randomFault = _context.EndRandomBoundary(_activeRandomBoundary);
         if ((_initializationInstance is not null ? _initializationDiagnostic is null : _stepRuntimeDiagnostic is null) && !_context.RuntimeBudget.IsExhausted)
         {
-            if (randomFault == GameEventScriptRandomGenerator.ScopeBoundaryFault.BoundaryUnderflow)
+            if (randomFault == GesRandomGenerator.ScopeBoundaryFault.BoundaryUnderflow)
             {
                 RecordRuntimeError(CreateRuntimeDiagnostic(
-                    GameEventScriptDiagnosticCodes.RuntimeRandomStackUnderflow,
+                    GesDiagnosticCodes.RuntimeRandomStackUnderflow,
                     "Random scope pop crossed the active handler boundary."));
             }
-            else if (randomFault == GameEventScriptRandomGenerator.ScopeBoundaryFault.Unbalanced)
+            else if (randomFault == GesRandomGenerator.ScopeBoundaryFault.Unbalanced)
             {
                 RecordRuntimeError(CreateRuntimeDiagnostic(
-                    GameEventScriptDiagnosticCodes.RuntimeRandomScopeImbalance,
+                    GesDiagnosticCodes.RuntimeRandomScopeImbalance,
                     "Random scopes were not balanced when the handler returned."));
             }
         }
@@ -581,9 +581,9 @@ public sealed partial class GameEventScriptHost
         if (IsMessageQueueFull)
         {
             if (initializationOutput)
-                _context.RuntimeBudget.Exhaust(nameof(GameEventScriptRuntimeLimits.MaxQueuedMessagesPerRun), "Initialization message queue limit reached.", _limits.MaxQueuedMessagesPerRun);
+                _context.RuntimeBudget.Exhaust(nameof(GesRuntimeLimits.MaxQueuedMessagesPerRun), "Initialization message queue limit reached.", _limits.MaxQueuedMessagesPerRun);
             else
-                _context.RecordRuntimeLimitReached(nameof(GameEventScriptRuntimeLimits.MaxQueuedMessagesPerRun),
+                _context.RecordRuntimeLimitReached(nameof(GesRuntimeLimits.MaxQueuedMessagesPerRun),
                     $"Message queue limit reached. Dropped '{message.Message.Name}'.", _limits.MaxQueuedMessagesPerRun);
             return false;
         }
@@ -620,7 +620,7 @@ public sealed partial class GameEventScriptHost
 
     internal bool DetachInstance(long registrationId)
     {
-        GameEventScriptInstance? previous = null;
+        GesProgramInstance? previous = null;
         var current = _instances;
         while (current is not null && current.RegistrationId != registrationId)
         {
@@ -660,7 +660,7 @@ public sealed partial class GameEventScriptHost
         return Remove(current);
     }
 
-    private void RemoveInstanceRegistrations(GameEventScriptInstance instance)
+    private void RemoveInstanceRegistrations(GesProgramInstance instance)
     {
         var handlers = instance.LinkedProgram.Handlers;
         for (var handlerIndex = 0; handlerIndex < handlers.Length; handlerIndex++)
@@ -716,7 +716,7 @@ public sealed partial class GameEventScriptHost
         return result;
     }
 
-    private static SubscriptionEntry[] Remove(SubscriptionEntry[] entries, GameEventScriptInstance instance)
+    private static SubscriptionEntry[] Remove(SubscriptionEntry[] entries, GesProgramInstance instance)
     {
         var removedCount = 0;
         for (var index = 0; index < entries.Length; index++)
@@ -745,15 +745,15 @@ public sealed partial class GameEventScriptHost
     private sealed class SubscriptionEntry
     {
         private SubscriptionEntry(
-            GameEventScriptMessageSignature signature,
+            GesMessageSignature signature,
             string[] requiredTags,
             string[] excludedTags,
             bool matchArguments,
             int priority,
             long registrationOrder,
             long registrationId,
-            IGameEventScriptNativeMessageHandler? nativeHandler,
-            GameEventScriptInstance? instance,
+            IGesNativeMessageHandler? nativeHandler,
+            GesProgramInstance? instance,
             ushort entryAddress)
         {
             Signature = signature;
@@ -769,23 +769,23 @@ public sealed partial class GameEventScriptHost
             EntryAddress = entryAddress;
         }
 
-        internal GameEventScriptMessageSignature Signature { get; }
+        internal GesMessageSignature Signature { get; }
         internal string[] RequiredTags { get; }
         internal string[] ExcludedTags { get; }
         internal bool MatchArguments { get; }
         internal int Priority { get; }
         internal long RegistrationOrder { get; }
         internal long RegistrationId { get; }
-        internal IGameEventScriptNativeMessageHandler? NativeHandler { get; }
-        internal GameEventScriptInstance? Instance { get; }
+        internal IGesNativeMessageHandler? NativeHandler { get; }
+        internal GesProgramInstance? Instance { get; }
         internal ushort EntryAddress { get; }
         internal SubscriptionEntry? NextNativeRegistration { get; set; }
         internal string DispatchSignatureId { get; }
 
         internal static SubscriptionEntry ForNative(
             long registrationId,
-            GameEventScriptMessageSignature signature,
-            IGameEventScriptNativeMessageHandler handler,
+            GesMessageSignature signature,
+            IGesNativeMessageHandler handler,
             IReadOnlyList<string> requiredTags,
             IReadOnlyList<string> excludedTags,
             bool matchArguments,
@@ -793,7 +793,7 @@ public sealed partial class GameEventScriptHost
             long order)
             => new(signature, Copy(requiredTags), Copy(excludedTags), matchArguments, priority, order, registrationId, handler, null, 0);
 
-        internal static SubscriptionEntry ForScript(GameEventScriptInstance instance, GesLinkedProgram.Handler handler, int priority, long order)
+        internal static SubscriptionEntry ForScript(GesProgramInstance instance, GesLinkedProgram.Handler handler, int priority, long order)
             => new(handler.Signature, handler.RequiredTags, handler.ExcludedTags, handler.MatchArguments, priority, order, 0, null, instance, handler.EntryAddress);
 
         internal bool Matches(GameEventScriptMessage message)
@@ -819,7 +819,7 @@ public sealed partial class GameEventScriptHost
         private int _exactIndex;
         private int _nameIndex;
 
-        internal PendingMessage(GameEventScriptMessage message, SubscriptionEntry[] exact, SubscriptionEntry[] names, GameEventScriptInstance? initialization = null, GameEventScriptInstance? initializationOutput = null)
+        internal PendingMessage(GameEventScriptMessage message, SubscriptionEntry[] exact, SubscriptionEntry[] names, GesProgramInstance? initialization = null, GesProgramInstance? initializationOutput = null)
         {
             Message = message;
             Initialization = initialization;
@@ -831,17 +831,17 @@ public sealed partial class GameEventScriptHost
         }
 
         internal GameEventScriptMessage Message { get; }
-        internal GameEventScriptInstance? Initialization { get; }
-        private GameEventScriptInstance? InitializationOutput { get; }
+        internal GesProgramInstance? Initialization { get; }
+        private GesProgramInstance? InitializationOutput { get; }
         internal bool HasRecipients()
         {
-            if (InitializationOutput?.StartResult is { State: not GameEventScriptStartState.Ready }) return false;
+            if (InitializationOutput?.StartResult is { State: not GesStartState.Ready }) return false;
             foreach (var entry in _exact) if (CanReceive(entry)) return true;
             foreach (var entry in _names) if (CanReceive(entry)) return true;
             return false;
         }
         private bool CanReceive(SubscriptionEntry entry)
-            => entry.Instance?.StartResult is not { State: not GameEventScriptStartState.Ready } && entry.Matches(Message);
+            => entry.Instance?.StartResult is not { State: not GesStartState.Ready } && entry.Matches(Message);
 
         internal SubscriptionEntry? NextMatching()
         {

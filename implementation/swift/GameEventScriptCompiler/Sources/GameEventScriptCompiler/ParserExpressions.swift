@@ -139,7 +139,7 @@ extension GesParser {
         let start = current
         if current.kind == "number" {
             let token = advance()
-            guard let value = GameEventScriptCompilerSupport.number(token.text, percentage: token.text.hasSuffix("%")) else { throw failure("Invalid numeric literal.", token) }
+            guard let value = GesCompilerSupport.number(token.text, percentage: token.text.hasSuffix("%")) else { throw failure("Invalid numeric literal.", token) }
             let result = node(.literal(value), start)
             result.decimalLiteral = token.text.contains(".") || value.kind == .float
             return result
@@ -320,7 +320,7 @@ extension GesParser {
 
     func positiveInteger() throws -> Int {
         let t = current
-        guard t.kind == "number", let n = GameEventScriptCompilerSupport.number(t.text)?.integerValue, !t.text.hasSuffix("%"), !t.text.hasSuffix("m"), !t.text.hasSuffix("s"), !t.text.hasSuffix("°"), n > 0 && n <= Int32.max else {
+        guard t.kind == "number", let n = GesCompilerSupport.number(t.text)?.integerValue, !t.text.hasSuffix("%"), !t.text.hasSuffix("m"), !t.text.hasSuffix("s"), !t.text.hasSuffix("°"), n > 0 && n <= Int32.max else {
             throw failure("Expected positive Int32 literal.")
         }
         advance()

@@ -190,7 +190,7 @@ General rule: `GameEventScriptX` becomes `GesX` and `IGameEventScriptX` becomes
 | `TextNumberCast`, `TextLiteralReader` | `TextNumberCast`, `MessageNames` | `Ges` prefix |
 | ~100 AST records (`BinaryExpressionNode`, …) | `GesExpression.Kind` cases | `Ges` prefix in C#; typed cases in Swift |
 | `GesVmRegister*` static classes, `GesVm<Op>` / `<Op>Registers` methods | `execute<Op>` extensions | `Execute<OpCode>` members |
-| `SetMessageHandler`, `SetRange`, `SetExternalType`, `SetTextPointer`, `StageTagConstant`, `RaiseError`, `ModifyLocalRegisters`, `EnsureRegisterCapacity` | `setHandler`, `setIntegerRange`/`setFloatRange`, `setExternal`, `setTextConstant`, `stageTag`, `fail`, `modifyLocals`, `grow` | one name per operation |
+| `SetMessageHandler`, `SetRange`, `SetExternalType`, `SetTextPointer`, `StageTagConstant`, `RaiseError`, `ModifyLocalRegisters`, `EnsureRegisterCapacity` | `setHandler`, `setIntegerRange`/`setFloatRange`, `setExternal`, `setTextConstant`, `stageTag`, `fail`, `modifyLocals`, `grow` | `SetHandler`, `SetIntegerRange`/`SetFloatRange`, `SetExternal`, `SetTextConstant`/`SetTagConstant`, `StageTextConstant`/`StageTagConstant`, `RaiseError`, `ModifyLocals`, `EnsureRegisterCapacity` |
 
 ## Phases
 
@@ -336,7 +336,10 @@ contains exactly the measured reference sources plus the recalibrated corpus.
 - [x] Align handler names with opcode cases (`IntegerDivide`, `LogN`,
       `KeysOfMap`, separate `HasAny`/`HasAll`, `ContainsAny`/`ContainsAll`, …);
       fast and general variants use the Swift suffixes `Numeric`/`General`.
-- [ ] Align VM setter and staging names per the internal mapping table.
+- [x] Align VM setter and staging names per the internal mapping table:
+      `SetHandler`, `SetIntegerRange`/`SetFloatRange`, `SetExternal`,
+      `SetTextConstant`/`SetTagConstant`, `StageTextConstant`/`StageTagConstant`,
+      `RaiseError`, `ModifyLocals`, `EnsureRegisterCapacity` (Swift lower camel case).
 - [ ] Swift: fix handler names that do not match their opcode
       (`compoundIterator` in `IteratorCreate`), remove empty namespace files,
       move helper extensions off the VM-opcode files where they do not belong.

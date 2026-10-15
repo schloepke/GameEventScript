@@ -33,11 +33,11 @@ internal partial class GesVirtualMachine
                 var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
-                    SetRange(destinationRegister, 0, 0, 0);
+                    SetIntegerRange(destinationRegister, 0, 0, 0);
                     break;
                 }
 
-                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last) SetRange(destinationRegister, last, range.From, -range.Step);
+                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last) SetIntegerRange(destinationRegister, last, range.From, -range.Step);
                 else SetNothing(destinationRegister);
                 break;
             }
@@ -46,11 +46,11 @@ internal partial class GesVirtualMachine
                 var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
-                    SetRange(destinationRegister, 0d, 0d, 0d);
+                    SetFloatRange(destinationRegister, 0d, 0d, 0d);
                     break;
                 }
 
-                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last) SetRange(destinationRegister, last, range.From, -range.Step);
+                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last) SetFloatRange(destinationRegister, last, range.From, -range.Step);
                 else SetNothing(destinationRegister);
                 break;
             }

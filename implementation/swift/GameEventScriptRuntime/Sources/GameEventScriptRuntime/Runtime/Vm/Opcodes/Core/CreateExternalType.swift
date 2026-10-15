@@ -6,7 +6,7 @@ extension GesCallbacks {
         let destination = Int(i.word0)
         guard let binding = s.linked!.constructorBindings[i.word1], let constructor = s.linked!.constructors[i.word1] else {
             s.setNothing(destination)
-            s.fail("runtime.invalidExternalTypeBinding")
+            s.raiseError("runtime.invalidExternalTypeBinding")
             return
         }
         let labels = s.list(i.word2).map(s.text)
@@ -32,7 +32,7 @@ extension GesCallbacks {
         defer { call.end() }
         do { try constructor.invoke(call) } catch let fault as GesExtensionFaultError { throw fault } catch let fault as GesRuntimeError { throw fault } catch {
             s.setNothing(destination)
-            s.fail("runtime.externalConstructorFailed", symbol: constructor.definition.typeName, error: error)
+            s.raiseError("runtime.externalConstructorFailed", symbol: constructor.definition.typeName, error: error)
             return
         }
         s.setValue(destination, call.result)

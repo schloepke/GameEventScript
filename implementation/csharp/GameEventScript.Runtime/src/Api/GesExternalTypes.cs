@@ -210,8 +210,8 @@ public sealed class GesExternalTypeConstructorCall
         }
         _hasResult = true;
         _result = default;
-        _result.SetExternalType(value);
-        _vm?.SetExternalType(_destinationRegister, value);
+        _result.SetExternal(value);
+        _vm?.SetExternal(_destinationRegister, value);
     }
 }
 

@@ -26,7 +26,7 @@ public sealed class GesNumericStorageTests
         value.SetText("a😀b");
         Assert.AreEqual(0L, value.IntegerValue);
         Assert.AreEqual(3, value.Length);
-        value.SetRange(1L, long.MaxValue, 1L);
+        value.SetIntegerRange(1L, long.MaxValue, 1L);
         Assert.AreEqual(0L, value.IntegerValue);
         Assert.AreEqual(long.MaxValue, value.CollectionCount);
         Assert.AreEqual(int.MaxValue, value.Length);

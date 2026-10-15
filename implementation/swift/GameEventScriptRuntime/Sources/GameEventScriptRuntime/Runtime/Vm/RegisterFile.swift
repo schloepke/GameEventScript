@@ -10,7 +10,7 @@
 /// invocation.
 ///
 /// Obtain a view through `GesVirtualMachine.registers` for each access; storage moves only in
-/// `GesVirtualMachine.ensure`, so a view must not be kept across an operation that may grow it.
+/// `GesVirtualMachine.ensureRegisterCapacity`, so a view must not be kept across an operation that may grow it.
 struct GesRegisterFile {
     let base: UnsafeMutablePointer<GesValue>
     let count: Int

@@ -51,7 +51,7 @@ internal partial class GesVirtualMachine
                     case Nop:
                         break;
                     case RegisterLocals:
-                        ModifyLocalRegisters(instruction.Count);
+                        ModifyLocals(instruction.Count);
                         break;
                     case Jump:
                         JumpAddress(instruction.TargetAddress);
@@ -215,10 +215,10 @@ internal partial class GesVirtualMachine
                         SetPercentage(instruction.DestinationRegister, instruction.F64);
                         break;
                     case LoadText:
-                        SetTextPointer(instruction.DestinationRegister, instruction.StringIndex);
+                        SetTextConstant(instruction.DestinationRegister, instruction.StringIndex);
                         break;
                     case LoadTag:
-                        SetTagPointer(instruction.DestinationRegister, instruction.StringIndex);
+                        SetTagConstant(instruction.DestinationRegister, instruction.StringIndex);
                         break;
                     case LoadHandler:
                         ExecuteLoadHandler(instruction.DestinationRegister, Program.UInt16IndexLists.Resolve(instruction.ListIndex));

@@ -53,20 +53,20 @@ internal partial class GesVirtualMachine
                 var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length == 0)
                 {
-                    vm.SetRange(destinationRegister, 0, 0, 0);
+                    vm.SetIntegerRange(destinationRegister, 0, 0, 0);
                     return;
                 }
 
                 var sourceDescending = range.Step < 0;
                 if (sourceDescending == descending)
                 {
-                    vm.SetRange(destinationRegister, range.From, range.To, range.Step);
+                    vm.SetIntegerRange(destinationRegister, range.From, range.To, range.Step);
                     return;
                 }
 
                 if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last)
                 {
-                    vm.SetRange(destinationRegister, last, range.From, -range.Step);
+                    vm.SetIntegerRange(destinationRegister, last, range.From, -range.Step);
                     return;
                 }
 
@@ -78,20 +78,20 @@ internal partial class GesVirtualMachine
                 var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length == 0)
                 {
-                    vm.SetRange(destinationRegister, 0, 0, 0);
+                    vm.SetIntegerRange(destinationRegister, 0, 0, 0);
                     return;
                 }
 
                 var sourceDescending = range.Step < 0d;
                 if (sourceDescending == descending)
                 {
-                    vm.SetRange(destinationRegister, range.From, range.To, range.Step);
+                    vm.SetFloatRange(destinationRegister, range.From, range.To, range.Step);
                     return;
                 }
 
                 if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last)
                 {
-                    vm.SetRange(destinationRegister, last, range.From, -range.Step);
+                    vm.SetFloatRange(destinationRegister, last, range.From, -range.Step);
                     return;
                 }
 

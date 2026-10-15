@@ -21,6 +21,6 @@ internal partial class GesVirtualMachine
         {
             argumentNames[index - 1] = FetchStringByPointer(shape[index]);
         }
-        SetMessageHandler(destinationRegister, GesMessageSignature.Create(messageName, argumentNames));
+        SetHandler(destinationRegister, GesMessageSignature.Create(messageName, argumentNames));
     }
 }

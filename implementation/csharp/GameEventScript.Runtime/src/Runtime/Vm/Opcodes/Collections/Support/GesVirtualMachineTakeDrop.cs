@@ -287,11 +287,11 @@ internal partial class GesVirtualMachine
 
         if (count >= length)
         {
-            dst.SetRange(0, 0, 0);
+            dst.SetIntegerRange(0, 0, 0);
             return dst;
         }
 
-        if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, count + 1L) is { } from) dst.SetRange(from, valueRangeInteger.To, valueRangeInteger.Step);
+        if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, count + 1L) is { } from) dst.SetIntegerRange(from, valueRangeInteger.To, valueRangeInteger.Step);
         else dst.SetNothing();
         return dst;
     }
@@ -307,11 +307,11 @@ internal partial class GesVirtualMachine
 
         if (count >= length)
         {
-            dst.SetRange(0, 0, 0);
+            dst.SetIntegerRange(0, 0, 0);
             return dst;
         }
 
-        if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, length - count) is { } to) dst.SetRange(valueRangeInteger.From, to, valueRangeInteger.Step);
+        if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, length - count) is { } to) dst.SetIntegerRange(valueRangeInteger.From, to, valueRangeInteger.Step);
         else dst.SetNothing();
         return dst;
     }
@@ -327,11 +327,11 @@ internal partial class GesVirtualMachine
 
         if (count >= length)
         {
-            dst.SetRange(0, 0, 0);
+            dst.SetIntegerRange(0, 0, 0);
             return dst;
         }
 
-        if (GesRangeMath.GetTerm(range.From, range.To, range.Step, count + 1L) is { } from) dst.SetRange(from, range.To, range.Step);
+        if (GesRangeMath.GetTerm(range.From, range.To, range.Step, count + 1L) is { } from) dst.SetFloatRange(from, range.To, range.Step);
         else dst.SetNothing();
         return dst;
     }
@@ -347,11 +347,11 @@ internal partial class GesVirtualMachine
 
         if (count >= length)
         {
-            dst.SetRange(0, 0, 0);
+            dst.SetIntegerRange(0, 0, 0);
             return dst;
         }
 
-        if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length - count) is { } to) dst.SetRange(range.From, to, range.Step);
+        if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length - count) is { } to) dst.SetFloatRange(range.From, to, range.Step);
         else dst.SetNothing();
         return dst;
     }
@@ -362,7 +362,7 @@ internal partial class GesVirtualMachine
         var length = GesRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (count <= 0 || length <= 0 || valueRangeInteger.Step == 0)
         {
-            dst.SetRange(0, 0, 0);
+            dst.SetIntegerRange(0, 0, 0);
             return dst;
         }
 
@@ -378,12 +378,12 @@ internal partial class GesVirtualMachine
         {
             if (ascending)
             {
-                if (GesRangeMath.GetTerm(last, valueRangeInteger.From, -valueRangeInteger.Step, takeLength) is { } to) dst.SetRange(last, to, -valueRangeInteger.Step);
+                if (GesRangeMath.GetTerm(last, valueRangeInteger.From, -valueRangeInteger.Step, takeLength) is { } to) dst.SetIntegerRange(last, to, -valueRangeInteger.Step);
                 else dst.SetNothing();
             }
             else
             {
-                if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, takeLength) is { } to) dst.SetRange(valueRangeInteger.From, to, valueRangeInteger.Step);
+                if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, takeLength) is { } to) dst.SetIntegerRange(valueRangeInteger.From, to, valueRangeInteger.Step);
                 else dst.SetNothing();
             }
         }
@@ -391,12 +391,12 @@ internal partial class GesVirtualMachine
         {
             if (ascending)
             {
-                if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, takeLength) is { } to) dst.SetRange(valueRangeInteger.From, to, valueRangeInteger.Step);
+                if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, takeLength) is { } to) dst.SetIntegerRange(valueRangeInteger.From, to, valueRangeInteger.Step);
                 else dst.SetNothing();
             }
             else
             {
-                if (GesRangeMath.GetTerm(last, valueRangeInteger.From, -valueRangeInteger.Step, takeLength) is { } to) dst.SetRange(last, to, -valueRangeInteger.Step);
+                if (GesRangeMath.GetTerm(last, valueRangeInteger.From, -valueRangeInteger.Step, takeLength) is { } to) dst.SetIntegerRange(last, to, -valueRangeInteger.Step);
                 else dst.SetNothing();
             }
         }
@@ -423,7 +423,7 @@ internal partial class GesVirtualMachine
         var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
         if (count <= 0 || length <= 0 || range.Step == 0d)
         {
-            dst.SetRange(0, 0, 0);
+            dst.SetIntegerRange(0, 0, 0);
             return dst;
         }
 
@@ -439,12 +439,12 @@ internal partial class GesVirtualMachine
         {
             if (ascending)
             {
-                if (GesRangeMath.GetTerm(last, range.From, -range.Step, takeLength) is { } to) dst.SetRange(last, to, -range.Step);
+                if (GesRangeMath.GetTerm(last, range.From, -range.Step, takeLength) is { } to) dst.SetFloatRange(last, to, -range.Step);
                 else dst.SetNothing();
             }
             else
             {
-                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, takeLength) is { } to) dst.SetRange(range.From, to, range.Step);
+                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, takeLength) is { } to) dst.SetFloatRange(range.From, to, range.Step);
                 else dst.SetNothing();
             }
         }
@@ -452,12 +452,12 @@ internal partial class GesVirtualMachine
         {
             if (ascending)
             {
-                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, takeLength) is { } to) dst.SetRange(range.From, to, range.Step);
+                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, takeLength) is { } to) dst.SetFloatRange(range.From, to, range.Step);
                 else dst.SetNothing();
             }
             else
             {
-                if (GesRangeMath.GetTerm(last, range.From, -range.Step, takeLength) is { } to) dst.SetRange(last, to, -range.Step);
+                if (GesRangeMath.GetTerm(last, range.From, -range.Step, takeLength) is { } to) dst.SetFloatRange(last, to, -range.Step);
                 else dst.SetNothing();
             }
         }

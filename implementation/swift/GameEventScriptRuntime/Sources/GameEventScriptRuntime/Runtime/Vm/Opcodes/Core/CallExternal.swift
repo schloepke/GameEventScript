@@ -7,7 +7,7 @@ extension GesCallbacks {
         let registers = s.list(i.word2)
         guard let binding = s.linked!.extensionBindings[i.word1], let function = s.linked!.extensions[i.word1], binding.argumentNames.count == registers.count else {
             s.setNothing(destination)
-            s.fail("runtime.invalidExtensionBinding")
+            s.raiseError("runtime.invalidExtensionBinding")
             return
         }
         let call = s.extensionCall
@@ -15,18 +15,18 @@ extension GesCallbacks {
         call.begin(c, .init(state: s, indexes: registers))
         defer {
             let fault = c.endBoundary(boundary)
-            if s.error == nil { if fault == .boundaryUnderflow { s.fail("runtime.randomStackUnderflow") } else if fault == .unbalanced { s.fail("runtime.randomScopeImbalance") } }
+            if s.error == nil { if fault == .boundaryUnderflow { s.raiseError("runtime.randomStackUnderflow") } else if fault == .unbalanced { s.raiseError("runtime.randomScopeImbalance") } }
             call.end()
         }
         do { try function.invoke(call) } catch let fault as GesExtensionFaultError {
-            s.fail(fault.diagnostic)
+            s.raiseError(fault.diagnostic)
             throw fault
         } catch let fault as GesRuntimeError {
-            s.fail(fault.diagnostic)
+            s.raiseError(fault.diagnostic)
             throw fault
         } catch {
             s.setNothing(destination)
-            s.fail("runtime.extensionCallFailed", symbol: s.text(binding.name), error: error)
+            s.raiseError("runtime.extensionCallFailed", symbol: s.text(binding.name), error: error)
             return
         }
         s.setValue(destination, i.normalizeResultAsPredicate && call.result.kind != .boolean ? .nothing : call.result)

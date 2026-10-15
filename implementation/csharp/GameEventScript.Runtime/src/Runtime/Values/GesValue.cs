@@ -268,7 +268,7 @@ public partial struct GesValue : IEquatable<GesValue>
     public static GesValue GesRange(long from, long to, long step = 1)
     {
         var value = new GesValue();
-        value.SetRange(from, to, step);
+        value.SetIntegerRange(from, to, step);
         return value;
     }
 
@@ -282,7 +282,7 @@ public partial struct GesValue : IEquatable<GesValue>
     public static GesValue GesRange(double from, double to, double step = 1d)
     {
         var value = new GesValue();
-        value.SetRange(from, to, step);
+        value.SetFloatRange(from, to, step);
         return value;
     }
 
@@ -306,7 +306,7 @@ public partial struct GesValue : IEquatable<GesValue>
     public static GesValue GesHandler(GesMessageSignature signature)
     {
         var value = new GesValue();
-        value.SetMessageHandler(signature);
+        value.SetHandler(signature);
         return value;
     }
 
@@ -718,7 +718,7 @@ public partial struct GesValue : IEquatable<GesValue>
         ObjectValue = new GesCustomObject(typeName, record);
     }
 
-    internal void SetExternalType(IGesExternalValue value)
+    internal void SetExternal(IGesExternalValue value)
     {
         var externalValue = new GesExternalStorage(value);
         Kind = Custom;
@@ -728,7 +728,7 @@ public partial struct GesValue : IEquatable<GesValue>
         ObjectValue = externalValue;
     }
 
-    internal void SetRange(long from, long to, long step)
+    internal void SetIntegerRange(long from, long to, long step)
     {
         Kind = GesBytecodeTypeKind.Range;
         Unit = UnitNone;
@@ -746,7 +746,7 @@ public partial struct GesValue : IEquatable<GesValue>
         Flags = CollectionCount > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
     }
 
-    internal void SetRange(double from, double to, double step)
+    internal void SetFloatRange(double from, double to, double step)
     {
         if (!(double.IsFinite(from) && double.IsFinite(to) && double.IsFinite(step)))
         {
@@ -756,7 +756,7 @@ public partial struct GesValue : IEquatable<GesValue>
 
         if (Runtime.GesNumber.CanRepresentAsInteger(from) && Runtime.GesNumber.CanRepresentAsInteger(to) && Runtime.GesNumber.CanRepresentAsInteger(step))
         {
-            SetRange((long)from, (long)to, (long)step);
+            SetIntegerRange((long)from, (long)to, (long)step);
             return;
         }
         from = Runtime.GesNumber.CanonicalizeZero(from);
@@ -780,7 +780,7 @@ public partial struct GesValue : IEquatable<GesValue>
 
     private static GesIntegerRange _emptyValueRangeInteger = new(0, 0, 0);
 
-    internal void SetMessageHandler(GesMessageSignature handler)
+    internal void SetHandler(GesMessageSignature handler)
     {
         Kind = GesBytecodeTypeKind.Handler;
         Flags = StorageObjectFlag | HasValueFlag;

@@ -9,7 +9,7 @@ extension GesVirtualMachine {
         handlerName = signature
         ip = Int(entry)
         let count = matchArguments ? message.arguments.count : 1
-        guard ensure(count) else { return }
+        guard ensureRegisterCapacity(count) else { return }
         frameLength = count
         if matchArguments { for index in 0..<count { setValue(index, message.arguments[index]) } } else { setMessage(0, message) }
         processing = true
@@ -42,7 +42,7 @@ extension GesVirtualMachine {
                 if executed >= reserved { break }
                 instrumentation.phaseStarting(.fetch)
                 if ip < 0 || ip >= code.count {
-                    fail("runtime.illegalInstructionPointer")
+                    raiseError("runtime.illegalInstructionPointer")
                     break
                 }
                 let instruction = code[ip]
@@ -119,12 +119,12 @@ extension GesVirtualMachine {
                 case .loadInteger: setInteger(d, instruction.integer, unit: instruction.decodedUnit)
                 case .loadFloat: setFloat(d, instruction.float, unit: instruction.decodedUnit)
                 case .loadPercentage: setPercentage(d, instruction.float)
-                case .loadText: loadText(d, constant: instruction.word1)
-                case .loadTag: loadText(d, constant: instruction.word1, tag: true)
+                case .loadText: setTextConstant(d, constant: instruction.word1)
+                case .loadTag: setTagConstant(d, constant: instruction.word1)
                 case .loadHandler, .loadMessage:
                     let shape = list(instruction.opcode == .loadHandler ? instruction.word2 : instruction.word1)
                     if shape.isEmpty || (instruction.opcode == .loadMessage && list(instruction.word2).count != shape.count - 1) {
-                        fail("runtime.invalidMessageShape")
+                        raiseError("runtime.invalidMessageShape")
                         break
                     }
                     let signature = try GesMessageSignature(name: text(shape[0]), parameters: shape.dropFirst().map(text))
@@ -137,7 +137,7 @@ extension GesVirtualMachine {
                 case .stageFloat: stageFloat(instruction.float, unit: instruction.decodedUnit)
                 case .stagePercentage: stagePercentage(instruction.float)
                 case .stageText: stageTextConstant(instruction.word1)
-                case .stageTag: stageTextConstant(instruction.word1, tag: true)
+                case .stageTag: stageTagConstant(instruction.word1)
                 case .createDice:
                     let count = Int(instruction.signedWord1)
                     let sides = Int(instruction.signedWord2)
@@ -175,7 +175,7 @@ extension GesVirtualMachine {
                     createIterator(d, value, context, checkRangeLimit: true)
                 case .createRecord:
                     guard let binding = linked!.records[instruction.word1] else {
-                        fail("runtime.invalidRecordBinding")
+                        raiseError("runtime.invalidRecordBinding")
                         break
                     }
                     call(Int(binding.entryAddress), destination: d)
@@ -194,7 +194,7 @@ extension GesVirtualMachine {
                     let seed = value(x)
                     if !context.random.push(seed: seed.kind == .integer && !seed.hasUnit ? seed.asInteger : nil) { runtimeBudget.exhaust("MaxRandomScopeDepth", context.runtimeLimits.maxRandomScopeDepth) }
                 case .randomPushConstant: if !context.random.push(seed: instruction.integer) { runtimeBudget.exhaust("MaxRandomScopeDepth", context.runtimeLimits.maxRandomScopeDepth) }
-                case .randomPop: if !context.random.pop() && !runtimeBudget.isExhausted { fail("runtime.randomStackUnderflow") }
+                case .randomPop: if !context.random.pop() && !runtimeBudget.isExhausted { raiseError("runtime.randomStackUnderflow") }
                 case .iteratorCreate, .iteratorCreateOrJump:
                     try compoundIterator(instruction, context)
                     if instruction.opcode == .iteratorCreateOrJump, isRegisterData(d) { ip = y }
@@ -428,7 +428,7 @@ extension GesVirtualMachine {
                 instrumentation.phaseStarting(.advance)
                 executed += 1
             }
-        } catch let fault as GesExtensionFaultError { fail(fault.diagnostic) } catch let fault as GesRuntimeError { fail(fault.diagnostic) } catch { fail("runtime.unhandledFailure", error: error) }
+        } catch let fault as GesExtensionFaultError { raiseError(fault.diagnostic) } catch let fault as GesRuntimeError { raiseError(fault.diagnostic) } catch { raiseError("runtime.unhandledFailure", error: error) }
         instrumentation.finishSlice()
         runtimeBudget.complete(executed: executed, reserved: reserved, processing: processing)
         return executed

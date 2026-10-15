@@ -405,7 +405,7 @@ in the register array; do not replace this with nested associated-value enums.
 the Swift counterpart of C#'s in-place `ref` register access: elements are
 addressed through its base pointer, without per-access exclusivity or copy-on-write
 checks. Only the VM mutates registers, serially; callbacks use the VM's
-accessors. Storage moves only in `ensure`, between instructions. Handler entry
+accessors. Storage moves only in `ensureRegisterCapacity`, between instructions. Handler entry
 prewarms the Program requirement, so only dynamic literal parsing grows during
 execution. Access registers through `registers[...]` each time; never keep a view
 or pointer across an operation that may grow storage.

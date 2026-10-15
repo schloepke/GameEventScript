@@ -17,7 +17,7 @@ final class GesVirtualMachine {
     var handlerName: String?
     var ip = 0, frameStart = 0, frameLength = 0, stageLength = 0
     // Owned register storage; opcode extensions read fields and mutate through typed setters.
-    // Only ensure() moves it, so every register access re-derives its address from this base.
+    // Only ensureRegisterCapacity() moves it, so every register access re-derives its address from this base.
     private var registerBase: UnsafeMutablePointer<GesValue>
     private var registerCapacity: Int
     private var frames: [Frame]
@@ -48,13 +48,13 @@ final class GesVirtualMachine {
             pendingCapacity = max(pendingCapacity, capacity)
             return
         }
-        ensure(capacity)
+        ensureRegisterCapacity(capacity)
     }
 
-    @discardableResult func ensure(_ count: Int) -> Bool {
+    @discardableResult func ensureRegisterCapacity(_ count: Int) -> Bool {
         if count <= registerCapacity { return true }
         if count > maxRegisters {
-            fail("runtime.registerOverflow")
+            raiseError("runtime.registerOverflow")
             return false
         }
         grow(to: min(maxRegisters, max(count, max(1, registerCapacity) * 2)))
@@ -91,9 +91,13 @@ final class GesVirtualMachine {
 
     func output(_ index: Int) -> GesRegisterOutput { .init(state: self, index: index) }
 
-    func loadText(_ index: Int, constant: UInt16, tag: Bool = false) { registers[frameStart + index].setTextConstant(linked!.textValues[Int(constant)], tag: tag) }
+    func setTextConstant(_ index: Int, constant: UInt16) { registers[frameStart + index].setTextConstant(linked!.textValues[Int(constant)], tag: false) }
 
-    func stageTextConstant(_ constant: UInt16, tag: Bool = false) { if let index = reserveStage() { loadText(index, constant: constant, tag: tag) } }
+    func setTagConstant(_ index: Int, constant: UInt16) { registers[frameStart + index].setTextConstant(linked!.textValues[Int(constant)], tag: true) }
+
+    func stageTextConstant(_ constant: UInt16) { if let index = reserveStage() { setTextConstant(index, constant: constant) } }
+
+    func stageTagConstant(_ constant: UInt16) { if let index = reserveStage() { setTagConstant(index, constant: constant) } }
 
     func setText(_ index: Int, _ value: String) { registers[frameStart + index].setText(value) }
 
@@ -192,7 +196,7 @@ final class GesVirtualMachine {
 
     func stageValue(_ value: GesValue) {
         let index = frameStart + frameLength + stageLength
-        if ensure(index + 1) {
+        if ensureRegisterCapacity(index + 1) {
             registers[index] = value
             stageLength += 1
         }
@@ -204,7 +208,7 @@ final class GesVirtualMachine {
 
     private func reserveStage() -> Int? {
         let index = frameLength + stageLength
-        guard ensure(frameStart + index + 1) else { return nil }
+        guard ensureRegisterCapacity(frameStart + index + 1) else { return nil }
         stageLength += 1
         return index
     }
@@ -233,9 +237,9 @@ final class GesVirtualMachine {
 
     func modifyLocals(_ delta: Int) {
         if delta >= 0 {
-            if ensure(frameStart + frameLength + delta) { frameLength += delta }
+            if ensureRegisterCapacity(frameStart + frameLength + delta) { frameLength += delta }
         } else if frameLength + delta < 0 {
-            fail("runtime.preparationFailed")
+            raiseError("runtime.preparationFailed")
         } else {
             clear(frameStart + frameLength + delta, -delta)
             frameLength += delta
@@ -244,10 +248,10 @@ final class GesVirtualMachine {
 
     func call(_ address: Int, destination: Int, predicate: Bool = false, literal: GesLiteralEvaluation? = nil) {
         if depth >= frames.count {
-            fail("runtime.callStackOverflow")
+            raiseError("runtime.callStackOverflow")
             return
         }
-        if !ensure(frameStart + frameLength + stageLength) { return }
+        if !ensureRegisterCapacity(frameStart + frameLength + stageLength) { return }
         frames[depth] = .init(ip: ip, start: frameStart, length: frameLength, destination: destination, predicate: predicate, literal: literal)
         depth += 1
         ip = address
@@ -291,16 +295,16 @@ final class GesVirtualMachine {
         extensionCall.end()
         constructorCall.end()
         if pendingCapacity > 0 {
-            ensure(pendingCapacity)
+            ensureRegisterCapacity(pendingCapacity)
             pendingCapacity = 0
         }
     }
 
     private func clear(_ start: Int, _ count: Int) { for index in start..<(start + count) { registers[index].setNothing() } }
 
-    func fail(_ code: String, symbol: String? = nil, error: (any Error)? = nil) { fail(.init(phase: .runtime, code: code, symbol: symbol, technicalDetails: error.map { String(describing: $0) })) }
+    func raiseError(_ code: String, symbol: String? = nil, error: (any Error)? = nil) { raiseError(.init(phase: .runtime, code: code, symbol: symbol, technicalDetails: error.map { String(describing: $0) })) }
 
-    func fail(_ diagnostic: GesDiagnostic) {
+    func raiseError(_ diagnostic: GesDiagnostic) {
         var diagnostic = diagnostic
         if diagnostic.programName == nil { diagnostic.programName = linked?.program.moduleName }
         if diagnostic.handlerName == nil { diagnostic.handlerName = handlerName }

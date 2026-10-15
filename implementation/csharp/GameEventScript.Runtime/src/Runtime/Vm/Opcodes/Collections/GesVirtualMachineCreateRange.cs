@@ -12,11 +12,11 @@ internal partial class GesVirtualMachine
     {
         if (from.Kind is Integer && to.Kind is Integer)
         {
-            SetRange(destinationRegister, from.IntegerValue, to.IntegerValue, 1);
+            SetIntegerRange(destinationRegister, from.IntegerValue, to.IntegerValue, 1);
         }
         else if (from.IsNumeric && to.IsNumeric)
         {
-            SetRange(destinationRegister, from.AsNumeric, to.AsNumeric, 1.0d);
+            SetFloatRange(destinationRegister, from.AsNumeric, to.AsNumeric, 1.0d);
         }
         else
         {

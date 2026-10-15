@@ -142,9 +142,9 @@ internal partial class GesVirtualMachine
     internal void SetInteger(ushort index, long value, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetInteger(value, unit);
     internal void SetFloat(ushort index, double value, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetFloat(value, unit);
     internal void SetPercentage(ushort index, double ratio) => RegisterValues[index + RegisterFrameStart].SetPercentage(ratio);
-    internal void SetTextPointer(ushort index, ushort pointer) => RegisterValues[index + RegisterFrameStart].SetTextConstant(ActiveProgram!.TextConstants[pointer]);
+    internal void SetTextConstant(ushort index, ushort pointer) => RegisterValues[index + RegisterFrameStart].SetTextConstant(ActiveProgram!.TextConstants[pointer]);
     internal void SetText(ushort index, string text) => RegisterValues[index + RegisterFrameStart].SetText(text);
-    internal void SetTagPointer(ushort index, ushort pointer) => RegisterValues[index + RegisterFrameStart].SetTextConstant(ActiveProgram!.TextConstants[pointer], tag: true);
+    internal void SetTagConstant(ushort index, ushort pointer) => RegisterValues[index + RegisterFrameStart].SetTextConstant(ActiveProgram!.TextConstants[pointer], tag: true);
     internal void SetTag(ushort index, string tag) => RegisterValues[index + RegisterFrameStart].SetTag(tag);
     internal void SetVector(ushort index, double x, double y, double z, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetVector(x, y, z, unit);
     internal void SetVector(ushort index, GesSpatialValue vector, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetVector(vector, unit);
@@ -154,10 +154,10 @@ internal partial class GesVirtualMachine
     internal void SetList(ushort index, GesValue[] list) => RegisterValues[index + RegisterFrameStart].SetList(list);
     internal void SetMap(ushort index, GesValueMap valueMap) => RegisterValues[index + RegisterFrameStart].SetMap(valueMap);
     internal void SetRecord(ushort index, string typeName, GesValueMap record) => RegisterValues[index + RegisterFrameStart].SetRecord(typeName, record);
-    internal void SetExternalType(ushort index, IGesExternalValue value) => RegisterValues[index + RegisterFrameStart].SetExternalType(value);
-    internal void SetRange(ushort index, long from, long to, long step) => RegisterValues[index + RegisterFrameStart].SetRange(from, to, step);
-    internal void SetRange(ushort index, double from, double to, double step) => RegisterValues[index + RegisterFrameStart].SetRange(from, to, step);
-    internal void SetMessageHandler(ushort index, GesMessageSignature handler) => RegisterValues[index + RegisterFrameStart].SetMessageHandler(handler);
+    internal void SetExternal(ushort index, IGesExternalValue value) => RegisterValues[index + RegisterFrameStart].SetExternal(value);
+    internal void SetIntegerRange(ushort index, long from, long to, long step) => RegisterValues[index + RegisterFrameStart].SetIntegerRange(from, to, step);
+    internal void SetFloatRange(ushort index, double from, double to, double step) => RegisterValues[index + RegisterFrameStart].SetFloatRange(from, to, step);
+    internal void SetHandler(ushort index, GesMessageSignature handler) => RegisterValues[index + RegisterFrameStart].SetHandler(handler);
     internal void SetMessage(ushort index, GameEventScriptMessage message) => RegisterValues[index + RegisterFrameStart].SetMessage(message);
     internal void SetSeries(ushort index, GesSeriesValue series) => RegisterValues[index + RegisterFrameStart].SetSeries(series);
     internal void SetIterator(ushort index, IGesIterator value) => RegisterValues[index + RegisterFrameStart].SetIterator(value);
@@ -307,7 +307,7 @@ internal partial class GesVirtualMachine
     }
     internal string FetchStringByPointer(ushort index) => StringPool[index];
     internal GesUInt16IndexList FetchUInt16SliceTableByPointer(ushort index) => Program.UInt16IndexLists.Resolve(index);
-    internal void ModifyLocalRegisters(short registerCount)
+    internal void ModifyLocals(short registerCount)
     {
         switch (registerCount)
         {

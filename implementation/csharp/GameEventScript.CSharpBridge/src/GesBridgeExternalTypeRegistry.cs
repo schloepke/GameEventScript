@@ -232,7 +232,7 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
         if (value is not null && CreateExternalValue(value) is { } externalValue)
         {
             var result = new GesValue();
-            result.SetExternalType(externalValue);
+            result.SetExternal(externalValue);
             return result;
         }
 
@@ -495,7 +495,7 @@ internal static class GesBridgeValueConverter
             case GesMessageSignature signature:
             {
                 var result = new GesValue();
-                result.SetMessageHandler(signature);
+                result.SetHandler(signature);
                 return result;
             }
         }

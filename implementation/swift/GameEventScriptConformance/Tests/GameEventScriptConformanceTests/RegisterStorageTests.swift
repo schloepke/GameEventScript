@@ -16,7 +16,7 @@ final class RegisterStorageTests: XCTestCase {
         state.setIterator(3, iterator)
         for required in [65, 193, 511] {
             let previous = state.registers.count
-            XCTAssertTrue(state.ensure(required))
+            XCTAssertTrue(state.ensureRegisterCapacity(required))
             XCTAssertGreaterThan(state.registers.count, previous)
             for index in previous..<state.registers.count { XCTAssertTrue(state.slot(index).isNothing) }
             for (index, value) in values.enumerated() { XCTAssertEqual(state.value(index), value) }
@@ -39,7 +39,7 @@ final class RegisterStorageTests: XCTestCase {
             released = iterator
             state.setIterator(0, iterator)
         }
-        XCTAssertTrue(state.ensure(129))
+        XCTAssertTrue(state.ensureRegisterCapacity(129))
         do {
             let iterator = try XCTUnwrap(GesIterator.make(.list([.text("high slot")])))
             releasedHighSlot = iterator
@@ -71,8 +71,8 @@ final class RegisterStorageTests: XCTestCase {
                 released = iterator
                 state.setIterator(0, iterator)
             }
-            XCTAssertTrue(state.ensure(65))
-            XCTAssertTrue(state.ensure(257))
+            XCTAssertTrue(state.ensureRegisterCapacity(65))
+            XCTAssertTrue(state.ensureRegisterCapacity(257))
             do {
                 let iterator = try XCTUnwrap(GesIterator.make(.list([.text("high slot")])))
                 releasedHighSlot = iterator

@@ -10,7 +10,7 @@ extension GesVirtualMachine {
             message = value.messageValue ?? value.signatureValue?.makeMessage([])
         } else {
             guard let signature = linked!.outbound[i.word0] else {
-                fail("runtime.invalidMessageBinding")
+                raiseError("runtime.invalidMessageBinding")
                 return
             }
             message = signature.makeMessage(values(i.word2))

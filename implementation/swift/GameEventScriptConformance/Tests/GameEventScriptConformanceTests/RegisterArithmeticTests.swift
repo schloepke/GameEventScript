@@ -172,7 +172,7 @@ final class RegisterArithmeticTests: XCTestCase {
             (.divide, .float(5.8)), (.integerDivide, .integer(5)), (.modulo, .integer(4)), (.remainder, .integer(4)),
         ]
         let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
-        XCTAssertTrue(state.ensure(96))
+        XCTAssertTrue(state.ensureRegisterCapacity(96))
         state.frameStart = 40
         for (opcode, expected) in cases {
             for destination: UInt16 in [0, 1, 2] {
@@ -197,7 +197,7 @@ final class RegisterArithmeticTests: XCTestCase {
 
     func testNumericOpcodesReadInputsBeforeOverwritingEitherRegister() {
         let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
-        XCTAssertTrue(state.ensure(96))
+        XCTAssertTrue(state.ensureRegisterCapacity(96))
         state.frameStart = 40
         let cases: [(GesBytecodeOpCode, GesValue)] = [
             (.add, .integer(6)), (.subtract, .integer(-4)), (.multiply, .integer(5)),
@@ -233,7 +233,7 @@ final class RegisterArithmeticTests: XCTestCase {
 
     func testNavigationReadsEveryComponentBeforeOverwritingAnInput() {
         let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
-        XCTAssertTrue(state.ensure(96))
+        XCTAssertTrue(state.ensureRegisterCapacity(96))
         state.frameStart = 40
         for destination: UInt16 in 0...6 {
             for index in 0..<6 { state.setFloat(index, Double(index + 1), unit: .meter) }
@@ -257,7 +257,7 @@ final class RegisterArithmeticTests: XCTestCase {
 
     func testTypedWritesReplaceReferenceValuesAndNormalizeNumbers() {
         let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
-        XCTAssertTrue(state.ensure(96))
+        XCTAssertTrue(state.ensureRegisterCapacity(96))
         state.frameStart = 40
         state.setValue(0, .list([.text("old")]))
         state.setInteger(0, 12, unit: .meter)
@@ -286,7 +286,7 @@ final class RegisterArithmeticTests: XCTestCase {
 
     func testTypedHelperOutputsCanOverwriteTheirInputs() throws {
         let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
-        XCTAssertTrue(state.ensure(96))
+        XCTAssertTrue(state.ensureRegisterCapacity(96))
         state.frameStart = 40
         let host = try GameEventScriptHost.makeBuilder().build()
         let context = GesContext(host: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)

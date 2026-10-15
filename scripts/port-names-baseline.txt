@@ -330,7 +330,6 @@ only	csharp	Runtime	GesSeriesStep
 only	csharp	Runtime	GesStringIterator
 only	csharp	Runtime	GesTextPayload
 only	csharp	Runtime	GesTripletIterator
-only	csharp	Runtime	GesValueSlice
 only	csharp	Runtime	GesVirtualMachineDumper
 only	csharp	Runtime	GesVirtualMachinePublisher
 only	csharp	Runtime	GesVmDistinctBuilder

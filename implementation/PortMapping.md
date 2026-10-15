@@ -313,10 +313,11 @@ contains exactly the measured reference sources plus the recalibrated corpus.
       GesSeriesValue, GesExternalStorage, GesCompoundSources, GesSystemClock,
       GesNumber and GesText use one name in both ports. Open decision: C# keeps one
       iterator class per source kind while Swift switches inside GesIterator.
-- [ ] Align public value types (`GesValueSlice`, `GesMapEntry`, `GesSeriesValue`,
-      `GesSpatialValue`, `GesValueKind`, Swift `GesText`/`GesNumber`): same set in
-      both ports, internal where not needed publicly. Moved here from phase 1
-      because these types expose the internal value model.
+- [x] Align public value types: Swift `GesSpatialValue`, `GesText`, `GesNumber`
+      become internal and `GesSeriesValue` `@_spi(Compiler)`, as in C#; C#
+      `GesValueSlice` maps idiomatically to Swift `[GesValue]`. Open decision:
+      Swift `GesValueKind` versus C# `GesBytecodeTypeKind` as the public value
+      kind, and Swift `GesMapEntry` versus C# parallel key/value arrays.
 - [ ] `Ges` prefix for C# AST records and remaining unprefixed internal types.
 - [ ] Rename C# files whose type is renamed in this phase (for example
       `GameEventScriptExternalTypeValueConverter.cs`) and split

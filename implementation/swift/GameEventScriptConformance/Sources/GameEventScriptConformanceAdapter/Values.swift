@@ -118,7 +118,7 @@ extension Values {
         case .list: return ["type": ":List", "items": try (value.listValue ?? []).map(encode)]
         case .message: return ["type": ":Message", "message": try encodeMessage(value.messageValue!)]
         case .vector, .point:
-            let v = value.spatialValue!
+            let v = (x: value.x, y: value.y, z: value.z)
             result = ["type": value.kind == .vector ? ":Vector" : ":Point", "x": numberText(v.x), "y": numberText(v.y), "z": numberText(v.z)]
         case .integerRange, .floatRange:
             if let r = value.integerRangeValue { return ["type": ":Range.int64", "from": String(r.from), "to": String(r.to), "step": String(r.step)] }

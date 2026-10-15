@@ -81,6 +81,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `swiftValue(at:as:)`, `withSwiftArguments(_:)` and the `swiftArguments:` labels of
   message, emit and publish conveniences become `setNativeValue(_:)`,
   `nativeValue(at:as:)`, `withNativeArguments(_:)` and `nativeArguments:`.
+- Swift no longer exposes runtime helper types that C# keeps internal:
+  `GesNumber`, `GesText` and `GesSpatialValue` (use `GesValue.x`/`y`/`z`) are
+  internal, and `GesSeriesValue` with `GesValue.series(_:)`/`seriesValue` is
+  available only to the Compiler.
 
 ### Changed
 

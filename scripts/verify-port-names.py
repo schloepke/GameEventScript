@@ -48,6 +48,7 @@ PLATFORM_ONLY = {
     ("csharp", "Compiler", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
     ("csharp", "Bridge", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
     ("csharp", "Runtime", "GesReadOnlyArray"): "idiomatic mapping: Swift exposes [T]",
+    ("csharp", "Runtime", "GesValueSlice"): "idiomatic mapping: zero-copy C# list view; Swift exposes [GesValue]",
     ("csharp", "Compiler", "GesProgramBuilderEntry"): "C# 14 static extension container; Swift extends GameEventScriptProgram directly",
     ("csharp", "Runtime", "GesQuantityUnits"): "C# extension container: C# enums cannot declare the members Swift GesQuantityUnit has",
     ("csharp", "Runtime", "GesFatalRuntimeError"): "C# exception base class; Swift error structs have no inheritance",

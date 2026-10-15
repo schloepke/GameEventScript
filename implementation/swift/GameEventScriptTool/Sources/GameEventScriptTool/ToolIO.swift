@@ -115,3 +115,7 @@ func quoted(_ text: String) -> String {
     guard let data, let array = String(data: data, encoding: .utf8) else { return "\"\"" }
     return String(array.dropFirst().dropLast())
 }
+
+/// Compares Unicode scalar sequences exactly, without Swift String canonical equivalence; matches the Runtime's
+/// identifier and source comparison rules.
+func scalarEqual(_ left: String, _ right: String) -> Bool { left.utf8.elementsEqual(right.utf8) }

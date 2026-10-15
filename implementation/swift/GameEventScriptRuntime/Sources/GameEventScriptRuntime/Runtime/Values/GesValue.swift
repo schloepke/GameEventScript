@@ -66,7 +66,7 @@ public enum GesValueKind: Hashable {
 }
 
 /// An immutable vector or point's binary64 coordinates.
-public struct GesSpatialValue: Hashable {
+struct GesSpatialValue: Hashable {
     /// Binary64 x coordinate.
     public let x: Double
     /// Binary64 y coordinate.
@@ -89,7 +89,7 @@ public enum GesValueError: Error, Equatable {
 }
 
 /// Immutable metadata for a built-in series; execution of series terms belongs to the VM.
-public struct GesSeriesValue: Hashable {
+@_spi(Compiler) public struct GesSeriesValue: Hashable {
     /// Portable series signature identifying the built-in series.
     public let signatureID: String
     /// Signed term offset applied before series evaluation.
@@ -470,7 +470,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
     }
 
     /// Wraps a built-in series descriptor without evaluating terms.
-    public static func series(_ value: GesSeriesValue) -> Self {
+    @_spi(Compiler) public static func series(_ value: GesSeriesValue) -> Self {
         var result = Self()
         result.setSeries(value)
         return result
@@ -541,7 +541,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
     /// Unquoted text or bare tag name, otherwise nil.
     public var textValue: String? { kind == .text || kind == .tag ? payload(GesTextPayload.self).text : nil }
     /// Coordinates for a Vector or Point, otherwise nil.
-    public var spatialValue: GesSpatialValue? { kind == .vector || kind == .point ? payload(GesSpatialValue.self) : nil }
+    var spatialValue: GesSpatialValue? { kind == .vector || kind == .point ? payload(GesSpatialValue.self) : nil }
     /// Spatial x coordinate, or zero for non-spatial values.
     public var x: Double { spatialValue?.x ?? 0 }
     /// Spatial y coordinate, or zero for non-spatial values.
@@ -583,7 +583,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
     /// Stored Handler signature, or nil for other kinds.
     public var signatureValue: GesMessageSignature? { kind == .handler ? .init(storage: unsafeDowncast(object!, to: GesSignatureStorage.self)) : nil }
     /// Stored series descriptor, or nil for other kinds.
-    public var seriesValue: GesSeriesValue? { kind == .series ? payload(GesSeriesValue.self) : nil }
+    @_spi(Compiler) public var seriesValue: GesSeriesValue? { kind == .series ? payload(GesSeriesValue.self) : nil }
 
     /// Compares exact kinds, units and immutable payloads, with scalar-exact text and record names.
     public static func == (a: Self, b: Self) -> Bool {

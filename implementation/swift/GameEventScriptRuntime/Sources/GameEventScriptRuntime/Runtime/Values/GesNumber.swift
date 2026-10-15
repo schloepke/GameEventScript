@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Explicit signed-64 and binary64 conversion rules shared by runtime values.
-public enum GesNumber {
+enum GesNumber {
     /// Returns an exact signed-64 value only when the finite input is integral and in range.
     public static func exactInteger(_ value: Double) -> Int64? {
         guard value.isFinite, value >= -9223372036854775808.0, value < 9223372036854775808.0, value.rounded(.towardZero) == value else { return nil }

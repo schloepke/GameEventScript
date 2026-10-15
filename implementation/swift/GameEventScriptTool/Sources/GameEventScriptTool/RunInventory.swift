@@ -121,7 +121,7 @@ final class RunInventory {
             guard RunOptions.integerSpelling(value, signed: false), let id = Int(value), id >= 0 else { throw ToolError.usage("A program ID must be a positive integer, for example \(command) 1.") }
             matches = active.filter { $0.id == id }
         } else {
-            matches = active.filter { GesText.scalarEqual($0.instance.program.moduleName, selector) }
+            matches = active.filter { scalarEqual($0.instance.program.moduleName, selector) }
         }
         guard !matches.isEmpty else { throw ToolError.usage("No loaded program matches '\(selector)'. Use :list.") }
         guard matches.count == 1 else { throw ToolError.usage("Module '\(selector)' is loaded more than once. Use \(command) with one of: " + matches.map { "\($0.id)" }.joined(separator: ", ") + ".") }

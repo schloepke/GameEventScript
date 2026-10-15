@@ -3,7 +3,7 @@
 
 /// Unicode-scalar operations used by the portable value and identifier models.
 /// Swift's canonical-equivalence string comparison is deliberately not used.
-public enum GesText {
+enum GesText {
     /// Compares the exact scalar sequence, without Unicode normalization.
     public static func scalarEqual(_ left: String, _ right: String) -> Bool {
         // UTF-8 encodes scalar sequences bijectively, so byte equality is scalar equality.

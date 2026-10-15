@@ -84,7 +84,7 @@ enum Values {
         case ":Range.binary64": return try .floatRange(from: number(node.text("from")), to: number(node.text("to")), step: number(node.text("step")))
         case ":Message": return try .message(message(node.required("message")))
         default:
-            let nodes = try node.values("entries")
+            let nodes = node.values("entries")
             var keys = try nodes.map { try $0.text("key") }
             var values = try nodes.map { try decode($0.required("value")) }
             let result = type == ":Map" ? GesValue.map(keys: keys, values: values) : GesValue.record(typeName: String(type.dropFirst()), keys: keys, values: values)

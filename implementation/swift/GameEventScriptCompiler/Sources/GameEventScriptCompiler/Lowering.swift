@@ -112,7 +112,7 @@ extension GesCompiler {
 
     func literal(_ value: GesValue, _ target: Int, _ r: GesRoutine) throws {
         let flag: UInt8 = value.unit == .degree ? 1 : value.unit == .meter ? 2 : value.unit == .second ? 3 : 0
-        switch value.kind {
+        switch value.valueKind {
         case .nothing: r.emit(.loadNothing, target)
         case .boolean: r.emit(value.asBoolean ? .loadTrue : .loadFalse, target)
         case .integer: r.emit(.loadInteger, target, payload: UInt64(bitPattern: value.integerValue!), flags: flag)
@@ -141,7 +141,7 @@ extension GesCompiler {
             return try expression(GesExpression(value.kind, e.location, depth: value.depth), r, scope, destination: destination)
         }
         let d = destination ?? r.temporary()
-        if let value = scalarConstant(e), [.nothing, .boolean, .integer, .float, .percentage, .text, .tag].contains(value.kind) {
+        if let value = scalarConstant(e), [.nothing, .boolean, .integer, .float, .percentage, .text, .tag].contains(value.valueKind) {
             try literal(value, d, r)
             return d
         }

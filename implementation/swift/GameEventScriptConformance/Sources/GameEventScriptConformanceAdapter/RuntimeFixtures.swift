@@ -85,11 +85,11 @@ private struct FixtureFunction: GesExtensionFunction {
         case "nav.isNorth":
             let angle = (args[0].asNumber.truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360)
             call.setBoolean(angle <= 45 || angle >= 315)
-        case "test.vectorSum": if args[0].kind == .vector { call.setFloat(args[0].x + args[0].y + args[0].z, unit: args[0].unit) }
+        case "test.vectorSum": if args[0].valueKind == .vector { call.setFloat(args[0].x + args[0].y + args[0].z, unit: args[0].unit) }
         case "test.toJson":
             do { call.setText(try args[0].json()) } catch let error as GesMessageFormatError { throw try GesExtensionFaultError(code: error.code, message: error.code) }
         case "test.fromJson":
-            if args[0].kind == .text {
+            if args[0].valueKind == .text {
                 do { call.setValue(try GesValue(json: args[0].textValue!)) } catch let error as GesMessageFormatError { throw try GesExtensionFaultError(code: error.code, message: error.code) }
             }
         case "test.echo": call.setValue(args[0])

@@ -107,25 +107,25 @@ extension Values {
 
     static func encode(_ value: GesValue) throws -> [String: Any] {
         var result: [String: Any]
-        switch value.kind {
+        switch value.valueKind {
         case .nothing: return ["type": ":Nothing"]
         case .boolean: return ["type": ":Boolean", "value": value.asBoolean ? "true" : "false"]
-        case .text, .tag: return ["type": value.kind == .text ? ":Text" : ":Tag", "value": value.textValue ?? ""]
+        case .text, .tag: return ["type": value.valueKind == .text ? ":Text" : ":Tag", "value": value.textValue ?? ""]
         case .integer, .float:
-            result = ["type": (value.unit == .none ? ":Number." : ":Quantity.") + (value.kind == .integer ? "int64" : "binary64"), "value": value.kind == .integer ? String(value.integerValue!) : numberText(value.asNumber)]
+            result = ["type": (value.unit == .none ? ":Number." : ":Quantity.") + (value.valueKind == .integer ? "int64" : "binary64"), "value": value.valueKind == .integer ? String(value.integerValue!) : numberText(value.asNumber)]
         case .percentage: return ["type": ":Percentage", "value": numberText(value.asNumber)]
         case .dice: return ["type": ":Dice", "rolls": value.diceRolls ?? []]
         case .list: return ["type": ":List", "items": try (value.listValue ?? []).map(encode)]
         case .message: return ["type": ":Message", "message": try encodeMessage(value.messageValue!)]
         case .vector, .point:
             let v = (x: value.x, y: value.y, z: value.z)
-            result = ["type": value.kind == .vector ? ":Vector" : ":Point", "x": numberText(v.x), "y": numberText(v.y), "z": numberText(v.z)]
-        case .integerRange, .floatRange:
+            result = ["type": value.valueKind == .vector ? ":Vector" : ":Point", "x": numberText(v.x), "y": numberText(v.y), "z": numberText(v.z)]
+        case .range:
             if let r = value.integerRangeValue { return ["type": ":Range.int64", "from": String(r.from), "to": String(r.to), "step": String(r.step)] }
             let r = value.floatRangeValue!
             return ["type": ":Range.binary64", "from": numberText(r.from), "to": numberText(r.to), "step": numberText(r.step)]
         default:
-            return ["type": value.kind == .map ? ":Map" : ":" + (value.customTypeName ?? ""), "entries": try (value.materializedMap()?.entries ?? []).map { ["key": $0.key, "value": try encode($0.value)] as [String: Any] }]
+            return ["type": value.valueKind == .map ? ":Map" : ":" + (value.customTypeName ?? ""), "entries": try (value.materializedMap()?.entries ?? []).map { ["key": $0.key, "value": try encode($0.value)] as [String: Any] }]
         }
         if value.unit != .none { result["unit"] = ":" + String(describing: value.unit) }
         return result

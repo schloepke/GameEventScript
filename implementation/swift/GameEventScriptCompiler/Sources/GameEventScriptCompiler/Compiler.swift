@@ -487,15 +487,15 @@ final class GesCompiler {
         case .cast(let source, "number"), .cast(let source, "numeric"):
             guard let value = scalarConstant(source) else { return nil }
             let result = GesCompilerSupport.castNumber(value)
-            return result.kind == .float && !result.asNumber.isFinite ? nil : result
+            return result.valueKind == .float && !result.asNumber.isFinite ? nil : result
         case .binary(let op, let left, let right):
             let operations: [String: GesBytecodeOpCode] = ["+": .add, "-": .subtract, "*": .multiply, "/": .divide, "div": .integerDivide, "mod": .modulo, "rem": .remainder, "^": .power]
-            guard let opcode = operations[op], let a = scalarConstant(left), let b = scalarConstant(right), let result = GesCompilerSupport.arithmetic(opcode, a, b), result.kind != .float || result.asNumber.isFinite else { return nil }
+            guard let opcode = operations[op], let a = scalarConstant(left), let b = scalarConstant(right), let result = GesCompilerSupport.arithmetic(opcode, a, b), result.valueKind != .float || result.asNumber.isFinite else { return nil }
             return result
         case .unary("-", let value):
             guard let value = scalarConstant(value), value.isNumeric else { return nil }
             if let integer = value.integerValue, integer != .min { return .integer(-integer, unit: value.unit) }
-            if value.kind == .percentage { return .percentage(-value.asNumber) }
+            if value.valueKind == .percentage { return .percentage(-value.asNumber) }
             return .float(-value.asNumber, unit: value.unit)
         default: return nil
         }
@@ -514,7 +514,7 @@ final class GesCompiler {
             }
             guard let value = constant else { continue }
             let flag: UInt8 = value.unit == .degree ? 1 : value.unit == .meter ? 2 : value.unit == .second ? 3 : 0
-            switch value.kind {
+            switch value.valueKind {
             case .nothing: r.emit(.stageNothing)
             case .boolean: r.emit(value.asBoolean ? .stageTrue : .stageFalse)
             case .integer: r.emit(.stageInteger, payload: UInt64(bitPattern: value.integerValue!), flags: flag)

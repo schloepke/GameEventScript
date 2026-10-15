@@ -11,7 +11,7 @@ struct GesComponentRow {
 extension GesCompiler {
     func knownNonList(_ e: GesExpression, _ r: GesRoutine, _ scope: GesScope) -> Bool {
         switch e.kind {
-        case .literal(let value): return value.kind != .list
+        case .literal(let value): return value.valueKind != .list
         case .constant(let name): return constants[name].map { knownNonList($0, r, scope) } ?? false
         case .name(let name): return scope.get(name).map { r.nonListBindings.contains($0) } ?? false
         case .binary(let op, _, _): return ["/", "div", "mod", "rem", "^"].contains(op)

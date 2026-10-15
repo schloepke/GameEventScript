@@ -139,7 +139,7 @@ final class GesParser {
                 let value = try expression(15)
                 switch value.kind {
                 case .literal: break
-                case .unary("-", let operand): guard case .literal(let number) = operand.kind, [.integer, .float, .percentage].contains(number.kind) else { throw failure("Expected numeric literal after '-'.", begin) }
+                case .unary("-", let operand): guard case .literal(let number) = operand.kind, [.integer, .float, .percentage].contains(number.valueKind) else { throw failure("Expected numeric literal after '-'.", begin) }
                 default: throw failure("Expected scalar literal.", begin)
                 }
                 constants.append((name, value))

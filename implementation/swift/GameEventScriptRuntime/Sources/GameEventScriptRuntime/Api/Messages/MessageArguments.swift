@@ -70,8 +70,8 @@ public struct GesMessageArguments: Sequence, Hashable, CustomStringConvertible {
     /// The value at an existing argument index.
     public func valueAt(_ index: Int) -> GesValue { argumentValues[index] }
 
-    /// The storage kind at an existing argument index.
-    public func kindAt(_ index: Int) -> GesValueKind { argumentValues[index].kind }
+    /// The portable value kind at an existing argument index.
+    public func kindAt(_ index: Int) -> GesBytecodeTypeKind { argumentValues[index].valueKind }
 
     /// The unit at an existing argument index.
     public func unitAt(_ index: Int) -> GesQuantityUnit { argumentValues[index].unit }

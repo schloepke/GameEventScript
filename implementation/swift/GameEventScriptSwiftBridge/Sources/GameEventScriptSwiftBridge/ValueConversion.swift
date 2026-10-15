@@ -44,8 +44,8 @@ public enum GesBridgeValueConversion {
     /// The unit is removed only after validation; the native decoder still rejects precision loss and overflow.
     public static func decode<T: GesBridgeValueConvertible>(_ value: GesValue, as type: T.Type = T.self, unit: GesQuantityUnit) throws -> T {
         if unit == .none || value.isNothing { return try T.fromGesValue(value) }
-        guard value.unit == unit, value.kind == .integer || value.kind == .float else {
-            throw GesBridgeConversionError.typeMismatch(expected: "Quantity(" + unit.suffix + ")", actual: String(describing: value.kind) + value.unit.suffix)
+        guard value.unit == unit, value.valueKind == .integer || value.valueKind == .float else {
+            throw GesBridgeConversionError.typeMismatch(expected: "Quantity(" + unit.suffix + ")", actual: String(describing: value.valueKind) + value.unit.suffix)
         }
         let magnitude = value.integerValue.map { GesValue.integer($0) } ?? .float(value.floatValue!)
         return try T.fromGesValue(magnitude)
@@ -55,9 +55,9 @@ public enum GesBridgeValueConversion {
     public static func decode<T: GesBridgeValueConvertible>(_ value: GesValue, as type: T.Type = T.self) throws -> T { try T.fromGesValue(value) }
 }
 
-func requireKind(_ value: GesValue, _ first: GesValueKind, _ second: GesValueKind? = nil) throws {
-    guard value.unit == .none, value.kind == first || value.kind == second else {
-        throw GesBridgeConversionError.typeMismatch(expected: String(describing: first) + (second.map { "/" + String(describing: $0) } ?? ""), actual: String(describing: value.kind) + value.unit.suffix)
+func requireKind(_ value: GesValue, _ first: GesBytecodeTypeKind, _ second: GesBytecodeTypeKind? = nil) throws {
+    guard value.unit == .none, value.valueKind == first || value.valueKind == second else {
+        throw GesBridgeConversionError.typeMismatch(expected: String(describing: first) + (second.map { "/" + String(describing: $0) } ?? ""), actual: String(describing: value.valueKind) + value.unit.suffix)
     }
 }
 

@@ -357,7 +357,7 @@ final class Bindings: GesNativeMessageHandler, GesExtensionRegistry, GesRuntimeO
                 let distance = ((next - currentPlayer) * direction + playerCount) % playerCount
                 skipCount = (distance == 0 ? playerCount : distance) - 1
             } else if args.signatureLabels == ["repeatTurnForPlayer"] {
-                guard args[0].kind == .boolean else { throw CardGameError("repeatTurnForPlayer must be Boolean") }
+                guard args[0].valueKind == .boolean else { throw CardGameError("repeatTurnForPlayer must be Boolean") }
                 skipCount = args[0].asBoolean ? playerCount - 1 : 0
             } else {
                 skipCount = 0
@@ -395,12 +395,12 @@ final class Bindings: GesNativeMessageHandler, GesExtensionRegistry, GesRuntimeO
             notices.append((text: message, title: title))
         case "NoticeTable":
             if args.signatureLabels == ["pop"] {
-                guard args[0].kind == .boolean else { throw CardGameError("pop must be Boolean") }
+                guard args[0].valueKind == .boolean else { throw CardGameError("pop must be Boolean") }
                 if args[0].asBoolean, let previous = tableNoticeStack.popLast() { tableNotice = previous }
             } else {
                 let replacement = try text(args[0])
                 if args.count == 2 {
-                    guard args[1].kind == .boolean else { throw CardGameError("NoticeTable flags must be Boolean") }
+                    guard args[1].valueKind == .boolean else { throw CardGameError("NoticeTable flags must be Boolean") }
                     if args[1].asBoolean {
                         if args.signatureLabels[1] == "pushOld" {
                             guard tableNoticeStack.count < 64 else { throw CardGameError("Maximum 64 saved table notices") }
@@ -549,7 +549,7 @@ private struct BoardExtension: GesExtensionFunction {
         case "cards":
             call.setValue(.list(try bindings.board.zone(tag(call.arguments[0])).cards.map { try bindings.board.card($0).value }))
         case "card":
-            if call.arguments[0].kind == .nothing { call.setNothing() } else { call.setValue((try? bindings.board.card(integer(call.arguments[0])).value) ?? .nothing) }
+            if call.arguments[0].valueKind == .nothing { call.setNothing() } else { call.setValue((try? bindings.board.card(integer(call.arguments[0])).value) ?? .nothing) }
         case "top":
             let id = try bindings.board.zone(tag(call.arguments[0])).cards.last
             call.setValue(try id.map { try bindings.board.card($0).value } ?? .nothing)
@@ -593,6 +593,6 @@ func formatDiagnostic(_ diagnostic: GesDiagnostic) -> String {
 }
 
 private func setState(_ state: inout [String: GesValue], key: String, value: GesValue) throws {
-    guard value.kind == .nothing || state[key] != nil || state.count < 64 else { throw CardGameError("Maximum 64 rule state keys") }
-    if value.kind == .nothing { state.removeValue(forKey: key) } else { state[key] = value }
+    guard value.valueKind == .nothing || state[key] != nil || state.count < 64 else { throw CardGameError("Maximum 64 rule state keys") }
+    if value.valueKind == .nothing { state.removeValue(forKey: key) } else { state[key] = value }
 }

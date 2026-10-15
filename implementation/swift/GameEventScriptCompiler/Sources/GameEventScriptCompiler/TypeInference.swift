@@ -13,7 +13,7 @@ extension GesCompiler {
         case .assembly(let block): return block.predicate ? "boolean" : "other"
         case .literal(let value):
             if value.hasUnit { return "quantity:" + String(describing: value.unit) }
-            return String(describing: value.kind)
+            return String(describing: value.valueKind)
         case .name(let name): return types[name] ?? "unknown"
         case .constant(let name): return constants[name].map(child) ?? "unknown"
         case .cast(_, let type), .constructor(let type, _): return type
@@ -67,7 +67,7 @@ extension GesCompiler {
             case .name(let name): return types[name] == "number"
             case .unary("-", let value): return explicit(value)
             case .literal(let value):
-                return !value.hasUnit && value.kind == .float && value.asNumber.isFinite && value.asNumber.rounded(.towardZero) == value.asNumber && value.asNumber >= -9_223_372_036_854_775_808 && value.asNumber < 9_223_372_036_854_775_808
+                return !value.hasUnit && value.valueKind == .float && value.asNumber.isFinite && value.asNumber.rounded(.towardZero) == value.asNumber && value.asNumber >= -9_223_372_036_854_775_808 && value.asNumber < 9_223_372_036_854_775_808
             default: return false
             }
         }

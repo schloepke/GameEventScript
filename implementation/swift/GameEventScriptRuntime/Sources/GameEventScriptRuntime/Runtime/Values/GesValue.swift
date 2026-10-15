@@ -24,7 +24,7 @@ public enum GesQuantityUnit: String, Hashable {
 }
 
 /// Exact storage discriminants; integer and binary64 range payloads remain distinct.
-public enum GesValueKind: Hashable {
+enum GesValueKind: Hashable {
     /// Absence of a value.
     case nothing
     /// Boolean value.
@@ -135,7 +135,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
     // Double.bitPattern gives the Int64/Double union without depending on Swift struct layout.
     private var numericBits: UInt64 = 0
     private var object: AnyObject?
-    private var valueKind: GesValueKind = .nothing
+    private var storageKind: GesValueKind = .nothing
     private var valueUnit: GesQuantityUnit = .none
     private var flags: UInt8 = 0
 
@@ -158,8 +158,32 @@ public struct GesValue: Hashable, CustomStringConvertible {
     /// Quantity unit carried by numeric or spatial storage.
     public var unit: GesQuantityUnit { valueUnit }
 
-    /// Exact storage kind, including integer versus binary64 distinctions.
-    public var kind: GesValueKind { valueKind }
+    // Exact storage kind, including integer versus binary64 range distinctions; the public kind is `valueKind`.
+    var kind: GesValueKind { storageKind }
+
+    /// Portable value kind, the same type kinds as bytecode casts and checks. Integer and binary64 ranges are both
+    /// `.range`; records and external values are `.custom`.
+    public var valueKind: GesBytecodeTypeKind {
+        switch storageKind {
+        case .nothing: .nothing
+        case .boolean: .boolean
+        case .integer: .integer
+        case .float: .float
+        case .percentage: .percentage
+        case .text: .text
+        case .tag: .tag
+        case .vector: .vector
+        case .point: .point
+        case .dice: .dice
+        case .list: .list
+        case .map: .map
+        case .record, .external: .custom
+        case .integerRange, .floatRange: .range
+        case .message: .message
+        case .handler: .handler
+        case .series: .series
+        }
+    }
 
     // Every object accessor is guarded by a private discriminator set together with its payload.
     private func payload<Value>(_ type: Value.Type) -> Value { unsafeDowncast(object!, to: GesValueObject<Value>.self).value }
@@ -170,7 +194,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
 
     @inline(__always)
     mutating func setNothing() {
-        valueKind = .nothing
+        storageKind = .nothing
         valueUnit = .none
         flags = 0
         numericBits = 0
@@ -179,7 +203,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
 
     @inline(__always)
     mutating func setBoolean(_ value: Bool) {
-        valueKind = .boolean
+        storageKind = .boolean
         valueUnit = .none
         flags = Self.numericFlag | Self.hasValueFlag | (value ? Self.trueFlag : Self.falseFlag)
         numericBits = value ? 1 : 0
@@ -188,7 +212,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
 
     @inline(__always)
     mutating func setInteger(_ value: Int64, unit: GesQuantityUnit = .none) {
-        valueKind = .integer
+        storageKind = .integer
         valueUnit = unit
         flags = Self.numericFlag | Self.hasValueFlag | (value != 0 ? Self.trueFlag : Self.falseFlag)
         numericBits = UInt64(bitPattern: value)
@@ -205,7 +229,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
             setInteger(integer, unit: unit)
             return
         }
-        valueKind = .float
+        storageKind = .float
         valueUnit = unit
         flags = Self.numericFlag | Self.hasValueFlag | (value != 0 ? Self.trueFlag : Self.falseFlag)
         numericBits = value.bitPattern
@@ -218,7 +242,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
             setFloat(value)
             return
         }
-        valueKind = .percentage
+        storageKind = .percentage
         valueUnit = .none
         flags = Self.numericFlag | Self.hasValueFlag | (value != 0 ? Self.trueFlag : Self.falseFlag)
         numericBits = GesNumber.canonicalZero(value).bitPattern
@@ -226,7 +250,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
     }
 
     private mutating func setObject(_ kind: GesValueKind, _ value: AnyObject, unit: GesQuantityUnit = .none, hasValue: Bool = true, truth: Bool? = nil, numeric: Bool = false) {
-        valueKind = kind
+        storageKind = kind
         valueUnit = unit
         flags = Self.objectFlag | (hasValue ? Self.hasValueFlag : 0) | (truth == true ? Self.trueFlag : truth == false ? Self.falseFlag : 0) | (numeric ? Self.numericFlag : 0)
         numericBits = 0
@@ -240,7 +264,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
 
     // Linked string constants already own their immutable payload; loading or staging must not box again.
     mutating func setTextConstant(_ value: GesValue, tag: Bool) {
-        valueKind = tag ? .tag : .text
+        storageKind = tag ? .tag : .text
         valueUnit = .none
         flags = tag ? Self.objectFlag | Self.hasValueFlag | Self.falseFlag : value.flags
         numericBits = value.numericBits

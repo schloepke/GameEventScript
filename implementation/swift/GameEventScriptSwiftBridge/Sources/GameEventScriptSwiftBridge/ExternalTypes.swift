@@ -84,7 +84,7 @@ public final class GesBridgeTypeBinding<Root> {
 
     /// Only values created by this exact descriptor may be unwrapped.
     public func unwrap(_ value: GesValue) throws -> Root {
-        guard let box = value.externalValue as? GesBridgeExternalValue<Root>, box.type === self else { throw GesBridgeConversionError.typeMismatch(expected: definition.name, actual: value.customTypeName ?? String(describing: value.kind)) }
+        guard let box = value.externalValue as? GesBridgeExternalValue<Root>, box.type === self else { throw GesBridgeConversionError.typeMismatch(expected: definition.name, actual: value.customTypeName ?? String(describing: value.valueKind)) }
         return box.value
     }
 

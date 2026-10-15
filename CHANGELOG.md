@@ -85,6 +85,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `GesNumber`, `GesText` and `GesSpatialValue` (use `GesValue.x`/`y`/`z`) are
   internal, and `GesSeriesValue` with `GesValue.series(_:)`/`seriesValue` is
   available only to the Compiler.
+- Swift reports the public value kind as `GesValue.valueKind: GesBytecodeTypeKind`,
+  the same single type C# uses for `ValueKind`; `GesValueKind` and `kind` are no
+  longer public. Integer and binary64 ranges are both `.range` (use
+  `integerRangeValue`/`floatRangeValue`), and records and external values are
+  `.custom`. `GesMessageArguments.kindAt(_:)` returns `GesBytecodeTypeKind`.
 
 ### Changed
 

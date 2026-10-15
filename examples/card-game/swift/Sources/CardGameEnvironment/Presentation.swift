@@ -38,7 +38,7 @@ extension CardGame {
         }
         let actionJSON = offers.flatMap { activation in
             activation.offers.map { offer -> String in
-                let area = activation.area.map { $0.kind == .tag ? jsonString($0.asText) : $0.asText } ?? "null"
+                let area = activation.area.map { $0.valueKind == .tag ? jsonString($0.asText) : $0.asText } ?? "null"
                 return
                     "{\"id\":\(activation.id),\"kind\":\(jsonString(offer.kind)),\"label\":\(jsonString(activation.label)),\"button\":\(activation.button),\"zone\":\(activation.zone.map(jsonString) ?? "null"),\"area\":\(area),\"global\":\(activation.isGlobal),\"group\":\(activation.group.flatMap { id in bindings.groups.first { $0.id == id }.map { jsonString($0.kind) } } ?? "null"),\"priority\":\(activation.priority),\"optional\":\(activation.optional),\"remaining\":\(activation.remaining.map(String.init) ?? "null"),\"card\":\(offer.card.map(String.init) ?? "null")}"
             }

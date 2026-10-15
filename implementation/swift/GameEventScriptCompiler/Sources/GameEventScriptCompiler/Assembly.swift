@@ -14,7 +14,7 @@ extension GesCompiler {
     }
 
     func assemblyText(_ expression: GesExpression) throws -> String {
-        guard case .literal(let value) = expression.kind, value.kind == .text || value.kind == .tag, let text = value.textValue else { throw assemblyFailure(expression.location, "Expected literal text or tag.") }
+        guard case .literal(let value) = expression.kind, value.valueKind == .text || value.valueKind == .tag, let text = value.textValue else { throw assemblyFailure(expression.location, "Expected literal text or tag.") }
         return text
     }
 
@@ -26,13 +26,13 @@ extension GesCompiler {
     }
 
     func assemblyNumber(_ expression: GesExpression) throws -> Double {
-        guard case .literal(let value) = expression.kind, !value.hasUnit, value.kind == .integer || value.kind == .float else { throw assemblyFailure(expression.location, "Expected a numeric literal.") }
+        guard case .literal(let value) = expression.kind, !value.hasUnit, value.valueKind == .integer || value.valueKind == .float else { throw assemblyFailure(expression.location, "Expected a numeric literal.") }
         return value.asNumber
     }
 
     func assemblyScalar(_ expression: GesExpression) -> Bool {
         guard case .literal(let value) = expression.kind else { return false }
-        return [.nothing, .boolean, .integer, .float, .percentage, .text, .tag].contains(value.kind)
+        return [.nothing, .boolean, .integer, .float, .percentage, .text, .tag].contains(value.valueKind)
     }
 
     func assembly(_ block: GesAssembly, _ r: GesRoutine, _ outer: GesScope, destination: Int? = nil) throws {
@@ -258,7 +258,7 @@ extension GesCompiler {
     }
 
     func assemblyBooleanOperand(_ operand: GesExpression, _ state: [String: String]) -> Bool {
-        if case .literal(let value) = operand.kind { return value.kind == .nothing || value.kind == .boolean }
+        if case .literal(let value) = operand.kind { return value.valueKind == .nothing || value.valueKind == .boolean }
         if case .name(let name) = operand.kind { return state[name] == "boolean" }
         return false
     }

@@ -69,8 +69,8 @@ extension Bindings {
 
     func boolean(_ spec: GesValue, _ key: String, default fallback: Bool) throws -> Bool {
         let value = field(spec, key)
-        if value.kind == .nothing { return fallback }
-        guard value.kind == .boolean else { throw CardGameError("\(key) must be Boolean") }
+        if value.valueKind == .nothing { return fallback }
+        guard value.valueKind == .boolean else { throw CardGameError("\(key) must be Boolean") }
         return value.asBoolean
     }
 
@@ -88,7 +88,7 @@ extension Bindings {
     }
 
     func setupActions(_ value: GesValue) throws {
-        if value.kind == .nothing { return }
+        if value.valueKind == .nothing { return }
         guard let entries = value.listValue else { throw CardGameError("Setup actions must be a list") }
         for entry in entries { try activateSpec(entry, isGlobal: true) }
     }
@@ -97,12 +97,12 @@ extension Bindings {
         try requireActionEditing()
         try validateFields(spec, ["group", "player", "priority", "optional", "exclusive", "actions", "data"])
         let kind = try tag(field(spec, "group"))
-        let queued = field(spec, "player").kind != .nothing
+        let queued = field(spec, "player").valueKind != .nothing
         guard queued || currentPlayer != nil else { throw CardGameError("Preparation offers require a player") }
         let player = queued ? try checkedPlayer(field(spec, "player")) : currentPlayer!
         try validateTag(kind, player: player, isGlobal: false)
         guard let alternatives = field(spec, "actions").listValue, !alternatives.isEmpty else { throw CardGameError("Group requires alternatives") }
-        let priority = field(spec, "priority").kind == .nothing ? 0 : try integer(field(spec, "priority"))
+        let priority = field(spec, "priority").valueKind == .nothing ? 0 : try integer(field(spec, "priority"))
         let group = ActionGroup(
             id: nextActivation,
             kind: kind,
@@ -129,7 +129,7 @@ extension Bindings {
     private func activateSpec(_ spec: GesValue, isGlobal: Bool = false, group: ActionGroup? = nil) throws {
         let base = ["action", "label", "button", "finishTurn", "consumable", "handler", "area", "zone", "cards"]
         try validateFields(spec, base + (group == nil ? ["optional", "priority"] + (isGlobal ? [] : ["player"]) : []))
-        let queued = group?.queued ?? (!isGlobal && field(spec, "player").kind != .nothing)
+        let queued = group?.queued ?? (!isGlobal && field(spec, "player").valueKind != .nothing)
         let player = try group?.player ?? (isGlobal ? nil : queued ? checkedPlayer(field(spec, "player")) : currentPlayer)
         guard isGlobal || player != nil else { throw CardGameError("Preparation offers require a player") }
         let kind = try tag(field(spec, "action"))
@@ -141,12 +141,12 @@ extension Bindings {
         let optional = try group?.optional ?? boolean(spec, "optional", default: true)
         let finishTurn = try boolean(spec, "finishTurn", default: false)
         guard !waitingForRound || queued || !finishTurn else { throw CardGameError("Between-round actions use NextRound, not finishTurn") }
-        let priority = try group?.priority ?? (field(spec, "priority").kind == .nothing ? 0 : integer(field(spec, "priority")))
+        let priority = try group?.priority ?? (field(spec, "priority").valueKind == .nothing ? 0 : integer(field(spec, "priority")))
         let consumption = field(spec, "consumable")
         let mode: String
         let remaining: Int?
-        if consumption.kind == .nothing || consumption.kind == .tag {
-            mode = consumption.kind == .nothing ? "auto" : try tag(consumption)
+        if consumption.valueKind == .nothing || consumption.valueKind == .tag {
+            mode = consumption.valueKind == .nothing ? "auto" : try tag(consumption)
             guard ["auto", "manual", "never"].contains(mode) else { throw CardGameError("Unknown consumption mode") }
             remaining = mode == "auto" ? 1 : nil
         } else {
@@ -156,12 +156,12 @@ extension Bindings {
             remaining = count
         }
         guard mode != "never" || (optional && !finishTurn) else { throw CardGameError("#never requires optional: true and finishTurn: false") }
-        let targets = ["area", "zone", "cards"].filter { field(spec, $0).kind != .nothing }
+        let targets = ["area", "zone", "cards"].filter { field(spec, $0).valueKind != .nothing }
         guard targets.count == 1 else { throw CardGameError("Action requires exactly one area, zone or cards target") }
         let zone = targets[0] == "zone" ? try tag(field(spec, "zone")) : nil
         if let zone { _ = try board.zone(zone) }
         let area = targets[0] == "area" ? field(spec, "area") : nil
-        if let area, area.kind != .tag || area.asText != "table" { _ = try checkedPlayer(area) }
+        if let area, area.valueKind != .tag || area.asText != "table" { _ = try checkedPlayer(area) }
         let cards = targets[0] == "cards" ? try actionCards(field(spec, "cards")) : nil
         let labels = ["action"] + (isGlobal ? [] : ["player"]) + (cards == nil ? [] : ["card"])
         guard let handler = field(spec, "handler").signatureValue, handler.parameters == labels else { throw CardGameError("Expected a handler with parameters " + labels.joined(separator: ", ")) }

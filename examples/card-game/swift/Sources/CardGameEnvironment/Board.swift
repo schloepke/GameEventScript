@@ -70,7 +70,7 @@ struct Board {
 
     mutating func addCard(zone: String, properties: GesValue) throws {
         let index = try zoneIndex(zone)
-        guard properties.kind == .map, cards.count < 512 else { throw CardGameError("Card properties must be a map; maximum 512 cards") }
+        guard properties.valueKind == .map, cards.count < 512 else { throw CardGameError("Card properties must be a map; maximum 512 cards") }
         let card = Card(id: cards.count + 1, properties: properties)
         cards.append(card)
         zones[index].cards.append(card.id)
@@ -111,17 +111,17 @@ struct Board {
 }
 
 func integer(_ value: GesValue) throws -> Int {
-    guard value.kind == .integer, value.unit == .none, let result = Int(exactly: value.asInteger) else { throw CardGameError("Expected a platform-representable unitless integer") }
+    guard value.valueKind == .integer, value.unit == .none, let result = Int(exactly: value.asInteger) else { throw CardGameError("Expected a platform-representable unitless integer") }
     return result
 }
 
 func text(_ value: GesValue) throws -> String {
-    guard value.kind == .text else { throw CardGameError("Expected text") }
+    guard value.valueKind == .text else { throw CardGameError("Expected text") }
     return value.asText
 }
 
 func tag(_ value: GesValue) throws -> String {
-    guard value.kind == .tag else { throw CardGameError("Expected tag") }
+    guard value.valueKind == .tag else { throw CardGameError("Expected tag") }
     return value.asText
 }
 

@@ -77,8 +77,8 @@ enum NumberTextProbe {
         case .degree: unit = "degree"
         }
         if let integer = value.integerValue { return "integer:\(integer):\(unit)" }
-        guard value.kind == .float || value.kind == .percentage else { throw ToolError.invalidFixture("Non-numeric result") }
-        let kind = value.kind == .percentage ? "percentage" : "float"
+        guard value.valueKind == .float || value.valueKind == .percentage else { throw ToolError.invalidFixture("Non-numeric result") }
+        let kind = value.valueKind == .percentage ? "percentage" : "float"
         let hex = String(value.asNumber.bitPattern, radix: 16)
         return kind + ":" + String(repeating: "0", count: 16 - hex.count) + hex + ":" + unit
     }

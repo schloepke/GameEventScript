@@ -137,7 +137,7 @@ final class RunObserver: GesRuntimeObserver {
     private func format(_ message: GameEventScriptMessage) -> String {
         var text = message.name
         if !message.arguments.isEmpty {
-            text += "(" + (0..<message.arguments.count).map { message.arguments.nameAt($0) + ": " + (message.arguments[$0].kind == .text ? quoted(message.arguments[$0].asText) : message.arguments[$0].description) }.joined(separator: ", ") + ")"
+            text += "(" + (0..<message.arguments.count).map { message.arguments.nameAt($0) + ": " + (message.arguments[$0].valueKind == .text ? quoted(message.arguments[$0].asText) : message.arguments[$0].description) }.joined(separator: ", ") + ")"
         }
         if !message.tags.isEmpty { text += " with " + message.tags.map { "#" + $0 }.joined(separator: ", ") }
         return text
@@ -147,7 +147,11 @@ final class RunObserver: GesRuntimeObserver {
         var text = ""
         for index in 0..<message.arguments.count {
             let value = message.arguments[index]
-            if options.color && !error && value.kind != .text { text += [.integer, .float, .percentage].contains(value.kind) ? Highlighting.paint(value.description, 34) : highlighting.render(value.description) } else { text += value.description }
+            if options.color && !error && value.valueKind != .text {
+                text += [.integer, .float, .percentage].contains(value.valueKind) ? Highlighting.paint(value.description, 34) : highlighting.render(value.description)
+            } else {
+                text += value.description
+            }
         }
         io.line(options.color && error ? Highlighting.paint(text, 31) : text, toError: error)
     }
@@ -165,12 +169,12 @@ final class RunObserver: GesRuntimeObserver {
         func handle(_ message: GameEventScriptMessage, context: GesContext) throws {
             guard message.arguments.count == 1, ["code", "_"].contains(message.arguments.nameAt(0)) else { throw try invalid() }
             let value = message.arguments[0]
-            if value.kind == .nothing {
+            if value.valueKind == .nothing {
                 observer.exitCode = 0
                 return
             }
             let number = value.asNumber
-            guard [.integer, .float].contains(value.kind), value.unit == .none, number.isFinite, (0...255).contains(number), number == number.rounded(.towardZero) else { throw try invalid() }
+            guard [.integer, .float].contains(value.valueKind), value.unit == .none, number.isFinite, (0...255).contains(number), number == number.rounded(.towardZero) else { throw try invalid() }
             observer.exitCode = Int(number)
         }
 

@@ -141,7 +141,7 @@ extension GesParser {
             let token = advance()
             guard let value = GesCompilerSupport.number(token.text, percentage: token.text.hasSuffix("%")) else { throw failure("Invalid numeric literal.", token) }
             let result = node(.literal(value), start)
-            result.decimalLiteral = token.text.contains(".") || value.kind == .float
+            result.decimalLiteral = token.text.contains(".") || value.valueKind == .float
             return result
         }
         if current.kind == "text" { return node(.literal(.text(advance().text)), start) }

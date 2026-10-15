@@ -75,7 +75,7 @@ extension GesParser {
         switch expression.kind {
         case .unary("-", let operand):
             guard case .literal(let value) = operand.kind, value.isNumeric else { return expression }
-            if value.kind == .percentage {
+            if value.valueKind == .percentage {
                 kind = .literal(.percentage(-value.asNumber))
             } else if let integer = value.integerValue, integer != Int64.min {
                 kind = .literal(.integer(-integer, unit: value.unit))

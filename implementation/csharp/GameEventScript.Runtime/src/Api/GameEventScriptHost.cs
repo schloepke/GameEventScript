@@ -4,8 +4,8 @@
 using System;
 using System.Collections.Generic;
 using GameEventScript.Runtime;
-using GameEventScript.Runtime.VM;
-using static GameEventScript.Runtime.VM.GesVirtualMachine.StateValue;
+using GameEventScript.Runtime.Vm;
+using static GameEventScript.Runtime.Vm.GesVirtualMachine.StateValue;
 
 namespace GameEventScript.Api;
 

@@ -155,7 +155,7 @@ public sealed class GesExtensionCall
 {
     private GesContext? _context;
     private GesValueArguments _arguments = GesValueArguments.Empty;
-    private Runtime.VM.GesVirtualMachine? _vm;
+    private Runtime.Vm.GesVirtualMachine? _vm;
     private ushort _destinationRegister;
     private GesValue _result;
     private bool _hasResult;
@@ -203,7 +203,7 @@ public sealed class GesExtensionCall
 
     internal bool HasResult => _hasResult;
 
-    internal void BeginCall(Runtime.VM.GesVirtualMachine vm, ushort destinationRegister, GesContext context, GesValueArguments arguments)
+    internal void BeginCall(Runtime.Vm.GesVirtualMachine vm, ushort destinationRegister, GesContext context, GesValueArguments arguments)
     {
         _vm = vm ?? throw new ArgumentNullException(nameof(vm));
         _destinationRegister = destinationRegister;

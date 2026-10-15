@@ -124,7 +124,7 @@ public interface IGesExternalTypeConstructor
 public sealed class GesExternalTypeConstructorCall
 {
     private GesValueArguments _arguments = GesValueArguments.Empty;
-    private Runtime.VM.GesVirtualMachine? _vm;
+    private Runtime.Vm.GesVirtualMachine? _vm;
     private ushort _destinationRegister;
     private string? _expectedTypeName;
     private GesValue _result;
@@ -158,7 +158,7 @@ public sealed class GesExternalTypeConstructorCall
 
     internal bool HasResult => _hasResult;
 
-    internal void BeginCall(Runtime.VM.GesVirtualMachine vm, ushort destinationRegister, GesValueArguments arguments, string expectedTypeName)
+    internal void BeginCall(Runtime.Vm.GesVirtualMachine vm, ushort destinationRegister, GesValueArguments arguments, string expectedTypeName)
     {
         _vm = vm ?? throw new ArgumentNullException(nameof(vm));
         _destinationRegister = destinationRegister;

@@ -8,7 +8,7 @@ using System.Reflection;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
 using GameEventScript.Runtime.Values;
-using GameEventScript.Runtime.VM;
+using GameEventScript.Runtime.Vm;
 
 namespace GameEventScript.CSharpBridge;
 

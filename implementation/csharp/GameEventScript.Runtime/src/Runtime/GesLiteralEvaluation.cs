@@ -3,7 +3,7 @@
 using System.Collections.Generic;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using GameEventScript.Runtime.VM;
+using GameEventScript.Runtime.Vm;
 using static GameEventScript.Api.GesBindingSegment;
 
 namespace GameEventScript.Runtime;

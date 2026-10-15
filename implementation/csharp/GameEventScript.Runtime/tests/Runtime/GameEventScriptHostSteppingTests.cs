@@ -3,7 +3,7 @@
 
 using GameEventScript.Api;
 using GameEventScript.CSharpBridge;
-using GameEventScript.Runtime.VM;
+using GameEventScript.Runtime.Vm;
 using static GameEventScript.Api.GameEventScriptMessage;
 
 namespace GameEventScript.Tests.Native.Runtime;

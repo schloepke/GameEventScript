@@ -3,7 +3,7 @@
 
 using System;
 using GameEventScript.Api;
-using GameEventScript.Runtime.VM;
+using GameEventScript.Runtime.Vm;
 
 namespace GameEventScript.Runtime.Values;
 

@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 using GameEventScript.Api;
-using GameEventScript.Runtime.VM;
+using GameEventScript.Runtime.Vm;
 
 namespace GameEventScript.Compiler;
 

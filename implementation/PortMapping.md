@@ -303,7 +303,7 @@ contains exactly the measured reference sources plus the recalibrated corpus.
 
 ### Phase 3 – Internal names and layers
 
-- [ ] `VM` → `Vm` in namespaces and folders.
+- [x] `VM` → `Vm` in namespaces and folders.
 - [ ] Validators in the Program layer with identical split.
 - [ ] Host internals, value types and iterators per the internal mapping table.
 - [ ] Align public value types (`GesValueSlice`, `GesMapEntry`, `GesSeriesValue`,

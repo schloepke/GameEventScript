@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using GameEventScript.Api;
 using static GameEventScript.Api.GesBinaryBindKind;
 
-namespace GameEventScript.Runtime.Vm;
+namespace GameEventScript.Api;
 
 internal static class GesProgramCallGraphValidator
 {

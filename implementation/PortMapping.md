@@ -304,7 +304,8 @@ contains exactly the measured reference sources plus the recalibrated corpus.
 ### Phase 3 – Internal names and layers
 
 - [x] `VM` → `Vm` in namespaces and folders.
-- [ ] Validators in the Program layer with identical split.
+- [x] Validators in the Program layer with identical split (C# `Api/Validation`, Swift
+      `Api/Program/Validation`; CallGraph runs Resource in both, Debug is separate).
 - [ ] Host internals, value types and iterators per the internal mapping table.
 - [ ] Align public value types (`GesValueSlice`, `GesMapEntry`, `GesSeriesValue`,
       `GesSpatialValue`, `GesValueKind`, Swift `GesText`/`GesNumber`): same set in

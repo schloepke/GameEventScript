@@ -7,7 +7,7 @@ using GameEventScript.Api;
 using static GameEventScript.Api.GesBinaryBindKind;
 using static GameEventScript.Api.GesBytecodeOpCode;
 
-namespace GameEventScript.Runtime.Vm;
+namespace GameEventScript.Api;
 
 internal readonly struct GesProgramResourceValidator
 {

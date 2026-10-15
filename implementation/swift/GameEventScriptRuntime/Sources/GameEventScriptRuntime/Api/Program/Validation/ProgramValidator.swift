@@ -56,9 +56,9 @@ enum GesProgramValidator {
         if maxRegisters != p.requiredRegisterCount || maxDepth != p.requiredCallStackDepth { throw failure(.invalidResourceMetadata, 1) }
         if !p.stringConstants.contains(where: { GesText.scalarEqual($0, p.moduleName) }) { throw failure(.invalidStringIndex, 1) }
         for (index, instruction) in p.code.enumerated() { try validateInstruction(p, instruction, index, ids) }
-        try validateDebug(p)
-        try validateOpaque(p)
-        try GesProgramResourceValidator.validate(p)
+        try GesProgramDebugValidator.validate(p)
+        try GesProgramDebugValidator.validateOpaque(p)
+        try GesProgramCallGraphValidator.validate(p)
     }
 
     static func failure(_ code: GesProgramFormatErrorCode, _ section: UInt16? = nil, _ entry: Int? = nil) -> GesProgramFormatError { .init(code, sectionType: section, entryIndex: entry) }

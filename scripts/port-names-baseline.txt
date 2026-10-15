@@ -326,7 +326,6 @@ only	csharp	Runtime	GesIteratorResult
 only	csharp	Runtime	GesListIterator
 only	csharp	Runtime	GesMessageJsonCodec
 only	csharp	Runtime	GesNumericWithUnit
-only	csharp	Runtime	GesProgramCallGraphValidator
 only	csharp	Runtime	GesProgramEnumValidation
 only	csharp	Runtime	GesRuntimeLimitUtilities
 only	csharp	Runtime	GesSeriesCursor

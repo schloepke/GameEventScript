@@ -6,7 +6,7 @@ using GameEventScript.Api;
 using static GameEventScript.Api.GameEventScriptOpcodePrinter.OperandPart;
 using static GameEventScript.Api.GesBytecodeOpCode;
 
-namespace GameEventScript.Runtime.Vm;
+namespace GameEventScript.Api;
 
 // Follow each internal producer until its register is overwritten. This avoids
 // retaining a register-state matrix for every instruction in an untrusted file.

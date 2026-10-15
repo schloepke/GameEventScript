@@ -7,7 +7,7 @@ using GameEventScript.Compiler;
 using GameEventScript.Runtime;
 using static GameEventScript.Api.GesDiagnosticCodes;
 using static GameEventScript.Api.GesDiagnosticSymbolKind;
-using static GameEventScript.Compiler.GameEventScriptCallableKind;
+using static GameEventScript.Compiler.GesCallableKind;
 
 namespace GameEventScript.Api;
 
@@ -18,7 +18,7 @@ public sealed class GesProgramBuilder
 {
     private readonly List<SourceInput> _sources = [];
     private GesCompileOptions _options = new();
-    private IGesExternalTypeCatalog _externalTypeCatalog = GameEventScriptEmptyExternalTypeCatalog.Instance;
+    private IGesExternalTypeCatalog _externalTypeCatalog = GesEmptyExternalTypeCatalog.Instance;
 
     /// <summary>
     /// Creates an empty source builder with default compile options.
@@ -109,7 +109,7 @@ public sealed class GesProgramBuilder
     internal GesSyntaxTreeModule BuildModule(GesCompileOptions? options = null)
     {
         var compileOptions = options ?? _options;
-        var modules = new ParsedScript[_sources.Count];
+        var modules = new GesParsedScript[_sources.Count];
         for (var index = 0; index < _sources.Count; index++)
         {
             var source = _sources[index];
@@ -139,7 +139,7 @@ public sealed class GesProgramBuilder
             var conflictModule = FindModuleWithCallable(modules, conflictName, true) ??
                                  FindModuleWithCallable(modules, conflictName, false);
             var conflictNode = FindCallableNode(conflictModule?.FunctionDefinitions, conflictName) ??
-                               (ScriptNode?)FindCallableNode(conflictModule?.PredicateDefinitions, conflictName);
+                               (GesScriptNode?)FindCallableNode(conflictModule?.PredicateDefinitions, conflictName);
             errors.Add(conflictModule, $"Name '{conflictName}' is declared as both a predicate and a function", conflictName, GlobalDefinition, ValidatePredicateFunctionConflict, conflictNode);
         }
 
@@ -163,7 +163,7 @@ public sealed class GesProgramBuilder
 
     private sealed record SourceInput(string Text, string? SourceName);
 
-    private static string ResolveModuleName(IReadOnlyList<ParsedScript> modules, GesValidationErrors errors)
+    private static string ResolveModuleName(IReadOnlyList<GesParsedScript> modules, GesValidationErrors errors)
     {
         var result = string.Empty;
         for (var index = 0; index < modules.Count; index++)
@@ -185,9 +185,9 @@ public sealed class GesProgramBuilder
         return result;
     }
 
-    private static Dictionary<string, ExpressionNode> BuildConstantDefinitionMap(IReadOnlyList<ParsedScript> modules, GesValidationErrors errors)
+    private static Dictionary<string, GesExpressionNode> BuildConstantDefinitionMap(IReadOnlyList<GesParsedScript> modules, GesValidationErrors errors)
     {
-        var map = new Dictionary<string, ExpressionNode>(StringComparer.Ordinal);
+        var map = new Dictionary<string, GesExpressionNode>(StringComparer.Ordinal);
         foreach (var module in modules)
         {
             foreach (var definition in module.ConstantDefinitions)
@@ -202,13 +202,13 @@ public sealed class GesProgramBuilder
         return map;
     }
 
-    private static ParsedScript? FindModuleWithCallable(IReadOnlyList<ParsedScript> modules, string name, bool function)
+    private static GesParsedScript? FindModuleWithCallable(IReadOnlyList<GesParsedScript> modules, string name, bool function)
     {
         for (var moduleIndex = 0; moduleIndex < modules.Count; moduleIndex++)
         {
             var module = modules[moduleIndex];
             var definitions = function
-                ? (IReadOnlyList<ScriptNode>)module.FunctionDefinitions
+                ? (IReadOnlyList<GesScriptNode>)module.FunctionDefinitions
                 : module.PredicateDefinitions;
             if (FindCallableNode(definitions, name) is not null)
             {
@@ -219,7 +219,7 @@ public sealed class GesProgramBuilder
         return null;
     }
 
-    private static ScriptNode? FindCallableNode(IReadOnlyList<ScriptNode>? definitions, string name)
+    private static GesScriptNode? FindCallableNode(IReadOnlyList<GesScriptNode>? definitions, string name)
     {
         if (definitions is null)
         {
@@ -231,8 +231,8 @@ public sealed class GesProgramBuilder
             var definition = definitions[index];
             var definitionName = definition switch
             {
-                FunctionDefinitionNode function => function.Name,
-                PredicateDefinitionNode predicate => predicate.Name,
+                GesFunctionDefinitionNode function => function.Name,
+                GesPredicateDefinitionNode predicate => predicate.Name,
                 _ => null
             };
             if (string.Equals(definitionName, name, StringComparison.Ordinal))
@@ -244,9 +244,9 @@ public sealed class GesProgramBuilder
         return null;
     }
 
-    private static Dictionary<string, IReadOnlyList<EventHandlerNode>> BuildHandlerMap(IReadOnlyList<ParsedScript> modules)
+    private static Dictionary<string, IReadOnlyList<GesEventHandlerNode>> BuildHandlerMap(IReadOnlyList<GesParsedScript> modules)
     {
-        var map = new Dictionary<string, IReadOnlyList<EventHandlerNode>>(StringComparer.Ordinal);
+        var map = new Dictionary<string, IReadOnlyList<GesEventHandlerNode>>(StringComparer.Ordinal);
 
         foreach (var module in modules)
         {
@@ -254,24 +254,24 @@ public sealed class GesProgramBuilder
             {
                 if (!map.TryGetValue(handler.Message, out var existing))
                 {
-                    var newHandlers = new List<EventHandlerNode>();
+                    var newHandlers = new List<GesEventHandlerNode>();
                     newHandlers.Add(handler);
                     map[handler.Message] = newHandlers;
                     continue;
                 }
 
-                ((List<EventHandlerNode>)existing).Add(handler);
+                ((List<GesEventHandlerNode>)existing).Add(handler);
             }
         }
 
         return map;
     }
 
-    private static IReadOnlyDictionary<string, TypeDefinitionNode> BuildValidationTypeDefinitionMap(IReadOnlyDictionary<string, TypeDefinitionNode> scriptTypes, IGesExternalTypeCatalog externalTypes,
-        IReadOnlyList<ParsedScript> modules, GesValidationErrors errors)
+    private static IReadOnlyDictionary<string, GesTypeDefinitionNode> BuildValidationTypeDefinitionMap(IReadOnlyDictionary<string, GesTypeDefinitionNode> scriptTypes, IGesExternalTypeCatalog externalTypes,
+        IReadOnlyList<GesParsedScript> modules, GesValidationErrors errors)
     {
         if (externalTypes.Types.Count == 0) return scriptTypes;
-        var map = new Dictionary<string, TypeDefinitionNode>(scriptTypes, StringComparer.Ordinal);
+        var map = new Dictionary<string, GesTypeDefinitionNode>(scriptTypes, StringComparer.Ordinal);
         for (var externalTypeIndex = 0; externalTypeIndex < externalTypes.Types.Count; externalTypeIndex++)
         {
             var externalType = externalTypes.Types[externalTypeIndex];
@@ -282,20 +282,20 @@ public sealed class GesProgramBuilder
                 continue;
             }
 
-            var fields = new TypeFieldDefinitionNode[externalType.Fields.Count];
+            var fields = new GesTypeFieldDefinitionNode[externalType.Fields.Count];
             for (var index = 0; index < fields.Length; index++)
             {
                 var field = externalType.Fields[index];
-                fields[index] = new TypeFieldDefinitionNode(field.Name, field.TypeName, null, null, null, field.Name);
+                fields[index] = new GesTypeFieldDefinitionNode(field.Name, field.TypeName, null, null, null, field.Name);
             }
 
-            map[externalType.Name] = new TypeDefinitionNode(externalType.Name, fields);
+            map[externalType.Name] = new GesTypeDefinitionNode(externalType.Name, fields);
         }
 
         return map;
     }
 
-    private static ParsedScript? FindModuleWithType(IReadOnlyList<ParsedScript> modules, string name)
+    private static GesParsedScript? FindModuleWithType(IReadOnlyList<GesParsedScript> modules, string name)
     {
         for (var moduleIndex = 0; moduleIndex < modules.Count; moduleIndex++)
         {
@@ -312,9 +312,9 @@ public sealed class GesProgramBuilder
         return null;
     }
 
-    private static Dictionary<string, TypeDefinitionNode> BuildTypeDefinitionMap(IReadOnlyList<ParsedScript> modules, GesValidationErrors errors)
+    private static Dictionary<string, GesTypeDefinitionNode> BuildTypeDefinitionMap(IReadOnlyList<GesParsedScript> modules, GesValidationErrors errors)
     {
-        var map = new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal);
+        var map = new Dictionary<string, GesTypeDefinitionNode>(StringComparer.Ordinal);
         foreach (var module in modules)
         {
             foreach (var typeDefinition in module.TypeDefinitions)
@@ -329,9 +329,9 @@ public sealed class GesProgramBuilder
         return map;
     }
 
-    private static Dictionary<string, PredicateDefinitionNode> BuildPredicateDefinitionMap(IReadOnlyList<ParsedScript> modules, GesValidationErrors errors)
+    private static Dictionary<string, GesPredicateDefinitionNode> BuildPredicateDefinitionMap(IReadOnlyList<GesParsedScript> modules, GesValidationErrors errors)
     {
-        var map = new Dictionary<string, PredicateDefinitionNode>(StringComparer.Ordinal);
+        var map = new Dictionary<string, GesPredicateDefinitionNode>(StringComparer.Ordinal);
         foreach (var module in modules)
         {
             foreach (var predicateDefinition in module.PredicateDefinitions)
@@ -345,9 +345,9 @@ public sealed class GesProgramBuilder
         return map;
     }
 
-    private static Dictionary<string, FunctionDefinitionNode> BuildFunctionDefinitionMap(IReadOnlyList<ParsedScript> modules, GesValidationErrors errors)
+    private static Dictionary<string, GesFunctionDefinitionNode> BuildFunctionDefinitionMap(IReadOnlyList<GesParsedScript> modules, GesValidationErrors errors)
     {
-        var map = new Dictionary<string, FunctionDefinitionNode>(StringComparer.Ordinal);
+        var map = new Dictionary<string, GesFunctionDefinitionNode>(StringComparer.Ordinal);
         foreach (var module in modules)
         {
             foreach (var functionDefinition in module.FunctionDefinitions)
@@ -360,7 +360,7 @@ public sealed class GesProgramBuilder
         return map;
     }
 
-    private static Dictionary<string, GesCallableDefinition> BuildCallableDefinitionMap(IReadOnlyDictionary<string, PredicateDefinitionNode> predicateDefinitions, IReadOnlyDictionary<string, FunctionDefinitionNode> functionDefinitions)
+    private static Dictionary<string, GesCallableDefinition> BuildCallableDefinitionMap(IReadOnlyDictionary<string, GesPredicateDefinitionNode> predicateDefinitions, IReadOnlyDictionary<string, GesFunctionDefinitionNode> functionDefinitions)
     {
         var map = new Dictionary<string, GesCallableDefinition>(StringComparer.Ordinal);
 

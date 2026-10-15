@@ -35,7 +35,7 @@ public sealed partial class GameEventScriptHost
         {
             // Absence of a recipient is still successful acceptance; a full queue is not.
             if (IsMessageQueueFull && (HasMatch(message, Get(_exact, message.SignatureId), Get(_byName, message.Name)) ||
-                !GameEventScriptSystemEndpoints.IsUndeliverableName(message.Name) && HasMatch(message, Get(_exact, GameEventScriptSystemEndpoints.UndeliverableSignatureId), Get(_byName, GameEventScriptSystemEndpoints.UndeliverableName))))
+                !GesSystemEndpoints.IsUndeliverableName(message.Name) && HasMatch(message, Get(_exact, GesSystemEndpoints.UndeliverableSignatureId), Get(_byName, GesSystemEndpoints.UndeliverableName))))
             {
                 _context.RuntimeBudget.Exhaust(nameof(GesRuntimeLimits.MaxQueuedMessagesPerRun), "Message queue limit reached.", _limits.MaxQueuedMessagesPerRun);
                 return false;
@@ -53,10 +53,10 @@ public sealed partial class GameEventScriptHost
         }
         var exact = Get(_exact, message.SignatureId);
         var names = Get(_byName, message.Name);
-        if (!HasMatch(message, exact, names) && !GameEventScriptSystemEndpoints.IsUndeliverableName(message.Name))
+        if (!HasMatch(message, exact, names) && !GesSystemEndpoints.IsUndeliverableName(message.Name))
         {
-            exact = Get(_exact, GameEventScriptSystemEndpoints.UndeliverableSignatureId);
-            names = Get(_byName, GameEventScriptSystemEndpoints.UndeliverableName);
+            exact = Get(_exact, GesSystemEndpoints.UndeliverableSignatureId);
+            names = Get(_byName, GesSystemEndpoints.UndeliverableName);
         }
         var pending = new GesPendingMessage(message, exact, names, initializationOutput: _initializationInstance);
         var delayed = new GesDelayedMessage(now + microseconds, pending, publish, _initializationInstance);
@@ -104,7 +104,7 @@ public sealed partial class GameEventScriptHost
                 try { accepted = _publishSink!.Publish(delayed.Pending.Message); }
                 catch (Exception exception)
                 {
-                    _observer?.RuntimeError(CreateRuntimeDiagnostic(GesDiagnosticCodes.RuntimePublishSinkFailure, "Publish sink failed.", GameEventScriptRuntimeExceptionText.Describe(exception)));
+                    _observer?.RuntimeError(CreateRuntimeDiagnostic(GesDiagnosticCodes.RuntimePublishSinkFailure, "Publish sink failed.", GesRuntimeExceptionText.Describe(exception)));
                 }
             }
             _observer?.MessagePublished(delayed.Pending.Message, new(localAccepted, attempted, accepted));

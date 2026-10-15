@@ -48,7 +48,7 @@ public sealed class GesFieldAttribute : Attribute
     public GesFieldAttribute(string name, GesBytecodeTypeKind kind)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
-        TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit: null);
+        TypeName = GesExternalTypeNames.ToTypeName(kind, unit: null);
         Kind = kind;
     }
 
@@ -61,7 +61,7 @@ public sealed class GesFieldAttribute : Attribute
     public GesFieldAttribute(string name, GesBytecodeTypeKind kind, GesQuantityUnit unit)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
-        TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit);
+        TypeName = GesExternalTypeNames.ToTypeName(kind, unit);
         Kind = kind;
         Unit = unit.ToStoredUnit();
     }
@@ -118,7 +118,7 @@ public sealed class GesParamAttribute : Attribute
     public GesParamAttribute(string name, GesBytecodeTypeKind kind)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
-        TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit: null);
+        TypeName = GesExternalTypeNames.ToTypeName(kind, unit: null);
         Kind = kind;
     }
 
@@ -131,7 +131,7 @@ public sealed class GesParamAttribute : Attribute
     public GesParamAttribute(string name, GesBytecodeTypeKind kind, GesQuantityUnit unit)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
-        TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit);
+        TypeName = GesExternalTypeNames.ToTypeName(kind, unit);
         Kind = kind;
         Unit = unit.ToStoredUnit();
     }
@@ -212,7 +212,7 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
     /// <returns>The result of the operation.</returns>
     public GesExternalTypeDefinition? Resolve(string typeName)
     {
-        var normalized = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
+        var normalized = GesExternalTypeNames.NormalizeTypeName(typeName);
         return _typesByName.TryGetValue(normalized, out var definition) ? definition : null;
     }
 
@@ -248,7 +248,7 @@ public sealed class GesBridgeExternalTypeRegistry : IGesExternalTypeCatalog, IGe
     {
         var typeAttribute = clrType.GetCustomAttribute<GesTypeAttribute>() ??
                             throw new ArgumentException($"CLR type '{clrType.FullName}' must declare GesTypeAttribute.", nameof(clrType));
-        var typeName = GameEventScriptExternalTypeNames.NormalizeTypeName(typeAttribute.TypeName);
+        var typeName = GesExternalTypeNames.NormalizeTypeName(typeAttribute.TypeName);
         var fields = BuildFields(clrType);
         var fieldReaders = fields.ToDictionary(
             field => field.Definition.Name,
@@ -454,7 +454,7 @@ internal sealed class GesBridgeExternalValue(object instance, GesBridgeExternalT
     {
         if (!binding.Fields.TryGetValue(fieldName, out var field)) return null;
         var value = registry.ToValue(field.Reader(Instance));
-        return GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(in value, field.Definition);
+        return GesExternalTypeValueConverter.CoerceToDeclaredType(in value, field.Definition);
     }
 }
 

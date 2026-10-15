@@ -39,7 +39,7 @@ public struct GesMessageSignature: Hashable, CustomStringConvertible, Sendable {
     /// Removes surrounding ASCII spaces and tabs and validates the message name.
     /// Nil and an empty result normalize to the empty identity.
     public static func normalizeMessageName(_ name: String?) throws -> String {
-        let normalized = MessageNames.trim(name ?? "")
+        let normalized = GesMessageNames.trim(name ?? "")
         if normalized.isEmpty || normalized == "initialization" || normalized == "undeliverable" { return normalized }
         guard GesText.isUpperName(normalized) else { throw GesMessageError.invalidName }
         return normalized
@@ -48,7 +48,7 @@ public struct GesMessageSignature: Hashable, CustomStringConvertible, Sendable {
     /// Removes surrounding ASCII spaces and tabs and validates an external label.
     /// Nil, empty, and whitespace-only inputs normalize to `_`.
     public static func normalizeParameterName(_ name: String?) throws -> String {
-        let normalized = MessageNames.trim(name ?? "")
+        let normalized = GesMessageNames.trim(name ?? "")
         if normalized.isEmpty || normalized == unlabeledParameterName { return unlabeledParameterName }
         guard GesText.isLowerName(normalized) else { throw GesMessageError.invalidParameterName }
         return normalized

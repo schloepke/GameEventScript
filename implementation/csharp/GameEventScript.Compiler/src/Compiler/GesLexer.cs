@@ -151,7 +151,7 @@ internal enum GesTokenKind
 
 internal readonly record struct GesToken(GesTokenKind Kind, string Text, int Line, int Column, int EndLine, int EndColumn, string UnitName = "")
 {
-    private Runtime.Values.GesValue NumericValue => TextNumberCast.Read(Text, percentage: Kind == GesTokenKind.Percentage,
+    private Runtime.Values.GesValue NumericValue => GesTextNumberCast.Read(Text, percentage: Kind == GesTokenKind.Percentage,
         allowGrouping: false, percentageMagnitude: Kind == GesTokenKind.Percentage) ?? Runtime.Values.GesValue.GesNothing();
 
     public double FloatValue => NumericValue.AsNumber();
@@ -611,7 +611,7 @@ internal sealed class GesLexer
     {
         var start = _index;
         var end = _index;
-        var text = TextLiteralReader.Read(_input, ref end);
+        var text = GesTextLiteralReader.Read(_input, ref end);
         while (_index < end) Advance();
         return text is null
             ? CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column)

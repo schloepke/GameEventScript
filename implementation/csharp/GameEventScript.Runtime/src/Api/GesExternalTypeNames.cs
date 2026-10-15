@@ -6,7 +6,7 @@ using GameEventScript.Runtime;
 
 namespace GameEventScript.Api;
 
-internal static class GameEventScriptExternalTypeNames
+internal static class GesExternalTypeNames
 {
     public static string ToTypeName(GesBytecodeTypeKind kind, GesQuantityUnit? unit)
     {

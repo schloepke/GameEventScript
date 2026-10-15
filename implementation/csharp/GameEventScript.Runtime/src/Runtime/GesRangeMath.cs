@@ -3,7 +3,7 @@
 
 namespace GameEventScript.Runtime;
 
-internal static class GameEventScriptRangeMath
+internal static class GesRangeMath
 {
     public static long GetLength(long from, long to, long step)
     {

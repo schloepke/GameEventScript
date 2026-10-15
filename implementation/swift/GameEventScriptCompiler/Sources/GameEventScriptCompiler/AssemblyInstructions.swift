@@ -4,7 +4,7 @@
 @_spi(Compiler) import GameEventScriptRuntime
 
 extension GesCompiler {
-    static let assemblyInstructions: [String: (Op, String, [Int])] = [
+    static let assemblyInstructions: [String: (GesBytecodeOpCode, String, [Int])] = [
         "Nop": (.nop, "", []),
         "RandomTake": (.randomTake, "wrr", [0, 1, 2]),
         "RandomTakeFloat": (.randomTakeFloat, "wrr", [0, 1, 2]),

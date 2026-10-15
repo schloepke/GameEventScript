@@ -5,7 +5,7 @@ using System.Text;
 
 namespace GameEventScript.Runtime;
 
-internal static class TextLiteralReader
+internal static class GesTextLiteralReader
 {
     internal static string? Read(string text, ref int position)
     {

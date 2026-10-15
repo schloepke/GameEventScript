@@ -177,7 +177,7 @@ internal static class GesVmRegisterSortGroupDistinct
             }
             case GesBytecodeTypeKind.Range when source.ObjectValue is GesIntegerRange range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+                var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length == 0)
                 {
                     vm.SetRange(destinationRegister, 0, 0, 0);
@@ -191,7 +191,7 @@ internal static class GesVmRegisterSortGroupDistinct
                     return;
                 }
 
-                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last)
+                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last)
                 {
                     vm.SetRange(destinationRegister, last, range.From, -range.Step);
                     return;
@@ -202,7 +202,7 @@ internal static class GesVmRegisterSortGroupDistinct
             }
             case GesBytecodeTypeKind.Range when source.ObjectValue is GesFloatRange range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+                var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length == 0)
                 {
                     vm.SetRange(destinationRegister, 0, 0, 0);
@@ -216,7 +216,7 @@ internal static class GesVmRegisterSortGroupDistinct
                     return;
                 }
 
-                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last)
+                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last)
                 {
                     vm.SetRange(destinationRegister, last, range.From, -range.Step);
                     return;

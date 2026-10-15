@@ -89,7 +89,7 @@ internal static class GesVirtualMachinePublisher
         var signature = vm.OutboundMessageSignatures[outboundMessageSignatureIndex];
         if (!signature.IsValid || argumentRegisters.Length != signature.ArgumentNames.Count) return false;
 
-        var tags = new GameEventScriptTagBuffer(tagRegisters.Length);
+        var tags = new GesTagBuffer(tagRegisters.Length);
         for (var index = 0; index < tagRegisters.Length; index++)
         {
             AddTagsToBuffer(tags, in vm.Register(tagRegisters[index]));
@@ -132,7 +132,7 @@ internal static class GesVirtualMachinePublisher
     internal static bool GesVmPublishMessageValueWithTags(this GesVirtualMachine vm, in GesValue messageValue, GesUInt16IndexList tagRegisters, bool publish, GesContext context, long? delay = null)
     {
         if (messageValue.Kind is not Message || messageValue.ObjectValue is not GameEventScriptMessage msg) return false;
-        var tags = new GameEventScriptTagBuffer(tagRegisters.Length);
+        var tags = new GesTagBuffer(tagRegisters.Length);
         for (var index = 0; index < tagRegisters.Length; index++)
         {
             AddTagsToBuffer(tags, in vm.Register(tagRegisters[index]));
@@ -141,7 +141,7 @@ internal static class GesVirtualMachinePublisher
         return delay is { } microseconds ? context.Send(message, publish, microseconds) : publish ? context.Publish(message).AnyAccepted : context.Emit(message);
     }
 
-    private static void AddTagsToBuffer(GameEventScriptTagBuffer tags, in GesValue value)
+    private static void AddTagsToBuffer(GesTagBuffer tags, in GesValue value)
     {
         if (value.Kind is List && value.ObjectValue is GesValue[] values)
         {

@@ -25,7 +25,7 @@ extension GesCallbacks {
                 s.setNothing(destination)
                 return
             }
-            arguments.append(GesExternalNames.coerce(value, kind: parameter.kind, unit: parameter.unit))
+            arguments.append(GesExternalTypeNames.coerce(value, kind: parameter.kind, unit: parameter.unit))
         }
         let call = s.constructorCall
         call.begin(arguments: .init(arguments), typeName: constructor.definition.typeName)

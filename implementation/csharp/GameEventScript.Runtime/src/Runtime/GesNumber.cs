@@ -24,7 +24,7 @@ internal static class GesNumber
         if (value.Kind == GesBytecodeTypeKind.Integer) return value;
         if (value.Kind == GesBytecodeTypeKind.Text)
         {
-            return TextNumberCast.Read(value.TextValue) ?? GesValue.GesNothing();
+            return GesTextNumberCast.Read(value.TextValue) ?? GesValue.GesNothing();
         }
 
         if (value.Kind == GesBytecodeTypeKind.Series && value.ObjectValue is GesSeriesValue series)

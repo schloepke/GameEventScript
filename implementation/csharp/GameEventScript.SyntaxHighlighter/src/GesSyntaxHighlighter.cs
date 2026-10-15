@@ -12,7 +12,7 @@ namespace GameEventScript.SyntaxHighlighter;
 /// <summary>Reusable GES/GESA TextMate highlighting without a Compiler, Runtime, UI or terminal dependency.</summary>
 public sealed class GesSyntaxHighlighter
 {
-    private static readonly GrammarRule[] Rules = EmbeddedGrammars.CreateRules();
+    private static readonly GesGrammarRule[] Rules = GesEmbeddedGrammars.CreateRules();
     /// <summary>The selected bundled grammar.</summary>
     public GesSyntaxLanguage Language { get; }
     /// <summary>Maximum UTF-16 input length for one call; larger inputs return an incomplete result.</summary>
@@ -28,7 +28,7 @@ public sealed class GesSyntaxHighlighter
         if (maxInputLength <= 0) throw new ArgumentOutOfRangeException(nameof(maxInputLength));
         Language = language;
         MaxInputLength = maxInputLength;
-        _roots = language == GesSyntaxLanguage.Ges ? EmbeddedGrammars.Source : EmbeddedGrammars.Assembly;
+        _roots = language == GesSyntaxLanguage.Ges ? GesEmbeddedGrammars.Source : GesEmbeddedGrammars.Assembly;
         _rootScope = language == GesSyntaxLanguage.Ges ? "source.gameeventscript" : "source.gameeventscript.assembler";
     }
 
@@ -139,7 +139,7 @@ public sealed class GesSyntaxHighlighter
         return scopes;
     }
 
-    private static void Emit(List<GesHighlightSpan> spans, int offset, Match match, List<string> scopes, CaptureRule[] captures)
+    private static void Emit(List<GesHighlightSpan> spans, int offset, Match match, List<string> scopes, GesCaptureRule[] captures)
     {
         var groups = captures.Where(c => c.Group < match.Groups.Count && match.Groups[c.Group].Success && match.Groups[c.Group].Length > 0)
             .Select(c => (Range: match.Groups[c.Group], c.Scope)).OrderByDescending(c => c.Range.Length).ToArray();
@@ -183,25 +183,25 @@ public sealed class GesSyntaxHighlighter
     }
 }
 
-internal sealed class CaptureRule(int group, string scope)
+internal sealed class GesCaptureRule(int group, string scope)
 {
     internal int Group { get; } = group;
     internal string Scope { get; } = scope;
 }
 
-internal sealed class GrammarRule
+internal sealed class GesGrammarRule
 {
     internal Regex Pattern { get; }
     internal Regex? End { get; }
     internal string Name { get; }
     internal string ContentName { get; }
-    internal CaptureRule[] Captures { get; }
-    internal CaptureRule[] BeginCaptures { get; }
-    internal CaptureRule[] EndCaptures { get; }
+    internal GesCaptureRule[] Captures { get; }
+    internal GesCaptureRule[] BeginCaptures { get; }
+    internal GesCaptureRule[] EndCaptures { get; }
     internal int[] Children { get; }
     internal bool EndLast { get; }
 
-    internal GrammarRule(string pattern, string end, string name, string contentName, CaptureRule[] captures, CaptureRule[] beginCaptures, CaptureRule[] endCaptures, int[] children, bool endLast)
+    internal GesGrammarRule(string pattern, string end, string name, string contentName, GesCaptureRule[] captures, GesCaptureRule[] beginCaptures, GesCaptureRule[] endCaptures, int[] children, bool endLast)
     {
         const RegexOptions options = RegexOptions.CultureInvariant | RegexOptions.Multiline;
         Pattern = new(pattern, options, TimeSpan.FromMilliseconds(100));

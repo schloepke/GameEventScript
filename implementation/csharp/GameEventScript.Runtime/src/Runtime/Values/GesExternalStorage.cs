@@ -46,7 +46,7 @@ internal sealed class GesExternalStorage
             }
             catch (System.Exception exception)
             {
-                throw new GameEventScriptCallbackFailureException(
+                throw new GesCallbackFailureException(
                     GesDiagnosticCodes.RuntimeExternalFieldAccessFailed,
                     $"External value '{Definition.Name}' field '{field.Name}' failed unexpectedly.",
                     symbol: Definition.Name + "." + field.Name, exception);

@@ -1916,7 +1916,7 @@ internal static class GesVmRegisterMath
             return;
         }
 
-        vm.SetFloat(destinationRegister, number / 180d * GameEventScriptMathConstants.Pi);
+        vm.SetFloat(destinationRegister, number / 180d * GesMathConstants.Pi);
     }
     internal static void GesVmDegreeFromRadians(this GesVirtualMachine vm, ushort destinationRegister, in GesValue a)
     {
@@ -1939,7 +1939,7 @@ internal static class GesVmRegisterMath
             return;
         }
 
-        vm.SetFloat(destinationRegister, number / GameEventScriptMathConstants.Pi * 180d, UnitDegree);
+        vm.SetFloat(destinationRegister, number / GesMathConstants.Pi * 180d, UnitDegree);
     }
     internal static void GesVmWrapDegree(this GesVirtualMachine vm, ushort destinationRegister, in GesValue a)
     {

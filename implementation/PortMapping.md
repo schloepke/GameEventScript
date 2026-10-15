@@ -318,7 +318,8 @@ contains exactly the measured reference sources plus the recalibrated corpus.
       `GesValueSlice` maps idiomatically to Swift `[GesValue]`. Open decision:
       Swift `GesValueKind` versus C# `GesBytecodeTypeKind` as the public value
       kind, and Swift `GesMapEntry` versus C# parallel key/value arrays.
-- [ ] `Ges` prefix for C# AST records and remaining unprefixed internal types.
+- [x] `Ges` prefix for C# AST records and remaining unprefixed internal types
+      (no prefix or abbreviation findings remain in the port gate).
 - [ ] Rename C# files whose type is renamed in this phase (for example
       `GameEventScriptExternalTypeValueConverter.cs`) and split
       `GameEventScriptProgram.cs` where it helps navigation.

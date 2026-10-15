@@ -3,13 +3,13 @@
 
 /// GES grammar, exact Int64 conversion, and decimal percentage scaling.
 /// Swift's decimal conversion is used only after grammar validation for binary64 rounding.
-enum TextNumberCast {
+enum GesTextNumberCast {
     static func read(_ input: String, percentage: Bool = false, allowGrouping: Bool = true, percentageMagnitude: Bool = false) -> GesValue? {
         read(input, percentage: percentage, allowGrouping: allowGrouping, percentageMagnitude: percentageMagnitude, sink: GesValueFactory())
     }
 
     static func read<Output: GesValueOutput>(_ input: String, percentage: Bool = false, allowGrouping: Bool = true, percentageMagnitude: Bool = false, sink: Output) -> Output.Result? {
-        var text = MessageNames.trim(input)
+        var text = GesMessageNames.trim(input)
         guard !text.isEmpty else { return nil }
         var unit: GesQuantityUnit = .none
         let scaled = percentageMagnitude || text.hasSuffix("%")

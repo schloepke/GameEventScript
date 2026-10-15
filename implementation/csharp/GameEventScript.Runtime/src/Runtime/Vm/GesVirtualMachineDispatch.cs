@@ -11,7 +11,7 @@ using static GameEventScript.Runtime.Vm.GesVirtualMachine.StateValue;
 
 namespace GameEventScript.Runtime.Vm;
 
-internal sealed class GameEventScriptVmException(GesDiagnostic diagnostic, Exception? innerException = null)
+internal sealed class GesVmException(GesDiagnostic diagnostic, Exception? innerException = null)
     : GesFatalRuntimeException(diagnostic, innerException);
 
 internal partial class GesVirtualMachine
@@ -19,7 +19,7 @@ internal partial class GesVirtualMachine
     internal void Begin(GesLinkedProgram program, GameEventScriptMessage message, bool matchArguments, ushort entryAddress, string handlerName, GesContext context)
     {
         if (State is Processing)
-            throw new GameEventScriptVmException(new GesDiagnostic(GesDiagnosticPhase.Runtime, GesDiagnosticCodes.RuntimeVmStateConflict, "Virtual machine is already processing another message."));
+            throw new GesVmException(new GesDiagnostic(GesDiagnosticPhase.Runtime, GesDiagnosticCodes.RuntimeVmStateConflict, "Virtual machine is already processing another message."));
         if (State != Ready) Reset();
         if (!PrepareStateForMessage(program, message, matchArguments, entryAddress, handlerName, context) && ErrorDiagnostic is null)
             RaiseError(GesDiagnosticCodes.RuntimePreparationFailed, "Failed to prepare state for message.");
@@ -288,7 +288,7 @@ internal partial class GesVirtualMachine
                         this.GesVmCreateRangeIterator(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), context);
                         break;
                     case CreateRangeIteratorShort:
-                        if (!context.RuntimeBudget.CheckRangeLengthWithinLimit(GameEventScriptRangeMath.GetLength(instruction.ImmediateX, instruction.ImmediateY, instruction.AS), "For loop range would enumerate more range items than allowed."))
+                        if (!context.RuntimeBudget.CheckRangeLengthWithinLimit(GesRangeMath.GetLength(instruction.ImmediateX, instruction.ImmediateY, instruction.AS), "For loop range would enumerate more range items than allowed."))
                         {
                             SetIterator(instruction.DestinationRegister, new GesIntegerRangeIterator(0, 0, 0));
                             break;
@@ -771,7 +771,7 @@ internal partial class GesVirtualMachine
         }
         catch (GesFatalRuntimeException exception)
         {
-            // A GesExtensionFaultException or GameEventScriptCallbackFailureException
+            // A GesExtensionFaultException or GesCallbackFailureException
             // already carries its own TechnicalDetails; only fall back to the CLR type
             // name for internal fatal signals that never set it.
             RaiseError(exception.Diagnostic, exception.Diagnostic.TechnicalDetails ?? exception.GetType().Name);
@@ -781,7 +781,7 @@ internal partial class GesVirtualMachine
             RaiseError(
                 GesDiagnosticCodes.RuntimeUnhandledFailure,
                 "Unhandled VM execution failure.",
-                GameEventScriptRuntimeExceptionText.Describe(exception));
+                GesRuntimeExceptionText.Describe(exception));
         }
 
         finally { profiler?.FinishSlice(); }

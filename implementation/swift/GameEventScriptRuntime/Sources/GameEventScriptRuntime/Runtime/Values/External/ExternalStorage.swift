@@ -17,7 +17,7 @@ final class GesExternalStorage: Hashable {
 
     func field(_ name: String) throws -> GesValue? {
         guard let field = definition.fields.first(where: { $0.name == name }) else { return nil }
-        do { return try value.field(name).map { GesExternalNames.coerce($0, kind: field.kind, unit: field.unit) } } catch let fault as GesExtensionFaultError { throw fault } catch let fault as GesRuntimeError { throw fault } catch {
+        do { return try value.field(name).map { GesExternalTypeNames.coerce($0, kind: field.kind, unit: field.unit) } } catch let fault as GesExtensionFaultError { throw fault } catch let fault as GesRuntimeError { throw fault } catch {
             throw GesRuntimeError(diagnostic: .init(phase: .runtime, code: "runtime.externalFieldAccessFailed", symbol: definition.name + "." + name, technicalDetails: String(describing: error)))
         }
     }

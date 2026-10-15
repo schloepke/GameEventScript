@@ -7,7 +7,7 @@ using GameEventScript.Runtime.Values;
 
 namespace GameEventScript.Runtime;
 
-internal static class GameEventScriptExternalTypeValueConverter
+internal static class GesExternalTypeValueConverter
 {
     internal static GesValue CoerceToDeclaredType(in GesValue value, GesExternalTypeParameterDefinition definition)
         => CoerceToDeclaredType(in value, definition.Kind, definition.Unit, definition.TypeName);
@@ -94,7 +94,7 @@ internal static class GameEventScriptExternalTypeValueConverter
         var text = value.ToText;
         if (value.Kind == GesBytecodeTypeKind.Text)
         {
-            if (GameEventScriptTagRules.NormalizeTextCast(text) is { } normalized)
+            if (GesTagRules.NormalizeTextCast(text) is { } normalized)
             {
                 result.SetTag(normalized);
                 return result;
@@ -104,7 +104,7 @@ internal static class GameEventScriptExternalTypeValueConverter
             return result;
         }
 
-        if (GameEventScriptTagRules.IsValidTagName(text))
+        if (GesTagRules.IsValidTagName(text))
         {
             result.SetTag(text);
             return result;

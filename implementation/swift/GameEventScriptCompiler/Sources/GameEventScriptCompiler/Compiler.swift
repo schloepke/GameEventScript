@@ -3,13 +3,10 @@
 
 @_spi(Compiler) import GameEventScriptRuntime
 
-typealias Op = GesBytecodeOpCode
-typealias Instruction = GesBytecodeInstruction
-
 final class GesRoutine {
     let definition: GesDefinition
     var key: String { definition.kind.hasSuffix("andler") ? definition.signature + "@\(definition.location.sourceID ?? 0):\(definition.location.line ?? 0):\(definition.location.column ?? 0)" : definition.signature }
-    var code: [Instruction] = []
+    var code: [GesBytecodeInstruction] = []
     var locations: [GesSourceLocation] = []
     var pinned: Set<Int> = []
     var registers: Int
@@ -41,7 +38,7 @@ final class GesRoutine {
         return result
     }
 
-    @discardableResult func emit(_ op: Op, _ d: Int = 0, _ x: Int = 0, _ y: Int = 0, payload: UInt64 = 0, flags: UInt8 = 0) -> Int {
+    @discardableResult func emit(_ op: GesBytecodeOpCode, _ d: Int = 0, _ x: Int = 0, _ y: Int = 0, payload: UInt64 = 0, flags: UInt8 = 0) -> Int {
         let i = code.count
         code.append(.init(opcode: op, unitAndFlags: flags, word0: UInt16(truncatingIfNeeded: d), word1: UInt16(truncatingIfNeeded: x), word2: UInt16(truncatingIfNeeded: y), payload: payload))
         locations.append(location)
@@ -300,7 +297,7 @@ final class GesCompiler {
             return resources[name]!
         }
 
-        var code: [Instruction] = []
+        var code: [GesBytecodeInstruction] = []
         var spans: [GesSourceMapEntry] = []
         var symbols: [GesDebugSymbol] = []
         var handlerIDs: [String: Int] = [:]
@@ -402,7 +399,7 @@ final class GesCompiler {
         }
     }
 
-    func anonymousName(_ bindings: [GesBindingSegment.Entry], _ code: [Instruction], _ registers: Int, _ depth: Int) -> String {
+    func anonymousName(_ bindings: [GesBindingSegment.Entry], _ code: [GesBytecodeInstruction], _ registers: Int, _ depth: Int) -> String {
         var hash: UInt32 = 2_166_136_261
 
         func mix(_ value: UInt64, _ count: Int) { for shift in 0..<count { hash = (hash ^ UInt32(UInt8(truncatingIfNeeded: value >> (shift * 8)))) &* 16_777_619 } }
@@ -492,7 +489,7 @@ final class GesCompiler {
             let result = GesCompilerSupport.castNumber(value)
             return result.kind == .float && !result.asNumber.isFinite ? nil : result
         case .binary(let op, let left, let right):
-            let operations: [String: Op] = ["+": .add, "-": .subtract, "*": .multiply, "/": .divide, "div": .integerDivide, "mod": .modulo, "rem": .remainder, "^": .power]
+            let operations: [String: GesBytecodeOpCode] = ["+": .add, "-": .subtract, "*": .multiply, "/": .divide, "div": .integerDivide, "mod": .modulo, "rem": .remainder, "^": .power]
             guard let opcode = operations[op], let a = scalarConstant(left), let b = scalarConstant(right), let result = GesCompilerSupport.arithmetic(opcode, a, b), result.kind != .float || result.asNumber.isFinite else { return nil }
             return result
         case .unary("-", let value):

@@ -166,7 +166,7 @@ extension GesCompiler {
             return
         }
         let take = s.operation == "take"
-        let op: Op = s.mode == "first" ? (take ? .takeFirst : .dropFirst) : s.mode == "last" ? (take ? .takeLast : .dropLast) : s.mode == "highest" ? (take ? .takeHighest : .dropHighest) : (take ? .takeLowest : .dropLowest)
+        let op: GesBytecodeOpCode = s.mode == "first" ? (take ? .takeFirst : .dropFirst) : s.mode == "last" ? (take ? .takeLast : .dropLast) : s.mode == "highest" ? (take ? .takeHighest : .dropHighest) : (take ? .takeLowest : .dropLowest)
         r.emit(op, d, source, s.count)
     }
 
@@ -209,7 +209,8 @@ extension GesCompiler {
         switch s.operation {
         case "filter", "select", "map", "group", "distinct", "order", "take", "drop", "draw":
             builder = r.temporary()
-            let create: Op = s.operation == "map" ? .mapBuilderCreate : s.operation == "group" ? .groupBuilderCreate : s.operation == "distinct" ? .distinctBuilderCreate : s.operation == "order" ? .orderBuilderCreate : .listBuilderCreate
+            let create: GesBytecodeOpCode =
+                s.operation == "map" ? .mapBuilderCreate : s.operation == "group" ? .groupBuilderCreate : s.operation == "distinct" ? .distinctBuilderCreate : s.operation == "order" ? .orderBuilderCreate : .listBuilderCreate
             r.emit(create, builder)
         case "count", "average":
             r.emit(.loadInteger, count)
@@ -270,7 +271,7 @@ extension GesCompiler {
             r.emit(.listBuilderAdd, 0, builder, s.operation == "select" ? projected : current)
         case "map", "group", "distinct", "order":
             let value = s.operation == "map" && s.expressions.count > 1 ? try expression(s.expressions[1], r, child) : current
-            let op: Op = s.operation == "map" ? .mapBuilderAdd : s.operation == "group" ? .groupBuilderAdd : s.operation == "distinct" ? .distinctBuilderAdd : .orderBuilderAdd
+            let op: GesBytecodeOpCode = s.operation == "map" ? .mapBuilderAdd : s.operation == "group" ? .groupBuilderAdd : s.operation == "distinct" ? .distinctBuilderAdd : .orderBuilderAdd
             r.emit(op, 0, builder, projected, payload: UInt64(value))
         case "any", "all":
             nextJumps.append(r.emit(s.operation == "all" ? .jumpIfTrue : .jumpIfNotTrue, 0, projected))
@@ -329,7 +330,7 @@ extension GesCompiler {
         for jump in endJumps { r.patch(jump, target: r.code.count) }
         r.emit(.iteratorClose, 0, iterator)
         if collection {
-            let finish: Op =
+            let finish: GesBytecodeOpCode =
                 s.operation == "map"
                 ? .mapBuilderFinish
                 : s.operation == "group"

@@ -27,8 +27,8 @@ public sealed class GesHostBuilder
         return this;
     }
 
-    private IGesExtensionRegistry _extensionRegistry = GameEventScriptEmptyExtensionRegistry.Instance;
-    private IGesExternalTypeRegistry _externalTypeRegistry = GameEventScriptEmptyExternalTypeRegistry.Instance;
+    private IGesExtensionRegistry _extensionRegistry = GesEmptyExtensionRegistry.Instance;
+    private IGesExternalTypeRegistry _externalTypeRegistry = GesEmptyExternalTypeRegistry.Instance;
     private GesRuntimeLimits _limits = GesRuntimeLimits.Default;
     private IGesPublishSink? _publishSink;
 

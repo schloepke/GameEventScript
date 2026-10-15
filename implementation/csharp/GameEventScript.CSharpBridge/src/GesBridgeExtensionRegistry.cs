@@ -21,7 +21,7 @@ public sealed class GesExtensionAttribute(string name) : Attribute
     /// <summary>
     /// Gets the name.
     /// </summary>
-    public string Name { get; } = GameEventScriptExternalTypeNames.NormalizeExtensionName(name);
+    public string Name { get; } = GesExternalTypeNames.NormalizeExtensionName(name);
 }
 
 /// <summary>
@@ -37,7 +37,7 @@ public sealed class GesFunctionAttribute(string name) : Attribute
     /// <param name="returnKind">The return kind value.</param>
     public GesFunctionAttribute(string name, GesBytecodeTypeKind returnKind) : this(name)
     {
-        ReturnTypeName = GameEventScriptExternalTypeNames.ToTypeName(returnKind, unit: null);
+        ReturnTypeName = GesExternalTypeNames.ToTypeName(returnKind, unit: null);
         ReturnKind = returnKind;
     }
 
@@ -49,7 +49,7 @@ public sealed class GesFunctionAttribute(string name) : Attribute
     /// <param name="unit">The unit value.</param>
     public GesFunctionAttribute(string name, GesBytecodeTypeKind returnKind, GesQuantityUnit unit) : this(name)
     {
-        ReturnTypeName = GameEventScriptExternalTypeNames.ToTypeName(returnKind, unit);
+        ReturnTypeName = GesExternalTypeNames.ToTypeName(returnKind, unit);
         ReturnKind = returnKind;
         ReturnUnit = unit.ToStoredUnit();
     }
@@ -57,7 +57,7 @@ public sealed class GesFunctionAttribute(string name) : Attribute
     /// <summary>
     /// Gets the name.
     /// </summary>
-    public string Name { get; } = GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
+    public string Name { get; } = GesExternalTypeNames.NormalizeIdentifier(name, nameof(name));
 
     /// <summary>
     /// Gets the return type name.
@@ -461,8 +461,8 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
         public ExtensionParameterDefinition(string name, string typeName)
         {
             Name = NormalizeName(name);
-            TypeName = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
-            var (kind, unit) = GameEventScriptExternalTypeNames.GetKindAndUnit(TypeName);
+            TypeName = GesExternalTypeNames.NormalizeTypeName(typeName);
+            var (kind, unit) = GesExternalTypeNames.GetKindAndUnit(TypeName);
             Kind = kind;
             Unit = unit.ToStoredUnit();
         }
@@ -470,7 +470,7 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
         public ExtensionParameterDefinition(string name, GesBytecodeTypeKind kind, GesQuantityUnit? unit)
         {
             Name = NormalizeName(name);
-            TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit);
+            TypeName = GesExternalTypeNames.ToTypeName(kind, unit);
             Kind = kind;
             Unit = unit.ToStoredUnit();
         }
@@ -486,7 +486,7 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
         private static string NormalizeName(string name)
             => string.Equals(name, GesMessageSignature.UnlabeledParameterName, StringComparison.Ordinal)
                 ? GesMessageSignature.UnlabeledParameterName
-                : GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
+                : GesExternalTypeNames.NormalizeIdentifier(name, nameof(name));
     }
 
     private sealed class FloatArgumentReader : IExtensionArgumentReader<double>

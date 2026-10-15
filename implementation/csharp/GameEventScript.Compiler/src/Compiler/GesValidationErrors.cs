@@ -14,7 +14,7 @@ internal sealed class GesValidationErrors
 
     public int Count => _errors.Count;
 
-    public void Add(ParsedScript? module, string message, string symbol, GesDiagnosticSymbolKind symbolKind, string code, ScriptNode? sourceNode = null)
+    public void Add(GesParsedScript? module, string message, string symbol, GesDiagnosticSymbolKind symbolKind, string code, GesScriptNode? sourceNode = null)
     {
         var moduleName = string.IsNullOrWhiteSpace(module?.ModuleName) ? "UnknownModule" : module.ModuleName;
         var sourceName = string.IsNullOrWhiteSpace(module?.SourceName) ? "UnknownSource" : module.SourceName;
@@ -53,7 +53,7 @@ internal sealed class GesValidationErrors
         }
     }
 
-    private static ScriptNode? FindSourceNode(ParsedScript? module, string symbol, GesDiagnosticSymbolKind symbolKind)
+    private static GesScriptNode? FindSourceNode(GesParsedScript? module, string symbol, GesDiagnosticSymbolKind symbolKind)
     {
         if (module is null)
         {
@@ -78,14 +78,14 @@ internal sealed class GesValidationErrors
         };
     }
 
-    private static ConstantDefinitionNode? FindConstantDefinition(IReadOnlyList<ConstantDefinitionNode> definitions, string symbol)
+    private static GesConstantDefinitionNode? FindConstantDefinition(IReadOnlyList<GesConstantDefinitionNode> definitions, string symbol)
     {
         for (var index = 0; index < definitions.Count; index++)
             if (string.Equals(definitions[index].Name, symbol, StringComparison.Ordinal)) return definitions[index];
         return null;
     }
 
-    private static ScriptNode? FindVariableNode(ParsedScript parsedScript, string symbol)
+    private static GesScriptNode? FindVariableNode(GesParsedScript parsedScript, string symbol)
     {
         foreach (var type in parsedScript.TypeDefinitions)
         {
@@ -144,7 +144,7 @@ internal sealed class GesValidationErrors
         return null;
     }
 
-    private static ScriptNode? FindNodeInModule(ParsedScript parsedScript, string symbol)
+    private static GesScriptNode? FindNodeInModule(GesParsedScript parsedScript, string symbol)
     {
         foreach (var handler in parsedScript.Handlers)
         {
@@ -176,25 +176,25 @@ internal sealed class GesValidationErrors
         return null;
     }
 
-    private static ScriptNode? FindNodeInStatements(IEnumerable<StatementNode> statements, string symbol)
+    private static GesScriptNode? FindNodeInStatements(IEnumerable<GesStatementNode> statements, string symbol)
     {
         foreach (var statement in statements)
         {
             var node = statement switch
             {
-                LetStatementNode let => string.Equals(let.Identifier, symbol, StringComparison.Ordinal)
+                GesLetStatementNode let => string.Equals(let.Identifier, symbol, StringComparison.Ordinal)
                     ? let
                     : FindNodeInExpression(let.Expression, symbol),
-                ForStatementNode forStatement => string.Equals(forStatement.Identifier, symbol, StringComparison.Ordinal)
+                GesForStatementNode forStatement => string.Equals(forStatement.Identifier, symbol, StringComparison.Ordinal)
                     ? forStatement
                     : FindNodeInIterationSource(forStatement.Source, symbol) ??
                       FindNodeInStatements(forStatement.Body.Statements, symbol),
-                IfStatementNode ifStatement => ifStatement.Conditions.Select(condition => condition.Binding == symbol ? condition : FindNodeInExpression(condition.Expression, symbol)).FirstOrDefault(node => node is not null) ??
+                GesIfStatementNode ifStatement => ifStatement.Conditions.Select(condition => condition.Binding == symbol ? condition : FindNodeInExpression(condition.Expression, symbol)).FirstOrDefault(node => node is not null) ??
                                                FindNodeInStatements(ifStatement.ThenBody.Statements, symbol) ??
                                                (ifStatement.ElseBody is null ? null : FindNodeInStatements(ifStatement.ElseBody.Statements, symbol)),
-                PublishStatementNode publish => FindNodeInExpression(publish.MessageExpression, symbol),
-                ExpressionStatementNode expressionStatement => FindNodeInExpression(expressionStatement.Expression, symbol),
-                SeededRandomStatementNode seededRandom => FindNodeInExpression(seededRandom.SeedExpression, symbol) ??
+                GesPublishStatementNode publish => FindNodeInExpression(publish.MessageExpression, symbol),
+                GesExpressionStatementNode expressionStatement => FindNodeInExpression(expressionStatement.Expression, symbol),
+                GesSeededRandomStatementNode seededRandom => FindNodeInExpression(seededRandom.SeedExpression, symbol) ??
                                                           FindNodeInStatements(seededRandom.Body.Statements, symbol),
                 _ => null
             };
@@ -208,74 +208,74 @@ internal sealed class GesValidationErrors
         return null;
     }
 
-    private static ScriptNode? FindNodeInIterationSource(IterationSourceNode source, string symbol)
+    private static GesScriptNode? FindNodeInIterationSource(GesIterationSourceNode source, string symbol)
         => source switch
         {
-            CollectionIterationSourceNode collection => FindNodeInExpression(collection.Expression, symbol),
-            RangeIterationSourceNode range => FindNodeInExpression(range.RangeExpression, symbol),
+            GesCollectionIterationSourceNode collection => FindNodeInExpression(collection.Expression, symbol),
+            GesRangeIterationSourceNode range => FindNodeInExpression(range.RangeExpression, symbol),
             _ => null
         };
 
-    private static ScriptNode? FindNodeInExpression(ExpressionNode expression, string symbol)
+    private static GesScriptNode? FindNodeInExpression(GesExpressionNode expression, string symbol)
     {
         switch (expression)
         {
-            case ConstantReferenceExpressionNode constant when string.Equals(constant.Name, symbol, StringComparison.Ordinal):
+            case GesConstantReferenceExpressionNode constant when string.Equals(constant.Name, symbol, StringComparison.Ordinal):
                 return constant;
-            case IdentifierExpressionNode identifier when string.Equals(identifier.Name, symbol, StringComparison.Ordinal):
+            case GesIdentifierExpressionNode identifier when string.Equals(identifier.Name, symbol, StringComparison.Ordinal):
                 return identifier;
-            case CallExpressionNode call when string.Equals(call.Name, symbol, StringComparison.Ordinal):
+            case GesCallExpressionNode call when string.Equals(call.Name, symbol, StringComparison.Ordinal):
                 return call;
-            case PredicateCallExpressionNode predicateCall when string.Equals(predicateCall.PredicateName, symbol, StringComparison.Ordinal):
+            case GesPredicateCallExpressionNode predicateCall when string.Equals(predicateCall.PredicateName, symbol, StringComparison.Ordinal):
                 return predicateCall;
-            case TypeConstructorExpressionNode constructor when string.Equals(constructor.TypeName, symbol, StringComparison.Ordinal):
+            case GesTypeConstructorExpressionNode constructor when string.Equals(constructor.TypeName, symbol, StringComparison.Ordinal):
                 return constructor;
-            case MessageLiteralExpressionNode message when string.Equals(message.Message, symbol, StringComparison.Ordinal):
+            case GesMessageLiteralExpressionNode message when string.Equals(message.Message, symbol, StringComparison.Ordinal):
                 return message;
-            case HandlerLiteralExpressionNode handler when string.Equals(handler.Message, symbol, StringComparison.Ordinal):
+            case GesHandlerLiteralExpressionNode handler when string.Equals(handler.Message, symbol, StringComparison.Ordinal):
                 return handler;
         }
 
         return expression switch
         {
-            SendExpressionNode send => (send.Delay is null ? null : FindNodeInExpression(send.Delay, symbol)) ?? FindNodeInExpression(send.Message, symbol),
-            UnaryExpressionNode unary => FindNodeInExpression(unary.Operand, symbol),
-            BinaryExpressionNode binary => FindNodeInExpression(binary.Left, symbol) ?? FindNodeInExpression(binary.Right, symbol),
-            TypeCastExpressionNode cast => FindNodeInExpression(cast.Value, symbol),
-            TypeCheckExpressionNode check => FindNodeInExpression(check.Value, symbol),
-            NothingCheckExpressionNode check => FindNodeInExpression(check.Value, symbol),
-            PredicateCallExpressionNode predicateCall => predicateCall.Value is null ? null : FindNodeInExpression(predicateCall.Value, symbol),
-            ExtensionPredicateExpressionNode extensionPredicate => FindNodeInExpression(extensionPredicate.Value, symbol),
-            MemberAccessExpressionNode member => FindNodeInExpression(member.Target, symbol),
-            CombinedCollectionExpressionNode combined => FindNodeInExpressions(combined.Sources, symbol),
-            CollectionAccessExpressionNode collection => FindNodeInExpression(collection.Target, symbol) ?? FindNodeInSelector(collection.Selector, symbol),
-            RangeExpressionNode range => FindNodeInExpression(range.FromExpression, symbol) ??
+            GesSendExpressionNode send => (send.Delay is null ? null : FindNodeInExpression(send.Delay, symbol)) ?? FindNodeInExpression(send.Message, symbol),
+            GesUnaryExpressionNode unary => FindNodeInExpression(unary.Operand, symbol),
+            GesBinaryExpressionNode binary => FindNodeInExpression(binary.Left, symbol) ?? FindNodeInExpression(binary.Right, symbol),
+            GesTypeCastExpressionNode cast => FindNodeInExpression(cast.Value, symbol),
+            GesTypeCheckExpressionNode check => FindNodeInExpression(check.Value, symbol),
+            GesNothingCheckExpressionNode check => FindNodeInExpression(check.Value, symbol),
+            GesPredicateCallExpressionNode predicateCall => predicateCall.Value is null ? null : FindNodeInExpression(predicateCall.Value, symbol),
+            GesExtensionPredicateExpressionNode extensionPredicate => FindNodeInExpression(extensionPredicate.Value, symbol),
+            GesMemberAccessExpressionNode member => FindNodeInExpression(member.Target, symbol),
+            GesCombinedCollectionExpressionNode combined => FindNodeInExpressions(combined.Sources, symbol),
+            GesCollectionAccessExpressionNode collection => FindNodeInExpression(collection.Target, symbol) ?? FindNodeInSelector(collection.Selector, symbol),
+            GesRangeExpressionNode range => FindNodeInExpression(range.FromExpression, symbol) ??
                                          FindNodeInExpression(range.ToExpression, symbol) ??
                                          (range.StepExpression is null ? null : FindNodeInExpression(range.StepExpression, symbol)),
-            RandomExpressionNode random => FindNodeInExpression(random.FromExpression, symbol) ?? FindNodeInExpression(random.ToExpression, symbol),
-            SeededRandomExpressionNode seeded => FindNodeInExpression(seeded.SeedExpression, symbol) ?? FindNodeInExpression(seeded.BodyExpression, symbol),
-            VariadicTaggedExpressionNode variadic => FindNodeInExpressions(variadic.Arguments, symbol),
-            BetweenExpressionNode between => FindNodeInExpression(between.Value, symbol) ??
+            GesRandomExpressionNode random => FindNodeInExpression(random.FromExpression, symbol) ?? FindNodeInExpression(random.ToExpression, symbol),
+            GesSeededRandomExpressionNode seeded => FindNodeInExpression(seeded.SeedExpression, symbol) ?? FindNodeInExpression(seeded.BodyExpression, symbol),
+            GesVariadicTaggedExpressionNode variadic => FindNodeInExpressions(variadic.Arguments, symbol),
+            GesBetweenExpressionNode between => FindNodeInExpression(between.Value, symbol) ??
                                          FindNodeInExpression(between.Minimum, symbol) ??
                                          FindNodeInExpression(between.Maximum, symbol),
-            ClampExpressionNode clamp => FindNodeInExpression(clamp.Value, symbol) ??
+            GesClampExpressionNode clamp => FindNodeInExpression(clamp.Value, symbol) ??
                                          FindNodeInExpression(clamp.Minimum, symbol) ??
                                          FindNodeInExpression(clamp.Maximum, symbol),
-            GeneratedCollectionExpressionNode generated => FindNodeInIterationSource(generated.Source, symbol) ??
+            GesGeneratedCollectionExpressionNode generated => FindNodeInIterationSource(generated.Source, symbol) ??
                                                            (generated.Predicate is null ? null : FindNodeInExpression(generated.Predicate, symbol)) ??
                                                            FindNodeInExpression(generated.Projection, symbol),
-            GuardedChoiceExpressionNode guarded => FindNodeInGuardedChoice(guarded, symbol),
-            ListLiteralExpressionNode list => FindNodeInExpressions(list.Items, symbol),
-            MapLiteralExpressionNode dictionary => FindNodeInMapEntries(dictionary.Entries, symbol),
-            MessageLiteralExpressionNode message => FindNodeInArguments(message.Arguments, symbol),
-            CallExpressionNode call => FindNodeInArguments(call.ArgumentList.Arguments, symbol),
-            ExtensionCallExpressionNode extension => FindNodeInArguments(extension.Arguments, symbol),
-            TypeConstructorExpressionNode constructor => FindNodeInArguments(constructor.Arguments, symbol),
+            GesGuardedChoiceExpressionNode guarded => FindNodeInGuardedChoice(guarded, symbol),
+            GesListLiteralExpressionNode list => FindNodeInExpressions(list.Items, symbol),
+            GesMapLiteralExpressionNode dictionary => FindNodeInMapEntries(dictionary.Entries, symbol),
+            GesMessageLiteralExpressionNode message => FindNodeInArguments(message.Arguments, symbol),
+            GesCallExpressionNode call => FindNodeInArguments(call.ArgumentList.Arguments, symbol),
+            GesExtensionCallExpressionNode extension => FindNodeInArguments(extension.Arguments, symbol),
+            GesTypeConstructorExpressionNode constructor => FindNodeInArguments(constructor.Arguments, symbol),
             _ => null
         };
     }
 
-    private static ScriptNode? FindNodeInExpressions(IEnumerable<ExpressionNode> expressions, string symbol)
+    private static GesScriptNode? FindNodeInExpressions(IEnumerable<GesExpressionNode> expressions, string symbol)
     {
         foreach (var expression in expressions)
         {
@@ -289,7 +289,7 @@ internal sealed class GesValidationErrors
         return null;
     }
 
-    private static ScriptNode? FindNodeInArguments(IEnumerable<ArgumentNode> arguments, string symbol)
+    private static GesScriptNode? FindNodeInArguments(IEnumerable<GesArgumentNode> arguments, string symbol)
     {
         foreach (var argument in arguments)
         {
@@ -308,33 +308,33 @@ internal sealed class GesValidationErrors
         return null;
     }
 
-    private static ScriptNode? FindNodeInSelector(CollectionSelectorNode selector, string symbol)
+    private static GesScriptNode? FindNodeInSelector(GesCollectionSelectorNode selector, string symbol)
         => selector switch
         {
-            ExpressionSelectorNode expressionSelector => FindNodeInExpression(expressionSelector.Expression, symbol),
-            PredicateSelectorNode predicateSelector => FindNodeInExpression(predicateSelector.Predicate, symbol),
-            CountSelectorNode countSelector => FindNodeInExpression(countSelector.Predicate, symbol),
-            SeriesTermSelectorNode seriesTermSelector => FindNodeInExpression(seriesTermSelector.IndexExpression, symbol),
-            FilterSelectorNode filterSelector => FindNodeInExpression(filterSelector.Predicate, symbol),
-            SumSelectorNode sumSelector => FindNodeInExpression(sumSelector.Projection, symbol),
-            AverageSelectorNode averageSelector => FindNodeInExpression(averageSelector.Projection, symbol),
-            FoldSelectorNode fold => (fold.Seed is null ? null : FindNodeInExpression(fold.Seed, symbol)) ?? FindNodeInExpression(fold.Projection, symbol),
-            ForeachSelectorNode each => FindNodeInExpression(each.Expression, symbol),
-            SelectSelectorNode selectSelector => FindNodeInExpression(selectSelector.Projection, symbol),
-            MapSelectorNode dictionarySelector => FindNodeInExpression(dictionarySelector.KeyProjection, symbol) ??
+            GesExpressionSelectorNode expressionSelector => FindNodeInExpression(expressionSelector.Expression, symbol),
+            GesPredicateSelectorNode predicateSelector => FindNodeInExpression(predicateSelector.Predicate, symbol),
+            GesCountSelectorNode countSelector => FindNodeInExpression(countSelector.Predicate, symbol),
+            GesSeriesTermSelectorNode seriesTermSelector => FindNodeInExpression(seriesTermSelector.IndexExpression, symbol),
+            GesFilterSelectorNode filterSelector => FindNodeInExpression(filterSelector.Predicate, symbol),
+            GesSumSelectorNode sumSelector => FindNodeInExpression(sumSelector.Projection, symbol),
+            GesAverageSelectorNode averageSelector => FindNodeInExpression(averageSelector.Projection, symbol),
+            GesFoldSelectorNode fold => (fold.Seed is null ? null : FindNodeInExpression(fold.Seed, symbol)) ?? FindNodeInExpression(fold.Projection, symbol),
+            GesForeachSelectorNode each => FindNodeInExpression(each.Expression, symbol),
+            GesSelectSelectorNode selectSelector => FindNodeInExpression(selectSelector.Projection, symbol),
+            GesMapSelectorNode dictionarySelector => FindNodeInExpression(dictionarySelector.KeyProjection, symbol) ??
                                                          (dictionarySelector.ValueProjection is null ? null : FindNodeInExpression(dictionarySelector.ValueProjection, symbol)),
-            MinSelectorNode minSelector => FindNodeInExpression(minSelector.Projection, symbol),
-            MaxSelectorNode maxSelector => FindNodeInExpression(maxSelector.Projection, symbol),
-            ContainsSelectorNode containsSelector => FindNodeInExpression(containsSelector.ValueExpression, symbol),
-            DistinctSelectorNode distinctSelector => distinctSelector.Projection is null ? null : FindNodeInExpression(distinctSelector.Projection, symbol),
-            GroupBySelectorNode groupBySelector => FindNodeInExpression(groupBySelector.Projection, symbol),
-            OrderBySelectorNode orderBySelector => FindNodeInExpression(orderBySelector.Projection, symbol),
-            ChooseSelectorNode chooseSelector => (chooseSelector.Predicate is null ? null : FindNodeInExpression(chooseSelector.Predicate, symbol)) ??
+            GesMinSelectorNode minSelector => FindNodeInExpression(minSelector.Projection, symbol),
+            GesMaxSelectorNode maxSelector => FindNodeInExpression(maxSelector.Projection, symbol),
+            GesContainsSelectorNode containsSelector => FindNodeInExpression(containsSelector.ValueExpression, symbol),
+            GesDistinctSelectorNode distinctSelector => distinctSelector.Projection is null ? null : FindNodeInExpression(distinctSelector.Projection, symbol),
+            GesGroupBySelectorNode groupBySelector => FindNodeInExpression(groupBySelector.Projection, symbol),
+            GesOrderBySelectorNode orderBySelector => FindNodeInExpression(orderBySelector.Projection, symbol),
+            GesChooseSelectorNode chooseSelector => (chooseSelector.Predicate is null ? null : FindNodeInExpression(chooseSelector.Predicate, symbol)) ??
                                                  (chooseSelector.WeightExpression is null ? null : FindNodeInExpression(chooseSelector.WeightExpression, symbol)),
             _ => null
         };
 
-    private static TypeDefinitionNode? FindTypeDefinition(IReadOnlyList<TypeDefinitionNode> definitions, string symbol)
+    private static GesTypeDefinitionNode? FindTypeDefinition(IReadOnlyList<GesTypeDefinitionNode> definitions, string symbol)
     {
         for (var index = 0; index < definitions.Count; index++)
         {
@@ -348,7 +348,7 @@ internal sealed class GesValidationErrors
         return null;
     }
 
-    private static PredicateDefinitionNode? FindPredicateDefinition(IReadOnlyList<PredicateDefinitionNode> definitions, string symbol)
+    private static GesPredicateDefinitionNode? FindPredicateDefinition(IReadOnlyList<GesPredicateDefinitionNode> definitions, string symbol)
     {
         for (var index = 0; index < definitions.Count; index++)
         {
@@ -362,7 +362,7 @@ internal sealed class GesValidationErrors
         return null;
     }
 
-    private static FunctionDefinitionNode? FindFunctionDefinition(IReadOnlyList<FunctionDefinitionNode> definitions, string symbol)
+    private static GesFunctionDefinitionNode? FindFunctionDefinition(IReadOnlyList<GesFunctionDefinitionNode> definitions, string symbol)
     {
         for (var index = 0; index < definitions.Count; index++)
         {
@@ -376,7 +376,7 @@ internal sealed class GesValidationErrors
         return null;
     }
 
-    private static EventHandlerNode? FindHandler(IReadOnlyList<EventHandlerNode> handlers, string symbol)
+    private static GesEventHandlerNode? FindHandler(IReadOnlyList<GesEventHandlerNode> handlers, string symbol)
     {
         for (var index = 0; index < handlers.Count; index++)
         {
@@ -390,7 +390,7 @@ internal sealed class GesValidationErrors
         return null;
     }
 
-    private static TypeFieldDefinitionNode? FindField(IReadOnlyList<TypeFieldDefinitionNode> fields, string symbol)
+    private static GesTypeFieldDefinitionNode? FindField(IReadOnlyList<GesTypeFieldDefinitionNode> fields, string symbol)
     {
         for (var index = 0; index < fields.Count; index++)
         {
@@ -404,7 +404,7 @@ internal sealed class GesValidationErrors
         return null;
     }
 
-    private static ParameterNode? FindParameter(IReadOnlyList<ParameterNode> parameters, string symbol)
+    private static GesParameterNode? FindParameter(IReadOnlyList<GesParameterNode> parameters, string symbol)
     {
         for (var index = 0; index < parameters.Count; index++)
         {
@@ -418,7 +418,7 @@ internal sealed class GesValidationErrors
         return null;
     }
 
-    private static ScriptNode? FindNodeInGuardedChoice(GuardedChoiceExpressionNode guarded, string symbol)
+    private static GesScriptNode? FindNodeInGuardedChoice(GesGuardedChoiceExpressionNode guarded, string symbol)
     {
         for (var index = 0; index < guarded.Branches.Count; index++)
         {
@@ -434,7 +434,7 @@ internal sealed class GesValidationErrors
         return FindNodeInExpression(guarded.OtherwiseExpression, symbol);
     }
 
-    private static ScriptNode? FindNodeInMapEntries(IReadOnlyList<MapEntryNode> entries, string symbol)
+    private static GesScriptNode? FindNodeInMapEntries(IReadOnlyList<GesMapEntryNode> entries, string symbol)
     {
         for (var index = 0; index < entries.Count; index++)
         {

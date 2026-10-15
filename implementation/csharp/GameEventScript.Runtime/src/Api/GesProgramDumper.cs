@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using GameEventScript.Runtime;
-using static GameEventScript.Api.GameEventScriptOpcodePrinter.OperandPart;
+using static GameEventScript.Api.GesOpcodePrinter.OperandPart;
 
 namespace GameEventScript.Api;
 
@@ -246,7 +246,7 @@ internal static class GesProgramDumper
 
             builder.Append(instruction.OpCode);
 
-            var operands = GameEventScriptOpcodePrinter.PrintInstruction(instruction);
+            var operands = GesOpcodePrinter.PrintInstruction(instruction);
             for (var operandIndex = 0; operandIndex < operands.Length; operandIndex++)
             {
                 var operand = FormatOperand(context, instruction, operands[operandIndex], operandIndex, i);
@@ -365,14 +365,14 @@ internal static class GesProgramDumper
         return end < 0 ? normalized[start..] : normalized.Substring(start, end - start);
     }
 
-    private static string FormatOperand(DisassemblyContext context, GesBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part, int operandIndex, int codeAddress)
+    private static string FormatOperand(DisassemblyContext context, GesBytecodeInstruction instruction, GesOpcodePrinter.OperandPart part, int operandIndex, int codeAddress)
     {
         string RegisterAtAddress(ushort registerId) => context.Register(registerId, codeAddress);
 
         return part switch
         {
             TargetRegister => RegisterAtAddress(instruction.DestinationRegister),
-            OutboundMessage => context.OutboundMessageLabel(GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode) ? instruction.BindId : instruction.MessageDestination),
+            OutboundMessage => context.OutboundMessageLabel(GesOpcodePrinter.IsResultSend(instruction.OpCode) ? instruction.BindId : instruction.MessageDestination),
 
             SourceRegister => RegisterAtAddress(instruction.XRegister),
             LeftRegister => RegisterAtAddress(instruction.XRegister),
@@ -434,7 +434,7 @@ internal static class GesProgramDumper
             ValueEntry => context.CodeLabel(instruction.BU),
             FaceRegister => RegisterAtAddress(instruction.BU),
 
-            GameEventScriptOpcodePrinter.OperandPart.String => FormatTextReference(context, instruction.StringIndex),
+            GesOpcodePrinter.OperandPart.String => FormatTextReference(context, instruction.StringIndex),
             Text => FormatTextReference(context, instruction.StringIndex),
             Tag => FormatTextReference(context, instruction.StringIndex),
             MemberName => FormatTextReference(context, instruction.StringIndex),
@@ -453,7 +453,7 @@ internal static class GesProgramDumper
             KeyNameList => context.ListLabel(instruction.SecondaryListIndex),
             ValueRegisterList => context.ListLabel(instruction.ListIndex),
             CaptureRegisterList => context.ListLabel(CaptureRegisterListIndex(instruction)),
-            TagRegisterList => context.ListLabel(GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode) ? instruction.AU
+            TagRegisterList => context.ListLabel(GesOpcodePrinter.IsResultSend(instruction.OpCode) ? instruction.AU
                 : instruction.OpCode is GesBytecodeOpCode.EmitMessageWithTags or GesBytecodeOpCode.PublishMessageWithTags
                 ? instruction.SecondaryListIndex
                 : instruction.ListIndex),
@@ -498,7 +498,7 @@ internal static class GesProgramDumper
             if ((instruction.UnitAndFlags & 0x40) != 0) builder.Append(" mode=Numeric");
             return;
         }
-        if (GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode))
+        if (GesOpcodePrinter.IsResultSend(instruction.OpCode))
         {
             var sendFlags = instruction.UnitAndFlags & 0xC0;
             if (sendFlags != 0) builder.Append(" flags=").Append(sendFlags == 0x40 ? "WithTags" : sendFlags == 0x80 ? "Indirect" : "WithTags, Indirect");
@@ -511,14 +511,14 @@ internal static class GesProgramDumper
         }
     }
 
-    private static void AppendInstructionComment(StringBuilder builder, DisassemblyContext context, GesBytecodeInstruction instruction, ReadOnlySpan<GameEventScriptOpcodePrinter.OperandPart> operands)
+    private static void AppendInstructionComment(StringBuilder builder, DisassemblyContext context, GesBytecodeInstruction instruction, ReadOnlySpan<GesOpcodePrinter.OperandPart> operands)
     {
         var comments = new List<string>();
         foreach (var operand in operands)
         {
             switch (operand)
             {
-                case GameEventScriptOpcodePrinter.OperandPart.String:
+                case GesOpcodePrinter.OperandPart.String:
                 case Text:
                 case Tag:
                 case MemberName:
@@ -538,7 +538,7 @@ internal static class GesProgramDumper
                     AddListTextComment(comments, context, instruction.SecondaryListIndex);
                     break;
                 case OutboundMessage:
-                    AddOutboundMessageComment(comments, context, GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode) ? instruction.BindId : instruction.MessageDestination);
+                    AddOutboundMessageComment(comments, context, GesOpcodePrinter.IsResultSend(instruction.OpCode) ? instruction.BindId : instruction.MessageDestination);
                     break;
                 case RecordReference:
                     AddRecordComment(comments, context, instruction.BindId);
@@ -1099,7 +1099,7 @@ internal static class GesProgramDumper
 
             foreach (var instruction in binary.Code.Instructions)
             {
-                var operands = GameEventScriptOpcodePrinter.PrintInstruction(instruction);
+                var operands = GesOpcodePrinter.PrintInstruction(instruction);
                 for (var operandIndex = 0; operandIndex < operands.Length; operandIndex++)
                 {
                     if (GetListIndex(instruction, operands[operandIndex]) is not { } list)
@@ -1133,7 +1133,7 @@ internal static class GesProgramDumper
 
             foreach (var instruction in binary.Code.Instructions)
             {
-                foreach (var part in GameEventScriptOpcodePrinter.PrintInstruction(instruction))
+                foreach (var part in GesOpcodePrinter.PrintInstruction(instruction))
                 {
                     AddCodeLabelsForOperand(codeLabels, binary, instruction, part);
                 }
@@ -1142,7 +1142,7 @@ internal static class GesProgramDumper
             AddScopedCodeLabels(codeLabels, codeLabelNames);
         }
 
-        private static void AddCodeLabelsForOperand(SortedSet<int> labels, GameEventScriptProgram binary, GesBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part)
+        private static void AddCodeLabelsForOperand(SortedSet<int> labels, GameEventScriptProgram binary, GesBytecodeInstruction instruction, GesOpcodePrinter.OperandPart part)
         {
             switch (part)
             {
@@ -1370,7 +1370,7 @@ internal static class GesProgramDumper
         private static ListRole PreferListRole(ListRole current, ListRole candidate)
             => current == ListRole.Raw ? candidate : current;
 
-        private static (ushort Index, string Prefix, ListRole Role)? GetListIndex(GesBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part)
+        private static (ushort Index, string Prefix, ListRole Role)? GetListIndex(GesBytecodeInstruction instruction, GesOpcodePrinter.OperandPart part)
         {
             switch (part)
             {
@@ -1393,7 +1393,7 @@ internal static class GesProgramDumper
                 case CaptureRegisterList:
                     return (CaptureRegisterListIndex(instruction), "Captures", ListRole.Registers);
                 case TagRegisterList:
-                    var index = GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode) ? instruction.AU
+                    var index = GesOpcodePrinter.IsResultSend(instruction.OpCode) ? instruction.AU
                 : instruction.OpCode is GesBytecodeOpCode.EmitMessageWithTags or GesBytecodeOpCode.PublishMessageWithTags
                         ? instruction.SecondaryListIndex
                         : instruction.ListIndex;

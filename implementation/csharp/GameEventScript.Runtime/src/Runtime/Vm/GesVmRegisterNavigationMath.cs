@@ -609,7 +609,7 @@ internal static class GesVmRegisterNavigationMath
 
         var number = value.AsNumeric;
         var radians = value.Unit == UnitDegree
-            ? number / 180d * GameEventScriptMathConstants.Pi
+            ? number / 180d * GesMathConstants.Pi
             : number;
         return double.IsNaN(radians) ? null : radians;
     }

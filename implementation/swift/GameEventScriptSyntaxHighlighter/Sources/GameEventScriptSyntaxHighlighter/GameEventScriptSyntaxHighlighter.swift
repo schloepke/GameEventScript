@@ -18,7 +18,7 @@ public final class GesSyntaxHighlighter: Sendable {
         guard maxInputLength > 0 else { throw GesHighlightingError.invalidInputLimit }
         self.language = language
         self.maxInputLength = maxInputLength
-        roots = language == .ges ? Grammar.shared.source : Grammar.shared.assembly
+        roots = language == .ges ? GesGrammar.shared.source : GesGrammar.shared.assembly
         rootScope = language == .ges ? "source.gameeventscript" : "source.gameeventscript.assembler"
     }
 
@@ -84,7 +84,7 @@ public final class GesSyntaxHighlighter: Sendable {
             return result
         }
 
-        let rules = Grammar.shared.rules
+        let rules = GesGrammar.shared.rules
         var position = 0
         while position <= length {
             if expired || ProcessInfo.processInfo.systemUptime > deadline || frames.count > 128 { return false }
@@ -127,14 +127,14 @@ public final class GesSyntaxHighlighter: Sendable {
     private func context(_ frames: [Int]) -> [String] {
         var scopes = [rootScope]
         for id in frames {
-            let rule = Grammar.shared.rules[id]
+            let rule = GesGrammar.shared.rules[id]
             if !rule.name.isEmpty { scopes.append(rule.name) }
             if !rule.contentName.isEmpty { scopes.append(rule.contentName) }
         }
         return scopes
     }
 
-    private static func emit(_ spans: inout [GesHighlightSpan], _ offset: Int, _ match: NSTextCheckingResult, _ scopes: [String], _ captures: [CaptureRule]) {
+    private static func emit(_ spans: inout [GesHighlightSpan], _ offset: Int, _ match: NSTextCheckingResult, _ scopes: [String], _ captures: [GesCaptureRule]) {
         let groups = captures.compactMap { capture -> (NSRange, String, Int)? in
             guard capture.group < match.numberOfRanges else { return nil }
             let range = match.range(at: capture.group)
@@ -168,19 +168,19 @@ public final class GesSyntaxHighlighter: Sendable {
 
 private struct CachedMatch { let match: NSTextCheckingResult? }
 
-struct CaptureRule {
+struct GesCaptureRule {
     let group: Int
     let scope: String
 }
 
-final class GrammarRule {
+final class GesGrammarRule {
     let pattern: NSRegularExpression
     let end: NSRegularExpression?
     let name: String
     let contentName: String
-    let captures: [CaptureRule]
-    let beginCaptures: [CaptureRule]
-    let endCaptures: [CaptureRule]
+    let captures: [GesCaptureRule]
+    let beginCaptures: [GesCaptureRule]
+    let endCaptures: [GesCaptureRule]
     let children: [Int]
     let endLast: Bool
 
@@ -194,7 +194,7 @@ final class GrammarRule {
         name = data["name"] as! String
         contentName = data["contentName"] as! String
 
-        func groups(_ key: String) -> [CaptureRule] { (data[key] as! [[Any]]).map { CaptureRule(group: $0[0] as! Int, scope: $0[1] as! String) } }
+        func groups(_ key: String) -> [GesCaptureRule] { (data[key] as! [[Any]]).map { GesCaptureRule(group: $0[0] as! Int, scope: $0[1] as! String) } }
 
         captures = groups("captures")
         beginCaptures = groups("beginCaptures")
@@ -205,16 +205,16 @@ final class GrammarRule {
 }
 
 // Immutable compiled rules. NSRegularExpression is immutable; matching state remains local to each call.
-final class Grammar: @unchecked Sendable {
-    static let shared = Grammar()
+final class GesGrammar: @unchecked Sendable {
+    static let shared = GesGrammar()
     let source: [Int]
     let assembly: [Int]
-    let rules: [GrammarRule]
+    let rules: [GesGrammarRule]
 
     private init() {
-        let data = try! JSONSerialization.jsonObject(with: Data(EmbeddedGrammars.json.utf8)) as! [String: Any]
+        let data = try! JSONSerialization.jsonObject(with: Data(GesEmbeddedGrammars.json.utf8)) as! [String: Any]
         source = data["source"] as! [Int]
         assembly = data["assembly"] as! [Int]
-        rules = (data["rules"] as! [[String: Any]]).map(GrammarRule.init)
+        rules = (data["rules"] as! [[String: Any]]).map(GesGrammarRule.init)
     }
 }

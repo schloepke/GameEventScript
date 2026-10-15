@@ -6,7 +6,7 @@ using GameEventScript.Runtime.Values;
 
 namespace GameEventScript.Runtime;
 
-internal static class GameEventScriptSystemEndpoints
+internal static class GesSystemEndpoints
 {
     public const string InitializationName = "initialization";
     public const string UndeliverableName = "undeliverable";

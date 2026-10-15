@@ -15,7 +15,7 @@ public struct GesExternalTypeDefinition {
     /// - Throws: An API error for invalid names, duplicate definitions, foreign constructors or parameters without
     /// matching fields.
     public init(name: String, fields: [GesExternalTypeFieldDefinition], constructors: [GesExternalTypeConstructorDefinition]) throws {
-        self.name = try GesExternalNames.type(name)
+        self.name = try GesExternalTypeNames.type(name)
         self.fields = fields
         self.constructors = constructors
         let fieldNames = Set(fields.map(\.name))

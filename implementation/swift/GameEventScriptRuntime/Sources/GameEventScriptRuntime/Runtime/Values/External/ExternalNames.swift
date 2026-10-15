@@ -1,22 +1,22 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-enum GesExternalNames {
+enum GesExternalTypeNames {
     static func identifier(_ text: String) throws -> String {
-        let text = MessageNames.trim(text)
+        let text = GesMessageNames.trim(text)
         guard GesNames.plain(text) else { throw GesApiError.invalidArgument("Invalid external field or extension name") }
         return text
     }
 
     static func type(_ text: String) throws -> String {
-        var text = MessageNames.trim(text)
+        var text = GesMessageNames.trim(text)
         if text.hasPrefix(":") { text.removeFirst() }
         guard GesNames.type(text) else { throw GesApiError.invalidArgument("Invalid external type name") }
         return text
     }
 }
 
-extension GesExternalNames {
+extension GesExternalTypeNames {
     static func kind(_ name: String) -> GesBytecodeTypeKind? {
         switch name {
         case "Nothing": .nothing

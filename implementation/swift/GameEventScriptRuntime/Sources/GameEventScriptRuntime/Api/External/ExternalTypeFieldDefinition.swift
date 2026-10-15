@@ -16,9 +16,9 @@ public struct GesExternalTypeFieldDefinition {
     ///
     /// - Throws: An API error for an invalid identifier.
     public init(name: String, typeName: String) throws {
-        self.name = try GesExternalNames.identifier(name)
-        self.typeName = try GesExternalNames.type(typeName)
-        kind = GesExternalNames.kind(self.typeName)
+        self.name = try GesExternalTypeNames.identifier(name)
+        self.typeName = try GesExternalTypeNames.type(typeName)
+        kind = GesExternalTypeNames.kind(self.typeName)
         unit = .none
     }
 
@@ -26,9 +26,9 @@ public struct GesExternalTypeFieldDefinition {
     ///
     /// - Throws: An API error for an invalid name or unsupported kind/unit combination.
     public init(name: String, kind: GesBytecodeTypeKind, unit: GesQuantityUnit = .none) throws {
-        self.name = try GesExternalNames.identifier(name)
+        self.name = try GesExternalTypeNames.identifier(name)
         self.kind = kind
         self.unit = unit
-        typeName = try GesExternalNames.typeName(kind, unit)
+        typeName = try GesExternalTypeNames.typeName(kind, unit)
     }
 }

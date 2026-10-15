@@ -71,7 +71,7 @@ private final class GesMessageJsonCodec {
 
     static func number(_ value: GesValue) throws -> GesValue {
         let text = try string(value)
-        guard !text.contains("%"), let number = TextNumberCast.read(text, percentage: false, allowGrouping: false), number.numericOnly, !number.hasUnit else { throw GesJson.error() }
+        guard !text.contains("%"), let number = GesTextNumberCast.read(text, percentage: false, allowGrouping: false), number.numericOnly, !number.hasUnit else { throw GesJson.error() }
         return number
     }
 

@@ -70,7 +70,7 @@ public sealed class GesHighlightSpan
         Start = start;
         Length = length;
         Scopes = Array.AsReadOnly(scopes);
-        Kind = ScopeKinds.Classify(scopes);
+        Kind = GesScopeKinds.Classify(scopes);
     }
 }
 
@@ -118,7 +118,7 @@ public sealed class GesHighlightResult
     }
 }
 
-internal static class ScopeKinds
+internal static class GesScopeKinds
 {
     internal static GesSyntaxKind Classify(IReadOnlyList<string> scopes)
     {

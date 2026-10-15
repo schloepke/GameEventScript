@@ -173,7 +173,7 @@ internal static class GesProgramValidator
     {
         var encodedUnit = instruction.UnitAndFlags & 0x1F;
         var encodedFlags = instruction.UnitAndFlags & 0xE0;
-        var resultSend = GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode);
+        var resultSend = GesOpcodePrinter.IsResultSend(instruction.OpCode);
         var iteratorCreate = instruction.OpCode is GesBytecodeOpCode.IteratorCreate or GesBytecodeOpCode.IteratorCreateOrJump;
         var iteratorNext = instruction.OpCode == GesBytecodeOpCode.IteratorNext;
         var numericArithmetic = instruction.OpCode is GesBytecodeOpCode.Move
@@ -215,7 +215,7 @@ internal static class GesProgramValidator
             (instruction.UnitAndFlags != 0 || instruction.YRegister != 0 || instruction.Payload != 0))
             InvalidOperand("ParseLiteral reserves the unit/flag byte, Y word, and payload.", instructionIndex);
 
-        var operands = GameEventScriptOpcodePrinter.PrintInstruction(instruction);
+        var operands = GesOpcodePrinter.PrintInstruction(instruction);
         for (var operandIndex = 0; operandIndex < operands.Length; operandIndex++)
         {
             var operand = operands[operandIndex];
@@ -233,10 +233,10 @@ internal static class GesProgramValidator
             }
             if (IsStringOperand(operand))
             {
-                var stringIndex = operand == GameEventScriptOpcodePrinter.OperandPart.CustomTypeName ? instruction.SecondaryStringIndex : instruction.StringIndex;
+                var stringIndex = operand == GesOpcodePrinter.OperandPart.CustomTypeName ? instruction.SecondaryStringIndex : instruction.StringIndex;
                 if (stringIndex >= program.StringConstants.Slices.Count) Throw(GesProgramFormatErrorCode.InvalidStringIndex, "Instruction references a missing string.", (ushort)GesSectionType.Code, instructionIndex);
-                if (operand == GameEventScriptOpcodePrinter.OperandPart.Tag && !IsPortablePlainName(program.StringConstants, stringIndex)) InvalidOperand("Tag constants must use the portable lowercase ASCII name grammar.", instructionIndex);
-                if (operand == GameEventScriptOpcodePrinter.OperandPart.CustomTypeName && !IsPortableTypeName(program.StringConstants, stringIndex))
+                if (operand == GesOpcodePrinter.OperandPart.Tag && !IsPortablePlainName(program.StringConstants, stringIndex)) InvalidOperand("Tag constants must use the portable lowercase ASCII name grammar.", instructionIndex);
+                if (operand == GesOpcodePrinter.OperandPart.CustomTypeName && !IsPortableTypeName(program.StringConstants, stringIndex))
                     InvalidOperand("Custom type names must use the portable lowercase ASCII type-name grammar.", instructionIndex);
                 continue;
             }
@@ -247,15 +247,15 @@ internal static class GesProgramValidator
                 ValidateInstructionList(program, listIndex, operand, instructionIndex);
                 continue;
             }
-            if (operand == GameEventScriptOpcodePrinter.OperandPart.TypeKind && !GesProgramEnumValidation.IsDefined(instruction.TypeKind)) InvalidOperand("Instruction contains an unknown type kind.", instructionIndex);
-            if (operand == GameEventScriptOpcodePrinter.OperandPart.PatternKind && !GesProgramEnumValidation.IsDefined((GesBytecodePatternKind)instruction.AU))
+            if (operand == GesOpcodePrinter.OperandPart.TypeKind && !GesProgramEnumValidation.IsDefined(instruction.TypeKind)) InvalidOperand("Instruction contains an unknown type kind.", instructionIndex);
+            if (operand == GesOpcodePrinter.OperandPart.PatternKind && !GesProgramEnumValidation.IsDefined((GesBytecodePatternKind)instruction.AU))
                 InvalidOperand("Instruction contains an unknown pattern kind.", instructionIndex);
-            if (operand == GameEventScriptOpcodePrinter.OperandPart.SeriesKind && !GesProgramEnumValidation.IsDefined((GesBytecodeSeriesKind)instruction.TypeOperand))
+            if (operand == GesOpcodePrinter.OperandPart.SeriesKind && !GesProgramEnumValidation.IsDefined((GesBytecodeSeriesKind)instruction.TypeOperand))
                 InvalidOperand("Instruction contains an unknown series kind.", instructionIndex);
-            if (operand == GameEventScriptOpcodePrinter.OperandPart.OutboundMessage && !HasBind(indexedBindingIds, OutboundMessage, resultSend ? instruction.BindId : instruction.MessageDestination))
+            if (operand == GesOpcodePrinter.OperandPart.OutboundMessage && !HasBind(indexedBindingIds, OutboundMessage, resultSend ? instruction.BindId : instruction.MessageDestination))
                 InvalidOperand("Instruction references a missing outbound-message binding.", instructionIndex);
-            if (operand == GameEventScriptOpcodePrinter.OperandPart.RecordReference && !HasBind(indexedBindingIds, Record, instruction.BindId)) InvalidOperand("Instruction references a missing record binding.", instructionIndex);
-            if (operand == GameEventScriptOpcodePrinter.OperandPart.ExternalReference)
+            if (operand == GesOpcodePrinter.OperandPart.RecordReference && !HasBind(indexedBindingIds, Record, instruction.BindId)) InvalidOperand("Instruction references a missing record binding.", instructionIndex);
+            if (operand == GesOpcodePrinter.OperandPart.ExternalReference)
             {
                 var kind = instruction.OpCode == GesBytecodeOpCode.CallExternal ? ExtensionCall : ExternalType;
                 if (!HasBind(indexedBindingIds, kind, instruction.BindId)) InvalidOperand("Instruction references a missing external binding.", instructionIndex);
@@ -272,82 +272,82 @@ internal static class GesProgramValidator
         }
     }
 
-    internal static bool IsRegisterOperand(GameEventScriptOpcodePrinter.OperandPart part)
-        => part != GameEventScriptOpcodePrinter.OperandPart.OutboundMessage &&
-           (part is >= GameEventScriptOpcodePrinter.OperandPart.TargetRegister and <= GameEventScriptOpcodePrinter.OperandPart.AuxDRegister || part == GameEventScriptOpcodePrinter.OperandPart.FaceRegister);
+    internal static bool IsRegisterOperand(GesOpcodePrinter.OperandPart part)
+        => part != GesOpcodePrinter.OperandPart.OutboundMessage &&
+           (part is >= GesOpcodePrinter.OperandPart.TargetRegister and <= GesOpcodePrinter.OperandPart.AuxDRegister || part == GesOpcodePrinter.OperandPart.FaceRegister);
 
     internal static void ValidateInstructionFrame(GameEventScriptProgram program, GesBytecodeInstruction instruction, int instructionIndex, int frameLength)
     {
-        var operands = GameEventScriptOpcodePrinter.PrintInstruction(instruction);
+        var operands = GesOpcodePrinter.PrintInstruction(instruction);
         for (var index = 0; index < operands.Length; index++)
         {
             var operand = operands[index];
             if (IsRegisterOperand(operand) && ReadRegisterOperand(instruction, operand, index) >= frameLength)
                 InvalidOperand("Instruction references a register outside its active frame.", instructionIndex);
-            if (!IsListOperand(operand) || operand is GameEventScriptOpcodePrinter.OperandPart.MessageShapeList or GameEventScriptOpcodePrinter.OperandPart.ArgumentNameList or GameEventScriptOpcodePrinter.OperandPart.KeyNameList) continue;
+            if (!IsListOperand(operand) || operand is GesOpcodePrinter.OperandPart.MessageShapeList or GesOpcodePrinter.OperandPart.ArgumentNameList or GesOpcodePrinter.OperandPart.KeyNameList) continue;
             var list = program.UInt16IndexLists.Resolve(ReadListOperand(instruction, operand));
             for (var element = 0; element < list.Length; element++)
                 if (list[element] >= frameLength) InvalidOperand("Instruction list references a register outside its active frame.", instructionIndex);
         }
     }
 
-    internal static ushort ReadRegisterOperand(GesBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part, int operandIndex)
+    internal static ushort ReadRegisterOperand(GesBytecodeInstruction instruction, GesOpcodePrinter.OperandPart part, int operandIndex)
         => part switch
         {
-            GameEventScriptOpcodePrinter.OperandPart.TargetRegister or GameEventScriptOpcodePrinter.OperandPart.OutboundMessage => instruction.DestinationRegister,
-            GameEventScriptOpcodePrinter.OperandPart.RightRegister or GameEventScriptOpcodePrinter.OperandPart.ObjectRegister or GameEventScriptOpcodePrinter.OperandPart.ItemRegister or
-                GameEventScriptOpcodePrinter.OperandPart.KeyRegister or GameEventScriptOpcodePrinter.OperandPart.IndexRegister or GameEventScriptOpcodePrinter.OperandPart.DefaultRegister or
-                GameEventScriptOpcodePrinter.OperandPart.NeedleRegister or GameEventScriptOpcodePrinter.OperandPart.ToRegister => instruction.YRegister,
-            GameEventScriptOpcodePrinter.OperandPart.ValueRegister or GameEventScriptOpcodePrinter.OperandPart.AuxItemBindingRegister or GameEventScriptOpcodePrinter.OperandPart.StepRegister or
-                GameEventScriptOpcodePrinter.OperandPart.MaximumRegister or GameEventScriptOpcodePrinter.OperandPart.AuxARegister => instruction.AU,
-            GameEventScriptOpcodePrinter.OperandPart.ItemBindingRegister => operandIndex >= 3 ? instruction.AU : instruction.YRegister,
-            GameEventScriptOpcodePrinter.OperandPart.WeightRegister => instruction.OpCode == GesBytecodeOpCode.TakeWeighted ? instruction.AU : instruction.YRegister,
-            GameEventScriptOpcodePrinter.OperandPart.MinimumRegister => instruction.YRegister,
-            GameEventScriptOpcodePrinter.OperandPart.AuxBRegister or GameEventScriptOpcodePrinter.OperandPart.FaceRegister => instruction.BU,
-            GameEventScriptOpcodePrinter.OperandPart.AuxCRegister => instruction.CU,
-            GameEventScriptOpcodePrinter.OperandPart.AuxDRegister => instruction.DU,
+            GesOpcodePrinter.OperandPart.TargetRegister or GesOpcodePrinter.OperandPart.OutboundMessage => instruction.DestinationRegister,
+            GesOpcodePrinter.OperandPart.RightRegister or GesOpcodePrinter.OperandPart.ObjectRegister or GesOpcodePrinter.OperandPart.ItemRegister or
+                GesOpcodePrinter.OperandPart.KeyRegister or GesOpcodePrinter.OperandPart.IndexRegister or GesOpcodePrinter.OperandPart.DefaultRegister or
+                GesOpcodePrinter.OperandPart.NeedleRegister or GesOpcodePrinter.OperandPart.ToRegister => instruction.YRegister,
+            GesOpcodePrinter.OperandPart.ValueRegister or GesOpcodePrinter.OperandPart.AuxItemBindingRegister or GesOpcodePrinter.OperandPart.StepRegister or
+                GesOpcodePrinter.OperandPart.MaximumRegister or GesOpcodePrinter.OperandPart.AuxARegister => instruction.AU,
+            GesOpcodePrinter.OperandPart.ItemBindingRegister => operandIndex >= 3 ? instruction.AU : instruction.YRegister,
+            GesOpcodePrinter.OperandPart.WeightRegister => instruction.OpCode == GesBytecodeOpCode.TakeWeighted ? instruction.AU : instruction.YRegister,
+            GesOpcodePrinter.OperandPart.MinimumRegister => instruction.YRegister,
+            GesOpcodePrinter.OperandPart.AuxBRegister or GesOpcodePrinter.OperandPart.FaceRegister => instruction.BU,
+            GesOpcodePrinter.OperandPart.AuxCRegister => instruction.CU,
+            GesOpcodePrinter.OperandPart.AuxDRegister => instruction.DU,
             _ => instruction.XRegister
         };
 
-    private static bool IsAddressOperand(GameEventScriptOpcodePrinter.OperandPart part)
-        => part is >= GameEventScriptOpcodePrinter.OperandPart.JumpTarget and <= GameEventScriptOpcodePrinter.OperandPart.ValueEntry;
+    private static bool IsAddressOperand(GesOpcodePrinter.OperandPart part)
+        => part is >= GesOpcodePrinter.OperandPart.JumpTarget and <= GesOpcodePrinter.OperandPart.ValueEntry;
 
-    private static ushort ReadAddressOperand(GesBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part)
+    private static ushort ReadAddressOperand(GesBytecodeInstruction instruction, GesOpcodePrinter.OperandPart part)
         => part switch
         {
-            GameEventScriptOpcodePrinter.OperandPart.ProjectionEntry or GameEventScriptOpcodePrinter.OperandPart.KeyEntry => instruction.AU,
-            GameEventScriptOpcodePrinter.OperandPart.ValueEntry => instruction.BU,
+            GesOpcodePrinter.OperandPart.ProjectionEntry or GesOpcodePrinter.OperandPart.KeyEntry => instruction.AU,
+            GesOpcodePrinter.OperandPart.ValueEntry => instruction.BU,
             _ => instruction.EntryAddress
         };
 
-    private static bool IsStringOperand(GameEventScriptOpcodePrinter.OperandPart part)
-        => part is >= GameEventScriptOpcodePrinter.OperandPart.String and <= GameEventScriptOpcodePrinter.OperandPart.TypeName &&
-           part is not GameEventScriptOpcodePrinter.OperandPart.TypeKind and not GameEventScriptOpcodePrinter.OperandPart.PatternKind and not GameEventScriptOpcodePrinter.OperandPart.SeriesKind;
+    private static bool IsStringOperand(GesOpcodePrinter.OperandPart part)
+        => part is >= GesOpcodePrinter.OperandPart.String and <= GesOpcodePrinter.OperandPart.TypeName &&
+           part is not GesOpcodePrinter.OperandPart.TypeKind and not GesOpcodePrinter.OperandPart.PatternKind and not GesOpcodePrinter.OperandPart.SeriesKind;
 
-    private static bool IsListOperand(GameEventScriptOpcodePrinter.OperandPart part)
-        => part is >= GameEventScriptOpcodePrinter.OperandPart.MessageShapeList and <= GameEventScriptOpcodePrinter.OperandPart.TagRegisterList;
+    private static bool IsListOperand(GesOpcodePrinter.OperandPart part)
+        => part is >= GesOpcodePrinter.OperandPart.MessageShapeList and <= GesOpcodePrinter.OperandPart.TagRegisterList;
 
-    internal static ushort ReadListOperand(GesBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part)
+    internal static ushort ReadListOperand(GesBytecodeInstruction instruction, GesOpcodePrinter.OperandPart part)
         => part switch
         {
-            GameEventScriptOpcodePrinter.OperandPart.ArgumentNameList when instruction.OpCode == GesBytecodeOpCode.ConstructData => instruction.AU,
-            GameEventScriptOpcodePrinter.OperandPart.TagRegisterList when GameEventScriptOpcodePrinter.IsResultSend(instruction.OpCode) => instruction.AU,
-            GameEventScriptOpcodePrinter.OperandPart.MessageShapeList when instruction.OpCode == GesBytecodeOpCode.LoadMessage => instruction.SecondaryListIndex,
-            GameEventScriptOpcodePrinter.OperandPart.KeyNameList => instruction.SecondaryListIndex,
-            GameEventScriptOpcodePrinter.OperandPart.CaptureRegisterList => instruction.BU,
-            GameEventScriptOpcodePrinter.OperandPart.SourceRegisterList => instruction.XRegister,
-            GameEventScriptOpcodePrinter.OperandPart.TargetRegisterList => instruction.DestinationRegister,
-            GameEventScriptOpcodePrinter.OperandPart.TagRegisterList when instruction.OpCode is GesBytecodeOpCode.EmitMessageWithTags or GesBytecodeOpCode.PublishMessageWithTags => instruction.SecondaryListIndex,
+            GesOpcodePrinter.OperandPart.ArgumentNameList when instruction.OpCode == GesBytecodeOpCode.ConstructData => instruction.AU,
+            GesOpcodePrinter.OperandPart.TagRegisterList when GesOpcodePrinter.IsResultSend(instruction.OpCode) => instruction.AU,
+            GesOpcodePrinter.OperandPart.MessageShapeList when instruction.OpCode == GesBytecodeOpCode.LoadMessage => instruction.SecondaryListIndex,
+            GesOpcodePrinter.OperandPart.KeyNameList => instruction.SecondaryListIndex,
+            GesOpcodePrinter.OperandPart.CaptureRegisterList => instruction.BU,
+            GesOpcodePrinter.OperandPart.SourceRegisterList => instruction.XRegister,
+            GesOpcodePrinter.OperandPart.TargetRegisterList => instruction.DestinationRegister,
+            GesOpcodePrinter.OperandPart.TagRegisterList when instruction.OpCode is GesBytecodeOpCode.EmitMessageWithTags or GesBytecodeOpCode.PublishMessageWithTags => instruction.SecondaryListIndex,
             _ => instruction.ListIndex
         };
 
-    private static void ValidateInstructionList(GameEventScriptProgram program, ushort listIndex, GameEventScriptOpcodePrinter.OperandPart role, int instructionIndex)
+    private static void ValidateInstructionList(GameEventScriptProgram program, ushort listIndex, GesOpcodePrinter.OperandPart role, int instructionIndex)
     {
         var list = program.UInt16IndexLists.Resolve(listIndex);
-        if (role == GameEventScriptOpcodePrinter.OperandPart.SourceRegisterList && list.Length < 2 ||
-            role == GameEventScriptOpcodePrinter.OperandPart.TargetRegisterList && list.Length == 0)
+        if (role == GesOpcodePrinter.OperandPart.SourceRegisterList && list.Length < 2 ||
+            role == GesOpcodePrinter.OperandPart.TargetRegisterList && list.Length == 0)
             InvalidOperand("Iterator register list has an invalid arity.", instructionIndex);
-        if (role == GameEventScriptOpcodePrinter.OperandPart.TargetRegisterList)
+        if (role == GesOpcodePrinter.OperandPart.TargetRegisterList)
         {
             for (var index = 0; index < list.Length; index++)
             {
@@ -357,15 +357,15 @@ internal static class GesProgramValidator
                     if (list[index] == list[previous]) InvalidOperand("Iterator output registers must be distinct.", instructionIndex);
             }
         }
-        var textIndexes = role is GameEventScriptOpcodePrinter.OperandPart.MessageShapeList or GameEventScriptOpcodePrinter.OperandPart.ArgumentNameList or GameEventScriptOpcodePrinter.OperandPart.KeyNameList;
-        var validateUniqueArgumentNames = role is GameEventScriptOpcodePrinter.OperandPart.MessageShapeList or GameEventScriptOpcodePrinter.OperandPart.ArgumentNameList;
+        var textIndexes = role is GesOpcodePrinter.OperandPart.MessageShapeList or GesOpcodePrinter.OperandPart.ArgumentNameList or GesOpcodePrinter.OperandPart.KeyNameList;
+        var validateUniqueArgumentNames = role is GesOpcodePrinter.OperandPart.MessageShapeList or GesOpcodePrinter.OperandPart.ArgumentNameList;
         for (var index = 0; index < list.Length; index++)
         {
             if (textIndexes && list[index] >= program.StringConstants.Slices.Count)
                 Throw(GesProgramFormatErrorCode.InvalidStringIndex, "Instruction list references a missing string.", (ushort)GesSectionType.Code, instructionIndex);
             if (!textIndexes && list[index] == ushort.MaxValue) InvalidOperand("Instruction list references a register outside the V1 frame limit.", instructionIndex);
             if (!textIndexes) continue;
-            if (role == GameEventScriptOpcodePrinter.OperandPart.MessageShapeList && index == 0)
+            if (role == GesOpcodePrinter.OperandPart.MessageShapeList && index == 0)
             {
                 if (!IsPortableMessageName(program.StringConstants, list[index])) InvalidOperand("Message shape names must start uppercase and contain only ASCII letters or digits.", instructionIndex);
             }
@@ -374,8 +374,8 @@ internal static class GesProgramValidator
                 InvalidOperand("Argument and key names must use the portable lowercase ASCII identifier grammar.", instructionIndex);
             }
 
-            if (!validateUniqueArgumentNames || (role == GameEventScriptOpcodePrinter.OperandPart.MessageShapeList && index == 0) || IsPortableUnlabeled(program.StringConstants, list[index])) continue;
-            var firstArgumentIndex = role == GameEventScriptOpcodePrinter.OperandPart.MessageShapeList ? 1 : 0;
+            if (!validateUniqueArgumentNames || (role == GesOpcodePrinter.OperandPart.MessageShapeList && index == 0) || IsPortableUnlabeled(program.StringConstants, list[index])) continue;
+            var firstArgumentIndex = role == GesOpcodePrinter.OperandPart.MessageShapeList ? 1 : 0;
             for (var previous = firstArgumentIndex; previous < index; previous++)
                 if (!IsPortableUnlabeled(program.StringConstants, list[previous]) && StringConstantEquals(program.StringConstants, list[previous], list[index]))
                     InvalidOperand("Message argument name occurs more than once.", instructionIndex);

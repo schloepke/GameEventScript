@@ -246,7 +246,7 @@ public sealed partial class GameEventScriptMessage : IEquatable<GameEventScriptM
     {
         if (tags is null) return [];
 
-        var buffer = new GameEventScriptTagBuffer(GetKnownCount(tags));
+        var buffer = new GesTagBuffer(GetKnownCount(tags));
         foreach (var tag in tags)
         {
             buffer.Add(tag);
@@ -262,7 +262,7 @@ public sealed partial class GameEventScriptMessage : IEquatable<GameEventScriptM
             return existingTags;
         }
 
-        var buffer = new GameEventScriptTagBuffer(existingTags.Count + GetKnownCount(newTags));
+        var buffer = new GesTagBuffer(existingTags.Count + GetKnownCount(newTags));
         for (var index = 0; index < existingTags.Count; index++)
         {
             buffer.Add(existingTags[index]);

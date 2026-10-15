@@ -156,7 +156,7 @@ extension GesCompiler {
                 break
             }
             let a = try expression(input, r, scope)
-            let mapping: [String: Op] = [
+            let mapping: [String: GesBytecodeOpCode] = [
                 "-": .negate, "!": .not, "parse": .parseLiteral, "empty": .isEmpty, "hasValue": .hasValue, "abs": .abs, "ln": .logN, "exp": .exp, "chance": .chance, "floor": .floor, "ceil": .ceil, "truncate": .truncate, "rad": .degreeToRadians,
                 "deg": .degreeFromRadians, "wrapDegree": .wrapDegree, "roundHalfEven": .roundHalfEven, "roundHalfUp": .roundHalfUp, "roundHalfDown": .roundHalfDown, "sin": .sin, "cos": .cos, "tan": .tan, "asin": .asin, "acos": .acos, "atan": .atan,
             ]
@@ -168,11 +168,11 @@ extension GesCompiler {
             }
         case .binary(let op, let left, let right):
             let a = try expression(left, r, scope)
-            let shortOpcode: Op? = op == "or" ? .or : op == "and" ? .and : op == "->" ? .implies : nil
+            let shortOpcode: GesBytecodeOpCode? = op == "or" ? .or : op == "and" ? .and : op == "->" ? .implies : nil
             if let shortOpcode { r.emit(shortOpcode, d, a, a) }
             let short = shortOpcode != nil ? r.emit(op == "or" ? .jumpIfTrue : .jumpIfFalse, 0, a) : nil
             let b = try expression(right, r, scope)
-            let mapping: [String: Op] = [
+            let mapping: [String: GesBytecodeOpCode] = [
                 "+": .add, "-": .subtract, "*": .multiply, "/": .divide, "^": .power, "div": .integerDivide, "mod": .modulo, "rem": .remainder, "=": .equal, "<>": .notEqual, "<": .less, ">": .greater, "<=": .lessOrEqual, ">=": .greaterOrEqual,
                 "default": .default, "or": .or, "and": .and, "xor": .xor, "->": .implies, "in": .contains, "not in": .contains, "inValues": .containsValue, "startsWith": .startsWith, "endsWith": .endsWith, "|": .union, "&": .intersect, "zip": .zip,
             ]
@@ -253,7 +253,7 @@ extension GesCompiler {
                 flags |= 0x80
                 x = try expression(message, r, scope)
             }
-            let op: Op = publish ? (time == nil ? .publishInstant : .publishAfter) : (time == nil ? .emitInstant : .emitAfter)
+            let op: GesBytecodeOpCode = publish ? (time == nil ? .publishInstant : .publishAfter) : (time == nil ? .emitInstant : .emitAfter)
             r.emit(op, d, x, y, payload: UInt64(tags.isEmpty ? 0 : list(tagRegisters)) | UInt64(time ?? 0) << 16, flags: flags)
         case .message(let name, let arguments):
             let regs = try arguments.map { try expression($0.value, r, scope) }
@@ -385,7 +385,7 @@ extension GesCompiler {
             }
             return
         }
-        let signatures: [String: [Int: Op]] = [
+        let signatures: [String: [Int: GesBytecodeOpCode]] = [
             "clamp": [3: .clamp], "atan2": [2: .atan2], "hypot": [2: .hypot2D, 3: .hypot3D], "distance": [2: .distance, 4: .distance2D, 6: .distance3D], "distanceSquared": [2: .distanceSquared, 4: .distanceSquared2D, 6: .distanceSquared3D],
             "lengthSquared": [1: .lengthSquared, 2: .lengthSquared2D, 3: .lengthSquared3D], "normalize": [1: .normalize, 2: .normalize2D, 3: .normalize3D], "dot": [2: .dot, 4: .dot2D, 6: .dot3D], "cross": [2: .cross, 4: .cross2D, 6: .cross3D],
             "angleBetween": [2: .angleBetween, 4: .angleBetween2D, 6: .angleBetween3D],

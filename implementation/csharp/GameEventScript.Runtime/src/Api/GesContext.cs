@@ -20,7 +20,7 @@ public sealed class GesContext
         _host = host ?? throw new ArgumentNullException(nameof(host));
         Random = random ?? throw new ArgumentNullException(nameof(random));
         RuntimeLimits = runtimeLimits ?? throw new ArgumentNullException(nameof(runtimeLimits));
-        ExtensionRegistry = extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance;
+        ExtensionRegistry = extensionRegistry ?? GesEmptyExtensionRegistry.Instance;
         _runtimeObserver = runtimeObserver;
         RuntimeBudget = new GesRuntimeBudget(this, RuntimeLimits);
     }

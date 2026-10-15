@@ -33,11 +33,11 @@ public interface IGesExtensionFunction
     void Invoke(GesExtensionCall call);
 }
 
-internal sealed class GameEventScriptEmptyExtensionRegistry : IGesExtensionRegistry
+internal sealed class GesEmptyExtensionRegistry : IGesExtensionRegistry
 {
-    public static readonly GameEventScriptEmptyExtensionRegistry Instance = new();
+    public static readonly GesEmptyExtensionRegistry Instance = new();
 
-    private GameEventScriptEmptyExtensionRegistry()
+    private GesEmptyExtensionRegistry()
     {
     }
 
@@ -84,7 +84,7 @@ public sealed class GesExtensionReference
     public string SignatureId { get; }
 
     private static string NormalizeName(string? name)
-        => name is null ? string.Empty : GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
+        => name is null ? string.Empty : GesExternalTypeNames.NormalizeIdentifier(name, nameof(name));
 
     private static string[] NormalizeArgumentLabels(IEnumerable<string?>? argumentLabels)
     {

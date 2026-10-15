@@ -10,7 +10,7 @@ internal static partial class GesCompiler
 {
     private sealed partial class BinaryCompiler
     {
-        private static string? AssemblySpecialSignature(AssemblyLine line) => line.Name switch
+        private static string? AssemblySpecialSignature(GesAssemblyLine line) => line.Name switch
         {
             "Add" or "Subtract" or "Multiply" or "Divide" or "Power" or "IntegerDivide" or "Modulo" or "Remainder" or "Min" or "Max" when line.Operands.Count == 4 => "wrrt",
             "Move" or "Negate" or "Abs" when line.Operands.Count == 3 => "wrt",
@@ -28,13 +28,13 @@ internal static partial class GesCompiler
             _ => null
         };
 
-        private static GesBytecodeTypeKind AssemblyType(ExpressionNode operand)
+        private static GesBytecodeTypeKind AssemblyType(GesExpressionNode operand)
         {
             var name = AssemblyText(operand);
             return name == "Number" ? GesBytecodeTypeKind.Float : GetBytecodeTypeKind(name.ToLowerInvariant()) ?? throw AssemblyFailure("Unknown assembly type.", name);
         }
 
-        private static GesQuantityUnit AssemblyUnit(ExpressionNode operand)
+        private static GesQuantityUnit AssemblyUnit(GesExpressionNode operand)
             => AssemblyText(operand) switch
             {
                 "none" => GesQuantityUnit.UnitNone,
@@ -44,7 +44,7 @@ internal static partial class GesCompiler
                 var name => throw AssemblyFailure("Unknown assembly unit.", name)
             };
 
-        private static GesBytecodeSeriesKind AssemblySeries(ExpressionNode operand)
+        private static GesBytecodeSeriesKind AssemblySeries(GesExpressionNode operand)
             => AssemblyText(operand) switch
             {
                 "fibonacci" => GesBytecodeSeriesKind.Fibonacci,
@@ -52,7 +52,7 @@ internal static partial class GesCompiler
                 var name => throw AssemblyFailure("Unknown assembly series.", name)
             };
 
-        private static GesBytecodePatternKind AssemblyPattern(ExpressionNode operand)
+        private static GesBytecodePatternKind AssemblyPattern(GesExpressionNode operand)
             => AssemblyText(operand) switch
             {
                 "countAny" => GesBytecodePatternKind.CountAny,
@@ -62,7 +62,7 @@ internal static partial class GesCompiler
                 var name => throw AssemblyFailure("Unknown assembly pattern.", name)
             };
 
-        private bool EmitAssemblySpecial(AssemblyLine line, GesRegisterRef[] registers)
+        private bool EmitAssemblySpecial(GesAssemblyLine line, GesRegisterRef[] registers)
         {
             var args = line.Operands;
             switch (line.Name)

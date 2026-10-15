@@ -165,7 +165,7 @@ extension GesCompiler {
         let args = line.operands
         if ["Add", "Subtract", "Multiply", "Divide", "Power", "IntegerDivide", "Modulo", "Remainder", "Min", "Max"].contains(line.name) && args.count == 4 {
             guard try assemblyText(args[3]) == "numeric" else { throw assemblyFailure(line.location, "Unknown arithmetic mode.") }
-            let op: Op = ["Add": .add, "Subtract": .subtract, "Multiply": .multiply, "Divide": .divide, "Power": .power, "IntegerDivide": .integerDivide, "Modulo": .modulo, "Remainder": .remainder, "Min": .min, "Max": .max][line.name]!
+            let op: GesBytecodeOpCode = ["Add": .add, "Subtract": .subtract, "Multiply": .multiply, "Divide": .divide, "Power": .power, "IntegerDivide": .integerDivide, "Modulo": .modulo, "Remainder": .remainder, "Min": .min, "Max": .max][line.name]!
             r.emit(op, regs[0], regs[1], regs[2], flags: 64)
             return true
         }

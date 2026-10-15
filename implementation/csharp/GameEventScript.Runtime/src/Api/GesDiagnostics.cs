@@ -288,7 +288,7 @@ public static class GesDiagnosticCodes
 /// portable comparison value; only the diagnostic phase, code, and structured
 /// fields are normative.
 /// </summary>
-internal static class GameEventScriptRuntimeExceptionText
+internal static class GesRuntimeExceptionText
 {
     /// <summary>
     /// Describes an unexpected exception, including its type, message, and stack
@@ -507,7 +507,7 @@ public sealed class GesExtensionFaultException : GesFatalRuntimeException
             code,
             message,
             Symbol: symbol,
-            TechnicalDetails: innerException is null ? null : GameEventScriptRuntimeExceptionText.Describe(innerException));
+            TechnicalDetails: innerException is null ? null : GesRuntimeExceptionText.Describe(innerException));
     }
 }
 
@@ -517,9 +517,9 @@ public sealed class GesExtensionFaultException : GesFatalRuntimeException
 /// It is a <see cref="GesFatalRuntimeException"/> so every existing
 /// boundary that already special-cases that base type handles it without change.
 /// </summary>
-internal sealed class GameEventScriptCallbackFailureException : GesFatalRuntimeException
+internal sealed class GesCallbackFailureException : GesFatalRuntimeException
 {
-    internal GameEventScriptCallbackFailureException(string code, string message, string? symbol, Exception innerException)
+    internal GesCallbackFailureException(string code, string message, string? symbol, Exception innerException)
         : base(BuildDiagnostic(code, message, symbol, innerException), innerException)
     {
     }
@@ -530,7 +530,7 @@ internal sealed class GameEventScriptCallbackFailureException : GesFatalRuntimeE
             code,
             message,
             Symbol: symbol,
-            TechnicalDetails: GameEventScriptRuntimeExceptionText.Describe(innerException));
+            TechnicalDetails: GesRuntimeExceptionText.Describe(innerException));
 }
 
 /// <summary>

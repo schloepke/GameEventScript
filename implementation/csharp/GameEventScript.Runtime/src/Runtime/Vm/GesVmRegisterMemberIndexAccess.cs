@@ -112,11 +112,11 @@ internal static class GesVmRegisterMemberIndexAccess
                 }
                 return;
             case Range when obj.ObjectValue is GesIntegerRange integerRange:
-                if (GameEventScriptRangeMath.GetTerm(integerRange.From, integerRange.To, integerRange.Step, indexIn) is { } intRangeValue) vm.SetInteger(destinationRegister, intRangeValue);
+                if (GesRangeMath.GetTerm(integerRange.From, integerRange.To, integerRange.Step, indexIn) is { } intRangeValue) vm.SetInteger(destinationRegister, intRangeValue);
                 else vm.SetNothing(destinationRegister);
                 return;
             case Range when obj.ObjectValue is GesFloatRange floatRange:
-                if (GameEventScriptRangeMath.GetTerm(floatRange.From, floatRange.To, floatRange.Step, indexIn) is { } floatRangeValue) vm.SetFloat(destinationRegister, floatRangeValue);
+                if (GesRangeMath.GetTerm(floatRange.From, floatRange.To, floatRange.Step, indexIn) is { } floatRangeValue) vm.SetFloat(destinationRegister, floatRangeValue);
                 else vm.SetNothing(destinationRegister);
                 return;
             case Text or Tag:

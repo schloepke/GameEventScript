@@ -70,7 +70,7 @@ internal sealed class GesMessageJsonCodec
         var text = String(value);
         if (text.Contains("%"))
             throw Error();
-        var number = TextNumberCast.Read(text, 0, text.Length, percentage: false, allowGrouping: false);
+        var number = GesTextNumberCast.Read(text, 0, text.Length, percentage: false, allowGrouping: false);
         if (number is not { } result || result.Kind is not (Integer or Float) || result.Unit != 0)
             throw Error();
         return result;
@@ -118,7 +118,7 @@ internal sealed class GesMessageJsonCodec
         for (var i = 0; i < tags.Length; i++)
         {
             names[i] = String(tags[i]);
-            if (!GameEventScriptTagRules.IsValidTagName(names[i]))
+            if (!GesTagRules.IsValidTagName(names[i]))
                 throw Error();
         }
 
@@ -243,7 +243,7 @@ internal sealed class GesMessageJsonCodec
             case "Tag":
                 Fields(value, "type", "value");
                 var tag = String(Get(value, "value"));
-                if (!GameEventScriptTagRules.IsValidTagName(tag))
+                if (!GesTagRules.IsValidTagName(tag))
                     throw Error();
                 return GesValue.GesTag(tag);
             case "Boolean":

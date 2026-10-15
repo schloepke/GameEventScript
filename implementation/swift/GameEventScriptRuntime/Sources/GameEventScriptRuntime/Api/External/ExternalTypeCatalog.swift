@@ -18,7 +18,7 @@ public struct GesDeclaredExternalTypeCatalog: GesExternalTypeCatalog {
     ///
     /// - Throws: An API error for an invalid type name.
     public func resolve(_ typeName: String) throws -> GesExternalTypeDefinition? {
-        let name = try GesExternalNames.type(typeName)
+        let name = try GesExternalTypeNames.type(typeName)
         return types.first { $0.name == name }
     }
 }

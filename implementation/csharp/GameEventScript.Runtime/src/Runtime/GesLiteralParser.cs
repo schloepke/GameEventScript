@@ -56,7 +56,7 @@ internal struct GesLiteralParser
         if (_position == _text.Length) return null;
         if (_text[_position] is '\'' or '"')
         {
-            var text = TextLiteralReader.Read(_text, ref _position);
+            var text = GesTextLiteralReader.Read(_text, ref _position);
             return text is null ? null : GesValue.GesText(text);
         }
         if (_text[_position] == ':')
@@ -98,9 +98,9 @@ internal struct GesLiteralParser
         if (token[0] == '#')
         {
             var name = _text.Substring(start + 1, _position - start - 1);
-            return GameEventScriptTagRules.IsValidTagName(name) ? GesValue.GesTag(name) : null;
+            return GesTagRules.IsValidTagName(name) ? GesValue.GesTag(name) : null;
         }
-        return TextNumberCast.Read(_text, start, _position - start, percentage: token[token.Length - 1] == '%', allowGrouping: false);
+        return GesTextNumberCast.Read(_text, start, _position - start, percentage: token[token.Length - 1] == '%', allowGrouping: false);
     }
 
     private GesValue? ReadTyped(int depth)
@@ -287,7 +287,7 @@ internal struct GesLiteralParser
                 var start = _position;
                 while (_position < _text.Length && !IsWhitespace(_text[_position]) && _text[_position] is not (',' or ')')) _position++;
                 if (_position == start) return null;
-                var value = TextNumberCast.Read(_text, start, _position - start, percentage: _text[_position - 1] == '%', allowGrouping: false);
+                var value = GesTextNumberCast.Read(_text, start, _position - start, percentage: _text[_position - 1] == '%', allowGrouping: false);
                 if (value is not { } component || component.Kind is not (GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage))
                     return null;
                 if (unit.HasValue && unit != component.Unit) return null;
@@ -420,7 +420,7 @@ internal struct GesLiteralParser
     private string? ReadKey()
     {
         SkipWhitespace();
-        if (_position < _text.Length && _text[_position] is '\'' or '"') return TextLiteralReader.Read(_text, ref _position);
+        if (_position < _text.Length && _text[_position] is '\'' or '"') return GesTextLiteralReader.Read(_text, ref _position);
         var start = _position;
         if (_position == _text.Length || _text[_position] is < 'a' or > 'z') return null;
         _position++;

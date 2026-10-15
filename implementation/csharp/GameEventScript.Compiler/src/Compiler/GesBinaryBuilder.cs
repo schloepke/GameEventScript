@@ -416,7 +416,7 @@ internal sealed partial class GesBinaryBuilder
                 _debugSymbols,
                 _sourceMap,
                 _sourceArchive,
-                buildMetadataSegment: new GesBuildMetadataSegment(GameEventScriptCompilerMetadata.CompilerId, GameEventScriptCompilerMetadata.CompilerVersion));
+                buildMetadataSegment: new GesBuildMetadataSegment(GesCompilerMetadata.CompilerId, GesCompilerMetadata.CompilerVersion));
         }
 
         private string ResolveModuleName()

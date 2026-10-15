@@ -75,7 +75,7 @@ struct GesLiteralParser {
             let tag = String(token.dropFirst())
             return GesNames.plain(tag) ? try? .tag(tag) : nil
         }
-        return TextNumberCast.read(token, percentage: token.hasSuffix("%"), allowGrouping: false)
+        return GesTextNumberCast.read(token, percentage: token.hasSuffix("%"), allowGrouping: false)
     }
 
     private mutating func node(_ type: String, _ labels: [String], _ arguments: [GesValue], _ constructor: GesBindingSegment.Entry? = nil) -> GesValue {
@@ -241,7 +241,7 @@ struct GesLiteralParser {
                 while position < bytes.count && !Self.space(bytes[position]) && bytes[position] != 44 && bytes[position] != 41 { position += 1 }
                 if start == position { return nil }
                 let token = String(decoding: bytes[start..<position], as: UTF8.self)
-                guard let value = TextNumberCast.read(token, percentage: token.hasSuffix("%"), allowGrouping: false), value.numericOnly else { return nil }
+                guard let value = GesTextNumberCast.read(token, percentage: token.hasSuffix("%"), allowGrouping: false), value.numericOnly else { return nil }
                 if let unit, unit != value.unit { return nil }
                 unit = value.unit
                 components[index] = value.asNumber

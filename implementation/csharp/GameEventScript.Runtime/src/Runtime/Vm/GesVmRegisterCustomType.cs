@@ -92,7 +92,7 @@ internal static class GesVmRegisterCustomType
                     return;
                 }
 
-                arguments[parameterIndex] = GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(in converted, parameter);
+                arguments[parameterIndex] = GesExternalTypeValueConverter.CoerceToDeclaredType(in converted, parameter);
                 continue;
             }
 
@@ -165,7 +165,7 @@ internal static class GesVmRegisterCustomType
                 return;
             }
 
-            arguments[parameterIndex] = GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(in converted, parameter);
+            arguments[parameterIndex] = GesExternalTypeValueConverter.CoerceToDeclaredType(in converted, parameter);
         }
 
         var call = vm.ExternalTypeConstructorCall;
@@ -187,7 +187,7 @@ internal static class GesVmRegisterCustomType
                 vm.SetNothing(destinationRegister);
                 vm.RaiseError(GesDiagnosticCodes.RuntimeExternalConstructorFailed,
                     $"External type '{constructor.Definition.TypeName}' constructor failed unexpectedly.",
-                    GameEventScriptRuntimeExceptionText.Describe(exception), symbol: constructor.Definition.TypeName);
+                    GesRuntimeExceptionText.Describe(exception), symbol: constructor.Definition.TypeName);
                 return;
             }
 

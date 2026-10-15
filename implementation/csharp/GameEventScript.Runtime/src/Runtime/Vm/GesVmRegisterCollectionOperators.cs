@@ -100,7 +100,7 @@ internal static class GesVmRegisterCollectionOperators
             }
             else if (leftFloatRange is not null)
             {
-                left.SetFloat(GameEventScriptRangeMath.GetFloatTerm(leftFloatRange.From, leftFloatRange.To, leftFloatRange.Step, i));
+                left.SetFloat(GesRangeMath.GetFloatTerm(leftFloatRange.From, leftFloatRange.To, leftFloatRange.Step, i));
             }
 
             var right = new GesValue();
@@ -113,7 +113,7 @@ internal static class GesVmRegisterCollectionOperators
             }
             else if (rightFloatRange is not null)
             {
-                right.SetFloat(GameEventScriptRangeMath.GetFloatTerm(rightFloatRange.From, rightFloatRange.To, rightFloatRange.Step, i));
+                right.SetFloat(GesRangeMath.GetFloatTerm(rightFloatRange.From, rightFloatRange.To, rightFloatRange.Step, i));
             }
 
             if (left.EqualsValue(right)) continue;
@@ -215,7 +215,7 @@ internal static class GesVmRegisterCollectionOperators
             }
             else if (leftFloatRange is not null)
             {
-                left.SetFloat(GameEventScriptRangeMath.GetFloatTerm(leftFloatRange.From, leftFloatRange.To, leftFloatRange.Step, leftIndex));
+                left.SetFloat(GesRangeMath.GetFloatTerm(leftFloatRange.From, leftFloatRange.To, leftFloatRange.Step, leftIndex));
             }
 
             var right = new GesValue();
@@ -228,7 +228,7 @@ internal static class GesVmRegisterCollectionOperators
             }
             else if (rightFloatRange is not null)
             {
-                right.SetFloat(GameEventScriptRangeMath.GetFloatTerm(rightFloatRange.From, rightFloatRange.To, rightFloatRange.Step, i));
+                right.SetFloat(GesRangeMath.GetFloatTerm(rightFloatRange.From, rightFloatRange.To, rightFloatRange.Step, i));
             }
 
             if (left.EqualsValue(right)) continue;
@@ -557,7 +557,7 @@ internal static class GesVmRegisterCollectionOperators
                 return;
             case GesBytecodeTypeKind.Range when source.ObjectValue is GesIntegerRange range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+                var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
                 var value = range.From;
                 for (var i = 0L; i < length; i++)
                 {
@@ -583,10 +583,10 @@ internal static class GesVmRegisterCollectionOperators
             }
             case GesBytecodeTypeKind.Range when source.ObjectValue is GesFloatRange range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+                var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
                 for (var i = 0L; i < length; i++)
                 {
-                    var value = GameEventScriptRangeMath.GetFloatTerm(range.From, range.To, range.Step, i);
+                    var value = GesRangeMath.GetFloatTerm(range.From, range.To, range.Step, i);
                     if (value != 0d && double.IsFinite(value))
                     {
                         if (!requireAll)
@@ -698,7 +698,7 @@ internal static class GesVmRegisterCollectionOperators
             }
             case GesBytecodeTypeKind.Range when a.ObjectValue is GesIntegerRange range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+                var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
                 var value = range.From;
                 for (var i = 0L; i < length; i++)
                 {
@@ -724,10 +724,10 @@ internal static class GesVmRegisterCollectionOperators
             }
             case GesBytecodeTypeKind.Range when a.ObjectValue is GesFloatRange range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+                var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
                 for (var i = 0L; i < length; i++)
                 {
-                    var value = GameEventScriptRangeMath.GetFloatTerm(range.From, range.To, range.Step, i);
+                    var value = GesRangeMath.GetFloatTerm(range.From, range.To, range.Step, i);
                     candidate.SetFloat(value);
                     if (vm.ContainsHelper(candidate, b) == true)
                     {
@@ -786,7 +786,7 @@ internal static class GesVmRegisterCollectionOperators
             }
             case GesBytecodeTypeKind.Range when a.ObjectValue is GesIntegerRange range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+                var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
                 var value = range.From;
                 for (var i = 0L; i < length; i++)
                 {
@@ -799,10 +799,10 @@ internal static class GesVmRegisterCollectionOperators
             }
             case GesBytecodeTypeKind.Range when a.ObjectValue is GesFloatRange range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+                var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
                 for (var i = 0L; i < length; i++)
                 {
-                    var value = GameEventScriptRangeMath.GetFloatTerm(range.From, range.To, range.Step, i);
+                    var value = GesRangeMath.GetFloatTerm(range.From, range.To, range.Step, i);
                     candidate.SetFloat(value);
                     candidates.Add(in candidate);
                 }
@@ -1347,7 +1347,7 @@ internal static class GesVmRegisterCollectionOperators
         var number = value.AsNumeric;
         // Converting a large Int64 to Binary64 must not make a different integer appear contained.
         if (value.Kind == Integer && (!GesNumber.CanRepresentAsInteger(number) || (long)number != value.IntegerValue)) return false;
-        return GameEventScriptRangeMath.Contains(range.From, range.To, range.Step, number);
+        return GesRangeMath.Contains(range.From, range.To, range.Step, number);
     }
 
     private static bool? ContainsHelper(this GesVirtualMachine vm, in GesValue a, in GesValue b)

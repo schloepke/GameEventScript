@@ -16,8 +16,8 @@ public struct GesExtensionReference {
     ///
     /// - Throws: An API or message error for invalid identifiers.
     public init(extensionName: String, functionName: String, argumentLabels: [String] = []) throws {
-        self.extensionName = try GesExternalNames.identifier(extensionName)
-        self.functionName = try GesExternalNames.identifier(functionName)
+        self.extensionName = try GesExternalTypeNames.identifier(extensionName)
+        self.functionName = try GesExternalTypeNames.identifier(functionName)
         self.argumentLabels = try argumentLabels.map { try GesMessageSignature.normalizeParameterName($0) }
         signatureID = self.extensionName + "." + self.functionName + "(" + self.argumentLabels.joined(separator: ",") + ")"
     }

@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
-using static GameEventScript.Api.GameEventScriptOpcodePrinter.OperandPart;
+using static GameEventScript.Api.GesOpcodePrinter.OperandPart;
 
 namespace GameEventScript.Api;
 
 // ReSharper disable InconsistentNaming
-internal static class GameEventScriptOpcodePrinter
+internal static class GesOpcodePrinter
 {
     internal static bool IsResultSend(GesBytecodeOpCode opcode)
         => opcode is >= GesBytecodeOpCode.EmitInstant and <= GesBytecodeOpCode.PublishAfter;

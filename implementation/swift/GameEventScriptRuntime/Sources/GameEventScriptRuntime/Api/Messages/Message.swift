@@ -62,7 +62,7 @@ public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
     }
 
     private static func normalizeTagName(_ tag: String) throws -> String {
-        var normalized = MessageNames.trim(tag)
+        var normalized = GesMessageNames.trim(tag)
         if normalized.hasPrefix("#") { normalized.removeFirst() }
         guard !normalized.isEmpty else { return "" }
         guard GesText.isLowerName(normalized) else { throw GesMessageError.invalidTag }

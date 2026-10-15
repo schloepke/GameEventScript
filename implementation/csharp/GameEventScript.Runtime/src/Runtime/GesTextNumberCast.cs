@@ -9,7 +9,7 @@ using GameEventScript.Runtime.Values;
 
 namespace GameEventScript.Runtime;
 
-internal static class TextNumberCast
+internal static class GesTextNumberCast
 {
     // Grammar, exact Int64 decoding and decimal Percentage scaling are GES rules.
     // The runtime converter is used only for the final invariant decimal-to-binary64 rounding.

@@ -3,7 +3,7 @@
 
 namespace GameEventScript.Runtime;
 
-internal static class GameEventScriptMathConstants
+internal static class GesMathConstants
 {
     internal const double Pi = System.Math.PI;
     internal const double E = System.Math.E;

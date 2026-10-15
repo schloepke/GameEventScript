@@ -34,7 +34,7 @@ def main():
         expected, actual = enum_values(csharp, name), enum_values(swift, name, True)
         if not expected or expected != actual:
             raise RuntimeError(f"{name} identifier drift: C#={expected}; Swift={actual}")
-    printer = (CS / "GameEventScriptOpcodePrinter.cs").read_text()
+    printer = (CS / "GesOpcodePrinter.cs").read_text()
     expected = {
         lower(op): [lower(part.strip()) for part in parts.split(",") if part.strip()]
         for op, parts in re.findall(r"GesBytecodeOpCode\.(\w+) => \[([^\]]*)\]", printer)

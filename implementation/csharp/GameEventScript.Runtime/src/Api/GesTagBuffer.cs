@@ -5,12 +5,12 @@ using System;
 
 namespace GameEventScript.Api;
 
-internal sealed class GameEventScriptTagBuffer
+internal sealed class GesTagBuffer
 {
     private string[] _tags;
     private int _count;
 
-    internal GameEventScriptTagBuffer(int capacity)
+    internal GesTagBuffer(int capacity)
     {
         _tags = capacity <= 0 ? [] : new string[capacity];
     }

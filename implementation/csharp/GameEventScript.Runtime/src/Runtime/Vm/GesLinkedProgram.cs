@@ -55,8 +55,8 @@ internal sealed class GesLinkedProgram
         ExtensionCallBinds = BuildIdIndexedBindTable(program, ExtensionCall);
         ExternalTypeBinds = BuildIdIndexedBindTable(program, ExternalType);
         OutboundMessageSignatures = BuildOutboundMessageSignatures(program);
-        BoundExtensionCalls = BindExtensions(extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance);
-        BoundExternalTypeConstructors = BindExternalTypes(typeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance);
+        BoundExtensionCalls = BindExtensions(extensionRegistry ?? GesEmptyExtensionRegistry.Instance);
+        BoundExternalTypeConstructors = BindExternalTypes(typeRegistry ?? GesEmptyExternalTypeRegistry.Instance);
         Handlers = BuildHandlers(program);
         RequiredRegisterCapacity = program.RequiredRegisterCount;
     }

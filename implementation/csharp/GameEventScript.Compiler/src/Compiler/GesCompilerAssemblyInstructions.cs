@@ -175,7 +175,7 @@ internal static partial class GesCompiler
             _ => throw CompileFailure("compile.invalidAssembly", $"Unsupported assembly instruction '{opcode}'.", opcode)
         };
 
-        private void EmitAssemblyInstruction(AssemblyLine line, GesRegisterRef[] registers, IReadOnlyDictionary<string, GesLabelRef> labels)
+        private void EmitAssemblyInstruction(GesAssemblyLine line, GesRegisterRef[] registers, IReadOnlyDictionary<string, GesLabelRef> labels)
         {
             var operands = line.Operands;
             switch (line.Name)

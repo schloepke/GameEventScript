@@ -4,7 +4,7 @@
 /// Shared implementation boundary for the separately packaged compiler.
 @_spi(Compiler) public enum GesCompilerSupport {
     /// Recognizes a source numeric literal using the runtime's numeric rules; returns nil for invalid input.
-    public static func number(_ text: String, percentage: Bool = false) -> GesValue? { TextNumberCast.read(text, percentage: percentage, allowGrouping: false) }
+    public static func number(_ text: String, percentage: Bool = false) -> GesValue? { GesTextNumberCast.read(text, percentage: percentage, allowGrouping: false) }
 
     /// Validates labels for an explicit built-in data constructor without evaluating its arguments.
     public static func dataArguments(_ type: String, _ labels: [String]) -> Bool { GesDataConstructionShape.positions(type, labels) != nil }

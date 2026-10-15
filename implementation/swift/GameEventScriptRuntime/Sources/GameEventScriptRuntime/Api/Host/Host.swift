@@ -152,7 +152,7 @@ public final class GameEventScriptHost {
     /// - Returns: An idempotently detachable subscription.
     /// - Throws: An API error for an empty name, invalid tags or exhausted registration IDs.
     public func subscribeMessageName(_ name: String, handler: any GesNativeMessageHandler, matchingTags: [String] = [], withoutTags: [String] = [], priority: Int = 0) throws -> GesSubscription {
-        guard !MessageNames.trim(name).isEmpty else { throw GesApiError.invalidArgument("Empty message name") }
+        guard !GesMessageNames.trim(name).isEmpty else { throw GesApiError.invalidArgument("Empty message name") }
         return try subscribe(.init(name: name), handler: handler, matchingTags: matchingTags, withoutTags: withoutTags, priority: priority, matchArguments: false)
     }
 

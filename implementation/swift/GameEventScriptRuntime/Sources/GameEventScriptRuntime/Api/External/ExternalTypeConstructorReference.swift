@@ -14,8 +14,8 @@ public struct GesExternalTypeConstructorReference {
     ///
     /// - Throws: An API error for invalid names.
     public init(typeName: String, argumentLabels: [String] = []) throws {
-        self.typeName = try GesExternalNames.type(typeName)
-        self.argumentLabels = try argumentLabels.map(GesExternalNames.identifier).sorted()
+        self.typeName = try GesExternalTypeNames.type(typeName)
+        self.argumentLabels = try argumentLabels.map(GesExternalTypeNames.identifier).sorted()
         signatureID = self.typeName + "(" + self.argumentLabels.joined(separator: ",") + ")"
     }
 }

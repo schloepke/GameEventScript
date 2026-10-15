@@ -129,7 +129,7 @@ public sealed partial class GameEventScriptHost
                     _observer?.RuntimeError(new GesDiagnostic(GesDiagnosticPhase.Runtime,
                         GesDiagnosticCodes.RuntimePublishSinkFailure, "Publish sink failed.",
                         ProgramName: publication.Instance.Program.ModuleName, HandlerName: "initialization()",
-                        TechnicalDetails: GameEventScriptRuntimeExceptionText.Describe(exception)));
+                        TechnicalDetails: GesRuntimeExceptionText.Describe(exception)));
                 }
             }
             _observer?.MessagePublished(publication.Message, new(publication.LocalAccepted, attempted, accepted));

@@ -166,10 +166,10 @@ internal static class GesRuntimeLimitUtilities
             return 0;
         }
 
-        return GameEventScriptRangeMath.GetLength(from, to, step);
+        return GesRangeMath.GetLength(from, to, step);
     }
 
     public static long GetRangeLength(double from, double to, double step)
-        => GameEventScriptRangeMath.GetLength(from, to, step);
+        => GesRangeMath.GetLength(from, to, step);
 
 }

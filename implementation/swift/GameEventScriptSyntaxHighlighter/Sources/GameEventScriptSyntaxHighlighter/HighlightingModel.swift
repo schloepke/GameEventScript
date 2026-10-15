@@ -60,7 +60,7 @@ public struct GesHighlightSpan: Equatable, Sendable {
         self.start = start
         self.length = length
         self.scopes = scopes
-        kind = ScopeKinds.classify(scopes)
+        kind = GesScopeKinds.classify(scopes)
     }
 }
 
@@ -95,7 +95,7 @@ public enum GesHighlightingError: Error {
     case invalidAnsiColor
 }
 
-enum ScopeKinds {
+enum GesScopeKinds {
     static func classify(_ scopes: [String]) -> GesSyntaxKind {
         for scope in scopes.reversed() {
             if scope.hasPrefix("comment") { return .comment }

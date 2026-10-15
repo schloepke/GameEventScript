@@ -3,8 +3,8 @@
 
 using System;
 using GameEventScript.Api;
-using static GameEventScript.Api.GameEventScriptOpcodePrinter.OperandPart;
 using static GameEventScript.Api.GesBytecodeOpCode;
+using static GameEventScript.Api.GesOpcodePrinter.OperandPart;
 
 namespace GameEventScript.Api;
 
@@ -37,7 +37,7 @@ internal static class GesProgramInternalValueValidator
                 var address = pending[cursor];
                 var instruction = program.Code[address];
                 if (frames[address] <= register) continue;
-                var operands = GameEventScriptOpcodePrinter.PrintInstruction(instruction);
+                var operands = GesOpcodePrinter.PrintInstruction(instruction);
                 var overwritten = false;
                 for (var position = 0; position < operands.Length; position++)
                 {
@@ -77,7 +77,7 @@ internal static class GesProgramInternalValueValidator
         pending[count++] = address;
     }
 
-    private static bool Allows(GesBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart operand, int kind)
+    private static bool Allows(GesBytecodeInstruction instruction, GesOpcodePrinter.OperandPart operand, int kind)
     {
         var op = instruction.OpCode;
         if (operand == BuilderRegister)

@@ -96,7 +96,7 @@ public sealed class GesDeclaredExternalTypeCatalog : IGesExternalTypeCatalog
     /// <returns>The result of the operation.</returns>
     public GesExternalTypeDefinition? Resolve(string typeName)
     {
-        var normalized = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
+        var normalized = GesExternalTypeNames.NormalizeTypeName(typeName);
         return _typesByName.TryGetValue(normalized, out var definition) ? definition : null;
     }
 }
@@ -228,7 +228,7 @@ public sealed class GesExternalTypeDefinition
     /// <param name="constructors">The constructors value.</param>
     public GesExternalTypeDefinition(string name, IEnumerable<GesExternalTypeFieldDefinition> fields, IEnumerable<GesExternalTypeConstructorDefinition> constructors)
     {
-        Name = GameEventScriptExternalTypeNames.NormalizeTypeName(name);
+        Name = GesExternalTypeNames.NormalizeTypeName(name);
         var copiedFields = CopyFields(fields ?? throw new ArgumentNullException(nameof(fields)));
         var copiedConstructors = CopyConstructors(constructors ?? throw new ArgumentNullException(nameof(constructors)));
         ValidateFields(copiedFields);
@@ -379,9 +379,9 @@ public sealed class GesExternalTypeFieldDefinition
     /// <param name="typeName">The type name value.</param>
     public GesExternalTypeFieldDefinition(string name, string typeName)
     {
-        Name = GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
-        TypeName = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
-        var (kind, unit) = GameEventScriptExternalTypeNames.GetKindAndUnit(TypeName);
+        Name = GesExternalTypeNames.NormalizeIdentifier(name, nameof(name));
+        TypeName = GesExternalTypeNames.NormalizeTypeName(typeName);
+        var (kind, unit) = GesExternalTypeNames.GetKindAndUnit(TypeName);
         Kind = kind;
         Unit = unit.ToStoredUnit();
     }
@@ -409,9 +409,9 @@ public sealed class GesExternalTypeFieldDefinition
 
     internal GesExternalTypeFieldDefinition(string name, GesBytecodeTypeKind? kind, GesQuantityUnit? unit)
     {
-        Name = GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
+        Name = GesExternalTypeNames.NormalizeIdentifier(name, nameof(name));
         TypeName = kind is { } resolvedKind
-            ? GameEventScriptExternalTypeNames.ToTypeName(resolvedKind, unit)
+            ? GesExternalTypeNames.ToTypeName(resolvedKind, unit)
             : throw new ArgumentException("External GameEventScript field kind must be specified.", nameof(kind));
         Kind = kind;
         Unit = unit.ToStoredUnit();
@@ -450,9 +450,9 @@ public sealed class GesExternalTypeParameterDefinition
     /// <param name="typeName">The type name value.</param>
     public GesExternalTypeParameterDefinition(string name, string typeName)
     {
-        Name = GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
-        TypeName = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
-        var (kind, unit) = GameEventScriptExternalTypeNames.GetKindAndUnit(TypeName);
+        Name = GesExternalTypeNames.NormalizeIdentifier(name, nameof(name));
+        TypeName = GesExternalTypeNames.NormalizeTypeName(typeName);
+        var (kind, unit) = GesExternalTypeNames.GetKindAndUnit(TypeName);
         Kind = kind;
         Unit = unit.ToStoredUnit();
     }
@@ -480,9 +480,9 @@ public sealed class GesExternalTypeParameterDefinition
 
     internal GesExternalTypeParameterDefinition(string name, GesBytecodeTypeKind? kind, GesQuantityUnit? unit)
     {
-        Name = GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
+        Name = GesExternalTypeNames.NormalizeIdentifier(name, nameof(name));
         TypeName = kind is { } resolvedKind
-            ? GameEventScriptExternalTypeNames.ToTypeName(resolvedKind, unit)
+            ? GesExternalTypeNames.ToTypeName(resolvedKind, unit)
             : throw new ArgumentException("External GameEventScript parameter kind must be specified.", nameof(kind));
         Kind = kind;
         Unit = unit.ToStoredUnit();
@@ -521,7 +521,7 @@ public sealed class GesExternalTypeConstructorDefinition
     /// <param name="parameters">The parameters value.</param>
     public GesExternalTypeConstructorDefinition(string typeName, IEnumerable<GesExternalTypeParameterDefinition> parameters)
     {
-        TypeName = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
+        TypeName = GesExternalTypeNames.NormalizeTypeName(typeName);
         var copiedParameters = CopyParameters(parameters ?? throw new ArgumentNullException(nameof(parameters)));
         var names = new HashSet<string>(StringComparer.Ordinal);
         for (var index = 0; index < copiedParameters.Length; index++)
@@ -612,7 +612,7 @@ public sealed class GesExternalTypeConstructorReference
     /// <param name="argumentLabels">The argument labels value.</param>
     public GesExternalTypeConstructorReference(string typeName, IEnumerable<string?>? argumentLabels)
     {
-        TypeName = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
+        TypeName = GesExternalTypeNames.NormalizeTypeName(typeName);
         ArgumentLabels = GesReadOnlyArray<string>.FromOwnedArray(NormalizeAndSortLabels(argumentLabels));
         SignatureId = CreateSignatureId(TypeName, ArgumentLabels);
     }
@@ -640,7 +640,7 @@ public sealed class GesExternalTypeConstructorReference
     /// <returns>The result of the operation.</returns>
     public static string CreateSignatureId(string typeName, IEnumerable<string?>? argumentLabels)
     {
-        var normalizedTypeName = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
+        var normalizedTypeName = GesExternalTypeNames.NormalizeTypeName(typeName);
         var labels = NormalizeAndSortLabels(argumentLabels);
         var builder = new StringBuilder();
         builder.Append(normalizedTypeName).Append('(');
@@ -676,7 +676,7 @@ public sealed class GesExternalTypeConstructorReference
             var index = 0;
             foreach (var label in collection)
             {
-                values[index++] = GameEventScriptExternalTypeNames.NormalizeIdentifier(label, nameof(argumentLabels));
+                values[index++] = GesExternalTypeNames.NormalizeIdentifier(label, nameof(argumentLabels));
             }
         }
         else
@@ -684,7 +684,7 @@ public sealed class GesExternalTypeConstructorReference
             var list = new List<string>();
             foreach (var label in argumentLabels)
             {
-                list.Add(GameEventScriptExternalTypeNames.NormalizeIdentifier(label, nameof(argumentLabels)));
+                list.Add(GesExternalTypeNames.NormalizeIdentifier(label, nameof(argumentLabels)));
             }
 
             if (list.Count == 0)
@@ -704,11 +704,11 @@ public sealed class GesExternalTypeConstructorReference
     }
 }
 
-internal sealed class GameEventScriptEmptyExternalTypeCatalog : IGesExternalTypeCatalog
+internal sealed class GesEmptyExternalTypeCatalog : IGesExternalTypeCatalog
 {
-    public static readonly GameEventScriptEmptyExternalTypeCatalog Instance = new();
+    public static readonly GesEmptyExternalTypeCatalog Instance = new();
 
-    private GameEventScriptEmptyExternalTypeCatalog()
+    private GesEmptyExternalTypeCatalog()
     {
     }
 
@@ -717,11 +717,11 @@ internal sealed class GameEventScriptEmptyExternalTypeCatalog : IGesExternalType
     public GesExternalTypeDefinition? Resolve(string typeName) => null;
 }
 
-internal sealed class GameEventScriptEmptyExternalTypeRegistry : IGesExternalTypeRegistry
+internal sealed class GesEmptyExternalTypeRegistry : IGesExternalTypeRegistry
 {
-    public static readonly GameEventScriptEmptyExternalTypeRegistry Instance = new();
+    public static readonly GesEmptyExternalTypeRegistry Instance = new();
 
-    private GameEventScriptEmptyExternalTypeRegistry()
+    private GesEmptyExternalTypeRegistry()
     {
     }
 

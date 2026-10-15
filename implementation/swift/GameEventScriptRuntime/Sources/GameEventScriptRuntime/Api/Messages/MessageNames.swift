@@ -1,7 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-enum MessageNames {
+enum GesMessageNames {
     static func trim(_ input: String) -> String {
         let scalars = input.unicodeScalars
         var start = scalars.startIndex

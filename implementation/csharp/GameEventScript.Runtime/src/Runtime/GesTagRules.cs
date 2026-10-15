@@ -3,7 +3,7 @@
 
 namespace GameEventScript.Runtime;
 
-internal static class GameEventScriptTagRules
+internal static class GesTagRules
 {
     internal static bool IsValidTagName(string? value)
         => value is not null && GesText.IsTagName(value);

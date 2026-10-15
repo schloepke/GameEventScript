@@ -1071,7 +1071,7 @@ public partial struct GesValue : IEquatable<GesValue>
         Nothing => "nothing",
         Integer => FormatNumber(IntegerValue, Unit),
         Float => FormatNumber(FloatValue, Unit),
-        Percentage => TextNumberCast.FormatPercentage(FloatValue),
+        Percentage => GesTextNumberCast.FormatPercentage(FloatValue),
         GesBytecodeTypeKind.Boolean => IsTrue ? "true" : "false",
         Text => TextValue,
         Tag => "#" + TextValue,
@@ -1089,8 +1089,8 @@ public partial struct GesValue : IEquatable<GesValue>
         _ => Kind.ToString()
     };
 
-    private static string FormatNumber(long value, GesQuantityUnit unit) => TextNumberCast.Format(value, unit);
-    private static string FormatNumber(double value, GesQuantityUnit unit) => TextNumberCast.Format(value, unit);
+    private static string FormatNumber(long value, GesQuantityUnit unit) => GesTextNumberCast.Format(value, unit);
+    private static string FormatNumber(double value, GesQuantityUnit unit) => GesTextNumberCast.Format(value, unit);
     private static string FormatTriplet(string typeName, GesSpatialValue triplet, GesQuantityUnit unit)
         => $"{typeName}(x: {FormatNumber(triplet.X, unit)}, y: {FormatNumber(triplet.Y, unit)}, z: {FormatNumber(triplet.Z, unit)})";
     private static string FormatDice(int[] dice)
@@ -1109,7 +1109,7 @@ public partial struct GesValue : IEquatable<GesValue>
     }
     private static void AppendNestedText(StringBuilder builder, in GesValue value)
     {
-        if (value.Kind == Text) TextLiteralReader.AppendQuoted(builder, value.TextValue);
+        if (value.Kind == Text) GesTextLiteralReader.AppendQuoted(builder, value.TextValue);
         else builder.Append(value.ToText);
     }
     private static string FormatList(GesValue[] list)
@@ -1134,7 +1134,7 @@ public partial struct GesValue : IEquatable<GesValue>
             first = false;
             var key = valueMap.KeyAt(i);
             if (Runtime.GesText.IsFieldName(key)) builder.Append(key);
-            else TextLiteralReader.AppendQuoted(builder, key);
+            else GesTextLiteralReader.AppendQuoted(builder, key);
             builder.Append(": ");
             GesValue tempQualifier = valueMap.ValueAt(i);
             AppendNestedText(builder, in tempQualifier);
@@ -1146,7 +1146,7 @@ public partial struct GesValue : IEquatable<GesValue>
     private static string FormatRecord(string name, GesValueMap fields)
     {
         var builder = new StringBuilder(":Record(");
-        TextLiteralReader.AppendQuoted(builder, name);
+        GesTextLiteralReader.AppendQuoted(builder, name);
         return builder.Append(", ").Append(FormatMap(fields)).Append(')').ToString();
     }
     private static string FormatMessage(GameEventScriptMessage message)

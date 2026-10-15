@@ -8,23 +8,23 @@ namespace GameEventScript.Compiler;
 
 // Abstract nodes for the syntax tree
 
-internal abstract record StatementNode : ScriptNode;
+internal abstract record GesStatementNode : GesScriptNode;
 
-internal abstract record ExpressionNode : ScriptNode;
+internal abstract record GesExpressionNode : GesScriptNode;
 
-internal abstract record CollectionSelectorNode : ScriptNode
+internal abstract record GesCollectionSelectorNode : GesScriptNode
 {
     // Single bindings use the selector identifier; only multiple bindings need storage.
     public IReadOnlyList<string> BindingNames { get; init; } = [];
 }
 
-internal abstract record ObjectMatchValueNode : ScriptNode;
+internal abstract record GesObjectMatchValueNode : GesScriptNode;
 
-internal abstract record DicePatternNode : ScriptNode;
+internal abstract record GesDicePatternNode : GesScriptNode;
 
-internal abstract record IterationSourceNode : ScriptNode;
+internal abstract record GesIterationSourceNode : GesScriptNode;
 
-internal abstract record ScriptNode
+internal abstract record GesScriptNode
 {
     // Parser construction assigns metadata before attaching a fresh node to its
     // parent. Subsequent compiler passes retain copy-on-rewrite semantics.
@@ -36,41 +36,41 @@ internal abstract record ScriptNode
 
 // Root node of the syntax tree
 
-internal sealed record ParsedScript(
+internal sealed record GesParsedScript(
     string ModuleName,
     string SourceName,
-    IReadOnlyList<ConstantDefinitionNode> ConstantDefinitions,
-    IReadOnlyList<TypeDefinitionNode> TypeDefinitions,
-    IReadOnlyList<PredicateDefinitionNode> PredicateDefinitions,
-    IReadOnlyList<FunctionDefinitionNode> FunctionDefinitions,
-    IReadOnlyList<EventHandlerNode> Handlers) : ScriptNode;
+    IReadOnlyList<GesConstantDefinitionNode> ConstantDefinitions,
+    IReadOnlyList<GesTypeDefinitionNode> TypeDefinitions,
+    IReadOnlyList<GesPredicateDefinitionNode> PredicateDefinitions,
+    IReadOnlyList<GesFunctionDefinitionNode> FunctionDefinitions,
+    IReadOnlyList<GesEventHandlerNode> Handlers) : GesScriptNode;
 
 // Type/Predicate/Function/Handler nodes
 
-internal sealed record ConstantDefinitionNode(string Name, ExpressionNode Value) : ScriptNode;
+internal sealed record GesConstantDefinitionNode(string Name, GesExpressionNode Value) : GesScriptNode;
 
-internal sealed record ParameterNode(string? ExternalLabel, string LocalName, string? DeclaredType = null) : ScriptNode
+internal sealed record GesParameterNode(string? ExternalLabel, string LocalName, string? DeclaredType = null) : GesScriptNode
 {
     public string SignatureLabel => ExternalLabel ?? GesMessageSignature.UnlabeledParameterName;
 }
 
-internal sealed record ArgumentNode(string? Label, ExpressionNode Expression) : ScriptNode
+internal sealed record GesArgumentNode(string? Label, GesExpressionNode Expression) : GesScriptNode
 {
     public string Name => Label ?? GesMessageSignature.UnlabeledParameterName;
 }
 
-internal sealed record ArgumentListNode(IReadOnlyList<ArgumentNode> Arguments) : ScriptNode
+internal sealed record GesArgumentListNode(IReadOnlyList<GesArgumentNode> Arguments) : GesScriptNode
 {
-    public static readonly ArgumentListNode Empty = new([]);
+    public static readonly GesArgumentListNode Empty = new([]);
 
     public int Count => Arguments.Count;
 
-    public IReadOnlyList<ExpressionNode> Expressions { get; } = GesSyntaxTreeNodeLists.ToExpressions(Arguments);
+    public IReadOnlyList<GesExpressionNode> Expressions { get; } = GesSyntaxTreeNodeLists.ToExpressions(Arguments);
 }
 
 internal static class GesSyntaxTreeNodeLists
 {
-    public static IReadOnlyList<string> ToParameterNames(IReadOnlyList<ParameterNode> parameters)
+    public static IReadOnlyList<string> ToParameterNames(IReadOnlyList<GesParameterNode> parameters)
     {
         if (parameters.Count == 0)
         {
@@ -86,7 +86,7 @@ internal static class GesSyntaxTreeNodeLists
         return names;
     }
 
-    public static IReadOnlyList<string> ToSignatureLabels(IReadOnlyList<ParameterNode> parameters)
+    public static IReadOnlyList<string> ToSignatureLabels(IReadOnlyList<GesParameterNode> parameters)
     {
         if (parameters.Count == 0)
         {
@@ -102,14 +102,14 @@ internal static class GesSyntaxTreeNodeLists
         return labels;
     }
 
-    public static IReadOnlyList<ExpressionNode> ToExpressions(IReadOnlyList<ArgumentNode> arguments)
+    public static IReadOnlyList<GesExpressionNode> ToExpressions(IReadOnlyList<GesArgumentNode> arguments)
     {
         if (arguments.Count == 0)
         {
             return [];
         }
 
-        var expressions = new ExpressionNode[arguments.Count];
+        var expressions = new GesExpressionNode[arguments.Count];
         for (var index = 0; index < expressions.Length; index++)
         {
             expressions[index] = arguments[index].Expression;
@@ -119,19 +119,19 @@ internal static class GesSyntaxTreeNodeLists
     }
 }
 
-internal enum EventHandlerDispatchKind
+internal enum GesEventHandlerDispatchKind
 {
     ExactSignature,
     MessageName
 }
 
-internal sealed record EventHandlerNode(
+internal sealed record GesEventHandlerNode(
     string Message,
-    EventHandlerDispatchKind DispatchKind,
-    IReadOnlyList<ParameterNode> ParameterList,
-    IReadOnlyList<StatementNode> Statements,
+    GesEventHandlerDispatchKind DispatchKind,
+    IReadOnlyList<GesParameterNode> ParameterList,
+    IReadOnlyList<GesStatementNode> Statements,
     IReadOnlyList<string>? RequiredTags = null,
-    IReadOnlyList<string>? ExcludedTags = null) : ScriptNode
+    IReadOnlyList<string>? ExcludedTags = null) : GesScriptNode
 {
     public IReadOnlyList<string> Parameters { get; } = GesSyntaxTreeNodeLists.ToParameterNames(ParameterList);
 
@@ -142,41 +142,41 @@ internal sealed record EventHandlerNode(
     public IReadOnlyList<string> WithoutTags { get; } = ExcludedTags ?? [];
 }
 
-internal sealed record TypeDefinitionNode(string Name, IReadOnlyList<TypeFieldDefinitionNode> Fields) : ScriptNode;
-internal sealed record TypeFieldDefinitionNode(string Name, string TypeName, ExpressionNode? MinimumExpression, ExpressionNode? MaximumExpression, ExpressionNode? ComputedExpression, string? ConstructorLabel) : ScriptNode
+internal sealed record GesTypeDefinitionNode(string Name, IReadOnlyList<GesTypeFieldDefinitionNode> Fields) : GesScriptNode;
+internal sealed record GesTypeFieldDefinitionNode(string Name, string TypeName, GesExpressionNode? MinimumExpression, GesExpressionNode? MaximumExpression, GesExpressionNode? ComputedExpression, string? ConstructorLabel) : GesScriptNode
 {
     public bool IsConstructorParameter => ConstructorLabel is not null;
 }
-internal sealed record PredicateDefinitionNode(string Name, IReadOnlyList<ParameterNode> ParameterList, ExpressionNode Expression) : ScriptNode
+internal sealed record GesPredicateDefinitionNode(string Name, IReadOnlyList<GesParameterNode> ParameterList, GesExpressionNode Expression) : GesScriptNode
 {
     public IReadOnlyList<string> Parameters { get; } = GesSyntaxTreeNodeLists.ToParameterNames(ParameterList);
 }
 
-internal sealed record FunctionDefinitionNode(string Name, IReadOnlyList<ParameterNode> ParameterList, ExpressionNode Expression) : ScriptNode
+internal sealed record GesFunctionDefinitionNode(string Name, IReadOnlyList<GesParameterNode> ParameterList, GesExpressionNode Expression) : GesScriptNode
 {
     public IReadOnlyList<string> Parameters { get; } = GesSyntaxTreeNodeLists.ToParameterNames(ParameterList);
 }
 
 // Statement nodes
 
-internal enum PublishStatementKind
+internal enum GesPublishStatementKind
 {
     Emit,
     Publish
 }
 
-internal sealed record SendExpressionNode(PublishStatementKind Kind, ExpressionNode Message, IReadOnlyList<ExpressionNode> Tags, ExpressionNode? Delay) : ExpressionNode;
-internal sealed record PublishStatementNode(PublishStatementKind Kind, ExpressionNode MessageExpression, IReadOnlyList<ExpressionNode> TagExpressions) : StatementNode;
-internal sealed record LetStatementNode(string Identifier, ExpressionNode Expression) : StatementNode;
-internal sealed record StatementBodyNode(bool IsBlock, IReadOnlyList<StatementNode> Statements) : ScriptNode;
-internal sealed record IfConditionNode(ExpressionNode Expression, string? Binding = null) : ScriptNode;
-internal sealed record IfStatementNode(IReadOnlyList<IfConditionNode> Conditions, StatementBodyNode ThenBody, StatementBodyNode? ElseBody) : StatementNode;
-internal sealed record ForStatementNode(string Identifier, IterationSourceNode Source, StatementBodyNode Body) : StatementNode
+internal sealed record GesSendExpressionNode(GesPublishStatementKind Kind, GesExpressionNode Message, IReadOnlyList<GesExpressionNode> Tags, GesExpressionNode? Delay) : GesExpressionNode;
+internal sealed record GesPublishStatementNode(GesPublishStatementKind Kind, GesExpressionNode MessageExpression, IReadOnlyList<GesExpressionNode> TagExpressions) : GesStatementNode;
+internal sealed record GesLetStatementNode(string Identifier, GesExpressionNode Expression) : GesStatementNode;
+internal sealed record GesStatementBodyNode(bool IsBlock, IReadOnlyList<GesStatementNode> Statements) : GesScriptNode;
+internal sealed record GesIfConditionNode(GesExpressionNode Expression, string? Binding = null) : GesScriptNode;
+internal sealed record GesIfStatementNode(IReadOnlyList<GesIfConditionNode> Conditions, GesStatementBodyNode ThenBody, GesStatementBodyNode? ElseBody) : GesStatementNode;
+internal sealed record GesForStatementNode(string Identifier, GesIterationSourceNode Source, GesStatementBodyNode Body) : GesStatementNode
 {
     public IReadOnlyList<string> BindingNames { get; init; } = [];
 }
-internal sealed record SeededRandomStatementNode(ExpressionNode SeedExpression, StatementBodyNode Body) : StatementNode;
-internal sealed record ExpressionStatementNode(ExpressionNode Expression) : StatementNode;
+internal sealed record GesSeededRandomStatementNode(GesExpressionNode SeedExpression, GesStatementBodyNode Body) : GesStatementNode;
+internal sealed record GesExpressionStatementNode(GesExpressionNode Expression) : GesStatementNode;
 
 // Expression nodes
 
@@ -337,119 +337,119 @@ internal static class GesOperatorText
         };
 }
 
-internal sealed record IdentifierExpressionNode(string Name) : ExpressionNode;
-internal sealed record TagLiteralExpressionNode(string Name) : ExpressionNode;
-internal sealed record ConstantReferenceExpressionNode(string Name) : ExpressionNode;
-internal sealed record HandlerLiteralExpressionNode(string Message, IReadOnlyList<ParameterNode> ParameterList) : ExpressionNode
+internal sealed record GesIdentifierExpressionNode(string Name) : GesExpressionNode;
+internal sealed record GesTagLiteralExpressionNode(string Name) : GesExpressionNode;
+internal sealed record GesConstantReferenceExpressionNode(string Name) : GesExpressionNode;
+internal sealed record GesHandlerLiteralExpressionNode(string Message, IReadOnlyList<GesParameterNode> ParameterList) : GesExpressionNode
 {
     public IReadOnlyList<string> Parameters { get; } = GesSyntaxTreeNodeLists.ToParameterNames(ParameterList);
 
     public IReadOnlyList<string> SignatureLabels { get; } = GesSyntaxTreeNodeLists.ToSignatureLabels(ParameterList);
 }
 
-internal sealed record MessageLiteralExpressionNode(string Message, ArgumentListNode ArgumentList) : ExpressionNode
+internal sealed record GesMessageLiteralExpressionNode(string Message, GesArgumentListNode ArgumentList) : GesExpressionNode
 {
-    public IReadOnlyList<ArgumentNode> Arguments => ArgumentList.Arguments;
+    public IReadOnlyList<GesArgumentNode> Arguments => ArgumentList.Arguments;
 }
 
-internal sealed record CallExpressionNode(string Name, ArgumentListNode ArgumentList) : ExpressionNode
+internal sealed record GesCallExpressionNode(string Name, GesArgumentListNode ArgumentList) : GesExpressionNode
 {
-    public IReadOnlyList<ExpressionNode> Arguments => ArgumentList.Expressions;
+    public IReadOnlyList<GesExpressionNode> Arguments => ArgumentList.Expressions;
 }
 
-internal sealed record ExtensionCallExpressionNode(string ExtensionName, string FunctionName, ArgumentListNode ArgumentList) : ExpressionNode
+internal sealed record GesExtensionCallExpressionNode(string ExtensionName, string FunctionName, GesArgumentListNode ArgumentList) : GesExpressionNode
 {
-    public IReadOnlyList<ArgumentNode> Arguments => ArgumentList.Arguments;
+    public IReadOnlyList<GesArgumentNode> Arguments => ArgumentList.Arguments;
 }
 
-internal sealed record TypeConstructorExpressionNode(string TypeName, ArgumentListNode ArgumentList) : ExpressionNode
+internal sealed record GesTypeConstructorExpressionNode(string TypeName, GesArgumentListNode ArgumentList) : GesExpressionNode
 {
-    public IReadOnlyList<ArgumentNode> Arguments => ArgumentList.Arguments;
+    public IReadOnlyList<GesArgumentNode> Arguments => ArgumentList.Arguments;
 }
 
-internal sealed record BooleanLiteralExpressionNode(bool Value) : ExpressionNode;
-internal sealed record NothingLiteralExpressionNode : ExpressionNode;
-internal sealed record IntegerLiteralExpressionNode(long Value, bool HasDecimalPoint = false) : ExpressionNode;
-internal sealed record FloatLiteralExpressionNode(double Value) : ExpressionNode;
-internal sealed record PercentageLiteralExpressionNode(double RatioValue) : ExpressionNode;
-internal sealed record UnitIntegerLiteralExpressionNode(long Value, string UnitName, bool HasDecimalPoint = false) : ExpressionNode;
-internal sealed record UnitFloatLiteralExpressionNode(double Value, string UnitName) : ExpressionNode;
-internal sealed record TextLiteralExpressionNode(string Value) : ExpressionNode;
-internal sealed record ListLiteralExpressionNode(IReadOnlyList<ExpressionNode> Items) : ExpressionNode;
-internal sealed record MapLiteralExpressionNode(IReadOnlyList<MapEntryNode> Entries) : ExpressionNode;
-internal sealed record MapEntryNode(string Key, ExpressionNode Value) : ScriptNode;
-internal sealed record UnaryExpressionNode(GesUnaryOperator Operator, ExpressionNode Operand) : ExpressionNode;
-internal sealed record IntrinsicCallExpressionNode(GesIntrinsicFunction Function, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
-internal sealed record VariadicTaggedExpressionNode(string Operator, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
-internal sealed record BetweenExpressionNode(ExpressionNode Value, ExpressionNode Minimum, ExpressionNode Maximum) : ExpressionNode;
+internal sealed record GesBooleanLiteralExpressionNode(bool Value) : GesExpressionNode;
+internal sealed record GesNothingLiteralExpressionNode : GesExpressionNode;
+internal sealed record GesIntegerLiteralExpressionNode(long Value, bool HasDecimalPoint = false) : GesExpressionNode;
+internal sealed record GesFloatLiteralExpressionNode(double Value) : GesExpressionNode;
+internal sealed record GesPercentageLiteralExpressionNode(double RatioValue) : GesExpressionNode;
+internal sealed record GesUnitIntegerLiteralExpressionNode(long Value, string UnitName, bool HasDecimalPoint = false) : GesExpressionNode;
+internal sealed record GesUnitFloatLiteralExpressionNode(double Value, string UnitName) : GesExpressionNode;
+internal sealed record GesTextLiteralExpressionNode(string Value) : GesExpressionNode;
+internal sealed record GesListLiteralExpressionNode(IReadOnlyList<GesExpressionNode> Items) : GesExpressionNode;
+internal sealed record GesMapLiteralExpressionNode(IReadOnlyList<GesMapEntryNode> Entries) : GesExpressionNode;
+internal sealed record GesMapEntryNode(string Key, GesExpressionNode Value) : GesScriptNode;
+internal sealed record GesUnaryExpressionNode(GesUnaryOperator Operator, GesExpressionNode Operand) : GesExpressionNode;
+internal sealed record GesIntrinsicCallExpressionNode(GesIntrinsicFunction Function, IReadOnlyList<GesExpressionNode> Arguments) : GesExpressionNode;
+internal sealed record GesVariadicTaggedExpressionNode(string Operator, IReadOnlyList<GesExpressionNode> Arguments) : GesExpressionNode;
+internal sealed record GesBetweenExpressionNode(GesExpressionNode Value, GesExpressionNode Minimum, GesExpressionNode Maximum) : GesExpressionNode;
 
-internal sealed record ClampExpressionNode(ExpressionNode Value, ExpressionNode Minimum, ExpressionNode Maximum) : ExpressionNode;
-internal sealed record RangeExpressionNode(ExpressionNode FromExpression, ExpressionNode ToExpression, ExpressionNode? StepExpression) : ExpressionNode;
-internal sealed record RandomExpressionNode(ExpressionNode FromExpression, ExpressionNode ToExpression) : ExpressionNode;
-internal sealed record SeededRandomExpressionNode(ExpressionNode SeedExpression, ExpressionNode BodyExpression) : ExpressionNode;
-internal sealed record DiceExpressionNode(int DiceCount, int SideCount) : ExpressionNode;
-internal sealed record SeriesExpressionNode(GesBytecodeSeriesKind SeriesKind) : ExpressionNode;
-internal sealed record GeneratedCollectionExpressionNode(string CollectionType, string Identifier, IterationSourceNode Source, ExpressionNode? Predicate, ExpressionNode Projection) : ExpressionNode;
-internal sealed record GuardedChoiceExpressionNode(IReadOnlyList<GuardedChoiceBranchNode> Branches, ExpressionNode OtherwiseExpression) : ExpressionNode;
-internal sealed record GuardedChoiceBranchNode(ExpressionNode ValueExpression, ExpressionNode ConditionExpression) : ScriptNode;
-internal sealed record BinaryExpressionNode(ExpressionNode Left, GesBinaryOperator Operator, ExpressionNode Right) : ExpressionNode;
-internal sealed record PredicateCallExpressionNode(ExpressionNode? Value, string PredicateName) : ExpressionNode;
-internal sealed record ExtensionPredicateExpressionNode(ExpressionNode Value, string ExtensionName, string FunctionName) : ExpressionNode;
-internal sealed record TypeCheckExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;
-internal sealed record NothingCheckExpressionNode(ExpressionNode Value) : ExpressionNode;
-internal sealed record TypeCastExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;
-internal sealed record DiceCountPatternNode(int Count, ExpressionNode? Face) : DicePatternNode;
-internal sealed record MemberAccessExpressionNode(ExpressionNode Target, string Member) : ExpressionNode;
-internal sealed record CombinedCollectionExpressionNode(string Operation, IReadOnlyList<ExpressionNode> Sources) : ExpressionNode;
-internal sealed record ForeachSelectorNode(string Identifier, ExpressionNode Expression) : CollectionSelectorNode;
+internal sealed record GesClampExpressionNode(GesExpressionNode Value, GesExpressionNode Minimum, GesExpressionNode Maximum) : GesExpressionNode;
+internal sealed record GesRangeExpressionNode(GesExpressionNode FromExpression, GesExpressionNode ToExpression, GesExpressionNode? StepExpression) : GesExpressionNode;
+internal sealed record GesRandomExpressionNode(GesExpressionNode FromExpression, GesExpressionNode ToExpression) : GesExpressionNode;
+internal sealed record GesSeededRandomExpressionNode(GesExpressionNode SeedExpression, GesExpressionNode BodyExpression) : GesExpressionNode;
+internal sealed record GesDiceExpressionNode(int DiceCount, int SideCount) : GesExpressionNode;
+internal sealed record GesSeriesExpressionNode(GesBytecodeSeriesKind SeriesKind) : GesExpressionNode;
+internal sealed record GesGeneratedCollectionExpressionNode(string CollectionType, string Identifier, GesIterationSourceNode Source, GesExpressionNode? Predicate, GesExpressionNode Projection) : GesExpressionNode;
+internal sealed record GesGuardedChoiceExpressionNode(IReadOnlyList<GesGuardedChoiceBranchNode> Branches, GesExpressionNode OtherwiseExpression) : GesExpressionNode;
+internal sealed record GesGuardedChoiceBranchNode(GesExpressionNode ValueExpression, GesExpressionNode ConditionExpression) : GesScriptNode;
+internal sealed record GesBinaryExpressionNode(GesExpressionNode Left, GesBinaryOperator Operator, GesExpressionNode Right) : GesExpressionNode;
+internal sealed record GesPredicateCallExpressionNode(GesExpressionNode? Value, string PredicateName) : GesExpressionNode;
+internal sealed record GesExtensionPredicateExpressionNode(GesExpressionNode Value, string ExtensionName, string FunctionName) : GesExpressionNode;
+internal sealed record GesTypeCheckExpressionNode(GesExpressionNode Value, string TypeName) : GesExpressionNode;
+internal sealed record GesNothingCheckExpressionNode(GesExpressionNode Value) : GesExpressionNode;
+internal sealed record GesTypeCastExpressionNode(GesExpressionNode Value, string TypeName) : GesExpressionNode;
+internal sealed record GesDiceCountPatternNode(int Count, GesExpressionNode? Face) : GesDicePatternNode;
+internal sealed record GesMemberAccessExpressionNode(GesExpressionNode Target, string Member) : GesExpressionNode;
+internal sealed record GesCombinedCollectionExpressionNode(string Operation, IReadOnlyList<GesExpressionNode> Sources) : GesExpressionNode;
+internal sealed record GesForeachSelectorNode(string Identifier, GesExpressionNode Expression) : GesCollectionSelectorNode;
 
-internal sealed record CollectionAccessExpressionNode(ExpressionNode Target, CollectionSelectorNode Selector) : ExpressionNode;
+internal sealed record GesCollectionAccessExpressionNode(GesExpressionNode Target, GesCollectionSelectorNode Selector) : GesExpressionNode;
 
 // Collection selector nodes
 
-internal sealed record ExpressionSelectorNode(ExpressionNode Expression) : CollectionSelectorNode;
-internal sealed record PatternSelectorNode(DicePatternNode Pattern) : CollectionSelectorNode;
-internal sealed record ObjectMatchSelectorNode(ObjectMatchPatternNode Pattern) : CollectionSelectorNode;
-internal sealed record TakePatternSelectorNode(DicePatternNode Pattern) : CollectionSelectorNode;
-internal sealed record SequenceSliceSelectorNode(string Operation, string Scope, int Count) : CollectionSelectorNode;
-internal sealed record SeriesTermSelectorNode(ExpressionNode IndexExpression) : CollectionSelectorNode;
-internal sealed record PredicateSelectorNode(string Operator, string Identifier, ExpressionNode Predicate) : CollectionSelectorNode;
-internal sealed record CountSelectorNode(string Identifier, ExpressionNode Predicate) : CollectionSelectorNode;
-internal sealed record ChooseSelectorNode(int Count, bool AtRandom, string? Identifier, ExpressionNode? Predicate, string? WeightIdentifier, ExpressionNode? WeightExpression) : CollectionSelectorNode
+internal sealed record GesExpressionSelectorNode(GesExpressionNode Expression) : GesCollectionSelectorNode;
+internal sealed record GesPatternSelectorNode(GesDicePatternNode Pattern) : GesCollectionSelectorNode;
+internal sealed record GesObjectMatchSelectorNode(GesObjectMatchPatternNode Pattern) : GesCollectionSelectorNode;
+internal sealed record GesTakePatternSelectorNode(GesDicePatternNode Pattern) : GesCollectionSelectorNode;
+internal sealed record GesSequenceSliceSelectorNode(string Operation, string Scope, int Count) : GesCollectionSelectorNode;
+internal sealed record GesSeriesTermSelectorNode(GesExpressionNode IndexExpression) : GesCollectionSelectorNode;
+internal sealed record GesPredicateSelectorNode(string Operator, string Identifier, GesExpressionNode Predicate) : GesCollectionSelectorNode;
+internal sealed record GesCountSelectorNode(string Identifier, GesExpressionNode Predicate) : GesCollectionSelectorNode;
+internal sealed record GesChooseSelectorNode(int Count, bool AtRandom, string? Identifier, GesExpressionNode? Predicate, string? WeightIdentifier, GesExpressionNode? WeightExpression) : GesCollectionSelectorNode
 {
     public IReadOnlyList<string> WeightBindingNames { get; init; } = [];
 }
-internal sealed record DrawSelectorNode(int Count) : CollectionSelectorNode;
-internal sealed record ShuffleSelectorNode : CollectionSelectorNode;
-internal sealed record ReverseSelectorNode : CollectionSelectorNode;
-internal sealed record EdgeSelectorNode(string Mode, string? Identifier, ExpressionNode? Predicate) : CollectionSelectorNode;
-internal sealed record FilterSelectorNode(string Identifier, ExpressionNode Predicate) : CollectionSelectorNode;
-internal sealed record SumSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
-internal sealed record AverageSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
-internal sealed record FoldSelectorNode(string Accumulator, string Identifier, ExpressionNode? Seed, ExpressionNode Projection) : CollectionSelectorNode;
-internal sealed record SelectSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
-internal sealed record MapSelectorNode(string Identifier, ExpressionNode KeyProjection, ExpressionNode? ValueProjection) : CollectionSelectorNode;
-internal sealed record MinSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
-internal sealed record MaxSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
-internal sealed record ContainsSelectorNode(string Mode, ExpressionNode ValueExpression) : CollectionSelectorNode;
-internal sealed record SortSelectorNode(string Direction) : CollectionSelectorNode;
-internal sealed record DistinctSelectorNode(string? Identifier, ExpressionNode? Projection) : CollectionSelectorNode;
-internal sealed record GroupBySelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
-internal sealed record OrderBySelectorNode(string Direction, string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
+internal sealed record GesDrawSelectorNode(int Count) : GesCollectionSelectorNode;
+internal sealed record GesShuffleSelectorNode : GesCollectionSelectorNode;
+internal sealed record GesReverseSelectorNode : GesCollectionSelectorNode;
+internal sealed record GesEdgeSelectorNode(string Mode, string? Identifier, GesExpressionNode? Predicate) : GesCollectionSelectorNode;
+internal sealed record GesFilterSelectorNode(string Identifier, GesExpressionNode Predicate) : GesCollectionSelectorNode;
+internal sealed record GesSumSelectorNode(string Identifier, GesExpressionNode Projection) : GesCollectionSelectorNode;
+internal sealed record GesAverageSelectorNode(string Identifier, GesExpressionNode Projection) : GesCollectionSelectorNode;
+internal sealed record GesFoldSelectorNode(string Accumulator, string Identifier, GesExpressionNode? Seed, GesExpressionNode Projection) : GesCollectionSelectorNode;
+internal sealed record GesSelectSelectorNode(string Identifier, GesExpressionNode Projection) : GesCollectionSelectorNode;
+internal sealed record GesMapSelectorNode(string Identifier, GesExpressionNode KeyProjection, GesExpressionNode? ValueProjection) : GesCollectionSelectorNode;
+internal sealed record GesMinSelectorNode(string Identifier, GesExpressionNode Projection) : GesCollectionSelectorNode;
+internal sealed record GesMaxSelectorNode(string Identifier, GesExpressionNode Projection) : GesCollectionSelectorNode;
+internal sealed record GesContainsSelectorNode(string Mode, GesExpressionNode ValueExpression) : GesCollectionSelectorNode;
+internal sealed record GesSortSelectorNode(string Direction) : GesCollectionSelectorNode;
+internal sealed record GesDistinctSelectorNode(string? Identifier, GesExpressionNode? Projection) : GesCollectionSelectorNode;
+internal sealed record GesGroupBySelectorNode(string Identifier, GesExpressionNode Projection) : GesCollectionSelectorNode;
+internal sealed record GesOrderBySelectorNode(string Direction, string Identifier, GesExpressionNode Projection) : GesCollectionSelectorNode;
 
 // Dice Pattern nodes
 
-internal sealed record DiceFullHousePatternNode : DicePatternNode;
-internal sealed record DiceStraightPatternNode : DicePatternNode;
+internal sealed record GesDiceFullHousePatternNode : GesDicePatternNode;
+internal sealed record GesDiceStraightPatternNode : GesDicePatternNode;
 
 // Object matcher nodes
 
-internal sealed record ObjectMatchPatternNode(IReadOnlyList<ObjectMatchEntryNode> Entries) : ScriptNode;
-internal sealed record ObjectMatchEntryNode(string Key, ObjectMatchValueNode Value) : ScriptNode;
-internal sealed record ObjectMatchExpressionValueNode(ExpressionNode Expression) : ObjectMatchValueNode;
-internal sealed record ObjectMatchNestedValueNode(ObjectMatchPatternNode Pattern) : ObjectMatchValueNode;
+internal sealed record GesObjectMatchPatternNode(IReadOnlyList<GesObjectMatchEntryNode> Entries) : GesScriptNode;
+internal sealed record GesObjectMatchEntryNode(string Key, GesObjectMatchValueNode Value) : GesScriptNode;
+internal sealed record GesObjectMatchExpressionValueNode(GesExpressionNode Expression) : GesObjectMatchValueNode;
+internal sealed record GesObjectMatchNestedValueNode(GesObjectMatchPatternNode Pattern) : GesObjectMatchValueNode;
 
 // Iteration source nodes
 
-internal sealed record CollectionIterationSourceNode(ExpressionNode Expression) : IterationSourceNode;
-internal sealed record RangeIterationSourceNode(RangeExpressionNode RangeExpression) : IterationSourceNode;
+internal sealed record GesCollectionIterationSourceNode(GesExpressionNode Expression) : GesIterationSourceNode;
+internal sealed record GesRangeIterationSourceNode(GesRangeExpressionNode RangeExpression) : GesIterationSourceNode;

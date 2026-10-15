@@ -25,7 +25,7 @@ public sealed class GesIntegerRange(long from, long to, long step)
     /// </summary>
     public long Step { get; } = step;
 
-    internal long Count { get; } = GameEventScriptRangeMath.GetLength(from, to, step);
+    internal long Count { get; } = GesRangeMath.GetLength(from, to, step);
 }
 
 /// <summary>
@@ -48,5 +48,5 @@ public sealed class GesFloatRange(double from, double to, double step)
     /// </summary>
     public double Step { get; } = step;
 
-    internal long Count { get; } = GameEventScriptRangeMath.GetLength(from, to, step);
+    internal long Count { get; } = GesRangeMath.GetLength(from, to, step);
 }

@@ -92,7 +92,7 @@ internal partial class GesVirtualMachine
         if (State != StateValue.Ready) return false;
 
         if (!EnsureRegisterCapacity(required))
-            throw new GameEventScriptVmException(ErrorDiagnostic ?? new GesDiagnostic(
+            throw new GesVmException(ErrorDiagnostic ?? new GesDiagnostic(
                 GesDiagnosticPhase.Runtime,
                 GesDiagnosticCodes.RuntimeRegisterOverflow,
                 ErrorMessage ?? "VM register capacity could not be prepared."));
@@ -298,7 +298,7 @@ internal partial class GesVirtualMachine
     internal GesBytecodeInstruction FetchInstructionAndIncrementInstructionPointer()
     {
         if (InstructionPointer < CodeSegmentSize) return Program.Code[InstructionPointer++];
-        throw new GameEventScriptVmException(new GesDiagnostic(
+        throw new GesVmException(new GesDiagnostic(
             GesDiagnosticPhase.Runtime,
             GesDiagnosticCodes.RuntimeInstructionPointerOutOfRange,
             "Instruction pointer is outside the code segment.",

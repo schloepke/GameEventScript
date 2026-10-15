@@ -11,7 +11,7 @@ using GameEventScript.Runtime.Vm;
 
 namespace GameEventScript.Compiler;
 
-internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode> constants)
+internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionNode> constants)
 {
     public static GesSyntaxTreeModule Optimize(GesSyntaxTreeModule module)
         => new GesAstOptimizer(module.Constants).OptimizeModule(module);
@@ -24,7 +24,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
             knownTypeNames.Add(module.ExternalTypeDefinitions.Types[externalTypeIndex].Name);
         }
 
-        var optimizedTypes = new Dictionary<string, TypeDefinitionNode>(module.TypeDefinitions.Count, StringComparer.Ordinal);
+        var optimizedTypes = new Dictionary<string, GesTypeDefinitionNode>(module.TypeDefinitions.Count, StringComparer.Ordinal);
         foreach (var pair in module.TypeDefinitions)
         {
             optimizedTypes.Add(pair.Key, OptimizeTypeDefinition(pair.Value, knownTypeNames));
@@ -36,10 +36,10 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
             optimizedCallables.Add(pair.Key, OptimizeCallableDefinition(pair.Value, knownTypeNames));
         }
 
-        var optimizedHandlers = new Dictionary<string, IReadOnlyList<EventHandlerNode>>(module.Handlers.Count, StringComparer.Ordinal);
+        var optimizedHandlers = new Dictionary<string, IReadOnlyList<GesEventHandlerNode>>(module.Handlers.Count, StringComparer.Ordinal);
         foreach (var pair in module.Handlers)
         {
-            var handlers = new EventHandlerNode[pair.Value.Count];
+            var handlers = new GesEventHandlerNode[pair.Value.Count];
             for (var index = 0; index < handlers.Length; index++)
             {
                 handlers[index] = OptimizeHandler(pair.Value[index], knownTypeNames);
@@ -58,7 +58,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
             module.Sources);
     }
 
-    private TypeDefinitionNode OptimizeTypeDefinition(TypeDefinitionNode definition, ISet<string> knownTypeNames)
+    private GesTypeDefinitionNode OptimizeTypeDefinition(GesTypeDefinitionNode definition, ISet<string> knownTypeNames)
         => definition with
         {
             Fields = OptimizeTypeFields(definition.Fields, knownTypeNames)
@@ -70,13 +70,13 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         return new GesCallableDefinition(definition.Name, definition.ParameterList, optimized, definition.Kind, definition.SourceRange);
     }
 
-    private EventHandlerNode OptimizeHandler(EventHandlerNode handler, ISet<string> knownTypeNames)
+    private GesEventHandlerNode OptimizeHandler(GesEventHandlerNode handler, ISet<string> knownTypeNames)
         => handler with { Statements = OptimizeStatements(handler.Statements, knownTypeNames) };
 
-    private IReadOnlyList<IfConditionNode> OptimizeConditions(IReadOnlyList<IfConditionNode> conditions, ISet<string> knownTypeNames)
+    private IReadOnlyList<GesIfConditionNode> OptimizeConditions(IReadOnlyList<GesIfConditionNode> conditions, ISet<string> knownTypeNames)
     {
         // Keep condition iteration outside OptimizeStatement so other statements need no captured closure.
-        var optimized = new IfConditionNode[conditions.Count];
+        var optimized = new GesIfConditionNode[conditions.Count];
         for (var index = 0; index < optimized.Length; index++)
         {
             var condition = conditions[index];
@@ -86,52 +86,52 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         return optimized;
     }
 
-    private StatementNode OptimizeStatement(StatementNode statement, ISet<string> knownTypeNames)
+    private GesStatementNode OptimizeStatement(GesStatementNode statement, ISet<string> knownTypeNames)
         => statement switch
         {
-            PublishStatementNode publish => publish with
+            GesPublishStatementNode publish => publish with
             {
                 MessageExpression = OptimizeExpression(publish.MessageExpression, knownTypeNames),
                 TagExpressions = OptimizeExpressions(publish.TagExpressions, knownTypeNames)
             },
-            LetStatementNode let => let with
+            GesLetStatementNode let => let with
             {
                 Expression = OptimizeExpression(let.Expression, knownTypeNames)
             },
-            IfStatementNode ifStatement => ifStatement with
+            GesIfStatementNode ifStatement => ifStatement with
             {
                 Conditions = OptimizeConditions(ifStatement.Conditions, knownTypeNames),
                 ThenBody = OptimizeBody(ifStatement.ThenBody, knownTypeNames),
                 ElseBody = ifStatement.ElseBody is null ? null : OptimizeBody(ifStatement.ElseBody, knownTypeNames)
             },
-            ForStatementNode forStatement => forStatement with
+            GesForStatementNode forStatement => forStatement with
             {
                 Source = OptimizeIterationSource(forStatement.Source, knownTypeNames),
                 Body = OptimizeBody(forStatement.Body, knownTypeNames)
             },
-            SeededRandomStatementNode seededRandom => seededRandom with
+            GesSeededRandomStatementNode seededRandom => seededRandom with
             {
                 SeedExpression = OptimizeExpression(seededRandom.SeedExpression, knownTypeNames),
                 Body = OptimizeBody(seededRandom.Body, knownTypeNames)
             },
-            ExpressionStatementNode expressionStatement => expressionStatement with
+            GesExpressionStatementNode expressionStatement => expressionStatement with
             {
                 Expression = OptimizeExpression(expressionStatement.Expression, knownTypeNames)
             },
             _ => statement
         };
 
-    private StatementBodyNode OptimizeBody(StatementBodyNode body, ISet<string> knownTypeNames)
+    private GesStatementBodyNode OptimizeBody(GesStatementBodyNode body, ISet<string> knownTypeNames)
         => body with { Statements = OptimizeStatements(body.Statements, knownTypeNames) };
 
-    private IReadOnlyList<TypeFieldDefinitionNode> OptimizeTypeFields(IReadOnlyList<TypeFieldDefinitionNode> fields, ISet<string> knownTypeNames)
+    private IReadOnlyList<GesTypeFieldDefinitionNode> OptimizeTypeFields(IReadOnlyList<GesTypeFieldDefinitionNode> fields, ISet<string> knownTypeNames)
     {
         if (fields.Count == 0)
         {
             return [];
         }
 
-        var optimized = new TypeFieldDefinitionNode[fields.Count];
+        var optimized = new GesTypeFieldDefinitionNode[fields.Count];
         for (var index = 0; index < optimized.Length; index++)
         {
             var field = fields[index];
@@ -146,14 +146,14 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         return optimized;
     }
 
-    private IReadOnlyList<StatementNode> OptimizeStatements(IReadOnlyList<StatementNode> statements, ISet<string> knownTypeNames)
+    private IReadOnlyList<GesStatementNode> OptimizeStatements(IReadOnlyList<GesStatementNode> statements, ISet<string> knownTypeNames)
     {
         if (statements.Count == 0)
         {
             return [];
         }
 
-        var optimized = new StatementNode[statements.Count];
+        var optimized = new GesStatementNode[statements.Count];
         for (var index = 0; index < optimized.Length; index++)
         {
             optimized[index] = OptimizeStatement(statements[index], knownTypeNames);
@@ -162,14 +162,14 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         return optimized;
     }
 
-    private IReadOnlyList<ExpressionNode> OptimizeExpressions(IReadOnlyList<ExpressionNode> expressions, ISet<string> knownTypeNames)
+    private IReadOnlyList<GesExpressionNode> OptimizeExpressions(IReadOnlyList<GesExpressionNode> expressions, ISet<string> knownTypeNames)
     {
         if (expressions.Count == 0)
         {
             return [];
         }
 
-        var optimized = new ExpressionNode[expressions.Count];
+        var optimized = new GesExpressionNode[expressions.Count];
         for (var index = 0; index < optimized.Length; index++)
         {
             optimized[index] = OptimizeExpression(expressions[index], knownTypeNames);
@@ -178,14 +178,14 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         return optimized;
     }
 
-    private IReadOnlyList<GuardedChoiceBranchNode> OptimizeGuardedChoiceBranches(IReadOnlyList<GuardedChoiceBranchNode> branches, ISet<string> knownTypeNames)
+    private IReadOnlyList<GesGuardedChoiceBranchNode> OptimizeGuardedChoiceBranches(IReadOnlyList<GesGuardedChoiceBranchNode> branches, ISet<string> knownTypeNames)
     {
         if (branches.Count == 0)
         {
             return [];
         }
 
-        var optimized = new GuardedChoiceBranchNode[branches.Count];
+        var optimized = new GesGuardedChoiceBranchNode[branches.Count];
         for (var index = 0; index < optimized.Length; index++)
         {
             var branch = branches[index];
@@ -199,17 +199,17 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         return optimized;
     }
 
-    private ArgumentListNode OptimizeArgumentList(ArgumentListNode argumentList, ISet<string> knownTypeNames)
+    private GesArgumentListNode OptimizeArgumentList(GesArgumentListNode argumentList, ISet<string> knownTypeNames)
         => new(OptimizeArguments(argumentList.Arguments, knownTypeNames));
 
-    private IReadOnlyList<ArgumentNode> OptimizeArguments(IReadOnlyList<ArgumentNode> arguments, ISet<string> knownTypeNames)
+    private IReadOnlyList<GesArgumentNode> OptimizeArguments(IReadOnlyList<GesArgumentNode> arguments, ISet<string> knownTypeNames)
     {
         if (arguments.Count == 0)
         {
             return [];
         }
 
-        var optimized = new ArgumentNode[arguments.Count];
+        var optimized = new GesArgumentNode[arguments.Count];
         for (var index = 0; index < optimized.Length; index++)
         {
             var argument = arguments[index];
@@ -222,14 +222,14 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         return optimized;
     }
 
-    private IReadOnlyList<MapEntryNode> OptimizeMapEntries(IReadOnlyList<MapEntryNode> entries, ISet<string> knownTypeNames)
+    private IReadOnlyList<GesMapEntryNode> OptimizeMapEntries(IReadOnlyList<GesMapEntryNode> entries, ISet<string> knownTypeNames)
     {
         if (entries.Count == 0)
         {
             return [];
         }
 
-        var optimized = new MapEntryNode[entries.Count];
+        var optimized = new GesMapEntryNode[entries.Count];
         for (var index = 0; index < optimized.Length; index++)
         {
             var entry = entries[index];
@@ -242,138 +242,138 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         return optimized;
     }
 
-    private IterationSourceNode OptimizeIterationSource(IterationSourceNode source, ISet<string> knownTypeNames)
+    private GesIterationSourceNode OptimizeIterationSource(GesIterationSourceNode source, ISet<string> knownTypeNames)
         => source switch
         {
-            CollectionIterationSourceNode collectionSource => collectionSource with
+            GesCollectionIterationSourceNode collectionSource => collectionSource with
             {
                 Expression = OptimizeExpression(collectionSource.Expression, knownTypeNames)
             },
-            RangeIterationSourceNode rangeSource => rangeSource with
+            GesRangeIterationSourceNode rangeSource => rangeSource with
             {
-                RangeExpression = (RangeExpressionNode)OptimizeExpression(rangeSource.RangeExpression, knownTypeNames)
+                RangeExpression = (GesRangeExpressionNode)OptimizeExpression(rangeSource.RangeExpression, knownTypeNames)
             },
             _ => source
         };
 
-    private ExpressionNode OptimizeExpression(ExpressionNode expression, ISet<string> knownTypeNames)
+    private GesExpressionNode OptimizeExpression(GesExpressionNode expression, ISet<string> knownTypeNames)
     {
         var optimized = expression switch
         {
-            ConstantReferenceExpressionNode constant when constants.TryGetValue(constant.Name, out var value) => value with { SourceRange = constant.SourceRange },
-            SendExpressionNode send => send with
+            GesConstantReferenceExpressionNode constant when constants.TryGetValue(constant.Name, out var value) => value with { SourceRange = constant.SourceRange },
+            GesSendExpressionNode send => send with
             {
                 Message = OptimizeExpression(send.Message, knownTypeNames),
                 Tags = OptimizeExpressions(send.Tags, knownTypeNames),
                 Delay = send.Delay is null ? null : OptimizeExpression(send.Delay, knownTypeNames)
             },
-            UnaryExpressionNode unary => unary with
+            GesUnaryExpressionNode unary => unary with
             {
                 Operand = OptimizeExpression(unary.Operand, knownTypeNames)
             },
-            BinaryExpressionNode binary => binary with
+            GesBinaryExpressionNode binary => binary with
             {
                 Left = OptimizeExpression(binary.Left, knownTypeNames),
                 Right = OptimizeExpression(binary.Right, knownTypeNames)
             },
-            VariadicTaggedExpressionNode variadic => variadic with
+            GesVariadicTaggedExpressionNode variadic => variadic with
             {
                 Arguments = OptimizeExpressions(variadic.Arguments, knownTypeNames)
             },
-            IntrinsicCallExpressionNode intrinsic => intrinsic with
+            GesIntrinsicCallExpressionNode intrinsic => intrinsic with
             {
                 Arguments = OptimizeExpressions(intrinsic.Arguments, knownTypeNames)
             },
-            BetweenExpressionNode between => between with
+            GesBetweenExpressionNode between => between with
             {
                 Value = OptimizeExpression(between.Value, knownTypeNames),
                 Minimum = OptimizeExpression(between.Minimum, knownTypeNames),
                 Maximum = OptimizeExpression(between.Maximum, knownTypeNames)
             },
-            ClampExpressionNode clamp => clamp with
+            GesClampExpressionNode clamp => clamp with
             {
                 Value = OptimizeExpression(clamp.Value, knownTypeNames),
                 Minimum = OptimizeExpression(clamp.Minimum, knownTypeNames),
                 Maximum = OptimizeExpression(clamp.Maximum, knownTypeNames)
             },
-            RangeExpressionNode range => range with
+            GesRangeExpressionNode range => range with
             {
                 FromExpression = OptimizeExpression(range.FromExpression, knownTypeNames),
                 ToExpression = OptimizeExpression(range.ToExpression, knownTypeNames),
                 StepExpression = range.StepExpression is null ? null : OptimizeExpression(range.StepExpression, knownTypeNames)
             },
-            RandomExpressionNode random => random with
+            GesRandomExpressionNode random => random with
             {
                 FromExpression = OptimizeExpression(random.FromExpression, knownTypeNames),
                 ToExpression = OptimizeExpression(random.ToExpression, knownTypeNames)
             },
-            SeededRandomExpressionNode seededRandom => seededRandom with
+            GesSeededRandomExpressionNode seededRandom => seededRandom with
             {
                 SeedExpression = OptimizeExpression(seededRandom.SeedExpression, knownTypeNames),
                 BodyExpression = OptimizeExpression(seededRandom.BodyExpression, knownTypeNames)
             },
-            GeneratedCollectionExpressionNode generatedCollection => generatedCollection with
+            GesGeneratedCollectionExpressionNode generatedCollection => generatedCollection with
             {
                 Source = OptimizeIterationSource(generatedCollection.Source, knownTypeNames),
                 Predicate = generatedCollection.Predicate is null ? null : OptimizeExpression(generatedCollection.Predicate, knownTypeNames),
                 Projection = OptimizeExpression(generatedCollection.Projection, knownTypeNames)
             },
-            GuardedChoiceExpressionNode guardedChoice => guardedChoice with
+            GesGuardedChoiceExpressionNode guardedChoice => guardedChoice with
             {
                 Branches = OptimizeGuardedChoiceBranches(guardedChoice.Branches, knownTypeNames),
                 OtherwiseExpression = OptimizeExpression(guardedChoice.OtherwiseExpression, knownTypeNames)
             },
-            PredicateCallExpressionNode predicateCall => predicateCall with
+            GesPredicateCallExpressionNode predicateCall => predicateCall with
             {
                 Value = predicateCall.Value is null ? null : OptimizeExpression(predicateCall.Value, knownTypeNames)
             },
-            ExtensionPredicateExpressionNode extensionPredicate => extensionPredicate with
+            GesExtensionPredicateExpressionNode extensionPredicate => extensionPredicate with
             {
                 Value = OptimizeExpression(extensionPredicate.Value, knownTypeNames)
             },
-            TypeCheckExpressionNode typeCheck => typeCheck with
+            GesTypeCheckExpressionNode typeCheck => typeCheck with
             {
                 Value = OptimizeExpression(typeCheck.Value, knownTypeNames)
             },
-            NothingCheckExpressionNode nothingCheck => nothingCheck with
+            GesNothingCheckExpressionNode nothingCheck => nothingCheck with
             {
                 Value = OptimizeExpression(nothingCheck.Value, knownTypeNames)
             },
-            TypeCastExpressionNode typeCast => typeCast with
+            GesTypeCastExpressionNode typeCast => typeCast with
             {
                 Value = OptimizeExpression(typeCast.Value, knownTypeNames)
             },
-            TypeConstructorExpressionNode typeConstructor => typeConstructor with
+            GesTypeConstructorExpressionNode typeConstructor => typeConstructor with
             {
                 ArgumentList = OptimizeArgumentList(typeConstructor.ArgumentList, knownTypeNames)
             },
-            MemberAccessExpressionNode member => member with
+            GesMemberAccessExpressionNode member => member with
             {
                 Target = OptimizeExpression(member.Target, knownTypeNames)
             },
-            CombinedCollectionExpressionNode combined => combined with { Sources = OptimizeExpressions(combined.Sources, knownTypeNames) },
-            CollectionAccessExpressionNode access => access with
+            GesCombinedCollectionExpressionNode combined => combined with { Sources = OptimizeExpressions(combined.Sources, knownTypeNames) },
+            GesCollectionAccessExpressionNode access => access with
             {
                 Target = OptimizeExpression(access.Target, knownTypeNames),
                 Selector = OptimizeSelector(access.Selector, knownTypeNames)
             },
-            ListLiteralExpressionNode list => list with
+            GesListLiteralExpressionNode list => list with
             {
                 Items = OptimizeExpressions(list.Items, knownTypeNames)
             },
-            MapLiteralExpressionNode dictionary => dictionary with
+            GesMapLiteralExpressionNode dictionary => dictionary with
             {
                 Entries = OptimizeMapEntries(dictionary.Entries, knownTypeNames)
             },
-            MessageLiteralExpressionNode message => message with
+            GesMessageLiteralExpressionNode message => message with
             {
                 ArgumentList = OptimizeArgumentList(message.ArgumentList, knownTypeNames)
             },
-            CallExpressionNode call => call with
+            GesCallExpressionNode call => call with
             {
                 ArgumentList = OptimizeArgumentList(call.ArgumentList, knownTypeNames)
             },
-            ExtensionCallExpressionNode extensionCall => extensionCall with
+            GesExtensionCallExpressionNode extensionCall => extensionCall with
             {
                 ArgumentList = OptimizeArgumentList(extensionCall.ArgumentList, knownTypeNames)
             },
@@ -388,10 +388,10 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         return optimized;
     }
 
-    private static ExpressionNode? FoldConstantExpression(ExpressionNode expression)
+    private static GesExpressionNode? FoldConstantExpression(GesExpressionNode expression)
     {
         // Preserve decimal source spelling metadata used to select continuous random bounds.
-        if (expression is FloatLiteralExpressionNode or UnitFloatLiteralExpressionNode or IntegerLiteralExpressionNode or UnitIntegerLiteralExpressionNode)
+        if (expression is GesFloatLiteralExpressionNode or GesUnitFloatLiteralExpressionNode or GesIntegerLiteralExpressionNode or GesUnitIntegerLiteralExpressionNode)
         {
             return null;
         }
@@ -401,106 +401,106 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
             : null;
     }
 
-    private CollectionSelectorNode OptimizeSelector(CollectionSelectorNode selector, ISet<string> knownTypeNames)
+    private GesCollectionSelectorNode OptimizeSelector(GesCollectionSelectorNode selector, ISet<string> knownTypeNames)
         => selector switch
         {
-            ExpressionSelectorNode expressionSelector => expressionSelector with
+            GesExpressionSelectorNode expressionSelector => expressionSelector with
             {
                 Expression = OptimizeExpression(expressionSelector.Expression, knownTypeNames)
             },
-            PredicateSelectorNode predicateSelector => predicateSelector with
+            GesPredicateSelectorNode predicateSelector => predicateSelector with
             {
                 Predicate = OptimizeExpression(predicateSelector.Predicate, knownTypeNames)
             },
-            CountSelectorNode countSelector => countSelector with
+            GesCountSelectorNode countSelector => countSelector with
             {
                 Predicate = OptimizeExpression(countSelector.Predicate, knownTypeNames)
             },
-            ChooseSelectorNode chooseSelector => chooseSelector with
+            GesChooseSelectorNode chooseSelector => chooseSelector with
             {
                 Predicate = chooseSelector.Predicate is null ? null : OptimizeExpression(chooseSelector.Predicate, knownTypeNames),
                 WeightExpression = chooseSelector.WeightExpression is null ? null : OptimizeExpression(chooseSelector.WeightExpression, knownTypeNames)
             },
-            EdgeSelectorNode edgeSelector => edgeSelector with
+            GesEdgeSelectorNode edgeSelector => edgeSelector with
             {
                 Predicate = edgeSelector.Predicate is null ? null : OptimizeExpression(edgeSelector.Predicate, knownTypeNames)
             },
-            SeriesTermSelectorNode seriesTermSelector => seriesTermSelector with
+            GesSeriesTermSelectorNode seriesTermSelector => seriesTermSelector with
             {
                 IndexExpression = OptimizeExpression(seriesTermSelector.IndexExpression, knownTypeNames)
             },
-            ForeachSelectorNode each => each with { Expression = OptimizeExpression(each.Expression, knownTypeNames) },
-            FilterSelectorNode filterSelector => filterSelector with
+            GesForeachSelectorNode each => each with { Expression = OptimizeExpression(each.Expression, knownTypeNames) },
+            GesFilterSelectorNode filterSelector => filterSelector with
             {
                 Predicate = OptimizeExpression(filterSelector.Predicate, knownTypeNames)
             },
-            SumSelectorNode sumSelector => sumSelector with
+            GesSumSelectorNode sumSelector => sumSelector with
             {
                 Projection = OptimizeExpression(sumSelector.Projection, knownTypeNames)
             },
-            AverageSelectorNode averageSelector => averageSelector with
+            GesAverageSelectorNode averageSelector => averageSelector with
             {
                 Projection = OptimizeExpression(averageSelector.Projection, knownTypeNames)
             },
-            FoldSelectorNode fold => fold with
+            GesFoldSelectorNode fold => fold with
             {
                 Seed = fold.Seed is null ? null : OptimizeExpression(fold.Seed, knownTypeNames),
                 Projection = OptimizeExpression(fold.Projection, knownTypeNames)
             },
-            SelectSelectorNode selectSelector => selectSelector with
+            GesSelectSelectorNode selectSelector => selectSelector with
             {
                 Projection = OptimizeExpression(selectSelector.Projection, knownTypeNames)
             },
-            MapSelectorNode dictionarySelector => dictionarySelector with
+            GesMapSelectorNode dictionarySelector => dictionarySelector with
             {
                 KeyProjection = OptimizeExpression(dictionarySelector.KeyProjection, knownTypeNames),
                 ValueProjection = dictionarySelector.ValueProjection is null ? null : OptimizeExpression(dictionarySelector.ValueProjection, knownTypeNames)
             },
-            MinSelectorNode minSelector => minSelector with
+            GesMinSelectorNode minSelector => minSelector with
             {
                 Projection = OptimizeExpression(minSelector.Projection, knownTypeNames)
             },
-            MaxSelectorNode maxSelector => maxSelector with
+            GesMaxSelectorNode maxSelector => maxSelector with
             {
                 Projection = OptimizeExpression(maxSelector.Projection, knownTypeNames)
             },
-            ContainsSelectorNode containsSelector => containsSelector with
+            GesContainsSelectorNode containsSelector => containsSelector with
             {
                 ValueExpression = OptimizeExpression(containsSelector.ValueExpression, knownTypeNames)
             },
-            DistinctSelectorNode distinctSelector => distinctSelector with
+            GesDistinctSelectorNode distinctSelector => distinctSelector with
             {
                 Projection = distinctSelector.Projection is null ? null : OptimizeExpression(distinctSelector.Projection, knownTypeNames)
             },
-            GroupBySelectorNode groupBySelector => groupBySelector with
+            GesGroupBySelectorNode groupBySelector => groupBySelector with
             {
                 Projection = OptimizeExpression(groupBySelector.Projection, knownTypeNames)
             },
-            OrderBySelectorNode orderBySelector => orderBySelector with
+            GesOrderBySelectorNode orderBySelector => orderBySelector with
             {
                 Projection = OptimizeExpression(orderBySelector.Projection, knownTypeNames)
             },
-            ObjectMatchSelectorNode objectMatchSelector => objectMatchSelector with
+            GesObjectMatchSelectorNode objectMatchSelector => objectMatchSelector with
             {
                 Pattern = OptimizeObjectMatchPattern(objectMatchSelector.Pattern, knownTypeNames)
             },
             _ => selector
         };
 
-    private ObjectMatchPatternNode OptimizeObjectMatchPattern(ObjectMatchPatternNode pattern, ISet<string> knownTypeNames)
+    private GesObjectMatchPatternNode OptimizeObjectMatchPattern(GesObjectMatchPatternNode pattern, ISet<string> knownTypeNames)
         => pattern with
         {
             Entries = OptimizeObjectMatchEntries(pattern.Entries, knownTypeNames)
         };
 
-    private IReadOnlyList<ObjectMatchEntryNode> OptimizeObjectMatchEntries(IReadOnlyList<ObjectMatchEntryNode> entries, ISet<string> knownTypeNames)
+    private IReadOnlyList<GesObjectMatchEntryNode> OptimizeObjectMatchEntries(IReadOnlyList<GesObjectMatchEntryNode> entries, ISet<string> knownTypeNames)
     {
         if (entries.Count == 0)
         {
             return [];
         }
 
-        var optimized = new ObjectMatchEntryNode[entries.Count];
+        var optimized = new GesObjectMatchEntryNode[entries.Count];
         for (var index = 0; index < optimized.Length; index++)
         {
             var entry = entries[index];
@@ -508,11 +508,11 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
             {
                 Value = entry.Value switch
                 {
-                    ObjectMatchExpressionValueNode expressionValue => expressionValue with
+                    GesObjectMatchExpressionValueNode expressionValue => expressionValue with
                     {
                         Expression = OptimizeExpression(expressionValue.Expression, knownTypeNames)
                     },
-                    ObjectMatchNestedValueNode nestedValue => nestedValue with
+                    GesObjectMatchNestedValueNode nestedValue => nestedValue with
                     {
                         Pattern = OptimizeObjectMatchPattern(nestedValue.Pattern, knownTypeNames)
                     },
@@ -524,33 +524,33 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         return optimized;
     }
 
-    private static GesValue? EvaluateConstantValue(ExpressionNode expression)
+    private static GesValue? EvaluateConstantValue(GesExpressionNode expression)
     {
         switch (expression)
         {
-            case BooleanLiteralExpressionNode booleanLiteral:
+            case GesBooleanLiteralExpressionNode booleanLiteral:
                 return GesValue.GesBoolean(booleanLiteral.Value);
-            case NothingLiteralExpressionNode:
+            case GesNothingLiteralExpressionNode:
                 return GesValue.GesNothing();
-            case IntegerLiteralExpressionNode integerLiteral:
+            case GesIntegerLiteralExpressionNode integerLiteral:
                 return GesValue.GesInteger(integerLiteral.Value);
-            case UnitIntegerLiteralExpressionNode unitIntegerLiteral:
+            case GesUnitIntegerLiteralExpressionNode unitIntegerLiteral:
                 return GesQuantityUnits.ParseTypeName(unitIntegerLiteral.UnitName) is { } integerUnit
                     ? GesValue.GesInteger(unitIntegerLiteral.Value, integerUnit)
                     : GesValue.GesNothing();
-            case FloatLiteralExpressionNode floatLiteral:
+            case GesFloatLiteralExpressionNode floatLiteral:
                 return GesValue.GesFloat(floatLiteral.Value);
-            case UnitFloatLiteralExpressionNode unitFloatLiteral:
+            case GesUnitFloatLiteralExpressionNode unitFloatLiteral:
                 return GesQuantityUnits.ParseTypeName(unitFloatLiteral.UnitName) is { } unit
                     ? GesValue.GesFloat(unitFloatLiteral.Value, unit)
                     : GesValue.GesNothing();
-            case PercentageLiteralExpressionNode percentageLiteral:
+            case GesPercentageLiteralExpressionNode percentageLiteral:
                 return GesValue.GesPercentage(percentageLiteral.RatioValue);
-            case TextLiteralExpressionNode textLiteral:
+            case GesTextLiteralExpressionNode textLiteral:
                 return GesValue.GesText(textLiteral.Value);
-            case TagLiteralExpressionNode tagLiteral:
+            case GesTagLiteralExpressionNode tagLiteral:
                 return GesValue.GesTag(tagLiteral.Name);
-            case ListLiteralExpressionNode listLiteral:
+            case GesListLiteralExpressionNode listLiteral:
             {
                 var items = new GesValue[listLiteral.Items.Count];
                 for (var index = 0; index < listLiteral.Items.Count; index++)
@@ -565,7 +565,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
 
                 return GesValue.GesList(items);
             }
-            case MapLiteralExpressionNode mapLiteral:
+            case GesMapLiteralExpressionNode mapLiteral:
             {
                 var keys = new string[mapLiteral.Entries.Count];
                 var values = new GesValue[mapLiteral.Entries.Count];
@@ -583,18 +583,18 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
 
                 return GesValue.GesMap(keys, values);
             }
-            case TypeCastExpressionNode typeCastExpression:
+            case GesTypeCastExpressionNode typeCastExpression:
                 return EvaluateConstantTypeCastValue(typeCastExpression);
-            case UnaryExpressionNode unaryExpression:
+            case GesUnaryExpressionNode unaryExpression:
                 return EvaluateConstantUnaryValue(unaryExpression);
-            case BinaryExpressionNode binaryExpression:
+            case GesBinaryExpressionNode binaryExpression:
                 return EvaluateConstantBinaryValue(binaryExpression);
             default:
                 return null;
         }
     }
 
-    private static GesValue? EvaluateConstantTypeCastValue(TypeCastExpressionNode typeCast)
+    private static GesValue? EvaluateConstantTypeCastValue(GesTypeCastExpressionNode typeCast)
     {
         if (EvaluateConstantValue(typeCast.Value) is not { } source)
         {
@@ -611,7 +611,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         }
     }
 
-    private static GesValue? EvaluateConstantUnaryValue(UnaryExpressionNode unary)
+    private static GesValue? EvaluateConstantUnaryValue(GesUnaryExpressionNode unary)
     {
         if (EvaluateConstantValue(unary.Operand) is not { } operand)
         {
@@ -681,7 +681,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
                     return GesValue.GesNothing();
                 }
 
-                return GesValue.GesFloat(operand.AsNumber() / 180d * GameEventScriptMathConstants.Pi);
+                return GesValue.GesFloat(operand.AsNumber() / 180d * GesMathConstants.Pi);
             case GesUnaryOperator.DegreeFromRadians:
                 if (operand.Unit.IsNumericUnit() ||
                     operand.Kind is not (GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean) ||
@@ -690,7 +690,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
                     return GesValue.GesNothing();
                 }
 
-                return GesValue.GesFloat(operand.AsNumber() / GameEventScriptMathConstants.Pi * 180d, GesQuantityUnit.UnitDegree);
+                return GesValue.GesFloat(operand.AsNumber() / GesMathConstants.Pi * 180d, GesQuantityUnit.UnitDegree);
             case GesUnaryOperator.WrapDegree:
                 if ((operand.Unit.IsNumericUnit() && operand.Unit != GesQuantityUnit.UnitDegree) ||
                     operand.Kind is not (GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean) ||
@@ -707,7 +707,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         }
     }
 
-    private static GesValue? EvaluateConstantBinaryValue(BinaryExpressionNode binary)
+    private static GesValue? EvaluateConstantBinaryValue(GesBinaryExpressionNode binary)
     {
         if (EvaluateConstantValue(binary.Left) is not { } left ||
             EvaluateConstantValue(binary.Right) is not { } right)
@@ -1013,18 +1013,18 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
     private static GesQuantityUnit DivideResultUnit(GesQuantityUnit unit)
         => unit.IsNumericUnit() ? GesQuantityUnit.UnitNone : unit;
 
-    private static ExpressionNode? ConvertValueToLiteral(GesValue value)
+    private static GesExpressionNode? ConvertValueToLiteral(GesValue value)
     {
         switch (value.Kind)
         {
             case GesBytecodeTypeKind.Nothing:
-                return new NothingLiteralExpressionNode();
+                return new GesNothingLiteralExpressionNode();
             case GesBytecodeTypeKind.Boolean:
-                return new BooleanLiteralExpressionNode(value.AsBoolean());
+                return new GesBooleanLiteralExpressionNode(value.AsBoolean());
             case GesBytecodeTypeKind.Integer:
                 return value.Unit.IsNumericUnit()
-                    ? new UnitIntegerLiteralExpressionNode(value.IntegerValue, value.Unit.ToTypeName())
-                    : new IntegerLiteralExpressionNode(value.IntegerValue);
+                    ? new GesUnitIntegerLiteralExpressionNode(value.IntegerValue, value.Unit.ToTypeName())
+                    : new GesIntegerLiteralExpressionNode(value.IntegerValue);
             case GesBytecodeTypeKind.Float:
                 if (double.IsNaN(value.AsNumber()) || double.IsInfinity(value.AsNumber()))
                 {
@@ -1032,34 +1032,34 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
                 }
 
                 return value.Unit.IsNumericUnit()
-                    ? new UnitFloatLiteralExpressionNode(value.AsNumber(), value.Unit.ToTypeName())
-                    : new FloatLiteralExpressionNode(value.AsNumber());
+                    ? new GesUnitFloatLiteralExpressionNode(value.AsNumber(), value.Unit.ToTypeName())
+                    : new GesFloatLiteralExpressionNode(value.AsNumber());
             case GesBytecodeTypeKind.Percentage:
-                return new PercentageLiteralExpressionNode(value.AsNumber());
+                return new GesPercentageLiteralExpressionNode(value.AsNumber());
             case GesBytecodeTypeKind.Text:
-                return new TextLiteralExpressionNode(value.TextValue);
+                return new GesTextLiteralExpressionNode(value.TextValue);
             case GesBytecodeTypeKind.Tag:
-                return new TagLiteralExpressionNode(value.TextValue);
+                return new GesTagLiteralExpressionNode(value.TextValue);
             case GesBytecodeTypeKind.Vector:
-                return new TypeConstructorExpressionNode(
+                return new GesTypeConstructorExpressionNode(
                     "vector",
-                    new ArgumentListNode([
-                        new ArgumentNode(null, CreateFloatLiteral(value.X, value.Unit)),
-                        new ArgumentNode(null, CreateFloatLiteral(value.Y, value.Unit)),
-                        new ArgumentNode(null, CreateFloatLiteral(value.Z, value.Unit))
+                    new GesArgumentListNode([
+                        new GesArgumentNode(null, CreateFloatLiteral(value.X, value.Unit)),
+                        new GesArgumentNode(null, CreateFloatLiteral(value.Y, value.Unit)),
+                        new GesArgumentNode(null, CreateFloatLiteral(value.Z, value.Unit))
                     ]));
             case GesBytecodeTypeKind.Point:
-                return new TypeConstructorExpressionNode(
+                return new GesTypeConstructorExpressionNode(
                     "point",
-                    new ArgumentListNode([
-                        new ArgumentNode(null, CreateFloatLiteral(value.X, value.Unit)),
-                        new ArgumentNode(null, CreateFloatLiteral(value.Y, value.Unit)),
-                        new ArgumentNode(null, CreateFloatLiteral(value.Z, value.Unit))
+                    new GesArgumentListNode([
+                        new GesArgumentNode(null, CreateFloatLiteral(value.X, value.Unit)),
+                        new GesArgumentNode(null, CreateFloatLiteral(value.Y, value.Unit)),
+                        new GesArgumentNode(null, CreateFloatLiteral(value.Z, value.Unit))
                     ]));
             case GesBytecodeTypeKind.List:
             {
                 var source = value.AsList();
-                var items = new ExpressionNode[source.Length];
+                var items = new GesExpressionNode[source.Length];
                 for (var index = 0; index < items.Length; index++)
                 {
                     if (ConvertValueToLiteral(source[index]) is not { } itemLiteral)
@@ -1070,7 +1070,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
                     items[index] = itemLiteral;
                 }
 
-                return new ListLiteralExpressionNode(items);
+                return new GesListLiteralExpressionNode(items);
             }
             case GesBytecodeTypeKind.Map:
             {
@@ -1079,7 +1079,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
                     return null;
                 }
 
-                var entries = new MapEntryNode[map.Length];
+                var entries = new GesMapEntryNode[map.Length];
                 for (var index = 0; index < map.StorageLength; index++)
                 {
                     var mapValue = map.ValueAt(index);
@@ -1088,20 +1088,20 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
                         return null;
                     }
 
-                    entries[index] = new MapEntryNode(map.KeyAt(index), itemLiteral);
+                    entries[index] = new GesMapEntryNode(map.KeyAt(index), itemLiteral);
                 }
 
-                return new MapLiteralExpressionNode(entries);
+                return new GesMapLiteralExpressionNode(entries);
             }
             default:
                 return null;
         }
     }
 
-    private static ExpressionNode CreateFloatLiteral(double value, GesQuantityUnit? unit)
+    private static GesExpressionNode CreateFloatLiteral(double value, GesQuantityUnit? unit)
         => unit is { } valueUnit && valueUnit.IsNumericUnit()
-            ? new UnitFloatLiteralExpressionNode(value, valueUnit.ToTypeName())
-            : new FloatLiteralExpressionNode(value);
+            ? new GesUnitFloatLiteralExpressionNode(value, valueUnit.ToTypeName())
+            : new GesFloatLiteralExpressionNode(value);
 
     private static long ToIntegerSaturated(double number) => GesNumber.ToIntegerSaturated(number);
 

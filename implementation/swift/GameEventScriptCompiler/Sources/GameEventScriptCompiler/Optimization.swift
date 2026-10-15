@@ -6,7 +6,7 @@
 extension GesCompiler {
     func optimize(_ routine: GesRoutine) {
         if routine.hasAssembly { return }
-        let branches: Set<Op> = [.jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing, .iteratorNext, .iteratorCreateOrJump]
+        let branches: Set<GesBytecodeOpCode> = [.jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing, .iteratorNext, .iteratorCreateOrJump]
         for round in 0..<2 {
             // Same position as the C# reference pipeline: between the two cleanup rounds.
             if round == 1 { hoistLoopInvariants(routine) }
@@ -59,7 +59,7 @@ extension GesCompiler {
             for index in routine.code.indices where index + 1 < routine.code.count {
                 let branch = routine.code[index]
                 let jump = routine.code[index + 1]
-                let inverse: Op? = branch.opcode == .jumpIfTrue ? .jumpIfFalse : branch.opcode == .jumpIfFalse || branch.opcode == .jumpIfNotTrue ? .jumpIfTrue : nil
+                let inverse: GesBytecodeOpCode? = branch.opcode == .jumpIfTrue ? .jumpIfFalse : branch.opcode == .jumpIfFalse || branch.opcode == .jumpIfNotTrue ? .jumpIfTrue : nil
                 if let inverse, Int(branch.word2) == index + 2, jump.opcode == .jump, !targets.contains(index + 1) {
                     routine.code[index] = .init(
                         opcode: inverse,
@@ -88,7 +88,7 @@ extension GesCompiler {
                 if !removed.contains(index) { next += 1 }
             }
             addresses[routine.code.count] = next
-            var code: [Instruction] = []
+            var code: [GesBytecodeInstruction] = []
             var locations: [GesSourceLocation] = []
             for index in routine.code.indices where !removed.contains(index) {
                 let instruction = routine.code[index]
@@ -115,13 +115,13 @@ extension GesCompiler {
         while hoistRound(routine, &operandLayouts) {}
     }
 
-    private static let branches: Set<Op> = [.jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing, .iteratorNext, .iteratorCreateOrJump]
+    private static let branches: Set<GesBytecodeOpCode> = [.jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing, .iteratorNext, .iteratorCreateOrJump]
 
-    private static let backEdges: Set<Op> = [.jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing]
+    private static let backEdges: Set<GesBytecodeOpCode> = [.jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing]
 
     // Constant loads and arithmetic are side-effect free, never fail (invalid input yields
     // Nothing or a float result), draw no random numbers and charge no runtime budget.
-    private static let pureTotalOperations: Set<Op> = [
+    private static let pureTotalOperations: Set<GesBytecodeOpCode> = [
         .loadNothing, .loadTrue, .loadFalse, .loadInteger, .loadFloat, .loadPercentage, .loadText, .loadTag,
         .add, .subtract, .multiply, .divide, .integerDivide, .modulo, .remainder, .negate, .abs,
     ]
@@ -206,7 +206,7 @@ struct GesOperandSlots {
     let registers: [Int]
     let lists: [Int]
 
-    static func of(_ instruction: Instruction, _ cache: inout [Int: GesOperandSlots]) -> GesOperandSlots {
+    static func of(_ instruction: GesBytecodeInstruction, _ cache: inout [Int: GesOperandSlots]) -> GesOperandSlots {
         // Slots depend on the opcode, its flags (iterator modes) and the whitespace split operand.
         let key = Int(instruction.opcode.rawValue) << 16 | Int(instruction.unitAndFlags) << 1 | (instruction.opcode == .splitText && instruction.a == 1 ? 1 : 0)
         if let slots = cache[key] { return slots }
@@ -267,7 +267,7 @@ struct GesLoopAnalysis {
 }
 
 extension GesCompiler {
-    static func isBranch(_ opcode: Op) -> Bool {
+    static func isBranch(_ opcode: GesBytecodeOpCode) -> Bool {
         switch opcode {
         case .jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing, .iteratorNext, .iteratorCreateOrJump: true
         default: false
@@ -275,7 +275,7 @@ extension GesCompiler {
     }
 }
 
-extension Instruction {
+extension GesBytecodeInstruction {
     // Operand field by slot, without materializing the `fields` array.
     func field(_ slot: Int) -> UInt16 {
         switch slot {

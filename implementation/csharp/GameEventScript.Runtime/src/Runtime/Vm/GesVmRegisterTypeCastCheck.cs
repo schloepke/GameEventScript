@@ -72,7 +72,7 @@ internal static class GesVmRegisterTypeCastCheck
                 dst.SetFloat(xValue.AsNumeric, xValue.Kind is Integer or Float ? xValue.Unit : UnitNone);
                 return dst;
             case Percentage:
-                return TextNumberCast.Percentage(in xValue);
+                return GesTextNumberCast.Percentage(in xValue);
             case Text:
                 return CastText(in xValue);
             case Tag:
@@ -318,7 +318,7 @@ internal static class GesVmRegisterTypeCastCheck
                 var list = new GesValue[(int)xValue.CollectionCount];
                 for (var i = 0; i < list.Length; i++)
                 {
-                    list[i].SetFloat(GameEventScriptRangeMath.GetFloatTerm(range.From, range.To, range.Step, i));
+                    list[i].SetFloat(GesRangeMath.GetFloatTerm(range.From, range.To, range.Step, i));
                 }
 
                 dst.SetList(list);
@@ -536,7 +536,7 @@ internal static class GesVmRegisterTypeCastCheck
             {
                 for (var i = 0; i < xValue.CollectionCount && i < 3; i++)
                 {
-                    var current = GameEventScriptRangeMath.GetFloatTerm(range.From, range.To, range.Step, i);
+                    var current = GesRangeMath.GetFloatTerm(range.From, range.To, range.Step, i);
                     if (i == 0) x = current;
                     else if (i == 1) y = current;
                     else z = current;
@@ -559,11 +559,11 @@ internal static class GesVmRegisterTypeCastCheck
         switch (xValue.Kind)
         {
             case Tag:
-                if (GameEventScriptTagRules.IsValidTagName(xValue.TextValue)) return xValue;
+                if (GesTagRules.IsValidTagName(xValue.TextValue)) return xValue;
                 else dst.SetNothing();
                 return dst;
             case Text:
-                if (GameEventScriptTagRules.NormalizeTextCast(xValue.TextValue) is { } tag) dst.SetTag(tag);
+                if (GesTagRules.NormalizeTextCast(xValue.TextValue) is { } tag) dst.SetTag(tag);
                 else dst.SetNothing();
                 return dst;
             case GesBytecodeTypeKind.Boolean:

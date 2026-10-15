@@ -56,8 +56,8 @@ public sealed partial class GameEventScriptHost
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _observer = observer;
         _profiler = profiler;
-        _extensionRegistry = extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance;
-        _externalTypeRegistry = externalTypeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance;
+        _extensionRegistry = extensionRegistry ?? GesEmptyExtensionRegistry.Instance;
+        _externalTypeRegistry = externalTypeRegistry ?? GesEmptyExternalTypeRegistry.Instance;
         _limits = limits ?? GesRuntimeLimits.Default;
         _publishSink = publishSink;
         _clock = clock ?? new GesSystemClock();
@@ -125,7 +125,7 @@ public sealed partial class GameEventScriptHost
         {
             for (var index = 0; index < linked.Handlers.Length; index++)
             {
-                if (!GameEventScriptSystemEndpoints.IsInitializationName(linked.Handlers[index].Signature.Name)) continue;
+                if (!GesSystemEndpoints.IsInitializationName(linked.Handlers[index].Signature.Name)) continue;
                 throw LinkError(GesDiagnosticCodes.LinkInitializationQueueFull, "The host message queue has no capacity for program initialization.", program);
             }
         }
@@ -142,7 +142,7 @@ public sealed partial class GameEventScriptHost
         {
             var handler = linked.Handlers[index];
             var entry = GesSubscriptionEntry.ForScript(instance, handler, priority, _nextRegistrationOrder++);
-            if (GameEventScriptSystemEndpoints.IsInitializationName(handler.Signature.Name))
+            if (GesSystemEndpoints.IsInitializationName(handler.Signature.Name))
                 initialization.Add(entry);
             else
                 Register(entry);
@@ -152,7 +152,7 @@ public sealed partial class GameEventScriptHost
         _instances = instance;
         if (initialization.Count > 0)
         {
-            var message = GameEventScriptSystemEndpoints.CreateInitializationMessage();
+            var message = GesSystemEndpoints.CreateInitializationMessage();
             // No host callbacks occur between the capacity check and this initialization enqueue.
             var pending = new GesPendingMessage(message, Sort(initialization.ToArray()), [], instance);
             _idleSinceMicroseconds = null;
@@ -260,7 +260,7 @@ public sealed partial class GameEventScriptHost
     public bool Receive(GameEventScriptMessage message)
     {
         _ = message ?? throw new ArgumentNullException(nameof(message));
-        if (!IsReady || message.Name.Length == 0 || GameEventScriptSystemEndpoints.IsInitializationName(message.Name)) return false;
+        if (!IsReady || message.Name.Length == 0 || GesSystemEndpoints.IsInitializationName(message.Name)) return false;
         return EnqueueMessage(message);
     }
 
@@ -368,7 +368,7 @@ public sealed partial class GameEventScriptHost
                     RecordRuntimeError(CreateRuntimeDiagnostic(
                         GesDiagnosticCodes.RuntimeNativeHandlerFailure,
                         "Native message handler failed.",
-                        GameEventScriptRuntimeExceptionText.Describe(exception)));
+                        GesRuntimeExceptionText.Describe(exception)));
                 }
                 CompleteActiveHandler();
                 if (_context.RuntimeBudget.IsExhausted)
@@ -466,7 +466,7 @@ public sealed partial class GameEventScriptHost
                 _observer?.RuntimeError(CreateRuntimeDiagnostic(
                     GesDiagnosticCodes.RuntimePublishSinkFailure,
                     "Publish sink failed.",
-                    GameEventScriptRuntimeExceptionText.Describe(exception)));
+                    GesRuntimeExceptionText.Describe(exception)));
             }
         }
 
@@ -565,9 +565,9 @@ public sealed partial class GameEventScriptHost
         var names = Get(_byName, message.Name);
         if (!HasMatch(message, exact, names))
         {
-            if (GameEventScriptSystemEndpoints.IsUndeliverableName(message.Name)) return false;
-            exact = Get(_exact, GameEventScriptSystemEndpoints.UndeliverableSignatureId);
-            names = Get(_byName, GameEventScriptSystemEndpoints.UndeliverableName);
+            if (GesSystemEndpoints.IsUndeliverableName(message.Name)) return false;
+            exact = Get(_exact, GesSystemEndpoints.UndeliverableSignatureId);
+            names = Get(_byName, GesSystemEndpoints.UndeliverableName);
             if (!HasMatch(message, exact, names)) return false;
         }
 
@@ -666,7 +666,7 @@ public sealed partial class GameEventScriptHost
         for (var handlerIndex = 0; handlerIndex < handlers.Length; handlerIndex++)
         {
             var handler = handlers[handlerIndex];
-            if (GameEventScriptSystemEndpoints.IsInitializationName(handler.Signature.Name)) continue;
+            if (GesSystemEndpoints.IsInitializationName(handler.Signature.Name)) continue;
             var index = handler.MatchArguments ? _exact : _byName;
             var key = handler.MatchArguments ? handler.Signature.SignatureId : handler.Signature.Name;
             if (!index.TryGetValue(key, out var entries)) continue;

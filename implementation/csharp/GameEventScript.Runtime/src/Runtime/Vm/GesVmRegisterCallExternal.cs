@@ -61,7 +61,7 @@ internal static class GesVmRegisterCallExternal
                 var name = state.FetchStringByPointer(bind.Name);
                 state.SetNothing(destinationRegister);
                 state.RaiseError(GesDiagnosticCodes.RuntimeExtensionCallFailed,
-                    $"Extension '{name}' failed unexpectedly.", GameEventScriptRuntimeExceptionText.Describe(exception), symbol: name);
+                    $"Extension '{name}' failed unexpectedly.", GesRuntimeExceptionText.Describe(exception), symbol: name);
                 return;
             }
 

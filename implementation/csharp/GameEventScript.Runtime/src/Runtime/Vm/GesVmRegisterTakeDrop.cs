@@ -815,7 +815,7 @@ internal static class GesVmRegisterTakeDrop
     private static GesValue OneRandomRange(GesIntegerRange valueRangeInteger, GesRandomGenerator randomGenerator)
     {
         var dst = new GesValue();
-        var length = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
+        var length = GesRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (length <= 0)
         {
             dst.SetNothing();
@@ -823,14 +823,14 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var index = randomGenerator.NextInclusiveInteger(0, length - 1L);
-        if (GameEventScriptRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, index + 1L) is { } value) dst.SetInteger(value);
+        if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, index + 1L) is { } value) dst.SetInteger(value);
         else dst.SetNothing();
         return dst;
     }
     private static GesValue OneRandomRange(GesFloatRange range, GesRandomGenerator randomGenerator)
     {
         var dst = new GesValue();
-        var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+        var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
         if (length <= 0)
         {
             dst.SetNothing();
@@ -838,7 +838,7 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var index = randomGenerator.NextInclusiveInteger(0, length - 1L);
-        if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, index + 1L) is { } value) dst.SetFloat(value);
+        if (GesRangeMath.GetTerm(range.From, range.To, range.Step, index + 1L) is { } value) dst.SetFloat(value);
         else dst.SetNothing();
         return dst;
     }
@@ -897,7 +897,7 @@ internal static class GesVmRegisterTakeDrop
     private static GesValue TakeRandomRange(GesVirtualMachine vm, GesIntegerRange valueRangeInteger, short count, GesRandomGenerator randomGenerator)
     {
         var dst = new GesValue();
-        var sourceLength = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
+        var sourceLength = GesRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (count <= 0 || sourceLength <= 0)
         {
             dst.SetList(vm.EmptyList);
@@ -911,7 +911,7 @@ internal static class GesVmRegisterTakeDrop
             var indices = CreateShuffledPrefix(checked((int)sourceLength), length, randomGenerator);
             for (var i = 0; i < length; i++)
             {
-                if (GameEventScriptRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, indices[i] + 1L) is { } value) list[i].SetInteger(value);
+                if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, indices[i] + 1L) is { } value) list[i].SetInteger(value);
                 else list[i].SetNothing();
             }
 
@@ -939,7 +939,7 @@ internal static class GesVmRegisterTakeDrop
             } while (duplicate);
 
             terms[i] = index;
-            if (GameEventScriptRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, index + 1L) is { } value) list[i].SetInteger(value);
+            if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, index + 1L) is { } value) list[i].SetInteger(value);
             else list[i].SetNothing();
         }
 
@@ -949,7 +949,7 @@ internal static class GesVmRegisterTakeDrop
     private static GesValue TakeRandomRange(GesVirtualMachine vm, GesFloatRange range, short count, GesRandomGenerator randomGenerator)
     {
         var dst = new GesValue();
-        var sourceLength = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+        var sourceLength = GesRangeMath.GetLength(range.From, range.To, range.Step);
         if (count <= 0 || sourceLength <= 0)
         {
             dst.SetList(vm.EmptyList);
@@ -963,7 +963,7 @@ internal static class GesVmRegisterTakeDrop
             var indices = CreateShuffledPrefix(checked((int)sourceLength), length, randomGenerator);
             for (var i = 0; i < length; i++)
             {
-                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, indices[i] + 1L) is { } value) list[i].SetFloat(value);
+                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, indices[i] + 1L) is { } value) list[i].SetFloat(value);
                 else list[i].SetNothing();
             }
 
@@ -991,7 +991,7 @@ internal static class GesVmRegisterTakeDrop
             } while (duplicate);
 
             terms[i] = index;
-            if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, index + 1L) is { } value) list[i].SetFloat(value);
+            if (GesRangeMath.GetTerm(range.From, range.To, range.Step, index + 1L) is { } value) list[i].SetFloat(value);
             else list[i].SetNothing();
         }
 
@@ -1087,7 +1087,7 @@ internal static class GesVmRegisterTakeDrop
     private static GesValue TakeFirstRange(GesVirtualMachine vm, GesIntegerRange valueRangeInteger, short count)
     {
         var dst = new GesValue();
-        var length = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
+        var length = GesRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (count <= 0 || length <= 0)
         {
             dst.SetRange(0, 0, 0);
@@ -1100,14 +1100,14 @@ internal static class GesVmRegisterTakeDrop
             return dst;
         }
 
-        if (GameEventScriptRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, count) is { } to) dst.SetRange(valueRangeInteger.From, to, valueRangeInteger.Step);
+        if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, count) is { } to) dst.SetRange(valueRangeInteger.From, to, valueRangeInteger.Step);
         else dst.SetNothing();
         return dst;
     }
     private static GesValue DropFirstRange(in GesValue source, GesIntegerRange valueRangeInteger, short count)
     {
         var dst = new GesValue();
-        var length = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
+        var length = GesRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (count <= 0)
         {
             return source;
@@ -1119,14 +1119,14 @@ internal static class GesVmRegisterTakeDrop
             return dst;
         }
 
-        if (GameEventScriptRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, count + 1L) is { } from) dst.SetRange(from, valueRangeInteger.To, valueRangeInteger.Step);
+        if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, count + 1L) is { } from) dst.SetRange(from, valueRangeInteger.To, valueRangeInteger.Step);
         else dst.SetNothing();
         return dst;
     }
     private static GesValue TakeLastRange(GesVirtualMachine vm, GesIntegerRange valueRangeInteger, short count)
     {
         var dst = new GesValue();
-        var length = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
+        var length = GesRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (count <= 0 || length <= 0)
         {
             dst.SetRange(0, 0, 0);
@@ -1139,14 +1139,14 @@ internal static class GesVmRegisterTakeDrop
             return dst;
         }
 
-        if (GameEventScriptRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, length - count + 1L) is { } from) dst.SetRange(from, valueRangeInteger.To, valueRangeInteger.Step);
+        if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, length - count + 1L) is { } from) dst.SetRange(from, valueRangeInteger.To, valueRangeInteger.Step);
         else dst.SetNothing();
         return dst;
     }
     private static GesValue DropLastRange(in GesValue source, GesIntegerRange valueRangeInteger, short count)
     {
         var dst = new GesValue();
-        var length = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
+        var length = GesRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (count <= 0)
         {
             return source;
@@ -1158,14 +1158,14 @@ internal static class GesVmRegisterTakeDrop
             return dst;
         }
 
-        if (GameEventScriptRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, length - count) is { } to) dst.SetRange(valueRangeInteger.From, to, valueRangeInteger.Step);
+        if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, length - count) is { } to) dst.SetRange(valueRangeInteger.From, to, valueRangeInteger.Step);
         else dst.SetNothing();
         return dst;
     }
     private static GesValue TakeFirstRange(GesVirtualMachine vm, GesFloatRange range, short count)
     {
         var dst = new GesValue();
-        var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+        var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
         if (count <= 0 || length <= 0)
         {
             dst.SetRange(0, 0, 0);
@@ -1178,14 +1178,14 @@ internal static class GesVmRegisterTakeDrop
             return dst;
         }
 
-        if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, count) is { } to) dst.SetRange(range.From, to, range.Step);
+        if (GesRangeMath.GetTerm(range.From, range.To, range.Step, count) is { } to) dst.SetRange(range.From, to, range.Step);
         else dst.SetNothing();
         return dst;
     }
     private static GesValue DropFirstRange(in GesValue source, GesFloatRange range, short count)
     {
         var dst = new GesValue();
-        var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+        var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
         if (count <= 0)
         {
             return source;
@@ -1197,14 +1197,14 @@ internal static class GesVmRegisterTakeDrop
             return dst;
         }
 
-        if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, count + 1L) is { } from) dst.SetRange(from, range.To, range.Step);
+        if (GesRangeMath.GetTerm(range.From, range.To, range.Step, count + 1L) is { } from) dst.SetRange(from, range.To, range.Step);
         else dst.SetNothing();
         return dst;
     }
     private static GesValue TakeLastRange(GesVirtualMachine vm, GesFloatRange range, short count)
     {
         var dst = new GesValue();
-        var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+        var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
         if (count <= 0 || length <= 0)
         {
             dst.SetRange(0, 0, 0);
@@ -1217,14 +1217,14 @@ internal static class GesVmRegisterTakeDrop
             return dst;
         }
 
-        if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length - count + 1L) is { } from) dst.SetRange(from, range.To, range.Step);
+        if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length - count + 1L) is { } from) dst.SetRange(from, range.To, range.Step);
         else dst.SetNothing();
         return dst;
     }
     private static GesValue DropLastRange(in GesValue source, GesFloatRange range, short count)
     {
         var dst = new GesValue();
-        var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+        var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
         if (count <= 0)
         {
             return source;
@@ -1236,14 +1236,14 @@ internal static class GesVmRegisterTakeDrop
             return dst;
         }
 
-        if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length - count) is { } to) dst.SetRange(range.From, to, range.Step);
+        if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length - count) is { } to) dst.SetRange(range.From, to, range.Step);
         else dst.SetNothing();
         return dst;
     }
     private static GesValue TakeExtremeRange(GesVirtualMachine vm, GesIntegerRange valueRangeInteger, short count, bool highest)
     {
         var dst = new GesValue();
-        var length = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
+        var length = GesRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (count <= 0 || length <= 0 || valueRangeInteger.Step == 0)
         {
             dst.SetRange(0, 0, 0);
@@ -1251,7 +1251,7 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var takeLength = count < length ? count : length;
-        if (GameEventScriptRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, length) is not { } last)
+        if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, length) is not { } last)
         {
             dst.SetNothing();
             return dst;
@@ -1262,12 +1262,12 @@ internal static class GesVmRegisterTakeDrop
         {
             if (ascending)
             {
-                if (GameEventScriptRangeMath.GetTerm(last, valueRangeInteger.From, -valueRangeInteger.Step, takeLength) is { } to) dst.SetRange(last, to, -valueRangeInteger.Step);
+                if (GesRangeMath.GetTerm(last, valueRangeInteger.From, -valueRangeInteger.Step, takeLength) is { } to) dst.SetRange(last, to, -valueRangeInteger.Step);
                 else dst.SetNothing();
             }
             else
             {
-                if (GameEventScriptRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, takeLength) is { } to) dst.SetRange(valueRangeInteger.From, to, valueRangeInteger.Step);
+                if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, takeLength) is { } to) dst.SetRange(valueRangeInteger.From, to, valueRangeInteger.Step);
                 else dst.SetNothing();
             }
         }
@@ -1275,12 +1275,12 @@ internal static class GesVmRegisterTakeDrop
         {
             if (ascending)
             {
-                if (GameEventScriptRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, takeLength) is { } to) dst.SetRange(valueRangeInteger.From, to, valueRangeInteger.Step);
+                if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, takeLength) is { } to) dst.SetRange(valueRangeInteger.From, to, valueRangeInteger.Step);
                 else dst.SetNothing();
             }
             else
             {
-                if (GameEventScriptRangeMath.GetTerm(last, valueRangeInteger.From, -valueRangeInteger.Step, takeLength) is { } to) dst.SetRange(last, to, -valueRangeInteger.Step);
+                if (GesRangeMath.GetTerm(last, valueRangeInteger.From, -valueRangeInteger.Step, takeLength) is { } to) dst.SetRange(last, to, -valueRangeInteger.Step);
                 else dst.SetNothing();
             }
         }
@@ -1302,7 +1302,7 @@ internal static class GesVmRegisterTakeDrop
     private static GesValue TakeExtremeRange(GesVirtualMachine vm, GesFloatRange range, short count, bool highest)
     {
         var dst = new GesValue();
-        var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+        var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
         if (count <= 0 || length <= 0 || range.Step == 0d)
         {
             dst.SetRange(0, 0, 0);
@@ -1310,7 +1310,7 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var takeLength = count < length ? count : length;
-        if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length) is not { } last)
+        if (GesRangeMath.GetTerm(range.From, range.To, range.Step, length) is not { } last)
         {
             dst.SetNothing();
             return dst;
@@ -1321,12 +1321,12 @@ internal static class GesVmRegisterTakeDrop
         {
             if (ascending)
             {
-                if (GameEventScriptRangeMath.GetTerm(last, range.From, -range.Step, takeLength) is { } to) dst.SetRange(last, to, -range.Step);
+                if (GesRangeMath.GetTerm(last, range.From, -range.Step, takeLength) is { } to) dst.SetRange(last, to, -range.Step);
                 else dst.SetNothing();
             }
             else
             {
-                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, takeLength) is { } to) dst.SetRange(range.From, to, range.Step);
+                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, takeLength) is { } to) dst.SetRange(range.From, to, range.Step);
                 else dst.SetNothing();
             }
         }
@@ -1334,12 +1334,12 @@ internal static class GesVmRegisterTakeDrop
         {
             if (ascending)
             {
-                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, takeLength) is { } to) dst.SetRange(range.From, to, range.Step);
+                if (GesRangeMath.GetTerm(range.From, range.To, range.Step, takeLength) is { } to) dst.SetRange(range.From, to, range.Step);
                 else dst.SetNothing();
             }
             else
             {
-                if (GameEventScriptRangeMath.GetTerm(last, range.From, -range.Step, takeLength) is { } to) dst.SetRange(last, to, -range.Step);
+                if (GesRangeMath.GetTerm(last, range.From, -range.Step, takeLength) is { } to) dst.SetRange(last, to, -range.Step);
                 else dst.SetNothing();
             }
         }

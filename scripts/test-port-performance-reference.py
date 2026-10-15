@@ -34,6 +34,7 @@ class ReferenceTests(unittest.TestCase):
     def test_unchanged_candidate_passes(self):
         base = reference.summarize([result(10, 5)])
         self.assertEqual((1.0, [], []), reference.compare(base, base))
+        self.assertEqual((True, 1.0, []), reference.evaluate(base, base, base))
 
     def test_elapsed_budget_uses_geometric_mean(self):
         base = reference.summarize([result(10, 5)])
@@ -51,6 +52,23 @@ class ReferenceTests(unittest.TestCase):
         base = reference.summarize([result(10, 5)])
         candidate = reference.summarize([{"cases": []}])
         self.assertEqual(sorted(base), reference.compare(base, candidate)[2])
+
+    def test_empty_measurements_fail_instead_of_passing_neutrally(self):
+        frozen = reference.summarize([result(10, 5)])
+        empty = reference.summarize([{"cases": []}])
+        passed, mean, problems = reference.evaluate(frozen, empty, empty)
+        self.assertFalse(passed)
+        self.assertIsNone(mean)
+        self.assertIn("candidate produced no measurements", problems)
+        self.assertIn("elapsed reference produced no measurements", problems)
+
+    def test_interleaved_mode_still_checks_frozen_metric_coverage(self):
+        frozen = reference.summarize([result(10, 5)])
+        # Baseline and candidate agree with each other but both lack the frozen allocation metric.
+        partial = {key: value for key, value in reference.summarize([result(10, 5)]).items() if not key.endswith("run.allocated")}
+        passed, _, problems = reference.evaluate(frozen, partial, partial)
+        self.assertFalse(passed)
+        self.assertEqual(["missing metric suite/case-1|run.allocated"], problems)
 
 
 if __name__ == "__main__":

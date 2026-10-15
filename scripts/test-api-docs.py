@@ -42,7 +42,7 @@ class StagingTests(unittest.TestCase):
             path.write_text('<html>Generated public extension</html>')
         for name in ['index', 'api/GameEventScript.Api.GameEventScriptHost',
                      'api/GameEventScript.Api.GesProgramBuilder',
-                     'api/GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner',
+                     'api/GameEventScript.CSharpBridge.GesBridgeHostRunner',
                      'api/GameEventScript.SyntaxHighlighter.GesSyntaxHighlighter']:
             path = self.root / f'api/csharp/reference/{name}.html'
             path.parent.mkdir(parents=True, exist_ok=True)

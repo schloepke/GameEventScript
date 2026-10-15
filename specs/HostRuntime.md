@@ -425,7 +425,7 @@ wrapping an already ready host schedules its pending work immediately. Both
 runners serialize callbacks on a shared background dispatcher and expose readiness,
 the last execution result and synchronized instance startup results.
 
-`CSharpBridge.GameEventScriptCSharpHostRunner` serializes access
+`CSharpBridge.GesBridgeHostRunner` serializes access
 to one host with a C# lock and schedules at most one pump job for that host on a
 shared dispatcher. Concurrent `Receive`, `Load`, subscribe, detach, and
 unsubscribe calls go through the runner. Creating a runner immediately schedules

@@ -92,8 +92,28 @@ def compare(reference, candidate):
                 ratios.append(actual / expected["median"])
         elif actual > expected["median"]:
             allocation_regressions.append((key, expected["median"], actual, expected["unit"]))
-    geometric_mean = math.exp(sum(math.log(r) for r in ratios) / len(ratios)) if ratios else 1.0
+    # No comparable elapsed metric means nothing was measured; never report that as a neutral ratio.
+    geometric_mean = math.exp(sum(math.log(r) for r in ratios) / len(ratios)) if ratios else None
     return geometric_mean, allocation_regressions, missing
+
+
+def evaluate(frozen, elapsed_reference, candidate):
+    """Judge a candidate: elapsed time against `elapsed_reference` (frozen file or interleaved baseline), allocations
+    and metric coverage against the frozen reference. Returns (passed, geometric mean or None, problems)."""
+    problems = []
+    if not candidate:
+        problems.append("candidate produced no measurements")
+    if not elapsed_reference:
+        problems.append("elapsed reference produced no measurements")
+    geometric_mean, _, missing_elapsed = compare(elapsed_reference, candidate)
+    _, regressions, missing_frozen = compare(frozen, candidate)
+    if geometric_mean is None:
+        problems.append("no comparable elapsed metrics")
+    elif geometric_mean > ELAPSED_BUDGET:
+        problems.append(f"elapsed geometric mean {geometric_mean:.4f} exceeds {ELAPSED_BUDGET:.2f}")
+    problems += [f"allocation increase {key}: {expected:g} -> {actual:g} {unit}" for key, expected, actual, unit in regressions]
+    problems += [f"missing metric {key}" for key in sorted(set(missing_elapsed) | set(missing_frozen))]
+    return not problems, geometric_mean, problems
 
 
 def build(port, root):
@@ -196,20 +216,17 @@ def main(argv=None):
         elapsed_reference = reference["metrics"]
         source = "frozen reference"
     summary = summarize(candidate)
-    geometric_mean, _, missing = compare(elapsed_reference, summary)
-    _, regressions, _ = compare(reference["metrics"], summary)
-    print(f"{args.port}: elapsed geometric mean {geometric_mean:.4f} against {source} (budget {ELAPSED_BUDGET:.2f})")
+    passed, geometric_mean, problems = evaluate(reference["metrics"], elapsed_reference, summary)
+    shown = "n/a" if geometric_mean is None else f"{geometric_mean:.4f}"
+    print(f"{args.port}: elapsed geometric mean {shown} against {source} (budget {ELAPSED_BUDGET:.2f})")
     if args.details:
         ratios = sorted((summary[key]["median"] / expected["median"], key) for key, expected in elapsed_reference.items()
                         if key in summary and is_elapsed(expected["unit"]) and expected["median"] > 0)
         for ratio, key in ratios[-args.details:][::-1] + ratios[:args.details]:
             print(f"  {ratio:.3f} {key}")
-    for key, expected, actual, unit in regressions:
-        print(f"  allocation increase {key}: {expected:g} -> {actual:g} {unit}")
-    for key in missing:
-        print(f"  missing metric {key}")
-    return 0 if geometric_mean <= ELAPSED_BUDGET and not regressions and not missing else 1
-
+    for problem in problems:
+        print(f"  {problem}")
+    return 0 if passed else 1
 
 if __name__ == "__main__":
     sys.exit(main())

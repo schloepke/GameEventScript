@@ -22,8 +22,8 @@ SWIFT_EXTENSION_PAGES = [
     'gameeventscriptswiftbridge/documentation/gameeventscriptswiftbridge/gameeventscriptruntime/' + member + '/index.html'
     for member in [
         'gameeventscripthost/subscribe(_:matchingtags:withouttags:priority:handler:)',
-        'gameeventscriptmessage/init(name:swiftarguments:tags:)',
-        'gameeventscriptcontext/publish(_:swiftarguments:tags:)',
+        'gameeventscriptmessage/init(name:nativearguments:tags:)',
+        'gescontext/publish(_:nativearguments:tags:)',
     ]
 ]
 
@@ -36,7 +36,7 @@ def validate(language, expected):
     required = ['reference/index.html', *[
         f'reference/api/{symbol}.html' for symbol in [
             'GameEventScript.Api.GameEventScriptHost', 'GameEventScript.Api.GesProgramBuilder',
-            'GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner',
+            'GameEventScript.CSharpBridge.GesBridgeHostRunner',
             'GameEventScript.SyntaxHighlighter.GesSyntaxHighlighter']]] if language == 'csharp' else [
         f'{module.lower()}/documentation/{module.lower()}/index.html' for module in build.SWIFT] + SWIFT_EXTENSION_PAGES
     for relative in required:

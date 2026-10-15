@@ -41,7 +41,6 @@ final class GesRuntimeBudget {
         if processing && executionSteps >= limits.maxExecutionSteps { exhaust("MaxExecutionSteps", limits.maxExecutionSteps) }
     }
 
-    @inline(__always)
     func loop() -> Bool {
         if isExhausted { return false }
         if limits.maxLoopIterations > 0 && loopIterations >= limits.maxLoopIterations {

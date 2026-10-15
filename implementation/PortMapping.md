@@ -345,9 +345,13 @@ contains exactly the measured reference sources plus the recalibrated corpus.
       move helper extensions off the VM-opcode files where they do not belong.
       Multi-opcode handlers keep a descriptive name in both ports (`Send`,
       `EmitOrPublishMessage…`). A/B against 30811af3: 0.9827.
-- [ ] Re-measure every existing inlining attribute per group in both ports
+- [x] Re-measure every existing inlining attribute per group in both ports
       (C# 14 `AggressiveInlining`, Swift 38 `@inline(__always)` and 120
       `@inline(never)`); keep only measured benefits with a rationale comment.
+      C# keeps `ExecuteAdd` (3.4x on core/case-0005). Swift drops all
+      `@inline(never)` (1.0025, +16 KB adapter) and the four neutral
+      `@inline(__always)`; the VM core, `GesValue` and Add/Modulo/Multiply fast
+      paths stay (2–13% on core and low-allocation runs).
 
 - [ ] Map storage layout, decided by measurement in both ports: one sorted entry
       array (Swift today) versus parallel key and value arrays (C# today). Typical

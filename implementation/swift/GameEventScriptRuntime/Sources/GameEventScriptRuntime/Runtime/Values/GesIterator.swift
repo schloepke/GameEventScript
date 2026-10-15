@@ -63,7 +63,6 @@ final class GesIntegerRangeIterator: GesIterator {
     }
 
     // Statically dispatched step for the hot integer-range loop; same sequence as next().
-    @inline(__always)
     func nextIntegerTerm() -> Int64? {
         guard !exhausted, index < count else {
             exhausted = true

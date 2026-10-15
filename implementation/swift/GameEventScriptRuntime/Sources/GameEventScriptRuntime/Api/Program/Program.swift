@@ -264,7 +264,6 @@ public struct GesBytecodeInstruction: Sendable, Equatable {
     /// Decoded degree, meter or second unit; other codes yield none. Validation rejects invalid encodings.
     public var unit: GesQuantityUnit { decodedUnit }
     // Inlined into VM dispatch; the public accessor shares this single mapping.
-    @inline(__always)
     var decodedUnit: GesQuantityUnit {
         switch unitAndFlags & 0x1f {
         case 1: .degree

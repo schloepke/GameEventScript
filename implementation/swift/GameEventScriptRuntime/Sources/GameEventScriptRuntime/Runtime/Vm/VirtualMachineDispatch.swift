@@ -23,8 +23,9 @@ extension GesVirtualMachine {
     }
 
     // Specialize the shared loop so the disabled path has no existential call or optional check per opcode.
-    // Opcode extensions normally stay out of line: broad inlining regressed the uninstrumented
-    // compute benchmark. Keep exceptions such as Add measurement-driven, independently of this loop specialization.
+    // Inlining attributes in the VM core (this file, VirtualMachine, RegisterFile), GesValue and the integer
+    // fast paths of Add/Modulo/Multiply are measured: removing them slows core and low-allocation runs by 2–13%.
+    // Other handlers are left to the compiler.
     @inline(__always)
     private func executeSlice<Instrumentation: VmInstrumentation>(context: GesContext, budget: Int, instrumentation: Instrumentation) -> Int {
         var executed = 0

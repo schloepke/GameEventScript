@@ -29,7 +29,6 @@ enum GesDataConstruction {
     }
 
     // Every shape has at most three parameters, so positions are 0...2.
-    @inline(__always)
     private static func place(_ value: GesValue, at position: Int, in slots: inout (GesValue, GesValue, GesValue)) {
         switch position {
         case 0: slots.0 = value

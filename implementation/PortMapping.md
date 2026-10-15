@@ -340,9 +340,11 @@ contains exactly the measured reference sources plus the recalibrated corpus.
       `SetHandler`, `SetIntegerRange`/`SetFloatRange`, `SetExternal`,
       `SetTextConstant`/`SetTagConstant`, `StageTextConstant`/`StageTagConstant`,
       `RaiseError`, `ModifyLocals`, `EnsureRegisterCapacity` (Swift lower camel case).
-- [ ] Swift: fix handler names that do not match their opcode
+- [x] Swift: fix handler names that do not match their opcode
       (`compoundIterator` in `IteratorCreate`), remove empty namespace files,
       move helper extensions off the VM-opcode files where they do not belong.
+      Multi-opcode handlers keep a descriptive name in both ports (`Send`,
+      `EmitOrPublishMessage…`). A/B against 30811af3: 0.9827.
 - [ ] Re-measure every existing inlining attribute per group in both ports
       (C# 14 `AggressiveInlining`, Swift 38 `@inline(__always)` and 120
       `@inline(never)`); keep only measured benefits with a rationale comment.

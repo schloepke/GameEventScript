@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    func cartesian(_ destination: Int, _ left: GesValue, _ right: GesValue, _ budget: GesRuntimeBudget) {
+    func executeCartesian(_ destination: Int, _ left: GesValue, _ right: GesValue, _ budget: GesRuntimeBudget) {
         guard let a = left.listValue, let b = right.listValue else {
             setNothing(destination)
             return

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    func nextComponents(_ instruction: GesBytecodeInstruction) -> Bool {
+    func executeIteratorNextComponents(_ instruction: GesBytecodeInstruction) -> Bool {
         let iterator = self.iterator(Int(instruction.word1))
         let components = iterator as? any GesComponentIterator
         let item = components == nil ? iterator?.next() : nil

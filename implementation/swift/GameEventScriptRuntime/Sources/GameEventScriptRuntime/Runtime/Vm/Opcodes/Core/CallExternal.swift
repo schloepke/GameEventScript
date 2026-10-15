@@ -1,34 +1,34 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesCallbacks {
-    static func extensionCall(_ i: GesBytecodeInstruction, _ s: GesVirtualMachine, _ c: GesContext) throws {
+extension GesVirtualMachine {
+    func executeCallExternal(_ i: GesBytecodeInstruction, _ c: GesContext) throws {
         let destination = Int(i.word0)
-        let registers = s.list(i.word2)
-        guard let binding = s.linked!.extensionBindings[i.word1], let function = s.linked!.extensions[i.word1], binding.argumentNames.count == registers.count else {
-            s.setNothing(destination)
-            s.raiseError("runtime.invalidExtensionBinding")
+        let registers = list(i.word2)
+        guard let binding = linked!.extensionBindings[i.word1], let function = linked!.extensions[i.word1], binding.argumentNames.count == registers.count else {
+            setNothing(destination)
+            raiseError("runtime.invalidExtensionBinding")
             return
         }
-        let call = s.extensionCall
+        let call = extensionCall
         let boundary = c.random.markBoundary()
-        call.begin(c, .init(state: s, indexes: registers))
+        call.begin(c, .init(state: self, indexes: registers))
         defer {
             let fault = c.endBoundary(boundary)
-            if s.error == nil { if fault == .boundaryUnderflow { s.raiseError("runtime.randomStackUnderflow") } else if fault == .unbalanced { s.raiseError("runtime.randomScopeImbalance") } }
+            if error == nil { if fault == .boundaryUnderflow { raiseError("runtime.randomStackUnderflow") } else if fault == .unbalanced { raiseError("runtime.randomScopeImbalance") } }
             call.end()
         }
         do { try function.invoke(call) } catch let fault as GesExtensionFaultError {
-            s.raiseError(fault.diagnostic)
+            raiseError(fault.diagnostic)
             throw fault
         } catch let fault as GesRuntimeError {
-            s.raiseError(fault.diagnostic)
+            raiseError(fault.diagnostic)
             throw fault
         } catch {
-            s.setNothing(destination)
-            s.raiseError("runtime.extensionCallFailed", symbol: s.text(binding.name), error: error)
+            setNothing(destination)
+            raiseError("runtime.extensionCallFailed", symbol: text(binding.name), error: error)
             return
         }
-        s.setValue(destination, i.normalizeResultAsPredicate && call.result.kind != .boolean ? .nothing : call.result)
+        setValue(destination, i.normalizeResultAsPredicate && call.result.kind != .boolean ? .nothing : call.result)
     }
 }

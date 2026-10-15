@@ -65,9 +65,9 @@ extension GesVirtualMachine {
                 case .returnVoid: try returnValue()
                 case .returnValue: try returnRegister(x)
                 case .createSeries: setSeries(d, .init(signatureID: instruction.word2 == 1 ? "fibonacci" : "factorial"))
-                case .callExternal: try GesCallbacks.extensionCall(instruction, self, context)
+                case .callExternal: try executeCallExternal(instruction, context)
                 case .emitInstant, .emitAfter, .publishInstant, .publishAfter: try send(instruction, context)
-                case .emitMessage, .emitMessageWithTags, .publishMessage, .publishMessageWithTags, .emitMessageValue, .emitMessageValueWithTags, .publishMessageValue, .publishMessageValueWithTags: try emitMessage(instruction, context)
+                case .emitMessage, .emitMessageWithTags, .publishMessage, .publishMessageWithTags, .emitMessageValue, .emitMessageValueWithTags, .publishMessageValue, .publishMessageValueWithTags: try emitOrPublishMessage(instruction, context)
                 case .cast: try GesCasts.cast(value(x), GesBytecodeTypeKind(rawValue: instruction.word2)!, context, sink: output(d))
                 case .castCustom:
                     let value = self.value(x)
@@ -183,7 +183,7 @@ extension GesVirtualMachine {
                     let value = self.value(x)
                     if let fields = value.asMap, value.kind == .map { setRecord(d, typeName: text(instruction.word2), fields: fields) } else { setNothing(d) }
                 case .createExternalType:
-                    try GesCallbacks.constructor(instruction, self, context)
+                    try executeCreateExternalType(instruction, context)
                     clearStage()
                 case .hasValue: setBoolean(d, value(x).hasValue)
                 case .isEmpty: setBoolean(d, !value(x).hasValue)
@@ -196,12 +196,12 @@ extension GesVirtualMachine {
                 case .randomPushConstant: if !context.random.push(seed: instruction.integer) { runtimeBudget.exhaust("MaxRandomScopeDepth", context.runtimeLimits.maxRandomScopeDepth) }
                 case .randomPop: if !context.random.pop() && !runtimeBudget.isExhausted { raiseError("runtime.randomStackUnderflow") }
                 case .iteratorCreate, .iteratorCreateOrJump:
-                    try compoundIterator(instruction, context)
+                    try executeIteratorCreate(instruction, context)
                     if instruction.opcode == .iteratorCreateOrJump, isRegisterData(d) { ip = y }
                 case .cartesian:
-                    cartesian(d, value(x), value(y), runtimeBudget)
+                    executeCartesian(d, value(x), value(y), runtimeBudget)
                 case .iteratorNext where instruction.unitAndFlags & 32 != 0:
-                    if nextComponents(instruction) { _ = runtimeBudget.loop() }
+                    if executeIteratorNextComponents(instruction) { _ = runtimeBudget.loop() }
                 case .iteratorNext:
                     if let iterator = self.iterator(x), iterator.isIntegerRange {
                         if let term = unsafeDowncast(iterator, to: GesIntegerRangeIterator.self).nextIntegerTerm() {

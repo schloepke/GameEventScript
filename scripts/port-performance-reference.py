@@ -111,6 +111,10 @@ def evaluate(frozen, elapsed_reference, candidate, runs=None, reference_runs=Non
         problems += [f"candidate metric missing in some runs: {key}" for key in incomplete(candidate, runs)]
     if reference_runs is not None:
         problems += [f"baseline metric missing in some runs: {key}" for key in incomplete(elapsed_reference, reference_runs)]
+    # A workload that failed in every baseline run vanishes from the summary; without this check its candidate
+    # timing would silently drop out of the geometric mean.
+    problems += [f"baseline missing elapsed metric {key}" for key, metric in sorted(frozen.items())
+                 if is_elapsed(metric["unit"]) and key not in elapsed_reference]
     if not candidate:
         problems.append("candidate produced no measurements")
     if not elapsed_reference:

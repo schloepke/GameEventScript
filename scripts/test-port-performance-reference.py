@@ -82,6 +82,21 @@ class ReferenceTests(unittest.TestCase):
         self.assertFalse(passed)
         self.assertIn("baseline metric missing in some runs: suite/case-1|run.elapsed", problems)
 
+    def test_workload_failing_in_every_baseline_run_fails(self):
+        def two_cases(first, second):
+            document = result(first, 5)
+            document["cases"][1] = {"id": "suite/case-2", "performance": {"metrics": {"run.elapsed": {"measured": str(second), "unit": "ms"}}}}
+            return document
+
+        frozen = reference.summarize([two_cases(10, 10)])
+        # case-2 errors in all five baseline runs, so it vanishes from the summary instead of looking incomplete.
+        baseline = reference.summarize([result(10, 5)] * 5)
+        candidate = reference.summarize([two_cases(10, 1000)] * 5)
+        passed, mean, problems = reference.evaluate(frozen, baseline, candidate, runs=5, reference_runs=5)
+        self.assertFalse(passed)
+        self.assertEqual(1.0, mean)
+        self.assertEqual(["baseline missing elapsed metric suite/case-2|run.elapsed"], problems)
+
 
 if __name__ == "__main__":
     unittest.main()

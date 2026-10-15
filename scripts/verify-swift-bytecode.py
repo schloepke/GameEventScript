@@ -27,7 +27,7 @@ def enum_values(text, name, swift=False):
 
 
 def main():
-    csharp = (CS / "GameEventScriptProgram.cs").read_text() + (CS / "GesProgramFormat.cs").read_text()
+    csharp = "".join((CS / name).read_text() for name in ("GesBytecode.cs", "GesBinaryFormat.cs", "GesProgramSegments.cs", "GesProgramFormat.cs"))
     swift = (SWIFT / "Api/Program/Bytecode/Bytecode.swift").read_text() + (SWIFT / "Api/Program/Binary/ProgramFormat.swift").read_text()
     names = re.findall(r"public enum (\w+): (?:UInt\d+|Int),", swift)
     for name in names:

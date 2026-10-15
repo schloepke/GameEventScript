@@ -320,9 +320,14 @@ contains exactly the measured reference sources plus the recalibrated corpus.
       kind, and Swift `GesMapEntry` versus C# parallel key/value arrays.
 - [x] `Ges` prefix for C# AST records and remaining unprefixed internal types
       (no prefix or abbreviation findings remain in the port gate).
-- [ ] Rename C# files whose type is renamed in this phase (for example
-      `GameEventScriptExternalTypeValueConverter.cs`) and split
-      `GameEventScriptProgram.cs` where it helps navigation.
+- [x] Rename C# files whose type is renamed in this phase and split
+      `GameEventScriptProgram.cs` like the Swift files: `GameEventScriptProgram.cs`,
+      `GesProgramSegments.cs`, `GesBytecode.cs`, `GesBinaryFormat.cs`,
+      `GesReadOnlyArray.cs`.
+- Open decisions for later phases: the iterator model (C# one class per source
+  kind, Swift one class switching on the source kind), the public value kind
+  (Swift `GesValueKind` versus C# `GesBytecodeTypeKind`), and map entries (Swift
+  `GesMapEntry` versus C# parallel key/value arrays).
 
 ### Phase 4 – VM handlers
 

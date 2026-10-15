@@ -23,7 +23,7 @@ public sealed partial class GameEventScriptHost
     }
 
     private readonly IGesClock _clock;
-    private List<DelayedMessage>? _delayed;
+    private List<GesDelayedMessage>? _delayed;
 
     /// <summary>Gets whole microseconds until the earliest delayed message, or null when no delayed message remains. Reading never pumps the host.</summary>
     public long? NextMessageDelay => _delayed is { Count: > 0 } ? Math.Max(0, _delayed[0].Deadline - _clock.ElapsedMicroseconds) : null;
@@ -58,8 +58,8 @@ public sealed partial class GameEventScriptHost
             exact = Get(_exact, GameEventScriptSystemEndpoints.UndeliverableSignatureId);
             names = Get(_byName, GameEventScriptSystemEndpoints.UndeliverableName);
         }
-        var pending = new PendingMessage(message, exact, names, initializationOutput: _initializationInstance);
-        var delayed = new DelayedMessage(now + microseconds, pending, publish, _initializationInstance);
+        var pending = new GesPendingMessage(message, exact, names, initializationOutput: _initializationInstance);
+        var delayed = new GesDelayedMessage(now + microseconds, pending, publish, _initializationInstance);
         _delayed ??= new();
         var lo = 0;
         var hi = _delayed.Count;
@@ -120,6 +120,4 @@ public sealed partial class GameEventScriptHost
             if (item.Owner?.StartResult is { State: not GesStartState.Ready } || !item.Publish && !item.Pending.HasRecipients()) _delayed.RemoveAt(index);
         }
     }
-
-    private readonly record struct DelayedMessage(long Deadline, PendingMessage Pending, bool Publish, GesProgramInstance? Owner);
 }

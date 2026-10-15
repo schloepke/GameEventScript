@@ -607,7 +607,7 @@ internal static class GesBridgeValueConverter
     public static object? ToClrExternalObjectValue(in GesValue value, Type objectType)
     {
         _ = objectType ?? throw new ArgumentNullException(nameof(objectType));
-        if (value.ObjectValue is GesExternalValue externalValue &&
+        if (value.ObjectValue is GesExternalStorage externalValue &&
             externalValue.Value is GesBridgeExternalValue csharpValue &&
             objectType.IsInstanceOfType(csharpValue.Instance)) return csharpValue.Instance;
         return null;

@@ -29,7 +29,7 @@ internal static class GesProgramValidator
         _ = program ?? throw new ArgumentNullException(nameof(program));
         if (program.FormatVersion != GesBinaryFormat.Version)
             Throw(GesProgramFormatErrorCode.UnsupportedFormatVersion, $"Unsupported program format version '{program.FormatVersion}'.");
-        if (!GameEventScriptText.IsModuleName(program.ModuleName))
+        if (!GesText.IsModuleName(program.ModuleName))
             Throw(GesProgramFormatErrorCode.InvalidProgram, $"Module name '{program.ModuleName}' does not use the portable module-name grammar.", (ushort)GesSectionType.ProgramMetadata);
 
         ValidateStrings(program.StringConstants);

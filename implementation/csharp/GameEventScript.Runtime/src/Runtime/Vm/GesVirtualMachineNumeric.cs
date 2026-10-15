@@ -28,7 +28,7 @@ internal partial class GesVirtualMachine
             case Integer when b.NumericKind is Integer:
                 if (SameUnit(in a, in b) is { } unit)
                 {
-                    if (GameEventScriptNumber.AddExact(a.IntegerValue, b.IntegerValue) is { } integerResult) SetInteger(destinationRegister, integerResult, unit);
+                    if (GesNumber.AddExact(a.IntegerValue, b.IntegerValue) is { } integerResult) SetInteger(destinationRegister, integerResult, unit);
                     else SetFloat(destinationRegister, (double)a.IntegerValue + b.IntegerValue, unit);
                 }
                 else SetFloat(destinationRegister, double.NaN);

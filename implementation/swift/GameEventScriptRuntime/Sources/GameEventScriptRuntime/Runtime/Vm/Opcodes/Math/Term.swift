@@ -7,6 +7,6 @@ extension GesVirtualMachine {
         let destination = destinationRegister
         let x = frameStart + sourceRegister
         let y = frameStart + otherRegister
-        return registers[y].isNumeric ? GesSeries.term(registers[x].registerValue, index: registers[y].asInteger, sink: output(destination)) : setNothing(destination)
+        return registers[y].isNumeric ? GesSeriesValue.term(registers[x].registerValue, index: registers[y].asInteger, sink: output(destination)) : setNothing(destination)
     }
 }

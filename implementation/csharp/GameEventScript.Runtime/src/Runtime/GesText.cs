@@ -10,7 +10,7 @@ namespace GameEventScript.Runtime;
 /// Implements the language-level text rules without depending on platform Unicode
 /// classification or native string indexing semantics.
 /// </summary>
-internal static class GameEventScriptText
+internal static class GesText
 {
     internal static IComparer<string> ScalarComparer { get; } = new ScalarOrdinalComparer();
 

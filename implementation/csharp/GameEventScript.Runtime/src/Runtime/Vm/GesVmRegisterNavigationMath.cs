@@ -332,7 +332,7 @@ internal static class GesVmRegisterNavigationMath
                 var n = value.AsNumeric;
                 vm.SetFloat(destinationRegister, n * n);
                 return;
-            case Vector or Point when value.ObjectValue is GesValueVectorPoint triplet:
+            case Vector or Point when value.ObjectValue is GesSpatialValue triplet:
                 vm.SetFloat(destinationRegister, triplet.X * triplet.X + triplet.Y * triplet.Y + triplet.Z * triplet.Z);
                 return;
             default:
@@ -383,7 +383,7 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (value.Kind is not (Vector or Point) || value.ObjectValue is not GesValueVectorPoint triplet)
+        if (value.Kind is not (Vector or Point) || value.ObjectValue is not GesSpatialValue triplet)
         {
             vm.SetNothing(destinationRegister);
             return;
@@ -718,8 +718,8 @@ internal static class GesVmRegisterNavigationMath
         if (left.Unit != right.Unit ||
             left.Kind is not (Vector or Point) ||
             right.Kind is not (Vector or Point) ||
-            left.ObjectValue is not GesValueVectorPoint leftTriplet ||
-            right.ObjectValue is not GesValueVectorPoint rightTriplet)
+            left.ObjectValue is not GesSpatialValue leftTriplet ||
+            right.ObjectValue is not GesSpatialValue rightTriplet)
         {
             return null;
         }

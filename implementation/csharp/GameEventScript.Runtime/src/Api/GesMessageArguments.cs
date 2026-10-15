@@ -193,7 +193,7 @@ public sealed class GesMessageArguments : IReadOnlyCollection<GesMessageArgument
             GesBytecodeTypeKind.Boolean => value.IsTrue,
             GesBytecodeTypeKind.Integer => value.IntegerValue != 0,
             Float or Percentage => value.FloatValue != 0d,
-            Vector or Point when value.ObjectValue is GesValueVectorPoint vector => vector.X != 0d || vector.Y != 0d || vector.Z != 0d,
+            Vector or Point when value.ObjectValue is GesSpatialValue vector => vector.X != 0d || vector.Y != 0d || vector.Z != 0d,
             _ => value.IsTrue
         };
     }
@@ -339,7 +339,7 @@ public sealed class GesMessageArguments : IReadOnlyCollection<GesMessageArgument
 
     internal ref readonly GesValue VmValueAt(int index) => ref _values[index];
 
-    private static long ToIntegerSaturated(double number) => GameEventScriptNumber.ToIntegerSaturated(number);
+    private static long ToIntegerSaturated(double number) => GesNumber.ToIntegerSaturated(number);
 
     private static GesMessageArguments CreateOrderedCore(string[] names, GesValue[] values)
     {

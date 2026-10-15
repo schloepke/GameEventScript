@@ -19,10 +19,10 @@ internal static class GesVmRegisterMemberIndexAccess
             case Custom when obj.ObjectValue is GesCustomObject customObject && customObject.Map.Get(key) is { } value:
                 vm.SetValue(destinationRegister, in value);
                 return;
-            case Custom when obj.ObjectValue is GesExternalValue externalValue && externalValue.ToMap().Get(key) is { } value:
+            case Custom when obj.ObjectValue is GesExternalStorage externalValue && externalValue.ToMap().Get(key) is { } value:
                 vm.SetValue(destinationRegister, in value);
                 return;
-            case Vector or Point when obj.ObjectValue is GesValueVectorPoint vp && vp.GetComponent(key) is { } value:
+            case Vector or Point when obj.ObjectValue is GesSpatialValue vp && vp.GetComponent(key) is { } value:
                 vm.SetFloat(destinationRegister, value, obj.Unit);
                 return;
             case Message when obj.ObjectValue is GameEventScriptMessage message:
@@ -94,7 +94,7 @@ internal static class GesVmRegisterMemberIndexAccess
                 if (index < dices.Length) vm.SetInteger(destinationRegister, dices[(int)index]);
                 else vm.SetNothing(destinationRegister);
                 return;
-            case Vector or Point when obj.ObjectValue is GesValueVectorPoint vp:
+            case Vector or Point when obj.ObjectValue is GesSpatialValue vp:
                 switch (index)
                 {
                     case 0:
@@ -111,16 +111,16 @@ internal static class GesVmRegisterMemberIndexAccess
                         break;
                 }
                 return;
-            case Range when obj.ObjectValue is GesValueRangeInteger integerRange:
+            case Range when obj.ObjectValue is GesIntegerRange integerRange:
                 if (GameEventScriptRangeMath.GetTerm(integerRange.From, integerRange.To, integerRange.Step, indexIn) is { } intRangeValue) vm.SetInteger(destinationRegister, intRangeValue);
                 else vm.SetNothing(destinationRegister);
                 return;
-            case Range when obj.ObjectValue is GesValueRangeFloat floatRange:
+            case Range when obj.ObjectValue is GesFloatRange floatRange:
                 if (GameEventScriptRangeMath.GetTerm(floatRange.From, floatRange.To, floatRange.Step, indexIn) is { } floatRangeValue) vm.SetFloat(destinationRegister, floatRangeValue);
                 else vm.SetNothing(destinationRegister);
                 return;
             case Text or Tag:
-                if (GameEventScriptText.ScalarAt(obj.TextValue, index) is { } scalar) vm.SetText(destinationRegister, scalar);
+                if (GesText.ScalarAt(obj.TextValue, index) is { } scalar) vm.SetText(destinationRegister, scalar);
                 else vm.SetNothing(destinationRegister);
                 return;
             default:

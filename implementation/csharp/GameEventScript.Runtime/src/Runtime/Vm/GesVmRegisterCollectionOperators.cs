@@ -36,10 +36,10 @@ internal static class GesVmRegisterCollectionOperators
         GesValue[]? rightList = null;
         int[]? leftDice = null;
         int[]? rightDice = null;
-        GesValueRangeInteger? leftRange = null;
-        GesValueRangeInteger? rightRange = null;
-        GesValueRangeFloat? leftFloatRange = null;
-        GesValueRangeFloat? rightFloatRange = null;
+        GesIntegerRange? leftRange = null;
+        GesIntegerRange? rightRange = null;
+        GesFloatRange? leftFloatRange = null;
+        GesFloatRange? rightFloatRange = null;
 
         switch (a.Kind)
         {
@@ -49,10 +49,10 @@ internal static class GesVmRegisterCollectionOperators
             case Dice when a.ObjectValue is int[] value:
                 leftDice = value;
                 break;
-            case GesBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeInteger value:
+            case GesBytecodeTypeKind.Range when a.ObjectValue is GesIntegerRange value:
                 leftRange = value;
                 break;
-            case GesBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeFloat value:
+            case GesBytecodeTypeKind.Range when a.ObjectValue is GesFloatRange value:
                 leftFloatRange = value;
                 break;
             default:
@@ -68,10 +68,10 @@ internal static class GesVmRegisterCollectionOperators
             case Dice when b.ObjectValue is int[] value:
                 rightDice = value;
                 break;
-            case GesBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeInteger value:
+            case GesBytecodeTypeKind.Range when b.ObjectValue is GesIntegerRange value:
                 rightRange = value;
                 break;
-            case GesBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeFloat value:
+            case GesBytecodeTypeKind.Range when b.ObjectValue is GesFloatRange value:
                 rightFloatRange = value;
                 break;
             default:
@@ -149,10 +149,10 @@ internal static class GesVmRegisterCollectionOperators
         GesValue[]? rightList = null;
         int[]? leftDice = null;
         int[]? rightDice = null;
-        GesValueRangeInteger? leftRange = null;
-        GesValueRangeInteger? rightRange = null;
-        GesValueRangeFloat? leftFloatRange = null;
-        GesValueRangeFloat? rightFloatRange = null;
+        GesIntegerRange? leftRange = null;
+        GesIntegerRange? rightRange = null;
+        GesFloatRange? leftFloatRange = null;
+        GesFloatRange? rightFloatRange = null;
 
         switch (a.Kind)
         {
@@ -162,10 +162,10 @@ internal static class GesVmRegisterCollectionOperators
             case Dice when a.ObjectValue is int[] value:
                 leftDice = value;
                 break;
-            case GesBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeInteger value:
+            case GesBytecodeTypeKind.Range when a.ObjectValue is GesIntegerRange value:
                 leftRange = value;
                 break;
-            case GesBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeFloat value:
+            case GesBytecodeTypeKind.Range when a.ObjectValue is GesFloatRange value:
                 leftFloatRange = value;
                 break;
             default:
@@ -181,10 +181,10 @@ internal static class GesVmRegisterCollectionOperators
             case Dice when b.ObjectValue is int[] value:
                 rightDice = value;
                 break;
-            case GesBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeInteger value:
+            case GesBytecodeTypeKind.Range when b.ObjectValue is GesIntegerRange value:
                 rightRange = value;
                 break;
-            case GesBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeFloat value:
+            case GesBytecodeTypeKind.Range when b.ObjectValue is GesFloatRange value:
                 rightFloatRange = value;
                 break;
             default:
@@ -302,7 +302,7 @@ internal static class GesVmRegisterCollectionOperators
 
                 vm.SetBoolean(dst, map.ContainsKey(a.TextValue));
                 return;
-            case Vector or Point when b.ObjectValue is GesValueVectorPoint triplet:
+            case Vector or Point when b.ObjectValue is GesSpatialValue triplet:
                 if (!a.IsNumeric)
                 {
                     vm.SetBoolean(dst, false);
@@ -327,7 +327,7 @@ internal static class GesVmRegisterCollectionOperators
                 value.SetFloat(triplet.Z, b.Unit);
                 vm.SetBoolean(dst, value.EqualsValue(a));
                 return;
-            case GesBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when b.ObjectValue is GesIntegerRange range:
                 if (a.Kind is not Integer || a.Unit is not GesQuantityUnit.UnitNone || range.Step == 0)
                 {
                     vm.SetBoolean(dst, false);
@@ -338,7 +338,7 @@ internal static class GesVmRegisterCollectionOperators
                     ? a.IntegerValue >= range.From && a.IntegerValue <= range.To && unchecked((ulong)a.IntegerValue - (ulong)range.From) % (ulong)range.Step == 0UL
                     : a.IntegerValue <= range.From && a.IntegerValue >= range.To && unchecked((ulong)range.From - (ulong)a.IntegerValue) % unchecked(0UL - (ulong)range.Step) == 0UL);
                 return;
-            case GesBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when b.ObjectValue is GesFloatRange range:
                 vm.SetBoolean(dst, ContainsFloatRange(in a, range));
                 return;
             case Nothing:
@@ -497,7 +497,7 @@ internal static class GesVmRegisterCollectionOperators
                 var item = new GesValue();
                 for (var utf16Offset = 0; utf16Offset < text.Length;)
                 {
-                    var scalar = GameEventScriptText.ScalarAtUtf16Offset(text, utf16Offset);
+                    var scalar = GesText.ScalarAtUtf16Offset(text, utf16Offset);
                     utf16Offset += scalar.Length;
                     item.SetText(scalar, 1);
                     if (item.IsTrue)
@@ -518,7 +518,7 @@ internal static class GesVmRegisterCollectionOperators
                 vm.SetBoolean(dst, requireAll);
                 return;
             }
-            case Vector or Point when source.ObjectValue is GesValueVectorPoint triplet:
+            case Vector or Point when source.ObjectValue is GesSpatialValue triplet:
                 if (triplet.X != 0d && double.IsFinite(triplet.X))
                 {
                     if (!requireAll)
@@ -555,7 +555,7 @@ internal static class GesVmRegisterCollectionOperators
 
                 vm.SetBoolean(dst, false);
                 return;
-            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesIntegerRange range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 var value = range.From;
@@ -581,7 +581,7 @@ internal static class GesVmRegisterCollectionOperators
                 vm.SetBoolean(dst, requireAll);
                 return;
             }
-            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesFloatRange range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 for (var i = 0L; i < length; i++)
@@ -675,7 +675,7 @@ internal static class GesVmRegisterCollectionOperators
                 var text = a.TextValue;
                 for (var utf16Offset = 0; utf16Offset < text.Length;)
                 {
-                    var scalar = GameEventScriptText.ScalarAtUtf16Offset(text, utf16Offset);
+                    var scalar = GesText.ScalarAtUtf16Offset(text, utf16Offset);
                     utf16Offset += scalar.Length;
                     candidate.SetText(scalar, 1);
                     if (vm.ContainsHelper(candidate, b) == true)
@@ -696,7 +696,7 @@ internal static class GesVmRegisterCollectionOperators
                 vm.SetBoolean(dst, requireAll);
                 return;
             }
-            case GesBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when a.ObjectValue is GesIntegerRange range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 var value = range.From;
@@ -722,7 +722,7 @@ internal static class GesVmRegisterCollectionOperators
                 vm.SetBoolean(dst, requireAll);
                 return;
             }
-            case GesBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when a.ObjectValue is GesFloatRange range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 for (var i = 0L; i < length; i++)
@@ -776,7 +776,7 @@ internal static class GesVmRegisterCollectionOperators
                 var text = a.TextValue;
                 for (var utf16Offset = 0; utf16Offset < text.Length;)
                 {
-                    var scalar = GameEventScriptText.ScalarAtUtf16Offset(text, utf16Offset);
+                    var scalar = GesText.ScalarAtUtf16Offset(text, utf16Offset);
                     utf16Offset += scalar.Length;
                     candidate.SetText(scalar, 1);
                     candidates.Add(in candidate);
@@ -784,7 +784,7 @@ internal static class GesVmRegisterCollectionOperators
 
                 break;
             }
-            case GesBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when a.ObjectValue is GesIntegerRange range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 var value = range.From;
@@ -797,7 +797,7 @@ internal static class GesVmRegisterCollectionOperators
 
                 break;
             }
-            case GesBytecodeTypeKind.Range when a.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when a.ObjectValue is GesFloatRange range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 for (var i = 0L; i < length; i++)
@@ -888,7 +888,7 @@ internal static class GesVmRegisterCollectionOperators
 
                 vm.SetBoolean(dst, false);
                 return;
-            case Vector or Point when b.ObjectValue is GesValueVectorPoint triplet:
+            case Vector or Point when b.ObjectValue is GesSpatialValue triplet:
                 if (!a.IsNumeric)
                 {
                     vm.SetBoolean(dst, false);
@@ -1045,7 +1045,7 @@ internal static class GesVmRegisterCollectionOperators
                         var bi = 0;
                         while (ai < aMap.StorageLength && bi < bMap.StorageLength)
                         {
-                            var comparison = GameEventScriptText.CompareScalarOrdinal(aMap.KeyAt(ai), bMap.KeyAt(bi));
+                            var comparison = GesText.CompareScalarOrdinal(aMap.KeyAt(ai), bMap.KeyAt(bi));
                             if (comparison == 0)
                             {
                                 map.Set(aMap.KeyAt(ai), aMap.ValueAt(ai));
@@ -1079,12 +1079,12 @@ internal static class GesVmRegisterCollectionOperators
                             keys[i] = keyValue.TextValue;
                         }
 
-                        Array.Sort(keys, GameEventScriptText.ScalarComparer);
+                        Array.Sort(keys, GesText.ScalarComparer);
                         var ai = 0;
                         var bi = 0;
                         while (ai < aMap.StorageLength && bi < keys.Length)
                         {
-                            var comparison = GameEventScriptText.CompareScalarOrdinal(aMap.KeyAt(ai), keys[bi]);
+                            var comparison = GesText.CompareScalarOrdinal(aMap.KeyAt(ai), keys[bi]);
                             if (comparison == 0)
                             {
                                 map.Set(aMap.KeyAt(ai), aMap.ValueAt(ai));
@@ -1294,7 +1294,7 @@ internal static class GesVmRegisterCollectionOperators
             case Custom when a.ObjectValue is GesCustomObject customObject:
                 vm.SetList(dst, customObject.Map.ValueList);
                 break;
-            case Custom when a.ObjectValue is GesExternalValue externalValue:
+            case Custom when a.ObjectValue is GesExternalStorage externalValue:
                 vm.SetList(dst, externalValue.ToMap().ValueList);
                 break;
             default:
@@ -1313,7 +1313,7 @@ internal static class GesVmRegisterCollectionOperators
             case Custom when a.ObjectValue is GesCustomObject customObject:
                 vm.SetList(dst, customObject.Map.KeyList);
                 break;
-            case Custom when a.ObjectValue is GesExternalValue externalValue:
+            case Custom when a.ObjectValue is GesExternalStorage externalValue:
                 vm.SetList(dst, externalValue.ToMap().KeyList);
                 break;
             default:
@@ -1332,7 +1332,7 @@ internal static class GesVmRegisterCollectionOperators
             case Custom when a.ObjectValue is GesCustomObject customObject:
                 vm.SetList(dst, customObject.Map.EntryList);
                 break;
-            case Custom when a.ObjectValue is GesExternalValue externalValue:
+            case Custom when a.ObjectValue is GesExternalStorage externalValue:
                 vm.SetList(dst, externalValue.ToMap().EntryList);
                 break;
             default:
@@ -1341,12 +1341,12 @@ internal static class GesVmRegisterCollectionOperators
         }
     }
 
-    private static bool ContainsFloatRange(in GesValue value, GesValueRangeFloat range)
+    private static bool ContainsFloatRange(in GesValue value, GesFloatRange range)
     {
         if (value.Kind is not (Integer or Float) || value.Unit != GesQuantityUnit.UnitNone) return false;
         var number = value.AsNumeric;
         // Converting a large Int64 to Binary64 must not make a different integer appear contained.
-        if (value.Kind == Integer && (!GameEventScriptNumber.CanRepresentAsInteger(number) || (long)number != value.IntegerValue)) return false;
+        if (value.Kind == Integer && (!GesNumber.CanRepresentAsInteger(number) || (long)number != value.IntegerValue)) return false;
         return GameEventScriptRangeMath.Contains(range.From, range.To, range.Step, number);
     }
 
@@ -1394,7 +1394,7 @@ internal static class GesVmRegisterCollectionOperators
             case Map when b.ObjectValue is GesValueMap map:
                 if (a.Kind is not (Text or Tag)) return false;
                 return map.ContainsKey(a.TextValue);
-            case Vector or Point when b.ObjectValue is GesValueVectorPoint triplet:
+            case Vector or Point when b.ObjectValue is GesSpatialValue triplet:
                 if (!a.IsNumeric) return false;
                 var value = new GesValue();
                 value.SetFloat(triplet.X, b.Unit);
@@ -1403,12 +1403,12 @@ internal static class GesVmRegisterCollectionOperators
                 if (value.EqualsValue(a)) return true;
                 value.SetFloat(triplet.Z, b.Unit);
                 return value.EqualsValue(a);
-            case GesBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when b.ObjectValue is GesIntegerRange range:
                 if (a.Kind is not Integer || a.Unit is not GesQuantityUnit.UnitNone || range.Step == 0) return false;
                 return range.Step > 0
                     ? a.IntegerValue >= range.From && a.IntegerValue <= range.To && unchecked((ulong)a.IntegerValue - (ulong)range.From) % (ulong)range.Step == 0UL
                     : a.IntegerValue <= range.From && a.IntegerValue >= range.To && unchecked((ulong)range.From - (ulong)a.IntegerValue) % unchecked(0UL - (ulong)range.Step) == 0UL;
-            case GesBytecodeTypeKind.Range when b.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when b.ObjectValue is GesFloatRange range:
                 return ContainsFloatRange(in a, range);
             case Nothing:
                 return null;

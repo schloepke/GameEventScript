@@ -3,7 +3,7 @@
 
 namespace GameEventScript.Runtime.Values;
 
-internal sealed class GesValueVectorPoint(double x, double y, double z)
+internal sealed class GesSpatialValue(double x, double y, double z)
 {
     internal readonly double X = x;
     internal readonly double Y = y;

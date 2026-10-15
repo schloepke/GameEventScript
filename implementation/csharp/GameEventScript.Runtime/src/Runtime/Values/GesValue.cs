@@ -118,7 +118,7 @@ public partial struct GesValue : IEquatable<GesValue>
     public static GesValue GesText(string text)
     {
         text ??= string.Empty;
-        GameEventScriptText.RequireValidUnicode(text, nameof(text));
+        Runtime.GesText.RequireValidUnicode(text, nameof(text));
         var value = new GesValue();
         value.SetText(text);
         return value;
@@ -132,7 +132,7 @@ public partial struct GesValue : IEquatable<GesValue>
     public static GesValue GesTag(string tag)
     {
         tag ??= string.Empty;
-        if (!GameEventScriptText.IsTagValue(tag))
+        if (!Runtime.GesText.IsTagValue(tag))
             throw new ArgumentException("Tag values must use the portable ASCII name grammar.", nameof(tag));
         var value = new GesValue();
         value.SetTag(tag);
@@ -310,7 +310,7 @@ public partial struct GesValue : IEquatable<GesValue>
         return value;
     }
 
-    internal static GesValue GesSeries(GesSeries series)
+    internal static GesValue GesSeries(GesSeriesValue series)
     {
         var value = new GesValue();
         value.SetSeries(series);
@@ -392,7 +392,7 @@ public partial struct GesValue : IEquatable<GesValue>
         GesBytecodeTypeKind.Boolean => IsTrue,
         GesBytecodeTypeKind.Integer => IntegerValue != 0,
         Float or Percentage => FloatValue != 0d,
-        Vector or Point when ObjectValue is GesValueVectorPoint vector => vector.X != 0d || vector.Y != 0d || vector.Z != 0d,
+        Vector or Point when ObjectValue is GesSpatialValue vector => vector.X != 0d || vector.Y != 0d || vector.Z != 0d,
         _ => IsTrue
     };
 
@@ -405,17 +405,17 @@ public partial struct GesValue : IEquatable<GesValue>
     /// <summary>
     /// Gets the x.
     /// </summary>
-    public readonly double X => ObjectValue is GesValueVectorPoint vector ? vector.X : 0d;
+    public readonly double X => ObjectValue is GesSpatialValue vector ? vector.X : 0d;
 
     /// <summary>
     /// Gets the y.
     /// </summary>
-    public readonly double Y => ObjectValue is GesValueVectorPoint vector ? vector.Y : 0d;
+    public readonly double Y => ObjectValue is GesSpatialValue vector ? vector.Y : 0d;
 
     /// <summary>
     /// Gets the z.
     /// </summary>
-    public readonly double Z => ObjectValue is GesValueVectorPoint vector ? vector.Z : 0d;
+    public readonly double Z => ObjectValue is GesSpatialValue vector ? vector.Z : 0d;
 
     /// <summary>
     /// Gets the Unicode scalar or collection count, saturated at Int32.MaxValue; scalar values have length zero.
@@ -430,9 +430,9 @@ public partial struct GesValue : IEquatable<GesValue>
         GesValue[] list => list.Length,
         GesValueMap map => map.Length,
         GesCustomObject record => record.Map.Length,
-        GesExternalValue external => external.Definition.Fields.Count,
-        GesValueRangeInteger range => range.Count,
-        GesValueRangeFloat range => range.Count,
+        GesExternalStorage external => external.Definition.Fields.Count,
+        GesIntegerRange range => range.Count,
+        GesFloatRange range => range.Count,
         _ => 0,
     };
 
@@ -451,7 +451,7 @@ public partial struct GesValue : IEquatable<GesValue>
     /// </summary>
     public readonly string? CustomTypeName => ObjectValue switch
     {
-        GesExternalValue externalValue => externalValue.CustomTypeName,
+        GesExternalStorage externalValue => externalValue.CustomTypeName,
         GesCustomObject customObject => customObject.TypeName,
         _ => null
     };
@@ -471,7 +471,7 @@ public partial struct GesValue : IEquatable<GesValue>
     {
         GesValueMap map => map,
         GesCustomObject customObject => customObject.Map,
-        GesExternalValue externalValue => externalValue.ToMap(),
+        GesExternalStorage externalValue => externalValue.ToMap(),
         _ => null
     };
 
@@ -494,16 +494,12 @@ public partial struct GesValue : IEquatable<GesValue>
     /// <summary>
     /// Gets the integer range.
     /// </summary>
-    public readonly GesIntegerRange? IntegerRange => ObjectValue is GesValueRangeInteger range
-        ? new GesIntegerRange(range.From, range.To, range.Step)
-        : null;
+    public readonly GesIntegerRange? IntegerRange => ObjectValue as GesIntegerRange;
 
     /// <summary>
     /// Gets the float range.
     /// </summary>
-    public readonly GesFloatRange? FloatRange => ObjectValue is GesValueRangeFloat range
-        ? new GesFloatRange(range.From, range.To, range.Step)
-        : null;
+    public readonly GesFloatRange? FloatRange => ObjectValue as GesFloatRange;
 
     /// <summary>
     /// Returns the equals result for this value.
@@ -567,7 +563,7 @@ public partial struct GesValue : IEquatable<GesValue>
         }
 
         // ReSharper disable once CompareOfFloatsByEqualityOperator
-        if (GameEventScriptNumber.CanRepresentAsInteger(value))
+        if (Runtime.GesNumber.CanRepresentAsInteger(value))
         {
             var intValue = (long)value;
             Kind = Integer;
@@ -592,7 +588,7 @@ public partial struct GesValue : IEquatable<GesValue>
             SetNothing();
             return;
         }
-        ratio = GameEventScriptNumber.CanonicalizeZero(ratio);
+        ratio = Runtime.GesNumber.CanonicalizeZero(ratio);
         if (double.IsFinite(ratio))
         {
             Kind = Percentage;
@@ -610,14 +606,14 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     internal void SetText(string text)
-        => SetText(text, GameEventScriptText.CountScalars(text));
+        => SetText(text, Runtime.GesText.CountScalars(text));
 
     internal void SetText(string text, int scalarCount)
     {
         Kind = Text;
         Flags = StorageObjectFlag |
                 (text.Length == 0 ? None : HasValueFlag) |
-                (GameEventScriptText.EqualsAsciiIgnoreCase(text, "true") || text == "1" ? IsTrueFlag : IsFalseFlag);
+                (Runtime.GesText.EqualsAsciiIgnoreCase(text, "true") || text == "1" ? IsTrueFlag : IsFalseFlag);
         Unit = UnitNone;
         IntegerValue = 0;
         ObjectValue = scalarCount == text.Length ? text : new GesTextPayload(text, scalarCount);
@@ -650,17 +646,17 @@ public partial struct GesValue : IEquatable<GesValue>
             return;
         }
 
-        x = GameEventScriptNumber.CanonicalizeZero(x);
-        y = GameEventScriptNumber.CanonicalizeZero(y);
-        z = GameEventScriptNumber.CanonicalizeZero(z);
+        x = Runtime.GesNumber.CanonicalizeZero(x);
+        y = Runtime.GesNumber.CanonicalizeZero(y);
+        z = Runtime.GesNumber.CanonicalizeZero(z);
         Kind = Vector;
         Flags = StorageObjectFlag | HasValueFlag | (x is 0 or double.NaN && y is 0 or double.NaN && z is 0 or double.NaN ? IsFalseFlag : IsTrueFlag);
         Unit = unit;
         IntegerValue = 0;
-        ObjectValue = new GesValueVectorPoint(x, y, z);
+        ObjectValue = new GesSpatialValue(x, y, z);
     }
 
-    internal void SetVector(GesValueVectorPoint vector, GesQuantityUnit unit = UnitNone)
+    internal void SetVector(GesSpatialValue vector, GesQuantityUnit unit = UnitNone)
         => SetVector(vector.X, vector.Y, vector.Z, unit);
 
     internal void SetPoint(double x, double y, double z, GesQuantityUnit unit = UnitNone)
@@ -671,17 +667,17 @@ public partial struct GesValue : IEquatable<GesValue>
             return;
         }
 
-        x = GameEventScriptNumber.CanonicalizeZero(x);
-        y = GameEventScriptNumber.CanonicalizeZero(y);
-        z = GameEventScriptNumber.CanonicalizeZero(z);
+        x = Runtime.GesNumber.CanonicalizeZero(x);
+        y = Runtime.GesNumber.CanonicalizeZero(y);
+        z = Runtime.GesNumber.CanonicalizeZero(z);
         Kind = Point;
         Flags = StorageObjectFlag | HasValueFlag | (x is 0 or double.NaN && y is 0 or double.NaN && z is 0 or double.NaN ? IsFalseFlag : IsTrueFlag);
         Unit = unit;
         IntegerValue = 0;
-        ObjectValue = new GesValueVectorPoint(x, y, z);
+        ObjectValue = new GesSpatialValue(x, y, z);
     }
 
-    internal void SetPoint(GesValueVectorPoint point, GesQuantityUnit unit = UnitNone)
+    internal void SetPoint(GesSpatialValue point, GesQuantityUnit unit = UnitNone)
         => SetPoint(point.X, point.Y, point.Z, unit);
 
     internal void SetDice(int[] values)
@@ -724,7 +720,7 @@ public partial struct GesValue : IEquatable<GesValue>
 
     internal void SetExternalType(IGesExternalValue value)
     {
-        var externalValue = new GesExternalValue(value);
+        var externalValue = new GesExternalStorage(value);
         Kind = Custom;
         Flags = StorageObjectFlag | HasValueFlag;
         Unit = UnitNone;
@@ -743,7 +739,7 @@ public partial struct GesValue : IEquatable<GesValue>
         }
         else
         {
-            ObjectValue = new GesValueRangeInteger(from, to, step);
+            ObjectValue = new GesIntegerRange(from, to, step);
             IntegerValue = 0;
         }
 
@@ -758,14 +754,14 @@ public partial struct GesValue : IEquatable<GesValue>
             return;
         }
 
-        if (GameEventScriptNumber.CanRepresentAsInteger(from) && GameEventScriptNumber.CanRepresentAsInteger(to) && GameEventScriptNumber.CanRepresentAsInteger(step))
+        if (Runtime.GesNumber.CanRepresentAsInteger(from) && Runtime.GesNumber.CanRepresentAsInteger(to) && Runtime.GesNumber.CanRepresentAsInteger(step))
         {
             SetRange((long)from, (long)to, (long)step);
             return;
         }
-        from = GameEventScriptNumber.CanonicalizeZero(from);
-        to = GameEventScriptNumber.CanonicalizeZero(to);
-        step = GameEventScriptNumber.CanonicalizeZero(step);
+        from = Runtime.GesNumber.CanonicalizeZero(from);
+        to = Runtime.GesNumber.CanonicalizeZero(to);
+        step = Runtime.GesNumber.CanonicalizeZero(step);
         Kind = GesBytecodeTypeKind.Range;
         Unit = UnitNone;
         if (step == 0 || (step > 0 && from > to) || (step < 0 && from < to))
@@ -775,14 +771,14 @@ public partial struct GesValue : IEquatable<GesValue>
         }
         else
         {
-            ObjectValue = new GesValueRangeFloat(from, to, step);
+            ObjectValue = new GesFloatRange(from, to, step);
             IntegerValue = 0;
         }
 
         Flags = CollectionCount > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
     }
 
-    private static GesValueRangeInteger _emptyValueRangeInteger = new(0, 0, 0);
+    private static GesIntegerRange _emptyValueRangeInteger = new(0, 0, 0);
 
     internal void SetMessageHandler(GesMessageSignature handler)
     {
@@ -802,7 +798,7 @@ public partial struct GesValue : IEquatable<GesValue>
         ObjectValue = message;
     }
 
-    internal void SetSeries(GesSeries series)
+    internal void SetSeries(GesSeriesValue series)
     {
         Kind = Series;
         Flags = StorageObjectFlag | HasValueFlag;
@@ -883,7 +879,7 @@ public partial struct GesValue : IEquatable<GesValue>
         return sum;
     }
 
-    private static long ToIntegerSaturated(double number) => GameEventScriptNumber.ToIntegerSaturated(number);
+    private static long ToIntegerSaturated(double number) => Runtime.GesNumber.ToIntegerSaturated(number);
     internal GesNumericWithUnit AsNumericWithUnit()
         => new(AsNumeric, Unit);
 
@@ -906,7 +902,7 @@ public partial struct GesValue : IEquatable<GesValue>
                 return IsTrue == other.IsTrue;
             case Text or Tag:
                 return string.Equals(TextValue, other.TextValue, StringComparison.Ordinal);
-            case Vector or Point when ObjectValue is GesValueVectorPoint left && other.ObjectValue is GesValueVectorPoint right:
+            case Vector or Point when ObjectValue is GesSpatialValue left && other.ObjectValue is GesSpatialValue right:
                 return left.X.Equals(right.X) && left.Y.Equals(right.Y) && left.Z.Equals(right.Z);
             case Dice when ObjectValue is int[] left && other.ObjectValue is int[] right:
                 if (left.Length != right.Length) return false;
@@ -949,15 +945,15 @@ public partial struct GesValue : IEquatable<GesValue>
                 }
 
                 return true;
-            case GesBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger left && other.ObjectValue is GesValueRangeInteger right:
+            case GesBytecodeTypeKind.Range when ObjectValue is GesIntegerRange left && other.ObjectValue is GesIntegerRange right:
                 return left.From == right.From && left.To == right.To && left.Step == right.Step;
-            case GesBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat left && other.ObjectValue is GesValueRangeFloat right:
+            case GesBytecodeTypeKind.Range when ObjectValue is GesFloatRange left && other.ObjectValue is GesFloatRange right:
                 return left.From.Equals(right.From) && left.To.Equals(right.To) && left.Step.Equals(right.Step);
             case GesBytecodeTypeKind.Handler when ObjectValue is GesMessageSignature left && other.ObjectValue is GesMessageSignature right:
                 return left.Equals(right);
             case GesBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage left && other.ObjectValue is GameEventScriptMessage right:
                 return left.Equals(right);
-            case Series when ObjectValue is GesSeries left && other.ObjectValue is GesSeries right:
+            case Series when ObjectValue is GesSeriesValue left && other.ObjectValue is GesSeriesValue right:
                 return string.Equals(left.SignatureId, right.SignatureId, StringComparison.Ordinal) && left.Offset == right.Offset;
             default:
                 return ReferenceEquals(ObjectValue, other.ObjectValue);
@@ -985,7 +981,7 @@ public partial struct GesValue : IEquatable<GesValue>
             case Text or Tag:
                 hash.Add(TextValue, StringComparer.Ordinal);
                 break;
-            case Vector or Point when ObjectValue is GesValueVectorPoint vector:
+            case Vector or Point when ObjectValue is GesSpatialValue vector:
                 hash.Add(vector.X);
                 hash.Add(vector.Y);
                 hash.Add(vector.Z);
@@ -1016,12 +1012,12 @@ public partial struct GesValue : IEquatable<GesValue>
                 }
 
                 break;
-            case GesBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when ObjectValue is GesIntegerRange range:
                 hash.Add(range.From);
                 hash.Add(range.To);
                 hash.Add(range.Step);
                 break;
-            case GesBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when ObjectValue is GesFloatRange range:
                 hash.Add(range.From);
                 hash.Add(range.To);
                 hash.Add(range.Step);
@@ -1032,7 +1028,7 @@ public partial struct GesValue : IEquatable<GesValue>
             case GesBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage message:
                 hash.Add(message);
                 break;
-            case Series when ObjectValue is GesSeries series:
+            case Series when ObjectValue is GesSeriesValue series:
                 hash.Add(series.SignatureId, StringComparer.Ordinal);
                 hash.Add(series.Offset);
                 break;
@@ -1048,9 +1044,9 @@ public partial struct GesValue : IEquatable<GesValue>
     {
         switch (Kind)
         {
-            case GesBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when ObjectValue is GesIntegerRange range:
                 return new GesIntegerRangeIterator(range.From, range.To, range.Step);
-            case GesBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when ObjectValue is GesFloatRange range:
                 return new GesFloatRangeIterator(range.From, range.To, range.Step);
             case List when ObjectValue is GesValue[] list:
                 return new GesListIterator(list);
@@ -1060,7 +1056,7 @@ public partial struct GesValue : IEquatable<GesValue>
                 return new GesListIterator(map.ValueList);
             case Custom when ObjectValue is GesCustomObject custom:
                 return new GesListIterator(custom.Map.ValueList);
-            case Vector or Point when ObjectValue is GesValueVectorPoint vp:
+            case Vector or Point when ObjectValue is GesSpatialValue vp:
                 return new GesTripletIterator(vp);
             case Text or Tag:
                 return new GesStringIterator(TextValue);
@@ -1079,15 +1075,15 @@ public partial struct GesValue : IEquatable<GesValue>
         GesBytecodeTypeKind.Boolean => IsTrue ? "true" : "false",
         Text => TextValue,
         Tag => "#" + TextValue,
-        Vector when ObjectValue is GesValueVectorPoint vector => FormatTriplet(":Vector", vector, Unit),
-        Point when ObjectValue is GesValueVectorPoint point => FormatTriplet(":Point", point, Unit),
+        Vector when ObjectValue is GesSpatialValue vector => FormatTriplet(":Vector", vector, Unit),
+        Point when ObjectValue is GesSpatialValue point => FormatTriplet(":Point", point, Unit),
         Dice when ObjectValue is int[] dice => FormatDice(dice),
         List when ObjectValue is GesValue[] list => FormatList(list),
         Map when ObjectValue is GesValueMap map => FormatMap(map),
         Custom when ObjectValue is GesCustomObject custom => FormatRecord(custom.TypeName, custom.Map),
-        GesBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger range => FormatRange(range.From, range.To, range.Step),
-        GesBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat range => FormatRange(range.From, range.To, range.Step),
-        Series when ObjectValue is GesSeries series => $":Series({series.SignatureId}, offset: {series.Offset.ToString(CultureInfo.InvariantCulture)})",
+        GesBytecodeTypeKind.Range when ObjectValue is GesIntegerRange range => FormatRange(range.From, range.To, range.Step),
+        GesBytecodeTypeKind.Range when ObjectValue is GesFloatRange range => FormatRange(range.From, range.To, range.Step),
+        Series when ObjectValue is GesSeriesValue series => $":Series({series.SignatureId}, offset: {series.Offset.ToString(CultureInfo.InvariantCulture)})",
         GesBytecodeTypeKind.Handler when ObjectValue is GesMessageSignature signature => $":Handler({signature.SignatureId})",
         GesBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage message => FormatMessage(message),
         _ => Kind.ToString()
@@ -1095,7 +1091,7 @@ public partial struct GesValue : IEquatable<GesValue>
 
     private static string FormatNumber(long value, GesQuantityUnit unit) => TextNumberCast.Format(value, unit);
     private static string FormatNumber(double value, GesQuantityUnit unit) => TextNumberCast.Format(value, unit);
-    private static string FormatTriplet(string typeName, GesValueVectorPoint triplet, GesQuantityUnit unit)
+    private static string FormatTriplet(string typeName, GesSpatialValue triplet, GesQuantityUnit unit)
         => $"{typeName}(x: {FormatNumber(triplet.X, unit)}, y: {FormatNumber(triplet.Y, unit)}, z: {FormatNumber(triplet.Z, unit)})";
     private static string FormatDice(int[] dice)
     {
@@ -1137,7 +1133,7 @@ public partial struct GesValue : IEquatable<GesValue>
             if (!first) builder.Append(", ");
             first = false;
             var key = valueMap.KeyAt(i);
-            if (GameEventScriptText.IsFieldName(key)) builder.Append(key);
+            if (Runtime.GesText.IsFieldName(key)) builder.Append(key);
             else TextLiteralReader.AppendQuoted(builder, key);
             builder.Append(": ");
             GesValue tempQualifier = valueMap.ValueAt(i);
@@ -1172,5 +1168,5 @@ public partial struct GesValue : IEquatable<GesValue>
     private static string FormatRange(double from, double to, double step)
         => $":Range(from: {FormatRangeComponent(from)}, to: {FormatRangeComponent(to)}, step: {FormatRangeComponent(step)})";
     private static string FormatRangeComponent(double value)
-        => GameEventScriptNumber.FormatCanonicalFloat(value);
+        => Runtime.GesNumber.FormatCanonicalFloat(value);
 }

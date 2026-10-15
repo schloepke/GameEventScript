@@ -306,7 +306,13 @@ contains exactly the measured reference sources plus the recalibrated corpus.
 - [x] `VM` → `Vm` in namespaces and folders.
 - [x] Validators in the Program layer with identical split (C# `Api/Validation`, Swift
       `Api/Program/Validation`; CallGraph runs Resource in both, Debug is separate).
-- [ ] Host internals, value types and iterators per the internal mapping table.
+- [x] Host internals, value types and iterators per the internal mapping table:
+      C# host internals become GesMessageQueue, GesPendingMessage,
+      GesSubscriptionEntry, GesDelayedMessage and GesDeferredPublication; the C#
+      range payload merges into GesIntegerRange/GesFloatRange; GesSpatialValue,
+      GesSeriesValue, GesExternalStorage, GesCompoundSources, GesSystemClock,
+      GesNumber and GesText use one name in both ports. Open decision: C# keeps one
+      iterator class per source kind while Swift switches inside GesIterator.
 - [ ] Align public value types (`GesValueSlice`, `GesMapEntry`, `GesSeriesValue`,
       `GesSpatialValue`, `GesValueKind`, Swift `GesText`/`GesNumber`): same set in
       both ports, internal where not needed publicly. Moved here from phase 1

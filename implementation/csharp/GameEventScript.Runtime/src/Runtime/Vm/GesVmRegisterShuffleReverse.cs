@@ -29,7 +29,7 @@ internal static class GesVmRegisterShuffleReverse
                 vm.SetList(destinationRegister, result);
                 break;
             }
-            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesIntegerRange range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
@@ -42,7 +42,7 @@ internal static class GesVmRegisterShuffleReverse
                 else vm.SetNothing(destinationRegister);
                 break;
             }
-            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesFloatRange range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
@@ -83,7 +83,7 @@ internal static class GesVmRegisterShuffleReverse
                 vm.SetList(destinationRegister, result);
                 break;
             }
-            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesIntegerRange range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
@@ -109,7 +109,7 @@ internal static class GesVmRegisterShuffleReverse
                 vm.SetList(destinationRegister, result);
                 break;
             }
-            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesFloatRange range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)

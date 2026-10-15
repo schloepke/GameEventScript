@@ -13,7 +13,7 @@ namespace GameEventScript.Runtime;
 /// and conformance tooling. None of these methods relies on the CLR overflow
 /// context or on the platform's default number formatting.
 /// </summary>
-internal static class GameEventScriptNumber
+internal static class GesNumber
 {
     internal const int RuntimeEqualityUlps = 2;
     internal const double Int64UpperExclusive = 9223372036854775808d;
@@ -27,7 +27,7 @@ internal static class GameEventScriptNumber
             return TextNumberCast.Read(value.TextValue) ?? GesValue.GesNothing();
         }
 
-        if (value.Kind == GesBytecodeTypeKind.Series && value.ObjectValue is GesSeries series)
+        if (value.Kind == GesBytecodeTypeKind.Series && value.ObjectValue is GesSeriesValue series)
         {
             var first = series.GetTerm(0);
             return Cast(in first);

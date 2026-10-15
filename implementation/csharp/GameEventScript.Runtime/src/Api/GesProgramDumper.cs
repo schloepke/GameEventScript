@@ -825,7 +825,7 @@ internal static class GesProgramDumper
 
     private static string Immediate(double value)
     {
-        var text = GameEventScriptNumber.FormatCanonicalFloat(value);
+        var text = GesNumber.FormatCanonicalFloat(value);
         if (value == 0 || double.IsNaN(value) || double.IsInfinity(value)) return "#" + text;
 
         // Runtime formatters choose different decimal/exponential thresholds. Retain
@@ -1331,14 +1331,14 @@ internal static class GesProgramDumper
                 var ch = name[i];
                 if (i == 0)
                 {
-                    if (GameEventScriptText.IsAsciiLetter(ch) || ch == '_')
+                    if (GesText.IsAsciiLetter(ch) || ch == '_')
                     {
                         builder.Append(ch);
                     }
                     else
                     {
                         builder.Append('_');
-                        if (GameEventScriptText.IsAsciiDigit(ch))
+                        if (GesText.IsAsciiDigit(ch))
                         {
                             builder.Append(ch);
                         }
@@ -1347,7 +1347,7 @@ internal static class GesProgramDumper
                     continue;
                 }
 
-                builder.Append(GameEventScriptText.IsAsciiLetter(ch) || GameEventScriptText.IsAsciiDigit(ch) || ch == '_' ? ch : '_');
+                builder.Append(GesText.IsAsciiLetter(ch) || GesText.IsAsciiDigit(ch) || ch == '_' ? ch : '_');
             }
 
             return builder.ToString();

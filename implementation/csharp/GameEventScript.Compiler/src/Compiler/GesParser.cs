@@ -219,7 +219,7 @@ internal sealed partial class GesParser
         }
 
         _moduleName = builder.ToString();
-        if (!GameEventScriptText.IsModuleName(_moduleName)) throw new GameEventScriptParseException($"Invalid module identifier '{_moduleName}'", Previous);
+        if (!GesText.IsModuleName(_moduleName)) throw new GameEventScriptParseException($"Invalid module identifier '{_moduleName}'", Previous);
     }
 
     private ConstantDefinitionNode ParseConstantDefinition()
@@ -2998,7 +2998,7 @@ internal sealed partial class GesParser
 
         for (var i = 1; i < text.Length; i++)
         {
-            if (!GameEventScriptText.IsAsciiDigit(text[i]))
+            if (!GesText.IsAsciiDigit(text[i]))
             {
                 return false;
             }

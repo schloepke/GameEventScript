@@ -23,11 +23,11 @@ internal static class GesVmIteratorCollectorTerminals
                 if (dice.Length > 0) vm.SetInteger(destinationRegister, dice[0]);
                 else vm.SetNothing(destinationRegister);
                 return;
-            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesIntegerRange range:
                 if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) vm.SetInteger(destinationRegister, range.From);
                 else vm.SetNothing(destinationRegister);
                 return;
-            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesFloatRange range:
                 if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) vm.SetFloat(destinationRegister, range.From);
                 else vm.SetNothing(destinationRegister);
                 return;
@@ -40,7 +40,7 @@ internal static class GesVmIteratorCollectorTerminals
                 if (customMap.ValueList.Length > 0) vm.SetValue(destinationRegister, in customMap.ValueList[0]);
                 else vm.SetNothing(destinationRegister);
                 return;
-            case Vector or Point when source.ObjectValue is GesValueVectorPoint triplet:
+            case Vector or Point when source.ObjectValue is GesSpatialValue triplet:
                 vm.SetFloat(destinationRegister, triplet.X);
                 return;
             case Text or Tag:
@@ -66,11 +66,11 @@ internal static class GesVmIteratorCollectorTerminals
                 if (dice.Length > 0) vm.SetInteger(destinationRegister, dice[^1]);
                 else vm.SetNothing(destinationRegister);
                 return;
-            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesIntegerRange range:
                 if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step)) is { } lastInteger) vm.SetInteger(destinationRegister, lastInteger);
                 else vm.SetNothing(destinationRegister);
                 return;
-            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesFloatRange range:
                 if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step)) is { } lastFloat) vm.SetFloat(destinationRegister, lastFloat);
                 else vm.SetNothing(destinationRegister);
                 return;
@@ -83,7 +83,7 @@ internal static class GesVmIteratorCollectorTerminals
                 if (customMap.ValueList.Length > 0) vm.SetValue(destinationRegister, in customMap.ValueList[customMap.ValueList.Length - 1]);
                 else vm.SetNothing(destinationRegister);
                 return;
-            case Vector or Point when source.ObjectValue is GesValueVectorPoint triplet:
+            case Vector or Point when source.ObjectValue is GesSpatialValue triplet:
                 vm.SetFloat(destinationRegister, triplet.Z);
                 return;
             case Text or Tag:
@@ -109,11 +109,11 @@ internal static class GesVmIteratorCollectorTerminals
                 if (dice.Length == 1) vm.SetInteger(destinationRegister, dice[0]);
                 else vm.SetNothing(destinationRegister);
                 return;
-            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesIntegerRange range:
                 if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) vm.SetInteger(destinationRegister, range.From);
                 else vm.SetNothing(destinationRegister);
                 return;
-            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GameEventScript.Api.GesBytecodeTypeKind.Range when source.ObjectValue is GesFloatRange range:
                 if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) vm.SetFloat(destinationRegister, range.From);
                 else vm.SetNothing(destinationRegister);
                 return;
@@ -193,12 +193,12 @@ internal static class GesVmIteratorCollectorTerminals
     }
     private static void FirstFromText(GesVirtualMachine vm, ushort destinationRegister, in GesValue source)
     {
-        if (GameEventScriptText.ScalarAt(source.TextValue, 0) is { } scalar) vm.SetText(destinationRegister, scalar);
+        if (GesText.ScalarAt(source.TextValue, 0) is { } scalar) vm.SetText(destinationRegister, scalar);
         else vm.SetNothing(destinationRegister);
     }
     private static void LastFromText(GesVirtualMachine vm, ushort destinationRegister, in GesValue source)
     {
-        if (source.CollectionCount > 0 && GameEventScriptText.ScalarAt(source.TextValue, source.CollectionCount - 1) is { } scalar) vm.SetText(destinationRegister, scalar);
+        if (source.CollectionCount > 0 && GesText.ScalarAt(source.TextValue, source.CollectionCount - 1) is { } scalar) vm.SetText(destinationRegister, scalar);
         else vm.SetNothing(destinationRegister);
     }
     private static void SingleFromText(GesVirtualMachine vm, ushort destinationRegister, in GesValue source)

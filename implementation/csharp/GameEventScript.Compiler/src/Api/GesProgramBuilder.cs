@@ -79,7 +79,7 @@ public sealed class GesProgramBuilder
     /// </returns>
     public GesProgramBuilder AddScript(string text, string? sourceName = null)
     {
-        var source = GameEventScriptText.PrepareSource(text ?? throw new ArgumentNullException(nameof(text)), nameof(text));
+        var source = GesText.PrepareSource(text ?? throw new ArgumentNullException(nameof(text)), nameof(text));
         _sources.Add(new SourceInput(source, sourceName));
         return this;
     }

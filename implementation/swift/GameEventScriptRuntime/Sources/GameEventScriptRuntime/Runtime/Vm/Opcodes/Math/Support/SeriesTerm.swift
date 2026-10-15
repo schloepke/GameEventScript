@@ -1,7 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-extension GesSeries {
+extension GesSeriesValue {
     static func term(_ value: GesValue, index: Int64) -> GesValue {
         term(value, index: index, sink: GesValueFactory())
     }

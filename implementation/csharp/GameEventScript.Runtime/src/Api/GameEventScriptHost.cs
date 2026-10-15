@@ -24,17 +24,17 @@ public sealed partial class GameEventScriptHost
     private readonly IGesExternalTypeRegistry _externalTypeRegistry;
     private readonly GesRuntimeLimits _limits;
     private readonly IGesPublishSink? _publishSink;
-    private readonly Dictionary<string, SubscriptionEntry[]> _exact = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, SubscriptionEntry[]> _byName = new(StringComparer.Ordinal);
-    private readonly MessageRingQueue _queue = new(16);
+    private readonly Dictionary<string, GesSubscriptionEntry[]> _exact = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, GesSubscriptionEntry[]> _byName = new(StringComparer.Ordinal);
+    private readonly GesMessageQueue _queue = new(16);
     private readonly GesContext _context;
     private GesVirtualMachine? _vm;
-    private PendingMessage _activeMessage;
-    private SubscriptionEntry? _activeHandler;
+    private GesPendingMessage _activeMessage;
+    private GesSubscriptionEntry? _activeHandler;
     private bool _hasActiveMessage;
     private bool _scriptHandlerActive;
     private GesProgramInstance? _instances;
-    private SubscriptionEntry? _nativeSubscriptions;
+    private GesSubscriptionEntry? _nativeSubscriptions;
     private long _nextRegistrationId;
     private long _nextRegistrationOrder;
     private int _stepExecutedOpcodes;
@@ -60,7 +60,7 @@ public sealed partial class GameEventScriptHost
         _externalTypeRegistry = externalTypeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance;
         _limits = limits ?? GesRuntimeLimits.Default;
         _publishSink = publishSink;
-        _clock = clock ?? new GameEventScriptSystemClock();
+        _clock = clock ?? new GesSystemClock();
         _context = new GesContext(this, _random, _limits, _extensionRegistry, _observer);
     }
 
@@ -137,11 +137,11 @@ public sealed partial class GameEventScriptHost
         var registrationId = NextRegistrationId();
         linked.Profiler = _profiler?.CreateProgramProfiler(program);
         var instance = new GesProgramInstance(this, registrationId, program, linked);
-        var initialization = new List<SubscriptionEntry>();
+        var initialization = new List<GesSubscriptionEntry>();
         for (var index = 0; index < linked.Handlers.Length; index++)
         {
             var handler = linked.Handlers[index];
-            var entry = SubscriptionEntry.ForScript(instance, handler, priority, _nextRegistrationOrder++);
+            var entry = GesSubscriptionEntry.ForScript(instance, handler, priority, _nextRegistrationOrder++);
             if (GameEventScriptSystemEndpoints.IsInitializationName(handler.Signature.Name))
                 initialization.Add(entry);
             else
@@ -154,7 +154,7 @@ public sealed partial class GameEventScriptHost
         {
             var message = GameEventScriptSystemEndpoints.CreateInitializationMessage();
             // No host callbacks occur between the capacity check and this initialization enqueue.
-            var pending = new PendingMessage(message, Sort(initialization.ToArray()), [], instance);
+            var pending = new GesPendingMessage(message, Sort(initialization.ToArray()), [], instance);
             _idleSinceMicroseconds = null;
             if (IsReady) _queue.Enqueue(pending);
             else _startupQueue.Enqueue(pending);
@@ -211,7 +211,7 @@ public sealed partial class GameEventScriptHost
         _ = signature ?? throw new ArgumentNullException(nameof(signature));
         _ = handler ?? throw new ArgumentNullException(nameof(handler));
         var registrationId = NextRegistrationId();
-        var entry = SubscriptionEntry.ForNative(registrationId, signature, handler,
+        var entry = GesSubscriptionEntry.ForNative(registrationId, signature, handler,
             GameEventScriptMessage.NormalizeTags(matchingTags),
             GameEventScriptMessage.NormalizeTags(withoutTags),
             matchArguments: true, priority, _nextRegistrationOrder++);
@@ -240,7 +240,7 @@ public sealed partial class GameEventScriptHost
         if (string.IsNullOrWhiteSpace(messageName)) throw new ArgumentException("Message name must not be empty.", nameof(messageName));
         _ = handler ?? throw new ArgumentNullException(nameof(handler));
         var registrationId = NextRegistrationId();
-        var entry = SubscriptionEntry.ForNative(registrationId, GesMessageSignature.Create(messageName, []), handler,
+        var entry = GesSubscriptionEntry.ForNative(registrationId, GesMessageSignature.Create(messageName, []), handler,
             GameEventScriptMessage.NormalizeTags(matchingTags),
             GameEventScriptMessage.NormalizeTags(withoutTags),
             matchArguments: false, priority, _nextRegistrationOrder++);
@@ -525,7 +525,7 @@ public sealed partial class GameEventScriptHost
         return true;
     }
 
-    private void StartHandler(SubscriptionEntry handler)
+    private void StartHandler(GesSubscriptionEntry handler)
     {
         _activeHandler = handler;
         _activeRandomBoundary = _context.BeginHandler();
@@ -571,12 +571,12 @@ public sealed partial class GameEventScriptHost
             if (!HasMatch(message, exact, names)) return false;
         }
 
-        return EnqueuePlan(new PendingMessage(message, exact, names, initializationOutput: initializationOutput ? _initializationInstance : null), initializationOutput);
+        return EnqueuePlan(new GesPendingMessage(message, exact, names, initializationOutput: initializationOutput ? _initializationInstance : null), initializationOutput);
     }
 
     private bool IsMessageQueueFull => _limits.MaxQueuedMessagesPerRun > 0 && PendingMessageCount >= _limits.MaxQueuedMessagesPerRun;
 
-    private bool EnqueuePlan(PendingMessage message, bool initializationOutput)
+    private bool EnqueuePlan(GesPendingMessage message, bool initializationOutput)
     {
         if (IsMessageQueueFull)
         {
@@ -593,14 +593,14 @@ public sealed partial class GameEventScriptHost
         return true;
     }
 
-    private void Register(SubscriptionEntry entry)
+    private void Register(GesSubscriptionEntry entry)
     {
         var index = entry.MatchArguments ? _exact : _byName;
         var key = entry.MatchArguments ? entry.Signature.SignatureId : entry.Signature.Name;
         index[key] = index.TryGetValue(key, out var entries) ? Insert(entries, entry) : [entry];
     }
 
-    private bool Remove(SubscriptionEntry entry)
+    private bool Remove(GesSubscriptionEntry entry)
     {
         var index = entry.MatchArguments ? _exact : _byName;
         var key = entry.MatchArguments ? entry.Signature.SignatureId : entry.Signature.Name;
@@ -645,7 +645,7 @@ public sealed partial class GameEventScriptHost
 
     internal bool Unsubscribe(long registrationId)
     {
-        SubscriptionEntry? previous = null;
+        GesSubscriptionEntry? previous = null;
         var current = _nativeSubscriptions;
         while (current is not null && current.RegistrationId != registrationId)
         {
@@ -683,227 +683,58 @@ public sealed partial class GameEventScriptHost
         return ++_nextRegistrationId;
     }
 
-    private static SubscriptionEntry[] Get(Dictionary<string, SubscriptionEntry[]> index, string key)
+    private static GesSubscriptionEntry[] Get(Dictionary<string, GesSubscriptionEntry[]> index, string key)
         => index.TryGetValue(key, out var entries) ? entries : [];
 
-    private static bool HasMatch(GameEventScriptMessage message, SubscriptionEntry[] exact, SubscriptionEntry[] names)
+    private static bool HasMatch(GameEventScriptMessage message, GesSubscriptionEntry[] exact, GesSubscriptionEntry[] names)
     {
         for (var index = 0; index < exact.Length; index++) if (exact[index].Matches(message)) return true;
         for (var index = 0; index < names.Length; index++) if (names[index].Matches(message)) return true;
         return false;
     }
 
-    private static SubscriptionEntry[] Insert(SubscriptionEntry[] entries, SubscriptionEntry entry)
+    private static GesSubscriptionEntry[] Insert(GesSubscriptionEntry[] entries, GesSubscriptionEntry entry)
     {
-        var result = new SubscriptionEntry[entries.Length + 1];
+        var result = new GesSubscriptionEntry[entries.Length + 1];
         var target = entries.Length;
         for (var index = 0; index < entries.Length; index++)
-            if (Compare(entry, entries[index]) < 0) { target = index; break; }
+            if (GesSubscriptionEntry.Compare(entry, entries[index]) < 0) { target = index; break; }
         Array.Copy(entries, 0, result, 0, target);
         result[target] = entry;
         Array.Copy(entries, target, result, target + 1, entries.Length - target);
         return result;
     }
 
-    private static SubscriptionEntry[] Remove(SubscriptionEntry[] entries, SubscriptionEntry entry)
+    private static GesSubscriptionEntry[] Remove(GesSubscriptionEntry[] entries, GesSubscriptionEntry entry)
     {
         var index = Array.IndexOf(entries, entry);
         if (index < 0) return entries;
         if (entries.Length == 1) return [];
-        var result = new SubscriptionEntry[entries.Length - 1];
+        var result = new GesSubscriptionEntry[entries.Length - 1];
         Array.Copy(entries, 0, result, 0, index);
         Array.Copy(entries, index + 1, result, index, entries.Length - index - 1);
         return result;
     }
 
-    private static SubscriptionEntry[] Remove(SubscriptionEntry[] entries, GesProgramInstance instance)
+    private static GesSubscriptionEntry[] Remove(GesSubscriptionEntry[] entries, GesProgramInstance instance)
     {
         var removedCount = 0;
         for (var index = 0; index < entries.Length; index++)
             if (ReferenceEquals(entries[index].Instance, instance)) removedCount++;
         if (removedCount == 0) return entries;
         if (removedCount == entries.Length) return [];
-        var result = new SubscriptionEntry[entries.Length - removedCount];
+        var result = new GesSubscriptionEntry[entries.Length - removedCount];
         var target = 0;
         for (var index = 0; index < entries.Length; index++)
             if (!ReferenceEquals(entries[index].Instance, instance)) result[target++] = entries[index];
         return result;
     }
 
-    private static SubscriptionEntry[] Sort(SubscriptionEntry[] entries)
+    private static GesSubscriptionEntry[] Sort(GesSubscriptionEntry[] entries)
     {
-        Array.Sort(entries, Compare);
+        Array.Sort(entries, GesSubscriptionEntry.Compare);
         return entries;
     }
 
-    private static int Compare(SubscriptionEntry left, SubscriptionEntry right)
-    {
-        var priority = right.Priority.CompareTo(left.Priority);
-        return priority != 0 ? priority : left.RegistrationOrder.CompareTo(right.RegistrationOrder);
-    }
 
-    private sealed class SubscriptionEntry
-    {
-        private SubscriptionEntry(
-            GesMessageSignature signature,
-            string[] requiredTags,
-            string[] excludedTags,
-            bool matchArguments,
-            int priority,
-            long registrationOrder,
-            long registrationId,
-            IGesNativeMessageHandler? nativeHandler,
-            GesProgramInstance? instance,
-            ushort entryAddress)
-        {
-            Signature = signature;
-            RequiredTags = requiredTags;
-            ExcludedTags = excludedTags;
-            MatchArguments = matchArguments;
-            DispatchSignatureId = matchArguments ? signature.SignatureId : $"{signature.Name}(*)";
-            Priority = priority;
-            RegistrationOrder = registrationOrder;
-            RegistrationId = registrationId;
-            NativeHandler = nativeHandler;
-            Instance = instance;
-            EntryAddress = entryAddress;
-        }
-
-        internal GesMessageSignature Signature { get; }
-        internal string[] RequiredTags { get; }
-        internal string[] ExcludedTags { get; }
-        internal bool MatchArguments { get; }
-        internal int Priority { get; }
-        internal long RegistrationOrder { get; }
-        internal long RegistrationId { get; }
-        internal IGesNativeMessageHandler? NativeHandler { get; }
-        internal GesProgramInstance? Instance { get; }
-        internal ushort EntryAddress { get; }
-        internal SubscriptionEntry? NextNativeRegistration { get; set; }
-        internal string DispatchSignatureId { get; }
-
-        internal static SubscriptionEntry ForNative(
-            long registrationId,
-            GesMessageSignature signature,
-            IGesNativeMessageHandler handler,
-            IReadOnlyList<string> requiredTags,
-            IReadOnlyList<string> excludedTags,
-            bool matchArguments,
-            int priority,
-            long order)
-            => new(signature, Copy(requiredTags), Copy(excludedTags), matchArguments, priority, order, registrationId, handler, null, 0);
-
-        internal static SubscriptionEntry ForScript(GesProgramInstance instance, GesLinkedProgram.Handler handler, int priority, long order)
-            => new(handler.Signature, handler.RequiredTags, handler.ExcludedTags, handler.MatchArguments, priority, order, 0, null, instance, handler.EntryAddress);
-
-        internal bool Matches(GameEventScriptMessage message)
-        {
-            for (var index = 0; index < RequiredTags.Length; index++) if (!message.HasTag(RequiredTags[index])) return false;
-            for (var index = 0; index < ExcludedTags.Length; index++) if (message.HasTag(ExcludedTags[index])) return false;
-            return true;
-        }
-
-        private static string[] Copy(IReadOnlyList<string> source)
-        {
-            if (source.Count == 0) return [];
-            var result = new string[source.Count];
-            for (var index = 0; index < result.Length; index++) result[index] = source[index];
-            return result;
-        }
-    }
-
-    private struct PendingMessage
-    {
-        private readonly SubscriptionEntry[] _exact;
-        private readonly SubscriptionEntry[] _names;
-        private int _exactIndex;
-        private int _nameIndex;
-
-        internal PendingMessage(GameEventScriptMessage message, SubscriptionEntry[] exact, SubscriptionEntry[] names, GesProgramInstance? initialization = null, GesProgramInstance? initializationOutput = null)
-        {
-            Message = message;
-            Initialization = initialization;
-            InitializationOutput = initializationOutput;
-            _exact = exact;
-            _names = names;
-            _exactIndex = 0;
-            _nameIndex = 0;
-        }
-
-        internal GameEventScriptMessage Message { get; }
-        internal GesProgramInstance? Initialization { get; }
-        private GesProgramInstance? InitializationOutput { get; }
-        internal bool HasRecipients()
-        {
-            if (InitializationOutput?.StartResult is { State: not GesStartState.Ready }) return false;
-            foreach (var entry in _exact) if (CanReceive(entry)) return true;
-            foreach (var entry in _names) if (CanReceive(entry)) return true;
-            return false;
-        }
-        private bool CanReceive(SubscriptionEntry entry)
-            => entry.Instance?.StartResult is not { State: not GesStartState.Ready } && entry.Matches(Message);
-
-        internal SubscriptionEntry? NextMatching()
-        {
-            while (_exactIndex < _exact.Length || _nameIndex < _names.Length)
-            {
-                SubscriptionEntry next;
-                if (_exactIndex >= _exact.Length) next = _names[_nameIndex++];
-                else if (_nameIndex >= _names.Length) next = _exact[_exactIndex++];
-                else if (Compare(_exact[_exactIndex], _names[_nameIndex]) <= 0) next = _exact[_exactIndex++];
-                else next = _names[_nameIndex++];
-                if (CanReceive(next)) return next;
-            }
-
-            return null;
-        }
-    }
-
-    private sealed class MessageRingQueue
-    {
-        private PendingMessage[] _items;
-        private int _head;
-        private int _tail;
-
-        internal MessageRingQueue(int capacity) => _items = new PendingMessage[Math.Max(1, capacity)];
-        internal int Count { get; private set; }
-
-        internal void Enqueue(PendingMessage item)
-        {
-            if (Count == _items.Length) Grow();
-            _items[_tail] = item;
-            _tail = (_tail + 1) % _items.Length;
-            Count++;
-        }
-
-        internal bool Dequeue(out PendingMessage item)
-        {
-            if (Count == 0) { item = default; return false; }
-            item = _items[_head];
-            _items[_head] = default;
-            _head = (_head + 1) % _items.Length;
-            Count--;
-            return true;
-        }
-
-        internal void Clear()
-        {
-            while (Dequeue(out _)) { }
-        }
-        internal void RemoveFailedRecipients()
-        {
-            var count = Count;
-            for (var index = 0; index < count; index++)
-                if (Dequeue(out var item) && item.HasRecipients()) Enqueue(item);
-        }
-
-        private void Grow()
-        {
-            var expanded = new PendingMessage[_items.Length * 2];
-            for (var index = 0; index < Count; index++) expanded[index] = _items[(_head + index) % _items.Length];
-            _items = expanded;
-            _head = 0;
-            _tail = Count;
-        }
-    }
 }

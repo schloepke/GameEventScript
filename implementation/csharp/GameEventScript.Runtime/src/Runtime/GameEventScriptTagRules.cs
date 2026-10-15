@@ -6,7 +6,7 @@ namespace GameEventScript.Runtime;
 internal static class GameEventScriptTagRules
 {
     internal static bool IsValidTagName(string? value)
-        => value is not null && GameEventScriptText.IsTagName(value);
+        => value is not null && GesText.IsTagName(value);
 
     internal static string? NormalizeTextCast(string? value)
     {

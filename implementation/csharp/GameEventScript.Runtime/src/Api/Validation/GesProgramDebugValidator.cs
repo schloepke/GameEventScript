@@ -26,7 +26,7 @@ internal static class GesProgramDebugValidator
             {
                 var symbol = program.DebugSymbols.Symbols[index];
                 if (!GesProgramEnumValidation.IsDefined(symbol.Kind) ||
-                    symbol.Name is null || (symbol.Name != GesMessageSignature.UnlabeledParameterName && !GameEventScriptText.IsIdentifier(symbol.Name)) || symbol.CodeLength == 0 ||
+                    symbol.Name is null || (symbol.Name != GesMessageSignature.UnlabeledParameterName && !GesText.IsIdentifier(symbol.Name)) || symbol.CodeLength == 0 ||
                     (ulong)symbol.CodeStart + symbol.CodeLength > (ulong)program.Code.Count || symbol.RegisterId == ushort.MaxValue)
                     GesProgramValidator.Throw(GesProgramFormatErrorCode.InvalidDebugSymbol, "Debug symbol has an invalid kind, name, register, or code range.", (ushort)GesSectionType.DebugSymbols, index);
             }
@@ -49,7 +49,7 @@ internal static class GesProgramDebugValidator
         for (var index = 0; index < map.Sources.Count; index++)
         {
             var source = map.Sources[index];
-            if (source.SourceId != (uint)index || !ids.Add(source.SourceId) || source.SourceName is null || source.SourceName.Length == 0 || GameEventScriptText.GetInvalidUtf16Offset(source.SourceName) >= 0 ||
+            if (source.SourceId != (uint)index || !ids.Add(source.SourceId) || source.SourceName is null || source.SourceName.Length == 0 || GesText.GetInvalidUtf16Offset(source.SourceName) >= 0 ||
                 source.Sha256.Count != 32 || source.LineStartByteOffsets.Count == 0 || source.LineStartByteOffsets[0] != 0)
                 GesProgramValidator.Throw(GesProgramFormatErrorCode.InvalidSourceMap, "SourceMap source metadata is invalid.", (ushort)GesSectionType.SourceMap, index);
             uint previous = 0;
@@ -81,7 +81,7 @@ internal static class GesProgramDebugValidator
         for (var index = 0; index < archive.Sources.Count; index++)
         {
             var source = archive.Sources[index];
-            if (!ids.Add(source.SourceId) || source.SourceName is null || source.SourceName.Length == 0 || GameEventScriptText.GetInvalidUtf16Offset(source.SourceName) >= 0)
+            if (!ids.Add(source.SourceId) || source.SourceName is null || source.SourceName.Length == 0 || GesText.GetInvalidUtf16Offset(source.SourceName) >= 0)
                 GesProgramValidator.Throw(
                     GesProgramFormatErrorCode.InvalidSourceArchive, "SourceArchive SourceIds must be unique and names valid non-empty Unicode.", (ushort)GesSectionType.SourceArchive, index);
             try
@@ -167,7 +167,7 @@ internal static class GesProgramDebugValidator
 
     private static void ValidateMetadataText(string value, string role, ushort sectionType)
     {
-        if (value is null || value.Length == 0 || GameEventScriptText.GetInvalidUtf16Offset(value) >= 0)
+        if (value is null || value.Length == 0 || GesText.GetInvalidUtf16Offset(value) >= 0)
             GesProgramValidator.Throw(GesProgramFormatErrorCode.InvalidProgram, $"{role} must be valid non-empty Unicode.", sectionType);
     }
 

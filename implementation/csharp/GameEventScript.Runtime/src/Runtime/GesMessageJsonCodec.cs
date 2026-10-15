@@ -79,12 +79,12 @@ internal sealed class GesMessageJsonCodec
     private static string MessageName(GesValue value)
     {
         var name = String(value);
-        if (!GameEventScriptText.IsMessageName(name) && name is not ("initialization" or "undeliverable"))
+        if (!GesText.IsMessageName(name) && name is not ("initialization" or "undeliverable"))
             throw Error();
         return name;
     }
 
-    private static string NumberText(GesValue value) => value.Kind == Integer ? value.IntegerValue.ToString(CultureInfo.InvariantCulture) : GameEventScriptNumber.FormatCanonicalFloat(value.FloatValue);
+    private static string NumberText(GesValue value) => value.Kind == Integer ? value.IntegerValue.ToString(CultureInfo.InvariantCulture) : GesNumber.FormatCanonicalFloat(value.FloatValue);
     internal GesValue EncodeMessage(GameEventScriptMessage message, int depth)
     {
         Enter(depth);
@@ -108,7 +108,7 @@ internal sealed class GesMessageJsonCodec
         {
             Fields(args[i], "name", "value");
             var label = String(Get(args[i], "name"));
-            if (label != "_" && !GameEventScriptText.IsFieldName(label))
+            if (label != "_" && !GesText.IsFieldName(label))
                 throw Error();
             arguments[i] = new(label, Decode(Get(args[i], "value"), depth + 1));
         }
@@ -143,7 +143,7 @@ internal sealed class GesMessageJsonCodec
             case Float:
                 return Typed("Number", ("value", Text(NumberText(value))), ("unit", Text(UnitName(value.Unit))));
             case Percentage:
-                return Typed("Percentage", ("value", Text(GameEventScriptNumber.FormatCanonicalFloat(value.FloatValue))));
+                return Typed("Percentage", ("value", Text(GesNumber.FormatCanonicalFloat(value.FloatValue))));
             case GesBytecodeTypeKind.Boolean:
                 return Typed("Boolean", ("value", value));
             case GesBytecodeTypeKind.Text:
@@ -164,16 +164,16 @@ internal sealed class GesMessageJsonCodec
                     entries[i] = Object(("key", Text(map.KeyAt(i))), ("value", Encode(map.ValueAt(i), depth + 1)));
                 if (value.Kind == Map)
                     return Typed("Map", ("entries", Array(entries)));
-                if (value.CustomTypeName is not { } name || !GameEventScriptText.IsTypeName(name))
+                if (value.CustomTypeName is not { } name || !GesText.IsTypeName(name))
                     throw Error();
                 return Typed("Record", ("name", Text(name)), ("entries", Array(entries)));
             case Vector:
             case Point:
                 return Typed(
                     value.Kind == Vector ? "Vector" : "Point",
-                    ("x", Text(GameEventScriptNumber.FormatCanonicalFloat(value.X))),
-                    ("y", Text(GameEventScriptNumber.FormatCanonicalFloat(value.Y))),
-                    ("z", Text(GameEventScriptNumber.FormatCanonicalFloat(value.Z))),
+                    ("x", Text(GesNumber.FormatCanonicalFloat(value.X))),
+                    ("y", Text(GesNumber.FormatCanonicalFloat(value.Y))),
+                    ("z", Text(GesNumber.FormatCanonicalFloat(value.Z))),
                     ("unit", Text(UnitName(value.Unit)))
                 );
             case Dice:
@@ -189,18 +189,18 @@ internal sealed class GesMessageJsonCodec
 
                 return Typed("Dice", ("rolls", Array(dice)));
             case GesBytecodeTypeKind.Range:
-                if (value.ObjectValue is GesValueRangeInteger integer)
+                if (value.ObjectValue is GesIntegerRange integer)
                     return Typed("Range", ("from", Text(integer.From.ToString(CultureInfo.InvariantCulture))), ("to", Text(integer.To.ToString(CultureInfo.InvariantCulture))), ("step", Text(integer.Step.ToString(CultureInfo.InvariantCulture))));
-                if (value.ObjectValue is GesValueRangeFloat real)
+                if (value.ObjectValue is GesFloatRange real)
                     return Typed(
                         "Range",
-                        ("from", Text(GameEventScriptNumber.FormatCanonicalFloat(real.From))),
-                        ("to", Text(GameEventScriptNumber.FormatCanonicalFloat(real.To))),
-                        ("step", Text(GameEventScriptNumber.FormatCanonicalFloat(real.Step)))
+                        ("from", Text(GesNumber.FormatCanonicalFloat(real.From))),
+                        ("to", Text(GesNumber.FormatCanonicalFloat(real.To))),
+                        ("step", Text(GesNumber.FormatCanonicalFloat(real.Step)))
                     );
                 throw Error();
             case Series:
-                if (value.ObjectValue is not GesSeries series || series.SignatureId is not ("fibonacci" or "factorial"))
+                if (value.ObjectValue is not GesSeriesValue series || series.SignatureId is not ("fibonacci" or "factorial"))
                     throw Error("message.unsupportedSeries");
                 return Typed("Series", ("kind", Text(series.SignatureId)), ("offset", Text(series.Offset.ToString(CultureInfo.InvariantCulture))));
             case Handler:
@@ -285,7 +285,7 @@ internal sealed class GesMessageJsonCodec
                 else
                 {
                     var name = String(Get(value, "name"));
-                    if (!GameEventScriptText.IsTypeName(name))
+                    if (!GesText.IsTypeName(name))
                         throw Error();
                     result.SetRecord(name, map);
                 }
@@ -328,8 +328,8 @@ internal sealed class GesMessageJsonCodec
                     throw Error();
                 var series = kind switch
                 {
-                    "fibonacci" => GesSeries.Fibonacci(),
-                    "factorial" => GesSeries.Factorial(),
+                    "fibonacci" => GesSeriesValue.Fibonacci(),
+                    "factorial" => GesSeriesValue.Factorial(),
                     _ => throw Error("message.unsupportedSeries")
                 };
                 return GesValue.GesSeries(series.Drop(offset.IntegerValue));
@@ -340,7 +340,7 @@ internal sealed class GesMessageJsonCodec
                 for (var i = 0; i < labels.Length; i++)
                 {
                     names[i] = String(labels[i]);
-                    if (names[i] != "_" && !GameEventScriptText.IsFieldName(names[i]))
+                    if (names[i] != "_" && !GesText.IsFieldName(names[i]))
                         throw Error();
                 }
 

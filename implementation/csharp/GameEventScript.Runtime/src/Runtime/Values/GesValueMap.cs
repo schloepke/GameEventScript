@@ -26,8 +26,8 @@ public sealed class GesValueMap
         Array.Copy(keys, _keys, count);
         Array.Copy(values, _values, count);
         for (var index = 0; index < _keys.Length; index++)
-            GameEventScriptText.RequireValidUnicode(_keys[index], nameof(keys));
-        Array.Sort(_keys, _values, GameEventScriptText.ScalarComparer);
+            GesText.RequireValidUnicode(_keys[index], nameof(keys));
+        Array.Sort(_keys, _values, GesText.ScalarComparer);
     }
 
     // Trusted canonical keys from a GesMapLayout: validated, scalar-sorted and unique. The layout
@@ -93,7 +93,7 @@ public sealed class GesValueMap
         while (min <= max)
         {
             var mid = min + ((max - min) >> 1);
-            var comparison = GameEventScriptText.CompareScalarOrdinal(_keys[mid], key);
+            var comparison = GesText.CompareScalarOrdinal(_keys[mid], key);
             if (comparison == 0) return mid;
             if (comparison < 0) min = mid + 1;
             else max = mid - 1;

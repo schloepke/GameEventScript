@@ -692,7 +692,7 @@ internal static class GesAstValidator
             return "integer";
         }
 
-        if (expression is FloatLiteralExpressionNode floatingPoint && GameEventScriptNumber.CanRepresentAsInteger(floatingPoint.Value))
+        if (expression is FloatLiteralExpressionNode floatingPoint && GesNumber.CanRepresentAsInteger(floatingPoint.Value))
         {
             return "integer";
         }
@@ -727,7 +727,7 @@ internal static class GesAstValidator
         if (result.TypeName is "integer" ||
             seedExpression is ConstantReferenceExpressionNode constant && declaredTypes.TryGetValue("$" + constant.Name, out var constantType) && constantType == "integer" ||
             HasExplicitNumberSeedConversion(seedExpression, declaredTypes) ||
-            seedExpression is FloatLiteralExpressionNode floatingPoint && GameEventScriptNumber.CanRepresentAsInteger(floatingPoint.Value))
+            seedExpression is FloatLiteralExpressionNode floatingPoint && GesNumber.CanRepresentAsInteger(floatingPoint.Value))
         {
             return;
         }
@@ -1962,13 +1962,13 @@ internal static class GesAstValidator
 
     private static void ValidateCallableCase(ParsedScript parsedScriptContext, string name, string symbol, GesDiagnosticSymbolKind symbolKind, string message, GesValidationErrors errors)
     {
-        if (GameEventScriptText.IsCallableName(name)) return;
+        if (GesText.IsCallableName(name)) return;
         errors.Add(parsedScriptContext, message, symbol, symbolKind, GesDiagnosticCodes.ValidateInvalidIdentifierCase);
     }
 
     private static void ValidateArgumentLabelCase(ParsedScript parsedScriptContext, string name, string symbol, GesDiagnosticSymbolKind symbolKind, string message, GesValidationErrors errors)
     {
-        if (GameEventScriptText.IsArgumentLabel(name)) return;
+        if (GesText.IsArgumentLabel(name)) return;
         errors.Add(parsedScriptContext, message, symbol, symbolKind, GesDiagnosticCodes.ValidateInvalidIdentifierCase);
     }
 
@@ -1988,8 +1988,8 @@ internal static class GesAstValidator
     }
 
     private static bool IsIdentifierCase(string name)
-        => GameEventScriptText.IsIdentifier(name);
+        => GesText.IsIdentifier(name);
 
     private static bool IsMessageCase(string name)
-        => GameEventScriptText.IsMessageName(name);
+        => GesText.IsMessageName(name);
 }

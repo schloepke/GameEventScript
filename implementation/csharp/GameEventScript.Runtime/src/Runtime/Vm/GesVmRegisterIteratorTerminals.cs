@@ -24,13 +24,13 @@ internal static class GesVmRegisterIteratorTerminals
             case Dice when source.ObjectValue is int[] dice:
                 vm.SetInteger(destinationRegister, dice.Length);
                 return;
-            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesIntegerRange range:
                 vm.SetInteger(destinationRegister, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step));
                 return;
-            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesFloatRange range:
                 vm.SetInteger(destinationRegister, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step));
                 return;
-            case Vector or Point when source.ObjectValue is GesValueVectorPoint:
+            case Vector or Point when source.ObjectValue is GesSpatialValue:
                 vm.SetInteger(destinationRegister, 3);
                 return;
             case Text or Tag:

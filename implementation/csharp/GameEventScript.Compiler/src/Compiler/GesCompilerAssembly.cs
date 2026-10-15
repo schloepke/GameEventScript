@@ -65,7 +65,7 @@ internal static partial class GesCompiler
             }
             foreach (var declaration in block.Declarations)
             {
-                if (!GameEventScriptText.IsVariableName(declaration.Name)) throw AssemblyFailure("Invalid assembly register name.", declaration.Name);
+                if (!GesText.IsVariableName(declaration.Name)) throw AssemblyFailure("Invalid assembly register name.", declaration.Name);
                 if (!writable.Add(declaration.Name) || outer.Contains(declaration.Name))
                     throw AssemblyFailure("Assembly bindings cannot shadow existing bindings.", declaration.Name);
                 if (declaration.Export) outputs.Add(declaration.Name);
@@ -79,7 +79,7 @@ internal static partial class GesCompiler
             {
                 var line = block.Lines[index];
                 if (!line.IsLabel) continue;
-                if (!GameEventScriptText.IsVariableName(line.Name)) throw AssemblyFailure("Invalid assembly label.", line.Name);
+                if (!GesText.IsVariableName(line.Name)) throw AssemblyFailure("Invalid assembly label.", line.Name);
                 if (!targets.TryAdd(line.Name, index)) throw AssemblyFailure("Duplicate assembly label.", line.Name);
                 labels.Add(line.Name, _builder.AddLabel(line.Name));
             }

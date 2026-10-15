@@ -147,9 +147,9 @@ internal partial class GesVirtualMachine
     internal void SetTagPointer(ushort index, ushort pointer) => RegisterValues[index + RegisterFrameStart].SetTextConstant(ActiveProgram!.TextConstants[pointer], tag: true);
     internal void SetTag(ushort index, string tag) => RegisterValues[index + RegisterFrameStart].SetTag(tag);
     internal void SetVector(ushort index, double x, double y, double z, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetVector(x, y, z, unit);
-    internal void SetVector(ushort index, GesValueVectorPoint vector, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetVector(vector, unit);
+    internal void SetVector(ushort index, GesSpatialValue vector, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetVector(vector, unit);
     internal void SetPoint(ushort index, double x, double y, double z, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetPoint(x, y, z, unit);
-    internal void SetPoint(ushort index, GesValueVectorPoint point, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetPoint(point, unit);
+    internal void SetPoint(ushort index, GesSpatialValue point, GesQuantityUnit unit = GesQuantityUnit.UnitNone) => RegisterValues[index + RegisterFrameStart].SetPoint(point, unit);
     internal void SetDice(ushort index, int[] values) => RegisterValues[index + RegisterFrameStart].SetDice(values);
     internal void SetList(ushort index, GesValue[] list) => RegisterValues[index + RegisterFrameStart].SetList(list);
     internal void SetMap(ushort index, GesValueMap valueMap) => RegisterValues[index + RegisterFrameStart].SetMap(valueMap);
@@ -159,7 +159,7 @@ internal partial class GesVirtualMachine
     internal void SetRange(ushort index, double from, double to, double step) => RegisterValues[index + RegisterFrameStart].SetRange(from, to, step);
     internal void SetMessageHandler(ushort index, GesMessageSignature handler) => RegisterValues[index + RegisterFrameStart].SetMessageHandler(handler);
     internal void SetMessage(ushort index, GameEventScriptMessage message) => RegisterValues[index + RegisterFrameStart].SetMessage(message);
-    internal void SetSeries(ushort index, GesSeries series) => RegisterValues[index + RegisterFrameStart].SetSeries(series);
+    internal void SetSeries(ushort index, GesSeriesValue series) => RegisterValues[index + RegisterFrameStart].SetSeries(series);
     internal void SetIterator(ushort index, IGesIterator value) => RegisterValues[index + RegisterFrameStart].SetIterator(value);
     internal void CreateListBuilder(ushort index) => RegisterValues[index + RegisterFrameStart].SetListBuilder(new GesVmListBuilder());
     internal void CreateMapBuilder(ushort index) => RegisterValues[index + RegisterFrameStart].SetMapBuilder(new GesVmMapBuilder());

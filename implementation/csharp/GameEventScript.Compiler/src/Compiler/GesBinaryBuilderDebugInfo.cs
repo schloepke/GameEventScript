@@ -149,7 +149,7 @@ internal sealed partial class GesBinaryBuilder
         var lineIndex = Math.Clamp(line - 1, 0, Math.Max(0, lineStarts.Count - 1));
         var start = lineStarts.Count == 0 ? 0 : lineStarts[lineIndex];
         var end = lineIndex + 1 < lineStarts.Count ? lineStarts[lineIndex + 1] : text.Length;
-        return GameEventScriptText.Utf16OffsetForScalarOffset(text, start, end, Math.Max(0, column - 1));
+        return GesText.Utf16OffsetForScalarOffset(text, start, end, Math.Max(0, column - 1));
     }
 
     private static int[] BuildLineStartCharacters(string text)

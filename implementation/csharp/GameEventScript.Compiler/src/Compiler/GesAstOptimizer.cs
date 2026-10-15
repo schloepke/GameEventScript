@@ -605,7 +605,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         {
             case "number":
             case "numeric":
-                return GameEventScriptNumber.Cast(in source);
+                return GesNumber.Cast(in source);
             default:
                 return null;
         }
@@ -733,7 +733,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
             case GesBinaryOperator.Implies:
                 return EvaluateConstantImplies(left, right);
             case GesBinaryOperator.Power:
-                return GameEventScriptNumber.Power(in left, in right);
+                return GesNumber.Power(in left, in right);
         }
 
         if (left.IsNothing || right.IsNothing)
@@ -751,13 +751,13 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
             switch (binary.Operator)
             {
                 case GesBinaryOperator.IntegerDivide:
-                    return GameEventScriptNumber.FloorDivideExact(left.IntegerValue, right.IntegerValue) is { } quotient
+                    return GesNumber.FloorDivideExact(left.IntegerValue, right.IntegerValue) is { } quotient
                         ? GesValue.GesInteger(quotient, DivideResultUnit(left.Unit))
                         : GesValue.GesFloat(Math.Floor((double)left.IntegerValue / right.IntegerValue), DivideResultUnit(left.Unit));
                 case GesBinaryOperator.Modulo:
-                    return right.IntegerValue == 0 ? GesValue.GesNothing() : GesValue.GesInteger(GameEventScriptNumber.Modulo(left.IntegerValue, right.IntegerValue), left.Unit);
+                    return right.IntegerValue == 0 ? GesValue.GesNothing() : GesValue.GesInteger(GesNumber.Modulo(left.IntegerValue, right.IntegerValue), left.Unit);
                 case GesBinaryOperator.Remainder:
-                    return right.IntegerValue == 0 ? GesValue.GesNothing() : GesValue.GesInteger(GameEventScriptNumber.Remainder(left.IntegerValue, right.IntegerValue), left.Unit);
+                    return right.IntegerValue == 0 ? GesValue.GesNothing() : GesValue.GesInteger(GesNumber.Remainder(left.IntegerValue, right.IntegerValue), left.Unit);
             }
         }
 
@@ -870,7 +870,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
             right.Kind == GesBytecodeTypeKind.Integer &&
             left.Unit == right.Unit)
         {
-            return GameEventScriptNumber.AddExact(left.IntegerValue, right.IntegerValue) is { } integerResult
+            return GesNumber.AddExact(left.IntegerValue, right.IntegerValue) is { } integerResult
                 ? GesValue.GesInteger(integerResult, left.Unit)
                 : GesValue.GesFloat((double)left.IntegerValue + right.IntegerValue, left.Unit);
         }
@@ -901,7 +901,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
             right.Kind == GesBytecodeTypeKind.Integer &&
             left.Unit == right.Unit)
         {
-            return GameEventScriptNumber.SubtractExact(left.IntegerValue, right.IntegerValue) is { } integerResult
+            return GesNumber.SubtractExact(left.IntegerValue, right.IntegerValue) is { } integerResult
                 ? GesValue.GesInteger(integerResult, left.Unit)
                 : GesValue.GesFloat((double)left.IntegerValue - right.IntegerValue, left.Unit);
         }
@@ -933,7 +933,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         {
             if (left.Unit == GesQuantityUnit.UnitNone && right.Unit == GesQuantityUnit.UnitNone)
             {
-                return GameEventScriptNumber.MultiplyExact(left.IntegerValue, right.IntegerValue) is { } integerResult
+                return GesNumber.MultiplyExact(left.IntegerValue, right.IntegerValue) is { } integerResult
                     ? GesValue.GesInteger(integerResult)
                     : GesValue.GesFloat((double)left.IntegerValue * right.IntegerValue);
             }
@@ -992,7 +992,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
         }
 
         if (preferInteger &&
-            GameEventScriptNumber.CanRepresentAsInteger(number))
+            GesNumber.CanRepresentAsInteger(number))
         {
             return GesValue.GesInteger((long)number, unit);
         }
@@ -1103,7 +1103,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, ExpressionNode
             ? new UnitFloatLiteralExpressionNode(value, valueUnit.ToTypeName())
             : new FloatLiteralExpressionNode(value);
 
-    private static long ToIntegerSaturated(double number) => GameEventScriptNumber.ToIntegerSaturated(number);
+    private static long ToIntegerSaturated(double number) => GesNumber.ToIntegerSaturated(number);
 
-    private static double RoundHalfTowardZero(double value) => GameEventScriptNumber.RoundHalfTowardZero(value);
+    private static double RoundHalfTowardZero(double value) => GesNumber.RoundHalfTowardZero(value);
 }

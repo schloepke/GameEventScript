@@ -233,11 +233,11 @@ public sealed partial class GameEventScriptMessage : IEquatable<GameEventScriptM
     internal static string NormalizeTagName(string? tag)
     {
         if (tag is null) return string.Empty;
-        GameEventScriptText.RequireValidUnicode(tag, nameof(tag));
-        var normalized = GameEventScriptText.TrimAsciiWhitespace(tag);
+        GesText.RequireValidUnicode(tag, nameof(tag));
+        var normalized = GesText.TrimAsciiWhitespace(tag);
         if (normalized.Length > 0 && normalized[0] == '#') normalized = normalized[1..];
         if (normalized.Length == 0) return string.Empty;
-        if (!GameEventScriptText.IsTagName(normalized))
+        if (!GesText.IsTagName(normalized))
             throw new ArgumentException("Tag names must use the portable lowercase ASCII name grammar.", nameof(tag));
         return normalized;
     }

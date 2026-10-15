@@ -105,9 +105,9 @@ public readonly struct GesValueSlice
         return value.Kind switch
         {
             GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Dice => value.IntegerValue,
-            GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage => GameEventScriptNumber.ToIntegerSaturated(value.FloatValue),
+            GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage => GesNumber.ToIntegerSaturated(value.FloatValue),
             GesBytecodeTypeKind.Boolean => value.IsTrue ? 1 : 0,
-            _ => GameEventScriptNumber.ToIntegerSaturated(value.AsNumeric)
+            _ => GesNumber.ToIntegerSaturated(value.AsNumeric)
         };
     }
 
@@ -141,7 +141,7 @@ public readonly struct GesValueSlice
             GesBytecodeTypeKind.Boolean => value.IsTrue,
             GesBytecodeTypeKind.Integer => value.IntegerValue != 0,
             GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage => value.FloatValue != 0d,
-            GesBytecodeTypeKind.Vector or GesBytecodeTypeKind.Point when value.ObjectValue is GesValueVectorPoint vector => vector.X != 0d || vector.Y != 0d || vector.Z != 0d,
+            GesBytecodeTypeKind.Vector or GesBytecodeTypeKind.Point when value.ObjectValue is GesSpatialValue vector => vector.X != 0d || vector.Y != 0d || vector.Z != 0d,
             _ => value.IsTrue
         };
     }
@@ -164,21 +164,21 @@ public readonly struct GesValueSlice
     /// </summary>
     /// <param name="index">The index value.</param>
     /// <returns>The result of the operation.</returns>
-    public double GetX(int index) => _values![Start + index].ObjectValue is GesValueVectorPoint vector ? vector.X : 0d;
+    public double GetX(int index) => _values![Start + index].ObjectValue is GesSpatialValue vector ? vector.X : 0d;
 
     /// <summary>
     /// Gets the y.
     /// </summary>
     /// <param name="index">The index value.</param>
     /// <returns>The result of the operation.</returns>
-    public double GetY(int index) => _values![Start + index].ObjectValue is GesValueVectorPoint vector ? vector.Y : 0d;
+    public double GetY(int index) => _values![Start + index].ObjectValue is GesSpatialValue vector ? vector.Y : 0d;
 
     /// <summary>
     /// Gets the z.
     /// </summary>
     /// <param name="index">The index value.</param>
     /// <returns>The result of the operation.</returns>
-    public double GetZ(int index) => _values![Start + index].ObjectValue is GesValueVectorPoint vector ? vector.Z : 0d;
+    public double GetZ(int index) => _values![Start + index].ObjectValue is GesSpatialValue vector ? vector.Z : 0d;
 
     internal ref readonly GesValue VmValueAt(int index) => ref _values![Start + index];
 }

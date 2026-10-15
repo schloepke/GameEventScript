@@ -13,10 +13,10 @@ internal static class GesVmRegisterSeries
         switch (seriesKind)
         {
             case GesBytecodeSeriesKind.Fibonacci:
-                vm.SetSeries(destinationRegister, GesSeries.Fibonacci());
+                vm.SetSeries(destinationRegister, GesSeriesValue.Fibonacci());
                 return;
             case GesBytecodeSeriesKind.Factorial:
-                vm.SetSeries(destinationRegister, GesSeries.Factorial());
+                vm.SetSeries(destinationRegister, GesSeriesValue.Factorial());
                 return;
             default:
                 vm.SetNothing(destinationRegister);

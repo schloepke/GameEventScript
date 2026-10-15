@@ -12,7 +12,7 @@ public interface IGesClock
     long ElapsedMicroseconds { get; }
 }
 
-internal sealed class GameEventScriptSystemClock : IGesClock
+internal sealed class GesSystemClock : IGesClock
 {
     private readonly long _origin = Stopwatch.GetTimestamp();
     /// <inheritdoc />

@@ -108,7 +108,7 @@ internal struct GesLiteralParser
         if (depth >= MaximumDepth) { _limit = "MaxLiteralDepth"; return null; }
         _position++;
         var name = ReadName();
-        if (name is null || !GameEventScriptText.IsTypeName(name)) return null;
+        if (name is null || !GesText.IsTypeName(name)) return null;
         var builtin = name.ToLowerInvariant();
         // Built-in names are case-sensitive; user Record definitions retain their declared spelling.
         var isBuiltin = GesDataConstruction.IsType(builtin) && name == char.ToUpperInvariant(builtin[0]) + builtin.Substring(1);
@@ -137,7 +137,7 @@ internal struct GesLiteralParser
                 var label = ReadKey();
                 SkipWhitespace();
                 if (label is null || !Consume(':')) { label = "_"; _position = saved; }
-                else if (!GameEventScriptText.IsFieldName(label) || labels.Contains(label)) return null;
+                else if (!GesText.IsFieldName(label) || labels.Contains(label)) return null;
                 SkipWhitespace();
                 GesValue? value;
                 if (builtin == "series" && values.Count == 0 && _position < _text.Length && _text[_position] is >= 'a' and <= 'z')
@@ -194,7 +194,7 @@ internal struct GesLiteralParser
                 if (handler)
                 {
                     var label = ReadName();
-                    if (label is null || label != "_" && (!GameEventScriptText.IsFieldName(label) || labels.Contains(label))) return null;
+                    if (label is null || label != "_" && (!GesText.IsFieldName(label) || labels.Contains(label))) return null;
                     labels.Add(label);
                 }
                 else
@@ -203,7 +203,7 @@ internal struct GesLiteralParser
                     var label = ReadKey();
                     SkipWhitespace();
                     if (label is null || !Consume(':')) { label = "_"; _position = saved; }
-                    else if (!GameEventScriptText.IsFieldName(label) || labels.Contains(label)) return null;
+                    else if (!GesText.IsFieldName(label) || labels.Contains(label)) return null;
                     var value = ReadValue(depth);
                     if (value is not { } item) return null;
                     labels.Add(label);

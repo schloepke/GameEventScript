@@ -8,7 +8,7 @@ namespace GameEventScript.Api;
 
 public sealed partial class GameEventScriptHost
 {
-    private readonly MessageRingQueue _startupQueue = new(4);
+    private readonly GesMessageQueue _startupQueue = new(4);
     private GesStartResult? _startResult;
     private GesStartResult? _initializationFailure;
     private int _initializationOpcodes, _initializationEmits, _initializationPublishes;
@@ -17,8 +17,8 @@ public sealed partial class GameEventScriptHost
     private bool _executingScript;
     private GesProgramInstance? _initializationInstance;
     private GesDiagnostic? _initializationDiagnostic;
-    private List<DeferredPublication>? _initializationPublications;
-    private List<DeferredPublication>? _startupPublications;
+    private List<GesDeferredPublication>? _initializationPublications;
+    private List<GesDeferredPublication>? _startupPublications;
 
     /// <summary>Gets whether the initial load group started successfully. Pending messages and later instance failures do not change this value.</summary>
     public bool IsReady => _startResult is { State: GesStartState.Ready };
@@ -114,7 +114,7 @@ public sealed partial class GameEventScriptHost
         => new(GesDiagnosticPhase.Runtime, GesDiagnosticCodes.RuntimeInitializationLimitReached, "Initialization exceeded a runtime limit.",
             ProgramName: instance?.Program.ModuleName, HandlerName: "initialization()");
 
-    private void FlushPublications(List<DeferredPublication>? publications)
+    private void FlushPublications(List<GesDeferredPublication>? publications)
     {
         if (publications is null) return;
         foreach (var publication in publications)
@@ -136,6 +136,4 @@ public sealed partial class GameEventScriptHost
         }
         publications.Clear();
     }
-
-    private readonly record struct DeferredPublication(GameEventScriptMessage Message, bool LocalAccepted, GesProgramInstance Instance);
 }

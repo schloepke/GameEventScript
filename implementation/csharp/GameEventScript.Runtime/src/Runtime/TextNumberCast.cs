@@ -174,7 +174,7 @@ internal static class TextNumberCast
 
     internal static string Format(double value, GesQuantityUnit unit)
     {
-        var text = GameEventScriptNumber.FormatCanonicalFloat(value);
+        var text = GesNumber.FormatCanonicalFloat(value);
         return unit.IsNumericUnit() ? text + unit.ToSuffix() : text;
     }
 
@@ -182,9 +182,9 @@ internal static class TextNumberCast
     {
         if (ratio == 0) return "0%";
         // Format the ratio's exact Number view, then shift its decimal exponent without binary arithmetic.
-        var text = GameEventScriptNumber.CanRepresentAsInteger(ratio)
+        var text = GesNumber.CanRepresentAsInteger(ratio)
             ? ((long)ratio).ToString(CultureInfo.InvariantCulture)
-            : GameEventScriptNumber.FormatCanonicalFloat(ratio);
+            : GesNumber.FormatCanonicalFloat(ratio);
         var exponentIndex = text.IndexOf('e');
         if (exponentIndex >= 0)
         {

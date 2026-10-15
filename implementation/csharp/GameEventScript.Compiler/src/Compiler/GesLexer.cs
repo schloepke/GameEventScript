@@ -176,7 +176,7 @@ internal sealed class GesLexer
 
     public GesLexer(string input)
     {
-        _input = GameEventScriptText.PrepareSource(input ?? throw new ArgumentNullException(nameof(input)), nameof(input));
+        _input = GesText.PrepareSource(input ?? throw new ArgumentNullException(nameof(input)), nameof(input));
         _length = _input.Length;
     }
 
@@ -223,7 +223,7 @@ internal sealed class GesLexer
                 return ReadWordLikeToken(startLine, startColumn);
             }
 
-            if (GameEventScriptText.IsAsciiDigit(ch))
+            if (GesText.IsAsciiDigit(ch))
             {
                 return ReadNumberLikeToken(startLine, startColumn);
             }
@@ -233,13 +233,13 @@ internal sealed class GesLexer
                 case '\'':
                 case '"':
                     return ReadTextToken(startLine, startColumn);
-                case ':' when GameEventScriptText.IsAsciiUpper(Peek()):
+                case ':' when GesText.IsAsciiUpper(Peek()):
                     return ReadTypeToken(startLine, startColumn);
-                case ':' when GameEventScriptText.IsAsciiLower(Peek()):
+                case ':' when GesText.IsAsciiLower(Peek()):
                     return ReadSelectorToken(startLine, startColumn);
-                case '#' when GameEventScriptText.IsAsciiLower(Peek()):
+                case '#' when GesText.IsAsciiLower(Peek()):
                     return ReadTagToken(startLine, startColumn);
-                case '$' when GameEventScriptText.IsAsciiLower(Peek()):
+                case '$' when GesText.IsAsciiLower(Peek()):
                     return ReadConstantReferenceToken(startLine, startColumn);
                 default:
                     return ReadOperatorToken(startLine, startColumn);
@@ -280,12 +280,12 @@ internal sealed class GesLexer
 
         _previousWasCarriageReturn = false;
         _column++;
-        _index += GameEventScriptText.ScalarUtf16LengthAt(_input, _index);
+        _index += GesText.ScalarUtf16LengthAt(_input, _index);
     }
 
     private void ReadWordName()
     {
-        while (!IsAtEnd && (IsWordLetter(Current) || GameEventScriptText.IsAsciiDigit(Current)))
+        while (!IsAtEnd && (IsWordLetter(Current) || GesText.IsAsciiDigit(Current)))
         {
             Advance();
         }
@@ -293,7 +293,7 @@ internal sealed class GesLexer
 
     private void ReadDigits()
     {
-        while (!IsAtEnd && GameEventScriptText.IsAsciiDigit(Current))
+        while (!IsAtEnd && GesText.IsAsciiDigit(Current))
         {
             Advance();
         }
@@ -390,7 +390,7 @@ internal sealed class GesLexer
         if (IsWordAt(start, length, "constant")) return new GesToken(GesTokenKind.Constant, "constant", line, column, endLine, endColumn);
 
         var text = _input[start..(start + length)];
-        return GameEventScriptText.IsAsciiUpper(text[0])
+        return GesText.IsAsciiUpper(text[0])
             ? new GesToken(GesTokenKind.Message, text, line, column, endLine, endColumn)
             : new GesToken(GesTokenKind.Identifier, text, line, column, endLine, endColumn);
     }
@@ -403,12 +403,12 @@ internal sealed class GesLexer
         var start = _index;
         var first = Current;
         ReadWordName();
-        if (GameEventScriptText.IsAsciiLower(first) && !IsAtEnd && Current == '_')
+        if (GesText.IsAsciiLower(first) && !IsAtEnd && Current == '_')
         {
             Advance();
             if (!ReadValidIdentifierSuffix())
             {
-                while (!IsAtEnd && !GameEventScriptText.IsTokenWhitespace(Current))
+                while (!IsAtEnd && !GesText.IsTokenWhitespace(Current))
                 {
                     Advance();
                 }
@@ -422,7 +422,7 @@ internal sealed class GesLexer
             }
         }
         if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current))) return CreateWordToken(start, _index - start, line, column, _line, _column);
-        while (!IsAtEnd && !GameEventScriptText.IsTokenWhitespace(Current))
+        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current))
         {
             Advance();
         }
@@ -432,7 +432,7 @@ internal sealed class GesLexer
 
     private bool ReadValidIdentifierSuffix()
     {
-        if (IsAtEnd || !GameEventScriptText.IsAsciiDigit(Current))
+        if (IsAtEnd || !GesText.IsAsciiDigit(Current))
         {
             return false;
         }
@@ -440,7 +440,7 @@ internal sealed class GesLexer
         if (Current == '0')
         {
             Advance();
-            return IsAtEnd || !GameEventScriptText.IsAsciiDigit(Current);
+            return IsAtEnd || !GesText.IsAsciiDigit(Current);
         }
 
         ReadDigits();
@@ -476,7 +476,7 @@ internal sealed class GesLexer
             return CreateToken(GesTokenKind.Tag, _input[start.._index], line, column);
         }
 
-        while (!IsAtEnd && !GameEventScriptText.IsTokenWhitespace(Current))
+        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current))
         {
             Advance();
         }
@@ -499,7 +499,7 @@ internal sealed class GesLexer
         if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current)))
             return CreateToken(GesTokenKind.Tag, _input[start.._index], line, column);
 
-        while (!IsAtEnd && !GameEventScriptText.IsTokenWhitespace(Current))
+        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current))
         {
             Advance();
         }
@@ -514,7 +514,7 @@ internal sealed class GesLexer
         ReadWordName();
         if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current)))
             return CreateToken(GesTokenKind.TypeName, _input[start.._index], line, column);
-        while (!IsAtEnd && !GameEventScriptText.IsTokenWhitespace(Current)) Advance();
+        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
         return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
     }
 
@@ -525,7 +525,7 @@ internal sealed class GesLexer
         ReadWordName();
         if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current)))
             return CreateToken(GesTokenKind.ConstantReference, _input[start.._index], line, column);
-        while (!IsAtEnd && !GameEventScriptText.IsTokenWhitespace(Current)) Advance();
+        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
         return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
     }
 
@@ -533,7 +533,7 @@ internal sealed class GesLexer
     {
         var start = _index;
         ReadNumberDigits();
-        if (!IsAtEnd && Current == '.' && GameEventScriptText.IsAsciiDigit(Peek()))
+        if (!IsAtEnd && Current == '.' && GesText.IsAsciiDigit(Peek()))
         {
             Advance();
             ReadNumberDigits();
@@ -545,7 +545,7 @@ internal sealed class GesLexer
             Advance();
             text = _input[start..(_index - 1)];
             if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateToken(GesTokenKind.Percentage, text, line, column);
-            while (!IsAtEnd && !GameEventScriptText.IsTokenWhitespace(Current))
+            while (!IsAtEnd && !GesText.IsTokenWhitespace(Current))
             {
                 Advance();
             }
@@ -558,7 +558,7 @@ internal sealed class GesLexer
             Advance();
             text = _input[start..(_index - 1)];
             if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateUnitNumberToken(text, "degree", line, column);
-            while (!IsAtEnd && !GameEventScriptText.IsTokenWhitespace(Current))
+            while (!IsAtEnd && !GesText.IsTokenWhitespace(Current))
             {
                 Advance();
             }
@@ -576,10 +576,10 @@ internal sealed class GesLexer
             return CreateUnitNumberToken(text, unitName, line, column);
         }
 
-        if (!IsAtEnd && GameEventScriptText.IsAsciiLetter(Current)) return CreateToken(GesTokenKind.Float, text, line, column);
+        if (!IsAtEnd && GesText.IsAsciiLetter(Current)) return CreateToken(GesTokenKind.Float, text, line, column);
 
         if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateToken(GesTokenKind.Float, text, line, column);
-        while (!IsAtEnd && !GameEventScriptText.IsTokenWhitespace(Current))
+        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current))
         {
             Advance();
         }
@@ -591,13 +591,13 @@ internal sealed class GesLexer
     {
         while (!IsAtEnd)
         {
-            if (GameEventScriptText.IsAsciiDigit(Current))
+            if (GesText.IsAsciiDigit(Current))
             {
                 Advance();
                 continue;
             }
 
-            if (Current == '_' && GameEventScriptText.IsAsciiDigit(Peek()))
+            if (Current == '_' && GesText.IsAsciiDigit(Peek()))
             {
                 Advance();
                 continue;
@@ -622,7 +622,7 @@ internal sealed class GesLexer
     {
         var ch = Current;
         var next = Peek();
-        var text = GameEventScriptText.ScalarAtUtf16Offset(_input, _index);
+        var text = GesText.ScalarAtUtf16Offset(_input, _index);
         Advance();
         switch (ch)
         {
@@ -706,7 +706,7 @@ internal sealed class GesLexer
     {
         while (!IsAtEnd)
         {
-            if (GameEventScriptText.IsInlineWhitespace(Current))
+            if (GesText.IsInlineWhitespace(Current))
             {
                 Advance();
                 continue;
@@ -728,15 +728,15 @@ internal sealed class GesLexer
         }
     }
 
-    private static bool IsValidWordBoundary(char ch) => GameEventScriptText.IsTokenWhitespace(ch) || IsStructuralBoundary(ch);
+    private static bool IsValidWordBoundary(char ch) => GesText.IsTokenWhitespace(ch) || IsStructuralBoundary(ch);
 
-    private bool IsValidNumberBoundary(char ch) => GameEventScriptText.IsTokenWhitespace(ch) || IsStructuralBoundary(ch) || (ch == 'd' && GameEventScriptText.IsAsciiDigit(Peek()));
+    private bool IsValidNumberBoundary(char ch) => GesText.IsTokenWhitespace(ch) || IsStructuralBoundary(ch) || (ch == 'd' && GesText.IsAsciiDigit(Peek()));
 
-    private static bool IsValidUnitBoundary(char ch) => ch == '\0' || GameEventScriptText.IsTokenWhitespace(ch) || IsStructuralBoundary(ch);
+    private static bool IsValidUnitBoundary(char ch) => ch == '\0' || GesText.IsTokenWhitespace(ch) || IsStructuralBoundary(ch);
 
-    private static bool IsWordStart(char ch) => GameEventScriptText.IsAsciiLetter(ch);
+    private static bool IsWordStart(char ch) => GesText.IsAsciiLetter(ch);
 
-    private static bool IsWordLetter(char ch) => GameEventScriptText.IsAsciiLetter(ch);
+    private static bool IsWordLetter(char ch) => GesText.IsAsciiLetter(ch);
 
     private static bool IsStructuralBoundary(char ch)
         => ch is '(' or ')' or '{' or '}' or '[' or ']' or ',' or ';' or '.' or ':' or '#' or '+' or '-' or '*' or '/' or '!' or '~' or '&' or '|' or '^' or '=' or '<' or '>' or

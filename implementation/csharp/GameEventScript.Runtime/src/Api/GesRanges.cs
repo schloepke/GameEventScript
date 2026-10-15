@@ -1,10 +1,12 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+using GameEventScript.Runtime;
+
 namespace GameEventScript.Api;
 
 /// <summary>
-/// Represents a game event script integer range.
+/// An immutable signed-64 range descriptor. Terms are computed lazily without binary64 conversion.
 /// </summary>
 public sealed class GesIntegerRange(long from, long to, long step)
 {
@@ -22,10 +24,12 @@ public sealed class GesIntegerRange(long from, long to, long step)
     /// Gets the step.
     /// </summary>
     public long Step { get; } = step;
+
+    internal long Count { get; } = GameEventScriptRangeMath.GetLength(from, to, step);
 }
 
 /// <summary>
-/// Represents a game event script float range.
+/// An immutable binary64 range descriptor; terms are computed lazily.
 /// </summary>
 public sealed class GesFloatRange(double from, double to, double step)
 {
@@ -43,4 +47,6 @@ public sealed class GesFloatRange(double from, double to, double step)
     /// Gets the step.
     /// </summary>
     public double Step { get; } = step;
+
+    internal long Count { get; } = GameEventScriptRangeMath.GetLength(from, to, step);
 }

@@ -5,11 +5,11 @@ using GameEventScript.Api;
 
 namespace GameEventScript.Runtime.Values;
 
-internal sealed class GesExternalValue
+internal sealed class GesExternalStorage
 {
     private GesValueMap? _map;
 
-    internal GesExternalValue(IGesExternalValue value)
+    internal GesExternalStorage(IGesExternalValue value)
     {
         Value = value ?? throw new System.ArgumentNullException(nameof(value));
         Definition = value.Definition ?? throw new System.ArgumentException("External value does not provide a type definition.", nameof(value));

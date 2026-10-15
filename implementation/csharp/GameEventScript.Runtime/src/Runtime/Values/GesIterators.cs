@@ -140,7 +140,7 @@ internal class GesStringIterator(string stringValue) : IGesIterator, IDisposable
         }
 
         var value = default(GesValue);
-        var scalar = GameEventScriptText.ScalarAtUtf16Offset(_stringValue, _utf16Offset);
+        var scalar = GesText.ScalarAtUtf16Offset(_stringValue, _utf16Offset);
         _utf16Offset += scalar.Length;
         value.SetText(scalar, 1);
         return new GesIteratorResult(in value);
@@ -152,10 +152,10 @@ internal class GesStringIterator(string stringValue) : IGesIterator, IDisposable
     }
 }
 
-internal class GesTripletIterator(GesValueVectorPoint triplet) : IGesIterator, IDisposable
+internal class GesTripletIterator(GesSpatialValue triplet) : IGesIterator, IDisposable
 {
     private int _current;
-    private GesValueVectorPoint? _triplet = triplet;
+    private GesSpatialValue? _triplet = triplet;
 
     public GesIteratorResult Next()
     {

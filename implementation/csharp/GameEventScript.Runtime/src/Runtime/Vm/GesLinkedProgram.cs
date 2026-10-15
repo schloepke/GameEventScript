@@ -225,10 +225,10 @@ internal sealed class GesLinkedProgram
     {
         for (var index = 0; index < strings.Length; index++)
         {
-            if (GameEventScriptText.CountScalars(strings[index]) == strings[index].Length) continue;
+            if (GesText.CountScalars(strings[index]) == strings[index].Length) continue;
             var counts = new int[strings.Length];
             for (var countIndex = 0; countIndex < strings.Length; countIndex++)
-                counts[countIndex] = GameEventScriptText.CountScalars(strings[countIndex]);
+                counts[countIndex] = GesText.CountScalars(strings[countIndex]);
             return counts;
         }
 
@@ -284,14 +284,14 @@ internal sealed class GesMapLayout
                 continue;
             }
 
-            GameEventScriptText.RequireValidUnicode(key, nameof(keyNames));
+            GesText.RequireValidUnicode(key, nameof(keyNames));
             keys.Add(key);
             sources.Add(i);
         }
 
         Keys = [.. keys];
         Sources = [.. sources];
-        Array.Sort(Keys, Sources, GameEventScriptText.ScalarComparer);
+        Array.Sort(Keys, Sources, GesText.ScalarComparer);
     }
 
     internal int InputCount { get; }

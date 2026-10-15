@@ -27,14 +27,14 @@ internal interface IGesForwardDoubleSeries
     double? ReadCursor(in GesSeriesCursor cursor);
 }
 
-internal sealed class GesSeries
+internal sealed class GesSeriesValue
 {
     private readonly GesSeriesDefinition _definition;
     private readonly bool _hasCheckpoint;
     private readonly long _checkpointIndex;
     private readonly GesSeriesCursor _checkpoint;
 
-    private GesSeries(GesSeriesDefinition definition, long offset, bool hasCheckpoint, long checkpointIndex, in GesSeriesCursor checkpoint)
+    private GesSeriesValue(GesSeriesDefinition definition, long offset, bool hasCheckpoint, long checkpointIndex, in GesSeriesCursor checkpoint)
     {
         _definition = definition;
         Offset = offset < 0 ? 0 : offset;
@@ -47,7 +47,7 @@ internal sealed class GesSeries
 
     internal long Offset { get; }
 
-    internal GesSeries Drop(long count)
+    internal GesSeriesValue Drop(long count)
     {
         if (count <= 0)
         {
@@ -55,7 +55,7 @@ internal sealed class GesSeries
         }
 
         var offset = AddIndex(Offset, count) ?? long.MaxValue;
-        return new GesSeries(_definition, offset, _hasCheckpoint, _checkpointIndex, in _checkpoint);
+        return new GesSeriesValue(_definition, offset, _hasCheckpoint, _checkpointIndex, in _checkpoint);
     }
 
     internal GesValue GetTerm(long index)
@@ -102,20 +102,20 @@ internal sealed class GesSeries
         return _definition.ReadCursorValue(in cursor);
     }
 
-    internal static GesSeries Fibonacci()
+    internal static GesSeriesValue Fibonacci()
     {
         var definition = FibonacciSeriesDefinition.Instance;
         var checkpoint = default(GesSeriesCursor);
         if (definition.CreateCursor(0) is { } cursor) checkpoint = cursor;
-        return new GesSeries(definition, 0, true, 0, in checkpoint);
+        return new GesSeriesValue(definition, 0, true, 0, in checkpoint);
     }
 
-    internal static GesSeries Factorial()
+    internal static GesSeriesValue Factorial()
     {
         var definition = FactorialSeriesDefinition.Instance;
         var checkpoint = default(GesSeriesCursor);
         if (definition.CreateCursor(0) is { } cursor) checkpoint = cursor;
-        return new GesSeries(definition, 0, true, 0, in checkpoint);
+        return new GesSeriesValue(definition, 0, true, 0, in checkpoint);
     }
 
     private static long? AddIndex(long left, long right)

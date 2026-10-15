@@ -49,10 +49,10 @@ public sealed class GesMessageSignature : IEquatable<GesMessageSignature>
     public static string NormalizeMessageName(string? name)
     {
         if (name is null) return string.Empty;
-        GameEventScriptText.RequireValidUnicode(name, nameof(name));
-        var normalized = GameEventScriptText.TrimAsciiWhitespace(name);
+        GesText.RequireValidUnicode(name, nameof(name));
+        var normalized = GesText.TrimAsciiWhitespace(name);
         if (normalized.Length == 0) return string.Empty;
-        if (!GameEventScriptText.IsMessageName(normalized) && normalized is not ("initialization" or "undeliverable"))
+        if (!GesText.IsMessageName(normalized) && normalized is not ("initialization" or "undeliverable"))
             throw new ArgumentException("Message names must start with an upper-case ASCII letter and contain ASCII letters or digits.", nameof(name));
         return normalized;
     }
@@ -68,10 +68,10 @@ public sealed class GesMessageSignature : IEquatable<GesMessageSignature>
     public static string NormalizeParameterName(string? name)
     {
         if (name is null) return UnlabeledParameterName;
-        GameEventScriptText.RequireValidUnicode(name, nameof(name));
-        var normalized = GameEventScriptText.TrimAsciiWhitespace(name);
+        GesText.RequireValidUnicode(name, nameof(name));
+        var normalized = GesText.TrimAsciiWhitespace(name);
         if (normalized.Length == 0) return UnlabeledParameterName;
-        if (normalized != UnlabeledParameterName && !GameEventScriptText.IsArgumentLabel(normalized))
+        if (normalized != UnlabeledParameterName && !GesText.IsArgumentLabel(normalized))
             throw new ArgumentException("Parameter names must use the portable lowercase ASCII identifier grammar.", nameof(name));
         return normalized;
     }

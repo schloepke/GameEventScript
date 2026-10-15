@@ -19,7 +19,7 @@ internal static class GameEventScriptExternalTypeValueConverter
     {
         if (kind == GesBytecodeTypeKind.Vector &&
             unit is not null && unit != GesQuantityUnit.UnitNone &&
-            value.ObjectValue is GesValueVectorPoint vector)
+            value.ObjectValue is GesSpatialValue vector)
         {
             var result = new GesValue();
             result.SetVector(vector.X, vector.Y, vector.Z, unit.ToStoredUnit());
@@ -28,7 +28,7 @@ internal static class GameEventScriptExternalTypeValueConverter
 
         if (kind == GesBytecodeTypeKind.Point &&
             unit is not null && unit != GesQuantityUnit.UnitNone &&
-            value.ObjectValue is GesValueVectorPoint point)
+            value.ObjectValue is GesSpatialValue point)
         {
             var result = new GesValue();
             result.SetPoint(point.X, point.Y, point.Z, unit.ToStoredUnit());

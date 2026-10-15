@@ -401,7 +401,7 @@ public sealed class GesRandomGenerator
         return _sequence[_sequenceIndex++];
     }
 
-    private static long ToLongSaturated(double value) => GameEventScriptNumber.ToIntegerSaturated(value);
+    private static long ToLongSaturated(double value) => GesNumber.ToIntegerSaturated(value);
 
     private static double[] CopySequence(double[] values)
     {

@@ -8,7 +8,7 @@ extension GesVirtualMachine {
         let x = frameStart + sourceRegister
         let count = max(0, countOperand)
         if registers[x].seriesValue != nil {
-            return setList(destination, (0..<count).map { GesSeries.term(registers[x].registerValue, index: Int64($0)) })
+            return setList(destination, (0..<count).map { GesSeriesValue.term(registers[x].registerValue, index: Int64($0)) })
         }
         if registers[x].integerRangeValue != nil || registers[x].floatRangeValue != nil {
             let length = GesCollectionOperators.length(registers[x].registerValue)

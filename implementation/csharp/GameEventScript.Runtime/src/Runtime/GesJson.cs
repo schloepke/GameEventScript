@@ -97,7 +97,7 @@ internal static class GesJson
 
     private static void Quote(StringBuilder b, string text)
     {
-        GameEventScriptText.RequireValidUnicode(text, nameof(text));
+        GesText.RequireValidUnicode(text, nameof(text));
         if (text.Length > 4194304)
             throw Error("message.resourceLimit");
         b.Append('"');
@@ -237,7 +237,7 @@ internal static class GesJson
                     var result = b.ToString();
                     try
                     {
-                        GameEventScriptText.RequireValidUnicode(result, nameof(text));
+                        GesText.RequireValidUnicode(result, nameof(text));
                     }
                     catch (ArgumentException)
                     {

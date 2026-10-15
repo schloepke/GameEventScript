@@ -175,7 +175,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 vm.SetList(destinationRegister, result);
                 return;
             }
-            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesIntegerRange range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length == 0)
@@ -200,7 +200,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 vm.SetNothing(destinationRegister);
                 return;
             }
-            case GesBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
+            case GesBytecodeTypeKind.Range when source.ObjectValue is GesFloatRange range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length == 0)
@@ -431,12 +431,12 @@ internal static class GesVmRegisterSortGroupDistinct
         {
             case Text when b.Kind is Text:
             case Tag when b.Kind is Tag:
-                return GameEventScriptText.CompareScalarOrdinal(a.TextValue, b.TextValue);
+                return GesText.CompareScalarOrdinal(a.TextValue, b.TextValue);
             case Vector when b.Kind is Vector:
             case Point when b.Kind is Point:
                 if (a.Unit != b.Unit ||
-                    a.ObjectValue is not GesValueVectorPoint leftTriplet ||
-                    b.ObjectValue is not GesValueVectorPoint rightTriplet)
+                    a.ObjectValue is not GesSpatialValue leftTriplet ||
+                    b.ObjectValue is not GesSpatialValue rightTriplet)
                 {
                     return null;
                 }

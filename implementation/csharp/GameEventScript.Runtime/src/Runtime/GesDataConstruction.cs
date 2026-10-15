@@ -104,7 +104,7 @@ internal static class GesDataConstruction
 
         if (type == "number")
         {
-            var number = GameEventScriptNumber.Cast(first);
+            var number = GesNumber.Cast(first);
             if (arguments.Length == 1)
                 return number;
             if (values[1].Kind != Text)
@@ -126,7 +126,7 @@ internal static class GesDataConstruction
 
         if (type == "record")
         {
-            if (first.Kind != Text || !GameEventScriptText.IsTypeName(first.TextValue) || values[1].Kind != Map || values[1].ObjectValue is not GesValueMap map)
+            if (first.Kind != Text || !GesText.IsTypeName(first.TextValue) || values[1].Kind != Map || values[1].ObjectValue is not GesValueMap map)
                 return default;
             var value = new GesValue();
             value.SetRecord(first.TextValue, map);
@@ -150,8 +150,8 @@ internal static class GesDataConstruction
                 return default;
             var series = first.TextValue switch
             {
-                "fibonacci" => GesSeries.Fibonacci(),
-                "factorial" => GesSeries.Factorial(),
+                "fibonacci" => GesSeriesValue.Fibonacci(),
+                "factorial" => GesSeriesValue.Factorial(),
                 _ => null
             };
             return series is null ? default : GesValue.GesSeries(series.Drop(arguments.Length > 1 ? values[1].IntegerValue : 0));

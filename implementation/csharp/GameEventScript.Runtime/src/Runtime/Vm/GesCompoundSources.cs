@@ -9,7 +9,7 @@ using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime.Vm;
 
-internal static class GesVmCompoundIterators
+internal static class GesCompoundSources
 {
     internal static void GesVmIteratorCreate(this GesVirtualMachine state, GesBytecodeInstruction instruction, GesRuntimeBudget budget)
     {
@@ -27,7 +27,7 @@ internal static class GesVmCompoundIterators
             {
                 GesValueMap value => value,
                 GesCustomObject custom => custom.Map,
-                GesExternalValue external => external.ToMap(),
+                GesExternalStorage external => external.ToMap(),
                 _ => null
             };
             if (map is not null) iterator = new GesEntriesIterator(map, budget);

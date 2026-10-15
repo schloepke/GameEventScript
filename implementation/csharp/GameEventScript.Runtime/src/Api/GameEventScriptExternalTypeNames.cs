@@ -72,7 +72,7 @@ internal static class GameEventScriptExternalTypeNames
             normalized = normalized[1..];
         }
 
-        if (!GameEventScriptText.IsTypeName(normalized))
+        if (!GesText.IsTypeName(normalized))
         {
             throw new ArgumentException($"External GameEventScript type name ':{normalized}' must start with an upper-case ASCII letter and contain ASCII letters or digits.");
         }
@@ -83,7 +83,7 @@ internal static class GameEventScriptExternalTypeNames
     public static string NormalizeIdentifier(string? name, string parameterName)
     {
         var normalized = NormalizeName(name, parameterName);
-        if (!GameEventScriptText.IsArgumentLabel(normalized))
+        if (!GesText.IsArgumentLabel(normalized))
         {
             throw new ArgumentException($"External GameEventScript identifier '{normalized}' must start with a lower-case ASCII letter and contain ASCII letters or digits.");
         }
@@ -94,7 +94,7 @@ internal static class GameEventScriptExternalTypeNames
     public static string NormalizeExtensionName(string? name)
     {
         var normalized = NormalizeName(name, "name");
-        if (!GameEventScriptText.IsTagName(normalized))
+        if (!GesText.IsTagName(normalized))
         {
             throw new ArgumentException($"GameEventScript extension name '{normalized}' must start with a lower-case ASCII letter and contain ASCII letters or digits.", nameof(name));
         }
@@ -109,8 +109,8 @@ internal static class GameEventScriptExternalTypeNames
             throw new ArgumentException("Name must not be null or whitespace.", parameterName);
         }
 
-        GameEventScriptText.RequireValidUnicode(name, parameterName);
-        var normalized = GameEventScriptText.TrimAsciiWhitespace(name);
+        GesText.RequireValidUnicode(name, parameterName);
+        var normalized = GesText.TrimAsciiWhitespace(name);
         if (normalized.Length == 0) throw new ArgumentException("Name must not be null or whitespace.", parameterName);
         return normalized;
     }

@@ -9,7 +9,7 @@ extension GesCasts {
     static func number<Output: GesValueOutput>(_ value: GesValue, sink: Output) -> Output.Result {
         if value.kind == .integer { return sink.copy(value) }
         if value.kind == .text { return TextNumberCast.read(value.asText, sink: sink) ?? sink.nothing }
-        if value.kind == .series { return GesSeries.term(value, index: 0, sink: sink) }
+        if value.kind == .series { return GesSeriesValue.term(value, index: 0, sink: sink) }
         return sink.float(value.asNumber, unit: value.kind == .float ? value.unit : .none)
     }
 }

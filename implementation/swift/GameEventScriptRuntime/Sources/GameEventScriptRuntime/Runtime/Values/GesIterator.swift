@@ -26,7 +26,7 @@ class GesIterator {
         case .floatRange: return GesFloatRangeIterator(source.floatRangeValue!)
         case .list: return GesListIterator(source.listValue!)
         case .dice: return GesIntIterator(source.diceRolls!)
-        case .map, .record: return GesListIterator(source.asMap!.values)
+        case .map, .record: return GesMapValueIterator(source.asMap!)
         case .vector, .point: return GesTripletIterator(x: source.x, y: source.y, z: source.z)
         case .text, .tag: return GesStringIterator(source.textValue!)
         default: return nil
@@ -146,6 +146,42 @@ final class GesListIterator: GesIterator {
     override func close() {
         super.close()
         values = []
+    }
+}
+
+// Iterates map and record values in key order over the map's existing entries. Sharing the entry array avoids
+// materializing a value array at iterator creation, so early exits stay O(1) to set up.
+final class GesMapValueIterator: GesIterator {
+    private var entries: [GesMapEntry]
+    private var index = 0
+
+    init(_ map: GesValueMap) {
+        entries = map.entries
+        super.init(patternSequence: true, integerRange: false)
+    }
+
+    override func next() -> GesValue? {
+        guard !exhausted, index < entries.count else {
+            exhausted = true
+            return nil
+        }
+        defer { index += 1 }
+        return entries[index].value
+    }
+
+    override func next(into output: GesRegisterOutput) -> Bool {
+        guard !exhausted, index < entries.count else {
+            exhausted = true
+            return false
+        }
+        output.copy(entries[index].value)
+        index += 1
+        return true
+    }
+
+    override func close() {
+        super.close()
+        entries = []
     }
 }
 

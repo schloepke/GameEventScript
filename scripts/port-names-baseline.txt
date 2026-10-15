@@ -379,6 +379,7 @@ only	swift	Runtime	GesCollectionOperators
 only	swift	Runtime	GesComparison
 only	swift	Runtime	GesDataConstructionShape
 only	swift	Runtime	GesMapEntry
+only	swift	Runtime	GesMapValueIterator
 only	swift	Runtime	GesMath
 only	swift	Runtime	GesMessageNames
 only	swift	Runtime	GesMessageStorage

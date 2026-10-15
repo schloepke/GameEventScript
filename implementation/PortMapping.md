@@ -355,7 +355,8 @@ contains exactly the measured reference sources plus the recalibrated corpus.
       layout wins; if both are close, prefer the one with less memory and fewer
       allocations, and check whether the entry layout lets C# drop its lazy
       `_keyList`/`_valueList`/`_entries` caches. Both ports then use the same
-      layout.
+      layout, and the map value iterator follows it (Swift `GesMapValueIterator`
+      over shared entries today, C# `GesListIterator` over the value array).
 
 ### Phase 5 – Compiler
 
